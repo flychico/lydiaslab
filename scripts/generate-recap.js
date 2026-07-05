@@ -75,11 +75,11 @@ const NAV = `<nav><div class="nav-inner">
   <a class="navlink" href="/index.html">Home</a>
   <a class="navlink" href="/dashboard.html">Dashboard</a>
   <a class="navlink" href="/picks.html">Picks</a>
-  <a class="navlink" href="/odds.html">Live Odds</a>
-  <a class="navlink" href="/tools.html">Value Tools</a>
-  <a class="navlink" href="/stats.html">Team Stats</a>
-  <a class="navlink active" href="/recaps/">Daily Recap</a>
-  <a class="navlink" href="/articles.html">Articles</a>
+  <a class="navlink" href="/previews/">Previews</a>
+  <a class="navlink" href="/results.html">Results</a>
+  <a class="navlink" href="/odds.html">Odds</a>
+  <a class="navlink active" href="/recaps/">Recaps</a>
+  <a class="navlink" href="/membership.html">Membership</a>
 </div></nav>`;
 const FOOTER = `<footer>MLB Edges — analysis and education only, not betting advice. Please bet responsibly. If gambling stops being fun, call 1-800-GAMBLER.</footer>`;
 
