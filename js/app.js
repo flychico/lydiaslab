@@ -69,7 +69,7 @@ function renderNav(active) {
   const el = document.getElementById("nav");
   if (!el) return;
   el.innerHTML = '<div class="nav-inner">'
-    + '<a class="brand" href="index.html">MLB<span>Edges</span></a>'
+    + '<a class="brand" href="index.html"><span class="brand-ly">Ly</span><span class="brand-dia">Dia</span> Picks</a>'
     + links.map(function (l) {
         return '<a class="navlink' + (l[0] === active ? ' active' : '') + '" href="' + l[0] + '">' + l[1] + '</a>';
       }).join("")

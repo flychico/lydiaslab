@@ -6,8 +6,8 @@
   --border: #d0d7de;
   --text: #1f2328;
   --text-dim: #57606a;
-  --accent: #1a7f37;
-  --accent2: #0969da;
+  --accent: #d6508e;   /* pink */
+  --accent2: #4d9fdc;  /* baby blue */
   --warn: #9a6700;
   --danger: #cf222e;
   --radius: 10px;
@@ -34,6 +34,8 @@ nav {
 }
 .brand { font-weight: 700; font-size: 1.15rem; color: var(--text); margin-right: 20px; }
 .brand span { color: var(--accent); }
+.brand .brand-ly { color: var(--accent2); }
+.brand .brand-dia { color: var(--accent); }
 nav a.navlink {
   color: var(--text-dim); padding: 6px 12px; border-radius: 6px; font-size: .95rem;
 }
@@ -83,9 +85,9 @@ button.secondary { background: var(--bg-elev); color: var(--text); border: 1px s
 
 /* Badges & results */
 .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: .78rem; font-weight: 600; }
-.badge.pos { background: rgba(26,127,55,.12); color: var(--accent); }
+.badge.pos { background: rgba(214,80,142,.12); color: var(--accent); }
 .badge.neg { background: rgba(207,34,46,.10); color: var(--danger); }
-.badge.neutral { background: rgba(9,105,218,.10); color: var(--accent2); }
+.badge.neutral { background: rgba(77,159,220,.14); color: var(--accent2); }
 .result-box {
   background: var(--bg-elev); border: 1px solid var(--border); border-radius: var(--radius);
   padding: 16px; margin-top: 14px; font-size: .95rem;
@@ -101,7 +103,7 @@ button.secondary { background: var(--bg-elev); color: var(--text); border: 1px s
 .game-card { margin-bottom: 18px; }
 .game-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 .game-head .matchup { font-weight: 700; font-size: 1.05rem; }
-.best-odds { background: rgba(26,127,55,.14); border-radius: 4px; }
+.best-odds { background: rgba(214,80,142,.14); border-radius: 4px; }
 .notice {
   background: var(--bg-elev); border: 1px solid var(--border); border-left: 4px solid var(--accent2);
   border-radius: 6px; padding: 14px 16px; margin: 16px 0; font-size: .92rem; color: var(--text-dim);

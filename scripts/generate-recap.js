@@ -71,7 +71,7 @@ function recapSentence(g) {
 }
 
 const NAV = `<nav><div class="nav-inner">
-  <a class="brand" href="/index.html">MLB<span>Edges</span></a>
+  <a class="brand" href="/index.html"><span class="brand-ly">Ly</span><span class="brand-dia">Dia</span> Picks</a>
   <a class="navlink" href="/index.html">Home</a>
   <a class="navlink" href="/dashboard.html">Dashboard</a>
   <a class="navlink" href="/picks.html">Picks</a>
