@@ -10,6 +10,7 @@
   --accent2: #4d9fdc;  /* baby blue */
   --warn: #9a6700;
   --danger: #cf222e;
+  --good: #1e8e3e;    /* green for positive numbers */
   --radius: 10px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -85,7 +86,7 @@ button.secondary { background: var(--bg-elev); color: var(--text); border: 1px s
 
 /* Badges & results */
 .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: .78rem; font-weight: 600; }
-.badge.pos { background: rgba(214,80,142,.12); color: var(--accent); }
+.badge.pos { background: rgba(30,142,62,.12); color: var(--good); }
 .badge.neg { background: rgba(207,34,46,.10); color: var(--danger); }
 .badge.neutral { background: rgba(77,159,220,.14); color: var(--accent2); }
 .result-box {
@@ -94,7 +95,7 @@ button.secondary { background: var(--bg-elev); color: var(--text); border: 1px s
 }
 .result-box strong { color: var(--accent); }
 .big-num { font-size: 1.6rem; font-weight: 700; }
-.pos-text { color: var(--accent); }
+.pos-text { color: var(--good); }
 .neg-text { color: var(--danger); }
 .dim { color: var(--text-dim); }
 .small { font-size: .84rem; }

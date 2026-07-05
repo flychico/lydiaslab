@@ -82,6 +82,63 @@ ${FOOTER}
 `;
 }
 
+
+const PARKS = {
+  "Arizona Diamondbacks": ["Chase Field", 33.445, -112.067, 1, "neutral"],
+  "Atlanta Braves": ["Truist Park", 33.891, -84.468, 0, "hitter-friendly"],
+  "Baltimore Orioles": ["Camden Yards", 39.284, -76.622, 0, "neutral"],
+  "Boston Red Sox": ["Fenway Park", 42.346, -71.097, 0, "hitter-friendly"],
+  "Chicago Cubs": ["Wrigley Field", 41.948, -87.655, 0, "wind-dependent"],
+  "Chicago White Sox": ["Rate Field", 41.830, -87.634, 0, "hitter-friendly"],
+  "Cincinnati Reds": ["Great American Ball Park", 39.097, -84.507, 0, "hitter-friendly"],
+  "Cleveland Guardians": ["Progressive Field", 41.496, -81.685, 0, "neutral"],
+  "Colorado Rockies": ["Coors Field", 39.756, -104.994, 0, "extreme hitter's park"],
+  "Detroit Tigers": ["Comerica Park", 42.339, -83.049, 0, "pitcher-friendly"],
+  "Houston Astros": ["Daikin Park", 29.757, -95.355, 1, "neutral"],
+  "Kansas City Royals": ["Kauffman Stadium", 39.051, -94.480, 0, "pitcher-friendly"],
+  "Los Angeles Angels": ["Angel Stadium", 33.800, -117.883, 0, "neutral"],
+  "Los Angeles Dodgers": ["Dodger Stadium", 34.074, -118.240, 0, "pitcher-friendly"],
+  "Miami Marlins": ["loanDepot park", 25.778, -80.220, 1, "pitcher-friendly"],
+  "Milwaukee Brewers": ["American Family Field", 43.028, -87.971, 1, "neutral"],
+  "Minnesota Twins": ["Target Field", 44.982, -93.278, 0, "neutral"],
+  "New York Mets": ["Citi Field", 40.757, -73.846, 0, "pitcher-friendly"],
+  "New York Yankees": ["Yankee Stadium", 40.829, -73.926, 0, "hitter-friendly"],
+  "Athletics": ["Sutter Health Park", 38.580, -121.513, 0, "neutral"],
+  "Philadelphia Phillies": ["Citizens Bank Park", 39.906, -75.166, 0, "hitter-friendly"],
+  "Pittsburgh Pirates": ["PNC Park", 40.447, -80.006, 0, "pitcher-friendly"],
+  "San Diego Padres": ["Petco Park", 32.707, -117.157, 0, "pitcher-friendly"],
+  "San Francisco Giants": ["Oracle Park", 37.778, -122.389, 0, "strong pitcher's park"],
+  "Seattle Mariners": ["T-Mobile Park", 47.591, -122.332, 1, "strong pitcher's park"],
+  "St. Louis Cardinals": ["Busch Stadium", 38.622, -90.193, 0, "pitcher-friendly"],
+  "Tampa Bay Rays": ["home park", 27.768, -82.653, 1, "neutral"],
+  "Texas Rangers": ["Globe Life Field", 32.747, -97.084, 1, "neutral"],
+  "Toronto Blue Jays": ["Rogers Centre", 43.641, -79.389, 1, "hitter-friendly"],
+  "Washington Nationals": ["Nationals Park", 38.873, -77.007, 0, "neutral"]
+};
+const _wx = {};
+async function weatherFor(homeTeam, gameIso) {
+  const pk = PARKS[homeTeam];
+  if (!pk || pk[3]) return null; // unknown or roofed
+  try {
+    if (!_wx[homeTeam]) {
+      const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${pk[1]}&longitude=${pk[2]}&hourly=temperature_2m,wind_speed_10m,wind_direction_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&forecast_days=3&timezone=auto`);
+      if (!res.ok) return null;
+      _wx[homeTeam] = await res.json();
+    }
+    const h = _wx[homeTeam].hourly;
+    if (!h || !h.time) return null;
+    const target = new Date(gameIso).getTime();
+    let best = 0, diff = Infinity;
+    for (let i = 0; i < h.time.length; i++) {
+      const d = Math.abs(new Date(h.time[i]).getTime() - target);
+      if (d < diff) { diff = d; best = i; }
+    }
+    const dirs = ["N","NE","E","SE","S","SW","W","NW"];
+    return { temp: Math.round(h.temperature_2m[best]), wind: Math.round(h.wind_speed_10m[best]),
+             dir: dirs[Math.round(((h.wind_direction_10m[best] % 360) + 360) % 360 / 45) % 8] };
+  } catch (e) { return null; }
+}
+
 async function getJson(url) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
@@ -188,6 +245,14 @@ async function main() {
     const bestAm = mkt ? (pickHome ? mkt.bestHome : mkt.bestAway) : null;
     const edge = mktProb !== null ? prob - mktProb : null;
 
+    const pkInfo = PARKS[h.team.name];
+    const wx = pkInfo ? await weatherFor(h.team.name, g.gameDate) : null;
+    let venueTxt = "";
+    if (pkInfo) {
+      venueTxt = ` The setting: ${pkInfo[0]}, a ${pkInfo[4]} venue` +
+        (pkInfo[3] ? " with a roof, so weather is a non-factor." :
+         wx ? `; the forecast calls for ${wx.temp}\u00B0F with ${wx.wind} mph ${wx.dir} winds.` : ".");
+    }
     const eraDiff = spA.eff - spH.eff;
     const duel = Math.abs(eraDiff) < 0.4
       ? `The pitching matchup is close to even.`
@@ -197,7 +262,7 @@ async function main() {
       `The model makes ${pick} a ${pct(prob)} favorite here` +
       (edge !== null ? (edge >= VALUE_EDGE ? ` — and with the market at ${pct(mktProb)} (best price ${fmtAm(bestAm)}), it sees value.` :
         edge <= -VALUE_EDGE ? `, though the market is higher on the other side (${pct(mktProb)}) — no value at the current price.` :
-        `, roughly in line with the market (${pct(mktProb)}).`) : `.`);
+        `, roughly in line with the market (${pct(mktProb)}).`) : `.`) + venueTxt;
 
     body += `<div class="pv">
   <h2>${esc(a.team.name)} @ ${esc(h.team.name)}</h2>

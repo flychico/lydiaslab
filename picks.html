@@ -176,6 +176,20 @@ async function load() {
   statusEl.innerHTML = oddsMap ? "" :
     `<div class="notice">No Odds API key saved — picks show model probabilities only. Add your key on the <a href="odds.html">Live Odds</a> page to see value edges vs the market.</div>`;
   picksEl.innerHTML = cards.join("");
+
+  // park + game-time weather context (async, fills in as forecasts arrive)
+  for (const g of upcoming) {
+    const el = document.getElementById("ctx-" + g.gamePk);
+    const pk = Parks[g.teams.home.team.name];
+    if (!el || !pk) continue;
+    const base = "\u{1F3DF} " + pk.park + " \u2014 " + pk.env + (pk.roof ? " (retractable roof)" : "");
+    el.textContent = base;
+    if (!pk.roof) {
+      gameWeather(g.teams.home.team.name, g.gameDate).then(w => {
+        if (w) el.textContent = base + " \u00B7 \u{1F324} " + w.temp + "\u00B0F, wind " + w.wind + " mph " + w.dir;
+      });
+    }
+  }
 }
 
 function buildOddsMap(events) {
@@ -270,6 +284,7 @@ function renderPick(g, strength, pitchers, oddsMap) {
         <thead><tr><th>Team</th><th class="num">Pythag</th><th class="num">Last 10</th><th>Probable starter</th></tr></thead>
         <tbody>${teamRow(aT, sA, spA)}${teamRow(hT, sH, spH)}</tbody>
       </table>
+      <div class="dim small" id="ctx-${g.gamePk}" style="margin:6px 0"></div>
       <span class="adj">base (quality + form + home): ${Odds.fmtPct(pickHome ? pBase : 1 - pBase)}
       → pitching matchup: <b class="${(pickHome ? pitchDelta : -pitchDelta) >= 0 ? "pos-text" : "neg-text"}">${(pickHome ? pitchDelta : -pitchDelta) >= 0 ? "+" : ""}${Odds.fmtPct(pickHome ? pitchDelta : -pitchDelta)}</b>
       → final: <b>${Odds.fmtPct(pickProb)}</b></span>
