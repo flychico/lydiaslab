@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Membership — LyDia Picks</title>
+<meta name="description" content="Join LyDia Picks: every model pick with full analysis delivered daily, $30/month. Free newsletter available.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+<style>
+.plan {
+  max-width: 460px; margin: 24px auto; text-align: center;
+  border: 2px solid var(--accent); border-radius: var(--radius);
+  background: var(--bg-card); padding: 28px;
+}
+.plan .price { font-size: 2.6rem; font-weight: 800; color: var(--accent); }
+.plan .price span { font-size: 1rem; font-weight: 600; color: var(--text-dim); }
+.plan ul { list-style: none; text-align: left; margin: 18px 0; padding: 0; }
+.plan li { padding: 7px 0; border-bottom: 1px solid var(--border); font-size: .95rem; }
+.plan li::before { content: "✓ "; color: var(--accent); font-weight: 700; }
+.cta { display: inline-block; width: 100%; padding: 14px; font-size: 1.05rem; }
+.forms { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 28px; }
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main>
+  <h1>Membership</h1>
+  <p class="subtitle">One plan. Every pick, every day, with the full reasoning — straight to your inbox.</p>
+
+  <div class="plan">
+    <h2 style="margin-top:0">LyDia Picks Monthly</h2>
+    <div class="price">$30<span>/month</span></div>
+    <ul>
+      <li>Every model pick for every game, emailed before first pitch</li>
+      <li>Full analysis: team quality, form, pitching matchup, and market edge</li>
+      <li>Value flags — when the model beats the market price by 3+ points</li>
+      <li>Complete transparency: every pick graded on the public <a href="results.html">Results page</a></li>
+      <li>Cancel anytime</li>
+    </ul>
+    <div id="paypal-button-container-P-0U2970970K989854ENJFNLVA"></div>
+    <div id="sub-success" class="result-box" hidden>
+      <strong>You're in! 🎉</strong> Tell us where to send your daily picks:
+      <form name="member-email" method="POST" data-netlify="true" netlify-honeypot="bot-field" style="margin-top:10px">
+        <p style="display:none"><input name="bot-field"></p>
+        <input type="hidden" name="form-name" value="member-email">
+        <input type="hidden" name="subscription-id" id="sub-id" value="">
+        <div class="field">
+          <label for="member-em">Email for daily picks</label>
+          <input type="email" id="member-em" name="email" required placeholder="you@example.com">
+        </div>
+        <button type="submit">Save my email</button>
+      </form>
+    </div>
+    <p class="dim small" style="margin-top:10px">Secure payment via PayPal — cancel anytime from your PayPal account. 21+ only where legal. No results guaranteed — see disclaimer below.</p>
+  </div>
+
+  <div class="forms">
+    <div class="card">
+      <h3>Already a member?</h3>
+      <p>If you subscribed but didn't register a delivery email, add it here so your picks land in the right inbox.</p>
+      <form name="member-email" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+        <p style="display:none"><input name="bot-field"></p>
+        <input type="hidden" name="form-name" value="member-email">
+        <div class="field" style="margin-top:10px">
+          <label for="wl-email">Email address</label>
+          <input type="email" id="wl-email" name="email" required placeholder="you@example.com">
+        </div>
+        <div class="field">
+          <label for="wl-subid">PayPal subscription ID (optional, starts with I-)</label>
+          <input type="text" id="wl-subid" name="subscription-id" placeholder="I-XXXXXXXXXX">
+        </div>
+        <button type="submit">Register email</button>
+      </form>
+    </div>
+    <div class="card">
+      <h3>Free newsletter</h3>
+      <p>The daily recap and one featured game preview, free, every morning.</p>
+      <form name="newsletter" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+        <p style="display:none"><input name="bot-field"></p>
+        <input type="hidden" name="form-name" value="newsletter">
+        <div class="field" style="margin-top:10px">
+          <label for="nl-email">Email address</label>
+          <input type="email" id="nl-email" name="email" required placeholder="you@example.com">
+        </div>
+        <button type="submit" class="secondary">Subscribe free</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="notice warn" style="margin-top:28px">
+    <strong>Disclaimer:</strong> LyDia Picks provides analysis and opinions for entertainment and informational purposes.
+    Nothing on this site is betting or financial advice, and no win rate is guaranteed — our full pick history, wins and
+    losses alike, is public on the <a href="results.html">Results page</a>. Only bet what you can afford to lose.
+    If gambling stops being fun, call 1-800-GAMBLER.
+  </div>
+</main>
+<footer id="footer"></footer>
+<script src="js/app.js"></script>
+<script>renderNav("membership.html"); renderFooter();</script>
+<script src="https://www.paypal.com/sdk/js?client-id=BAA8Cwl-aXCTuv2CfMNydxfJvojvfQbVzee0gdfapDoJXgvxz-VGmO64ubP5YoP2BARXY_gVHC85qNo2TY&vault=true&intent=subscription" data-sdk-integration-source="button-factory"></script>
+<script>
+  paypal.Buttons({
+    style: { shape: 'rect', color: 'gold', layout: 'vertical', label: 'subscribe' },
+    createSubscription: function (data, actions) {
+      return actions.subscription.create({ plan_id: 'P-0U2970970K989854ENJFNLVA' });
+    },
+    onApprove: function (data, actions) {
+      var box = document.getElementById('sub-success');
+      document.getElementById('sub-id').value = data.subscriptionID || '';
+      box.hidden = false;
+      box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }).render('#paypal-button-container-P-0U2970970K989854ENJFNLVA');
+</script>
+</body>
+</html>
