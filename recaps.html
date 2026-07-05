@@ -3,169 +3,86 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Daily Recap — MLB Edges</title>
-<meta name="description" content="Daily MLB recap: every final score, the biggest blowout, the closest finish, and what it means for the standings.">
+<title>Membership — LyDia Picks</title>
+<meta name="description" content="Join LyDia Picks: every model pick with full analysis delivered daily, $30/month. Free newsletter available.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
 <link rel="stylesheet" href="css/style.css">
 <style>
-.controls { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin-bottom: 20px; }
-.controls .field { margin-bottom: 0; }
-.recap-game { border-left: 3px solid var(--accent2); padding-left: 14px; margin: 18px 0; }
-.recap-game h3 { margin: 0 0 4px; }
-.recap-game .scoreline { font-weight: 700; }
-.recap-game p { color: var(--text); font-size: .95rem; margin-top: 4px; }
-.roundup { font-size: 1.02rem; }
+.plan {
+  max-width: 460px; margin: 24px auto; text-align: center;
+  border: 2px solid var(--accent); border-radius: var(--radius);
+  background: var(--bg-card); padding: 28px;
+}
+.plan .price { font-size: 2.6rem; font-weight: 800; color: var(--accent); }
+.plan .price span { font-size: 1rem; font-weight: 600; color: var(--text-dim); }
+.plan ul { list-style: none; text-align: left; margin: 18px 0; padding: 0; }
+.plan li { padding: 7px 0; border-bottom: 1px solid var(--border); font-size: .95rem; }
+.plan li::before { content: "✓ "; color: var(--accent); font-weight: 700; }
+.cta { display: inline-block; width: 100%; padding: 14px; font-size: 1.05rem; }
+.forms { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 28px; }
 </style>
 </head>
 <body>
 <nav id="nav"></nav>
 <main>
-  <h1>Daily Recap</h1>
-  <p class="subtitle">Every final from around the league, written up automatically from the box scores.</p>
+  <h1>Membership</h1>
+  <p class="subtitle">One plan. Every pick, every day, with the full reasoning — straight to your inbox.</p>
 
-  <div class="controls">
-    <div class="field">
-      <label for="date-pick">Date</label>
-      <input type="date" id="date-pick">
-    </div>
-    <button onclick="shiftDay(-1)">Yesterday</button>
-    <button class="secondary" onclick="shiftDay(0)">Today</button>
-    <button class="secondary" onclick="copyMarkdown()" id="copy-btn" disabled>Copy as blog post (Markdown)</button>
+  <div class="plan">
+    <h2 style="margin-top:0">LyDia Picks Monthly</h2>
+    <div class="price">$30<span>/month</span></div>
+    <ul>
+      <li>Every model pick for every game, emailed before first pitch</li>
+      <li>Full analysis: team quality, form, pitching matchup, and market edge</li>
+      <li>Value flags — when the model beats the market price by 3+ points</li>
+      <li>Complete transparency: every pick graded on the public <a href="results.html">Results page</a></li>
+      <li>Cancel anytime</li>
+    </ul>
+    <!-- SETUP: create a $30/mo subscription Payment Link in your Stripe dashboard
+         (Products → Add product → $30 monthly → Create payment link)
+         and replace the href below with your link. -->
+    <a class="btn cta" href="#" onclick="alert('Payments are almost ready — leave your email below and you\'ll be first to know when membership opens.');return false;">Join for $30/month</a>
+    <p class="dim small" style="margin-top:10px">Secure payment via Stripe. 21+ only where legal. No results guaranteed — see disclaimer below.</p>
   </div>
 
-  <div id="status" class="loading">Loading results…</div>
-  <div class="card" id="recap" hidden></div>
+  <div class="forms">
+    <div class="card">
+      <h3>Get notified when membership opens</h3>
+      <p>Drop your email and you'll be the first in — plus get the free newsletter in the meantime.</p>
+      <form name="member-waitlist" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+        <p style="display:none"><input name="bot-field"></p>
+        <input type="hidden" name="form-name" value="member-waitlist">
+        <div class="field" style="margin-top:10px">
+          <label for="wl-email">Email address</label>
+          <input type="email" id="wl-email" name="email" required placeholder="you@example.com">
+        </div>
+        <button type="submit">Join the waitlist</button>
+      </form>
+    </div>
+    <div class="card">
+      <h3>Free newsletter</h3>
+      <p>The daily recap and one featured game preview, free, every morning.</p>
+      <form name="newsletter" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+        <p style="display:none"><input name="bot-field"></p>
+        <input type="hidden" name="form-name" value="newsletter">
+        <div class="field" style="margin-top:10px">
+          <label for="nl-email">Email address</label>
+          <input type="email" id="nl-email" name="email" required placeholder="you@example.com">
+        </div>
+        <button type="submit" class="secondary">Subscribe free</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="notice warn" style="margin-top:28px">
+    <strong>Disclaimer:</strong> LyDia Picks provides analysis and opinions for entertainment and informational purposes.
+    Nothing on this site is betting or financial advice, and no win rate is guaranteed — our full pick history, wins and
+    losses alike, is public on the <a href="results.html">Results page</a>. Only bet what you can afford to lose.
+    If gambling stops being fun, call 1-800-GAMBLER.
+  </div>
 </main>
 <footer id="footer"></footer>
 <script src="js/app.js"></script>
-<script>
-renderNav("recaps.html"); renderFooter();
-
-let markdownOut = "";
-const datePick = document.getElementById("date-pick");
-datePick.value = isoDate(-1); // default: yesterday
-datePick.addEventListener("change", load);
-load();
-
-function isoDate(offset) {
-  const d = new Date(); d.setDate(d.getDate() + offset);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-function shiftDay(off) { datePick.value = isoDate(off); load(); }
-
-function niceDate(iso) {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric", year: "numeric" });
-}
-
-async function load() {
-  const statusEl = document.getElementById("status");
-  const recapEl = document.getElementById("recap");
-  const copyBtn = document.getElementById("copy-btn");
-  statusEl.innerHTML = `<div class="loading">Loading results…</div>`;
-  recapEl.hidden = true; copyBtn.disabled = true;
-  const date = datePick.value;
-  let sched;
-  try {
-    const res = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=linescore`);
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    sched = await res.json();
-  } catch (e) {
-    statusEl.innerHTML = `<div class="notice warn">Failed to load results (${escapeHtml(e.message)}).</div>`;
-    return;
-  }
-  const games = (((sched.dates || [])[0]) || {}).games || [];
-  const finals = games.filter(g => g.status.abstractGameState === "Final" && g.teams.away.score !== undefined);
-  if (!finals.length) {
-    statusEl.innerHTML = `<div class="notice">No completed games for ${niceDate(date)}${games.length ? " yet — check back after tonight's finals" : ""}.</div>`;
-    return;
-  }
-  statusEl.innerHTML = "";
-  const { html, md } = buildRecap(finals, date);
-  recapEl.innerHTML = html;
-  recapEl.hidden = false;
-  markdownOut = md;
-  copyBtn.disabled = false;
-}
-
-function marginPhrase(m) {
-  if (m === 1) return "edged";
-  if (m === 2) return "slipped past";
-  if (m <= 4) return "beat";
-  if (m <= 7) return "pulled away from";
-  return "routed";
-}
-
-function gameFacts(g) {
-  const a = g.teams.away, h = g.teams.home;
-  const winner = a.score > h.score ? a : h;
-  const loser = winner === a ? h : a;
-  const margin = winner.score - loser.score;
-  const ls = g.linescore || {};
-  const innings = ls.currentInning || 9;
-  // biggest single inning by the winner (4+ runs)
-  let bigInning = null;
-  for (const inn of ls.innings || []) {
-    const side = winner === a ? "away" : "home";
-    const runs = inn[side] && inn[side].runs;
-    if (runs >= 4 && (!bigInning || runs > bigInning.runs)) bigInning = { runs, ord: inn.ordinalNum };
-  }
-  return { a, h, winner, loser, margin, innings, bigInning };
-}
-
-function recapSentence(g) {
-  const { a, winner, loser, margin, innings, bigInning } = gameFacts(g);
-  const where = winner === a ? "on the road" : "at home";
-  let s = `The ${teamShort(winner.team.name)} ${marginPhrase(margin)} the ${teamShort(loser.team.name)} ${winner.score}–${loser.score} ${where}`;
-  if (innings > 9) s += ` in ${innings} innings`;
-  s += ".";
-  if (bigInning) s += ` A ${bigInning.runs}-run ${bigInning.ord} broke the game open.`;
-  const wr = winner.leagueRecord, lr = loser.leagueRecord;
-  if (wr && lr) s += ` The win moves them to ${wr.wins}-${wr.losses}; the ${teamShort(loser.team.name)} fall to ${lr.wins}-${lr.losses}.`;
-  return s;
-}
-
-function teamShort(name) {
-  const two = ["Red Sox", "White Sox", "Blue Jays"].find(x => name.endsWith(x));
-  if (two) return two;
-  const parts = name.split(" ");
-  return parts[parts.length - 1];
-}
-
-function buildRecap(finals, date) {
-  const facts = finals.map(gameFacts);
-  const nice = niceDate(date);
-  const totalRuns = facts.reduce((s, f) => s + f.winner.score + f.loser.score, 0);
-  const blow = facts.reduce((x, f) => f.margin > x.margin ? f : x, facts[0]);
-  const close = facts.filter(f => f.margin === 1).length;
-  const extras = facts.filter(f => f.innings > 9).length;
-
-  const intro = `${finals.length} games went final on ${nice}, producing ${totalRuns} total runs. ` +
-    `The biggest margin of the day belonged to the ${teamShort(blow.winner.team.name)}, who ${marginPhrase(blow.margin)} the ${teamShort(blow.loser.team.name)} by ${blow.margin}. ` +
-    `${close ? `${close} game${close > 1 ? "s were" : " was"} decided by a single run` : "No one-run games"}${extras ? `, and ${extras} went to extra innings` : ""}.`;
-
-  let html = `<h2>MLB Recap — ${escapeHtml(nice)}</h2><p class="roundup">${escapeHtml(intro)}</p>`;
-  let md = `# MLB Recap — ${nice}\n\n${intro}\n`;
-
-  for (const g of finals) {
-    const { a, h } = gameFacts(g);
-    const head = `${teamShort(a.team.name)} ${a.score}, ${teamShort(h.team.name)} ${h.score}`;
-    const body = recapSentence(g);
-    html += `<div class="recap-game"><h3 class="scoreline">${escapeHtml(head)}</h3><p>${escapeHtml(body)}</p></div>`;
-    md += `\n## ${head}\n\n${body}\n`;
-  }
-  md += `\n---\n*Generated from official MLB data at mlbedges.com — odds, tools, and analysis for every game.*\n`;
-  html += `<p class="dim small">Recaps are generated from official MLB box score data. Use the copy button above to repost as your daily blog.</p>`;
-  return { html, md };
-}
-
-function copyMarkdown() {
-  navigator.clipboard.writeText(markdownOut).then(() => {
-    const b = document.getElementById("copy-btn");
-    const t = b.textContent; b.textContent = "Copied!";
-    setTimeout(() => b.textContent = t, 1500);
-  });
-}
-</script>
+<script>renderNav("membership.html"); renderFooter();</script>
 </body>
 </html>

@@ -1,12 +1,281 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://mlbedges.com/</loc></url>
-  <url><loc>https://mlbedges.com/dashboard.html</loc></url>
-  <url><loc>https://mlbedges.com/picks.html</loc></url>
-  <url><loc>https://mlbedges.com/odds.html</loc></url>
-  <url><loc>https://mlbedges.com/tools.html</loc></url>
-  <url><loc>https://mlbedges.com/stats.html</loc></url>
-  <url><loc>https://mlbedges.com/recaps.html</loc></url>
-  <url><loc>https://mlbedges.com/articles.html</loc></url>
-  <url><loc>https://mlbedges.com/recaps/</loc></url>
-</urlset>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Model Picks — MLB Edges</title>
+<meta name="description" content="A model-based lean for every MLB game: Pythagorean team strength, last-10 form, and starting pitcher quality, compared against live market odds.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+<style>
+.controls { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin-bottom: 16px; }
+.controls .field { margin-bottom: 0; }
+.pick-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; }
+.pick-head { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+.pick-head .matchup { font-weight: 700; }
+.pick-line { display: flex; align-items: center; gap: 10px; margin: 10px 0; flex-wrap: wrap; }
+.pick-team { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+.why { font-size: .87rem; color: var(--text-dim); border-top: 1px solid var(--border); padding-top: 8px; margin-top: 8px; }
+.why table { font-size: .85rem; margin: 6px 0; }
+.why td, .why th { padding: 3px 8px; }
+.metric { display: inline-block; margin-right: 14px; font-variant-numeric: tabular-nums; }
+.metric b { color: var(--text); }
+.adj { font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main>
+  <h1>Model Picks</h1>
+  <p class="subtitle">A transparent lean for every game — team quality, recent form, and the pitching matchup, with the math shown on every card.</p>
+
+  <div class="notice">
+    <strong>How it works:</strong> team strength blends <b>Pythagorean win%</b> (from run differential — 75%)
+    with <b>last-10 form</b> (25%). The two strengths are combined head-to-head (log5) and the home team gets the
+    historical ~54% home-field bump. Then the <b>starting pitcher matchup</b> shifts the number: each run of season-ERA
+    advantage moves the favorite by roughly 4–5 points (starters with under 20 innings count as league average).
+    With your Odds API key saved, the model is compared to the market's no-vig probability — <span class="badge pos">Value</span>
+    only appears when the model beats the price by 3+ points.
+  </div>
+
+  <div class="controls">
+    <div class="field">
+      <label for="date-pick">Date</label>
+      <input type="date" id="date-pick">
+    </div>
+    <button onclick="shiftDay(0)">Today</button>
+    <button class="secondary" onclick="shiftDay(1)">Tomorrow</button>
+  </div>
+
+  <div id="status" class="loading">Crunching the numbers…</div>
+  <div id="picks"></div>
+
+  <div class="notice warn">
+    These are model outputs, not guarantees. The model still doesn't know about injuries, bullpen fatigue, weather, or lineups —
+    and season ERA is a noisy measure of pitcher skill. Treat picks as a starting point for your own analysis, never as a reason
+    to bet more than you can afford to lose.
+  </div>
+</main>
+<footer id="footer"></footer>
+<script src="js/app.js"></script>
+<script>
+renderNav("picks.html"); renderFooter();
+
+const HFA = 54 / 46;          // home-field odds multiplier
+const PYTH_EXP = 1.83;
+const FORM_WEIGHT = 0.25;     // weight on last-10 record vs pythag
+const ERA_K = 0.20;           // log-odds shift per run of starter ERA advantage
+const LEAGUE_ERA = 4.20;      // fallback for unknown/low-innings starters
+const MIN_IP = 20;            // starters below this use league average
+const ERA_CLAMP = [2.75, 6.00];
+const VALUE_EDGE = 0.03;
+
+const datePick = document.getElementById("date-pick");
+datePick.value = isoDate(0);
+datePick.addEventListener("change", load);
+load();
+
+function isoDate(offset) {
+  const d = new Date(); d.setDate(d.getDate() + offset);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function shiftDay(off) { datePick.value = isoDate(off); load(); }
+
+function pythag(rs, ra) {
+  const num = Math.pow(rs, PYTH_EXP);
+  return num / (num + Math.pow(ra, PYTH_EXP));
+}
+function log5Home(sHome, sAway) {
+  const raw = (sHome * (1 - sAway)) / (sHome * (1 - sAway) + sAway * (1 - sHome));
+  const odds = (raw / (1 - raw)) * HFA;
+  return odds / (1 + odds);
+}
+function clampEra(e) { return Math.min(ERA_CLAMP[1], Math.max(ERA_CLAMP[0], e)); }
+function ipToNum(ip) { // "107.1" means 107 and 1/3 innings
+  const [w, f] = String(ip).split(".");
+  return Number(w) + (Number(f) || 0) / 3;
+}
+
+async function load() {
+  const statusEl = document.getElementById("status");
+  const picksEl = document.getElementById("picks");
+  statusEl.innerHTML = `<div class="loading">Crunching the numbers…</div>`;
+  picksEl.innerHTML = "";
+  const date = datePick.value;
+  const season = new Date().getMonth() >= 2 ? new Date().getFullYear() : new Date().getFullYear() - 1;
+  const oddsUrl = ApiKey.get()
+    ? `https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?apiKey=${encodeURIComponent(ApiKey.get())}&regions=us&markets=h2h&oddsFormat=american`
+    : null;
+
+  let sched, standings, oddsMap = null;
+  try {
+    const [sRes, stRes, oRes] = await Promise.all([
+      fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher`),
+      fetch(`https://statsapi.mlb.com/api/v1/standings?leagueId=103,104&season=${season}&standingsTypes=regularSeason`),
+      oddsUrl ? fetch(oddsUrl).catch(() => null) : Promise.resolve(null)
+    ]);
+    if (!sRes.ok || !stRes.ok) throw new Error("API error");
+    sched = await sRes.json();
+    standings = await stRes.json();
+    if (oRes && oRes.ok) oddsMap = buildOddsMap(await oRes.json());
+  } catch (e) {
+    statusEl.innerHTML = `<div class="notice warn">Failed to load data (${escapeHtml(e.message)}).</div>`;
+    return;
+  }
+
+  // team strength by id: pythag + last-10 form
+  const strength = {};
+  for (const rec of standings.records || []) {
+    for (const t of rec.teamRecords || []) {
+      const l10 = (((t.records || {}).splitRecords) || []).find(r => r.type === "lastTen");
+      strength[t.team.id] = {
+        pyth: pythag(t.runsScored, t.runsAllowed),
+        l10w: l10 ? l10.wins : null, l10l: l10 ? l10.losses : null,
+        form: l10 ? l10.wins / Math.max(1, l10.wins + l10.losses) : null,
+        wins: t.wins, losses: t.losses, gp: t.wins + t.losses
+      };
+    }
+  }
+
+  const games = (((sched.dates || [])[0]) || {}).games || [];
+  const upcoming = games.filter(g => g.status.abstractGameState === "Preview");
+  if (!upcoming.length) {
+    statusEl.innerHTML = `<div class="notice">No upcoming games for this date${games.length ? " (all have started or finished — see the Dashboard for scores)" : ""}.</div>`;
+    return;
+  }
+  upcoming.sort((a, b) => new Date(a.gameDate) - new Date(b.gameDate));
+
+  // batch-fetch season pitching stats for all probable starters
+  const pids = [];
+  for (const g of upcoming) {
+    for (const side of ["away", "home"]) {
+      const p = g.teams[side].probablePitcher;
+      if (p) pids.push(p.id);
+    }
+  }
+  const pitchers = {};
+  if (pids.length) {
+    try {
+      const pRes = await fetch(`https://statsapi.mlb.com/api/v1/people?personIds=${pids.join(",")}&hydrate=stats(group=[pitching],type=[season])`);
+      if (pRes.ok) {
+        const data = await pRes.json();
+        for (const person of data.people || []) {
+          const split = (((person.stats || [])[0] || {}).splits || [])[0];
+          if (split && split.stat) {
+            pitchers[person.id] = {
+              era: Number(split.stat.era), whip: split.stat.whip,
+              ip: ipToNum(split.stat.inningsPitched), gs: split.stat.gamesStarted
+            };
+          }
+        }
+      }
+    } catch (e) { /* pitcher stats optional — model falls back to league average */ }
+  }
+
+  const cards = upcoming.map(g => renderPick(g, strength, pitchers, oddsMap)).filter(Boolean);
+  statusEl.innerHTML = oddsMap ? "" :
+    `<div class="notice">No Odds API key saved — picks show model probabilities only. Add your key on the <a href="odds.html">Live Odds</a> page to see value edges vs the market.</div>`;
+  picksEl.innerHTML = cards.join("");
+}
+
+function buildOddsMap(events) {
+  const map = {};
+  for (const ev of events) {
+    const rows = [];
+    for (const bk of ev.bookmakers || []) {
+      const m = (bk.markets || []).find(m => m.key === "h2h");
+      if (!m) continue;
+      const oA = m.outcomes.find(o => o.name === ev.away_team);
+      const oH = m.outcomes.find(o => o.name === ev.home_team);
+      if (oA && oH) rows.push([oA.price, oH.price]);
+    }
+    if (!rows.length) continue;
+    const avgA = rows.reduce((s, r) => s + Odds.amToProb(r[0]), 0) / rows.length;
+    const avgH = rows.reduce((s, r) => s + Odds.amToProb(r[1]), 0) / rows.length;
+    const tot = avgA + avgH;
+    map[ev.away_team + "@" + ev.home_team] = { pAway: avgA / tot, pHome: avgH / tot };
+  }
+  return map;
+}
+
+function starterInfo(g, side, pitchers) {
+  const p = g.teams[side].probablePitcher;
+  if (!p) return { name: "TBD", era: null, eff: LEAGUE_ERA, note: "league avg used" };
+  const st = pitchers[p.id];
+  if (!st || !isFinite(st.era) || st.ip < MIN_IP)
+    return { name: p.fullName, era: st && isFinite(st.era) ? st.era : null, ip: st ? st.ip : 0, eff: LEAGUE_ERA, note: "under 20 IP — league avg used" };
+  return { name: p.fullName, era: st.era, whip: st.whip, ip: st.ip, eff: clampEra(st.era), note: null };
+}
+
+function renderPick(g, strength, pitchers, oddsMap) {
+  const aT = g.teams.away.team, hT = g.teams.home.team;
+  const sA = strength[aT.id], sH = strength[hT.id];
+  if (!sA || !sH) return "";
+
+  // blended strengths
+  const blendA = sA.form === null ? sA.pyth : (1 - FORM_WEIGHT) * sA.pyth + FORM_WEIGHT * sA.form;
+  const blendH = sH.form === null ? sH.pyth : (1 - FORM_WEIGHT) * sH.pyth + FORM_WEIGHT * sH.form;
+
+  // base prob (team quality + form + home field)
+  const pBase = log5Home(blendH, blendA);
+
+  // pitcher adjustment
+  const spA = starterInfo(g, "away", pitchers);
+  const spH = starterInfo(g, "home", pitchers);
+  const baseOdds = pBase / (1 - pBase);
+  const adjOdds = baseOdds * Math.exp(ERA_K * (spA.eff - spH.eff));
+  const pHome = adjOdds / (1 + adjOdds);
+  const pitchDelta = pHome - pBase;
+
+  const pickHome = pHome >= 0.5;
+  const pickTeam = pickHome ? hT.name : aT.name;
+  const pickProb = pickHome ? pHome : 1 - pHome;
+  const conf = pickProb >= 0.60 ? "Strong lean" : pickProb >= 0.55 ? "Lean" : "Slight lean";
+
+  const mkt = oddsMap ? oddsMap[aT.name + "@" + hT.name] : null;
+  let valueHtml = "", edgeNote = "";
+  if (mkt) {
+    const mktProb = pickHome ? mkt.pHome : mkt.pAway;
+    const edge = pickProb - mktProb;
+    edgeNote = `<span class="metric">market: <b>${Odds.fmtPct(mktProb)}</b></span>
+      <span class="metric">edge: <b class="${edge > 0 ? "pos-text" : "neg-text"}">${edge >= 0 ? "+" : ""}${Odds.fmtPct(edge)}</b></span>`;
+    if (edge >= VALUE_EDGE) valueHtml = `<span class="badge pos">Value</span>`;
+    else if (edge <= -VALUE_EDGE) valueHtml = `<span class="badge neg">Market disagrees</span>`;
+  }
+
+  const time = new Date(g.gameDate).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const smallSample = (sA.gp < 30 || sH.gp < 30) ? ` <span class="badge neg">small sample</span>` : "";
+  const eraTxt = sp => sp.era !== null ? `${sp.era.toFixed(2)} ERA${sp.whip ? `, ${sp.whip} WHIP` : ""} (${Math.round(sp.ip)} IP)` : "no season stats";
+  const teamRow = (t, s, sp) => `<tr>
+      <td><b>${escapeHtml(t.name)}</b></td>
+      <td class="num">${Odds.fmtPct(s.pyth)}</td>
+      <td class="num">${s.l10w !== null ? `${s.l10w}-${s.l10l}` : "—"}</td>
+      <td>${escapeHtml(sp.name)} — ${eraTxt(sp)}${sp.note ? ` <span class="dim">(${sp.note})</span>` : ""}</td>
+    </tr>`;
+
+  return `<div class="pick-card">
+    <div class="pick-head">
+      <span class="matchup">${escapeHtml(aT.name)} @ ${escapeHtml(hT.name)}</span>
+      <span class="dim small">${time}</span>
+    </div>
+    <div class="pick-line">
+      <span class="pick-team">▸ ${escapeHtml(pickTeam)}</span>
+      <span class="badge neutral">${conf}</span>
+      ${valueHtml}${smallSample}
+    </div>
+    <div class="why">
+      <span class="metric">model win prob: <b>${Odds.fmtPct(pickProb)}</b></span>
+      ${edgeNote}
+      <table>
+        <thead><tr><th>Team</th><th class="num">Pythag</th><th class="num">Last 10</th><th>Probable starter</th></tr></thead>
+        <tbody>${teamRow(aT, sA, spA)}${teamRow(hT, sH, spH)}</tbody>
+      </table>
+      <span class="adj">base (quality + form + home): ${Odds.fmtPct(pickHome ? pBase : 1 - pBase)}
+      → pitching matchup: <b class="${(pickHome ? pitchDelta : -pitchDelta) >= 0 ? "pos-text" : "neg-text"}">${(pickHome ? pitchDelta : -pitchDelta) >= 0 ? "+" : ""}${Odds.fmtPct(pickHome ? pitchDelta : -pitchDelta)}</b>
+      → final: <b>${Odds.fmtPct(pickProb)}</b></span>
+    </div>
+  </div>`;
+}
+</script>
+</body>
+</html>
