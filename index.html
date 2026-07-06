@@ -3,131 +3,121 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LyDia — Baseball Betting Analysis</title>
-<meta name="description" content="LyDia — data-driven MLB betting analysis. Live odds comparison, no-vig fair lines, EV and Kelly calculators, team stats, and strategy guides.">
+<title>LyDia — Daily MLB Picks, Previews &amp; Results</title>
+<meta name="description" content="LyDia publishes a model pick for every MLB game, every day — free to read, fully transparent, and delivered to members before first pitch. $30/month.">
+<link rel="canonical" href="https://mlbedges.com/">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 <nav id="nav"></nav>
 <main>
-  <div id="slate-banner" class="notice" style="margin-bottom:20px">Loading today's slate…</div>
-
-  <div class="hero-grid">
+  <section class="hero">
     <div>
-      <h1>Free MLB Picks — Every Game, Every Day</h1>
-      <p class="subtitle">A transparent model pick for every matchup on the slate: team strength, recent form, and the starting-pitcher matchup, checked against the live market and against what other public sources are saying. No paywall on the picks themselves — see today's full slate right now.</p>
-      <p style="margin-top:14px">
-        <a class="btn" href="picks.html" style="font-size:1.05rem;padding:13px 22px">See Today's Picks →</a>
-        <a class="btn secondary" href="results.html" style="font-size:1.05rem;padding:13px 22px;margin-left:8px">Our Track Record</a>
-      </p>
-    </div>
-
-    <div class="card" id="hero-signup-card">
-      <h3>Get today's pick by email</h3>
-      <p>Free. One email a day, before first pitch. No spam, unsubscribe anytime.</p>
-      <form name="newsletter" method="POST" data-netlify="true" netlify-honeypot="bot-field" id="hero-signup" style="margin-top:10px">
-        <p style="display:none"><input name="bot-field"></p>
-        <input type="hidden" name="form-name" value="newsletter">
-        <input type="hidden" name="source" value="homepage-hero">
-        <div class="field">
-          <label for="hero-email">Email address</label>
-          <input type="email" id="hero-email" name="email" required placeholder="you@example.com">
-        </div>
-        <button type="submit" style="width:100%">Send me today's pick — free</button>
-      </form>
-      <div id="hero-success" class="result-box" hidden>
-        <strong>You're on the list! 🎉</strong> While you wait for tomorrow's email:
-        <ul style="margin:10px 0 0 18px; padding:0">
-          <li><a href="picks.html">Today's model picks</a> — see the full slate right now</li>
-          <li><a href="results.html">Our track record</a> — every pick graded, wins and losses alike</li>
-          <li><a href="articles.html">How to read a pick</a> — the method behind the numbers</li>
-        </ul>
-      </div>
-      <div id="hero-error" class="notice warn" hidden style="margin-top:10px">
-        Something went wrong submitting that — you can also reach picks daily via the <a href="previews/">Previews archive</a>, or try again in a moment.
+      <p class="eyebrow">Daily MLB analysis by LyDia</p>
+      <h1>A model pick for every game — the math, the market, and the reasoning, shown.</h1>
+      <p class="subtitle">Every morning LyDia scores the full slate, checks the price against the market, and publishes the lean before first pitch. Free to read. Nothing is deleted, wins or losses.</p>
+      <div id="slate-banner" class="notice pink">Loading today's slate…</div>
+      <div class="hero-actions">
+        <a class="btn" href="/previews/">Today's Previews →</a>
+        <a class="btn blue" href="/membership/">Join for $30/mo</a>
+        <a class="btn secondary" href="/results/">See Results</a>
       </div>
     </div>
-  </div>
+    <div class="card">
+      <h3>Today's status</h3>
+      <p id="status-agent"><strong>Daily agent:</strong> loading…</p>
+      <p id="status-picks"><strong>Official picks:</strong> loading…</p>
+      <p id="status-record"><strong>Record:</strong> loading…</p>
+      <p style="margin-top:14px"><a class="btn blue" href="/membership/" style="width:100%;text-align:center">Get every pick by email →</a></p>
+      <p class="dim small" style="margin-top:8px">$30/month. Cancel anytime. Every pick graded in public.</p>
+    </div>
+  </section>
 
-  <div class="grid grid-2" style="margin-top:32px">
+  <div class="grid grid-2" style="margin-top:28px">
     <div class="card">
       <h3>📡 Live Odds Board</h3>
-      <p>Real-time MLB moneylines from major US sportsbooks via The Odds API. See every book's price side by side, the best available line highlighted, implied probabilities, and each market's vig.</p>
-      <p style="margin-top:12px"><a class="btn" href="odds.html">Open Live Odds →</a></p>
+      <p>Real-time MLB moneylines, run totals, and run lines from major US sportsbooks. Best available price highlighted, no-vig fair lines, and each market's vig.</p>
+      <p style="margin-top:12px"><a class="btn" href="/odds/">Open Live Odds →</a></p>
     </div>
     <div class="card">
       <h3>🧮 Value Tools</h3>
       <p>Convert odds formats, strip the vig to find fair prices, calculate expected value against your own win probability, and size bets with the Kelly criterion.</p>
-      <p style="margin-top:12px"><a class="btn" href="tools.html">Open Tools →</a></p>
+      <p style="margin-top:12px"><a class="btn" href="/tools/">Open Tools →</a></p>
     </div>
     <div class="card">
       <h3>📊 Team Stats</h3>
       <p>Live MLB standings with run differentials and Pythagorean expected win percentage — a quick read on which teams are over- or under-performing their true talent.</p>
-      <p style="margin-top:12px"><a class="btn" href="stats.html">Open Stats →</a></p>
+      <p style="margin-top:12px"><a class="btn" href="/stats/">Open Stats →</a></p>
     </div>
     <div class="card">
       <h3>📖 Strategy Articles</h3>
       <p>Guides on the fundamentals of finding value: understanding the vig, why closing line value matters, and how MLB's unique structure creates betting opportunities.</p>
-      <p style="margin-top:12px"><a class="btn" href="articles.html">Read Articles →</a></p>
+      <p style="margin-top:12px"><a class="btn" href="/articles/">Read Articles →</a></p>
     </div>
   </div>
 
-  <h2>The core idea</h2>
-  <div class="card">
-    <p>Every betting line implies a probability. A −150 favorite implies 60%; a +130 underdog implies 43.5%. Those add up to more than 100% — the difference is the sportsbook's margin (the vig). You only have an edge when <em>your</em> estimate of a team's win probability is higher than the <strong>no-vig</strong> implied probability. Everything on this site is built around finding and quantifying that gap.</p>
+  <h2>How LyDia works</h2>
+  <div class="grid grid-3">
+    <div class="card"><h3>Model</h3><p>Team strength (Pythagorean + last-10 form), home field, and a starting-pitcher ERA adjustment, run every morning against the day's real slate.</p></div>
+    <div class="card"><h3>Market</h3><p>Every pick is checked against the market's no-vig probability. No edge over the price means no pick — discipline is the product, not volume.</p></div>
+    <div class="card"><h3>Accountability</h3><p>Every preview is archived and every pick is graded the next day on the public <a href="/results/">Results page</a>. Wins and losses alike — nothing is deleted.</p></div>
   </div>
 
-  <div class="notice" style="margin-top:20px">
-    Want every pick delivered before first pitch without checking the site? See <a href="membership.html">Membership</a>.
-  </div>
-
-  <div class="notice warn">
-    This site is for analysis and education. Nothing here is betting advice, and no model or stat guarantees a profit. Only bet what you can afford to lose.
+  <div class="notice warn" style="margin-top:28px">
+    This site is for analysis and education. Nothing here is betting advice, and no model or stat guarantees a profit. Only bet what you can afford to lose. If gambling stops being fun, call 1-800-GAMBLER.
   </div>
 </main>
 <footer id="footer"></footer>
-<script src="js/app.js"></script>
+<script src="/js/app.js"></script>
 <script>
-renderNav("index.html"); renderFooter();
+renderNav("/"); renderFooter();
 
-async function loadSlate() {
-  const el = document.getElementById("slate-banner");
+(async function () {
+  const bannerEl = document.getElementById("slate-banner");
+  const agentEl = document.getElementById("status-agent");
+  const picksEl = document.getElementById("status-picks");
+  const recordEl = document.getElementById("status-record");
+
+  const d = new Date();
+  const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
   try {
-    const d = new Date();
-    const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    const res = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}`);
-    if (!res.ok) throw new Error("HTTP " + res.status);
+    const res = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${iso}`);
     const data = await res.json();
     const games = (((data.dates || [])[0]) || {}).games || [];
-    if (!games.length) {
-      el.textContent = "No MLB games today — fresh picks publish every morning there's a slate.";
-      return;
+    if (games.length) {
+      const first = games.map(g => new Date(g.gameDate)).sort((a, b) => a - b)[0];
+      const t = first.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZoneName: "short" });
+      bannerEl.innerHTML = `<strong>Today's slate:</strong> ${games.length} game${games.length > 1 ? "s" : ""} — first pitch ${t}. <a href="/previews/">See every matchup →</a>`;
+    } else {
+      bannerEl.innerHTML = `<strong>No MLB games today.</strong> Check back tomorrow morning, or browse the <a href="/previews/">preview archive</a>.`;
     }
-    games.sort((a, b) => new Date(a.gameDate) - new Date(b.gameDate));
-    const first = new Date(games[0].gameDate).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-    el.innerHTML = `<strong>${games.length}</strong> MLB game${games.length > 1 ? "s" : ""} today · first pitch <strong>${first}</strong> · <a href="picks.html">see today's picks →</a>`;
   } catch (e) {
-    el.textContent = "Fresh model picks are published every morning before first pitch.";
+    bannerEl.innerHTML = `<a href="/previews/">See today's game previews →</a>`;
   }
-}
-loadSlate();
 
-document.getElementById("hero-signup").addEventListener("submit", function (e) {
-  e.preventDefault();
-  const form = e.target;
-  const data = new FormData(form);
-  fetch("/", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams(data).toString()
-  }).then(() => {
-    form.hidden = true;
-    document.getElementById("hero-success").hidden = false;
-  }).catch(() => {
-    document.getElementById("hero-error").hidden = false;
-  });
-});
+  try {
+    const picksRes = await fetch(`/data/picks/${iso}.json`, { cache: "no-store" });
+    if (picksRes.ok) {
+      const pj = await picksRes.json();
+      const n = (pj.picks || []).length;
+      agentEl.innerHTML = `<strong>Daily agent:</strong> ran this morning — on schedule.`;
+      picksEl.innerHTML = `<strong>Official picks:</strong> ${n} published for today. <a href="/previews/${iso}">Read them →</a>`;
+    } else {
+      agentEl.innerHTML = `<strong>Daily agent:</strong> next run before first pitch tomorrow.`;
+      picksEl.innerHTML = `<strong>Official picks:</strong> see the <a href="/previews/">preview archive</a>.`;
+    }
+  } catch (e) {
+    agentEl.innerHTML = `<strong>Daily agent:</strong> automated every morning.`;
+    picksEl.innerHTML = `<strong>Official picks:</strong> see the <a href="/previews/">preview archive</a>.`;
+  }
+
+  const record = await fetchRecord();
+  recordEl.innerHTML = record
+    ? `<strong>Record:</strong> ${record.wins}-${record.losses} (${(record.pct * 100).toFixed(1)}%) across ${record.days} day${record.days > 1 ? "s" : ""} — <a href="/results/">full history →</a>`
+    : `<strong>Record:</strong> LyDia is in its founding stretch — results start from the first graded slate, and every pick stays visible on the <a href="/results/">Results page</a>, win or lose.`;
+})();
 </script>
 </body>
 </html>
