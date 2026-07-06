@@ -23,6 +23,14 @@ deeper competitor-reasoning and verifier pass described in `AGENT.md` and `READM
 - "Never suppress a pick, never hide a pick behind a paywall" — the live Results and
   Previews pages hold to this; membership is sold on delivery and price-discipline
   alerts, not on access.
+- Actual delivery — `scripts/send-member-emails.js` now runs as the last step of the
+  daily workflow: it reads that day's `data/picks/<date>.json`, pulls the list of
+  people who've submitted the "member-email" form on the Membership page (via the
+  Netlify API), and emails each of them the day's picks through Resend. Before this,
+  the membership page *promised* delivery but nothing actually sent an email — see
+  `EMAIL_SETUP.md` in the repo root for the one-time setup (Resend account + a
+  handful of GitHub secrets) needed to switch it on. Until that setup is done, this
+  step logs why it's skipping and the rest of the daily run is unaffected.
 
 **What's still manual, on purpose, per this package's own `NEXT_STEPS.md`
 ("do not automate paid pick publishing until the manual workflow has proven
