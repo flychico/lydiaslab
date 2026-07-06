@@ -333,12 +333,30 @@ function renderPick(g, strength, pitchers, oddsMap) {
   let runLineHtml = "";
   if (mktEntry && mktEntry.runLine) {
     const { homePoint, awayPoint, pHomeCover, pAwayCover, bestHome, bestAway } = mktEntry.runLine;
-    const modelPHomeCover = Odds.normCdf((projMargin - Math.abs(homePoint)) / MARGIN_STD);
+    // Cover probability uses the SIGNED point — a team on +1.5 covers by losing
+    // narrowly or winning, a team on -1.5 needs to win by 2+.
+    const modelPHomeCover = Odds.normCdf((projMargin + homePoint) / MARGIN_STD);
     const edgeHome = modelPHomeCover - pHomeCover, edgeAway = (1 - modelPHomeCover) - pAwayCover;
-    if (edgeHome >= VALUE_EDGE && edgeHome >= edgeAway)
-      runLineHtml = `<div class="subpick">▸ Run line: <b>${escapeHtml(hT.name)} ${homePoint > 0 ? "+" : ""}${homePoint}</b> <span class="badge pos">Value</span> — projected margin ${projMargin > 0 ? "+" : ""}${projMargin.toFixed(1)}, edge +${Odds.fmtPct(edgeHome)} (best ${Odds.fmtAm(bestHome)})</div>`;
-    else if (edgeAway >= VALUE_EDGE)
-      runLineHtml = `<div class="subpick">▸ Run line: <b>${escapeHtml(aT.name)} ${awayPoint > 0 ? "+" : ""}${awayPoint}</b> <span class="badge pos">Value</span> — projected margin ${projMargin > 0 ? "+" : ""}${projMargin.toFixed(1)}, edge +${Odds.fmtPct(edgeAway)} (best ${Odds.fmtAm(bestAway)})</div>`;
+    let rlPick = null, rlPoint = null, rlEdge = 0, rlBestAm = null;
+    if (edgeHome >= VALUE_EDGE && edgeHome >= edgeAway) { rlPick = hT.name; rlPoint = homePoint; rlEdge = edgeHome; rlBestAm = bestHome; }
+    else if (edgeAway >= VALUE_EDGE) { rlPick = aT.name; rlPoint = awayPoint; rlEdge = edgeAway; rlBestAm = bestAway; }
+
+    // Run Line Sanity Check — never show a run-line pick that contradicts the
+    // moneyline's projected winner. A team can only be laid at a negative point
+    // (must win by 2+) if the model also has that team winning outright by enough
+    // margin. A team on the plus side only needs to not lose by 1.5+.
+    if (rlPick) {
+      const pickIsHome = rlPick === hT.name;
+      const marginForPick = pickIsHome ? projMargin : -projMargin;
+      const sideIsProjectedWinner = pickIsHome ? pickHome : !pickHome;
+      const contradicts = rlPoint < 0
+        ? !(sideIsProjectedWinner && marginForPick >= Math.abs(rlPoint))
+        : marginForPick < -Math.abs(rlPoint);
+      if (contradicts) rlPick = null;
+    }
+
+    if (rlPick)
+      runLineHtml = `<div class="subpick">▸ Run line: <b>${escapeHtml(rlPick)} ${rlPoint > 0 ? "+" : ""}${rlPoint}</b> <span class="badge pos">Value</span> — projected margin ${projMargin > 0 ? "+" : ""}${projMargin.toFixed(1)}, edge +${Odds.fmtPct(rlEdge)} (best ${Odds.fmtAm(rlBestAm)})</div>`;
     else
       runLineHtml = `<div class="subpick pass">Run line: pass — projected margin ${projMargin > 0 ? "+" : ""}${projMargin.toFixed(1)}, no clear edge at ${homePoint > 0 ? "+" : ""}${homePoint}.</div>`;
   }
