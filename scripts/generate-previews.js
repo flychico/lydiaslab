@@ -144,6 +144,12 @@ function pageShell(title, desc, body) {
 .pv .price-disc { font-size: .82rem; color: var(--text-dim); border-top: 1px dashed var(--border); margin-top: 8px; padding-top: 6px; }
 .archive-list a { display: block; padding: 8px 0; border-bottom: 1px solid var(--border); }
 .featured-flag { display: inline-block; background: var(--accent); color: #fff; font-size: .75rem; font-weight: 700; padding: 2px 9px; border-radius: 20px; margin-bottom: 8px; }
+.approved-badge { display: inline-block; background: #2f9e44; color: #fff; font-size: .75rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; margin: 4px 0 8px; }
+.field-grid { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; font-size: .85rem; margin: 10px 0; padding: 10px 0; border-top: 1px dashed var(--border); border-bottom: 1px dashed var(--border); }
+.field-grid dt { color: var(--text-dim); margin: 0; }
+.field-grid dd { margin: 0; font-weight: 600; }
+.why-block, .risk-block { font-size: .88rem; margin-top: 10px; line-height: 1.45; }
+.why-block b, .risk-block b { display: block; margin-bottom: 3px; color: var(--text); }
 </style>
 </head>
 <body>
@@ -196,7 +202,7 @@ async function weatherFor(homeTeam, gameIso) {
   if (!pk || pk[3]) return null; // unknown or roofed
   try {
     if (!_wx[homeTeam]) {
-      const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${pk[1]}&longitude=${pk[2]}&hourly=temperature_2m,wind_speed_10m,wind_direction_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&forecast_days=3&timezone=auto`);
+      const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${pk[1]}&longitude=${pk[2]}&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,precipitation_probability&temperature_unit=fahrenheit&wind_speed_unit=mph&forecast_days=3&timezone=auto`);
       if (!res.ok) return null;
       _wx[homeTeam] = await res.json();
     }
@@ -210,8 +216,72 @@ async function weatherFor(homeTeam, gameIso) {
     }
     const dirs = ["N","NE","E","SE","S","SW","W","NW"];
     return { temp: Math.round(h.temperature_2m[best]), wind: Math.round(h.wind_speed_10m[best]),
-             dir: dirs[Math.round(((h.wind_direction_10m[best] % 360) + 360) % 360 / 45) % 8] };
+             dir: dirs[Math.round(((h.wind_direction_10m[best] % 360) + 360) % 360 / 45) % 8],
+             precip: h.precipitation_probability ? Math.round(h.precipitation_probability[best]) : null };
   } catch (e) { return null; }
+}
+
+// Confidence tier + a 0-100 "edge score" — a transparent read on edge size and
+// model conviction, not a probability. Documented in methodology text; not a
+// claim of precision, just a consistent way to rank plays against each other.
+function tierAndScore(edge, prob) {
+  const score = Math.max(5, Math.min(97, Math.round(50 + edge * 800 + (prob - 0.5) * 40)));
+  const tier = edge >= 0.06 ? "Strong Play" : edge >= NO_PLAY_EDGE ? "Standard Play" : null;
+  return { tier, score };
+}
+
+// Range of live prices across tracked books for whichever side was picked —
+// "current price used" on the card. Falls back to a single price if only one
+// book has a line.
+function priceRangeStr(prices) {
+  if (!prices || !prices.length) return null;
+  const decs = prices.map(amToDec);
+  const best = decToAm(Math.max(...decs));
+  const worst = decToAm(Math.min(...decs));
+  return best === worst ? fmtAm(best) : `${fmtAm(best)} to ${fmtAm(worst)}`;
+}
+
+// Range of no-vig (fair) implied probability across tracked books for the picked side.
+function probRangeStr(probs) {
+  if (!probs || !probs.length) return null;
+  const lo = Math.min(...probs), hi = Math.max(...probs);
+  return lo === hi ? pct(lo) : `${pct(lo)} to ${pct(hi)}`;
+}
+
+// "Why we like it" — built only from data the model actually has: the pitching
+// matchup, recent form, and the price-sensitivity of the play. No claims about
+// lineups, injuries, or bullpen availability the model doesn't check.
+function whyWeLikeIt({ pick, pickHome, spA, spH, sA, sH, pd }) {
+  const pickSp = pickHome ? spH : spA, oppSp = pickHome ? spA : spH;
+  const eraDiff = spA.eff - spH.eff;
+  const formPick = pickHome ? sH.form : sA.form, formOpp = pickHome ? sA.form : sH.form;
+  let s1;
+  if (Math.abs(eraDiff) >= 0.4) {
+    s1 = `${pick} projects ahead here mainly on the mound — ${pickSp.name} has the stronger run-prevention profile this season against ${oppSp.name}.`;
+  } else if (formPick !== null && formOpp !== null && Math.abs(formPick - formOpp) >= 0.15) {
+    s1 = `${pick} has been the hotter team lately (last 10: ${pickHome ? sH.l10 : sA.l10} vs. ${pickHome ? sA.l10 : sH.l10}), enough to tip an otherwise close pitching matchup.`;
+  } else {
+    s1 = `${pick} grades out ahead on the model's blend of run differential and recent form${pickHome ? ", with the home-field bump added in" : ""}.`;
+  }
+  const s2 = pd ? `This is a price-sensitive play — the edge holds at ${pd.current}, but the value is gone by ${pd.playableTo} or worse.` : "";
+  return [s1, s2].filter(Boolean).join(" ");
+}
+
+// "What could go wrong" — real weather data when it's genuinely a factor,
+// otherwise an honest note about what the model can't see (injuries, bullpen
+// availability, lineup changes) rather than a fabricated risk.
+function whatCouldGoWrong({ wx, pkInfo, oppSp }) {
+  const bits = [];
+  if (pkInfo && !pkInfo[3] && wx) {
+    if (wx.precip !== null && wx.precip >= 40) {
+      bits.push(`There's roughly a ${wx.precip}% chance of rain around first pitch at ${pkInfo[0]} — a delay can scramble starter and bullpen usage.`);
+    } else if (wx.wind >= 12) {
+      bits.push(`Wind is up (${wx.wind} mph ${wx.dir}) at ${pkInfo[0]}, which adds variance to a number this dependent on pitching.`);
+    }
+  }
+  bits.push(`${oppSp.name} has enough stuff to outpitch his season line on a given night — an efficient outing from him tightens this quickly.`);
+  bits.push(`The model doesn't see live injury, bullpen-availability, or lineup news — worth a quick recheck before first pitch.`);
+  return bits.join(" ");
 }
 
 async function getJson(url) {
@@ -400,9 +470,15 @@ async function main() {
           const avgA = h2hRows.reduce((s, r) => s + amToProb(r[0]), 0) / h2hRows.length;
           const avgH = h2hRows.reduce((s, r) => s + amToProb(r[1]), 0) / h2hRows.length;
           const tot = avgA + avgH;
+          // Per-book no-vig probability, so the card can show a real range (not just an average).
+          const noVigA = h2hRows.map(r => { const qa = amToProb(r[0]), qh = amToProb(r[1]); return qa / (qa + qh); });
+          const noVigH = h2hRows.map(r => { const qa = amToProb(r[0]), qh = amToProb(r[1]); return qh / (qa + qh); });
           entry.ml = { pAway: avgA / tot, pHome: avgH / tot,
             bestAway: decToAm(Math.max(...h2hRows.map(r => amToDec(r[0])))),
-            bestHome: decToAm(Math.max(...h2hRows.map(r => amToDec(r[1])))) };
+            bestHome: decToAm(Math.max(...h2hRows.map(r => amToDec(r[1])))),
+            awayPrices: h2hRows.map(r => r[0]), homePrices: h2hRows.map(r => r[1]),
+            awayNoVigRange: [Math.min(...noVigA), Math.max(...noVigA)],
+            homeNoVigRange: [Math.min(...noVigH), Math.max(...noVigH)] };
         }
         if (totalRows.length) {
           // use the most common line, averaged prices at that line
@@ -561,14 +637,48 @@ async function main() {
       ? `<p class="subpick">▸ Run line: <b>${esc(runLineOut.pick)} ${runLineOut.point > 0 ? "+" : ""}${runLineOut.point}</b> (projected margin ${runLineOut.projMargin > 0 ? "+" : ""}${runLineOut.projMargin}, edge ${pct(runLineOut.edge)})</p>`
       : runLineOut.point !== null ? `<p class="subpick pass">Run line: pass — no clear edge at ${runLineOut.point > 0 ? "+" : ""}${runLineOut.point}.</p>` : "";
 
+    // Full "Approved Play" card for anything that clears the value bar — the same
+    // format members get by email. Passes keep the older compact line; nothing is
+    // ever hidden either way, this just decides how much detail a game gets.
+    let cardBlock = "";
+    let tier = null, edgeScore = null, priceRangeTxt = null, mktProbRangeTxt = null, whyTxt = null, riskTxt = null;
+    if (valueTag && pd) {
+      const t = tierAndScore(edge, prob);
+      tier = t.tier; edgeScore = t.score;
+      const pickedPrices = mkt ? (pickHome ? mkt.homePrices : mkt.awayPrices) : null;
+      priceRangeTxt = priceRangeStr(pickedPrices) || pd.current;
+      const pickedNoVigRange = mkt ? (pickHome ? mkt.homeNoVigRange : mkt.awayNoVigRange) : null;
+      mktProbRangeTxt = pickedNoVigRange ? probRangeStr(pickedNoVigRange) : pct(mktProb);
+      const oppSp = pickHome ? spA : spH;
+      whyTxt = whyWeLikeIt({ pick, pickHome, spA, spH, sA, sH, pd });
+      riskTxt = whatCouldGoWrong({ wx, pkInfo, oppSp });
+
+      cardBlock = `
+  <span class="approved-badge">Approved Play: ${esc(pick)} ML</span>
+  <dl class="field-grid">
+    <dt>Game</dt><dd>${esc(a.team.name)} @ ${esc(h.team.name)}</dd>
+    <dt>Market</dt><dd>Moneyline</dd>
+    <dt>Pick</dt><dd>${esc(pick)} ML</dd>
+    <dt>Current price used</dt><dd>${esc(priceRangeTxt)}</dd>
+    <dt>Playable to</dt><dd>${esc(pd.current)}</dd>
+    <dt>Pass at</dt><dd>${esc(pd.playableTo)} or worse</dd>
+    <dt>Confidence tier</dt><dd>${esc(tier)}</dd>
+    <dt>Dia edge score</dt><dd>${edgeScore} / 100</dd>
+    <dt>Market no-vig probability</dt><dd>${esc(mktProbRangeTxt)}</dd>
+    <dt>Dia projected probability</dt><dd>${pct(prob)}</dd>
+    <dt>Raw edge</dt><dd>+${pct(edge)}</dd>
+  </dl>
+  <div class="why-block"><b>Why we like it</b>${esc(whyTxt)}</div>
+  <div class="risk-block"><b>What could go wrong</b>${esc(riskTxt)}</div>`;
+    }
+
     rendered.push({
       html: `<div class="pv" data-edge="${edge !== null ? edge : -1}">
   <h2>${esc(a.team.name)} @ ${esc(h.team.name)}</h2>
   <div class="meta">${time} · ${esc(spA.name)} vs ${esc(spH.name)}</div>
   <p>${esc(para)}</p>
-  <p class="pick">▸ Moneyline: ${esc(pick)} (${pct(prob)})${valueTag ? " — " + valueTag : isPass ? " — PASS, no edge" : ""}</p>
+  ${cardBlock || `<p class="pick">▸ Moneyline: ${esc(pick)} (${pct(prob)})${isPass ? " — PASS, no edge" : ""}</p>`}
   ${totalLine}${runLineLine}
-  ${pd ? `<div class="price-disc">Current price ${pd.current} · playable to ${pd.playableTo} · pass beyond that · re-check if lineup, starter, or bullpen news changes before first pitch.</div>` : ""}
   <p class="dim small">${esc(signalNote)}</p>
 </div>\n`,
       edge: edge !== null ? edge : -1
@@ -580,7 +690,9 @@ async function main() {
         pick, side: pickHome ? "home" : "away", prob: Number(prob.toFixed(4)),
         mktProb: mktProb !== null ? Number(mktProb.toFixed(4)) : null,
         bestAm, valueTag: valueTag || null, isPass,
-        consensusAgree: agreeCount, consensusOppose: opposeCount
+        consensusAgree: agreeCount, consensusOppose: opposeCount,
+        tier, edgeScore, priceRange: priceRangeTxt, mktProbRange: mktProbRangeTxt,
+        why: whyTxt, risk: riskTxt
       },
       total: totalOut,
       runLine: runLineOut
