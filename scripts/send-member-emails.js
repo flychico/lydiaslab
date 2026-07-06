@@ -94,7 +94,7 @@ function buildEmail(dateStr, picks, isPreview) {
       (l.why ? `<div style="font-size:12.5px;color:#555;margin:2px 0"><b>Why:</b> ${esc(l.why)}</div>` : "") +
       (l.risk ? `<div style="font-size:12.5px;color:#555;margin:2px 0 0"><b>Risk:</b> ${esc(l.risk)}</div>` : "")
     ).join("");
-    return `<div style="border-left:3px solid #d6336c;padding:8px 0 8px 12px;margin:12px 0">
+    return `<div style="border-left:3px solid #d6508e;padding:8px 0 8px 12px;margin:12px 0">
       <div style="font-weight:700">${esc(p.away)} @ ${esc(p.home)}</div>
       ${body}
     </div>`;
@@ -111,12 +111,12 @@ function buildEmail(dateStr, picks, isPreview) {
 
   const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:560px;margin:0 auto;color:#1a1a1a">
     ${previewBanner}
-    <h2 style="margin-bottom:4px">LyDia Picks — ${esc(nice)}</h2>
+    <h2 style="margin-bottom:4px;color:#d6508e">LyDia Picks — ${esc(nice)}</h2>
     <p style="color:#666;font-size:14px">${playCount ? `${playCount} play${playCount > 1 ? "s" : ""} on today's ${picks.length}-game slate.` : `No edge anywhere on today's ${picks.length}-game slate — the model is passing across the board.`}</p>
     ${rowsHtml || `<p style="color:#888;font-style:italic">Nothing cleared the bar today.</p>`}
     ${noPlaySummary}
-    <p style="font-size:13px;color:#888;margin-top:20px">Full reasoning for every game: <a href="https://mlbedges.com/previews/${dateStr}">mlbedges.com/previews/${dateStr}</a><br>
-    Every pick graded publicly: <a href="https://mlbedges.com/results/">mlbedges.com/results/</a></p>
+    <p style="font-size:13px;color:#888;margin-top:20px">Full reasoning for every game: <a href="https://mlbedges.com/previews/${dateStr}" style="color:#4d9fdc">mlbedges.com/previews/${dateStr}</a><br>
+    Every pick graded publicly: <a href="https://mlbedges.com/results/" style="color:#4d9fdc">mlbedges.com/results/</a></p>
     <p style="font-size:12px;color:#aaa;margin-top:24px;border-top:1px solid #eee;padding-top:10px">
     LyDia — analysis and education only, not betting advice. No win rate is guaranteed. Please bet responsibly;
     if gambling stops being fun, call 1-800-GAMBLER. Manage your subscription from your PayPal account.
