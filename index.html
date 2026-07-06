@@ -3,18 +3,54 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MLB Edges — Baseball Betting Analysis</title>
-<meta name="description" content="MLB Edges — data-driven MLB betting analysis. Live odds comparison, no-vig fair lines, EV and Kelly calculators, team stats, and strategy guides.">
+<title>LyDia — Baseball Betting Analysis</title>
+<meta name="description" content="LyDia — data-driven MLB betting analysis. Live odds comparison, no-vig fair lines, EV and Kelly calculators, team stats, and strategy guides.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <nav id="nav"></nav>
 <main>
-  <h1>MLB Edges</h1>
-  <p class="subtitle">Data-driven MLB betting analysis — live odds, value tools, and team stats in one place.</p>
+  <div id="slate-banner" class="notice" style="margin-bottom:20px">Loading today's slate…</div>
 
-  <div class="grid grid-2">
+  <div class="hero-grid">
+    <div>
+      <h1>Free MLB Picks — Every Game, Every Day</h1>
+      <p class="subtitle">A transparent model pick for every matchup on the slate: team strength, recent form, and the starting-pitcher matchup, checked against the live market and against what other public sources are saying. No paywall on the picks themselves — see today's full slate right now.</p>
+      <p style="margin-top:14px">
+        <a class="btn" href="picks.html" style="font-size:1.05rem;padding:13px 22px">See Today's Picks →</a>
+        <a class="btn secondary" href="results.html" style="font-size:1.05rem;padding:13px 22px;margin-left:8px">Our Track Record</a>
+      </p>
+    </div>
+
+    <div class="card" id="hero-signup-card">
+      <h3>Get today's pick by email</h3>
+      <p>Free. One email a day, before first pitch. No spam, unsubscribe anytime.</p>
+      <form name="newsletter" method="POST" data-netlify="true" netlify-honeypot="bot-field" id="hero-signup" style="margin-top:10px">
+        <p style="display:none"><input name="bot-field"></p>
+        <input type="hidden" name="form-name" value="newsletter">
+        <input type="hidden" name="source" value="homepage-hero">
+        <div class="field">
+          <label for="hero-email">Email address</label>
+          <input type="email" id="hero-email" name="email" required placeholder="you@example.com">
+        </div>
+        <button type="submit" style="width:100%">Send me today's pick — free</button>
+      </form>
+      <div id="hero-success" class="result-box" hidden>
+        <strong>You're on the list! 🎉</strong> While you wait for tomorrow's email:
+        <ul style="margin:10px 0 0 18px; padding:0">
+          <li><a href="picks.html">Today's model picks</a> — see the full slate right now</li>
+          <li><a href="results.html">Our track record</a> — every pick graded, wins and losses alike</li>
+          <li><a href="articles.html">How to read a pick</a> — the method behind the numbers</li>
+        </ul>
+      </div>
+      <div id="hero-error" class="notice warn" hidden style="margin-top:10px">
+        Something went wrong submitting that — you can also reach picks daily via the <a href="previews/">Previews archive</a>, or try again in a moment.
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-2" style="margin-top:32px">
     <div class="card">
       <h3>📡 Live Odds Board</h3>
       <p>Real-time MLB moneylines from major US sportsbooks via The Odds API. See every book's price side by side, the best available line highlighted, implied probabilities, and each market's vig.</p>
@@ -42,12 +78,56 @@
     <p>Every betting line implies a probability. A −150 favorite implies 60%; a +130 underdog implies 43.5%. Those add up to more than 100% — the difference is the sportsbook's margin (the vig). You only have an edge when <em>your</em> estimate of a team's win probability is higher than the <strong>no-vig</strong> implied probability. Everything on this site is built around finding and quantifying that gap.</p>
   </div>
 
+  <div class="notice" style="margin-top:20px">
+    Want every pick delivered before first pitch without checking the site? See <a href="membership.html">Membership</a>.
+  </div>
+
   <div class="notice warn">
     This site is for analysis and education. Nothing here is betting advice, and no model or stat guarantees a profit. Only bet what you can afford to lose.
   </div>
 </main>
 <footer id="footer"></footer>
 <script src="js/app.js"></script>
-<script>renderNav("index.html"); renderFooter();</script>
+<script>
+renderNav("index.html"); renderFooter();
+
+async function loadSlate() {
+  const el = document.getElementById("slate-banner");
+  try {
+    const d = new Date();
+    const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const res = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}`);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    const games = (((data.dates || [])[0]) || {}).games || [];
+    if (!games.length) {
+      el.textContent = "No MLB games today — fresh picks publish every morning there's a slate.";
+      return;
+    }
+    games.sort((a, b) => new Date(a.gameDate) - new Date(b.gameDate));
+    const first = new Date(games[0].gameDate).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    el.innerHTML = `<strong>${games.length}</strong> MLB game${games.length > 1 ? "s" : ""} today · first pitch <strong>${first}</strong> · <a href="picks.html">see today's picks →</a>`;
+  } catch (e) {
+    el.textContent = "Fresh model picks are published every morning before first pitch.";
+  }
+}
+loadSlate();
+
+document.getElementById("hero-signup").addEventListener("submit", function (e) {
+  e.preventDefault();
+  const form = e.target;
+  const data = new FormData(form);
+  fetch("/", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams(data).toString()
+  }).then(() => {
+    form.hidden = true;
+    document.getElementById("hero-success").hidden = false;
+  }).catch(() => {
+    document.getElementById("hero-error").hidden = false;
+  });
+});
+</script>
 </body>
 </html>

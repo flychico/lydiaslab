@@ -182,11 +182,11 @@ async function load() {
     const el = document.getElementById("ctx-" + g.gamePk);
     const pk = Parks[g.teams.home.team.name];
     if (!el || !pk) continue;
-    const base = "\u{1F3DF} " + pk.park + " \u2014 " + pk.env + (pk.roof ? " (retractable roof)" : "");
+    const base = "\u{1F3DF} " + pk.park + " — " + pk.env + (pk.roof ? " (retractable roof)" : "");
     el.textContent = base;
     if (!pk.roof) {
       gameWeather(g.teams.home.team.name, g.gameDate).then(w => {
-        if (w) el.textContent = base + " \u00B7 \u{1F324} " + w.temp + "\u00B0F, wind " + w.wind + " mph " + w.dir;
+        if (w) el.textContent = base + " · \u{1F324} " + w.temp + "°F, wind " + w.wind + " mph " + w.dir;
       });
     }
   }
