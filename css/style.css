@@ -42,6 +42,12 @@ nav a.navlink {
 }
 nav a.navlink:hover { color: var(--text); background: var(--bg-elev); text-decoration: none; }
 nav a.navlink.active { color: var(--text); background: var(--bg-elev); }
+nav a.navlink-cta {
+  margin-left: auto; background: var(--accent); color: #fff; font-weight: 700;
+  white-space: nowrap;
+}
+nav a.navlink-cta:hover { background: var(--accent); filter: brightness(1.1); color: #fff; text-decoration: none; }
+nav a.navlink-cta.active { background: var(--accent); color: #fff; }
 
 /* Layout */
 main { max-width: 1100px; margin: 0 auto; padding: 32px 20px 64px; }
@@ -49,9 +55,15 @@ h1 { font-size: 1.7rem; margin-bottom: 6px; }
 h2 { font-size: 1.25rem; margin: 28px 0 12px; }
 h3 { font-size: 1.05rem; margin: 18px 0 8px; }
 .subtitle { color: var(--text-dim); margin-bottom: 24px; }
+.eyebrow { color: var(--accent); font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
 
-.hero-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; align-items: start; }
-@media (max-width: 720px) { .hero-grid { grid-template-columns: 1fr; } }
+/* Hero (homepage) */
+.hero, .hero-grid {
+  display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; align-items: start; margin-bottom: 8px;
+}
+@media (max-width: 720px) { .hero, .hero-grid { grid-template-columns: 1fr; } }
+.hero-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0; }
+.hero h1 { font-size: 2rem; }
 
 .grid { display: grid; gap: 16px; }
 .grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
@@ -83,9 +95,11 @@ input:focus, select:focus { outline: none; border-color: var(--accent2); }
 button, .btn {
   background: var(--accent); color: #ffffff; border: none; border-radius: 6px;
   padding: 10px 18px; font-size: .95rem; font-weight: 600; cursor: pointer;
+  display: inline-block;
 }
-button:hover, .btn:hover { filter: brightness(1.1); }
-button.secondary { background: var(--bg-elev); color: var(--text); border: 1px solid var(--border); }
+button:hover, .btn:hover { filter: brightness(1.1); text-decoration: none; }
+button.secondary, .btn.secondary { background: var(--bg-elev); color: var(--text); border: 1px solid var(--border); }
+.btn.blue { background: var(--accent2); }
 
 /* Badges & results */
 .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: .78rem; font-weight: 600; }
@@ -103,6 +117,13 @@ button.secondary { background: var(--bg-elev); color: var(--text); border: 1px s
 .dim { color: var(--text-dim); }
 .small { font-size: .84rem; }
 
+/* Trust badge (win-loss record pulled live from results.json) */
+.trust-badge {
+  display: inline-flex; align-items: center; gap: 8px; background: var(--bg-elev);
+  border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; font-size: .88rem;
+}
+.trust-badge b { color: var(--accent); }
+
 /* Odds page */
 .game-card { margin-bottom: 18px; }
 .game-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
@@ -113,6 +134,26 @@ button.secondary { background: var(--bg-elev); color: var(--text); border: 1px s
   border-radius: 6px; padding: 14px 16px; margin: 16px 0; font-size: .92rem; color: var(--text-dim);
 }
 .notice.warn { border-left-color: var(--warn); }
+.notice.pink { border-left-color: var(--accent); }
+
+/* Lead capture / membership upsell boxes (previews + membership funnel) */
+.lead-box {
+  border: 1px solid var(--accent); border-radius: var(--radius); background: var(--bg-card);
+  padding: 18px; margin: 18px 0;
+}
+.lead-box form { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.lead-box input[type=email] { flex: 1; min-width: 200px; }
+.member-tease {
+  border: 1px dashed var(--accent); border-radius: var(--radius); background: rgba(214,80,142,.05);
+  padding: 16px 18px; margin: 16px 0;
+}
+.member-tease .lock { font-size: 1.1rem; }
+
+/* Free vs member comparison table */
+.cmp-table th, .cmp-table td { text-align: center; }
+.cmp-table th:first-child, .cmp-table td:first-child { text-align: left; }
+.cmp-table td.yes { color: var(--good); font-weight: 700; }
+.cmp-table td.member-col { background: rgba(214,80,142,.05); }
 
 /* Articles */
 article.post { margin-bottom: 36px; }
@@ -127,4 +168,5 @@ footer {
 @media (max-width: 640px) {
   .nav-inner { overflow-x: auto; }
   main { padding: 20px 14px 48px; }
+  nav a.navlink-cta { margin-left: 0; }
 }
