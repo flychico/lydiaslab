@@ -3,59 +3,197 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Results — verified pick record | LyDia</title>
-<meta name="description" content="LyDia verified results: 9-6 (60.0%) — every model pick graded publicly against final scores.">
-<link rel="canonical" href="https://mlbedges.com/results/">
+<title>LyDia — Daily MLB Picks, Previews &amp; Results</title>
+<meta name="description" content="LyDia publishes a model pick for every MLB game, every day — free to read, fully transparent, and delivered to members before first pitch. $30/month.">
+<link rel="canonical" href="https://mlbedges.com/">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "LyDia",
+  "url": "https://mlbedges.com/",
+  "description": "LyDia publishes a quantitative model pick for every MLB game, every day, with the math shown and every result graded in public.",
+  "sameAs": []
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "LyDia",
+  "url": "https://mlbedges.com/",
+  "description": "Daily MLB moneyline, total, and run line picks from a transparent quantitative model, checked against the market and graded publicly."
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How does LyDia's MLB model work?",
+      "acceptedAnswer": { "@type": "Answer", "text": "LyDia blends each team's Pythagorean win expectation (from run differential) with last-10 form, combines the two teams head-to-head with a log5 calculation and a home-field adjustment, then shifts the number based on the starting pitching matchup using each starter's season ERA (with a floor for low-innings starters). Totals and run lines use a separate normal-approximation model on the same team and pitcher inputs, adjusted for ballpark and weather." }
+    },
+    {
+      "@type": "Question",
+      "name": "Is LyDia's model always right?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No, and it isn't trying to be. The model publishes a probability and compares it to the market's fair price — when the two are close, or the model has no real edge, it explicitly passes rather than forcing a play. Every graded pick, win or lose, stays visible on the public Results page." }
+    },
+    {
+      "@type": "Question",
+      "name": "Is LyDia free to use?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. Every model pick, every day, is free to read on the Previews page with the full math shown. Membership ($30/month) adds delivery to your inbox before first pitch and a re-check alert if a price moves, but nothing is held back from the free site." }
+    },
+    {
+      "@type": "Question",
+      "name": "What markets does LyDia cover?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Moneyline, total runs (Over/Under), and run line for every MLB regular-season game, compared against live sportsbook pricing with the no-vig probability and raw edge shown for each market." }
+    }
+  ]
+}
+</script>
 </head>
 <body>
-<nav><div class="nav-inner">
-  <a class="brand" href="/"><span class="brand-ly">Ly</span><span class="brand-dia">Dia</span></a>
-  <a class="navlink" href="/">Home</a>
-  <a class="navlink" href="/dashboard/">Dashboard</a>
-  <a class="navlink" href="/picks/">Picks</a>
-  <a class="navlink" href="/previews/">Previews</a>
-  <a class="navlink active" href="/results/">Results</a>
-  <a class="navlink" href="/odds/">Odds</a>
-  <a class="navlink" href="/recaps/">Recaps</a>
-  <a class="navlink" href="/articles/">Articles</a>
-  <a class="navlink navlink-cta" href="/membership/">Join $30/mo</a>
-</div></nav>
+<nav id="nav"></nav>
 <main>
-<h1>Results</h1>
-<p class="subtitle">Every model pick — moneyline, total, and run line — graded automatically against final scores. Wins and losses alike — nothing is deleted.</p>
-<div class="kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px">
-  <div class="card"><div class="dim small">RECORD</div><div style="font-size:1.6rem;font-weight:700">9-6</div></div>
-  <div class="card"><div class="dim small">WIN RATE</div><div style="font-size:1.6rem;font-weight:700">60.0%</div></div>
-  <div class="card"><div class="dim small">UNITS (flat 1u @ best price)</div><div style="font-size:1.6rem;font-weight:700" class="pos-text">+1.26</div></div>
-  <div class="card"><div class="dim small">DAYS TRACKED</div><div style="font-size:1.6rem;font-weight:700">1</div></div>
-</div>
-<div class="card">
-<table>
-<thead><tr><th>Date</th><th class="num">Record</th><th class="num">Win%</th><th class="num">Units</th><th>Picks</th></tr></thead>
-<tbody>
-<tr>
-    <td>Jul 6, 2026</td>
-    <td class="num">9-6</td>
-    <td class="num">60%</td>
-    <td class="num pos-text">+1.26</td>
-    <td><details><summary>8 games</summary><div class="small dim">No official play — Philadelphia Phillies @ Kansas City Royals</div><div class="small">❌ ML Tampa Bay Rays (64%, -118) · ✅ Total Under 8 — New York Yankees @ Tampa Bay Rays · 5-1</div><div class="small">✅ ML Washington Nationals (56%, -118) · ✅ Total Over 9 · ✅ RL Washington Nationals +1.5 — Houston Astros @ Washington Nationals · 11-12</div><div class="small">❌ ML Atlanta Braves (75%, -119) · ❌ RL Atlanta Braves -1.5 — New York Mets @ Atlanta Braves · 7-6</div><div class="small">✅ ML Milwaukee Brewers (67%, -109) · ❌ RL Milwaukee Brewers -1.5 — Milwaukee Brewers @ St. Louis Cardinals · 4-3</div><div class="small">❌ Total Over 8.5 — Arizona Diamondbacks @ San Diego Padres · 8-0</div><div class="small">✅ ML San Francisco Giants (53%, -104) · ✅ Total Over 7.5 — Toronto Blue Jays @ San Francisco Giants · 1-10</div><div class="small">✅ ML Los Angeles Dodgers (80%, -250) · ✅ Total Over 9 · ❌ RL Los Angeles Dodgers -1.5 — Colorado Rockies @ Los Angeles Dodgers · 7-8</div></details></td>
-  </tr>
-</tbody>
-</table>
-</div>
-<div class="notice" style="margin-top:20px">
-  Picks are published every morning on the <a href="/previews/">Previews page</a> before first pitch and graded the next day —
-  timestamps are in the repository history, so the record can't be rewritten.
-  A reminder that even good models have losing stretches: judge the process over hundreds of picks, not a hot or cold week.
-</div>
-<div class="lead-box" style="border-color:var(--accent2);margin-top:16px">
-  <h3 style="margin:0 0 4px">Want this delivered before first pitch?</h3>
-  <p class="dim small" style="margin:0">$30/month. Same picks, same transparency — just no need to check the site.</p>
-  <p style="margin-top:10px"><a class="btn blue" href="/membership/">Join LyDia — $30/mo →</a></p>
-</div>
+  <section class="hero">
+    <div>
+      <p class="eyebrow">Daily MLB analysis by LyDia</p>
+      <h1>A model pick for every game — the math, the market, and the reasoning, shown.</h1>
+      <p class="subtitle">Every morning LyDia scores the full slate, checks the price against the market, and publishes the lean before first pitch. Free to read. Nothing is deleted, wins or losses.</p>
+      <div id="slate-banner" class="notice pink">Loading today's slate…</div>
+      <div class="hero-actions">
+        <a class="btn" href="/previews/">Today's Previews →</a>
+        <a class="btn blue" href="/membership/">Join for $30/mo</a>
+        <a class="btn secondary" href="/results/">See Results</a>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Today's status</h3>
+      <p id="status-agent"><strong>Daily agent:</strong> loading…</p>
+      <p id="status-picks"><strong>Official picks:</strong> loading…</p>
+      <p id="status-record"><strong>Record:</strong> loading…</p>
+      <p style="margin-top:14px"><a class="btn blue" href="/membership/" style="width:100%;text-align:center">Get every pick by email →</a></p>
+      <p class="dim small" style="margin-top:8px">$30/month. Cancel anytime. Every pick graded in public.</p>
+    </div>
+  </section>
+
+  <div class="grid grid-2" style="margin-top:28px">
+    <div class="card">
+      <h3>📡 Live Odds Board</h3>
+      <p>Real-time MLB moneylines, run totals, and run lines from major US sportsbooks. Best available price highlighted, no-vig fair lines, and each market's vig.</p>
+      <p style="margin-top:12px"><a class="btn" href="/odds/">Open Live Odds →</a></p>
+    </div>
+    <div class="card">
+      <h3>🧮 Value Tools</h3>
+      <p>Convert odds formats, strip the vig to find fair prices, calculate expected value against your own win probability, and size bets with the Kelly criterion.</p>
+      <p style="margin-top:12px"><a class="btn" href="/tools/">Open Tools →</a></p>
+    </div>
+    <div class="card">
+      <h3>📊 Team Stats</h3>
+      <p>Live MLB standings with run differentials and Pythagorean expected win percentage — a quick read on which teams are over- or under-performing their true talent.</p>
+      <p style="margin-top:12px"><a class="btn" href="/stats/">Open Stats →</a></p>
+    </div>
+    <div class="card">
+      <h3>📖 Strategy Articles</h3>
+      <p>Guides on the fundamentals of finding value: understanding the vig, why closing line value matters, and how MLB's unique structure creates betting opportunities.</p>
+      <p style="margin-top:12px"><a class="btn" href="/articles/">Read Articles →</a></p>
+    </div>
+  </div>
+
+  <h2>How LyDia works</h2>
+  <div class="grid grid-3">
+    <div class="card"><h3>Model</h3><p>Team strength (Pythagorean + last-10 form), home field, and a starting-pitcher ERA adjustment, run every morning against the day's real slate.</p></div>
+    <div class="card"><h3>Market</h3><p>Every pick is checked against the market's no-vig probability. No edge over the price means no pick — discipline is the product, not volume.</p></div>
+    <div class="card"><h3>Accountability</h3><p>Every preview is archived and every pick is graded the next day on the public <a href="/results/">Results page</a>. Wins and losses alike — nothing is deleted.</p></div>
+  </div>
+
+  <h2>The methodology, in plain English</h2>
+  <p>Every morning, before any picks are published, the model pulls the day's real MLB schedule, current standings, and probable starters, then works through the same process for every game on the slate. First, each team gets a strength number blending its Pythagorean win expectation — a well-established estimate of "true" win percentage derived from runs scored and allowed, which tends to be more stable than raw record — with its last-10-game form, weighted so a hot or cold recent stretch nudges the number without overwhelming the full-season signal. Those two team strengths are combined head-to-head using a log5 calculation, the standard method for estimating one team's win probability against a specific opponent, and the home team gets a modest home-field adjustment reflecting MLB's roughly 54% historical home win rate.</p>
+  <p>From there, the starting pitching matchup shifts the number. Each starter's season ERA is compared to league average, with a floor: any starter under 20 innings pitched for the season is treated as league-average rather than trusted on a small, noisy sample, and extreme ERA values are clamped into a realistic range so one outlier start can't distort the projection. The size of the shift is proportional to the ERA gap between the two starters — see the full breakdown in the <a href="/mlb-pitching-metrics-for-betting/">pitching metrics guide</a>.</p>
+  <p>Total runs and run line use a separate, lighter model: each team's scoring rate and its opponent's run prevention are combined, adjusted for the home ballpark's park factor (see the <a href="/mlb-park-factors-betting-guide/">park factors guide</a>) and, for open-air stadiums, the game-time weather forecast, then compared to the market line through a standard normal-distribution approximation. A run-line pick is only published if it's directionally consistent with the same game's moneyline projection — see <a href="/mlb-run-line-vs-moneyline/">run line vs. moneyline</a> for why that consistency check matters.</p>
+  <p>Every one of these three numbers — moneyline, total, run line — is then compared to the sportsbook market's no-vig (fair) probability, not the raw price. See <a href="/no-vig-odds-calculator-guide/">the no-vig odds calculator guide</a> for exactly how that works. Only when the model's probability clears the market's fair number by a meaningful margin does a game get labeled a play; everything else is marked an explicit pass. That's what "no edge, no play" means in practice — read more on <a href="/mlb-betting-edge-explained/">what edge actually means</a> and <a href="/how-to-find-value-in-mlb-moneylines/">how to find value in MLB moneylines</a>.</p>
+
+  <h2>Guides</h2>
+  <p class="subtitle">The concepts behind every pick on this site, explained in full.</p>
+  <div class="grid grid-3">
+    <div class="card"><h3><a href="/mlb-betting-edge-explained/">What Is Edge in MLB Betting?</a></h3><p>What edge actually means, where it comes from, and how to calculate it yourself.</p></div>
+    <div class="card"><h3><a href="/no-vig-odds-calculator-guide/">No-Vig Odds Calculator Guide</a></h3><p>How to strip the sportsbook's margin out of any price to see the market's real, fair probability.</p></div>
+    <div class="card"><h3><a href="/how-to-find-value-in-mlb-moneylines/">How to Find Value in MLB Moneylines</a></h3><p>A repeatable, five-step process for spotting real value instead of chasing hunches.</p></div>
+    <div class="card"><h3><a href="/closing-line-value-mlb-betting/">Closing Line Value in MLB Betting</a></h3><p>Why CLV, not win rate, is the fastest reliable signal of whether a process has an edge.</p></div>
+    <div class="card"><h3><a href="/mlb-run-line-vs-moneyline/">MLB Run Line vs. Moneyline</a></h3><p>When each market offers better value, and the consistency rule almost nobody applies.</p></div>
+    <div class="card"><h3><a href="/mlb-bullpen-fatigue-betting/">MLB Bullpen Fatigue and Betting</a></h3><p>How to spot an overworked bullpen before a game, and why it's hard to model automatically.</p></div>
+    <div class="card"><h3><a href="/mlb-park-factors-betting-guide/">MLB Park Factors Betting Guide</a></h3><p>A full table of all 30 ballparks' run environments, from Coors Field to Oracle Park.</p></div>
+    <div class="card"><h3><a href="/mlb-pitching-metrics-for-betting/">MLB Pitching Metrics for Betting</a></h3><p>ERA vs. FIP vs. xFIP vs. SIERA — what each measures and which actually predicts.</p></div>
+  </div>
+
+  <h2>Frequently asked questions</h2>
+  <h3>How does LyDia's MLB model work?</h3>
+  <p>LyDia blends each team's Pythagorean win expectation (from run differential) with last-10 form, combines the two teams head-to-head with a log5 calculation and a home-field adjustment, then shifts the number based on the starting pitching matchup using each starter's season ERA (with a floor for low-innings starters). Totals and run lines use a separate normal-approximation model on the same team and pitcher inputs, adjusted for ballpark and weather.</p>
+  <h3>Is LyDia's model always right?</h3>
+  <p>No, and it isn't trying to be. The model publishes a probability and compares it to the market's fair price — when the two are close, or the model has no real edge, it explicitly passes rather than forcing a play. Every graded pick, win or lose, stays visible on the public <a href="/results/">Results page</a>.</p>
+  <h3>Is LyDia free to use?</h3>
+  <p>Yes. Every model pick, every day, is free to read on the <a href="/previews/">Previews page</a> with the full math shown. Membership ($30/month) adds delivery to your inbox before first pitch and a re-check alert if a price moves, but nothing is held back from the free site.</p>
+  <h3>What markets does LyDia cover?</h3>
+  <p>Moneyline, total runs (Over/Under), and run line for every MLB regular-season game, compared against live sportsbook pricing with the no-vig probability and raw edge shown for each market.</p>
+
+  <div class="notice warn" style="margin-top:28px">
+    This site is for analysis and education. Nothing here is betting advice, and no model or stat guarantees a profit. Only bet what you can afford to lose. If gambling stops being fun, call 1-800-GAMBLER.
+  </div>
 </main>
-<footer>LyDia — analysis and education only, not betting advice. Please bet responsibly. If gambling stops being fun, call 1-800-GAMBLER.</footer>
+<footer id="footer"></footer>
+<script src="/js/app.js"></script>
+<script>
+renderNav("/"); renderFooter();
+
+(async function () {
+  const bannerEl = document.getElementById("slate-banner");
+  const agentEl = document.getElementById("status-agent");
+  const picksEl = document.getElementById("status-picks");
+  const recordEl = document.getElementById("status-record");
+
+  const d = new Date();
+  const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  try {
+    const res = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${iso}`);
+    const data = await res.json();
+    const games = (((data.dates || [])[0]) || {}).games || [];
+    if (games.length) {
+      const first = games.map(g => new Date(g.gameDate)).sort((a, b) => a - b)[0];
+      const t = first.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZoneName: "short" });
+      bannerEl.innerHTML = `<strong>Today's slate:</strong> ${games.length} game${games.length > 1 ? "s" : ""} — first pitch ${t}. <a href="/previews/">See every matchup →</a>`;
+    } else {
+      bannerEl.innerHTML = `<strong>No MLB games today.</strong> Check back tomorrow morning, or browse the <a href="/previews/">preview archive</a>.`;
+    }
+  } catch (e) {
+    bannerEl.innerHTML = `<a href="/previews/">See today's game previews →</a>`;
+  }
+
+  try {
+    const picksRes = await fetch(`/data/picks/${iso}.json`, { cache: "no-store" });
+    if (picksRes.ok) {
+      const pj = await picksRes.json();
+      const n = (pj.picks || []).length;
+      agentEl.innerHTML = `<strong>Daily agent:</strong> ran this morning — on schedule.`;
+      picksEl.innerHTML = `<strong>Official picks:</strong> ${n} published for today. <a href="/previews/${iso}">Read them →</a>`;
+    } else {
+      agentEl.innerHTML = `<strong>Daily agent:</strong> next run before first pitch tomorrow.`;
+      picksEl.innerHTML = `<strong>Official picks:</strong> see the <a href="/previews/">preview archive</a>.`;
+    }
+  } catch (e) {
+    agentEl.innerHTML = `<strong>Daily agent:</strong> automated every morning.`;
+    picksEl.innerHTML = `<strong>Official picks:</strong> see the <a href="/previews/">preview archive</a>.`;
+  }
+
+  const record = await fetchRecord();
+  recordEl.innerHTML = record
+    ? `<strong>Record:</strong> ${record.wins}-${record.losses} (${(record.pct * 100).toFixed(1)}%) across ${record.days} day${record.days > 1 ? "s" : ""} — <a href="/results/">full history →</a>`
+    : `<strong>Record:</strong> LyDia is in its founding stretch — results start from the first graded slate, and every pick stays visible on the <a href="/results/">Results page</a>, win or lose.`;
+})();
+</script>
 </body>
 </html>
