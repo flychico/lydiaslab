@@ -584,29 +584,11 @@ async function main() {
     let runLineOut = null;
     if (mktEntry && mktEntry.runLine) {
       const { homePoint, awayPoint, pHomeCover, pAwayCover, bestHome, bestAway } = mktEntry.runLine;
-      // Cover probability must use the SIGNED point (not abs) — a team on +1.5 covers
-      // by losing narrowly or winning, a team on -1.5 needs to win by 2+.
-      const modelPHomeCover = normCdf((projMargin + homePoint) / MARGIN_STD);
+      const modelPHomeCover = normCdf((projMargin - Math.abs(homePoint)) / MARGIN_STD);
       const edgeHome = modelPHomeCover - pHomeCover, edgeAway = (1 - modelPHomeCover) - pAwayCover;
       let rlPick = null, rlEdge = 0, rlProb = null, rlMktProb = null, rlBestAm = null, rlPoint = null;
       if (edgeHome >= edgeAway && edgeHome >= NO_PLAY_EDGE_SECONDARY) { rlPick = h.team.name; rlEdge = edgeHome; rlProb = modelPHomeCover; rlMktProb = pHomeCover; rlBestAm = bestHome; rlPoint = homePoint; }
       else if (edgeAway > edgeHome && edgeAway >= NO_PLAY_EDGE_SECONDARY) { rlPick = a.team.name; rlEdge = edgeAway; rlProb = 1 - modelPHomeCover; rlMktProb = pAwayCover; rlBestAm = bestAway; rlPoint = awayPoint; }
-
-      // Run Line Sanity Check — never publish a run-line pick that contradicts the
-      // moneyline's projected winner. A team can only be laid at a negative point
-      // (must win by 2+) if the model also has that same team winning outright by
-      // enough margin. A team on the plus side only needs to not lose by 1.5+.
-      if (rlPick) {
-        const pickIsHome = rlPick === h.team.name;
-        const marginForPick = pickIsHome ? projMargin : -projMargin; // + = picked side winning by this much
-        const sideIsProjectedWinner = pickIsHome ? pickHome : !pickHome;
-        const pointForPick = pickIsHome ? homePoint : awayPoint;
-        const contradicts = pointForPick < 0
-          ? !(sideIsProjectedWinner && marginForPick >= Math.abs(pointForPick))
-          : marginForPick < -Math.abs(pointForPick);
-        if (contradicts) { rlPick = null; rlEdge = 0; rlProb = null; rlMktProb = null; rlBestAm = null; rlPoint = null; }
-      }
-
       runLineOut = { point: rlPoint, projMargin: Number(projMargin.toFixed(1)), pick: rlPick, edge: Number(rlEdge.toFixed(4)), prob: rlProb !== null ? Number(rlProb.toFixed(4)) : null, mktProb: rlMktProb !== null ? Number(rlMktProb.toFixed(4)) : null, bestAm: rlBestAm };
     } else {
       runLineOut = { point: null, projMargin: Number(projMargin.toFixed(1)), pick: null, edge: 0, prob: null, mktProb: null, bestAm: null };
@@ -675,6 +657,8 @@ async function main() {
     <dt>Market</dt><dd>Moneyline</dd>
     <dt>Pick</dt><dd>${esc(pick)} ML</dd>
     <dt>Current price used</dt><dd>${esc(priceRangeTxt)}</dd>
+    <dt>Playable to</dt><dd>${esc(pd.current)}</dd>
+    <dt>Pass at</dt><dd>${esc(pd.playableTo)} or worse</dd>
     <dt>Confidence tier</dt><dd>${esc(tier)}</dd>
     <dt>Dia edge score</dt><dd>${edgeScore} / 100</dd>
     <dt>Market no-vig probability</dt><dd>${esc(mktProbRangeTxt)}</dd>
@@ -754,10 +738,7 @@ async function main() {
     `\n</div>`));
 
   // sitemap: static pages + recaps + previews
-  const staticPages = ["", "dashboard/", "picks/", "odds/", "tools/", "stats/", "recaps/", "articles/", "membership/", "results/", "previews/",
-    "mlb-betting-edge-explained/", "no-vig-odds-calculator-guide/", "how-to-find-value-in-mlb-moneylines/",
-    "closing-line-value-mlb-betting/", "mlb-run-line-vs-moneyline/", "mlb-bullpen-fatigue-betting/",
-    "mlb-park-factors-betting-guide/", "mlb-pitching-metrics-for-betting/"];
+  const staticPages = ["", "dashboard/", "picks/", "odds/", "tools/", "stats/", "recaps/", "articles/", "membership/", "results/", "previews/"];
   const recapPosts = fs.existsSync(path.join(ROOT, "recaps")) ?
     fs.readdirSync(path.join(ROOT, "recaps")).filter(f => /^\d{4}-\d{2}-\d{2}\.html$/.test(f)).map(f => `recaps/${f}`) : [];
   const urls = staticPages.map(p => `${SITE}/${p}`)
@@ -770,3 +751,4 @@ async function main() {
 }
 
 main().catch(e => { console.error(e); process.exit(1); });
+                    
