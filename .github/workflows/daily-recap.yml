@@ -2,8 +2,9 @@ name: Daily content
 
 on:
   schedule:
-    # 11:00 UTC = 6/7am US Eastern — grade yesterday, recap yesterday, preview today
-    - cron: "0 11 * * *"
+    # 7:35 AM Eastern — grade yesterday, recap yesterday, preview today
+    - cron: "35 7 * * *"
+      timezone: "America/New_York"
   workflow_dispatch: {}
 
 permissions:
