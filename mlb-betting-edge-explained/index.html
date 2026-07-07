@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What Is "Edge" in MLB Betting? A Practical Explanation | LyDia</title>
+<meta name="description" content="A plain-English explanation of betting edge in MLB: what it actually means, where it comes from, how to calculate it, and why a good record isn't the same thing as an edge.">
+<link rel="canonical" href="https://mlbedges.com/mlb-betting-edge-explained/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "What Is \"Edge\" in MLB Betting? A Practical Explanation",
+  "description": "A plain-English explanation of betting edge in MLB: what it actually means, where it comes from, how to calculate it, and why a good record isn't the same thing as an edge.",
+  "author": { "@type": "Organization", "name": "LyDia" },
+  "publisher": { "@type": "Organization", "name": "LyDia" },
+  "datePublished": "2026-07-06",
+  "dateModified": "2026-07-06",
+  "mainEntityOfPage": "https://mlbedges.com/mlb-betting-edge-explained/"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Does having a positive edge guarantee a winning bet?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No. Edge describes a probability advantage over the market price, not a guaranteed outcome. A 55% true probability still loses 45% of the time. Edge is a long-run concept — it predicts profitability over a large sample of similarly-priced bets, not the result of any single game." }
+    },
+    {
+      "@type": "Question",
+      "name": "Is a good win-loss record the same thing as having an edge?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No, and this is the most common confusion in sports betting. A short winning streak can come from pure variance with zero real edge, and a real edge can produce a losing week. Closing line value, not win rate, is the faster and more reliable signal of whether a process actually has an edge." }
+    },
+    {
+      "@type": "Question",
+      "name": "What's a realistic edge to expect in MLB moneylines?",
+      "acceptedAnswer": { "@type": "Answer", "text": "MLB is one of the more efficiently priced markets because of daily games and heavy public and sharp betting volume. Real, sustainable edges in liquid MLB moneylines are usually in the low single digits (roughly 2-6 percentage points), not the double-digit edges sometimes claimed by pick-selling sites." }
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<nav id="nav"></nav>
+<main>
+<article class="post">
+  <p class="eyebrow">Guide · Fundamentals</p>
+  <h1>What Is "Edge" in MLB Betting?</h1>
+  <p class="subtitle">The single most misused word in sports betting. Here's what it actually means, where it comes from, and how to tell a real one from a marketing claim.</p>
+
+  <h2>The one-sentence definition</h2>
+  <p>Edge is the difference between your estimated probability that an outcome happens and the probability implied by the price you can actually bet at, after removing the sportsbook's built-in margin (the vig). If your model says a team wins 57% of the time and the no-vig market price implies 52%, your edge is +5 percentage points. That's it — edge is a comparison between two numbers, not a feeling about a team.</p>
+
+  <h2>Where edge actually comes from</h2>
+  <p>There are only three legitimate sources of edge in a market as heavily bet as MLB, and it's worth being honest about how rare each one is:</p>
+  <p><b>Information the market hasn't priced in yet.</b> A lineup change, a bullpen that's genuinely gassed after extra innings the night before, a bounced-around starter no one's noticed. This is the fastest-decaying edge — books move quickly, and it's usually gone within minutes of becoming public.</p>
+  <p><b>A better model of information everyone already has.</b> Team strength, recent form, and starting pitching are public data. An edge here means processing that same public data into a more accurate probability than the consensus — not finding secret information. This is the slower, more durable kind of edge, and it's what a quantitative model like LyDia's is actually trying to do: blend Pythagorean win expectancy, recent form, and starter quality into one number, then compare it to the market.</p>
+  <p><b>Structural or behavioral biases in how the public bets.</b> Public money tends to overweight name-brand teams, recent results, and narratives ("this team is hot"). That bias can push a line slightly off its true probability, especially on lower-liquidity markets like MLB run lines and totals versus the moneyline.</p>
+
+  <h2>How to calculate it yourself</h2>
+  <p>Three steps, every time:</p>
+  <p><b>1. Convert the price to an implied probability.</b> For American odds: a negative price of -150 implies 150 / (150 + 100) = 60%. A positive price of +130 implies 100 / (130 + 100) = 43.5%.</p>
+  <p><b>2. Strip the vig to get the fair (no-vig) probability.</b> Both sides of a two-way market add up to more than 100% — that extra is the book's margin. Divide each side's implied probability by the sum of both sides to get the fair number. See the full walkthrough on the <a href="/no-vig-odds-calculator-guide/">no-vig odds calculator guide</a>, or use the live <a href="/tools/">Value Tools</a> page to do this instantly.</p>
+  <p><b>3. Subtract the fair probability from your own estimate.</b> Your estimate minus the market's fair number is your raw edge. If it isn't comfortably positive — most disciplined models require at least 3 percentage points — the honest move is to pass, not to bet anyway because you "like the team."</p>
+
+  <h2>A worked example</h2>
+  <p>Say a team is priced at -125 on the moneyline, and the same team's opponent is +110. Implied probabilities: -125 → 55.6%, +110 → 47.6%. Those sum to 103.2%, meaning there's 3.2 percentage points of vig baked in. Strip it out: fair probability on the favorite is 55.6 / 103.2 = 53.9%. If an independent model puts that team's true win probability at 58%, the edge is +4.1 percentage points — enough that a disciplined process would call it a play. If the model instead lands at 55%, the edge is barely over a point, and the honest call is a pass.</p>
+
+  <h2>Why "record" is the wrong thing to check first</h2>
+  <p>A 20-10 stretch of picks feels like proof of an edge, but a coin flip can go 20-10 by chance more often than most people expect, and a real 5% edge can lose money over a two-week sample just from normal variance. The faster, more reliable signal is <a href="/closing-line-value-mlb-betting/">closing line value</a> — whether the price you bet was better than the price the market settled on by first pitch. That comparison shows up in days, not months, which is why serious bettors and serious models track it obsessively instead of just watching the record.</p>
+
+  <div class="lead-box" style="border-color:var(--accent2)">
+    <h3 style="margin:0 0 4px">See the edge calculation on today's real slate</h3>
+    <p class="dim small" style="margin:0">Every published pick shows the model's probability, the market's no-vig probability, and the raw edge between them — no exceptions, no picks without the math shown.</p>
+    <p style="margin-top:10px"><a class="btn" href="/previews/">Today's Previews →</a> <a class="btn blue" href="/membership/">Join LyDia — $30/mo →</a></p>
+  </div>
+
+  <h2>Frequently asked questions</h2>
+  <h3>Does having a positive edge guarantee a winning bet?</h3>
+  <p>No. Edge describes a probability advantage over the market price, not a guaranteed outcome. A 55% true probability still loses 45% of the time. Edge is a long-run concept — it predicts profitability over a large sample of similarly-priced bets, not the result of any single game.</p>
+  <h3>Is a good win-loss record the same thing as having an edge?</h3>
+  <p>No, and this is the most common confusion in sports betting. A short winning streak can come from pure variance with zero real edge, and a real edge can produce a losing week. Closing line value, not win rate, is the faster and more reliable signal of whether a process actually has an edge.</p>
+  <h3>What's a realistic edge to expect in MLB moneylines?</h3>
+  <p>MLB is one of the more efficiently priced markets because of daily games and heavy public and sharp betting volume. Real, sustainable edges in liquid MLB moneylines are usually in the low single digits (roughly 2-6 percentage points), not the double-digit edges sometimes claimed by pick-selling sites.</p>
+
+  <p class="dim small" style="margin-top:24px">Related reading: <a href="/no-vig-odds-calculator-guide/">No-vig odds calculator guide</a> · <a href="/how-to-find-value-in-mlb-moneylines/">How to find value in MLB moneylines</a> · <a href="/closing-line-value-mlb-betting/">Closing line value in MLB betting</a></p>
+</article>
+
+<div class="notice warn" style="margin-top:28px">
+  This page is for analysis and education. Nothing here is betting advice, and no model or stat guarantees a profit. Only bet what you can afford to lose. If gambling stops being fun, call 1-800-GAMBLER.
+</div>
+</main>
+<footer id="footer"></footer>
+<script src="/js/app.js"></script>
+<script>renderNav(""); renderFooter();</script>
+</body>
+</html>

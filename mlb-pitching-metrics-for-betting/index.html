@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MLB Pitching Metrics for Betting: ERA, FIP, xFIP, and What Actually Predicts | LyDia</title>
+<meta name="description" content="ERA vs. FIP vs. xFIP vs. SIERA for MLB betting: what each measures, which are more predictive, and why season ERA alone is a noisier signal than it looks.">
+<link rel="canonical" href="https://mlbedges.com/mlb-pitching-metrics-for-betting/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "MLB Pitching Metrics for Betting: ERA, FIP, xFIP, and What Actually Predicts",
+  "description": "ERA vs. FIP vs. xFIP vs. SIERA for MLB betting: what each measures, which are more predictive, and why season ERA alone is a noisier signal than it looks.",
+  "author": { "@type": "Organization", "name": "LyDia" },
+  "publisher": { "@type": "Organization", "name": "LyDia" },
+  "datePublished": "2026-07-06",
+  "dateModified": "2026-07-06",
+  "mainEntityOfPage": "https://mlbedges.com/mlb-pitching-metrics-for-betting/"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is FIP a better predictor than ERA?",
+      "acceptedAnswer": { "@type": "Answer", "text": "For future performance, generally yes. FIP strips out balls in play, which are heavily influenced by defense and luck, and focuses on strikeouts, walks, and home runs — outcomes a pitcher controls more directly. ERA includes everything that happened, which makes it noisier as a predictive signal even though it's the more familiar number." }
+    },
+    {
+      "@type": "Question",
+      "name": "Why is a small sample of innings pitched a problem for ERA?",
+      "acceptedAnswer": { "@type": "Answer", "text": "ERA is highly sensitive to a small number of bad innings early in a season or after a call-up. A single rough outing can distort a rate stat when the denominator (innings pitched) is still small, which is why models and serious bettors treat a starter's ERA with far more caution below roughly 15-20 innings pitched." }
+    },
+    {
+      "@type": "Question",
+      "name": "What should a bettor look at besides ERA for a starting pitcher matchup?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Strikeout rate (K/9 or K%), walk rate (BB/9 or BB%), and home run rate (HR/9) are the core building blocks behind FIP-style metrics and tend to stabilize faster and predict future performance better than ERA alone, especially over a starter's first 20-30 innings of a season." }
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<nav id="nav"></nav>
+<main>
+<article class="post">
+  <p class="eyebrow">Guide · Fundamentals</p>
+  <h1>MLB Pitching Metrics for Betting</h1>
+  <p class="subtitle">ERA is the number everyone knows and the number that lies to you the most. Here's what to actually weigh, and why.</p>
+
+  <h2>ERA: familiar, but noisier than it looks</h2>
+  <p>Earned run average counts every run that scores as a result of the pitcher's own actions, including the effects of the defense behind him and simple batted-ball luck (a screaming line drive right at a fielder counts the same as a routine popup in run prevention terms, but the outcomes on balls in play vary a lot from what the pitcher actually controls). Over a full season, ERA converges toward something meaningful. Early in a season, or for any pitcher with a limited innings sample, it's a genuinely noisy number — a few unlucky innings can move it by a full run or more.</p>
+
+  <h2>FIP: strips out what the pitcher doesn't control</h2>
+  <p>Fielding Independent Pitching (FIP) is built only from strikeouts, walks, hit-by-pitches, and home runs allowed — the outcomes that don't depend on the nine fielders behind the pitcher or where a ball happens to land. It's scaled to look like an ERA number for easy comparison, and it tends to be a better predictor of a pitcher's future ERA than his current ERA is, especially over shorter samples.</p>
+
+  <h2>xFIP: adjusts home runs to a league-average rate</h2>
+  <p>Expected FIP (xFIP) takes FIP one step further by normalizing home-run rate to what would be expected given the pitcher's fly-ball rate and the league-average home-run-per-fly-ball rate, rather than the pitcher's actual (and often small-sample, park-influenced) home run total. This can be especially useful early in a season, or for pitchers who've had an unusually high or low home-run rate in a small number of innings.</p>
+
+  <h2>SIERA and other advanced ERA estimators</h2>
+  <p>Skill-Interactive ERA (SIERA) and similar metrics attempt to go further still, accounting for batted-ball mix (ground balls vs. fly balls) and how strikeout and walk rates interact with each other. These are generally considered more sophisticated but require more inputs and are less transparent to calculate by hand than FIP or xFIP.</p>
+
+  <h2>Why this matters more early in a season</h2>
+  <p>A starter with 12 innings pitched and a 2.50 ERA looks great on paper, but 12 innings is a tiny sample — a single bad inning changes that ERA by nearly half a run. This is exactly why disciplined models apply an innings-pitched floor before trusting a starter's season ERA at face value, falling back to a league-average estimate for pitchers who haven't thrown enough innings yet to produce a stable read. LyDia's own model, for example, treats any starter under 20 innings pitched as a league-average arm rather than trusting a small, noisy sample — and even beyond that threshold, clamps extreme ERA values into a realistic range (roughly 2.75 to 6.00) rather than letting one outlier start dominate the projection.</p>
+
+  <h2>The secondary rate stats worth knowing</h2>
+  <p><b>WHIP</b> (walks + hits per inning pitched) — a quick read on traffic allowed, though like ERA it includes balls-in-play luck.<br>
+  <b>K/9 or K%</b> — strikeout rate, one of the fastest-stabilizing and most predictive pitching skills.<br>
+  <b>BB/9 or BB%</b> — walk rate, similarly fast-stabilizing and a real skill signal.<br>
+  <b>HR/9</b> — home run rate, which stabilizes more slowly and benefits from the kind of park/luck adjustment xFIP applies.</p>
+
+  <h2>How to apply this to a matchup</h2>
+  <p>For a betting decision, weighing the starting pitching matchup by ERA alone is the most common mistake in amateur MLB handicapping. A better process leans on strikeout and walk rate as faster-stabilizing signals, treats home-run rate with more skepticism in small samples, and discounts season ERA specifically for pitchers with limited innings — exactly the kind of adjustment that separates a durable model input from a number that just happens to look impressive or alarming this week.</p>
+
+  <div class="lead-box" style="border-color:var(--accent2)">
+    <h3 style="margin:0 0 4px">See the starting pitching adjustment on today's slate</h3>
+    <p class="dim small" style="margin:0">Every preview shows both starters' ERA, WHIP, and innings pitched, with low-sample starters flagged rather than trusted at face value.</p>
+    <p style="margin-top:10px"><a class="btn" href="/previews/">Today's Previews →</a> <a class="btn blue" href="/membership/">Join LyDia — $30/mo →</a></p>
+  </div>
+
+  <h2>Frequently asked questions</h2>
+  <h3>Is FIP a better predictor than ERA?</h3>
+  <p>For future performance, generally yes. FIP strips out balls in play, which are heavily influenced by defense and luck, and focuses on strikeouts, walks, and home runs — outcomes a pitcher controls more directly. ERA includes everything that happened, which makes it noisier as a predictive signal even though it's the more familiar number.</p>
+  <h3>Why is a small sample of innings pitched a problem for ERA?</h3>
+  <p>ERA is highly sensitive to a small number of bad innings early in a season or after a call-up. A single rough outing can distort a rate stat when the denominator (innings pitched) is still small, which is why models and serious bettors treat a starter's ERA with far more caution below roughly 15-20 innings pitched.</p>
+  <h3>What should a bettor look at besides ERA for a starting pitcher matchup?</h3>
+  <p>Strikeout rate (K/9 or K%), walk rate (BB/9 or BB%), and home run rate (HR/9) are the core building blocks behind FIP-style metrics and tend to stabilize faster and predict future performance better than ERA alone, especially over a starter's first 20-30 innings of a season.</p>
+
+  <p class="dim small" style="margin-top:24px">Related reading: <a href="/mlb-bullpen-fatigue-betting/">Bullpen fatigue and betting</a> · <a href="/mlb-park-factors-betting-guide/">Park factors betting guide</a> · <a href="/how-to-find-value-in-mlb-moneylines/">How to find value in MLB moneylines</a></p>
+</article>
+
+<div class="notice warn" style="margin-top:28px">
+  This page is for analysis and education. Nothing here is betting advice, and no model or stat guarantees a profit. Only bet what you can afford to lose. If gambling stops being fun, call 1-800-GAMBLER.
+</div>
+</main>
+<footer id="footer"></footer>
+<script src="/js/app.js"></script>
+<script>renderNav(""); renderFooter();</script>
+</body>
+</html>

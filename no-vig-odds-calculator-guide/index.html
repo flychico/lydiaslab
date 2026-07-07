@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>No-Vig Odds Calculator Guide: How to Strip the Vig from MLB Lines | LyDia</title>
+<meta name="description" content="How to calculate no-vig (fair) odds from any MLB moneyline, total, or run line, with worked examples and formulas — plus a free live calculator.">
+<link rel="canonical" href="https://mlbedges.com/no-vig-odds-calculator-guide/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "No-Vig Odds Calculator Guide: How to Strip the Vig from MLB Lines",
+  "description": "How to calculate no-vig (fair) odds from any MLB moneyline, total, or run line, with worked examples and formulas — plus a free live calculator.",
+  "author": { "@type": "Organization", "name": "LyDia" },
+  "publisher": { "@type": "Organization", "name": "LyDia" },
+  "datePublished": "2026-07-06",
+  "dateModified": "2026-07-06",
+  "mainEntityOfPage": "https://mlbedges.com/no-vig-odds-calculator-guide/"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What does 'no-vig' mean?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No-vig (also called 'fair odds' or 'de-vigged') means the sportsbook's built-in profit margin has been mathematically removed from a price, leaving the market's true implied probability for each outcome." }
+    },
+    {
+      "@type": "Question",
+      "name": "Why don't both sides of a moneyline add up to 100%?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Because the book builds in a margin (the vig, or juice) on both sides of the bet. Adding the implied probabilities of both outcomes on a two-way market will almost always total slightly more than 100% — commonly 102% to 105% for MLB moneylines — and that excess is the book's edge, not a reflection of the true probabilities." }
+    },
+    {
+      "@type": "Question",
+      "name": "How much vig does a typical MLB moneyline carry?",
+      "acceptedAnswer": { "@type": "Answer", "text": "It varies by book and by how lopsided the game is, but MLB moneylines commonly run 2% to 5% total vig, with lines on heavy favorites (very short prices) tending to carry more vig than close games." }
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<nav id="nav"></nav>
+<main>
+<article class="post">
+  <p class="eyebrow">Guide · Fundamentals</p>
+  <h1>No-Vig Odds Calculator Guide</h1>
+  <p class="subtitle">Every betting line has the book's margin baked in. Here's exactly how to strip it out and see the market's real, fair probability — with the formulas and worked examples.</p>
+
+  <h2>What "the vig" actually is</h2>
+  <p>Sportsbooks don't set prices to reflect true 50/50 probability on an even game — they set prices so that both sides of the bet, added together, total more than 100%. That extra percentage is the vig (also called juice or the overround), and it's how the book makes money regardless of who wins. A "pick'em" game priced at -110 / -110 isn't really a 50/50 proposition to the book — implied probability on each side is 52.4%, which sums to 104.8%. The extra 4.8% is margin.</p>
+
+  <h2>The implied probability formula</h2>
+  <p>Before you can remove the vig, you need to convert American odds into implied probability:</p>
+  <p><b>Negative odds</b> (favorite): implied probability = |odds| ÷ (|odds| + 100)<br>Example: -150 → 150 ÷ 250 = 60.0%</p>
+  <p><b>Positive odds</b> (underdog): implied probability = 100 ÷ (odds + 100)<br>Example: +130 → 100 ÷ 230 = 43.5%</p>
+
+  <h2>The no-vig (de-vigged) formula</h2>
+  <p>Once you have implied probability for both sides of a two-way market, dividing each side by the sum of both removes the vig proportionally:</p>
+  <p><code>fair probability (side A) = implied(A) ÷ (implied(A) + implied(B))</code></p>
+  <p>This is the same method used throughout LyDia's own model and the live <a href="/tools/">Value Tools</a> calculator, and it's the standard approach used across the sports betting analytics community — it assumes the book distributes its margin roughly proportionally across both sides, which is a reasonable approximation for liquid two-way MLB markets.</p>
+
+  <h2>A full worked example</h2>
+  <p>Take a real-looking MLB moneyline: Team A -140, Team B +120.</p>
+  <p>Step 1 — implied probability: Team A = 140 ÷ 240 = 58.3%. Team B = 100 ÷ 220 = 45.5%.</p>
+  <p>Step 2 — sum: 58.3% + 45.5% = 103.8%. That's 3.8 percentage points of vig.</p>
+  <p>Step 3 — de-vig: Team A fair = 58.3 ÷ 103.8 = 56.2%. Team B fair = 45.5 ÷ 103.8 = 43.8%. Notice these now sum to exactly 100%, as a true probability pair should.</p>
+  <p>That 56.2% is the market's actual, fair-value opinion on Team A — not the 58.3% the raw price suggested. Any model comparison should always be made against this de-vigged number, never the raw implied probability, or you'll systematically understate how much edge you actually need to have.</p>
+
+  <h2>No-vig for totals and run lines</h2>
+  <p>The same math applies to Over/Under totals (Over vs. Under) and run lines (favorite -1.5 vs. underdog +1.5) — any two-way market works identically. See <a href="/mlb-run-line-vs-moneyline/">run line vs. moneyline</a> for how those two markets relate to each other and why a bettor's view on one constrains what they can logically believe about the other.</p>
+
+  <h2>Why this number matters more than the raw price</h2>
+  <p>No-vig probability is the honest baseline for measuring <a href="/mlb-betting-edge-explained/">edge</a>: your model's probability minus the market's fair probability. Comparing your number to the raw (vig-included) price will make almost every bet look better than it really is, since the vig is working against you on both sides. Always de-vig first.</p>
+
+  <div class="lead-box" style="border-color:var(--accent2)">
+    <h3 style="margin:0 0 4px">Skip the manual math</h3>
+    <p class="dim small" style="margin:0">The live Value Tools page converts odds formats, strips the vig, and calculates expected value and Kelly stake sizing automatically.</p>
+    <p style="margin-top:10px"><a class="btn" href="/tools/">Open the calculator →</a> <a class="btn blue" href="/membership/">Join LyDia — $30/mo →</a></p>
+  </div>
+
+  <h2>Frequently asked questions</h2>
+  <h3>What does "no-vig" mean?</h3>
+  <p>No-vig (also called "fair odds" or "de-vigged") means the sportsbook's built-in profit margin has been mathematically removed from a price, leaving the market's true implied probability for each outcome.</p>
+  <h3>Why don't both sides of a moneyline add up to 100%?</h3>
+  <p>Because the book builds in a margin (the vig, or juice) on both sides of the bet. Adding the implied probabilities of both outcomes on a two-way market will almost always total slightly more than 100% — commonly 102% to 105% for MLB moneylines — and that excess is the book's edge, not a reflection of the true probabilities.</p>
+  <h3>How much vig does a typical MLB moneyline carry?</h3>
+  <p>It varies by book and by how lopsided the game is, but MLB moneylines commonly run 2% to 5% total vig, with lines on heavy favorites (very short prices) tending to carry more vig than close games.</p>
+
+  <p class="dim small" style="margin-top:24px">Related reading: <a href="/mlb-betting-edge-explained/">What is edge in MLB betting?</a> · <a href="/how-to-find-value-in-mlb-moneylines/">How to find value in MLB moneylines</a> · <a href="/mlb-run-line-vs-moneyline/">Run line vs. moneyline</a></p>
+</article>
+
+<div class="notice warn" style="margin-top:28px">
+  This page is for analysis and education. Nothing here is betting advice, and no model or stat guarantees a profit. Only bet what you can afford to lose. If gambling stops being fun, call 1-800-GAMBLER.
+</div>
+</main>
+<footer id="footer"></footer>
+<script src="/js/app.js"></script>
+<script>renderNav(""); renderFooter();</script>
+</body>
+</html>
