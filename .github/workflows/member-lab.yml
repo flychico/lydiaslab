@@ -1,0 +1,53 @@
+name: LyDia Member Lab
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "YYYY-MM-DD date to generate. Leave blank for today."
+        required: false
+        default: ""
+      snapshot:
+        description: "posted, current, or closing"
+        required: false
+        default: "posted"
+  schedule:
+    # MLB season is usually in Eastern Daylight Time. 11:40 UTC = 7:40 AM ET during DST.
+    - cron: "40 11 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  generate-member-lab:
+    runs-on: ubuntu-latest
+    env:
+      ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Generate member lab data
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            node scripts/generate-member-lab.js --date "${{ github.event.inputs.date }}" --snapshot "${{ github.event.inputs.snapshot || 'posted' }}"
+          else
+            node scripts/generate-member-lab.js --snapshot "posted"
+          fi
+
+      - name: Commit generated lab data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/member-brief data/market
+          if git diff --cached --quiet; then
+            echo "No member lab changes to commit."
+          else
+            git commit -m "Update LyDia member lab data"
+            git push
+          fi
