@@ -72,7 +72,7 @@ function renderNav(active) {
     ["/previews/", "Previews"],
     ["/results/", "Results"],
     ["/odds/", "Odds"],
-    ["/tools/", "Tools"],
+    ["/tools/", "Lab"],
     ["/stats/", "Stats"],
     ["/recaps/", "Recap"],
     ["/articles/", "Articles"]
