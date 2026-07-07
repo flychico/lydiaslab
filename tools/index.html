@@ -12,7 +12,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LyDia's Lab — MLB Research Tools</title>
-<meta name="description" content="LyDia's Lab gives MLB members research tools for pitcher matchups, bullpen fatigue, market movement, and odds value checks.">
+<meta name="description" content="LyDia's Lab gives MLB members research tools for pitcher matchups, bullpen fatigue, market movement, Lab Score, and odds value checks.">
 <link rel="canonical" href="https://mlbedges.com/tools/">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
@@ -36,17 +36,33 @@
     <div class="card">
       <div class="lab-kicker">Member research workspace</div>
       <h1>LyDia's Lab</h1>
-      <p class="subtitle" style="margin-bottom:0">Daily MLB research tools built around the way LyDia actually reads a card: starting pitching, bullpen condition, market movement, and transparent value math.</p>
+      <p class="subtitle" style="margin-bottom:0">Daily MLB research tools built around the way LyDia reads a card: starting pitching, bullpen condition, market movement, Lab Score, and transparent value math.</p>
     </div>
     <div class="card">
-      <h3>What changed?</h3>
-      <p>This page is no longer just an odds calculator. The calculators are still here, but the main product is now the research lab members can use before they read the daily picks.</p>
-      <p><a class="btn blue" href="/membership/">Join LyDia — $30/mo →</a></p>
+      <h3>Best member workflow</h3>
+      <p>Start with the Daily Member Brief, then drill into pitcher matchups, bullpen fatigue, and LyDia vs Market when a game needs more context.</p>
+      <p><a class="btn blue" href="/member-brief/">Open Daily Member Brief →</a></p>
     </div>
   </div>
 
-  <h2>Today's Research</h2>
-  <div class="grid grid-3">
+  <h2>Member Lab</h2>
+  <div class="grid grid-2">
+    <div class="card tool-card">
+      <span class="badge pos">New</span>
+      <h3>Daily Member Brief</h3>
+      <p>One morning dashboard with official picks, Lab Score, pitcher edges, bullpen flags, market notes, and pass reasons.</p>
+      <div class="tool-status">Uses generated JSON from the member-lab workflow.</div>
+      <div class="btn-row"><a class="btn" href="/member-brief/">Open daily brief →</a></div>
+    </div>
+
+    <div class="card tool-card">
+      <span class="badge pos">New</span>
+      <h3>LyDia vs Market</h3>
+      <p>Track posted price, current price, and closing price snapshots for official picks so members can evaluate process quality.</p>
+      <div class="tool-status">Requires generated market snapshots for true tracking.</div>
+      <div class="btn-row"><a class="btn" href="/tools/market/">Open market tracker →</a></div>
+    </div>
+
     <div class="card tool-card">
       <span class="badge neutral">Live tool</span>
       <h3>Pitcher Matchup Tool</h3>
@@ -61,14 +77,6 @@
       <p>See which teams enter today with fresh, normal, tired, or high-risk bullpen profiles based on recent workload.</p>
       <div class="tool-status">Version one estimates workload from recent game logs.</div>
       <div class="btn-row"><a class="btn" href="/tools/bullpen-fatigue/">Open bullpen index →</a></div>
-    </div>
-
-    <div class="card tool-card">
-      <span class="badge neutral">Live tool</span>
-      <h3>LyDia vs Market</h3>
-      <p>Compare LyDia's model side against the current market and review whether the price supports or pushes back on the model read.</p>
-      <div class="tool-status">Requires the same Odds API key saved on the Odds page.</div>
-      <div class="btn-row"><a class="btn" href="/tools/market/">Open market tracker →</a></div>
     </div>
   </div>
 
@@ -119,7 +127,7 @@
   </div>
 
   <div class="notice">
-    <strong>Lab workflow:</strong> start with the pitcher matchup, check bullpen condition, compare LyDia's read to the market, then use the calculators only to understand the math behind a price.
+    <strong>Lab workflow:</strong> read the Daily Member Brief first, then use the individual tools to understand why a game cleared the model, why it landed on the watchlist, or why LyDia passed.
   </div>
 </main>
 <footer id="footer"></footer>
