@@ -2,7 +2,7 @@ name: Daily content
 
 on:
   schedule:
-    # 7:35 AM Eastern — grade yesterday, recap yesterday, preview today
+    # Runs every day at 7:35 AM America/New_York
     - cron: "35 7 * * *"
       timezone: "America/New_York"
   workflow_dispatch: {}
@@ -10,15 +10,31 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: daily-content
+  cancel-in-progress: false
+
 jobs:
   daily:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 20
+
+      - name: Show run time
+        run: |
+          echo "UTC time:"
+          date -u
+          echo "Eastern time:"
+          TZ="America/New_York" date
 
       - name: Grade yesterday's picks
         run: node scripts/grade-results.js
@@ -31,15 +47,51 @@ jobs:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
         run: node scripts/generate-previews.js
 
+      - name: Verify generated files
+        run: |
+          echo "Checking generated content..."
+
+          echo "Results folder:"
+          ls -la results || true
+
+          echo "Previews folder:"
+          ls -la previews || true
+
+          echo "Recaps folder:"
+          ls -la recaps || true
+
+          echo "Data folder:"
+          ls -la data || true
+
+          if [ ! -f "results/index.html" ]; then
+            echo "ERROR: results/index.html was not generated."
+            exit 1
+          fi
+
+          if ! grep -q "<table" results/index.html; then
+            echo "ERROR: results/index.html exists, but no results table was found."
+            exit 1
+          fi
+
+          if [ ! -f "previews/index.html" ]; then
+            echo "ERROR: previews/index.html was not generated."
+            exit 1
+          fi
+
+          echo "Generated files look good."
+
       - name: Commit and push if changed
         run: |
           git config user.name "lydia-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add recaps/ previews/ data/ results/ sitemap.xml
+
+          git add results/ recaps/ previews/ data/ sitemap.xml
+
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "Daily content $(date -u +%F)"
+            git commit -m "Daily content $(TZ='America/New_York' date +%F)"
+            git pull --rebase
             git push
           fi
 
