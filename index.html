@@ -8,6 +8,53 @@
 <link rel="canonical" href="https://mlbedges.com/">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "LyDia",
+  "url": "https://mlbedges.com/",
+  "description": "LyDia publishes a quantitative model pick for every MLB game, every day, with the math shown and every result graded in public.",
+  "sameAs": []
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "LyDia",
+  "url": "https://mlbedges.com/",
+  "description": "Daily MLB moneyline, total, and run line picks from a transparent quantitative model, checked against the market and graded publicly."
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How does LyDia's MLB model work?",
+      "acceptedAnswer": { "@type": "Answer", "text": "LyDia blends each team's Pythagorean win expectation (from run differential) with last-10 form, combines the two teams head-to-head with a log5 calculation and a home-field adjustment, then shifts the number based on the starting pitching matchup using each starter's season ERA (with a floor for low-innings starters). Totals and run lines use a separate normal-approximation model on the same team and pitcher inputs, adjusted for ballpark and weather." }
+    },
+    {
+      "@type": "Question",
+      "name": "Is LyDia's model always right?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No, and it isn't trying to be. The model publishes a probability and compares it to the market's fair price — when the two are close, or the model has no real edge, it explicitly passes rather than forcing a play. Every graded pick, win or lose, stays visible on the public Results page." }
+    },
+    {
+      "@type": "Question",
+      "name": "Is LyDia free to use?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. Every model pick, every day, is free to read on the Previews page with the full math shown. Membership ($30/month) adds delivery to your inbox before first pitch and a re-check alert if a price moves, but nothing is held back from the free site." }
+    },
+    {
+      "@type": "Question",
+      "name": "What markets does LyDia cover?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Moneyline, total runs (Over/Under), and run line for every MLB regular-season game, compared against live sportsbook pricing with the no-vig probability and raw edge shown for each market." }
+    }
+  ]
+}
+</script>
 </head>
 <body>
 <nav id="nav"></nav>
@@ -63,6 +110,35 @@
     <div class="card"><h3>Market</h3><p>Every pick is checked against the market's no-vig probability. No edge over the price means no pick — discipline is the product, not volume.</p></div>
     <div class="card"><h3>Accountability</h3><p>Every preview is archived and every pick is graded the next day on the public <a href="/results/">Results page</a>. Wins and losses alike — nothing is deleted.</p></div>
   </div>
+
+  <h2>The methodology, in plain English</h2>
+  <p>Every morning, before any picks are published, the model pulls the day's real MLB schedule, current standings, and probable starters, then works through the same process for every game on the slate. First, each team gets a strength number blending its Pythagorean win expectation — a well-established estimate of "true" win percentage derived from runs scored and allowed, which tends to be more stable than raw record — with its last-10-game form, weighted so a hot or cold recent stretch nudges the number without overwhelming the full-season signal. Those two team strengths are combined head-to-head using a log5 calculation, the standard method for estimating one team's win probability against a specific opponent, and the home team gets a modest home-field adjustment reflecting MLB's roughly 54% historical home win rate.</p>
+  <p>From there, the starting pitching matchup shifts the number. Each starter's season ERA is compared to league average, with a floor: any starter under 20 innings pitched for the season is treated as league-average rather than trusted on a small, noisy sample, and extreme ERA values are clamped into a realistic range so one outlier start can't distort the projection. The size of the shift is proportional to the ERA gap between the two starters — see the full breakdown in the <a href="/mlb-pitching-metrics-for-betting/">pitching metrics guide</a>.</p>
+  <p>Total runs and run line use a separate, lighter model: each team's scoring rate and its opponent's run prevention are combined, adjusted for the home ballpark's park factor (see the <a href="/mlb-park-factors-betting-guide/">park factors guide</a>) and, for open-air stadiums, the game-time weather forecast, then compared to the market line through a standard normal-distribution approximation. A run-line pick is only published if it's directionally consistent with the same game's moneyline projection — see <a href="/mlb-run-line-vs-moneyline/">run line vs. moneyline</a> for why that consistency check matters.</p>
+  <p>Every one of these three numbers — moneyline, total, run line — is then compared to the sportsbook market's no-vig (fair) probability, not the raw price. See <a href="/no-vig-odds-calculator-guide/">the no-vig odds calculator guide</a> for exactly how that works. Only when the model's probability clears the market's fair number by a meaningful margin does a game get labeled a play; everything else is marked an explicit pass. That's what "no edge, no play" means in practice — read more on <a href="/mlb-betting-edge-explained/">what edge actually means</a> and <a href="/how-to-find-value-in-mlb-moneylines/">how to find value in MLB moneylines</a>.</p>
+
+  <h2>Guides</h2>
+  <p class="subtitle">The concepts behind every pick on this site, explained in full.</p>
+  <div class="grid grid-3">
+    <div class="card"><h3><a href="/mlb-betting-edge-explained/">What Is Edge in MLB Betting?</a></h3><p>What edge actually means, where it comes from, and how to calculate it yourself.</p></div>
+    <div class="card"><h3><a href="/no-vig-odds-calculator-guide/">No-Vig Odds Calculator Guide</a></h3><p>How to strip the sportsbook's margin out of any price to see the market's real, fair probability.</p></div>
+    <div class="card"><h3><a href="/how-to-find-value-in-mlb-moneylines/">How to Find Value in MLB Moneylines</a></h3><p>A repeatable, five-step process for spotting real value instead of chasing hunches.</p></div>
+    <div class="card"><h3><a href="/closing-line-value-mlb-betting/">Closing Line Value in MLB Betting</a></h3><p>Why CLV, not win rate, is the fastest reliable signal of whether a process has an edge.</p></div>
+    <div class="card"><h3><a href="/mlb-run-line-vs-moneyline/">MLB Run Line vs. Moneyline</a></h3><p>When each market offers better value, and the consistency rule almost nobody applies.</p></div>
+    <div class="card"><h3><a href="/mlb-bullpen-fatigue-betting/">MLB Bullpen Fatigue and Betting</a></h3><p>How to spot an overworked bullpen before a game, and why it's hard to model automatically.</p></div>
+    <div class="card"><h3><a href="/mlb-park-factors-betting-guide/">MLB Park Factors Betting Guide</a></h3><p>A full table of all 30 ballparks' run environments, from Coors Field to Oracle Park.</p></div>
+    <div class="card"><h3><a href="/mlb-pitching-metrics-for-betting/">MLB Pitching Metrics for Betting</a></h3><p>ERA vs. FIP vs. xFIP vs. SIERA — what each measures and which actually predicts.</p></div>
+  </div>
+
+  <h2>Frequently asked questions</h2>
+  <h3>How does LyDia's MLB model work?</h3>
+  <p>LyDia blends each team's Pythagorean win expectation (from run differential) with last-10 form, combines the two teams head-to-head with a log5 calculation and a home-field adjustment, then shifts the number based on the starting pitching matchup using each starter's season ERA (with a floor for low-innings starters). Totals and run lines use a separate normal-approximation model on the same team and pitcher inputs, adjusted for ballpark and weather.</p>
+  <h3>Is LyDia's model always right?</h3>
+  <p>No, and it isn't trying to be. The model publishes a probability and compares it to the market's fair price — when the two are close, or the model has no real edge, it explicitly passes rather than forcing a play. Every graded pick, win or lose, stays visible on the public <a href="/results/">Results page</a>.</p>
+  <h3>Is LyDia free to use?</h3>
+  <p>Yes. Every model pick, every day, is free to read on the <a href="/previews/">Previews page</a> with the full math shown. Membership ($30/month) adds delivery to your inbox before first pitch and a re-check alert if a price moves, but nothing is held back from the free site.</p>
+  <h3>What markets does LyDia cover?</h3>
+  <p>Moneyline, total runs (Over/Under), and run line for every MLB regular-season game, compared against live sportsbook pricing with the no-vig probability and raw edge shown for each market.</p>
 
   <div class="notice warn" style="margin-top:28px">
     This site is for analysis and education. Nothing here is betting advice, and no model or stat guarantees a profit. Only bet what you can afford to lose. If gambling stops being fun, call 1-800-GAMBLER.
