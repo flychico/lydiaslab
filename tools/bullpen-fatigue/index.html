@@ -86,13 +86,15 @@ function ipToNum(ip) {
   const [w, f] = String(ip).split(".");
   return Number(w || 0) + (Number(f || 0) / 3);
 }
-function fmtIP(n) {
+function fmtNumber(n, dp=1) {
   if (!Number.isFinite(n)) return "—";
-  const whole = Math.floor(n);
-  const frac = Math.round((n - whole) * 3);
-  return frac ? `${whole}.${frac}` : String(whole);
+  const rounded = Math.round(n * Math.pow(10, dp)) / Math.pow(10, dp);
+  return Number.isInteger(rounded) ? String(rounded) : String(rounded.toFixed(dp));
 }
 function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
+function gradeClass(grade) {
+  return grade === "High risk" || grade === "Tired" ? "neg" : grade === "Fresh" ? "pos" : "neutral";
+}
 
 async function load() {
   const statusEl = document.getElementById("status");
@@ -102,6 +104,56 @@ async function load() {
   teamsEl.innerHTML = ""; kpisEl.innerHTML = "";
 
   const date = datePick.value;
+  const generated = await loadGeneratedBullpen(date);
+  if (generated && Array.isArray(generated.teams)) {
+    const rows = generated.teams.map(normalizeGeneratedTeam).sort((a,b) => b.score - a.score || a.name.localeCompare(b.name));
+    renderRows(rows, `Generated source: /data/bullpen/${generated.date === localISODate(new Date()) ? "today.json" : generated.date + ".json"}. Last updated ${escapeHtml(generated.generated_at || "unknown")}.`);
+    return;
+  }
+
+  await loadLiveFallback(date);
+}
+
+async function loadGeneratedBullpen(date) {
+  const stamp = Date.now();
+  const today = localISODate(new Date());
+  const urls = date === today
+    ? [`/data/bullpen/today.json?v=${stamp}`, `/data/bullpen/${date}.json?v=${stamp}`]
+    : [`/data/bullpen/${date}.json?v=${stamp}`];
+
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (data && data.date === date && Array.isArray(data.teams)) return data;
+    } catch(e) {}
+  }
+  return null;
+}
+
+function normalizeGeneratedTeam(t) {
+  const score = Number.isFinite(Number(t.score)) ? Number(t.score) : 0;
+  const grade = t.label || t.grade || "Unknown";
+  return {
+    name: t.team || t.name || "Unknown team",
+    nextGame: t.game || t.nextGame || "",
+    score,
+    grade,
+    cls: gradeClass(grade),
+    lastGameBPIP: Number(t.last_game_bp_ip),
+    last3BP: Number(t.last3_bp_ip),
+    lastGameRelievers: Number(t.last_game_relievers),
+    last3Relievers: Number(t.last3_relievers),
+    b2b: Number(t.back_to_back_arms),
+    read: t.workload_read || t.read || "Bullpen workload data available from generated LyDia source.",
+    gamesTracked: Number.isFinite(Number(t.games_tracked)) ? Number(t.games_tracked) : null,
+    dataSource: t.data_source || "generated"
+  };
+}
+
+async function loadLiveFallback(date) {
+  const statusEl = document.getElementById("status");
   let todayGames;
   try {
     todayGames = await getGamesForDate(date);
@@ -110,21 +162,15 @@ async function load() {
     return;
   }
 
-  const todayPreview = todayGames.filter(g => g.status.abstractGameState === "Preview" || g.status.abstractGameState === "Live");
   if (!todayGames.length) {
-    statusEl.innerHTML = `<div class="notice">No MLB games scheduled for ${date}.</div>`;
+    statusEl.innerHTML = `<div class="notice">No MLB games scheduled for ${escapeHtml(date)}.</div>`;
     return;
   }
 
-  const teamsToday = new Map();
-  for (const g of todayGames) {
-    teamsToday.set(g.teams.away.team.id, { id:g.teams.away.team.id, name:g.teams.away.team.name, nextGame:`${g.teams.away.team.name} @ ${g.teams.home.team.name}` });
-    teamsToday.set(g.teams.home.team.id, { id:g.teams.home.team.id, name:g.teams.home.team.name, nextGame:`${g.teams.away.team.name} @ ${g.teams.home.team.name}` });
-  }
-
   const data = {};
-  for (const t of teamsToday.values()) {
-    data[t.id] = { ...t, games: [], pitcherDates: {} };
+  for (const g of todayGames) {
+    data[g.teams.away.team.id] = { id:g.teams.away.team.id, name:g.teams.away.team.name, nextGame:`${g.teams.away.team.name} @ ${g.teams.home.team.name}`, games: [], pitcherDates: {} };
+    data[g.teams.home.team.id] = { id:g.teams.home.team.id, name:g.teams.home.team.name, nextGame:`${g.teams.away.team.name} @ ${g.teams.home.team.name}`, games: [], pitcherDates: {} };
   }
 
   const priorDates = [-1, -2, -3].map(n => dateShift(date, n));
@@ -145,7 +191,15 @@ async function load() {
   }
 
   const rows = Object.values(data).map(scoreTeam).sort((a,b) => b.score - a.score || a.name.localeCompare(b.name));
-  statusEl.innerHTML = "";
+  renderRows(rows, "Generated bullpen JSON was not available for this date, so this page is using live browser calculation as a fallback.", true);
+}
+
+function renderRows(rows, sourceNote, isFallback=false) {
+  const statusEl = document.getElementById("status");
+  const teamsEl = document.getElementById("teams");
+  const kpisEl = document.getElementById("kpis");
+
+  statusEl.innerHTML = `<div class="notice${isFallback ? " warn" : ""}"><strong>Data source:</strong> ${sourceNote}</div>`;
   teamsEl.innerHTML = rows.map(renderTeam).join("");
 
   const high = rows.filter(r => r.grade === "High risk").length;
@@ -213,7 +267,6 @@ function scoreTeam(team) {
     }
   }
 
-  // Centered on a normal workload (last3 ~9 bullpen IP, last game ~3 IP). Deviations move the score, so the index discriminates instead of pinning every team at 100.
   const score = Math.round(clamp(45 + (last3BP - 9) * 3.5 + (last.bpIP - 3) * 4 + b2b * 6, 0, 100));
   let grade = "Normal", cls = "neutral";
   if (score >= 78) { grade = "High risk"; cls = "neg"; }
@@ -228,20 +281,22 @@ function scoreTeam(team) {
   return {
     ...team,
     lastGameDate: last.date,
-    lastGameBPIP: last.bpIP,
+    lastGameBPIP: Math.round(last.bpIP * 10) / 10,
     lastGameRelievers: last.relievers,
-    last3BP,
+    last3BP: Math.round(last3BP * 10) / 10,
     last3Relievers,
     b2b,
     score,
     grade,
     cls,
     read,
-    gamesTracked: games.length
+    gamesTracked: games.length,
+    dataSource: "live_fallback"
   };
 }
 
 function renderTeam(t) {
+  const tracked = t.gamesTracked === null ? "generated" : `${t.gamesTracked} recent game${t.gamesTracked === 1 ? "" : "s"} tracked`;
   return `<div class="card team-card">
     <div class="team-head">
       <span class="matchup">${escapeHtml(t.name)}</span>
@@ -250,15 +305,16 @@ function renderTeam(t) {
     <div class="grade-line">
       <span class="badge ${t.cls}">${escapeHtml(t.grade)}</span>
       <span><b>Fatigue score:</b> ${t.score}/100</span>
-      <span class="dim small">${t.gamesTracked} recent game${t.gamesTracked === 1 ? "" : "s"} tracked</span>
+      <span class="dim small">${tracked}</span>
     </div>
     <div class="metric-grid">
-      <div class="metric-box"><div class="label">Last game BP IP</div><div class="value">${fmtIP(t.lastGameBPIP)}</div></div>
-      <div class="metric-box"><div class="label">Last 3 days BP IP</div><div class="value">${fmtIP(t.last3BP)}</div></div>
-      <div class="metric-box"><div class="label">Last game relievers</div><div class="value">${t.lastGameRelievers || 0}</div></div>
-      <div class="metric-box"><div class="label">Back-to-back arms</div><div class="value">${t.b2b || 0}</div></div>
+      <div class="metric-box"><div class="label">Last game BP IP</div><div class="value">${fmtNumber(t.lastGameBPIP)}</div></div>
+      <div class="metric-box"><div class="label">Last 3 BP IP</div><div class="value">${fmtNumber(t.last3BP)}</div></div>
+      <div class="metric-box"><div class="label">Last game relievers</div><div class="value">${Number.isFinite(t.lastGameRelievers) ? t.lastGameRelievers : "—"}</div></div>
+      <div class="metric-box"><div class="label">Last 3 relievers</div><div class="value">${Number.isFinite(t.last3Relievers) ? t.last3Relievers : "—"}</div></div>
+      <div class="metric-box"><div class="label">Back-to-back arms</div><div class="value">${Number.isFinite(t.b2b) ? t.b2b : "—"}</div></div>
     </div>
-    <div class="read">${escapeHtml(t.read)}</div>
+    <div class="read">${escapeHtml(t.read || "")}</div>
   </div>`;
 }
 </script>
