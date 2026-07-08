@@ -191,13 +191,39 @@ function processBoxSide(box,side,teamId,date,teams){
 }
 function scoreBullpen(team){
   const games=team.games.sort((a,b)=>new Date(b.date)-new Date(a.date));
-  const last=games[0]||{bpIP:0,relievers:0}; const last3BP=games.reduce((s,g)=>s+g.bpIP,0); let b2b=0;
+  const last=games[0]||{bpIP:0,relievers:0};
+  const last3BP=games.reduce((s,g)=>s+g.bpIP,0);
+  const last3Relievers=games.reduce((s,g)=>s+g.relievers,0);
+  let b2b=0;
   for(const dates of Object.values(team.pitcherDates)){
     const arr=[...dates].sort(); for(let i=1;i<arr.length;i++){ const prev=new Date(arr[i-1]+"T12:00:00"), curr=new Date(arr[i]+"T12:00:00"); if((curr-prev)/86400000===1){b2b++; break;} }
   }
-  const score=Math.round(clamp(last.bpIP*10+last3BP*4+last.relievers*5+b2b*12,0,100));
-  let label="Fresh"; if(score>=75) label="High risk"; else if(score>=50) label="Tired"; else if(score>=25) label="Normal";
-  return {score,label,last_game_bp_ip:round(last.bpIP,1),last3_bp_ip:round(last3BP,1),last_game_relievers:last.relievers,back_to_back_arms:b2b};
+
+  // Center fatigue around normal recent workload so the index can separate teams instead of pinning normal usage near 100.
+  // Baseline assumptions: about 9 bullpen IP across three days and about 3 bullpen IP in the last game.
+  const rawScore = 45 + (last3BP - 9) * 3.5 + (last.bpIP - 3) * 4 + b2b * 6;
+  const score=Math.round(clamp(rawScore,0,100));
+  let label="Normal";
+  if(score>=78) label="High risk";
+  else if(score>=60) label="Tired";
+  else if(score<35) label="Fresh";
+
+  return {
+    score,
+    label,
+    last_game_bp_ip:round(last.bpIP,1),
+    last3_bp_ip:round(last3BP,1),
+    last_game_relievers:last.relievers,
+    last3_relievers:last3Relievers,
+    back_to_back_arms:b2b,
+    workload_read:bullpenWorkloadRead(label)
+  };
+}
+function bullpenWorkloadRead(label){
+  if(label==="Fresh") return "Low recent workload. No major bullpen fatigue flag from the last three days.";
+  if(label==="Tired") return "Elevated recent workload. Full-game angles deserve extra late-inning caution.";
+  if(label==="High risk") return "Heavy recent workload. Late-game pitching condition could materially affect the read.";
+  return "Manageable recent workload. Bullpen should still be part of the full-game read.";
 }
 
 function modelGame(g,strength,pitchers,oddsMap,bullpen){
@@ -226,18 +252,38 @@ function modelGame(g,strength,pitchers,oddsMap,bullpen){
     away_team:aT.name, home_team:hT.name, away_record:`${sA.wins}-${sA.losses}`, home_record:`${sH.wins}-${sH.losses}`, away_l10:sA.l10, home_l10:sH.l10,
     pick_team:pickTeam, side, model_probability:round(modelProb,4), edge:edge===null?null:round(edge,4), status, value_tag:status==="official_pick"?(labScore>=75?"STRONG SETUP":"QUALIFIED SETUP"):(status==="watchlist"?"WATCHLIST":"PASS"), lab_score:labScore, pass_reason:passReason, read,
     pitcher_edge:{team:pitchEdgeTeam,gap:pitchGap,conflict:pitcherConflict,away_score:awayScore.score,home_score:homeScore.score,away_pitcher:awayPitcher?awayPitcher.fullName:"TBD",home_pitcher:homePitcher?homePitcher.fullName:"TBD",away_era:awayStats&&Number.isFinite(awayStats.era)?awayStats.era:null,home_era:homeStats&&Number.isFinite(homeStats.era)?homeStats.era:null,away_whip:awayStats&&Number.isFinite(awayStats.whip)?awayStats.whip:null,home_whip:homeStats&&Number.isFinite(homeStats.whip)?homeStats.whip:null},
-    bullpen:{pick_team:pickBullpen,opponent:oppBullpen,label:bullpenRead,major_caution:majorBullpenCaution},
+    bullpen:{pick_team:pickBullpen,opponent:oppBullpen,label:bullpenRead,major_caution:majorBullpenCaution,absolute_risk:absoluteBullpenRisk(pickBullpen,oppBullpen)},
     market:{no_vig_probability:marketProb===null?null:round(marketProb,4),best_price:bestPrice,books:m?m.books:0}
   };
 }
 function calcLabScore({edge,pitchGap,pitchEdgeSupports,pickBullpen,oppBullpen,hasMarket}){
   const modelPts=edge===null?0:clamp(edge/0.08,0,1)*35;
   const pitcherPts=pitchEdgeSupports?clamp(pitchGap/20,0,1)*25:Math.max(0,8-clamp(pitchGap/20,0,1)*8);
-  let bullpenPts=7; if(pickBullpen&&oppBullpen) bullpenPts=8+clamp((oppBullpen.score-pickBullpen.score)/45,-1,1)*7;
+  let bullpenPts=7;
+  if(pickBullpen&&oppBullpen){
+    bullpenPts=8+clamp((oppBullpen.score-pickBullpen.score)/45,-1,1)*7;
+    if(pickBullpen.score>=78) bullpenPts-=2;
+    if(pickBullpen.score>=78&&oppBullpen.score>=78) bullpenPts-=1;
+  }
   const marketPts=!hasMarket?0:edge>=VALUE_EDGE?15:edge>=0?10:edge>-VALUE_EDGE?5:1;
   return Math.round(clamp(modelPts+pitcherPts+bullpenPts+marketPts+5,0,100));
 }
-function bullpenLabel(pick,opp){ if(!pick||!opp) return "Unknown"; if(pick.score+15<opp.score) return "Supports LyDia side"; if(pick.score>opp.score+15) return "Adds caution"; return "Neutral"; }
+function bullpenLabel(pick,opp){
+  if(!pick||!opp) return "Unknown";
+  if(pick.score>=78&&opp.score>=78) return "Both bullpens stressed";
+  if(pick.score+15<opp.score) return "Supports LyDia side";
+  if(pick.score>opp.score+15) return "Adds caution";
+  if(pick.score>=60||opp.score>=60) return "Elevated volatility";
+  return "Neutral";
+}
+function absoluteBullpenRisk(pick,opp){
+  if(!pick||!opp) return "Unknown";
+  if(pick.score>=78&&opp.score>=78) return "Both high";
+  if(pick.score>=78) return "Pick side high";
+  if(opp.score>=78) return "Opponent high";
+  if(pick.score>=60||opp.score>=60) return "Elevated";
+  return "Normal";
+}
 function passReasonFor({edge,pitchEdgeTeam,pickTeam,pitcherConflict,labScore,market,majorBullpenCaution}){
   if(!market) return "No market data available, so this stays research-only until pricing is checked.";
   if(edge!==null&&edge<0) return "Market is higher than LyDia's model probability.";
@@ -249,7 +295,7 @@ function passReasonFor({edge,pitchEdgeTeam,pickTeam,pitcherConflict,labScore,mar
 }
 function summarize(rows,hasOdds){ const official=rows.filter(r=>r.status==="official_pick").length, watch=rows.filter(r=>r.status==="watchlist").length, high=rows.filter(r=>r.lab_score>=75).length; if(!hasOdds) return "Brief generated without Odds API pricing. No official picks should be treated as complete until market pricing is available."; if(official) return `${official} official pick${official===1?"":"s"} cleared the full Lab process. ${watch} additional game${watch===1?"":"s"} landed on the watchlist.`; return `No official picks cleared the full Lab process. ${high} game${high===1?"":"s"} reached a Lab Score of 75+ but did not clear every check.`; }
 
-function riskNote(r){ const notes=[]; if(r.pitcher_edge.conflict) notes.push("starting pitcher edge conflicts with the model side"); if(r.bullpen.major_caution) notes.push("bullpen fatigue adds late-game caution"); if(r.market.books&&r.market.books<3) notes.push("limited sportsbook sample"); if(!notes.length) return "No model can see every live lineup, injury, or late bullpen availability update. Recheck official news before first pitch."; return `Primary caution: ${notes.join("; ")}. Recheck official news before first pitch.`; }
+function riskNote(r){ const notes=[]; if(r.pitcher_edge.conflict) notes.push("starting pitcher edge conflicts with the model side"); if(r.bullpen.major_caution) notes.push("bullpen fatigue adds late-game caution"); if(r.bullpen.label==="Both bullpens stressed") notes.push("both bullpens show elevated recent workload"); else if(r.bullpen.label==="Elevated volatility") notes.push("bullpen workload adds late-game volatility"); if(r.market.books&&r.market.books<3) notes.push("limited sportsbook sample"); if(!notes.length) return "No model can see every live lineup, injury, or late bullpen availability update. Recheck official news before first pitch."; return `Primary caution: ${notes.join("; ")}. Recheck official news before first pitch.`; }
 function buildPicksFile(rows,generatedAt){ const official=rows.filter(r=>r.status==="official_pick"); return {date:DATE,generated:generatedAt,source_of_truth:"scripts/generate-member-lab.js",note:"Official picks are created only after pitcher matchup, bullpen fatigue, market pricing, and Lab Score checks.",picks:official.map(r=>({gamePk:r.game_pk,away:r.away_team,home:r.home_team,time:r.game_time_iso,labScore:r.lab_score,status:r.status,pitcherEdge:r.pitcher_edge,bullpen:r.bullpen,moneyline:{pick:r.pick_team,side:r.side,prob:r.model_probability,mktProb:r.market.no_vig_probability,bestAm:r.market.best_price,valueTag:r.value_tag,isPass:false,tier:r.lab_score>=75?"Strong Setup":"Qualified Setup",edgeScore:r.lab_score,rawEdge:r.edge,why:r.read,risk:riskNote(r)}}))}; }
 function buildMarketFile(rows,generatedAt){ return {date:DATE,generated_at:generatedAt,snapshot_type:SNAPSHOT,items:rows.filter(r=>r.status==="official_pick").map(r=>({pick_id:`${r.game_id}-ml`,date:DATE,game:r.game,market:"Moneyline",pick:`${r.pick_team} ML`,pick_team:r.pick_team,lab_score:r.lab_score,posted_price:SNAPSHOT==="posted"?r.market.best_price:null,current_price:SNAPSHOT==="current"?r.market.best_price:null,closing_price:SNAPSHOT==="closing"?r.market.best_price:null,posted_at:SNAPSHOT==="posted"?generatedAt:null,last_checked_at:generatedAt,movement:"pending",read:"Market tracking compares LyDia's posted number against later current and closing snapshots."}))}; }
 function mergeAndWriteMarket(newMarket){ const file=`data/market/${DATE}.json`; let existing=null; try{existing=JSON.parse(fs.readFileSync(file,"utf8"));}catch(e){} let merged=existing&&Array.isArray(existing.items)?existing:{date:DATE,generated_at:new Date().toISOString(),items:[]}; const byId=new Map(merged.items.map(i=>[i.pick_id,i])); for(const item of newMarket.items){ const prev=byId.get(item.pick_id)||{}; const updated={...prev,...item}; if(SNAPSHOT!=="posted"&&prev.posted_price!==undefined) updated.posted_price=prev.posted_price; if(SNAPSHOT!=="posted"&&prev.posted_at) updated.posted_at=prev.posted_at; if(SNAPSHOT!=="current"&&prev.current_price!==undefined) updated.current_price=prev.current_price; if(SNAPSHOT!=="closing"&&prev.closing_price!==undefined) updated.closing_price=prev.closing_price; updated.movement=movement(updated.posted_price,updated.current_price||updated.closing_price); byId.set(item.pick_id,updated); } merged.items=[...byId.values()]; merged.generated_at=new Date().toISOString(); merged.snapshot_type=SNAPSHOT; writeJson(file,merged); writeJson("data/market/today.json",merged); }
