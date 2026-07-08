@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XVWTMDNBJK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XVWTMDNBJK');
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bullpen Fatigue Index — LyDia's Lab</title>
+<meta name="description" content="Review MLB bullpen workload by team using recent innings, reliever usage, and back-to-back appearances.">
+<link rel="canonical" href="https://mlbedges.com/tools/bullpen-fatigue/">
+<link rel="stylesheet" href="/css/style.css">
+<style>
+.controls { display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:16px; }
+.controls .field { margin-bottom:0; }
+.kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin:16px 0 22px; }
+.kpi { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
+.kpi .label { font-size:.76rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em; }
+.kpi .value { font-size:1.35rem; font-weight:800; }
+.team-card { margin-bottom:14px; }
+.team-head { display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; align-items:baseline; margin-bottom:8px; }
+.team-head .matchup { font-weight:800; font-size:1.05rem; }
+.metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:10px; margin-top:10px; }
+.metric-box { background:var(--bg-elev); border:1px solid var(--border); border-radius:var(--radius); padding:12px; }
+.metric-box .label { color:var(--text-dim); font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; }
+.metric-box .value { font-size:1.25rem; font-weight:800; font-variant-numeric:tabular-nums; }
+.read { margin-top:10px; font-size:.88rem; color:var(--text-dim); }
+.grade-line { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main>
+  <p class="eyebrow">LyDia's Lab</p>
+  <h1>Bullpen Fatigue Index</h1>
+  <p class="subtitle">Estimate bullpen condition for teams playing today using recent boxscores, bullpen innings, reliever usage, and repeat appearances.</p>
+
+  <div class="notice warn">
+    <strong>Beta note:</strong> this is a first-pass workload tool. It is useful for spotting late-game risk, but it should be checked against injuries, roster moves, and official availability news.
+  </div>
+
+  <div class="controls">
+    <div class="field">
+      <label for="date-pick">Date</label>
+      <input type="date" id="date-pick">
+    </div>
+    <button onclick="shiftDay(0)">Today</button>
+    <button class="secondary" onclick="shiftDay(1)">Tomorrow</button>
+    <button class="secondary" onclick="load()">Refresh</button>
+  </div>
+
+  <div id="kpis" class="kpis"></div>
+  <div id="status" class="loading">Loading bullpen workload…</div>
+  <div id="teams"></div>
+</main>
+<footer id="footer"></footer>
+<script src="/js/app.js"></script>
+<script>
+renderNav("/tools/"); renderFooter();
+
+const datePick = document.getElementById("date-pick");
+datePick.value = localISODate(new Date());
+datePick.addEventListener("change", load);
+load();
+
+function localISODate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function dateShift(base, n) {
+  const d = new Date(base + "T12:00:00");
+  d.setDate(d.getDate() + n);
+  return localISODate(d);
+}
+function shiftDay(n) {
+  const d = new Date(); d.setDate(d.getDate() + n);
+  datePick.value = localISODate(d);
+  load();
+}
+function ipToNum(ip) {
+  if (!ip || ip === "-.--") return 0;
+  const [w, f] = String(ip).split(".");
+  return Number(w || 0) + (Number(f || 0) / 3);
+}
+function fmtIP(n) {
+  if (!Number.isFinite(n)) return "—";
+  const whole = Math.floor(n);
+  const frac = Math.round((n - whole) * 3);
+  return frac ? `${whole}.${frac}` : String(whole);
+}
+function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
+
+async function load() {
+  const statusEl = document.getElementById("status");
+  const teamsEl = document.getElementById("teams");
+  const kpisEl = document.getElementById("kpis");
+  statusEl.innerHTML = `<div class="loading">Loading bullpen workload…</div>`;
+  teamsEl.innerHTML = ""; kpisEl.innerHTML = "";
+
+  const date = datePick.value;
+  let todayGames;
+  try {
+    todayGames = await getGamesForDate(date);
+  } catch (e) {
+    statusEl.innerHTML = `<div class="notice warn">Could not load MLB schedule (${escapeHtml(e.message)}).</div>`;
+    return;
+  }
+
+  const todayPreview = todayGames.filter(g => g.status.abstractGameState === "Preview" || g.status.abstractGameState === "Live");
+  if (!todayGames.length) {
+    statusEl.innerHTML = `<div class="notice">No MLB games scheduled for ${date}.</div>`;
+    return;
+  }
+
+  const teamsToday = new Map();
+  for (const g of todayGames) {
+    teamsToday.set(g.teams.away.team.id, { id:g.teams.away.team.id, name:g.teams.away.team.name, nextGame:`${g.teams.away.team.name} @ ${g.teams.home.team.name}` });
+    teamsToday.set(g.teams.home.team.id, { id:g.teams.home.team.id, name:g.teams.home.team.name, nextGame:`${g.teams.away.team.name} @ ${g.teams.home.team.name}` });
+  }
+
+  const data = {};
+  for (const t of teamsToday.values()) {
+    data[t.id] = { ...t, games: [], pitcherDates: {} };
+  }
+
+  const priorDates = [-1, -2, -3].map(n => dateShift(date, n));
+  try {
+    const priorSchedules = await Promise.all(priorDates.map(d => getGamesForDate(d).then(games => ({ date:d, games })).catch(() => ({ date:d, games:[] }))));
+    const gameJobs = [];
+    for (const day of priorSchedules) {
+      for (const g of day.games) {
+        if (g.status.abstractGameState !== "Final") continue;
+        const awayId = g.teams.away.team.id, homeId = g.teams.home.team.id;
+        if (!data[awayId] && !data[homeId]) continue;
+        gameJobs.push(readBoxscoreWorkload(g, day.date, data));
+      }
+    }
+    await Promise.all(gameJobs);
+  } catch (e) {
+    statusEl.innerHTML = `<div class="notice warn">Some recent boxscores could not be loaded. Showing the available workload data.</div>`;
+  }
+
+  const rows = Object.values(data).map(scoreTeam).sort((a,b) => b.score - a.score || a.name.localeCompare(b.name));
+  statusEl.innerHTML = "";
+  teamsEl.innerHTML = rows.map(renderTeam).join("");
+
+  const high = rows.filter(r => r.grade === "High risk").length;
+  const tired = rows.filter(r => r.grade === "Tired").length;
+  const fresh = rows.filter(r => r.grade === "Fresh").length;
+  kpisEl.innerHTML = `
+    <div class="kpi"><div class="label">Teams tracked</div><div class="value">${rows.length}</div><div class="small dim">playing selected date</div></div>
+    <div class="kpi"><div class="label">High risk</div><div class="value">${high}</div><div class="small dim">heavy recent workload</div></div>
+    <div class="kpi"><div class="label">Tired</div><div class="value">${tired}</div><div class="small dim">elevated usage</div></div>
+    <div class="kpi"><div class="label">Fresh</div><div class="value">${fresh}</div><div class="small dim">low recent workload</div></div>`;
+}
+
+async function getGamesForDate(date) {
+  const res = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}`);
+  if (!res.ok) throw new Error("Schedule HTTP " + res.status);
+  const data = await res.json();
+  return (((data.dates || [])[0]) || {}).games || [];
+}
+
+async function readBoxscoreWorkload(g, date, data) {
+  const res = await fetch(`https://statsapi.mlb.com/api/v1/game/${g.gamePk}/boxscore`);
+  if (!res.ok) return;
+  const box = await res.json();
+  processSide(box, "away", g.teams.away.team.id, date, data);
+  processSide(box, "home", g.teams.home.team.id, date, data);
+}
+
+function processSide(box, side, teamId, date, data) {
+  const team = data[teamId];
+  if (!team) return;
+  const tb = box.teams && box.teams[side];
+  if (!tb || !tb.pitchers || !tb.players) return;
+
+  const pitcherIds = tb.pitchers;
+  let totalIP = 0, starterIP = 0, relievers = 0, relieverIds = [];
+  for (let i = 0; i < pitcherIds.length; i++) {
+    const id = pitcherIds[i];
+    const player = tb.players["ID" + id];
+    const ip = ipToNum(player && player.stats && player.stats.pitching && player.stats.pitching.inningsPitched);
+    totalIP += ip;
+    if (i === 0) starterIP = ip;
+    else {
+      relievers++;
+      relieverIds.push(id);
+      if (!team.pitcherDates[id]) team.pitcherDates[id] = new Set();
+      team.pitcherDates[id].add(date);
+    }
+  }
+  const bpIP = Math.max(0, totalIP - starterIP);
+  team.games.push({ date, bpIP, relievers, relieverIds });
+}
+
+function scoreTeam(team) {
+  const games = team.games.sort((a,b) => new Date(b.date) - new Date(a.date));
+  const last = games[0] || { bpIP:0, relievers:0, date:null };
+  const last3BP = games.reduce((s,g) => s + g.bpIP, 0);
+  const last3Relievers = games.reduce((s,g) => s + g.relievers, 0);
+  let b2b = 0;
+  for (const dates of Object.values(team.pitcherDates)) {
+    const arr = [...dates].sort();
+    for (let i = 1; i < arr.length; i++) {
+      const prev = new Date(arr[i-1] + "T12:00:00");
+      const curr = new Date(arr[i] + "T12:00:00");
+      if ((curr - prev) / 86400000 === 1) { b2b++; break; }
+    }
+  }
+
+  // Centered on a normal workload (last3 ~9 bullpen IP, last game ~3 IP). Deviations move the score, so the index discriminates instead of pinning every team at 100.
+  const score = Math.round(clamp(45 + (last3BP - 9) * 3.5 + (last.bpIP - 3) * 4 + b2b * 6, 0, 100));
+  let grade = "Normal", cls = "neutral";
+  if (score >= 78) { grade = "High risk"; cls = "neg"; }
+  else if (score >= 60) { grade = "Tired"; cls = "neg"; }
+  else if (score < 35) { grade = "Fresh"; cls = "pos"; }
+
+  let read = "Low recent workload. No major bullpen fatigue flag from the last three days.";
+  if (grade === "Normal") read = "Manageable recent workload. Bullpen should still be part of the full-game read.";
+  if (grade === "Tired") read = "Elevated recent workload. Full-game angles deserve extra late-inning caution.";
+  if (grade === "High risk") read = "Heavy recent workload. Late-game pitching condition could materially affect the read.";
+
+  return {
+    ...team,
+    lastGameDate: last.date,
+    lastGameBPIP: last.bpIP,
+    lastGameRelievers: last.relievers,
+    last3BP,
+    last3Relievers,
+    b2b,
+    score,
+    grade,
+    cls,
+    read,
+    gamesTracked: games.length
+  };
+}
+
+function renderTeam(t) {
+  return `<div class="card team-card">
+    <div class="team-head">
+      <span class="matchup">${escapeHtml(t.name)}</span>
+      <span class="dim small">${escapeHtml(t.nextGame || "")}</span>
+    </div>
+    <div class="grade-line">
+      <span class="badge ${t.cls}">${escapeHtml(t.grade)}</span>
+      <span><b>Fatigue score:</b> ${t.score}/100</span>
+      <span class="dim small">${t.gamesTracked} recent game${t.gamesTracked === 1 ? "" : "s"} tracked</span>
+    </div>
+    <div class="metric-grid">
+      <div class="metric-box"><div class="label">Last game BP IP</div><div class="value">${fmtIP(t.lastGameBPIP)}</div></div>
+      <div class="metric-box"><div class="label">Last 3 days BP IP</div><div class="value">${fmtIP(t.last3BP)}</div></div>
+      <div class="metric-box"><div class="label">Last game relievers</div><div class="value">${t.lastGameRelievers || 0}</div></div>
+      <div class="metric-box"><div class="label">Back-to-back arms</div><div class="value">${t.b2b || 0}</div></div>
+    </div>
+    <div class="read">${escapeHtml(t.read)}</div>
+  </div>`;
+}
+</script>
+</body>
+</html>
