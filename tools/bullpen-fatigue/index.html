@@ -93,24 +93,38 @@ async function load() {
   sourceEl.className = "notice";
   sourceEl.innerHTML = "Loading bullpen source…";
 
-  const today = localISODate(new Date());
-  const urls = date === today
-    ? [`/data/bullpen/today.json`, `/data/bullpen/${date}.json`]
-    : [`/data/bullpen/${date}.json`];
+const today = localISODate(new Date());
 
-  let data = null;
-  let loadedUrl = null;
-  for (const url of urls) {
-    try {
-      const cacheBust = `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`;
-      const res = await fetch(cacheBust, { cache: "no-store" });
-      if (res.ok) {
-        data = await res.json();
-        loadedUrl = url;
-        break;
-      }
-    } catch(e) {}
+// Prefer the date-specific file first.
+// today.json is only a fallback.
+const urls = date === today
+  ? [`/data/bullpen/${date}.json`, `/data/bullpen/today.json`]
+  : [`/data/bullpen/${date}.json`];
+
+let data = null;
+let loadedUrl = null;
+
+for (const url of urls) {
+  try {
+    const cacheBust = `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`;
+    const res = await fetch(cacheBust, { cache: "no-store" });
+    if (!res.ok) continue;
+
+    const candidate = await res.json();
+
+    // Hard stop: do not use a file for the wrong date.
+    if (!candidate || candidate.date !== date || !Array.isArray(candidate.teams)) {
+      console.warn(`Skipped bullpen file ${url}: date mismatch or invalid teams array`, candidate);
+      continue;
+    }
+
+    data = candidate;
+    loadedUrl = url;
+    break;
+  } catch(e) {
+    console.warn(`Could not load bullpen file ${url}`, e);
   }
+}
 
   if (!data || !Array.isArray(data.teams)) {
     sourceEl.className = "notice warn";
