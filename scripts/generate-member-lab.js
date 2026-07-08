@@ -26,7 +26,7 @@ const ODDS_API_KEY = process.env.ODDS_API_KEY || "";
 main().catch(err => { console.error(err); process.exit(1); });
 
 async function main() {
-  ["data/member-brief","data/picks","data/market","previews"].forEach(p => fs.mkdirSync(p, { recursive:true }));
+  ["data/member-brief","data/picks","data/market","data/bullpen","previews"].forEach(p => fs.mkdirSync(p, { recursive:true }));
 
   const [sched, standings, oddsEvents] = await Promise.all([
     fetchJson(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${DATE}&hydrate=probablePitcher`),
@@ -47,6 +47,10 @@ async function main() {
     .sort((a, b) => (b.lab_score || 0) - (a.lab_score || 0));
 
   const generatedAt = new Date().toISOString();
+
+  const bullpenFile = buildBullpenFile(games, bullpen, generatedAt);
+  writeJson(`data/bullpen/${DATE}.json`, bullpenFile);
+  writeJson("data/bullpen/today.json", bullpenFile);
 
   const brief = {
     date: DATE,
@@ -224,6 +228,47 @@ function bullpenWorkloadRead(label){
   if(label==="Tired") return "Elevated recent workload. Full-game angles deserve extra late-inning caution.";
   if(label==="High risk") return "Heavy recent workload. Late-game pitching condition could materially affect the read.";
   return "Manageable recent workload. Bullpen should still be part of the full-game read.";
+}
+
+function buildBullpenFile(games,bullpen,generatedAt){
+  const teams=[];
+  for(const g of games){
+    const away=g.teams.away.team;
+    const home=g.teams.home.team;
+    const gameLabel=`${away.name} @ ${home.name}`;
+    for(const side of ["away","home"]){
+      const team=side==="away"?away:home;
+      const opp=side==="away"?home:away;
+      const bp=bullpen[team.name]||null;
+      teams.push({
+        team_id:team.id,
+        team:team.name,
+        side,
+        opponent:opp.name,
+        game:gameLabel,
+        game_pk:g.gamePk,
+        game_time_iso:g.gameDate,
+        data_source:"generated",
+        score:bp?bp.score:null,
+        label:bp?bp.label:"Unknown",
+        last_game_bp_ip:bp?bp.last_game_bp_ip:null,
+        last3_bp_ip:bp?bp.last3_bp_ip:null,
+        last_game_relievers:bp?bp.last_game_relievers:null,
+        last3_relievers:bp?bp.last3_relievers:null,
+        back_to_back_arms:bp?bp.back_to_back_arms:null,
+        workload_read:bp?bp.workload_read:"Bullpen workload data unavailable for this team."
+      });
+    }
+  }
+  teams.sort((a,b)=>(b.score??-1)-(a.score??-1)||String(a.team).localeCompare(String(b.team)));
+  return {
+    date:DATE,
+    generated_at:generatedAt,
+    source_of_truth:"scripts/generate-member-lab.js",
+    method:"Generated bullpen source first. Bullpen tool page may fall back to live calculation if this file is missing.",
+    note:"This file keeps the Bullpen Fatigue Index, Daily Member Brief, and LyDia model aligned on the same bullpen scores.",
+    teams
+  };
 }
 
 function modelGame(g,strength,pitchers,oddsMap,bullpen){
