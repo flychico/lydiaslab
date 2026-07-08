@@ -1,87 +1,385 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MLB Game Previews &amp; Lab Scores Wednesday, July 8, 2026 | LyDia</title>
-<meta name="description" content="LyDia MLB previews for Wednesday, July 8, 2026 with Lab Score, pitcher matchup, bullpen fatigue, market edge, and pass reasons.">
-<link rel="stylesheet" href="/css/style.css"><style>
-.pv{border:1px solid var(--border);border-radius:10px;background:var(--bg-card);padding:18px;margin:16px 0}.pv.featured{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}.pv h2{margin:0 0 4px;font-size:1.15rem}.pv .meta{color:var(--text-dim);font-size:.85rem;margin-bottom:8px}.featured-flag{display:inline-block;background:var(--accent);color:#fff;font-size:.75rem;font-weight:700;padding:2px 9px;border-radius:20px;margin-bottom:8px}.status-badge{display:inline-block;color:#fff;font-size:.75rem;font-weight:700;padding:3px 10px;border-radius:20px;margin:4px 0 8px;background:var(--accent2)}.status-badge.official{background:var(--good)}.status-badge.pass{background:var(--text-dim)}.field-grid{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:.85rem;margin:10px 0;padding:10px 0;border-top:1px dashed var(--border);border-bottom:1px dashed var(--border)}.field-grid dt{color:var(--text-dim);margin:0}.field-grid dd{margin:0;font-weight:600}.why-block,.risk-block{font-size:.88rem;margin-top:10px;line-height:1.45}.why-block b,.risk-block b{display:block;margin-bottom:3px;color:var(--text)}
-</style></head><body><nav id="nav"></nav><main>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MLB Game Previews &amp; Picks Wednesday, July 8, 2026 | LyDia</title>
+<meta name="description" content="Preview and model pick for every MLB game on Wednesday, July 8, 2026: pitching matchups, form, and value vs the betting market across moneyline, total, and run line.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+<style>
+.pv { border: 1px solid var(--border); border-radius: 10px; background: var(--bg-card); padding: 18px; margin: 16px 0; }
+.pv.featured { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.pv h2 { margin: 0 0 4px; font-size: 1.15rem; }
+.pv .meta { color: var(--text-dim); font-size: .85rem; margin-bottom: 8px; }
+.pv .pick { font-weight: 700; color: var(--accent); }
+.pv .subpick { font-size: .92rem; margin: 4px 0; }
+.pv .pass { color: var(--text-dim); font-style: italic; }
+.pv table { font-size: .88rem; margin: 8px 0; border-collapse: collapse; }
+.pv td, .pv th { padding: 4px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+.pv .price-disc { font-size: .82rem; color: var(--text-dim); border-top: 1px dashed var(--border); margin-top: 8px; padding-top: 6px; }
+.archive-list a { display: block; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.featured-flag { display: inline-block; background: var(--accent); color: #fff; font-size: .75rem; font-weight: 700; padding: 2px 9px; border-radius: 20px; margin-bottom: 8px; }
+.approved-badge { display: inline-block; background: #2f9e44; color: #fff; font-size: .75rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; margin: 4px 0 8px; }
+.field-grid { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; font-size: .85rem; margin: 10px 0; padding: 10px 0; border-top: 1px dashed var(--border); border-bottom: 1px dashed var(--border); }
+.field-grid dt { color: var(--text-dim); margin: 0; }
+.field-grid dd { margin: 0; font-weight: 600; }
+.why-block, .risk-block { font-size: .88rem; margin-top: 10px; line-height: 1.45; }
+.why-block b, .risk-block b { display: block; margin-bottom: 3px; color: var(--text); }
+</style>
+</head>
+<body>
+<nav><div class="nav-inner">
+  <a class="brand" href="/"><span class="brand-ly">Ly</span><span class="brand-dia">Dia</span></a>
+  <a class="navlink" href="/">Home</a>
+  <a class="navlink" href="/dashboard/">Dashboard</a>
+  <a class="navlink" href="/picks/">Picks</a>
+  <a class="navlink active" href="/previews/">Previews</a>
+  <a class="navlink" href="/results/">Results</a>
+  <a class="navlink" href="/odds/">Odds</a>
+  <a class="navlink" href="/recaps/">Recaps</a>
+  <a class="navlink" href="/articles/">Articles</a>
+  <a class="navlink navlink-cta" href="/membership/">Join $30/mo</a>
+</div></nav>
+<main>
 <h1>MLB Game Previews — Wednesday, July 8, 2026</h1>
-<p class="subtitle">Generated from LyDia's source-of-truth engine after pitcher matchup, bullpen fatigue, market pricing, and Lab Score are calculated.</p>
-<p class="dim small">Generated 2026-07-08T13:05:24.947Z · 15 games · 6 official picks.</p>
-<div class="lead-box" style="border-color:var(--accent2)"><h3 style="margin:0 0 4px">Get the organized member view</h3><p class="dim small" style="margin:0">Members get the Daily Member Brief: official picks first, watchlist second, pass reasons third, and market tracking as prices change.</p><p style="margin-top:10px"><a class="btn blue" href="/membership/">Join LyDia — $30/mo →</a> <a class="btn secondary" href="/member-brief/">Open Member Brief</a></p></div>
-<div class="pv featured" data-lab-score="90">
-  <span class="featured-flag">Top Lab Score</span><h2>Athletics @ Detroit Tigers</h2><div class="meta">6:40 PM ET · Jeffrey Springs vs Troy Melton</div>
-  <span class="status-badge official">Official Pick</span><dl class="field-grid">
-    <dt>LyDia side</dt><dd>Detroit Tigers</dd><dt>Lab Score</dt><dd>90/100</dd><dt>Model probability</dt><dd>82.7%</dd><dt>Market probability</dt><dd>59.2%</dd><dt>Model vs market</dt><dd>+23.5%</dd><dt>Current price</dt><dd>-154</dd><dt>Pitcher edge</dt><dd>Detroit Tigers (gap 27)</dd><dt>Bullpen read</dt><dd>Neutral</dd>
-  </dl><div class="why-block"><b>Read</b>Detroit Tigers cleared the model, market, pitcher, and bullpen checks with a Lab Score of 90.</div><div class="risk-block"><b>Risk note</b>No model can see every live lineup, injury, or late bullpen availability update. Recheck official news before first pitch.</div></div>
-<div class="pv" data-lab-score="73">
-  <h2>New York Yankees @ Tampa Bay Rays</h2><div class="meta">6:40 PM ET · Gerrit Cole vs Shane McClanahan</div>
-  <span class="status-badge official">Official Pick</span><dl class="field-grid">
-    <dt>LyDia side</dt><dd>Tampa Bay Rays</dd><dt>Lab Score</dt><dd>73/100</dd><dt>Model probability</dt><dd>66.8%</dd><dt>Market probability</dt><dd>54.2%</dd><dt>Model vs market</dt><dd>+12.5%</dd><dt>Current price</dt><dd>-125</dd><dt>Pitcher edge</dt><dd>Tampa Bay Rays (gap 8)</dd><dt>Bullpen read</dt><dd>Neutral</dd>
-  </dl><div class="why-block"><b>Read</b>Tampa Bay Rays cleared the model, market, pitcher, and bullpen checks with a Lab Score of 73.</div><div class="risk-block"><b>Risk note</b>No model can see every live lineup, injury, or late bullpen availability update. Recheck official news before first pitch.</div></div>
-<div class="pv" data-lab-score="73">
-  <h2>Houston Astros @ Washington Nationals</h2><div class="meta">6:45 PM ET · Spencer Arrighetti vs Foster Griffin</div>
-  <span class="status-badge official">Official Pick</span><dl class="field-grid">
-    <dt>LyDia side</dt><dd>Washington Nationals</dd><dt>Lab Score</dt><dd>73/100</dd><dt>Model probability</dt><dd>62.1%</dd><dt>Market probability</dt><dd>55.7%</dd><dt>Model vs market</dt><dd>+6.5%</dd><dt>Current price</dt><dd>-134</dd><dt>Pitcher edge</dt><dd>Washington Nationals (gap 13)</dd><dt>Bullpen read</dt><dd>Neutral</dd>
-  </dl><div class="why-block"><b>Read</b>Washington Nationals cleared the model, market, pitcher, and bullpen checks with a Lab Score of 73.</div><div class="risk-block"><b>Risk note</b>No model can see every live lineup, injury, or late bullpen availability update. Recheck official news before first pitch.</div></div>
-<div class="pv" data-lab-score="73">
-  <h2>Milwaukee Brewers @ St. Louis Cardinals</h2><div class="meta">7:45 PM ET · Kyle Harrison vs Michael McGreevy</div>
-  <span class="status-badge official">Official Pick</span><dl class="field-grid">
-    <dt>LyDia side</dt><dd>Milwaukee Brewers</dd><dt>Lab Score</dt><dd>73/100</dd><dt>Model probability</dt><dd>66.6%</dd><dt>Market probability</dt><dd>56.2%</dd><dt>Model vs market</dt><dd>+10.4%</dd><dt>Current price</dt><dd>-137</dd><dt>Pitcher edge</dt><dd>Milwaukee Brewers (gap 6)</dd><dt>Bullpen read</dt><dd>Neutral</dd>
-  </dl><div class="why-block"><b>Read</b>Milwaukee Brewers cleared the model, market, pitcher, and bullpen checks with a Lab Score of 73.</div><div class="risk-block"><b>Risk note</b>No model can see every live lineup, injury, or late bullpen availability update. Recheck official news before first pitch.</div></div>
-<div class="pv" data-lab-score="68">
-  <h2>Seattle Mariners @ Miami Marlins</h2><div class="meta">6:40 PM ET · George Kirby vs Tyler Phillips</div>
-  <span class="status-badge official">Official Pick</span><dl class="field-grid">
-    <dt>LyDia side</dt><dd>Miami Marlins</dd><dt>Lab Score</dt><dd>68/100</dd><dt>Model probability</dt><dd>57.6%</dd><dt>Market probability</dt><dd>45.7%</dd><dt>Model vs market</dt><dd>+11.8%</dd><dt>Current price</dt><dd>+115</dd><dt>Pitcher edge</dt><dd>Seattle Mariners (gap 4)</dd><dt>Bullpen read</dt><dd>Neutral</dd>
-  </dl><div class="why-block"><b>Read</b>Miami Marlins cleared the model, market, pitcher, and bullpen checks with a Lab Score of 68.</div><div class="risk-block"><b>Risk note</b>No model can see every live lineup, injury, or late bullpen availability update. Recheck official news before first pitch.</div></div>
-<div class="pv" data-lab-score="65">
-  <h2>Kansas City Royals @ New York Mets</h2><div class="meta">7:10 PM ET · Steven Cruz vs Christian Scott</div>
-  <span class="status-badge official">Official Pick</span><dl class="field-grid">
-    <dt>LyDia side</dt><dd>New York Mets</dd><dt>Lab Score</dt><dd>65/100</dd><dt>Model probability</dt><dd>61.7%</dd><dt>Market probability</dt><dd>57.2%</dd><dt>Model vs market</dt><dd>+4.5%</dd><dt>Current price</dt><dd>-146</dd><dt>Pitcher edge</dt><dd>New York Mets (gap 14)</dd><dt>Bullpen read</dt><dd>Neutral</dd>
-  </dl><div class="why-block"><b>Read</b>New York Mets cleared the model, market, pitcher, and bullpen checks with a Lab Score of 65.</div><div class="risk-block"><b>Risk note</b>No model can see every live lineup, injury, or late bullpen availability update. Recheck official news before first pitch.</div></div>
-<div class="pv" data-lab-score="61">
-  <h2>Arizona Diamondbacks @ San Diego Padres</h2><div class="meta">10:10 PM ET · Jose Cabrera vs Michael King</div>
-  <span class="status-badge pass">Pass</span><dl class="field-grid">
-    <dt>LyDia side</dt><dd>Arizona Diamondbacks</dd><dt>Lab Score</dt><dd>61/100</dd><dt>Model probability</dt><dd>50.0%</dd><dt>Market probability</dt><dd>43.3%</dd><dt>Model vs market</dt><dd>+6.7%</dd><dt>Current price</dt><dd>+128</dd><dt>Pitcher edge</dt><dd>San Diego Padres (gap 22)</dd><dt>Bullpen read</dt><dd>Supports LyDia side</dd>
-  </dl><div class="why-block"><b>Read</b>Starting pitcher edge conflicts with the model side.</div><div class="risk-block"><b>Pass reason</b>Starting pitcher edge conflicts with the model side.</div></div>
-<div class="pv" data-lab-score="59">
-  <h2>Chicago Cubs @ Baltimore Orioles</h2><div class="meta">6:35 PM ET · Colin Rea vs Dean Kremer</div>
-  <span class="status-badge pass">Pass</span><dl class="field-grid">
-    <dt>LyDia side</dt><dd>Chicago Cubs</dd><dt>Lab Score</dt><dd>59/100</dd><dt>Model probability</dt><dd>57.1%</dd><dt>Market probability</dt><dd>46.4%</dd><dt>Model vs market</dt><dd>+10.8%</dd><dt>Current price</dt><dd>+110</dd><dt>Pitcher edge</dt><dd>Baltimore Orioles (gap 21)</dd><dt>Bullpen read</dt><dd>Adds caution</dd>
-  </dl><div class="why-block"><b>Read</b>Starting pitcher edge conflicts with the model side.</div><div class="risk-block"><b>Pass reason</b>Starting pitcher edge conflicts with the model side.</div></div>
-<div class="pv" data-lab-score="58">
-  <h2>Boston Red Sox @ Chicago White Sox</h2><div class="meta">7:40 PM ET · Jake Bennett vs Davis Martin</div>
-  <span class="status-badge pass">Pass</span><dl class="field-grid">
-    <dt>LyDia side</dt><dd>Boston Red Sox</dd><dt>Lab Score</dt><dd>58/100</dd><dt>Model probability</dt><dd>53.1%</dd><dt>Market probability</dt><dd>48.3%</dd><dt>Model vs market</dt><dd>+4.8%</dd><dt>Current price</dt><dd>+105</dd><dt>Pitcher edge</dt><dd>No clear SP edge (gap 3)</dd><dt>Bullpen read</dt><dd>Neutral</dd>
-  </dl><div class="why-block"><b>Read</b>The combined Lab Score did not clear the official threshold.</div><div class="risk-block"><b>Pass reason</b>The combined Lab Score did not clear the official threshold.</div></div>
-<div class="pv" data-lab-score="56">
-  <h2>Los Angeles Angels @ Texas Rangers</h2><div class="meta">8:05 PM ET · Walbert Ureña vs MacKenzie Gore</div>
-  <span class="status-badge pass">Pass</span><dl class="field-grid">
-    <dt>LyDia side</dt><dd>Texas Rangers</dd><dt>Lab Score</dt><dd>56/100</dd><dt>Model probability</dt><dd>64.6%</dd><dt>Market probability</dt><dd>58.7%</dd><dt>Model vs market</dt><dd>+6.0%</dd><dt>Current price</dt><dd>-152</dd><dt>Pitcher edge</dt><dd>Los Angeles Angels (gap 4)</dd><dt>Bullpen read</dt><dd>Adds caution</dd>
-  </dl><div class="why-block"><b>Read</b>Bullpen fatigue adds too much late-game caution.</div><div class="risk-block"><b>Pass reason</b>Bullpen fatigue adds too much late-game caution.</div></div>
-<div class="pv" data-lab-score="49">
-  <h2>Colorado Rockies @ Los Angeles Dodgers</h2><div class="meta">10:10 PM ET · Gabriel Hughes vs Roki Sasaki</div>
-  <span class="status-badge pass">Pass</span><dl class="field-grid">
-    <dt>LyDia side</dt><dd>Los Angeles Dodgers</dd><dt>Lab Score</dt><dd>49/100</dd><dt>Model probability</dt><dd>71.1%</dd><dt>Market probability</dt><dd>67.8%</dd><dt>Model vs market</dt><dd>+3.3%</dd><dt>Current price</dt><dd>-225</dd><dt>Pitcher edge</dt><dd>Colorado Rockies (gap 9)</dd><dt>Bullpen read</dt><dd>Supports LyDia side</dd>
-  </dl><div class="why-block"><b>Read</b>Starting pitcher edge conflicts with the model side.</div><div class="risk-block"><b>Pass reason</b>Starting pitcher edge conflicts with the model side.</div></div>
-<div class="pv" data-lab-score="43">
-  <h2>Cleveland Guardians @ Minnesota Twins</h2><div class="meta">7:40 PM ET · Slade Cecconi vs Connor Prielipp</div>
-  <span class="status-badge pass">Pass</span><dl class="field-grid">
-    <dt>LyDia side</dt><dd>Minnesota Twins</dd><dt>Lab Score</dt><dd>43/100</dd><dt>Model probability</dt><dd>56.3%</dd><dt>Market probability</dt><dd>54.1%</dd><dt>Model vs market</dt><dd>+2.2%</dd><dt>Current price</dt><dd>-125</dd><dt>Pitcher edge</dt><dd>No clear SP edge (gap 3)</dd><dt>Bullpen read</dt><dd>Supports LyDia side</dd>
-  </dl><div class="why-block"><b>Read</b>Model and market are too close for a clear official pick.</div><div class="risk-block"><b>Pass reason</b>Model and market are too close for a clear official pick.</div></div>
-<div class="pv" data-lab-score="41">
-  <h2>Atlanta Braves @ Pittsburgh Pirates</h2><div class="meta">6:40 PM ET · Grant Holmes vs Jared Jones</div>
-  <span class="status-badge pass">Pass</span><dl class="field-grid">
-    <dt>LyDia side</dt><dd>Atlanta Braves</dd><dt>Lab Score</dt><dd>41/100</dd><dt>Model probability</dt><dd>50.1%</dd><dt>Market probability</dt><dd>48.0%</dd><dt>Model vs market</dt><dd>+2.2%</dd><dt>Current price</dt><dd>+103</dd><dt>Pitcher edge</dt><dd>Atlanta Braves (gap 10)</dd><dt>Bullpen read</dt><dd>Adds caution</dd>
-  </dl><div class="why-block"><b>Read</b>Model and market are too close for a clear official pick.</div><div class="risk-block"><b>Pass reason</b>Model and market are too close for a clear official pick.</div></div>
-<div class="pv" data-lab-score="41">
-  <h2>Philadelphia Phillies @ Cincinnati Reds</h2><div class="meta">7:10 PM ET · TBD vs Chase Burns</div>
-  <span class="status-badge pass">Pass</span><dl class="field-grid">
-    <dt>LyDia side</dt><dd>Cincinnati Reds</dd><dt>Lab Score</dt><dd>41/100</dd><dt>Model probability</dt><dd>51.1%</dd><dt>Market probability</dt><dd>56.0%</dd><dt>Model vs market</dt><dd>-4.9%</dd><dt>Current price</dt><dd>-139</dd><dt>Pitcher edge</dt><dd>Cincinnati Reds (gap 30)</dd><dt>Bullpen read</dt><dd>Supports LyDia side</dd>
-  </dl><div class="why-block"><b>Read</b>Market is higher than LyDia&#39;s model probability.</div><div class="risk-block"><b>Pass reason</b>Market is higher than LyDia&#39;s model probability.</div></div>
-<div class="pv" data-lab-score="40">
-  <h2>Toronto Blue Jays @ San Francisco Giants</h2><div class="meta">3:45 PM ET · Dylan Cease vs Logan Webb</div>
-  <span class="status-badge pass">Pass</span><dl class="field-grid">
-    <dt>LyDia side</dt><dd>San Francisco Giants</dd><dt>Lab Score</dt><dd>40/100</dd><dt>Model probability</dt><dd>50.9%</dd><dt>Market probability</dt><dd>48.0%</dd><dt>Model vs market</dt><dd>+2.9%</dd><dt>Current price</dt><dd>+103</dd><dt>Pitcher edge</dt><dd>Toronto Blue Jays (gap 8)</dd><dt>Bullpen read</dt><dd>Neutral</dd>
-  </dl><div class="why-block"><b>Read</b>Model and market are too close for a clear official pick.</div><div class="risk-block"><b>Pass reason</b>Model and market are too close for a clear official pick.</div></div>
-</main><footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/previews/"); renderFooter();</script></body></html>
+<p class="subtitle">Every matchup, the pitching duel, and the model's lean across moneyline, total, and run line. Methodology: Pythagorean strength (75%) + last-10 form (25%), log5, home-field bump, starter-ERA adjustment, and a public-signal check against tracked competitor sources.</p>
+<p class="dim small">Published automatically at 2:17 PM ET · 15 games on today's slate. No edge, no play — every pick that doesn't clear the bar says so.</p>
+<div class="lead-box" style="border-color:var(--accent2)">
+  <h3 style="margin:0 0 4px">Get this in your inbox before first pitch</h3>
+  <p class="dim small" style="margin:0">$30/month. Every pick below, delivered — plus a re-check alert if a price moves past the playable range. Nothing on this page is ever hidden from members or non-members alike.</p>
+  <p style="margin-top:10px"><a class="btn blue" href="/membership/">Join LyDia — $30/mo →</a> <a class="btn secondary" href="/results/">See the track record</a></p>
+</div><div class="pv featured" data-edge="0.27165234525869575">
+  <span class="featured-flag">PLAY OF THE DAY</span>
+  <h2>Athletics @ Detroit Tigers</h2>
+  <div class="meta">6:40 PM ET · Jeffrey Springs vs Troy Melton</div>
+  <p>Athletics (41-50, last 10: 2-8) visit Detroit Tigers (41-50, last 10: 7-3) at 6:40 PM ET. On the mound: Jeffrey Springs (5.79 ERA, 1.38 WHIP, 93 IP) against Troy Melton (2.05 ERA, 0.80 WHIP, 44 IP). Troy Melton holds a clear edge on the mound. The model makes Detroit Tigers a 82.7% favorite here — and with the market at 55.5% (best price -129), it sees value. The setting: Comerica Park, a pitcher-friendly venue; the forecast calls for 75°F with 5 mph S winds.</p>
+  
+  <span class="approved-badge">Approved Play: Detroit Tigers ML</span>
+  <dl class="field-grid">
+    <dt>Game</dt><dd>Athletics @ Detroit Tigers</dd>
+    <dt>Market</dt><dd>Moneyline</dd>
+    <dt>Pick</dt><dd>Detroit Tigers ML</dd>
+    <dt>Current price used</dt><dd>-129 to -152</dd>
+    <dt>Confidence tier</dt><dd>Strong Play</dd>
+    <dt>Dia edge score</dt><dd>96 / 100</dd>
+    <dt>Market no-vig probability</dt><dd>55.0% to 57.4%</dd>
+    <dt>Dia projected probability</dt><dd>82.7%</dd>
+    <dt>Raw edge</dt><dd>+27.2%</dd>
+  </dl>
+  <div class="why-block"><b>Why we like it</b>Detroit Tigers projects ahead mainly on the mound — Troy Melton has the stronger run-prevention number this season against Jeffrey Springs.</div>
+  <div class="risk-block"><b>What could go wrong</b>Jeffrey Springs can outpitch his season line on a given night, and the model doesn&#39;t see live injury or lineup news — worth a quick recheck before first pitch.</div>
+  <p class="subpick pass">Total: pass — projected 9.4 vs line 9, no clear edge.</p><p class="subpick">▸ Run line: <b>Detroit Tigers -1.5</b> (projected margin +3.9, edge 39.2%)</p>
+  <p class="dim small">No public signal detected for this game today.</p>
+</div>
+<div class="pv" data-edge="0.14877895278355335">
+  <h2>New York Yankees @ Tampa Bay Rays</h2>
+  <div class="meta">6:40 PM ET · Gerrit Cole vs Shane McClanahan</div>
+  <p>New York Yankees (50-41, last 10: 2-8) visit Tampa Bay Rays (53-36, last 10: 7-3) at 6:40 PM ET. On the mound: Gerrit Cole (4.01 ERA, 1.20 WHIP, 43 IP) against Shane McClanahan (3.05 ERA, 1.17 WHIP, 80 IP). Shane McClanahan holds a clear edge on the mound. The model makes Tampa Bay Rays a 66.8% favorite here — and with the market at 51.9% (best price -110), it sees value. The setting: home park, a neutral venue with a roof, so weather is a non-factor.</p>
+  
+  <span class="approved-badge">Approved Play: Tampa Bay Rays ML</span>
+  <dl class="field-grid">
+    <dt>Game</dt><dd>New York Yankees @ Tampa Bay Rays</dd>
+    <dt>Market</dt><dd>Moneyline</dd>
+    <dt>Pick</dt><dd>Tampa Bay Rays ML</dd>
+    <dt>Current price used</dt><dd>-110 to -129</dd>
+    <dt>Confidence tier</dt><dd>Strong Play</dd>
+    <dt>Dia edge score</dt><dd>96 / 100</dd>
+    <dt>Market no-vig probability</dt><dd>51.2% to 53.5%</dd>
+    <dt>Dia projected probability</dt><dd>66.8%</dd>
+    <dt>Raw edge</dt><dd>+14.9%</dd>
+  </dl>
+  <div class="why-block"><b>Why we like it</b>Tampa Bay Rays projects ahead mainly on the mound — Shane McClanahan has the stronger run-prevention number this season against Gerrit Cole.</div>
+  <div class="risk-block"><b>What could go wrong</b>Gerrit Cole can outpitch his season line on a given night, and the model doesn&#39;t see live injury or lineup news — worth a quick recheck before first pitch.</div>
+  <p class="subpick pass">Total: pass — projected 7.3 vs line 7.5, no clear edge.</p>
+  <p class="dim small">No public signal detected for this game today.</p>
+</div>
+<div class="pv" data-edge="0.11788111954065544">
+  <h2>Seattle Mariners @ Miami Marlins</h2>
+  <div class="meta">6:40 PM ET · George Kirby vs Tyler Phillips</div>
+  <p>Seattle Mariners (47-45, last 10: 6-4) visit Miami Marlins (50-42, last 10: 7-3) at 6:40 PM ET. On the mound: George Kirby (3.81 ERA, 1.32 WHIP, 104 IP) against Tyler Phillips (3.52 ERA, 1.38 WHIP, 69 IP). The pitching matchup is close to even. The model makes Miami Marlins a 57.6% favorite here — and with the market at 45.8% (best price +116), it sees value. The setting: loanDepot park, a pitcher-friendly venue with a roof, so weather is a non-factor.</p>
+  
+  <span class="approved-badge">Approved Play: Miami Marlins ML</span>
+  <dl class="field-grid">
+    <dt>Game</dt><dd>Seattle Mariners @ Miami Marlins</dd>
+    <dt>Market</dt><dd>Moneyline</dd>
+    <dt>Pick</dt><dd>Miami Marlins ML</dd>
+    <dt>Current price used</dt><dd>+116 to +105</dd>
+    <dt>Confidence tier</dt><dd>Strong Play</dd>
+    <dt>Dia edge score</dt><dd>96 / 100</dd>
+    <dt>Market no-vig probability</dt><dd>44.0% to 46.3%</dd>
+    <dt>Dia projected probability</dt><dd>57.6%</dd>
+    <dt>Raw edge</dt><dd>+11.8%</dd>
+  </dl>
+  <div class="why-block"><b>Why we like it</b>Miami Marlins grades out ahead on the model&#39;s blend of run differential and recent form, plus the home-field bump.</div>
+  <div class="risk-block"><b>What could go wrong</b>George Kirby can outpitch his season line on a given night, and the model doesn&#39;t see live injury or lineup news — worth a quick recheck before first pitch.</div>
+  <p class="subpick">▸ Total: <b>Under 8.5</b> (model projects 7.2 runs, edge 14.6%)</p><p class="subpick">▸ Run line: <b>Miami Marlins +1.5</b> (projected margin +0.3, edge 15.5%)</p>
+  <p class="dim small">No public signal detected for this game today.</p>
+</div>
+<div class="pv" data-edge="0.1090423985193652">
+  <h2>Chicago Cubs @ Baltimore Orioles</h2>
+  <div class="meta">6:35 PM ET · Colin Rea vs Dean Kremer</div>
+  <p>Chicago Cubs (51-40, last 10: 7-3) visit Baltimore Orioles (42-50, last 10: 4-6) at 6:35 PM ET. On the mound: Colin Rea (4.74 ERA, 1.43 WHIP, 89 IP) against Dean Kremer (limited innings). Dean Kremer holds a clear edge on the mound. The model makes Chicago Cubs a 57.2% favorite here — and with the market at 46.3% (best price +112), it sees value. The setting: Camden Yards, a neutral venue; the forecast calls for 75°F with 2 mph SW winds.</p>
+  
+  <span class="approved-badge">Approved Play: Chicago Cubs ML</span>
+  <dl class="field-grid">
+    <dt>Game</dt><dd>Chicago Cubs @ Baltimore Orioles</dd>
+    <dt>Market</dt><dd>Moneyline</dd>
+    <dt>Pick</dt><dd>Chicago Cubs ML</dd>
+    <dt>Current price used</dt><dd>+112 to +102</dd>
+    <dt>Confidence tier</dt><dd>Strong Play</dd>
+    <dt>Dia edge score</dt><dd>96 / 100</dd>
+    <dt>Market no-vig probability</dt><dd>45.6% to 46.9%</dd>
+    <dt>Dia projected probability</dt><dd>57.2%</dd>
+    <dt>Raw edge</dt><dd>+10.9%</dd>
+  </dl>
+  <div class="why-block"><b>Why we like it</b>Chicago Cubs projects ahead mainly on the mound — Colin Rea has the stronger run-prevention number this season against Dean Kremer.</div>
+  <div class="risk-block"><b>What could go wrong</b>Dean Kremer can outpitch his season line on a given night, and the model doesn&#39;t see live injury or lineup news — worth a quick recheck before first pitch.</div>
+  <p class="subpick pass">Total: pass — projected 10.2 vs line 10, no clear edge.</p>
+  <p class="dim small">No public signal detected for this game today.</p>
+</div>
+<div class="pv" data-edge="0.08744222174785088">
+  <h2>Milwaukee Brewers @ St. Louis Cardinals</h2>
+  <div class="meta">7:45 PM ET · Kyle Harrison vs Michael McGreevy</div>
+  <p>Milwaukee Brewers (58-33, last 10: 8-2) visit St. Louis Cardinals (47-43, last 10: 5-5) at 7:45 PM ET. On the mound: Kyle Harrison (2.82 ERA, 1.08 WHIP, 80 IP) against Michael McGreevy (3.12 ERA, 1.11 WHIP, 95 IP). The pitching matchup is close to even. The model makes Milwaukee Brewers a 66.6% favorite here — and with the market at 57.9% (best price -145), it sees value. The setting: Busch Stadium, a pitcher-friendly venue; the forecast calls for 78°F with 5 mph SE winds.</p>
+  
+  <span class="approved-badge">Approved Play: Milwaukee Brewers ML</span>
+  <dl class="field-grid">
+    <dt>Game</dt><dd>Milwaukee Brewers @ St. Louis Cardinals</dd>
+    <dt>Market</dt><dd>Moneyline</dd>
+    <dt>Pick</dt><dd>Milwaukee Brewers ML</dd>
+    <dt>Current price used</dt><dd>-145 to -157</dd>
+    <dt>Confidence tier</dt><dd>Strong Play</dd>
+    <dt>Dia edge score</dt><dd>96 / 100</dd>
+    <dt>Market no-vig probability</dt><dd>57.2% to 58.3%</dd>
+    <dt>Dia projected probability</dt><dd>66.6%</dd>
+    <dt>Raw edge</dt><dd>+8.7%</dd>
+  </dl>
+  <div class="why-block"><b>Why we like it</b>Milwaukee Brewers has been the hotter team lately (last 10: 8-2 vs. 5-5), enough to tip a close matchup.</div>
+  <div class="risk-block"><b>What could go wrong</b>Michael McGreevy can outpitch his season line on a given night, and the model doesn&#39;t see live injury or lineup news — worth a quick recheck before first pitch.</div>
+  <p class="subpick">▸ Total: <b>Under 8</b> (model projects 6.3 runs, edge 16.0%)</p>
+  <p class="dim small">No public signal detected for this game today.</p>
+</div>
+<div class="pv" data-edge="0.06545815460149579">
+  <h2>Arizona Diamondbacks @ San Diego Padres</h2>
+  <div class="meta">10:10 PM ET · Jose Cabrera vs Michael King</div>
+  <p>Arizona Diamondbacks (45-46, last 10: 4-6) visit San Diego Padres (45-46, last 10: 2-8) at 10:10 PM ET. On the mound: Jose Cabrera (limited innings) against Michael King (3.52 ERA, 1.16 WHIP, 102 IP). Michael King holds a clear edge on the mound. The model makes Arizona Diamondbacks a 50.0% favorite here — and with the market at 43.5% (best price +125), it sees value. The setting: Petco Park, a pitcher-friendly venue; the forecast calls for 63°F with 2 mph S winds.</p>
+  
+  <span class="approved-badge">Approved Play: Arizona Diamondbacks ML</span>
+  <dl class="field-grid">
+    <dt>Game</dt><dd>Arizona Diamondbacks @ San Diego Padres</dd>
+    <dt>Market</dt><dd>Moneyline</dd>
+    <dt>Pick</dt><dd>Arizona Diamondbacks ML</dd>
+    <dt>Current price used</dt><dd>+125 to +118</dd>
+    <dt>Confidence tier</dt><dd>Strong Play</dd>
+    <dt>Dia edge score</dt><dd>89 / 100</dd>
+    <dt>Market no-vig probability</dt><dd>42.5% to 43.9%</dd>
+    <dt>Dia projected probability</dt><dd>50.0%</dd>
+    <dt>Raw edge</dt><dd>+6.5%</dd>
+  </dl>
+  <div class="why-block"><b>Why we like it</b>Arizona Diamondbacks projects ahead mainly on the mound — Jose Cabrera has the stronger run-prevention number this season against Michael King.</div>
+  <div class="risk-block"><b>What could go wrong</b>Michael King can outpitch his season line on a given night, and the model doesn&#39;t see live injury or lineup news — worth a quick recheck before first pitch.</div>
+  <p class="subpick">▸ Total: <b>Under 8</b> (model projects 7.6 runs, edge 6.3%)</p>
+  <p class="dim small">1 tracked public source also leans Arizona Diamondbacks.</p>
+</div>
+<div class="pv" data-edge="0.06517451494002924">
+  <h2>Houston Astros @ Washington Nationals</h2>
+  <div class="meta">6:45 PM ET · Spencer Arrighetti vs Foster Griffin</div>
+  <p>Houston Astros (46-48, last 10: 6-4) visit Washington Nationals (47-46, last 10: 6-4) at 6:45 PM ET. On the mound: Spencer Arrighetti (3.81 ERA, 1.23 WHIP, 78 IP) against Foster Griffin (2.87 ERA, 1.04 WHIP, 103 IP). Foster Griffin holds a clear edge on the mound. The model makes Washington Nationals a 62.1% favorite here — and with the market at 55.6% (best price -133), it sees value. The setting: Nationals Park, a neutral venue; the forecast calls for 76°F with 5 mph SE winds.</p>
+  
+  <span class="approved-badge">Approved Play: Washington Nationals ML</span>
+  <dl class="field-grid">
+    <dt>Game</dt><dd>Houston Astros @ Washington Nationals</dd>
+    <dt>Market</dt><dd>Moneyline</dd>
+    <dt>Pick</dt><dd>Washington Nationals ML</dd>
+    <dt>Current price used</dt><dd>-133 to -141</dd>
+    <dt>Confidence tier</dt><dd>Strong Play</dd>
+    <dt>Dia edge score</dt><dd>93 / 100</dd>
+    <dt>Market no-vig probability</dt><dd>55.1% to 56.1%</dd>
+    <dt>Dia projected probability</dt><dd>62.1%</dd>
+    <dt>Raw edge</dt><dd>+6.5%</dd>
+  </dl>
+  <div class="why-block"><b>Why we like it</b>Washington Nationals projects ahead mainly on the mound — Foster Griffin has the stronger run-prevention number this season against Spencer Arrighetti.</div>
+  <div class="risk-block"><b>What could go wrong</b>Spencer Arrighetti can outpitch his season line on a given night, and the model doesn&#39;t see live injury or lineup news — worth a quick recheck before first pitch.</div>
+  <p class="subpick">▸ Total: <b>Under 9.5</b> (model projects 8.2 runs, edge 14.5%)</p>
+  <p class="dim small">No public signal detected for this game today.</p>
+</div>
+<div class="pv" data-edge="0.06489395243153628">
+  <h2>Los Angeles Angels @ Texas Rangers</h2>
+  <div class="meta">8:05 PM ET · Walbert Ureña vs MacKenzie Gore</div>
+  <p>Los Angeles Angels (36-56, last 10: 2-8) visit Texas Rangers (46-45, last 10: 7-3) at 8:05 PM ET. On the mound: Walbert Ureña (3.03 ERA, 1.31 WHIP, 77 IP) against MacKenzie Gore (4.31 ERA, 1.27 WHIP, 96 IP). Walbert Ureña holds a clear edge on the mound. The model makes Texas Rangers a 64.6% favorite here — and with the market at 58.2% (best price -145), it sees value. The setting: Globe Life Field, a neutral venue with a roof, so weather is a non-factor.</p>
+  
+  <span class="approved-badge">Approved Play: Texas Rangers ML</span>
+  <dl class="field-grid">
+    <dt>Game</dt><dd>Los Angeles Angels @ Texas Rangers</dd>
+    <dt>Market</dt><dd>Moneyline</dd>
+    <dt>Pick</dt><dd>Texas Rangers ML</dd>
+    <dt>Current price used</dt><dd>-145 to -165</dd>
+    <dt>Confidence tier</dt><dd>Strong Play</dd>
+    <dt>Dia edge score</dt><dd>93 / 100</dd>
+    <dt>Market no-vig probability</dt><dd>57.6% to 59.1%</dd>
+    <dt>Dia projected probability</dt><dd>64.6%</dd>
+    <dt>Raw edge</dt><dd>+6.5%</dd>
+  </dl>
+  <div class="why-block"><b>Why we like it</b>Texas Rangers projects ahead mainly on the mound — MacKenzie Gore has the stronger run-prevention number this season against Walbert Ureña.</div>
+  <div class="risk-block"><b>What could go wrong</b>Walbert Ureña can outpitch his season line on a given night, and the model doesn&#39;t see live injury or lineup news — worth a quick recheck before first pitch.</div>
+  <p class="subpick pass">Total: pass — projected 7.7 vs line 7.5, no clear edge.</p><p class="subpick">▸ Run line: <b>Los Angeles Angels +1.5</b> (projected margin -1, edge 20.0%)</p>
+  <p class="dim small">No public signal detected for this game today.</p>
+</div>
+<div class="pv" data-edge="0.05920138231954519">
+  <h2>Kansas City Royals @ New York Mets</h2>
+  <div class="meta">7:10 PM ET · Steven Cruz vs Christian Scott</div>
+  <p>Kansas City Royals (38-54, last 10: 4-6) visit New York Mets (38-54, last 10: 4-6) at 7:10 PM ET. On the mound: Steven Cruz (5.08 ERA, 1.45 WHIP, 28 IP) against Christian Scott (3.49 ERA, 1.35 WHIP, 49 IP). Christian Scott holds a clear edge on the mound. The model makes New York Mets a 61.7% favorite here — and with the market at 55.8% (best price -127), it sees value. The setting: Citi Field, a pitcher-friendly venue; the forecast calls for 71°F with 5 mph S winds.</p>
+  
+  <span class="approved-badge">Approved Play: New York Mets ML</span>
+  <dl class="field-grid">
+    <dt>Game</dt><dd>Kansas City Royals @ New York Mets</dd>
+    <dt>Market</dt><dd>Moneyline</dd>
+    <dt>Pick</dt><dd>New York Mets ML</dd>
+    <dt>Current price used</dt><dd>-127 to -146</dd>
+    <dt>Confidence tier</dt><dd>Standard Play</dd>
+    <dt>Dia edge score</dt><dd>89 / 100</dd>
+    <dt>Market no-vig probability</dt><dd>54.6% to 57.1%</dd>
+    <dt>Dia projected probability</dt><dd>61.7%</dd>
+    <dt>Raw edge</dt><dd>+5.9%</dd>
+  </dl>
+  <div class="why-block"><b>Why we like it</b>New York Mets projects ahead mainly on the mound — Christian Scott has the stronger run-prevention number this season against Steven Cruz.</div>
+  <div class="risk-block"><b>What could go wrong</b>Steven Cruz can outpitch his season line on a given night, and the model doesn&#39;t see live injury or lineup news — worth a quick recheck before first pitch.</div>
+  <p class="subpick pass">Total: pass — projected 9.3 vs line 9, no clear edge.</p><p class="subpick">▸ Run line: <b>New York Mets -1.5</b> (projected margin +1.8, edge 14.1%)</p>
+  <p class="dim small">No public signal detected for this game today.</p>
+</div>
+<div class="pv" data-edge="0.04421000988589219">
+  <h2>Toronto Blue Jays @ San Francisco Giants</h2>
+  <div class="meta">3:45 PM ET · Dylan Cease vs Logan Webb</div>
+  <p>Toronto Blue Jays (43-49, last 10: 4-6) visit San Francisco Giants (38-53, last 10: 5-5) at 3:45 PM ET. On the mound: Dylan Cease (2.79 ERA, 1.18 WHIP, 90 IP) against Logan Webb (3.66 ERA, 1.17 WHIP, 93 IP). Dylan Cease holds a clear edge on the mound. The model makes San Francisco Giants a 50.9% favorite here — and with the market at 46.5% (best price +112), it sees value. The setting: Oracle Park, a strong pitcher&#39;s park venue; the forecast calls for 57°F with 17 mph W winds.</p>
+  
+  <span class="approved-badge">Approved Play: San Francisco Giants ML</span>
+  <dl class="field-grid">
+    <dt>Game</dt><dd>Toronto Blue Jays @ San Francisco Giants</dd>
+    <dt>Market</dt><dd>Moneyline</dd>
+    <dt>Pick</dt><dd>San Francisco Giants ML</dd>
+    <dt>Current price used</dt><dd>+112 to +102</dd>
+    <dt>Confidence tier</dt><dd>Standard Play</dd>
+    <dt>Dia edge score</dt><dd>77 / 100</dd>
+    <dt>Market no-vig probability</dt><dd>45.8% to 47.4%</dd>
+    <dt>Dia projected probability</dt><dd>50.9%</dd>
+    <dt>Raw edge</dt><dd>+4.4%</dd>
+  </dl>
+  <div class="why-block"><b>Why we like it</b>San Francisco Giants projects ahead mainly on the mound — Logan Webb has the stronger run-prevention number this season against Dylan Cease.</div>
+  <div class="risk-block"><b>What could go wrong</b>Wind is up (17 mph W) at Oracle Park, adding variance to a pitching-driven number.</div>
+  <p class="subpick">▸ Total: <b>Under 7</b> (model projects 6.4 runs, edge 7.0%)</p>
+  <p class="dim small">No public signal detected for this game today.</p>
+</div>
+<div class="pv" data-edge="0.0402904662844602">
+  <h2>Boston Red Sox @ Chicago White Sox</h2>
+  <div class="meta">7:40 PM ET · Jake Bennett vs Davis Martin</div>
+  <p>Boston Red Sox (41-48, last 10: 8-2) visit Chicago White Sox (47-43, last 10: 5-5) at 7:40 PM ET. On the mound: Jake Bennett (3.10 ERA, 0.98 WHIP, 41 IP) against Davis Martin (3.08 ERA, 1.26 WHIP, 96 IP). The pitching matchup is close to even. The model makes Boston Red Sox a 53.1% favorite here — and with the market at 49.0% (best price -101), it sees value. The setting: Rate Field, a hitter-friendly venue; the forecast calls for 72°F with 6 mph SW winds.</p>
+  
+  <span class="approved-badge">Approved Play: Boston Red Sox ML</span>
+  <dl class="field-grid">
+    <dt>Game</dt><dd>Boston Red Sox @ Chicago White Sox</dd>
+    <dt>Market</dt><dd>Moneyline</dd>
+    <dt>Pick</dt><dd>Boston Red Sox ML</dd>
+    <dt>Current price used</dt><dd>-101 to -108</dd>
+    <dt>Confidence tier</dt><dd>Standard Play</dd>
+    <dt>Dia edge score</dt><dd>75 / 100</dd>
+    <dt>Market no-vig probability</dt><dd>48.5% to 49.6%</dd>
+    <dt>Dia projected probability</dt><dd>53.1%</dd>
+    <dt>Raw edge</dt><dd>+4.0%</dd>
+  </dl>
+  <div class="why-block"><b>Why we like it</b>Boston Red Sox has been the hotter team lately (last 10: 8-2 vs. 5-5), enough to tip a close matchup.</div>
+  <div class="risk-block"><b>What could go wrong</b>Davis Martin can outpitch his season line on a given night, and the model doesn&#39;t see live injury or lineup news — worth a quick recheck before first pitch.</div>
+  <p class="subpick">▸ Total: <b>Under 8</b> (model projects 6.6 runs, edge 14.1%)</p>
+  <p class="dim small">No public signal detected for this game today.</p>
+</div>
+<div class="pv" data-edge="0.03961805848890376">
+  <h2>Cleveland Guardians @ Minnesota Twins</h2>
+  <div class="meta">7:40 PM ET · Slade Cecconi vs Connor Prielipp</div>
+  <p>Cleveland Guardians (47-45, last 10: 5-5) visit Minnesota Twins (45-47, last 10: 7-3) at 7:40 PM ET. On the mound: Slade Cecconi (4.44 ERA, 1.40 WHIP, 95 IP) against Connor Prielipp (4.96 ERA, 1.38 WHIP, 62 IP). Slade Cecconi holds a clear edge on the mound. The model makes Minnesota Twins a 56.3% favorite here — and with the market at 52.3% (best price -115), it sees value. The setting: Target Field, a neutral venue; the forecast calls for 70°F with 4 mph N winds.</p>
+  
+  <span class="approved-badge">Approved Play: Minnesota Twins ML</span>
+  <dl class="field-grid">
+    <dt>Game</dt><dd>Cleveland Guardians @ Minnesota Twins</dd>
+    <dt>Market</dt><dd>Moneyline</dd>
+    <dt>Pick</dt><dd>Minnesota Twins ML</dd>
+    <dt>Current price used</dt><dd>-115 to -132</dd>
+    <dt>Confidence tier</dt><dd>Standard Play</dd>
+    <dt>Dia edge score</dt><dd>76 / 100</dd>
+    <dt>Market no-vig probability</dt><dd>51.7% to 54.0%</dd>
+    <dt>Dia projected probability</dt><dd>56.3%</dd>
+    <dt>Raw edge</dt><dd>+4.0%</dd>
+  </dl>
+  <div class="why-block"><b>Why we like it</b>Minnesota Twins projects ahead mainly on the mound — Connor Prielipp has the stronger run-prevention number this season against Slade Cecconi.</div>
+  <div class="risk-block"><b>What could go wrong</b>Slade Cecconi can outpitch his season line on a given night, and the model doesn&#39;t see live injury or lineup news — worth a quick recheck before first pitch.</div>
+  <p class="subpick">▸ Total: <b>Over 8.5</b> (model projects 10.1 runs, edge 17.1%)</p><p class="subpick">▸ Run line: <b>Cleveland Guardians +1.5</b> (projected margin -0.5, edge 11.0%)</p>
+  <p class="dim small">No public signal detected for this game today.</p>
+</div>
+<div class="pv" data-edge="0.03322331667060863">
+  <h2>Colorado Rockies @ Los Angeles Dodgers</h2>
+  <div class="meta">10:10 PM ET · Gabriel Hughes vs Roki Sasaki</div>
+  <p>Colorado Rockies (38-55, last 10: 5-5) visit Los Angeles Dodgers (60-33, last 10: 7-3) at 10:10 PM ET. On the mound: Gabriel Hughes (limited innings) against Roki Sasaki (5.40 ERA, 1.40 WHIP, 75 IP). Gabriel Hughes holds a clear edge on the mound. The model makes Los Angeles Dodgers a 71.1% favorite here — and with the market at 67.8% (best price -225), it sees value. The setting: Dodger Stadium, a pitcher-friendly venue; the forecast calls for 62°F with 4 mph E winds.</p>
+  
+  <span class="approved-badge">Approved Play: Los Angeles Dodgers ML</span>
+  <dl class="field-grid">
+    <dt>Game</dt><dd>Colorado Rockies @ Los Angeles Dodgers</dd>
+    <dt>Market</dt><dd>Moneyline</dd>
+    <dt>Pick</dt><dd>Los Angeles Dodgers ML</dd>
+    <dt>Current price used</dt><dd>-225 to -250</dd>
+    <dt>Confidence tier</dt><dd>Standard Play</dd>
+    <dt>Dia edge score</dt><dd>76 / 100</dd>
+    <dt>Market no-vig probability</dt><dd>67.5% to 68.2%</dd>
+    <dt>Dia projected probability</dt><dd>71.1%</dd>
+    <dt>Raw edge</dt><dd>+3.3%</dd>
+  </dl>
+  <div class="why-block"><b>Why we like it</b>Los Angeles Dodgers projects ahead mainly on the mound — Roki Sasaki has the stronger run-prevention number this season against Gabriel Hughes.</div>
+  <div class="risk-block"><b>What could go wrong</b>Gabriel Hughes can outpitch his season line on a given night, and the model doesn&#39;t see live injury or lineup news — worth a quick recheck before first pitch.</div>
+  <p class="subpick">▸ Total: <b>Over 10</b> (model projects 10.6 runs, edge 7.3%)</p><p class="subpick">▸ Run line: <b>Colorado Rockies +1.5</b> (projected margin +0.2, edge 19.1%)</p>
+  <p class="dim small">1 tracked public source also leans Los Angeles Dodgers.</p>
+</div>
+<div class="pv" data-edge="-0.0065679936953674245">
+  <h2>Atlanta Braves @ Pittsburgh Pirates</h2>
+  <div class="meta">6:40 PM ET · Grant Holmes vs Jared Jones</div>
+  <p>Atlanta Braves (52-38, last 10: 3-7) visit Pittsburgh Pirates (47-45, last 10: 6-4) at 6:40 PM ET. On the mound: Grant Holmes (3.83 ERA, 1.35 WHIP, 82 IP) against Jared Jones (5.28 ERA, 1.38 WHIP, 29 IP). Grant Holmes holds a clear edge on the mound. The model makes Atlanta Braves a 50.1% favorite here, roughly in line with the market (50.8%). The setting: PNC Park, a pitcher-friendly venue; the forecast calls for 75°F with 1 mph SE winds.</p>
+  <p class="pick">▸ Moneyline: Atlanta Braves (50.1%) — PASS, no edge</p>
+  <p class="subpick">▸ Total: <b>Over 9</b> (model projects 10.3 runs, edge 11.8%)</p><p class="subpick">▸ Run line: <b>Atlanta Braves -1.5</b> (projected margin -1.8, edge 13.8%)</p>
+  <p class="dim small">1 tracked public source lean the other side.</p>
+</div>
+<div class="pv" data-edge="-0.05337031516736512">
+  <h2>Philadelphia Phillies @ Cincinnati Reds</h2>
+  <div class="meta">7:10 PM ET · TBD vs Chase Burns</div>
+  <p>Philadelphia Phillies (51-41, last 10: 5-5) visit Cincinnati Reds (41-49, last 10: 3-7) at 7:10 PM ET. On the mound: TBD against Chase Burns (2.40 ERA, 1.08 WHIP, 98 IP). Chase Burns holds a clear edge on the mound. The model makes Cincinnati Reds a 51.1% favorite here, though the market is higher on the other side (56.5%) — no value at the current price. The setting: Great American Ball Park, a hitter-friendly venue; the forecast calls for 75°F with 1 mph S winds.</p>
+  <p class="pick">▸ Moneyline: Cincinnati Reds (51.1%) — PASS, no edge</p>
+  <p class="subpick">▸ Total: <b>Under 9</b> (model projects 7.7 runs, edge 13.5%)</p>
+  <p class="dim small">No public signal detected for this game today.</p>
+</div>
+<div class="lead-box">
+  <h3 style="margin:0 0 4px">Not ready to join? Get tomorrow's picks by email — free</h3>
+  <p class="dim small" style="margin:0">One email a day, before first pitch. No card required.</p>
+  <form name="newsletter" method="POST" data-netlify="true" netlify-honeypot="bot-field" id="lead-preview20260708">
+    <p style="display:none"><input name="bot-field"></p>
+    <input type="hidden" name="form-name" value="newsletter">
+    <input type="hidden" name="source" value="preview-2026-07-08">
+    <input type="email" name="email" required placeholder="you@example.com">
+    <button type="submit">Send me picks free</button>
+  </form>
+  <p class="ok pos-text small" id="lead-preview20260708-ok" style="margin-top:8px">You're on the list — check your inbox tomorrow morning. 🎉</p>
+  <script>
+  (function(){
+    var f = document.getElementById("lead-preview20260708");
+    if (!f) return;
+    f.addEventListener("submit", function(e){
+      e.preventDefault();
+      var data = new FormData(f);
+      fetch("/", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams(data).toString() })
+        .then(function(){ f.style.display = "none"; document.getElementById("lead-preview20260708-ok").style.display = "block"; })
+        .catch(function(){ });
+    });
+  })();
+  </script>
+</div><p class="dim small">Model outputs, not guarantees — the model doesn't know injuries, bullpens, or weather beyond the forecast shown. Total and run line use a simplified normal-approximation model layered on the same team/pitcher inputs as the moneyline. Every pick is graded on the <a href="/results/">Results page</a>.</p><h2>Public signals checked today</h2>
+<div class="card"><table><thead><tr><th>Source</th><th>Status</th><th>Link</th></tr></thead><tbody><tr><td>Action Network MLB</td><td>public page fetched</td><td><a href="https://www.actionnetwork.com/mlb">source</a></td></tr><tr><td>RotoWire MLB Betting</td><td>public page fetched</td><td><a href="https://www.rotowire.com/betting/mlb/">source</a></td></tr><tr><td>OddsJam MLB</td><td>public page fetched</td><td><a href="https://oddsjam.com/mlb">source</a></td></tr><tr><td>Covers MLB Picks</td><td>public page fetched</td><td><a href="https://www.covers.com/mlb/picks">source</a></td></tr></tbody></table>
+<p class="dim small">Public sources are checked as a second opinion only — LyDia's own model and market edge always decide the pick. Add a verified daily signal in <code>data/config/manual-competitor-signals.csv</code>; it's more reliable than the automated fetch above, since most pick sites are JavaScript-rendered.</p></div>
+</main>
+<footer>LyDia — analysis and education only, not betting advice. Please bet responsibly. If gambling stops being fun, call 1-800-GAMBLER.</footer>
+</body>
+</html>
