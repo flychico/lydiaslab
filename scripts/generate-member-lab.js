@@ -5,6 +5,7 @@
   Outputs member brief, picks JSON, market tracker, and public preview from one decision source.
 */
 const fs = require("fs");
+const { buildBullpenSource } = require("./lib/bullpen-fatigue-core");
 
 const HFA = 54 / 46;
 const PYTH_EXP = 1.83;
@@ -38,19 +39,19 @@ async function main() {
     .filter(g => g.status && g.status.abstractGameState === "Preview")
     .sort((a, b) => new Date(a.gameDate) - new Date(b.gameDate));
 
+  const generatedAt = new Date().toISOString();
+
   const strength = buildStrength(standings);
   const pitchers = await fetchPitchers(games);
   const oddsMap = buildOddsMap(oddsEvents);
-  const bullpen = await buildBullpenIndex(games, DATE);
+  const bullpenSource = await buildBullpenSource({ date: DATE, todayGames: games, fetchJson, generatedAt });
+  const bullpen = bullpenSource.teams_by_name || {};
+
+  writeJson(`data/bullpen/${DATE}.json`, bullpenSource);
+  writeJson("data/bullpen/today.json", bullpenSource);
 
   const rows = games.map(g => modelGame(g, strength, pitchers, oddsMap, bullpen)).filter(Boolean)
     .sort((a, b) => (b.lab_score || 0) - (a.lab_score || 0));
-
-  const generatedAt = new Date().toISOString();
-
-  const bullpenFile = buildBullpenFile(games, bullpen, generatedAt);
-  writeJson(`data/bullpen/${DATE}.json`, bullpenFile);
-  writeJson("data/bullpen/today.json", bullpenFile);
 
   const brief = {
     date: DATE,
@@ -164,112 +165,6 @@ function buildOddsMap(events){
   return map;
 }
 
-async function buildBullpenIndex(todayGames,date){
-  const teams={};
-  for(const g of todayGames){
-    teams[g.teams.away.team.id]={id:g.teams.away.team.id,name:g.teams.away.team.name,games:[],pitcherDates:{}};
-    teams[g.teams.home.team.id]={id:g.teams.home.team.id,name:g.teams.home.team.name,games:[],pitcherDates:{}};
-  }
-  for(const d of [-1,-2,-3].map(n=>dateShift(date,n))){
-    let schedule=[]; try{ schedule=await getGamesForDate(d); }catch(e){ continue; }
-    for(const g of schedule){
-      if(!g.status || g.status.abstractGameState!=="Final") continue;
-      const a=g.teams.away.team.id, h=g.teams.home.team.id; if(!teams[a]&&!teams[h]) continue;
-      try{ const box=await fetchJson(`https://statsapi.mlb.com/api/v1/game/${g.gamePk}/boxscore`); processBoxSide(box,"away",a,d,teams); processBoxSide(box,"home",h,d,teams); }catch(e){}
-    }
-  }
-  const out={}; for(const t of Object.values(teams)) out[t.name]=scoreBullpen(t); return out;
-}
-async function getGamesForDate(date){ const data=await fetchJson(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}`); return (((data.dates||[])[0])||{}).games||[]; }
-function dateShift(base,n){ const d=new Date(base+"T12:00:00"); d.setDate(d.getDate()+n); return localISODate(d); }
-function processBoxSide(box,side,teamId,date,teams){
-  const team=teams[teamId]; if(!team) return;
-  const tb=box.teams&&box.teams[side]; if(!tb||!tb.pitchers||!tb.players) return;
-  let totalIP=0,starterIP=0,relievers=0;
-  for(let i=0;i<tb.pitchers.length;i++){
-    const id=tb.pitchers[i], player=tb.players["ID"+id];
-    const ip=ipToNum(player&&player.stats&&player.stats.pitching&&player.stats.pitching.inningsPitched);
-    totalIP+=ip; if(i===0) starterIP=ip; else { relievers++; if(!team.pitcherDates[id]) team.pitcherDates[id]=new Set(); team.pitcherDates[id].add(date); }
-  }
-  team.games.push({date,bpIP:Math.max(0,totalIP-starterIP),relievers});
-}
-function scoreBullpen(team){
-  const games=team.games.sort((a,b)=>new Date(b.date)-new Date(a.date));
-  const last=games[0]||{bpIP:0,relievers:0};
-  const last3BP=games.reduce((s,g)=>s+g.bpIP,0);
-  const last3Relievers=games.reduce((s,g)=>s+g.relievers,0);
-  let b2b=0;
-  for(const dates of Object.values(team.pitcherDates)){
-    const arr=[...dates].sort(); for(let i=1;i<arr.length;i++){ const prev=new Date(arr[i-1]+"T12:00:00"), curr=new Date(arr[i]+"T12:00:00"); if((curr-prev)/86400000===1){b2b++; break;} }
-  }
-
-  // Center fatigue around normal recent workload so the index can separate teams instead of pinning normal usage near 100.
-  // Baseline assumptions: about 9 bullpen IP across three days and about 3 bullpen IP in the last game.
-  const rawScore = 45 + (last3BP - 9) * 3.5 + (last.bpIP - 3) * 4 + b2b * 6;
-  const score=Math.round(clamp(rawScore,0,100));
-  let label="Normal";
-  if(score>=78) label="High risk";
-  else if(score>=60) label="Tired";
-  else if(score<35) label="Fresh";
-
-  return {
-    score,
-    label,
-    last_game_bp_ip:round(last.bpIP,1),
-    last3_bp_ip:round(last3BP,1),
-    last_game_relievers:last.relievers,
-    last3_relievers:last3Relievers,
-    back_to_back_arms:b2b,
-    workload_read:bullpenWorkloadRead(label)
-  };
-}
-function bullpenWorkloadRead(label){
-  if(label==="Fresh") return "Low recent workload. No major bullpen fatigue flag from the last three days.";
-  if(label==="Tired") return "Elevated recent workload. Full-game angles deserve extra late-inning caution.";
-  if(label==="High risk") return "Heavy recent workload. Late-game pitching condition could materially affect the read.";
-  return "Manageable recent workload. Bullpen should still be part of the full-game read.";
-}
-
-function buildBullpenFile(games,bullpen,generatedAt){
-  const teams=[];
-  for(const g of games){
-    const away=g.teams.away.team;
-    const home=g.teams.home.team;
-    const gameLabel=`${away.name} @ ${home.name}`;
-    for(const side of ["away","home"]){
-      const team=side==="away"?away:home;
-      const opp=side==="away"?home:away;
-      const bp=bullpen[team.name]||null;
-      teams.push({
-        team_id:team.id,
-        team:team.name,
-        side,
-        opponent:opp.name,
-        game:gameLabel,
-        game_pk:g.gamePk,
-        game_time_iso:g.gameDate,
-        data_source:"generated",
-        score:bp?bp.score:null,
-        label:bp?bp.label:"Unknown",
-        last_game_bp_ip:bp?bp.last_game_bp_ip:null,
-        last3_bp_ip:bp?bp.last3_bp_ip:null,
-        last_game_relievers:bp?bp.last_game_relievers:null,
-        last3_relievers:bp?bp.last3_relievers:null,
-        back_to_back_arms:bp?bp.back_to_back_arms:null,
-        workload_read:bp?bp.workload_read:"Bullpen workload data unavailable for this team."
-      });
-    }
-  }
-  teams.sort((a,b)=>(b.score??-1)-(a.score??-1)||String(a.team).localeCompare(String(b.team)));
-  return {
-    date:DATE,
-    generated_at:generatedAt,
-    source_of_truth:"scripts/generate-member-lab.js",
-    method:"Generated bullpen source first. Bullpen tool page may fall back to live calculation if this file is missing.",
-    note:"This file keeps the Bullpen Fatigue Index, Daily Member Brief, and LyDia model aligned on the same bullpen scores.",
-    teams
-  };
-}
 
 function modelGame(g,strength,pitchers,oddsMap,bullpen){
   const aT=g.teams.away.team,hT=g.teams.home.team; const sA=strength[aT.id],sH=strength[hT.id]; if(!sA||!sH) return null;
