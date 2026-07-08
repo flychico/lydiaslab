@@ -1,6 +1,6 @@
 {
   "date": "2026-07-08",
-  "generated": "2026-07-08T18:41:10.462Z",
+  "generated": "2026-07-08T20:53:07.872Z",
   "source_of_truth": "scripts/generate-member-lab.js",
   "note": "Official picks are created only after pitcher matchup, bullpen fatigue, market pricing, and Lab Score checks.",
   "picks": [
@@ -26,24 +26,48 @@
       },
       "bullpen": {
         "pick_team": {
-          "score": 40,
+          "score": 38,
           "label": "Normal",
           "last_game_bp_ip": 4,
           "last3_bp_ip": 6.3,
           "last_game_relievers": 3,
           "last3_relievers": 6,
           "back_to_back_arms": 0,
-          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read."
+          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
+          "score_reason": "Score 38/100 (Normal). Last game bullpen IP: 4. Three-day bullpen IP: 6.3. Three-day relievers used: 6. Back-to-back arms: 0.",
+          "component_scores": {
+            "baseline": 45,
+            "last3_bp_ip": -7.5,
+            "last_game_bp_ip": 4.5,
+            "back_to_back_arms": 0,
+            "last3_relievers": -3.6,
+            "no_recent_games_credit": 0,
+            "raw_score": 38.4,
+            "extreme_workload": false
+          },
+          "source_version": "bullpen-fatigue-v2.0-clean"
         },
         "opponent": {
-          "score": 53,
+          "score": 50,
           "label": "Normal",
           "last_game_bp_ip": 4,
           "last3_bp_ip": 10,
           "last_game_relievers": 2,
           "last3_relievers": 7,
           "back_to_back_arms": 0,
-          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read."
+          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
+          "score_reason": "Score 50/100 (Normal). Last game bullpen IP: 4. Three-day bullpen IP: 10. Three-day relievers used: 7. Back-to-back arms: 0.",
+          "component_scores": {
+            "baseline": 45,
+            "last3_bp_ip": 2.8,
+            "last_game_bp_ip": 4.5,
+            "back_to_back_arms": 0,
+            "last3_relievers": -2.4,
+            "no_recent_games_credit": 0,
+            "raw_score": 49.9,
+            "extreme_workload": false
+          },
+          "source_version": "bullpen-fatigue-v2.0-clean"
         },
         "label": "Neutral",
         "major_caution": false,
@@ -53,13 +77,13 @@
         "pick": "Detroit Tigers",
         "side": "home",
         "prob": 0.827,
-        "mktProb": 0.5767,
+        "mktProb": 0.5638,
         "bestAm": -138,
         "valueTag": "STRONG SETUP",
         "isPass": false,
         "tier": "Strong Setup",
         "edgeScore": 90,
-        "rawEdge": 0.2503,
+        "rawEdge": 0.2632,
         "why": "Detroit Tigers cleared the model, market, pitcher, and bullpen checks with a Lab Score of 90.",
         "risk": "No model can see every live lineup, injury, or late bullpen availability update. Recheck official news before first pitch."
       }
@@ -69,31 +93,43 @@
       "away": "Philadelphia Phillies",
       "home": "Cincinnati Reds",
       "time": "2026-07-08T23:10:00Z",
-      "labScore": 90,
+      "labScore": 85,
       "status": "official_pick",
       "pitcherEdge": {
         "team": "Cincinnati Reds",
-        "gap": 30,
+        "gap": 16,
         "conflict": false,
-        "away_score": 50,
+        "away_score": 64,
         "home_score": 80,
-        "away_pitcher": "TBD",
+        "away_pitcher": "Alan Rangel",
         "home_pitcher": "Chase Burns",
-        "away_era": null,
+        "away_era": 3.38,
         "home_era": 2.4,
-        "away_whip": null,
+        "away_whip": 1.31,
         "home_whip": 1.08
       },
       "bullpen": {
         "pick_team": {
-          "score": 35,
-          "label": "Normal",
+          "score": 34,
+          "label": "Fresh",
           "last_game_bp_ip": 3,
           "last3_bp_ip": 6,
           "last_game_relievers": 4,
           "last3_relievers": 7,
           "back_to_back_arms": 0,
-          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read."
+          "workload_read": "Low recent workload. No major bullpen fatigue flag from the last three days.",
+          "score_reason": "Score 34/100 (Fresh). Last game bullpen IP: 3. Three-day bullpen IP: 6. Three-day relievers used: 7. Back-to-back arms: 0.",
+          "component_scores": {
+            "baseline": 45,
+            "last3_bp_ip": -8.4,
+            "last_game_bp_ip": 0,
+            "back_to_back_arms": 0,
+            "last3_relievers": -2.4,
+            "no_recent_games_credit": 0,
+            "raw_score": 34.2,
+            "extreme_workload": false
+          },
+          "source_version": "bullpen-fatigue-v2.0-clean"
         },
         "opponent": {
           "score": 48,
@@ -103,7 +139,19 @@
           "last_game_relievers": 3,
           "last3_relievers": 10,
           "back_to_back_arms": 2,
-          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read."
+          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
+          "score_reason": "Score 48/100 (Normal). Last game bullpen IP: 2. Three-day bullpen IP: 7.7. Three-day relievers used: 10. Back-to-back arms: 2.",
+          "component_scores": {
+            "baseline": 45,
+            "last3_bp_ip": -3.7,
+            "last_game_bp_ip": -4.5,
+            "back_to_back_arms": 10,
+            "last3_relievers": 1.2,
+            "no_recent_games_credit": 0,
+            "raw_score": 48,
+            "extreme_workload": false
+          },
+          "source_version": "bullpen-fatigue-v2.0-clean"
         },
         "label": "Neutral",
         "major_caution": false,
@@ -113,14 +161,14 @@
         "pick": "Cincinnati Reds",
         "side": "home",
         "prob": 0.5112,
-        "mktProb": 0.4071,
+        "mktProb": 0.4055,
         "bestAm": 139,
         "valueTag": "STRONG SETUP",
         "isPass": false,
         "tier": "Strong Setup",
-        "edgeScore": 90,
-        "rawEdge": 0.1042,
-        "why": "Cincinnati Reds cleared the model, market, pitcher, and bullpen checks with a Lab Score of 90.",
+        "edgeScore": 85,
+        "rawEdge": 0.1058,
+        "why": "Cincinnati Reds cleared the model, market, pitcher, and bullpen checks with a Lab Score of 85.",
         "risk": "No model can see every live lineup, injury, or late bullpen availability update. Recheck official news before first pitch."
       }
     },
@@ -146,14 +194,26 @@
       },
       "bullpen": {
         "pick_team": {
-          "score": 55,
+          "score": 53,
           "label": "Normal",
           "last_game_bp_ip": 2,
           "last3_bp_ip": 11.3,
           "last_game_relievers": 2,
           "last3_relievers": 10,
           "back_to_back_arms": 1,
-          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read."
+          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
+          "score_reason": "Score 53/100 (Normal). Last game bullpen IP: 2. Three-day bullpen IP: 11.3. Three-day relievers used: 10. Back-to-back arms: 1.",
+          "component_scores": {
+            "baseline": 45,
+            "last3_bp_ip": 6.5,
+            "last_game_bp_ip": -4.5,
+            "back_to_back_arms": 5,
+            "last3_relievers": 1.2,
+            "no_recent_games_credit": 0,
+            "raw_score": 53.2,
+            "extreme_workload": false
+          },
+          "source_version": "bullpen-fatigue-v2.0-clean"
         },
         "opponent": {
           "score": 100,
@@ -163,7 +223,19 @@
           "last_game_relievers": 4,
           "last3_relievers": 13,
           "back_to_back_arms": 4,
-          "workload_read": "Heavy recent workload. Late-game pitching condition could materially affect the read."
+          "workload_read": "Heavy recent workload. Late-game pitching condition could materially affect the read.",
+          "score_reason": "Score 100/100 (High risk). Last game bullpen IP: 8. Three-day bullpen IP: 19.3. Three-day relievers used: 13. Back-to-back arms: 4.",
+          "component_scores": {
+            "baseline": 45,
+            "last3_bp_ip": 28.9,
+            "last_game_bp_ip": 22,
+            "back_to_back_arms": 20,
+            "last3_relievers": 4.8,
+            "no_recent_games_credit": 0,
+            "raw_score": 120.7,
+            "extreme_workload": true
+          },
+          "source_version": "bullpen-fatigue-v2.0-clean"
         },
         "label": "Supports LyDia side",
         "major_caution": false,
@@ -173,13 +245,13 @@
         "pick": "Milwaukee Brewers",
         "side": "away",
         "prob": 0.6662,
-        "mktProb": 0.5356,
+        "mktProb": 0.5372,
         "bestAm": -121,
         "valueTag": "STRONG SETUP",
         "isPass": false,
         "tier": "Strong Setup",
         "edgeScore": 78,
-        "rawEdge": 0.1307,
+        "rawEdge": 0.129,
         "why": "Milwaukee Brewers cleared the model, market, pitcher, and bullpen checks with a Lab Score of 78.",
         "risk": "No model can see every live lineup, injury, or late bullpen availability update. Recheck official news before first pitch."
       }
@@ -189,7 +261,7 @@
       "away": "Houston Astros",
       "home": "Washington Nationals",
       "time": "2026-07-08T22:45:00Z",
-      "labScore": 75,
+      "labScore": 77,
       "status": "official_pick",
       "pitcherEdge": {
         "team": "Washington Nationals",
@@ -207,23 +279,47 @@
       "bullpen": {
         "pick_team": {
           "score": 60,
-          "label": "Tired",
+          "label": "Normal",
           "last_game_bp_ip": 3.3,
           "last3_bp_ip": 13,
           "last_game_relievers": 4,
           "last3_relievers": 11,
           "back_to_back_arms": 0,
-          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution."
+          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
+          "score_reason": "Score 60/100 (Normal). Last game bullpen IP: 3.3. Three-day bullpen IP: 13. Three-day relievers used: 11. Back-to-back arms: 0.",
+          "component_scores": {
+            "baseline": 45,
+            "last3_bp_ip": 11.2,
+            "last_game_bp_ip": 1.5,
+            "back_to_back_arms": 0,
+            "last3_relievers": 2.4,
+            "no_recent_games_credit": 0,
+            "raw_score": 60.1,
+            "extreme_workload": false
+          },
+          "source_version": "bullpen-fatigue-v2.0-clean"
         },
         "opponent": {
-          "score": 72,
+          "score": 73,
           "label": "Tired",
           "last_game_bp_ip": 5.3,
           "last3_bp_ip": 12.3,
           "last_game_relievers": 6,
           "last3_relievers": 12,
           "back_to_back_arms": 1,
-          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution."
+          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+          "score_reason": "Score 73/100 (Tired). Last game bullpen IP: 5.3. Three-day bullpen IP: 12.3. Three-day relievers used: 12. Back-to-back arms: 1.",
+          "component_scores": {
+            "baseline": 45,
+            "last3_bp_ip": 9.3,
+            "last_game_bp_ip": 10.5,
+            "back_to_back_arms": 5,
+            "last3_relievers": 3.6,
+            "no_recent_games_credit": 0,
+            "raw_score": 73.4,
+            "extreme_workload": false
+          },
+          "source_version": "bullpen-fatigue-v2.0-clean"
         },
         "label": "Elevated volatility",
         "major_caution": false,
@@ -233,14 +329,14 @@
         "pick": "Washington Nationals",
         "side": "home",
         "prob": 0.6214,
-        "mktProb": 0.5562,
-        "bestAm": -133,
+        "mktProb": 0.5504,
+        "bestAm": -129,
         "valueTag": "STRONG SETUP",
         "isPass": false,
         "tier": "Strong Setup",
-        "edgeScore": 75,
-        "rawEdge": 0.0652,
-        "why": "Washington Nationals cleared the model, market, pitcher, and bullpen checks with a Lab Score of 75.",
+        "edgeScore": 77,
+        "rawEdge": 0.071,
+        "why": "Washington Nationals cleared the model, market, pitcher, and bullpen checks with a Lab Score of 77.",
         "risk": "Primary caution: bullpen workload adds late-game volatility. Recheck official news before first pitch."
       }
     },
@@ -273,17 +369,41 @@
           "last_game_relievers": 4,
           "last3_relievers": 9,
           "back_to_back_arms": 0,
-          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read."
+          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
+          "score_reason": "Score 51/100 (Normal). Last game bullpen IP: 3.7. Three-day bullpen IP: 10. Three-day relievers used: 9. Back-to-back arms: 0.",
+          "component_scores": {
+            "baseline": 45,
+            "last3_bp_ip": 2.8,
+            "last_game_bp_ip": 3,
+            "back_to_back_arms": 0,
+            "last3_relievers": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 50.8,
+            "extreme_workload": false
+          },
+          "source_version": "bullpen-fatigue-v2.0-clean"
         },
         "opponent": {
-          "score": 53,
+          "score": 51,
           "label": "Normal",
           "last_game_bp_ip": 4,
           "last3_bp_ip": 10,
           "last_game_relievers": 3,
           "last3_relievers": 8,
           "back_to_back_arms": 0,
-          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read."
+          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
+          "score_reason": "Score 51/100 (Normal). Last game bullpen IP: 4. Three-day bullpen IP: 10. Three-day relievers used: 8. Back-to-back arms: 0.",
+          "component_scores": {
+            "baseline": 45,
+            "last3_bp_ip": 2.8,
+            "last_game_bp_ip": 4.5,
+            "back_to_back_arms": 0,
+            "last3_relievers": -1.2,
+            "no_recent_games_credit": 0,
+            "raw_score": 51.1,
+            "extreme_workload": false
+          },
+          "source_version": "bullpen-fatigue-v2.0-clean"
         },
         "label": "Neutral",
         "major_caution": false,
@@ -293,13 +413,13 @@
         "pick": "Tampa Bay Rays",
         "side": "home",
         "prob": 0.6675,
-        "mktProb": 0.5179,
-        "bestAm": -110,
+        "mktProb": 0.5214,
+        "bestAm": -115,
         "valueTag": "QUALIFIED SETUP",
         "isPass": false,
         "tier": "Qualified Setup",
         "edgeScore": 73,
-        "rawEdge": 0.1496,
+        "rawEdge": 0.1462,
         "why": "Tampa Bay Rays cleared the model, market, pitcher, and bullpen checks with a Lab Score of 73.",
         "risk": "No model can see every live lineup, injury, or late bullpen availability update. Recheck official news before first pitch."
       }
@@ -326,24 +446,48 @@
       },
       "bullpen": {
         "pick_team": {
-          "score": 24,
+          "score": 22,
           "label": "Fresh",
           "last_game_bp_ip": 2,
           "last3_bp_ip": 4,
           "last_game_relievers": 3,
           "last3_relievers": 5,
           "back_to_back_arms": 0,
-          "workload_read": "Low recent workload. No major bullpen fatigue flag from the last three days."
+          "workload_read": "Low recent workload. No major bullpen fatigue flag from the last three days.",
+          "score_reason": "Score 22/100 (Fresh). Last game bullpen IP: 2. Three-day bullpen IP: 4. Three-day relievers used: 5. Back-to-back arms: 0.",
+          "component_scores": {
+            "baseline": 45,
+            "last3_bp_ip": -14,
+            "last_game_bp_ip": -4.5,
+            "back_to_back_arms": 0,
+            "last3_relievers": -4.8,
+            "no_recent_games_credit": 0,
+            "raw_score": 21.7,
+            "extreme_workload": false
+          },
+          "source_version": "bullpen-fatigue-v2.0-clean"
         },
         "opponent": {
-          "score": 42,
+          "score": 43,
           "label": "Normal",
           "last_game_bp_ip": 3,
           "last3_bp_ip": 8,
           "last_game_relievers": 3,
           "last3_relievers": 10,
           "back_to_back_arms": 0,
-          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read."
+          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
+          "score_reason": "Score 43/100 (Normal). Last game bullpen IP: 3. Three-day bullpen IP: 8. Three-day relievers used: 10. Back-to-back arms: 0.",
+          "component_scores": {
+            "baseline": 45,
+            "last3_bp_ip": -2.8,
+            "last_game_bp_ip": 0,
+            "back_to_back_arms": 0,
+            "last3_relievers": 1.2,
+            "no_recent_games_credit": 0,
+            "raw_score": 43.4,
+            "extreme_workload": false
+          },
+          "source_version": "bullpen-fatigue-v2.0-clean"
         },
         "label": "Supports LyDia side",
         "major_caution": false,
@@ -353,13 +497,13 @@
         "pick": "Minnesota Twins",
         "side": "home",
         "prob": 0.5628,
-        "mktProb": 0.4759,
-        "bestAm": 108,
+        "mktProb": 0.4587,
+        "bestAm": 114,
         "valueTag": "QUALIFIED SETUP",
         "isPass": false,
         "tier": "Qualified Setup",
         "edgeScore": 73,
-        "rawEdge": 0.0869,
+        "rawEdge": 0.1041,
         "why": "Minnesota Twins cleared the model, market, pitcher, and bullpen checks with a Lab Score of 73.",
         "risk": "No model can see every live lineup, injury, or late bullpen availability update. Recheck official news before first pitch."
       }
@@ -369,7 +513,7 @@
       "away": "Seattle Mariners",
       "home": "Miami Marlins",
       "time": "2026-07-08T22:40:00Z",
-      "labScore": 69,
+      "labScore": 68,
       "status": "official_pick",
       "pitcherEdge": {
         "team": "Seattle Mariners",
@@ -386,14 +530,26 @@
       },
       "bullpen": {
         "pick_team": {
-          "score": 46,
+          "score": 47,
           "label": "Normal",
           "last_game_bp_ip": 5,
           "last3_bp_ip": 7,
           "last_game_relievers": 5,
           "last3_relievers": 8,
           "back_to_back_arms": 0,
-          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read."
+          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
+          "score_reason": "Score 47/100 (Normal). Last game bullpen IP: 5. Three-day bullpen IP: 7. Three-day relievers used: 8. Back-to-back arms: 0.",
+          "component_scores": {
+            "baseline": 45,
+            "last3_bp_ip": -5.6,
+            "last_game_bp_ip": 9,
+            "back_to_back_arms": 0,
+            "last3_relievers": -1.2,
+            "no_recent_games_credit": 0,
+            "raw_score": 47.2,
+            "extreme_workload": false
+          },
+          "source_version": "bullpen-fatigue-v2.0-clean"
         },
         "opponent": {
           "score": 41,
@@ -403,7 +559,19 @@
           "last_game_relievers": 5,
           "last3_relievers": 7,
           "back_to_back_arms": 0,
-          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read."
+          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
+          "score_reason": "Score 41/100 (Normal). Last game bullpen IP: 4.3. Three-day bullpen IP: 6.3. Three-day relievers used: 7. Back-to-back arms: 0.",
+          "component_scores": {
+            "baseline": 45,
+            "last3_bp_ip": -7.5,
+            "last_game_bp_ip": 6,
+            "back_to_back_arms": 0,
+            "last3_relievers": -2.4,
+            "no_recent_games_credit": 0,
+            "raw_score": 41.1,
+            "extreme_workload": false
+          },
+          "source_version": "bullpen-fatigue-v2.0-clean"
         },
         "label": "Neutral",
         "major_caution": false,
@@ -413,15 +581,15 @@
         "pick": "Miami Marlins",
         "side": "home",
         "prob": 0.5757,
-        "mktProb": 0.4571,
-        "bestAm": 116,
+        "mktProb": 0.4365,
+        "bestAm": 120,
         "valueTag": "QUALIFIED SETUP",
         "isPass": false,
         "tier": "Qualified Setup",
-        "edgeScore": 69,
-        "rawEdge": 0.1186,
-        "why": "Miami Marlins cleared the model, market, pitcher, and bullpen checks with a Lab Score of 69.",
-        "risk": "No model can see every live lineup, injury, or late bullpen availability update. Recheck official news before first pitch."
+        "edgeScore": 68,
+        "rawEdge": 0.1392,
+        "why": "Miami Marlins cleared the model, market, pitcher, and bullpen checks with a Lab Score of 68.",
+        "risk": "Primary caution: limited sportsbook sample. Recheck official news before first pitch."
       }
     },
     {
@@ -429,7 +597,7 @@
       "away": "Los Angeles Angels",
       "home": "Texas Rangers",
       "time": "2026-07-09T00:05:00Z",
-      "labScore": 66,
+      "labScore": 65,
       "status": "official_pick",
       "pitcherEdge": {
         "team": "Los Angeles Angels",
@@ -446,14 +614,26 @@
       },
       "bullpen": {
         "pick_team": {
-          "score": 48,
+          "score": 47,
           "label": "Normal",
           "last_game_bp_ip": 4,
           "last3_bp_ip": 8.7,
           "last_game_relievers": 4,
           "last3_relievers": 8,
           "back_to_back_arms": 0,
-          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read."
+          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
+          "score_reason": "Score 47/100 (Normal). Last game bullpen IP: 4. Three-day bullpen IP: 8.7. Three-day relievers used: 8. Back-to-back arms: 0.",
+          "component_scores": {
+            "baseline": 45,
+            "last3_bp_ip": -0.9,
+            "last_game_bp_ip": 4.5,
+            "back_to_back_arms": 0,
+            "last3_relievers": -1.2,
+            "no_recent_games_credit": 0,
+            "raw_score": 47.4,
+            "extreme_workload": false
+          },
+          "source_version": "bullpen-fatigue-v2.0-clean"
         },
         "opponent": {
           "score": 34,
@@ -463,7 +643,19 @@
           "last_game_relievers": 3,
           "last3_relievers": 8,
           "back_to_back_arms": 0,
-          "workload_read": "Low recent workload. No major bullpen fatigue flag from the last three days."
+          "workload_read": "Low recent workload. No major bullpen fatigue flag from the last three days.",
+          "score_reason": "Score 34/100 (Fresh). Last game bullpen IP: 2. Three-day bullpen IP: 7. Three-day relievers used: 8. Back-to-back arms: 0.",
+          "component_scores": {
+            "baseline": 45,
+            "last3_bp_ip": -5.6,
+            "last_game_bp_ip": -4.5,
+            "back_to_back_arms": 0,
+            "last3_relievers": -1.2,
+            "no_recent_games_credit": 0,
+            "raw_score": 33.7,
+            "extreme_workload": false
+          },
+          "source_version": "bullpen-fatigue-v2.0-clean"
         },
         "label": "Neutral",
         "major_caution": false,
@@ -473,14 +665,14 @@
         "pick": "Texas Rangers",
         "side": "home",
         "prob": 0.6464,
-        "mktProb": 0.57,
+        "mktProb": 0.5712,
         "bestAm": -142,
         "valueTag": "QUALIFIED SETUP",
         "isPass": false,
         "tier": "Qualified Setup",
-        "edgeScore": 66,
-        "rawEdge": 0.0764,
-        "why": "Texas Rangers cleared the model, market, pitcher, and bullpen checks with a Lab Score of 66.",
+        "edgeScore": 65,
+        "rawEdge": 0.0752,
+        "why": "Texas Rangers cleared the model, market, pitcher, and bullpen checks with a Lab Score of 65.",
         "risk": "No model can see every live lineup, injury, or late bullpen availability update. Recheck official news before first pitch."
       }
     }
