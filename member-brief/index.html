@@ -11,7 +11,7 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Daily Member Brief — LyDia</title>
+<title>Daily Member Brief | LyDia</title>
 <meta name="description" content="LyDia's Daily Member Brief organizes the MLB card by official picks, Lab Score, pitcher edges, bullpen flags, and market movement notes.">
 <link rel="canonical" href="https://mlbedges.com/member-brief/">
 <link rel="stylesheet" href="/css/style.css">
@@ -52,7 +52,7 @@
     <button class="secondary" onclick="loadBrief()">Refresh</button>
   </div>
 
-  <div id="status" class="loading">Loading member brief…</div>
+  <div id="status" class="loading">Loading member brief...</div>
   <div id="kpis" class="kpis"></div>
   <div id="summary"></div>
   <div id="official"></div>
@@ -77,9 +77,15 @@ function shiftDay(n) {
   datePick.value = localISODate(d);
   loadBrief();
 }
-function pct(v) { return typeof v === "number" ? (v * 100).toFixed(1) + "%" : "—"; }
-function edge(v) { return typeof v === "number" ? (v >= 0 ? "+" : "") + (v * 100).toFixed(1) + "%" : "—"; }
-function odds(v) { return typeof v === "number" ? Odds.fmtAm(v) : "—"; }
+function pct(v) { return typeof v === "number" ? (v * 100).toFixed(1) + "%" : "-"; }
+function edge(v) { return typeof v === "number" ? (v >= 0 ? "+" : "") + (v * 100).toFixed(1) + "%" : "-"; }
+function odds(v) { return typeof v === "number" ? Odds.fmtAm(v) : "-"; }
+function friendlyTime(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString("en-US", { month:"short", day:"numeric", hour:"numeric", minute:"2-digit", timeZone:"America/New_York", timeZoneName:"short" });
+}
 
 async function loadBrief() {
   const date = datePick.value;
@@ -90,7 +96,7 @@ async function loadBrief() {
   const watchEl = document.getElementById("watch");
   const passesEl = document.getElementById("passes");
 
-  statusEl.innerHTML = `<div class="loading">Loading member brief…</div>`;
+  statusEl.innerHTML = `<div class="loading">Loading member brief...</div>`;
   kpisEl.innerHTML = ""; summaryEl.innerHTML = ""; officialEl.innerHTML = ""; watchEl.innerHTML = ""; passesEl.innerHTML = "";
 
   let data = null;
@@ -105,29 +111,30 @@ async function loadBrief() {
     } catch(e) {}
   }
 
-  if (!data || !Array.isArray(data.games)) {
+  if (!data || !Array.isArray(data.games) || data.games.length === 0) {
     statusEl.innerHTML = `<div class="notice warn">
-      <strong>No member brief data found for ${escapeHtml(date)}.</strong>
-      Run the included <code>scripts/generate-member-lab.js</code> workflow to generate <code>/data/member-brief/${escapeHtml(date)}.json</code>.
+      <strong>No member brief is available for ${escapeHtml(date)}.</strong><br>
+      LyDia does not create official picks after a slate has already started. Check Results for completed cards or publish the daily card before games begin.
     </div>`;
     return;
   }
 
-  statusEl.innerHTML = "";
   const games = data.games || [];
   const official = games.filter(g => g.status === "official_pick");
   const watch = games.filter(g => g.status === "watchlist" || g.lab_score >= 65).filter(g => g.status !== "official_pick");
   const passes = games.filter(g => g.status === "pass");
+  const updated = friendlyTime(data.generated_at);
 
+  statusEl.innerHTML = "";
   kpisEl.innerHTML = `
     <div class="kpi"><div class="label">Games</div><div class="value">${games.length}</div><div class="small dim">${escapeHtml(data.date || date)}</div></div>
     <div class="kpi"><div class="label">Official picks</div><div class="value">${official.length}</div><div class="small dim">cleared model + market threshold</div></div>
-    <div class="kpi"><div class="label">Top Lab Score</div><div class="value">${games.length ? Math.max(...games.map(g => g.lab_score || 0)) : "—"}</div><div class="small dim">highest setup today</div></div>
+    <div class="kpi"><div class="label">Top Lab Score</div><div class="value">${games.length ? Math.max(...games.map(g => g.lab_score || 0)) : "-"}</div><div class="small dim">highest setup today</div></div>
     <div class="kpi"><div class="label">Market tracked</div><div class="value">${games.filter(g => g.market && g.market.best_price !== null).length}</div><div class="small dim">priced games</div></div>`;
 
   summaryEl.innerHTML = `<div class="notice">
     <strong>Brief read:</strong> ${escapeHtml(data.summary || "Review the official picks first, then the high Lab Score watchlist and pass reasons.")}
-    ${data.generated_at ? `<br><span class="small dim">Generated ${escapeHtml(data.generated_at)}</span>` : ""}
+    ${updated ? `<br><span class="small dim">Updated ${escapeHtml(updated)}</span>` : ""}
   </div>`;
 
   officialEl.innerHTML = section("Official Picks", official, "No official picks cleared the full threshold for this slate.");
@@ -139,9 +146,8 @@ function section(title, items, empty) {
   return `<h2 class="section-note">${escapeHtml(title)}</h2>` +
     (items.length ? items.map(renderCard).join("") : `<div class="notice">${escapeHtml(empty)}</div>`);
 }
-
 function renderCard(g) {
-  const cls = g.status === "official_pick" ? "pos" : g.status === "pass" ? "neutral" : "neutral";
+  const cls = g.status === "official_pick" ? "pos" : "neutral";
   const market = g.market || {};
   const pitcher = g.pitcher_edge || {};
   const bullpen = g.bullpen || {};
@@ -152,21 +158,20 @@ function renderCard(g) {
     </div>
     <div class="brief-line">
       <span class="badge ${cls}">${labelStatus(g.status)}</span>
-      <span><b>LyDia side:</b> ${escapeHtml(g.pick_team || "—")}</span>
-      <span class="score-pill">Lab Score: ${g.lab_score ?? "—"}/100</span>
+      <span><b>LyDia side:</b> ${escapeHtml(g.pick_team || "-")}</span>
+      <span class="score-pill">Lab Score: ${g.lab_score ?? "-"}/100</span>
     </div>
     <div class="metric-grid">
       <div class="metric-box"><div class="label">Model probability</div><div class="value">${pct(g.model_probability)}</div></div>
       <div class="metric-box"><div class="label">Market probability</div><div class="value">${pct(market.no_vig_probability)}</div></div>
       <div class="metric-box"><div class="label">Model vs market</div><div class="value ${g.edge > 0 ? "pos-text" : g.edge < 0 ? "neg-text" : ""}">${edge(g.edge)}</div></div>
       <div class="metric-box"><div class="label">Current price</div><div class="value">${odds(market.best_price)}</div></div>
-      <div class="metric-box"><div class="label">Pitcher edge</div><div class="value">${escapeHtml(pitcher.team || "—")}</div></div>
-      <div class="metric-box"><div class="label">Bullpen read</div><div class="value">${escapeHtml(bullpen.label || "—")}</div></div>
+      <div class="metric-box"><div class="label">Pitcher edge</div><div class="value">${escapeHtml(pitcher.team || "-")}</div></div>
+      <div class="metric-box"><div class="label">Bullpen read</div><div class="value">${escapeHtml(bullpen.label || "-")}</div></div>
     </div>
     <div class="read">${escapeHtml(g.read || g.pass_reason || "")}</div>
   </div>`;
 }
-
 function labelStatus(s) {
   if (s === "official_pick") return "Official pick";
   if (s === "watchlist") return "Watchlist";
@@ -174,6 +179,5 @@ function labelStatus(s) {
   return "Research";
 }
 </script>
-<!-- force deploy member brief -->
 </body>
 </html>

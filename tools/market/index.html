@@ -11,7 +11,7 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LyDia vs Market — LyDia's Lab</title>
+<title>LyDia vs Market | LyDia's Lab</title>
 <meta name="description" content="Track LyDia's posted prices against current and closing market prices.">
 <link rel="canonical" href="https://mlbedges.com/tools/market/">
 <link rel="stylesheet" href="/css/style.css">
@@ -50,7 +50,7 @@
     <button class="secondary" onclick="loadMarket()">Refresh</button>
   </div>
 
-  <div id="status" class="loading">Loading market tracker…</div>
+  <div id="status" class="loading">Loading market tracker...</div>
   <div id="kpis" class="kpis"></div>
   <div id="items"></div>
 </main>
@@ -72,14 +72,20 @@ function shiftDay(n) {
   datePick.value = localISODate(d);
   loadMarket();
 }
-function fmtOdds(v) { return typeof v === "number" ? Odds.fmtAm(v) : "—"; }
+function fmtOdds(v) { return typeof v === "number" ? Odds.fmtAm(v) : "-"; }
+function friendlyTime(iso) {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleString("en-US", { month:"short", day:"numeric", hour:"numeric", minute:"2-digit", timeZone:"America/New_York", timeZoneName:"short" });
+}
 
 async function loadMarket() {
   const date = datePick.value;
   const statusEl = document.getElementById("status");
   const kpisEl = document.getElementById("kpis");
   const itemsEl = document.getElementById("items");
-  statusEl.innerHTML = `<div class="loading">Loading market tracker…</div>`;
+  statusEl.innerHTML = `<div class="loading">Loading market tracker...</div>`;
   kpisEl.innerHTML = ""; itemsEl.innerHTML = "";
 
   let data = null;
@@ -96,8 +102,8 @@ async function loadMarket() {
 
   if (!data || !Array.isArray(data.items)) {
     statusEl.innerHTML = `<div class="notice warn">
-      <strong>No market tracker data found for ${escapeHtml(date)}.</strong>
-      Run the included workflow to create <code>/data/market/${escapeHtml(date)}.json</code> and <code>/data/market/today.json</code>.
+      <strong>No market tracker data found for ${escapeHtml(date)}.</strong><br>
+      Market tracking appears after an official card has been published and a market snapshot exists.
     </div>`;
     return;
   }
@@ -113,7 +119,7 @@ async function loadMarket() {
     <div class="kpi"><div class="label">Tracked picks</div><div class="value">${items.length}</div><div class="small dim">${escapeHtml(data.date || date)}</div></div>
     <div class="kpi"><div class="label">Toward LyDia</div><div class="value">${toward}</div><div class="small dim">price moved against late buyers</div></div>
     <div class="kpi"><div class="label">Away from LyDia</div><div class="value">${away}</div><div class="small dim">price became more favorable</div></div>
-    <div class="kpi"><div class="label">Closing tracked</div><div class="value">${closeTracked}</div><div class="small dim">closing field present</div></div>`;
+    <div class="kpi"><div class="label">Closing tracked</div><div class="value">${closeTracked}</div><div class="small dim">closing value present</div></div>`;
 
   itemsEl.innerHTML = items.length
     ? items.map(renderItem).join("")
@@ -132,16 +138,16 @@ function renderItem(x) {
     </div>
     <div class="market-line">
       <span class="badge ${cls}">${label}</span>
-      <span><b>Pick:</b> ${escapeHtml(x.pick || x.pick_team || "—")}</span>
+      <span><b>Pick:</b> ${escapeHtml(x.pick || x.pick_team || "-")}</span>
       ${x.result ? `<span class="dim small">Result: ${escapeHtml(x.result)}</span>` : ""}
     </div>
     <div class="metric-grid">
       <div class="metric-box"><div class="label">Posted price</div><div class="value">${fmtOdds(x.posted_price)}</div></div>
       <div class="metric-box"><div class="label">Current price</div><div class="value">${fmtOdds(x.current_price)}</div></div>
       <div class="metric-box"><div class="label">Closing price</div><div class="value">${fmtOdds(x.closing_price)}</div></div>
-      <div class="metric-box"><div class="label">Posted at</div><div class="value small">${escapeHtml(x.posted_at || "—")}</div></div>
-      <div class="metric-box"><div class="label">Last checked</div><div class="value small">${escapeHtml(x.last_checked_at || "—")}</div></div>
-      <div class="metric-box"><div class="label">Lab Score</div><div class="value">${x.lab_score ?? "—"}</div></div>
+      <div class="metric-box"><div class="label">Posted at</div><div class="value small">${escapeHtml(friendlyTime(x.posted_at))}</div></div>
+      <div class="metric-box"><div class="label">Last checked</div><div class="value small">${escapeHtml(friendlyTime(x.last_checked_at))}</div></div>
+      <div class="metric-box"><div class="label">Lab Score</div><div class="value">${x.lab_score ?? "-"}</div></div>
     </div>
     <div class="read">${escapeHtml(x.read || "Market tracking compares LyDia's posted number against later snapshots. Closing values require a late snapshot near first pitch.")}</div>
   </div>`;

@@ -11,7 +11,7 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Model Picks — LyDia</title>
+<title>Model Picks | LyDia</title>
 <meta name="description" content="LyDia official MLB picks generated after pitcher matchup, bullpen fatigue, market pricing, and Lab Score checks.">
 <link rel="canonical" href="https://mlbedges.com/picks/">
 <link rel="stylesheet" href="/css/style.css">
@@ -36,12 +36,12 @@
 <body>
 <nav id="nav"></nav>
 <main>
-  <p class="eyebrow">Official source-of-truth output</p>
+  <p class="eyebrow">Official daily card</p>
   <h1>Model Picks</h1>
-  <p class="subtitle">These are no longer calculated in the browser. Official picks come from LyDia's daily engine after pitcher matchup, bullpen fatigue, market pricing, and Lab Score are calculated.</p>
+  <p class="subtitle">Official picks come from LyDia's daily engine after pitcher matchup, bullpen fatigue, market pricing, and Lab Score are calculated.</p>
 
   <div class="notice">
-    <strong>Process order:</strong> pitcher matchup → bullpen fatigue → market check → model probability → Lab Score → official pick / watchlist / pass.
+    <strong>Process order:</strong> pitcher matchup, bullpen fatigue, market check, model probability, Lab Score, then official pick, watchlist, or pass.
   </div>
 
   <div class="controls">
@@ -54,7 +54,7 @@
     <button class="secondary" onclick="loadPicks()">Refresh</button>
   </div>
 
-  <div id="status" class="loading">Loading generated picks…</div>
+  <div id="status" class="loading">Loading generated picks...</div>
   <div id="kpis" class="kpis"></div>
   <div id="official"></div>
   <div id="watchlist"></div>
@@ -78,9 +78,15 @@ function shiftDay(n) {
   datePick.value = localISODate(d);
   loadPicks();
 }
-function pct(v) { return typeof v === "number" ? (v * 100).toFixed(1) + "%" : "—"; }
-function edge(v) { return typeof v === "number" ? (v >= 0 ? "+" : "") + (v * 100).toFixed(1) + "%" : "—"; }
-function odds(v) { return typeof v === "number" ? Odds.fmtAm(v) : "—"; }
+function pct(v) { return typeof v === "number" ? (v * 100).toFixed(1) + "%" : "-"; }
+function edge(v) { return typeof v === "number" ? (v >= 0 ? "+" : "") + (v * 100).toFixed(1) + "%" : "-"; }
+function odds(v) { return typeof v === "number" ? Odds.fmtAm(v) : "-"; }
+function friendlyTime(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString("en-US", { month:"short", day:"numeric", hour:"numeric", minute:"2-digit", timeZone:"America/New_York", timeZoneName:"short" });
+}
 
 async function loadPicks() {
   const date = datePick.value;
@@ -90,7 +96,7 @@ async function loadPicks() {
   const watchlistEl = document.getElementById("watchlist");
   const passesEl = document.getElementById("passes");
 
-  statusEl.innerHTML = `<div class="loading">Loading generated picks…</div>`;
+  statusEl.innerHTML = `<div class="loading">Loading generated picks...</div>`;
   kpisEl.innerHTML = ""; officialEl.innerHTML = ""; watchlistEl.innerHTML = ""; passesEl.innerHTML = "";
 
   let data = null;
@@ -105,10 +111,10 @@ async function loadPicks() {
     } catch(e) {}
   }
 
-  if (!data || !Array.isArray(data.games)) {
+  if (!data || !Array.isArray(data.games) || data.games.length === 0) {
     statusEl.innerHTML = `<div class="notice warn">
-      <strong>No generated pick data found for ${escapeHtml(date)}.</strong>
-      Run the LyDia Daily Source of Truth workflow first. This page will not create official picks by itself anymore.
+      <strong>No generated card is available for ${escapeHtml(date)}.</strong><br>
+      LyDia does not create official picks after a slate has already started. Check the Results page for completed cards or run the daily publish workflow before games begin.
     </div>`;
     return;
   }
@@ -117,8 +123,9 @@ async function loadPicks() {
   const official = games.filter(g => g.status === "official_pick");
   const watchlist = games.filter(g => g.status === "watchlist");
   const passes = games.filter(g => g.status === "pass");
+  const updated = friendlyTime(data.generated_at);
 
-  statusEl.innerHTML = `<div class="notice"><strong>Source:</strong> ${escapeHtml(data.source_of_truth || "daily engine")} · Generated ${escapeHtml(data.generated_at || "")}</div>`;
+  statusEl.innerHTML = `<div class="notice"><strong>LyDia Daily Engine</strong>${updated ? ` · Updated ${escapeHtml(updated)}` : ""}</div>`;
   kpisEl.innerHTML = `
     <div class="kpi"><div class="label">Games</div><div class="value">${games.length}</div><div class="small dim">${escapeHtml(data.date || date)}</div></div>
     <div class="kpi"><div class="label">Official picks</div><div class="value">${official.length}</div><div class="small dim">cleared all checks</div></div>
@@ -136,7 +143,7 @@ function section(title, items, empty) {
 }
 
 function renderGame(g) {
-  const cls = g.status === "official_pick" ? "pos" : g.status === "pass" ? "neutral" : "neutral";
+  const cls = g.status === "official_pick" ? "pos" : "neutral";
   const label = g.status === "official_pick" ? "Official pick" : g.status === "watchlist" ? "Watchlist" : "Pass";
   const market = g.market || {};
   const pitcher = g.pitcher_edge || {};
@@ -149,16 +156,16 @@ function renderGame(g) {
     </div>
     <div class="pick-line">
       <span class="badge ${cls}">${label}</span>
-      <span><b>LyDia side:</b> ${escapeHtml(g.pick_team || "—")}</span>
-      <span><b>Lab Score:</b> ${g.lab_score ?? "—"}/100</span>
+      <span><b>LyDia side:</b> ${escapeHtml(g.pick_team || "-")}</span>
+      <span><b>Lab Score:</b> ${g.lab_score ?? "-"}/100</span>
     </div>
     <div class="metric-grid">
       <div class="metric-box"><div class="label">Model probability</div><div class="value">${pct(g.model_probability)}</div></div>
       <div class="metric-box"><div class="label">Market probability</div><div class="value">${pct(market.no_vig_probability)}</div></div>
       <div class="metric-box"><div class="label">Model vs market</div><div class="value ${g.edge > 0 ? "pos-text" : g.edge < 0 ? "neg-text" : ""}">${edge(g.edge)}</div></div>
       <div class="metric-box"><div class="label">Current price</div><div class="value">${odds(market.best_price)}</div></div>
-      <div class="metric-box"><div class="label">Pitcher edge</div><div class="value">${escapeHtml(pitcher.team || "—")}</div></div>
-      <div class="metric-box"><div class="label">Bullpen read</div><div class="value">${escapeHtml(bullpen.label || "—")}</div></div>
+      <div class="metric-box"><div class="label">Pitcher edge</div><div class="value">${escapeHtml(pitcher.team || "-")}</div></div>
+      <div class="metric-box"><div class="label">Bullpen read</div><div class="value">${escapeHtml(bullpen.label || "-")}</div></div>
     </div>
     <div class="read">${escapeHtml(g.read || g.pass_reason || "")}</div>
   </div>`;

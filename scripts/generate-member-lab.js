@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 /*
   LyDia source-of-truth daily engine.
-  Order: schedule -> pitchers -> bullpen -> market -> model -> Lab Score -> official/watch/pass.
-  Outputs member brief, locked published-picks JSON, compatibility picks JSON, market tracker, bullpen data, and public preview.
+  This script creates research data and locked official picks only for an open slate.
+  It does not publish closed slates and it never writes empty official records.
 */
 const fs = require("fs");
+const path = require("path");
 const { buildBullpenSource } = require("./lib/bullpen-fatigue-core");
 
+const ROOT = path.join(__dirname, "..");
 const HFA = 54 / 46;
 const PYTH_EXP = 1.83;
 const FORM_WEIGHT = 0.25;
@@ -17,16 +19,26 @@ const ERA_CLAMP = [2.75, 6.00];
 const VALUE_EDGE = 0.03;
 const OFFICIAL_LAB_SCORE = 60;
 const WATCHLIST_LAB_SCORE = 65;
+const MAX_ABS_PRICE = 1000;
 
 const args = parseArgs(process.argv.slice(2));
 const DATE = args.date || etToday();
 const SNAPSHOT = args.snapshot || process.env.SNAPSHOT_TYPE || "posted";
 const ODDS_API_KEY = process.env.ODDS_API_KEY || "";
 
+if (!/^\d{4}-\d{2}-\d{2}$/.test(DATE)) {
+  console.error(`Bad date: ${DATE}`);
+  process.exit(1);
+}
+if (!["posted", "current", "closing"].includes(SNAPSHOT)) {
+  console.error(`Bad snapshot: ${SNAPSHOT}. Use posted, current, or closing.`);
+  process.exit(1);
+}
+
 main().catch(err => { console.error(err); process.exit(1); });
 
 async function main() {
-  ["data/member-brief","data/picks","data/published-picks","data/market","data/bullpen","previews"].forEach(p => fs.mkdirSync(p, { recursive:true }));
+  ["data/member-brief", "data/picks", "data/published-picks", "data/market", "data/bullpen"].forEach(p => fs.mkdirSync(path.join(ROOT, p), { recursive:true }));
 
   const [sched, standings, oddsEvents] = await Promise.all([
     fetchJson(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${DATE}&hydrate=probablePitcher`),
@@ -34,29 +46,41 @@ async function main() {
     ODDS_API_KEY ? fetchJson(`https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?apiKey=${encodeURIComponent(ODDS_API_KEY)}&regions=us&markets=h2h&oddsFormat=american`).catch(() => []) : Promise.resolve([])
   ]);
 
-  const games = ((((sched.dates || [])[0]) || {}).games || [])
-    .filter(g => g.status && g.status.abstractGameState === "Preview")
+  const allGames = ((((sched.dates || [])[0]) || {}).games || [])
+    .filter(g => g.gameType === "R" || g.gameType === undefined)
     .sort((a, b) => new Date(a.gameDate) - new Date(b.gameDate));
 
-  const generatedAt = new Date().toISOString();
+  if (!allGames.length) {
+    throw new Error(`No MLB games found for ${DATE}. No files were written.`);
+  }
 
+  const openGames = allGames.filter(g => g.status && g.status.abstractGameState === "Preview");
+  if (!openGames.length) {
+    throw new Error(`Closed slate guard: ${DATE} has ${allGames.length} game(s), but none are in Preview state. LyDia will not create or overwrite official picks after games start. Run Site maintenance cleanup or grade-results instead.`);
+  }
+
+  const generatedAt = new Date().toISOString();
   const strength = buildStrength(standings);
-  const pitchers = await fetchPitchers(games);
+  const pitchers = await fetchPitchers(openGames);
   const oddsMap = buildOddsMap(oddsEvents);
-  const bullpenSource = await buildBullpenSource({ date: DATE, todayGames: games, fetchJson, generatedAt });
+  const bullpenSource = await buildBullpenSource({ date: DATE, todayGames: openGames, fetchJson, generatedAt });
   const bullpen = bullpenSource.teams_by_name || {};
 
   writeJson(`data/bullpen/${DATE}.json`, bullpenSource);
   if (DATE === etToday()) writeJson("data/bullpen/today.json", bullpenSource);
 
-  const rows = games.map(g => modelGame(g, strength, pitchers, oddsMap, bullpen)).filter(Boolean)
+  const rows = openGames.map(g => modelGame(g, strength, pitchers, oddsMap, bullpen)).filter(Boolean)
     .sort((a, b) => (b.lab_score || 0) - (a.lab_score || 0));
+
+  if (!rows.length) {
+    throw new Error(`Model guard: ${DATE} produced zero game rows from ${openGames.length} open game(s). No official files were written.`);
+  }
 
   const brief = {
     date: DATE,
     generated_at: generatedAt,
     snapshot_type: SNAPSHOT,
-    source_of_truth: "scripts/generate-member-lab.js",
+    source_of_truth: "LyDia Daily Engine",
     summary: summarize(rows, Boolean(ODDS_API_KEY)),
     games: rows
   };
@@ -64,18 +88,14 @@ async function main() {
   if (DATE === etToday()) writeJson("data/member-brief/today.json", brief);
 
   const candidatePublished = buildPicksFile(rows, generatedAt);
-  const published = writeOrReusePublishedPicks(candidatePublished);
+  const published = writeOrReusePublishedPicks(candidatePublished, allGames.length);
 
-  // Backward-compatible mirrors. These are not the source of truth anymore.
   writeJson(`data/picks/${DATE}.json`, published);
   if (DATE === etToday()) writeJson("data/picks/today.json", published);
 
   mergeAndWriteMarket(buildMarketFile(rows, generatedAt));
 
-  fs.writeFileSync(`previews/${DATE}.html`, renderPreviewPage(rows, brief, published), "utf8");
-  updatePreviewArchive(DATE);
-
-  console.log(`Generated LyDia source-of-truth outputs for ${DATE}. Games: ${rows.length}. Published official picks: ${published.picks.length}.`);
+  console.log(`Generated LyDia source data for ${DATE}. Games: ${rows.length}. Official picks: ${published.picks.length}.`);
 }
 
 function parseArgs(argv) {
@@ -90,11 +110,10 @@ function parseArgs(argv) {
   }
   return out;
 }
-function localISODate(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
-function etToday(){ const et = new Date(new Date().toLocaleString("en-US", { timeZone:"America/New_York" })); return localISODate(et); }
+function etToday(){ const et = new Date(new Date().toLocaleString("en-US", { timeZone:"America/New_York" })); return `${et.getFullYear()}-${String(et.getMonth()+1).padStart(2,"0")}-${String(et.getDate()).padStart(2,"0")}`; }
 async function fetchJson(url){ const res = await fetch(url); if(!res.ok) throw new Error(`HTTP ${res.status}: ${url}`); return res.json(); }
-function writeJson(file,obj){ fs.writeFileSync(file, JSON.stringify(obj,null,2)+"\n","utf8"); }
-function readJson(file){ return JSON.parse(fs.readFileSync(file,"utf8")); }
+function writeJson(file,obj){ const out = path.join(ROOT, file); fs.mkdirSync(path.dirname(out), { recursive:true }); fs.writeFileSync(out, JSON.stringify(obj,null,2)+"\n","utf8"); }
+function readJson(file){ return JSON.parse(fs.readFileSync(path.join(ROOT, file),"utf8")); }
 function seasonYear(date){ const d = new Date(date+"T12:00:00"); return d.getMonth() >= 2 ? d.getFullYear() : d.getFullYear()-1; }
 function pythag(rs,ra){ const num=Math.pow(rs,PYTH_EXP); return num/(num+Math.pow(ra,PYTH_EXP)); }
 function log5Home(sHome,sAway){ const raw=(sHome*(1-sAway))/(sHome*(1-sAway)+sAway*(1-sHome)); const odds=(raw/(1-raw))*HFA; return odds/(1+odds); }
@@ -105,24 +124,18 @@ function ipToNum(ip){ if(!ip || ip==="-.--") return 0; const [w,f]=String(ip).sp
 function amToDec(am){ am=Number(am); return am>0 ? 1+am/100 : 1+100/Math.abs(am); }
 function amToProb(am){ am=Number(am); return am>0 ? 100/(am+100) : Math.abs(am)/(Math.abs(am)+100); }
 function decToAm(dec){ return dec>=2 ? Math.round((dec-1)*100) : Math.round(-100/(dec-1)); }
-function fmtPct(v,dp=1){ return typeof v==="number" && Number.isFinite(v) ? `${(v*100).toFixed(dp)}%` : "—"; }
-function fmtOdds(v){ if(typeof v!=="number" || !Number.isFinite(v)) return "—"; return v>0 ? `+${v}` : String(v); }
-function esc(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function slug(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,""); }
-function displayDate(date){ return new Date(date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",year:"numeric",month:"long",day:"numeric"}); }
 
 function buildStrength(standings){
   const strength={};
   for(const rec of standings.records||[]){
     for(const t of rec.teamRecords||[]){
       const l10=(((t.records||{}).splitRecords)||[]).find(r=>r.type==="lastTen");
-      const gp=Math.max(1,t.wins+t.losses);
-      strength[t.team.id]={pyth:pythag(t.runsScored,t.runsAllowed), form:l10 ? l10.wins/Math.max(1,l10.wins+l10.losses):null, l10:l10?`${l10.wins}-${l10.losses}`:"—", wins:t.wins, losses:t.losses, gp};
+      strength[t.team.id]={pyth:pythag(t.runsScored,t.runsAllowed), form:l10 ? l10.wins/Math.max(1,l10.wins+l10.losses):null, l10:l10?`${l10.wins}-${l10.losses}`:"-", wins:t.wins, losses:t.losses};
     }
   }
   return strength;
 }
-
 async function fetchPitchers(games){
   const ids=[...new Set(games.flatMap(g=>["away","home"].map(s=>g.teams[s].probablePitcher&&g.teams[s].probablePitcher.id).filter(Boolean)))];
   const out={}; if(!ids.length) return out;
@@ -136,7 +149,6 @@ async function fetchPitchers(games){
   } catch(e){ console.warn("Pitcher stats unavailable:", e.message); }
   return out;
 }
-
 function pitcherScore(st){
   if(!st || !Number.isFinite(st.era)) return {score:50,label:"Unknown",k9:null,bb9:null};
   const era=st.era||LEAGUE_ERA, whip=Number.isFinite(st.whip)?st.whip:1.30, ip=st.ip||0;
@@ -150,7 +162,6 @@ function pitcherScore(st){
   return {score,label,k9,bb9};
 }
 function starterEff(g,side,pitchers){ const p=g.teams[side].probablePitcher; if(!p) return LEAGUE_ERA; const st=pitchers[p.id]; if(!st||!isFinite(st.era)||st.ip<MIN_IP) return LEAGUE_ERA; return clampEra(st.era); }
-
 function buildOddsMap(events){
   const map={};
   for(const ev of events||[]){
@@ -158,7 +169,7 @@ function buildOddsMap(events){
     for(const bk of ev.bookmakers||[]){
       const m=(bk.markets||[]).find(m=>m.key==="h2h"); if(!m) continue;
       const oA=m.outcomes.find(o=>o.name===ev.away_team); const oH=m.outcomes.find(o=>o.name===ev.home_team);
-      if(oA&&oH) rows.push([oA.price,oH.price]);
+      if(oA&&oH&&Math.abs(Number(oA.price))<=MAX_ABS_PRICE&&Math.abs(Number(oH.price))<=MAX_ABS_PRICE) rows.push([oA.price,oH.price]);
     }
     if(!rows.length) continue;
     const avgA=rows.reduce((s,r)=>s+amToProb(r[0]),0)/rows.length;
@@ -168,7 +179,6 @@ function buildOddsMap(events){
   }
   return map;
 }
-
 function modelGame(g,strength,pitchers,oddsMap,bullpen){
   const aT=g.teams.away.team,hT=g.teams.home.team; const sA=strength[aT.id],sH=strength[hT.id]; if(!sA||!sH) return null;
   const blendA=sA.form===null?sA.pyth:(1-FORM_WEIGHT)*sA.pyth+FORM_WEIGHT*sA.form;
@@ -203,102 +213,33 @@ function calcLabScore({edge,pitchGap,pitchEdgeSupports,pickBullpen,oppBullpen,ha
   const modelPts=edge===null?0:clamp(edge/0.08,0,1)*35;
   const pitcherPts=pitchEdgeSupports?clamp(pitchGap/20,0,1)*25:Math.max(0,8-clamp(pitchGap/20,0,1)*8);
   let bullpenPts=7;
-  if(pickBullpen&&oppBullpen){
-    bullpenPts=8+clamp((oppBullpen.score-pickBullpen.score)/45,-1,1)*7;
-    if(pickBullpen.score>=78) bullpenPts-=2;
-    if(pickBullpen.score>=78&&oppBullpen.score>=78) bullpenPts-=1;
-  }
+  if(pickBullpen&&oppBullpen){ bullpenPts=8+clamp((oppBullpen.score-pickBullpen.score)/45,-1,1)*7; if(pickBullpen.score>=78) bullpenPts-=2; if(pickBullpen.score>=78&&oppBullpen.score>=78) bullpenPts-=1; }
   const marketPts=!hasMarket?0:edge>=VALUE_EDGE?15:edge>=0?10:edge>-VALUE_EDGE?5:1;
   return Math.round(clamp(modelPts+pitcherPts+bullpenPts+marketPts+5,0,100));
 }
-function bullpenLabel(pick,opp){
-  if(!pick||!opp) return "Unknown";
-  if(pick.score>=78&&opp.score>=78) return "Both bullpens stressed";
-  if(pick.score+15<opp.score) return "Supports LyDia side";
-  if(pick.score>opp.score+15) return "Adds caution";
-  if(pick.score>=60||opp.score>=60) return "Elevated volatility";
-  return "Neutral";
-}
-function absoluteBullpenRisk(pick,opp){
-  if(!pick||!opp) return "Unknown";
-  if(pick.score>=78&&opp.score>=78) return "Both high";
-  if(pick.score>=78) return "Pick side high";
-  if(opp.score>=78) return "Opponent high";
-  if(pick.score>=60||opp.score>=60) return "Elevated";
-  return "Normal";
-}
-function passReasonFor({edge,pitchEdgeTeam,pickTeam,pitcherConflict,labScore,market,majorBullpenCaution}){
-  if(!market) return "No market data available, so this stays research-only until pricing is checked.";
-  if(edge!==null&&edge<0) return "Market is higher than LyDia's model probability.";
-  if(edge!==null&&edge<VALUE_EDGE) return "Model and market are too close for a clear official pick.";
-  if(pitcherConflict) return "Starting pitcher edge conflicts with the model side.";
-  if(majorBullpenCaution) return "Bullpen fatigue adds too much late-game caution.";
-  if(labScore<OFFICIAL_LAB_SCORE) return "The combined Lab Score did not clear the official threshold.";
-  return "No clear setup.";
-}
-function summarize(rows,hasOdds){ const official=rows.filter(r=>r.status==="official_pick").length, watch=rows.filter(r=>r.status==="watchlist").length, high=rows.filter(r=>r.lab_score>=75).length; if(!hasOdds) return "Brief generated without Odds API pricing. No official picks should be treated as complete until market pricing is available."; if(official) return `${official} official pick${official===1?"":"s"} cleared the full Lab process. ${watch} additional game${watch===1?"":"s"} landed on the watchlist.`; return `No official picks cleared the full Lab process. ${high} game${high===1?"":"s"} reached a Lab Score of 75+ but did not clear every check.`; }
-
+function bullpenLabel(pick,opp){ if(!pick||!opp) return "Unknown"; if(pick.score>=78&&opp.score>=78) return "Both bullpens stressed"; if(pick.score+15<opp.score) return "Supports LyDia side"; if(pick.score>opp.score+15) return "Adds caution"; if(pick.score>=60||opp.score>=60) return "Elevated volatility"; return "Neutral"; }
+function absoluteBullpenRisk(pick,opp){ if(!pick||!opp) return "Unknown"; if(pick.score>=78&&opp.score>=78) return "Both high"; if(pick.score>=78) return "Pick side high"; if(opp.score>=78) return "Opponent high"; if(pick.score>=60||opp.score>=60) return "Elevated"; return "Normal"; }
+function passReasonFor({edge,pitchEdgeTeam,pickTeam,pitcherConflict,labScore,market,majorBullpenCaution}){ if(!market) return "No market data available, so this stays research-only until pricing is checked."; if(edge!==null&&edge<0) return "Market is higher than LyDia's model probability."; if(edge!==null&&edge<VALUE_EDGE) return "Model and market are too close for a clear official pick."; if(pitcherConflict) return "Starting pitcher edge conflicts with the model side."; if(majorBullpenCaution) return "Bullpen fatigue adds too much late-game caution."; if(labScore<OFFICIAL_LAB_SCORE) return "The combined Lab Score did not clear the official threshold."; return "No clear setup."; }
+function summarize(rows,hasOdds){ const official=rows.filter(r=>r.status==="official_pick").length, watch=rows.filter(r=>r.status==="watchlist").length, high=rows.filter(r=>r.lab_score>=75).length; if(!hasOdds) return "Brief generated without live market pricing. Treat the card as research-only until pricing is checked."; if(official) return `${official} official pick${official===1?"":"s"} cleared the full Lab process. ${watch} additional game${watch===1?"":"s"} landed on the watchlist.`; return `No official picks cleared the full Lab process. ${high} game${high===1?"":"s"} reached a Lab Score of 75+ but did not clear every check.`; }
 function riskNote(r){ const notes=[]; if(r.pitcher_edge.conflict) notes.push("starting pitcher edge conflicts with the model side"); if(r.bullpen.major_caution) notes.push("bullpen fatigue adds late-game caution"); if(r.bullpen.label==="Both bullpens stressed") notes.push("both bullpens show elevated recent workload"); else if(r.bullpen.label==="Elevated volatility") notes.push("bullpen workload adds late-game volatility"); if(r.market.books&&r.market.books<3) notes.push("limited sportsbook sample"); if(!notes.length) return "No model can see every live lineup, injury, or late bullpen availability update. Recheck official news before first pitch."; return `Primary caution: ${notes.join("; ")}. Recheck official news before first pitch.`; }
 function buildPicksFile(rows,generatedAt){
   const official=rows.filter(r=>r.status==="official_pick");
-  return {
-    date:DATE,
-    generated:generatedAt,
-    generated_at:generatedAt,
-    locked_at:generatedAt,
-    source_of_truth:"scripts/generate-member-lab.js",
-    lock_policy:"The dated file in data/published-picks is append-only. Re-running the engine for the same date reuses the existing dated file instead of changing official picks.",
-    note:"Official picks are created only after pitcher matchup, bullpen fatigue, market pricing, and Lab Score checks.",
-    picks:official.map(r=>({gamePk:r.game_pk,away:r.away_team,home:r.home_team,time:r.game_time_iso,labScore:r.lab_score,status:r.status,pitcherEdge:r.pitcher_edge,bullpen:r.bullpen,moneyline:{pick:r.pick_team,side:r.side,prob:r.model_probability,mktProb:r.market.no_vig_probability,bestAm:r.market.best_price,valueTag:r.value_tag,isPass:false,tier:r.lab_score>=75?"Strong Setup":"Qualified Setup",edgeScore:r.lab_score,rawEdge:r.edge,why:r.read,risk:riskNote(r)}}))
-  };
+  return { date:DATE, generated:generatedAt, generated_at:generatedAt, locked_at:generatedAt, source_of_truth:"LyDia Daily Engine", lock_policy:"Dated official pick files are append-only. Re-running the engine for the same date reuses the existing dated file instead of changing official picks.", note:"Official picks are created only after pitcher matchup, bullpen fatigue, market pricing, and Lab Score checks.", picks:official.map(r=>({gamePk:r.game_pk,away:r.away_team,home:r.home_team,time:r.game_time_iso,labScore:r.lab_score,status:r.status,pitcherEdge:r.pitcher_edge,bullpen:r.bullpen,moneyline:{pick:r.pick_team,side:r.side,prob:r.model_probability,mktProb:r.market.no_vig_probability,bestAm:r.market.best_price,valueTag:r.value_tag,isPass:false,tier:r.lab_score>=75?"Strong Setup":"Qualified Setup",edgeScore:r.lab_score,rawEdge:r.edge,why:r.read,risk:riskNote(r)}})) };
 }
-function writeOrReusePublishedPicks(candidate){
+function writeOrReusePublishedPicks(candidate, scheduledGameCount){
   const file=`data/published-picks/${DATE}.json`;
-  if(fs.existsSync(file)){
+  if(fs.existsSync(path.join(ROOT, file))){
     const existing=readJson(file);
     if(!existing || !Array.isArray(existing.picks)) throw new Error(`${file} exists but does not contain a picks array.`);
+    if(existing.picks.length===0 && scheduledGameCount>0) throw new Error(`${file} is an invalid empty lock for a real slate. Run scripts/site-health-cleanup.js --fix before publishing.`);
     console.log(`Published picks already exist for ${DATE}; reusing ${file}.`);
-    if(DATE===localISODate(new Date())) writeJson("data/published-picks/today.json", existing);
+    if(DATE===etToday()) writeJson("data/published-picks/today.json", existing);
     return existing;
   }
   writeJson(file,candidate);
-  if(DATE===localISODate(new Date())) writeJson("data/published-picks/today.json", candidate);
+  if(DATE===etToday()) writeJson("data/published-picks/today.json", candidate);
   return candidate;
 }
 function buildMarketFile(rows,generatedAt){ return {date:DATE,generated_at:generatedAt,snapshot_type:SNAPSHOT,items:rows.filter(r=>r.status==="official_pick").map(r=>({pick_id:`${r.game_id}-ml`,date:DATE,game:r.game,market:"Moneyline",pick:`${r.pick_team} ML`,pick_team:r.pick_team,lab_score:r.lab_score,posted_price:SNAPSHOT==="posted"?r.market.best_price:null,current_price:SNAPSHOT==="current"?r.market.best_price:null,closing_price:SNAPSHOT==="closing"?r.market.best_price:null,posted_at:SNAPSHOT==="posted"?generatedAt:null,last_checked_at:generatedAt,movement:"pending",read:"Market tracking compares LyDia's posted number against later current and closing snapshots."}))}; }
-function mergeAndWriteMarket(newMarket){ const file=`data/market/${DATE}.json`; let existing=null; try{existing=JSON.parse(fs.readFileSync(file,"utf8"));}catch(e){} let merged=existing&&Array.isArray(existing.items)?existing:{date:DATE,generated_at:new Date().toISOString(),items:[]}; const byId=new Map(merged.items.map(i=>[i.pick_id,i])); for(const item of newMarket.items){ const prev=byId.get(item.pick_id)||{}; const updated={...prev,...item}; if(SNAPSHOT!=="posted"&&prev.posted_price!==undefined) updated.posted_price=prev.posted_price; if(SNAPSHOT!=="posted"&&prev.posted_at) updated.posted_at=prev.posted_at; if(SNAPSHOT!=="current"&&prev.current_price!==undefined) updated.current_price=prev.current_price; if(SNAPSHOT!=="closing"&&prev.closing_price!==undefined) updated.closing_price=prev.closing_price; updated.movement=movement(updated.posted_price,updated.current_price||updated.closing_price); byId.set(item.pick_id,updated); } merged.items=[...byId.values()]; merged.generated_at=new Date().toISOString(); merged.snapshot_type=SNAPSHOT; writeJson(file,merged); if(DATE===localISODate(new Date())) writeJson("data/market/today.json",merged); }
+function mergeAndWriteMarket(newMarket){ const file=`data/market/${DATE}.json`; let existing=null; try{existing=readJson(file);}catch(e){} let merged=existing&&Array.isArray(existing.items)?existing:{date:DATE,generated_at:new Date().toISOString(),items:[]}; const byId=new Map(merged.items.map(i=>[i.pick_id,i])); for(const item of newMarket.items){ const prev=byId.get(item.pick_id)||{}; const updated={...prev,...item}; if(SNAPSHOT!=="posted"&&prev.posted_price!==undefined) updated.posted_price=prev.posted_price; if(SNAPSHOT!=="posted"&&prev.posted_at) updated.posted_at=prev.posted_at; if(SNAPSHOT!=="current"&&prev.current_price!==undefined) updated.current_price=prev.current_price; if(SNAPSHOT!=="closing"&&prev.closing_price!==undefined) updated.closing_price=prev.closing_price; updated.movement=movement(updated.posted_price,updated.current_price||updated.closing_price); byId.set(item.pick_id,updated); } merged.items=[...byId.values()]; merged.generated_at=new Date().toISOString(); merged.snapshot_type=SNAPSHOT; writeJson(file,merged); if(DATE===etToday()) writeJson("data/market/today.json",merged); }
 function movement(posted,later){ if(typeof posted!=="number"||typeof later!=="number") return "pending"; const postedDec=amToDec(posted), laterDec=amToDec(later); if(Math.abs(postedDec-laterDec)<0.015) return "stable"; return laterDec<postedDec?"toward_lydia":"away_from_lydia"; }
-
-function renderPreviewPage(rows,brief,published){
-  const official=rows.filter(r=>r.status==="official_pick"); const titleDate=displayDate(DATE);
-  const cards=rows.map((r,i)=>renderPreviewCard(r,i===0)).join("\n");
-  return `<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MLB Game Previews &amp; Lab Scores ${esc(titleDate)} | LyDia</title>
-<meta name="description" content="LyDia MLB previews for ${esc(titleDate)} with Lab Score, pitcher matchup, bullpen fatigue, market edge, and pass reasons.">
-<link rel="stylesheet" href="/css/style.css"><style>
-.pv{border:1px solid var(--border);border-radius:10px;background:var(--bg-card);padding:18px;margin:16px 0}.pv.featured{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}.pv h2{margin:0 0 4px;font-size:1.15rem}.pv .meta{color:var(--text-dim);font-size:.85rem;margin-bottom:8px}.featured-flag{display:inline-block;background:var(--accent);color:#fff;font-size:.75rem;font-weight:700;padding:2px 9px;border-radius:20px;margin-bottom:8px}.status-badge{display:inline-block;color:#fff;font-size:.75rem;font-weight:700;padding:3px 10px;border-radius:20px;margin:4px 0 8px;background:var(--accent2)}.status-badge.official{background:var(--good)}.status-badge.pass{background:var(--text-dim)}.field-grid{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:.85rem;margin:10px 0;padding:10px 0;border-top:1px dashed var(--border);border-bottom:1px dashed var(--border)}.field-grid dt{color:var(--text-dim);margin:0}.field-grid dd{margin:0;font-weight:600}.why-block,.risk-block{font-size:.88rem;margin-top:10px;line-height:1.45}.why-block b,.risk-block b{display:block;margin-bottom:3px;color:var(--text)}
-</style></head><body><nav id="nav"></nav><main>
-<h1>MLB Game Previews — ${esc(titleDate)}</h1>
-<p class="subtitle">Generated from LyDia's source-of-truth engine after pitcher matchup, bullpen fatigue, market pricing, and Lab Score are calculated.</p>
-<p class="dim small">Generated ${esc(brief.generated_at)} · ${rows.length} games · ${official.length} official pick${official.length===1?"":"s"}. Published pick file: data/published-picks/${esc(DATE)}.json.</p>
-<div class="lead-box" style="border-color:var(--accent2)"><h3 style="margin:0 0 4px">Get the organized member view</h3><p class="dim small" style="margin:0">Members get the Daily Member Brief: official picks first, watchlist second, pass reasons third, and market tracking as prices change.</p><p style="margin-top:10px"><a class="btn blue" href="/membership/">Join LyDia — $30/mo →</a> <a class="btn secondary" href="/member-brief/">Open Member Brief</a></p></div>
-${cards}
-</main><footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/previews/"); renderFooter();</script></body></html>\n`;
-}
-function renderPreviewCard(r,featured){
-  const official=r.status==="official_pick", pass=r.status==="pass"; const statusClass=official?"official":pass?"pass":""; const statusLabel=official?"Official Pick":r.status==="watchlist"?"Watchlist":"Pass";
-  const pe=r.pitcher_edge||{}, bp=r.bullpen||{}, m=r.market||{};
-  return `<div class="${featured&&official?"pv featured":"pv"}" data-lab-score="${r.lab_score}">
-  ${featured&&official?`<span class="featured-flag">Top Lab Score</span>`:""}<h2>${esc(r.game)}</h2><div class="meta">${esc(r.time)} ET · ${esc(pe.away_pitcher||"TBD")} vs ${esc(pe.home_pitcher||"TBD")}</div>
-  <span class="status-badge ${statusClass}">${esc(statusLabel)}</span><dl class="field-grid">
-    <dt>LyDia side</dt><dd>${esc(r.pick_team||"—")}</dd><dt>Lab Score</dt><dd>${r.lab_score}/100</dd><dt>Model probability</dt><dd>${fmtPct(r.model_probability)}</dd><dt>Market probability</dt><dd>${fmtPct(m.no_vig_probability)}</dd><dt>Model vs market</dt><dd>${r.edge===null?"—":(r.edge>=0?"+":"")+fmtPct(r.edge)}</dd><dt>Current price</dt><dd>${fmtOdds(m.best_price)}</dd><dt>Pitcher edge</dt><dd>${esc(pe.team||"—")} ${pe.gap?`(gap ${pe.gap})`:""}</dd><dt>Bullpen read</dt><dd>${esc(bp.label||"—")}</dd>
-  </dl><div class="why-block"><b>Read</b>${esc(r.read||"")}</div>${pass?`<div class="risk-block"><b>Pass reason</b>${esc(r.pass_reason||"No clear setup.")}</div>`:`<div class="risk-block"><b>Risk note</b>${esc(riskNote(r))}</div>`}</div>`;
-}
-function updatePreviewArchive(date){
-  const file="previews/index.html"; const link=`<a href="/previews/${date}.html">Game Previews — ${displayDate(date)}</a>`; let existing=""; try{existing=fs.readFileSync(file,"utf8");}catch(e){}
-  let links=[]; if(existing){ const matches=existing.match(/<a href="\/previews\/\d{4}-\d{2}-\d{2}\.html">[^<]+<\/a>/g)||[]; links=matches.filter(x=>!x.includes(`/previews/${date}.html`));}
-  links.unshift(link); links=[...new Set(links)].slice(0,60);
-  const html=`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>MLB Game Previews — archive | LyDia</title><meta name="description" content="Daily MLB game previews generated after LyDia's Lab Score, pitcher matchup, bullpen fatigue, and market checks."><link rel="stylesheet" href="/css/style.css"><style>.archive-list a{display:block;padding:8px 0;border-bottom:1px solid var(--border)}</style></head><body><nav id="nav"></nav><main><h1>Game Previews</h1><p class="subtitle">Daily previews generated from LyDia's source-of-truth engine.</p><div class="card archive-list">\n${links.join("\n")}\n</div></main><footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/previews/"); renderFooter();</script></body></html>\n`;
-  fs.writeFileSync(file,html,"utf8");
-}

@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 /*
   LyDia preview renderer.
-  This file no longer calculates official picks and no longer writes data/picks.
-  It renders previews from data/member-brief/<date>.json and data/published-picks/<date>.json.
+  Reads member brief and locked official picks. Does not calculate or overwrite picks.
 */
 const fs = require("fs");
 const path = require("path");
@@ -26,49 +25,41 @@ function niceDate(iso) {
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday:"long", month:"long", day:"numeric", year:"numeric" });
 }
-function esc(s) {
-  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+function prettyDateTime(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString("en-US", { month:"short", day:"numeric", hour:"numeric", minute:"2-digit", timeZone:"America/New_York", timeZoneName:"short" });
 }
-function pct(v, dp = 1) { return typeof v === "number" && Number.isFinite(v) ? `${(v * 100).toFixed(dp)}%` : "—"; }
-function edge(v) { return typeof v === "number" && Number.isFinite(v) ? `${v >= 0 ? "+" : ""}${pct(v)}` : "—"; }
-function odds(v) { if (typeof v !== "number" || !Number.isFinite(v)) return "—"; return v > 0 ? `+${Math.round(v)}` : String(Math.round(v)); }
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c])); }
+function pct(v, dp = 1) { return typeof v === "number" && Number.isFinite(v) ? `${(v * 100).toFixed(dp)}%` : "-"; }
+function edge(v) { return typeof v === "number" && Number.isFinite(v) ? `${v >= 0 ? "+" : ""}${pct(v)}` : "-"; }
+function odds(v) { if (typeof v !== "number" || !Number.isFinite(v)) return "-"; return v > 0 ? `+${Math.round(v)}` : String(Math.round(v)); }
 function readJson(file) { return JSON.parse(fs.readFileSync(file, "utf8")); }
-function exists(file) { return fs.existsSync(path.join(ROOT, file)); }
 
 async function main() {
   const briefPath = path.join(ROOT, "data", "member-brief", `${DATE}.json`);
   const publishedPath = path.join(ROOT, "data", "published-picks", `${DATE}.json`);
 
-  if (!fs.existsSync(briefPath)) {
-    throw new Error(`Missing data/member-brief/${DATE}.json. Run scripts/generate-member-lab.js first.`);
-  }
-  if (!fs.existsSync(publishedPath)) {
-    throw new Error(`Missing data/published-picks/${DATE}.json. Run scripts/generate-member-lab.js first.`);
-  }
+  if (!fs.existsSync(briefPath)) throw new Error(`Missing member brief for ${DATE}. Run the source engine before rendering previews.`);
+  if (!fs.existsSync(publishedPath)) throw new Error(`Missing locked official picks for ${DATE}. Run the source engine before rendering previews.`);
 
   const brief = readJson(briefPath);
   const published = readJson(publishedPath);
-  if (!Array.isArray(brief.games)) throw new Error(`${briefPath} does not contain games array.`);
-  if (!Array.isArray(published.picks)) throw new Error(`${publishedPath} does not contain picks array.`);
+  if (!Array.isArray(brief.games)) throw new Error(`Member brief for ${DATE} does not contain a games array.`);
+  if (!Array.isArray(published.picks)) throw new Error(`Official pick file for ${DATE} does not contain a picks array.`);
+  if (!brief.games.length) throw new Error(`Preview guard: ${DATE} has zero games in the member brief. Refusing to publish an empty public preview page.`);
 
   fs.mkdirSync(path.join(ROOT, "previews"), { recursive: true });
   fs.writeFileSync(path.join(ROOT, "previews", `${DATE}.html`), renderPreviewPage(brief, published), "utf8");
   updatePreviewArchive(DATE);
   updateSitemap();
 
-  console.log(`Rendered previews/${DATE}.html from member brief and published-picks. Official picks: ${published.picks.length}.`);
+  console.log(`Rendered previews/${DATE}.html from source data. Official picks: ${published.picks.length}.`);
 }
 
-function statusLabel(s) {
-  if (s === "official_pick") return "Official Pick";
-  if (s === "watchlist") return "Watchlist";
-  return "Pass";
-}
-function statusClass(s) {
-  if (s === "official_pick") return "official";
-  if (s === "pass") return "pass";
-  return "watch";
-}
+function statusLabel(s) { if (s === "official_pick") return "Official Pick"; if (s === "watchlist") return "Watchlist"; return "Pass"; }
+function statusClass(s) { if (s === "official_pick") return "official"; if (s === "pass") return "pass"; return "watch"; }
 function riskNote(g) {
   const notes = [];
   if (g.pitcher_edge && g.pitcher_edge.conflict) notes.push("starting pitcher edge conflicts with the model side");
@@ -79,7 +70,6 @@ function riskNote(g) {
   if (!notes.length) return "No model can see every live lineup, injury, or late bullpen availability update. Recheck official news before first pitch.";
   return `Primary caution: ${notes.join("; ")}. Recheck official news before first pitch.`;
 }
-
 function renderPreviewPage(brief, published) {
   const rows = [...brief.games].sort((a, b) => (b.lab_score || 0) - (a.lab_score || 0));
   const official = rows.filter(r => r.status === "official_pick");
@@ -87,13 +77,14 @@ function renderPreviewPage(brief, published) {
   const passes = rows.filter(r => r.status === "pass");
   const titleDate = niceDate(brief.date || DATE);
   const cards = rows.map((g, i) => renderCard(g, i === 0 && g.status === "official_pick")).join("\n");
+  const updated = prettyDateTime(brief.generated_at || published.generated_at || published.generated);
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MLB Game Previews &amp; Lab Scores ${esc(titleDate)} | LyDia</title>
+<title>MLB Game Previews and Lab Scores ${esc(titleDate)} | LyDia</title>
 <meta name="description" content="LyDia MLB previews for ${esc(titleDate)} with Lab Score, pitcher matchup, bullpen fatigue, market edge, official picks, watchlist, and pass reasons.">
 <link rel="canonical" href="${SITE}/previews/${esc(DATE)}.html">
 <link rel="stylesheet" href="/css/style.css">
@@ -104,18 +95,18 @@ function renderPreviewPage(brief, published) {
 <body>
 <nav id="nav"></nav>
 <main>
-<h1>MLB Game Previews — ${esc(titleDate)}</h1>
-<p class="subtitle">Rendered from LyDia's source-of-truth member brief and dated published-picks file. This page does not create or overwrite official picks.</p>
+<h1>MLB Game Previews - ${esc(titleDate)}</h1>
+<p class="subtitle">LyDia's public card view: official picks, watchlist games, pass reasons, pitcher reads, bullpen condition, and market context.</p>
 <div class="kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px">
   <div class="card"><div class="dim small">GAMES</div><div style="font-size:1.5rem;font-weight:800">${rows.length}</div></div>
   <div class="card"><div class="dim small">OFFICIAL PICKS</div><div style="font-size:1.5rem;font-weight:800">${official.length}</div></div>
   <div class="card"><div class="dim small">WATCHLIST</div><div style="font-size:1.5rem;font-weight:800">${watchlist.length}</div></div>
   <div class="card"><div class="dim small">PASSES</div><div style="font-size:1.5rem;font-weight:800">${passes.length}</div></div>
 </div>
-<p class="dim small">Generated ${esc(brief.generated_at || published.generated_at || published.generated || "")} · Official record source: <code>data/published-picks/${esc(DATE)}.json</code>.</p>
-<div class="lead-box" style="border-color:var(--accent2)"><h3 style="margin:0 0 4px">Get the organized member view</h3><p class="dim small" style="margin:0">Members get the Daily Member Brief: official picks first, watchlist second, pass reasons third, and market tracking as prices change.</p><p style="margin-top:10px"><a class="btn blue" href="/membership/">Join LyDia — $30/mo →</a> <a class="btn secondary" href="/member-brief/">Open Member Brief</a></p></div>
+<p class="dim small">${updated ? `Updated ${esc(updated)}.` : "Updated by LyDia Daily Engine."} Official picks are locked before grading.</p>
+<div class="lead-box" style="border-color:var(--accent2)"><h3 style="margin:0 0 4px">Get the organized member view</h3><p class="dim small" style="margin:0">Members get the Daily Member Brief: official picks first, watchlist second, pass reasons third, and market tracking as prices change.</p><p style="margin-top:10px"><a class="btn blue" href="/membership/">Join LyDia - $30/mo</a> <a class="btn secondary" href="/member-brief/">Open Member Brief</a></p></div>
 ${cards}
-<p class="dim small">Model outputs, not guarantees. LyDia provides analysis and education only, not betting advice. Every official pick is graded on the <a href="/results/">Results page</a>.</p>
+<p class="dim small">Model outputs, not promises. LyDia provides analysis and education only, not betting advice. Every official pick is graded on the <a href="/results/">Results page</a>.</p>
 </main>
 <footer id="footer"></footer>
 <script src="/js/app.js"></script>
@@ -124,7 +115,6 @@ ${cards}
 </html>
 `;
 }
-
 function renderCard(g, featured) {
   const pe = g.pitcher_edge || {};
   const bp = g.bullpen || {};
@@ -135,23 +125,22 @@ function renderCard(g, featured) {
   <div class="meta">${esc(g.time || "")} ET · ${esc(pe.away_pitcher || "TBD")} vs ${esc(pe.home_pitcher || "TBD")}</div>
   <span class="status-badge ${statusClass(g.status)}">${statusLabel(g.status)}</span>
   <dl class="field-grid">
-    <dt>LyDia side</dt><dd>${esc(g.pick_team || "—")}</dd>
-    <dt>Lab Score</dt><dd>${esc(g.lab_score ?? "—")}/100</dd>
+    <dt>LyDia side</dt><dd>${esc(g.pick_team || "-")}</dd>
+    <dt>Lab Score</dt><dd>${esc(g.lab_score ?? "-")}/100</dd>
     <dt>Model probability</dt><dd>${pct(g.model_probability)}</dd>
     <dt>Market probability</dt><dd>${pct(m.no_vig_probability)}</dd>
     <dt>Model vs market</dt><dd>${edge(g.edge)}</dd>
     <dt>Current price</dt><dd>${odds(m.best_price)}</dd>
-    <dt>Pitcher edge</dt><dd>${esc(pe.team || "—")}${pe.gap ? ` (gap ${esc(pe.gap)})` : ""}</dd>
-    <dt>Bullpen read</dt><dd>${esc(bp.label || "—")}</dd>
+    <dt>Pitcher edge</dt><dd>${esc(pe.team || "-")}${pe.gap ? ` (gap ${esc(pe.gap)})` : ""}</dd>
+    <dt>Bullpen read</dt><dd>${esc(bp.label || "-")}</dd>
   </dl>
   <div class="why-block"><b>Read</b>${esc(g.read || "")}</div>
   ${isPass ? `<div class="risk-block"><b>Pass reason</b>${esc(g.pass_reason || "No clear setup.")}</div>` : `<div class="risk-block"><b>Risk note</b>${esc(riskNote(g))}</div>`}
 </div>`;
 }
-
 function updatePreviewArchive(date) {
   const file = path.join(ROOT, "previews", "index.html");
-  const link = `<a href="/previews/${date}.html">Game Previews — ${niceDate(date)}</a>`;
+  const link = `<a href="/previews/${date}.html">Game Previews - ${niceDate(date)}</a>`;
   let links = [];
   if (fs.existsSync(file)) {
     const existing = fs.readFileSync(file, "utf8");
@@ -161,12 +150,11 @@ function updatePreviewArchive(date) {
   links.unshift(link);
   links = [...new Set(links)].slice(0, 60);
   fs.writeFileSync(file, `<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>MLB Game Previews — archive | LyDia</title><meta name="description" content="Daily MLB game previews generated after LyDia's Lab Score, pitcher matchup, bullpen fatigue, and market checks."><link rel="stylesheet" href="/css/style.css"><style>.archive-list a{display:block;padding:8px 0;border-bottom:1px solid var(--border)}</style></head><body><nav id="nav"></nav><main><h1>Game Previews</h1><p class="subtitle">Daily previews rendered from LyDia's source-of-truth engine.</p><div class="card archive-list">
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>MLB Game Previews archive | LyDia</title><meta name="description" content="Daily MLB game previews generated after LyDia's Lab Score, pitcher matchup, bullpen fatigue, and market checks."><link rel="stylesheet" href="/css/style.css"><style>.archive-list a{display:block;padding:8px 0;border-bottom:1px solid var(--border)}</style></head><body><nav id="nav"></nav><main><h1>Game Previews</h1><p class="subtitle">Daily previews rendered from LyDia's daily engine.</p><div class="card archive-list">
 ${links.join("\n")}
 </div></main><footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/previews/"); renderFooter();</script></body></html>
 `, "utf8");
 }
-
 function updateSitemap() {
   const staticPages = ["", "dashboard/", "picks/", "odds/", "tools/", "stats/", "recaps/", "articles/", "membership/", "results/", "previews/", "member-brief/", "tools/market/",
     "mlb-betting-edge-explained/", "no-vig-odds-calculator-guide/", "how-to-find-value-in-mlb-moneylines/",
@@ -177,5 +165,5 @@ function updateSitemap() {
   const recapPosts = fs.existsSync(recapsDir) ? fs.readdirSync(recapsDir).filter(f => /^\d{4}-\d{2}-\d{2}\.html$/.test(f)).map(f => `recaps/${f}`) : [];
   const previewPosts = fs.existsSync(previewsDir) ? fs.readdirSync(previewsDir).filter(f => /^\d{4}-\d{2}-\d{2}\.html$/.test(f)).map(f => `previews/${f}`) : [];
   const urls = staticPages.map(p => `${SITE}/${p}`).concat(recapPosts.map(p => `${SITE}/${p}`)).concat(previewPosts.map(p => `${SITE}/${p}`));
-  fs.writeFileSync(path.join(ROOT, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` + urls.map(u => `  <url><loc>${u}</loc></url>`).join("\n") + `\n</urlset>\n`, "utf8");
+  fs.writeFileSync(path.join(ROOT, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` + urls.map(u => `  <url><loc>${u}</loc></url>`).join("\n") + `\n</urlset>\n`);
 }

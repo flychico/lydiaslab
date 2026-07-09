@@ -1,18 +1,19 @@
-# ERRORS
+# ERRORS.md
 
-## 2026-07-08 publish workflow date mismatch
+## Empty official pick lock after closed slate
 
-### Symptom
-`publish-picks.yml` failed during preview rendering with:
+Problem: A manual publish was run after the July 8 slate had already started or finished. MLB API no longer returned games in Preview state, so the source engine produced zero games and locked an empty published-picks file.
 
-```text
-Error: Missing data/published-picks/2026-07-08.json. Run scripts/generate-member-lab.js first.
-```
+Fix: generate-member-lab.js now has a closed-slate guard. If the date has scheduled games but none are in Preview state, the script throws and writes no files. Empty member briefs and empty official pick locks are invalid artifacts.
 
-### Cause
-The workflow did not pass one resolved date to every step. On GitHub Actions, the runner uses UTC. Around late evening Eastern, `generate-member-lab.js` defaulted to the UTC date while `generate-previews.js` defaulted to America/New_York. That made the first step create one date and the second step look for another.
+## Internal implementation language on public pages
 
-### Fix
-Resolve the publish date once in the workflow using America/New_York, then pass that same date into `generate-member-lab.js`, `generate-previews.js`, verification, commit message, and email sending.
+Problem: picks/index.html displayed implementation details such as script paths and raw timestamps.
 
-Also changed `generate-member-lab.js` so its default date is America/New_York instead of runner-local time.
+Fix: public pages now display customer-facing labels only, such as LyDia Daily Engine and formatted Eastern time. assert-public-clean.js fails if generated public HTML contains internal script paths, internal data paths, or raw generated timestamps.
+
+## Recap nav drift
+
+Problem: generate-recap.js hardcoded nav HTML and could fall behind the shared site navigation.
+
+Fix: generated recap pages now use <nav id="nav"></nav>, /js/app.js, renderNav('/recaps/'), and renderFooter().
