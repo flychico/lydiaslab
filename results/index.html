@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Results — verified pick record | LyDia</title>
-<meta name="description" content="LyDia verified results: 29-15 (65.9%) — every published model pick graded publicly against final scores.">
+<meta name="description" content="LyDia verified results: 29-15 (65.9%) — current official model is moneyline-only, with older legacy totals and run-line history labeled separately.">
 <link rel="canonical" href="https://mlbedges.com/results/">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
@@ -13,7 +13,7 @@
 <nav id="nav"></nav>
 <main>
 <h1>Results</h1>
-<p class="subtitle">Every published model pick is graded automatically against final scores. Wins and losses alike stay visible.</p>
+<p class="subtitle">Current official LyDia picks are moneyline-only and require both a high model probability and a strong Lab Score. Older results may include legacy totals and run-line outputs from earlier model versions. Wins and losses alike stay visible.</p>
 <section id="live-pick-results" class="card" style="margin:16px 0 24px">
   <h2 style="margin-top:0">Today's Pick Status</h2>
   <div class="loading">Loading live pick results...</div>
@@ -23,6 +23,9 @@
   <div class="card"><div class="dim small">WIN RATE</div><div style="font-size:1.6rem;font-weight:700">65.9%</div></div>
   <div class="card"><div class="dim small">UNITS (flat 1u @ best price)</div><div style="font-size:1.6rem;font-weight:700" class="pos-text">+12.33</div></div>
   <div class="card"><div class="dim small">DAYS TRACKED</div><div style="font-size:1.6rem;font-weight:700">3</div></div>
+</div>
+<div class="notice" style="margin-bottom:20px">
+  <strong>Current official model:</strong> moneyline only. <strong>Legacy history:</strong> earlier records may show totals or run lines. Learning fields are stored in <code>data/results.json</code> and <code>data/clv/clv_log.csv</code> for process review.
 </div>
 <div class="card">
 <table>
@@ -53,7 +56,7 @@
 </table>
 </div>
 <div class="notice" style="margin-top:20px">
-  Picks are published to dated files in <code>data/published-picks/</code>. The official record is rebuilt from those dated files after games finish, so the history has a public timestamp trail.
+  Picks are published to dated locked files before grading. The official record is rebuilt from those dated files after games finish, so the history has a public timestamp trail.
   A reminder that even good models have losing stretches: judge the process over hundreds of picks, not a hot or cold week.
 </div>
 <div class="lead-box" style="border-color:var(--accent2);margin-top:16px">
