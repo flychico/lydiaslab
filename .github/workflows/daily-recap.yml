@@ -1,7 +1,9 @@
 name: Daily recap and grading
 
 # Backward-looking only. Safe to run unattended.
-# Grades yesterday's finished games, builds true-game recap/SEO pages,
+# Scheduled runs automatically process yesterday in America/New_York.
+# Manual runs require an explicit YYYY-MM-DD date.
+# Grades finished games, builds the true-game recap/SEO page,
 # generates the learning summary, and refreshes the Research Desk.
 # It does NOT generate today's picks or email members.
 
@@ -10,7 +12,13 @@ on:
     # GitHub Actions cron is UTC.
     # 11:35 UTC = 7:35 AM EDT / 6:35 AM EST.
     - cron: "35 11 * * *"
-  workflow_dispatch: {}
+
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Date to recap and grade in YYYY-MM-DD format"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -22,6 +30,7 @@ concurrency:
 jobs:
   recap:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -33,19 +42,37 @@ jobs:
         with:
           node-version: 20
 
-      - name: Show run time
+      - name: Resolve recap date
+        id: recap_date
+        shell: bash
         run: |
-          echo "UTC:"; date -u
-          echo "Eastern:"; TZ="America/New_York" date
+          echo "UTC:"
+          date -u
+          echo "Eastern:"
+          TZ="America/New_York" date
 
-      - name: Grade yesterday's picks
-        run: node scripts/grade-results.js
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            DATE_INPUT="${{ github.event.inputs.date }}"
+
+            if ! [[ "$DATE_INPUT" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+              echo "ERROR: Manual runs require a valid date in YYYY-MM-DD format."
+              exit 1
+            fi
+          else
+            DATE_INPUT=$(TZ="America/New_York" date -d "yesterday" +%F)
+          fi
+
+          echo "date=$DATE_INPUT" >> "$GITHUB_OUTPUT"
+          echo "Resolved recap date: $DATE_INPUT"
+
+      - name: Grade selected date picks
+        run: node scripts/grade-results.js "${{ steps.recap_date.outputs.date }}"
 
       - name: Generate true-game recap
-        run: node scripts/generate-recap.js
+        run: node scripts/generate-recap.js "${{ steps.recap_date.outputs.date }}"
 
       - name: Generate learning summary
-        run: node scripts/generate-learning-summary.js
+        run: node scripts/generate-learning-summary.js --date "${{ steps.recap_date.outputs.date }}"
 
       - name: Refresh LyDia Research Desk
         run: node scripts/generate-research-desk.js
@@ -56,25 +83,38 @@ jobs:
           node scripts/inject-live-results.js
 
       - name: Verify recap, learning, and research generated
+        shell: bash
         run: |
-          test -f results/index.html || { echo "ERROR: results/index.html missing"; exit 1; }
-          grep -q "<table" results/index.html || { echo "ERROR: no results table in results/index.html"; exit 1; }
-          grep -q "Today's Pick Status" results/index.html || { echo "ERROR: live pick status block missing"; exit 1; }
-          test -f learning/index.html || { echo "ERROR: learning/index.html missing"; exit 1; }
-          test -f data/learning-summary.json || { echo "ERROR: learning summary missing"; exit 1; }
-          test -f articles/index.html || { echo "ERROR: Research Desk page missing"; exit 1; }
-          test -f data/research-desk.json || { echo "ERROR: Research Desk data missing"; exit 1; }
-          echo "Recap, results, learning summary, and Research Desk look good."
+          DATE_INPUT="${{ steps.recap_date.outputs.date }}"
+
+          test -f "results/index.html" || { echo "ERROR: results/index.html missing"; exit 1; }
+          grep -q "<table" "results/index.html" || { echo "ERROR: no results table in results/index.html"; exit 1; }
+          grep -q "Today's Pick Status" "results/index.html" || { echo "ERROR: live pick status block missing"; exit 1; }
+
+          test -f "recaps/$DATE_INPUT.html" || { echo "ERROR: recap missing for $DATE_INPUT"; exit 1; }
+          test -f "data/learning/$DATE_INPUT.json" || { echo "ERROR: learning summary missing for $DATE_INPUT"; exit 1; }
+          test -f "learning/index.html" || { echo "ERROR: learning/index.html missing"; exit 1; }
+          test -f "data/learning-summary.json" || { echo "ERROR: current learning summary missing"; exit 1; }
+
+          test -f "articles/index.html" || { echo "ERROR: Research Desk page missing"; exit 1; }
+          test -f "data/research-desk.json" || { echo "ERROR: Research Desk data missing"; exit 1; }
+
+          echo "Recap, results, learning summary, and Research Desk look good for $DATE_INPUT."
 
       - name: Commit and push if changed
+        shell: bash
         run: |
+          DATE_INPUT="${{ steps.recap_date.outputs.date }}"
+
           git config user.name "lydia-bot"
           git config user.email "actions@users.noreply.github.com"
+
           git add results/ recaps/ learning/ articles/ data/ sitemap.xml
+
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "Daily recap, learning and research $(TZ='America/New_York' date +%F)"
+            git commit -m "Daily recap, learning and research $DATE_INPUT"
             git pull --rebase
             git push
           fi
