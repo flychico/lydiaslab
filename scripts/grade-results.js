@@ -1,12 +1,9 @@
 #!/usr/bin/env node
-/* LyDia — grade yesterday's picks against final scores and rebuild results/index.html.
+/* LyDia — grade published picks against final scores and rebuild results/index.html.
    Usage: node scripts/grade-results.js [YYYY-MM-DD]  (default: yesterday in US Eastern)
-   Reads:  data/picks/<date>.json
-   Writes: data/results.json, results/index.html, data/clv/clv_log.csv
-
-   Grades moneyline, total, and run line independently when present. Supports the
-   older flat pick schema (pre totals/run-line) for backward compatibility with
-   already-published days. */
+   Reads first: data/published-picks/<date>.json
+   Fallback:    data/picks/<date>.json for pre-lock historical days
+   Writes:      data/results.json, results/index.html, data/clv/clv_log.csv */
 
 const fs = require("fs");
 const path = require("path");
@@ -18,7 +15,7 @@ function etYesterday() {
   return `${et.getFullYear()}-${String(et.getMonth() + 1).padStart(2, "0")}-${String(et.getDate()).padStart(2, "0")}`;
 }
 const DATE = process.argv[2] || etYesterday();
-const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 const amToDec = am => am > 0 ? 1 + am / 100 : 1 + 100 / Math.abs(am);
 const fmtAm = am => am > 0 ? "+" + am : String(am);
 function niceDate(iso) {
@@ -26,7 +23,6 @@ function niceDate(iso) {
   return new Date(y, m - 1, d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 function normPick(p) {
-  // Accept both the new nested schema and the older flat one.
   if (p.moneyline) return p;
   return {
     gamePk: p.gamePk, away: p.away, home: p.home, time: p.time,
@@ -38,17 +34,35 @@ function normPick(p) {
 const RESULTS_PATH = path.join(ROOT, "data", "results.json");
 const CLV_PATH = path.join(ROOT, "data", "clv", "clv_log.csv");
 
+function loadPicksForDate() {
+  const publishedFile = path.join(ROOT, "data", "published-picks", `${DATE}.json`);
+  const legacyFile = path.join(ROOT, "data", "picks", `${DATE}.json`);
+  if (fs.existsSync(publishedFile)) {
+    const data = JSON.parse(fs.readFileSync(publishedFile, "utf8"));
+    return { file: publishedFile, data, source: "published-picks" };
+  }
+  if (fs.existsSync(legacyFile)) {
+    const data = JSON.parse(fs.readFileSync(legacyFile, "utf8"));
+    return { file: legacyFile, data, source: "legacy-picks" };
+  }
+  return null;
+}
+
 async function gradeDay() {
-  const picksFile = path.join(ROOT, "data", "picks", `${DATE}.json`);
-  if (!fs.existsSync(picksFile)) { console.log(`No picks file for ${DATE} — nothing to grade.`); return null; }
-  const { picks } = JSON.parse(fs.readFileSync(picksFile, "utf8"));
+  const loaded = loadPicksForDate();
+  if (!loaded) { console.log(`No published picks file for ${DATE} — nothing to grade.`); return null; }
+  const { picks } = loaded.data;
+  if (!Array.isArray(picks)) throw new Error(`${loaded.file} does not contain a picks array.`);
+  console.log(`Grading ${DATE} from ${loaded.source}: ${path.relative(ROOT, loaded.file)}`);
+
   const res = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${DATE}`);
   if (!res.ok) throw new Error("Schedule HTTP " + res.status);
   const sched = await res.json();
   const finals = {};
   for (const g of (((sched.dates || [])[0]) || {}).games || []) {
-    if (g.status.abstractGameState === "Final" && g.teams.away.score !== undefined)
+    if (g.status.abstractGameState === "Final" && g.teams.away.score !== undefined) {
       finals[g.gamePk] = { awayScore: g.teams.away.score, homeScore: g.teams.home.score };
+    }
   }
 
   const graded = [];
@@ -63,7 +77,6 @@ async function gradeDay() {
     const totalRuns = f.awayScore + f.homeScore;
     const margin = f.homeScore - f.awayScore;
 
-    // Moneyline
     let mlResult = "NG";
     if (p.moneyline && p.moneyline.pick && !p.moneyline.isPass) {
       const won = (p.moneyline.side === "home") === homeWon;
@@ -73,7 +86,6 @@ async function gradeDay() {
       clvRows.push({ date: DATE, market: "moneyline", matchup: `${p.away}@${p.home}`, pick: p.moneyline.pick, priceTaken: p.moneyline.bestAm, result: mlResult });
     }
 
-    // Total
     let totResult = "NG";
     if (p.total && p.total.pick) {
       const won = p.total.pick === "Over" ? totalRuns > p.total.line : totalRuns < p.total.line;
@@ -83,7 +95,6 @@ async function gradeDay() {
       clvRows.push({ date: DATE, market: "total", matchup: `${p.away}@${p.home}`, pick: `${p.total.pick} ${p.total.line}`, priceTaken: p.total.bestAm, result: totResult });
     }
 
-    // Run line
     let rlResult = "NG";
     if (p.runLine && p.runLine.pick) {
       const pickedHome = p.runLine.pick === p.home;
@@ -105,7 +116,7 @@ async function gradeDay() {
     fs.appendFileSync(CLV_PATH, lines);
   }
 
-  return { date: DATE, wins, losses, ungraded, units: unitsCounted ? Number(units.toFixed(2)) : null, picks: graded };
+  return { date: DATE, wins, losses, ungraded, units: unitsCounted ? Number(units.toFixed(2)) : null, source: loaded.source, picks: graded };
 }
 
 function rebuildResultsPage(results) {
@@ -128,11 +139,29 @@ function rebuildResultsPage(results) {
     <td class="num">${d.wins}-${d.losses}</td>
     <td class="num">${d.wins + d.losses ? (d.wins / (d.wins + d.losses) * 100).toFixed(0) + "%" : "—"}</td>
     <td class="num ${d.units > 0 ? "pos-text" : d.units < 0 ? "neg-text" : ""}">${d.units !== null ? (d.units > 0 ? "+" : "") + d.units.toFixed(2) : "—"}</td>
-    <td><details><summary>${d.picks.length} game${d.picks.length > 1 ? "s" : ""}</summary>${d.picks.map(pickLine).join("")}</details></td>
+    <td><details><summary>${d.picks.length} published pick group${d.picks.length === 1 ? "" : "s"}</summary>${d.picks.map(pickLine).join("")}</details></td>
   </tr>`).join("\n");
 
-  const body = `<h1>Results</h1>
-<p class="subtitle">Every model pick — moneyline, total, and run line — graded automatically against final scores. Wins and losses alike — nothing is deleted.</p>
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Results — verified pick record | LyDia</title>
+<meta name="description" content="LyDia verified results: ${W}-${L} (${winPct}%) — every published model pick graded publicly against final scores.">
+<link rel="canonical" href="https://mlbedges.com/results/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<nav id="nav"></nav>
+<main>
+<h1>Results</h1>
+<p class="subtitle">Every published model pick is graded automatically against final scores. Wins and losses alike stay visible.</p>
+<section id="live-pick-results" class="card" style="margin:16px 0 24px">
+  <h2 style="margin-top:0">Today's Pick Status</h2>
+  <div class="loading">Loading live pick results...</div>
+</section>
 <div class="kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px">
   <div class="card"><div class="dim small">RECORD</div><div style="font-size:1.6rem;font-weight:700">${W}-${L}</div></div>
   <div class="card"><div class="dim small">WIN RATE</div><div style="font-size:1.6rem;font-weight:700">${winPct}%</div></div>
@@ -148,46 +177,19 @@ ${dayRows}
 </table>
 </div>
 <div class="notice" style="margin-top:20px">
-  Picks are published every morning on the <a href="/previews/">Previews page</a> before first pitch and graded the next day —
-  timestamps are in the repository history, so the record can't be rewritten.
+  Picks are published to dated files in <code>data/published-picks/</code>. The official record is rebuilt from those dated files after games finish, so the history has a public timestamp trail.
   A reminder that even good models have losing stretches: judge the process over hundreds of picks, not a hot or cold week.
 </div>
 <div class="lead-box" style="border-color:var(--accent2);margin-top:16px">
   <h3 style="margin:0 0 4px">Want this delivered before first pitch?</h3>
-  <p class="dim small" style="margin:0">$30/month. Same picks, same transparency — just no need to check the site.</p>
+  <p class="dim small" style="margin:0">$30/month. Same transparency, cleaner delivery.</p>
   <p style="margin-top:10px"><a class="btn blue" href="/membership/">Join LyDia — $30/mo →</a></p>
-</div>`;
-
-  const NAV = `<nav><div class="nav-inner">
-  <a class="brand" href="/"><span class="brand-ly">Ly</span><span class="brand-dia">Dia</span></a>
-  <a class="navlink" href="/">Home</a>
-  <a class="navlink" href="/dashboard/">Dashboard</a>
-  <a class="navlink" href="/picks/">Picks</a>
-  <a class="navlink" href="/previews/">Previews</a>
-  <a class="navlink active" href="/results/">Results</a>
-  <a class="navlink" href="/odds/">Odds</a>
-  <a class="navlink" href="/recaps/">Recaps</a>
-  <a class="navlink" href="/articles/">Articles</a>
-  <a class="navlink navlink-cta" href="/membership/">Join $30/mo</a>
-</div></nav>`;
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Results — verified pick record | LyDia</title>
-<meta name="description" content="LyDia verified results: ${W}-${L} (${winPct}%) — every model pick graded publicly against final scores.">
-<link rel="canonical" href="https://mlbedges.com/results/">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
-<link rel="stylesheet" href="/css/style.css">
-</head>
-<body>
-${NAV}
-<main>
-${body}
+</div>
 </main>
-<footer>LyDia — analysis and education only, not betting advice. Please bet responsibly. If gambling stops being fun, call 1-800-GAMBLER.</footer>
+<footer id="footer"></footer>
+<script src="/js/app.js"></script>
+<script src="/js/live-results.js"></script>
+<script>renderNav("/results/"); renderFooter();</script>
 </body>
 </html>
 `;
@@ -201,7 +203,7 @@ async function main() {
   if (day) {
     results.days[DATE] = day;
     fs.mkdirSync(path.dirname(RESULTS_PATH), { recursive: true });
-    fs.writeFileSync(RESULTS_PATH, JSON.stringify(results, null, 2));
+    fs.writeFileSync(RESULTS_PATH, JSON.stringify(results, null, 2) + "\n");
     console.log(`graded ${DATE}: ${day.wins}-${day.losses}${day.units !== null ? `, ${day.units > 0 ? "+" : ""}${day.units}u` : ""}`);
   }
   fs.mkdirSync(path.join(ROOT, "results"), { recursive: true });
