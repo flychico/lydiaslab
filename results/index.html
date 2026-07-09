@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Results — verified pick record | LyDia</title>
-<meta name="description" content="LyDia verified results: 13-9 (59.1%) — every model pick graded publicly against final scores.">
+<meta name="description" content="LyDia verified results: 13-9 (59.1%) with live pick status and public grading history.">
 <link rel="canonical" href="https://mlbedges.com/results/">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
@@ -25,6 +25,10 @@
 <main>
 <h1>Results</h1>
 <p class="subtitle">Every model pick — moneyline, total, and run line — graded automatically against final scores. Wins and losses alike — nothing is deleted.</p>
+<section id="live-pick-results" class="card" style="margin:16px 0 24px">
+  <h2 style="margin-top:0">Today's Pick Status</h2>
+  <div class="loading">Loading live pick results...</div>
+</section>
 <div class="kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px">
   <div class="card"><div class="dim small">RECORD</div><div style="font-size:1.6rem;font-weight:700">13-9</div></div>
   <div class="card"><div class="dim small">WIN RATE</div><div style="font-size:1.6rem;font-weight:700">59.1%</div></div>
@@ -53,9 +57,7 @@
 </table>
 </div>
 <div class="notice" style="margin-top:20px">
-  Picks are published every morning on the <a href="/previews/">Previews page</a> before first pitch and graded the next day —
-  timestamps are in the repository history, so the record can't be rewritten.
-  A reminder that even good models have losing stretches: judge the process over hundreds of picks, not a hot or cold week.
+  Today's pick status updates in the browser while games are live. The official record is committed to the repository by automation after games finish, so the history still has a public timestamp trail. A reminder that even good models have losing stretches: judge the process over hundreds of picks, not a hot or cold week.
 </div>
 <div class="lead-box" style="border-color:var(--accent2);margin-top:16px">
   <h3 style="margin:0 0 4px">Want this delivered before first pitch?</h3>
@@ -64,5 +66,6 @@
 </div>
 </main>
 <footer>LyDia — analysis and education only, not betting advice. Please bet responsibly. If gambling stops being fun, call 1-800-GAMBLER.</footer>
+<script src="/js/live-results.js"></script>
 </body>
 </html>
