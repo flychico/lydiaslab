@@ -12,7 +12,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Model Picks | LyDia</title>
-<meta name="description" content="LyDia official MLB picks generated after pitcher matchup, bullpen fatigue, market pricing, and Lab Score checks.">
+<meta name="description" content="LyDia official MLB moneyline picks with model probability, market value, pitcher matchup, bullpen workload, and bettor-friendly reasoning.">
 <link rel="canonical" href="https://mlbedges.com/picks/">
 <link rel="stylesheet" href="/css/style.css">
 <style>
@@ -29,8 +29,8 @@
 .metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:10px; margin-top:10px; }
 .metric-box { background:var(--bg-elev); border:1px solid var(--border); border-radius:var(--radius); padding:12px; }
 .metric-box .label { color:var(--text-dim); font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; }
-.metric-box .value { font-size:1.15rem; font-weight:800; font-variant-numeric:tabular-nums; }
-.read { margin-top:10px; font-size:.88rem; color:var(--text-dim); }
+.metric-box .value { font-size:1.05rem; font-weight:800; font-variant-numeric:tabular-nums; line-height:1.28; }
+.read { margin-top:12px; font-size:.92rem; color:var(--text); line-height:1.55; }
 </style>
 </head>
 <body>
@@ -38,10 +38,10 @@
 <main>
   <p class="eyebrow">Official daily card</p>
   <h1>Model Picks</h1>
-  <p class="subtitle">Official picks come from LyDia's daily engine after pitcher matchup, bullpen fatigue, market pricing, and Lab Score are calculated.</p>
+  <p class="subtitle">Official moneyline picks with the probability, price, pitching matchup, bullpen condition, and plain-English reason behind the decision.</p>
 
   <div class="notice">
-    <strong>Process order:</strong> pitcher matchup, bullpen fatigue, market check, model probability, Lab Score, then official pick, watchlist, or pass.
+    <strong>How to read this page:</strong> Model probability tells you how often LyDia expects the team to win. Lab Score grades the quality of the full setup. An official pick needs both.
   </div>
 
   <div class="controls">
@@ -86,6 +86,68 @@ function friendlyTime(iso) {
   if (Number.isNaN(d.getTime())) return "";
   return d.toLocaleString("en-US", { month:"short", day:"numeric", hour:"numeric", minute:"2-digit", timeZone:"America/New_York", timeZoneName:"short" });
 }
+function opponentName(g) {
+  if (g.pick_team === g.away_team) return g.home_team || "Opponent";
+  if (g.pick_team === g.home_team) return g.away_team || "Opponent";
+  return "Opponent";
+}
+function bullpenAnalysis(g) {
+  const bp = g.bullpen || {};
+  const pick = bp.pick_team || null;
+  const opp = bp.opponent || null;
+  if (!pick || !opp || typeof pick.score !== "number" || typeof opp.score !== "number") return "Bullpen workload data unavailable.";
+
+  const team = g.pick_team || "LyDia side";
+  const opponent = opponentName(g);
+  const pickScore = Math.round(pick.score);
+  const oppScore = Math.round(opp.score);
+  const pickIp = typeof pick.last3_bp_ip === "number" ? pick.last3_bp_ip.toFixed(1) : null;
+  const oppIp = typeof opp.last3_bp_ip === "number" ? opp.last3_bp_ip.toFixed(1) : null;
+  const pickB2b = Number(pick.back_to_back_arms || 0);
+  const oppB2b = Number(opp.back_to_back_arms || 0);
+
+  if (pickScore >= 78 && oppScore >= 78) {
+    return `Both bullpens are heavily taxed. ${team} is ${pickScore}/100 and ${opponent} is ${oppScore}/100, so late-game volatility is elevated on both sides.`;
+  }
+  if (pickScore + 15 < oppScore) {
+    const detail = oppIp !== null ? `${opponent} has used ${oppIp} bullpen innings over the last three days${oppB2b ? ` with ${oppB2b} back-to-back arm${oppB2b === 1 ? "" : "s"}` : ""}.` : "";
+    return `${team} has the fresher bullpen, ${pickScore}/100 versus ${oppScore}/100. ${detail}`.trim();
+  }
+  if (pickScore > oppScore + 15) {
+    const detail = pickIp !== null ? `${team} has used ${pickIp} bullpen innings over the last three days${pickB2b ? ` with ${pickB2b} back-to-back arm${pickB2b === 1 ? "" : "s"}` : ""}.` : "";
+    return `${team} carries the heavier bullpen workload, ${pickScore}/100 versus ${oppScore}/100, which adds late-game risk. ${detail}`.trim();
+  }
+  if (pickScore >= 60 || oppScore >= 60) {
+    return `Bullpen workload is elevated but not decisive. ${team} is ${pickScore}/100 and ${opponent} is ${oppScore}/100.`;
+  }
+  return `No meaningful bullpen fatigue edge. ${team} is ${pickScore}/100 and ${opponent} is ${oppScore}/100.`;
+}
+function pitcherSentence(g) {
+  const p = g.pitcher_edge || {};
+  if (!p.team || p.team === "No clear SP edge") return "The starting pitching matchup does not create a clear advantage.";
+  if (p.team === g.pick_team) return `${g.pick_team} has the stronger starting pitcher matchup${p.gap ? ` by ${p.gap} points` : ""}.`;
+  return `${p.team} has the starting pitcher advantage${p.gap ? ` by ${p.gap} points` : ""}, which works against LyDia's side.`;
+}
+function clientRead(g) {
+  const market = g.market || {};
+  const price = odds(market.best_price);
+  const modelProb = pct(g.model_probability);
+  const marketProb = pct(market.no_vig_probability);
+  const pitcher = pitcherSentence(g);
+  const bullpen = bullpenAnalysis(g);
+  const team = g.pick_team || "This side";
+
+  if (g.status === "official_pick") {
+    return `${team} is an official moneyline pick because LyDia gives it a ${modelProb} chance to win, compared with the market's ${marketProb} no-vig probability. ${pitcher} ${bullpen} At ${price}, the price still offers enough value for the play to qualify as official.`;
+  }
+  if (g.status === "value_watch") {
+    return `${team} grades as a strong value setup because LyDia sees ${modelProb} win probability against a ${marketProb} market number. ${pitcher} ${bullpen} It stays a value watch instead of an official pick because the model probability does not reach the 72% official threshold.`;
+  }
+  if (g.status === "watchlist") {
+    return `${team} is worth monitoring, but it does not clear every requirement for an official pick. LyDia projects ${modelProb} win probability against a ${marketProb} market number. ${pitcher} ${bullpen}`;
+  }
+  return g.pass_reason || `${team} does not have a strong enough overall setup for an official pick.`;
+}
 
 async function loadPicks() {
   const date = datePick.value;
@@ -100,26 +162,28 @@ async function loadPicks() {
 
   let data = null;
   const urls = date === localISODate(new Date())
-    ? [`/data/member-brief/today.json`, `/data/member-brief/${date}.json`]
+    ? [`/data/member-brief/${date}.json`, `/data/member-brief/today.json`]
     : [`/data/member-brief/${date}.json`];
 
   for (const url of urls) {
     try {
-      const res = await fetch(url, { cache: "no-store" });
-      if (res.ok) { data = await res.json(); break; }
+      const res = await fetch(`${url}?v=${Date.now()}`, { cache: "no-store" });
+      if (!res.ok) continue;
+      const candidate = await res.json();
+      if (!candidate || candidate.date !== date || !Array.isArray(candidate.games) || candidate.games.length === 0) continue;
+      data = candidate;
+      break;
     } catch(e) {}
   }
 
   if (!data || !Array.isArray(data.games) || data.games.length === 0) {
-    statusEl.innerHTML = `<div class="notice warn">
-      <strong>No generated card is available for ${escapeHtml(date)}.</strong><br>
-      LyDia does not create official picks after a slate has already started. Check the Results page for completed cards or run the daily publish workflow before games begin.
-    </div>`;
+    statusEl.innerHTML = `<div class="notice warn"><strong>No generated card is available for ${escapeHtml(date)}.</strong></div>`;
     return;
   }
 
   const games = data.games || [];
   const official = games.filter(g => g.status === "official_pick");
+  const valueWatch = games.filter(g => g.status === "value_watch");
   const watchlist = games.filter(g => g.status === "watchlist");
   const passes = games.filter(g => g.status === "pass");
   const updated = friendlyTime(data.generated_at);
@@ -127,12 +191,12 @@ async function loadPicks() {
   statusEl.innerHTML = `<div class="notice"><strong>LyDia Daily Engine</strong>${updated ? ` · Updated ${escapeHtml(updated)}` : ""}</div>`;
   kpisEl.innerHTML = `
     <div class="kpi"><div class="label">Games</div><div class="value">${games.length}</div><div class="small dim">${escapeHtml(data.date || date)}</div></div>
-    <div class="kpi"><div class="label">Official picks</div><div class="value">${official.length}</div><div class="small dim">cleared all checks</div></div>
-    <div class="kpi"><div class="label">Watchlist</div><div class="value">${watchlist.length}</div><div class="small dim">high score, not official</div></div>
-    <div class="kpi"><div class="label">Passes</div><div class="value">${passes.length}</div><div class="small dim">no full setup</div></div>`;
+    <div class="kpi"><div class="label">Official picks</div><div class="value">${official.length}</div><div class="small dim">cleared every requirement</div></div>
+    <div class="kpi"><div class="label">Value watch</div><div class="value">${valueWatch.length}</div><div class="small dim">strong setup, not official</div></div>
+    <div class="kpi"><div class="label">Watchlist</div><div class="value">${watchlist.length}</div><div class="small dim">worth monitoring</div></div>`;
 
   officialEl.innerHTML = section("Official Picks", official, "No official picks cleared every check for this date.");
-  watchlistEl.innerHTML = section("Watchlist", watchlist, "No watchlist games for this date.");
+  watchlistEl.innerHTML = section("Value Watch / Watchlist", valueWatch.concat(watchlist), "No extra games reached the research range.");
   passesEl.innerHTML = section("Pass / No Clear Setup", passes, "No pass notes available.");
 }
 
@@ -143,10 +207,9 @@ function section(title, items, empty) {
 
 function renderGame(g) {
   const cls = g.status === "official_pick" ? "pos" : "neutral";
-  const label = g.status === "official_pick" ? "Official pick" : g.status === "watchlist" ? "Watchlist" : "Pass";
+  const label = g.status === "official_pick" ? "Official pick" : g.status === "value_watch" ? "Value watch" : g.status === "watchlist" ? "Watchlist" : "Pass";
   const market = g.market || {};
   const pitcher = g.pitcher_edge || {};
-  const bullpen = g.bullpen || {};
 
   return `<div class="card pick-card">
     <div class="pick-head">
@@ -155,7 +218,7 @@ function renderGame(g) {
     </div>
     <div class="pick-line">
       <span class="badge ${cls}">${label}</span>
-      <span><b>LyDia side:</b> ${escapeHtml(g.pick_team || "-")}</span>
+      <span><b>LyDia side:</b> ${escapeHtml(g.pick_team || "-")} Money Line</span>
       <span><b>Lab Score:</b> ${g.lab_score ?? "-"}/100</span>
     </div>
     <div class="metric-grid">
@@ -164,9 +227,9 @@ function renderGame(g) {
       <div class="metric-box"><div class="label">Model vs market</div><div class="value ${g.edge > 0 ? "pos-text" : g.edge < 0 ? "neg-text" : ""}">${edge(g.edge)}</div></div>
       <div class="metric-box"><div class="label">Current price</div><div class="value">${odds(market.best_price)}</div></div>
       <div class="metric-box"><div class="label">Pitcher edge</div><div class="value">${escapeHtml(pitcher.team || "-")}</div></div>
-      <div class="metric-box"><div class="label">Bullpen read</div><div class="value">${escapeHtml(bullpen.label || "-")}</div></div>
+      <div class="metric-box"><div class="label">Bullpen read</div><div class="value">${escapeHtml(bullpenAnalysis(g))}</div></div>
     </div>
-    <div class="read">${escapeHtml(g.read || g.pass_reason || "")}</div>
+    <div class="read">${escapeHtml(clientRead(g))}</div>
   </div>`;
 }
 </script>
