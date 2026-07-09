@@ -19,8 +19,7 @@ const OFFICIAL_LAB_SCORE = 60;
 const WATCHLIST_LAB_SCORE = 65;
 
 const args = parseArgs(process.argv.slice(2));
-const today = new Date();
-const DATE = args.date || localISODate(today);
+const DATE = args.date || etToday();
 const SNAPSHOT = args.snapshot || process.env.SNAPSHOT_TYPE || "posted";
 const ODDS_API_KEY = process.env.ODDS_API_KEY || "";
 
@@ -48,7 +47,7 @@ async function main() {
   const bullpen = bullpenSource.teams_by_name || {};
 
   writeJson(`data/bullpen/${DATE}.json`, bullpenSource);
-  if (DATE === localISODate(new Date())) writeJson("data/bullpen/today.json", bullpenSource);
+  if (DATE === etToday()) writeJson("data/bullpen/today.json", bullpenSource);
 
   const rows = games.map(g => modelGame(g, strength, pitchers, oddsMap, bullpen)).filter(Boolean)
     .sort((a, b) => (b.lab_score || 0) - (a.lab_score || 0));
@@ -62,14 +61,14 @@ async function main() {
     games: rows
   };
   writeJson(`data/member-brief/${DATE}.json`, brief);
-  if (DATE === localISODate(new Date())) writeJson("data/member-brief/today.json", brief);
+  if (DATE === etToday()) writeJson("data/member-brief/today.json", brief);
 
   const candidatePublished = buildPicksFile(rows, generatedAt);
   const published = writeOrReusePublishedPicks(candidatePublished);
 
   // Backward-compatible mirrors. These are not the source of truth anymore.
   writeJson(`data/picks/${DATE}.json`, published);
-  if (DATE === localISODate(new Date())) writeJson("data/picks/today.json", published);
+  if (DATE === etToday()) writeJson("data/picks/today.json", published);
 
   mergeAndWriteMarket(buildMarketFile(rows, generatedAt));
 
@@ -92,6 +91,7 @@ function parseArgs(argv) {
   return out;
 }
 function localISODate(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+function etToday(){ const et = new Date(new Date().toLocaleString("en-US", { timeZone:"America/New_York" })); return localISODate(et); }
 async function fetchJson(url){ const res = await fetch(url); if(!res.ok) throw new Error(`HTTP ${res.status}: ${url}`); return res.json(); }
 function writeJson(file,obj){ fs.writeFileSync(file, JSON.stringify(obj,null,2)+"\n","utf8"); }
 function readJson(file){ return JSON.parse(fs.readFileSync(file,"utf8")); }
