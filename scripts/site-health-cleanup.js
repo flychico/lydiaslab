@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /*
   LyDia site health cleanup.
-  Removes auto-generated empty slate artifacts and rebuilds public indexes.
+  Removes invalid generated artifacts and stale/invalid today mirrors.
   It never edits manual content, historical results, or membership pages.
 */
 const fs = require("fs");
@@ -18,12 +18,13 @@ main();
 function main() {
   const badDates = findBadEmptyDates();
   for (const date of badDates) {
-    issues.push(`Empty generated slate detected for ${date}`);
+    issues.push(`Invalid generated slate detected for ${date}`);
     if (FIX) removeGeneratedDate(date);
   }
 
   if (FIX) {
     removeStaleTodayMirrors();
+    removeInvalidTodayMirrors();
     rebuildPreviewArchive();
     rebuildSitemap();
     writeHealthReport(badDates);
@@ -62,6 +63,19 @@ function datedJsonFiles(relDir) {
 }
 function unique(arr) { return [...new Set(arr)].sort(); }
 
+function hasGames(brief) {
+  return brief && Array.isArray(brief.games) && brief.games.length > 0;
+}
+function hasTeams(bullpen) {
+  return bullpen && Array.isArray(bullpen.teams) && bullpen.teams.length > 0;
+}
+function hasItems(file) {
+  return file && Array.isArray(file.items) && file.items.length > 0;
+}
+function hasPicks(file) {
+  return file && Array.isArray(file.picks) && file.picks.length > 0;
+}
+
 function findBadEmptyDates() {
   const dates = unique([
     ...datedJsonFiles("data/member-brief"),
@@ -75,12 +89,14 @@ function findBadEmptyDates() {
     const legacy = readJsonSafe(`data/picks/${date}.json`);
     const preview = exists(`previews/${date}.html`) ? fs.readFileSync(path.join(ROOT, "previews", `${date}.html`), "utf8") : "";
 
-    const briefEmpty = brief && Array.isArray(brief.games) && brief.games.length === 0;
-    const publishedEmpty = published && Array.isArray(published.picks) && published.picks.length === 0;
-    const legacyEmpty = legacy && Array.isArray(legacy.picks) && legacy.picks.length === 0;
-    const previewEmpty = /GAMES<\/div><div[^>]*>0<\/div>/i.test(preview) || /Official picks:\s*0/i.test(preview);
+    const briefExistsButEmpty = brief && Array.isArray(brief.games) && brief.games.length === 0;
+    const previewEmpty = /GAMES<\/div><div[^>]*>0<\/div>/i.test(preview);
 
-    if (briefEmpty || publishedEmpty || legacyEmpty || previewEmpty) bad.push(date);
+    // Under the stricter official-pick gate, zero official picks can be valid.
+    // Only delete dated generated artifacts when the research brief itself is empty or the preview is clearly empty.
+    const invalidEmptyLockWithoutBrief = !hasGames(brief) && ((published && Array.isArray(published.picks) && published.picks.length === 0) || (legacy && Array.isArray(legacy.picks) && legacy.picks.length === 0));
+
+    if (briefExistsButEmpty || previewEmpty || invalidEmptyLockWithoutBrief) bad.push(date);
   }
   return bad;
 }
@@ -95,8 +111,8 @@ function removeGeneratedDate(date) {
 }
 
 function etToday() {
-  const et = new Date(new Date().toLocaleString("en-US", { timeZone:"America/New_York" }));
-  return `${et.getFullYear()}-${String(et.getMonth()+1).padStart(2,"0")}-${String(et.getDate()).padStart(2,"0")}`;
+  const et = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+  return `${et.getFullYear()}-${String(et.getMonth() + 1).padStart(2, "0")}-${String(et.getDate()).padStart(2, "0")}`;
 }
 function removeStaleTodayMirrors() {
   const today = etToday();
@@ -109,17 +125,54 @@ function removeStaleTodayMirrors() {
   ];
   for (const rel of mirrorFiles) {
     const data = readJsonSafe(rel);
-    if (data && data.date && data.date !== today) unlink(rel);
+    if (data && data.date && data.date !== today) {
+      issues.push(`Stale today mirror detected: ${rel} has date ${data.date}, expected ${today}`);
+      unlink(rel);
+    }
+  }
+}
+function removeInvalidTodayMirrors() {
+  const today = etToday();
+  const brief = readJsonSafe("data/member-brief/today.json");
+  const hasValidBrief = brief && brief.date === today && hasGames(brief);
+
+  if (brief && brief.date === today && Array.isArray(brief.games) && brief.games.length === 0) {
+    issues.push("Invalid today mirror detected: member brief has zero games");
+    unlink("data/member-brief/today.json");
+  }
+
+  const published = readJsonSafe("data/published-picks/today.json");
+  if (published && published.date === today && Array.isArray(published.picks) && published.picks.length === 0 && !hasValidBrief) {
+    issues.push("Invalid today mirror detected: published picks empty without a valid member brief");
+    unlink("data/published-picks/today.json");
+  }
+
+  const picks = readJsonSafe("data/picks/today.json");
+  if (picks && picks.date === today && Array.isArray(picks.picks) && picks.picks.length === 0 && !hasValidBrief) {
+    issues.push("Invalid today mirror detected: picks empty without a valid member brief");
+    unlink("data/picks/today.json");
+  }
+
+  const market = readJsonSafe("data/market/today.json");
+  if (market && market.date === today && Array.isArray(market.items) && market.items.length === 0 && !hasValidBrief) {
+    issues.push("Invalid today mirror detected: market empty without a valid member brief");
+    unlink("data/market/today.json");
+  }
+
+  const bullpen = readJsonSafe("data/bullpen/today.json");
+  if (bullpen && bullpen.date === today && Array.isArray(bullpen.teams) && bullpen.teams.length === 0) {
+    issues.push("Invalid today mirror detected: bullpen has zero teams");
+    unlink("data/bullpen/today.json");
   }
 }
 function niceDate(iso) {
   const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday:"long", month:"long", day:"numeric", year:"numeric" });
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 }
 function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c])); }
 function rebuildPreviewArchive() {
   const dir = path.join(ROOT, "previews");
-  fs.mkdirSync(dir, { recursive:true });
+  fs.mkdirSync(dir, { recursive: true });
   const posts = fs.readdirSync(dir).filter(f => /^\d{4}-\d{2}-\d{2}\.html$/.test(f)).sort().reverse();
   const links = posts.map(f => {
     const date = f.replace(".html", "");
@@ -145,11 +198,11 @@ function rebuildSitemap() {
   fs.writeFileSync(path.join(ROOT, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` + urls.map(u => `  <url><loc>${u}</loc></url>`).join("\n") + `\n</urlset>\n`, "utf8");
 }
 function writeHealthReport(badDates) {
-  fs.mkdirSync(path.join(ROOT, "data"), { recursive:true });
+  fs.mkdirSync(path.join(ROOT, "data"), { recursive: true });
   const report = {
     checked_at: new Date().toISOString(),
-    cleanup_version: "lydia-site-health-v1",
-    removed_empty_dates: badDates,
+    cleanup_version: "lydia-site-health-v2-strict-gates",
+    removed_invalid_dates: badDates,
     deleted_artifacts: deleted
   };
   fs.writeFileSync(path.join(ROOT, "data", "site-health.json"), JSON.stringify(report, null, 2) + "\n", "utf8");

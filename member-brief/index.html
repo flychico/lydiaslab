@@ -12,7 +12,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Daily Member Brief | LyDia</title>
-<meta name="description" content="LyDia's Daily Member Brief organizes the MLB card by official picks, Lab Score, pitcher edges, bullpen flags, and market movement notes.">
+<meta name="description" content="LyDia's Daily Member Brief organizes the MLB card by official picks, value watch setups, Lab Score, pitcher edges, bullpen flags, and market movement notes.">
 <link rel="canonical" href="https://mlbedges.com/member-brief/">
 <link rel="stylesheet" href="/css/style.css">
 <style>
@@ -40,7 +40,11 @@
 <main>
   <p class="eyebrow">LyDia's Lab</p>
   <h1>Daily Member Brief</h1>
-  <p class="subtitle">One morning view of the card: official picks, Lab Score, pitcher edges, bullpen flags, and market notes.</p>
+  <p class="subtitle">One morning view of the card: official moneyline picks, value watch setups, Lab Score, pitcher edges, bullpen flags, and market notes.</p>
+
+  <div class="notice">
+    <strong>Lab Score is not win probability.</strong> Win probability estimates how often LyDia thinks a team wins. Lab Score grades the full setup: model edge versus market, pitcher support, bullpen condition, market availability, and risk checks. A strong Lab Score with a low win probability becomes a value watch, not an official pick.
+  </div>
 
   <div class="controls">
     <div class="field">
@@ -100,13 +104,23 @@ async function loadBrief() {
 
   let data = null;
   const urls = date === localISODate(new Date())
-    ? [`/data/member-brief/today.json`, `/data/member-brief/${date}.json`]
+    ? [`/data/member-brief/${date}.json`, `/data/member-brief/today.json`]
     : [`/data/member-brief/${date}.json`];
 
   for (const url of urls) {
     try {
-      const res = await fetch(url, { cache: "no-store" });
-      if (res.ok) { data = await res.json(); break; }
+      const res = await fetch(`${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`, { cache: "no-store" });
+      if (!res.ok) continue;
+      const candidate = await res.json();
+
+      // Hard stop: never show a member brief for the wrong selected date.
+      if (!candidate || candidate.date !== date || !Array.isArray(candidate.games) || candidate.games.length === 0) {
+        console.warn(`Skipped member brief ${url}: date mismatch, missing games, or empty slate`, candidate);
+        continue;
+      }
+
+      data = candidate;
+      break;
     } catch(e) {}
   }
 
@@ -120,24 +134,25 @@ async function loadBrief() {
 
   const games = data.games || [];
   const official = games.filter(g => g.status === "official_pick");
-  const watch = games.filter(g => g.status === "watchlist" || g.lab_score >= 65).filter(g => g.status !== "official_pick");
+  const valueWatch = games.filter(g => g.status === "value_watch");
+  const watch = games.filter(g => (g.status === "watchlist" || g.lab_score >= 65) && g.status !== "official_pick" && g.status !== "value_watch");
   const passes = games.filter(g => g.status === "pass");
   const updated = friendlyTime(data.generated_at);
 
   statusEl.innerHTML = "";
   kpisEl.innerHTML = `
     <div class="kpi"><div class="label">Games</div><div class="value">${games.length}</div><div class="small dim">${escapeHtml(data.date || date)}</div></div>
-    <div class="kpi"><div class="label">Official picks</div><div class="value">${official.length}</div><div class="small dim">cleared model + market threshold</div></div>
-    <div class="kpi"><div class="label">Top Lab Score</div><div class="value">${games.length ? Math.max(...games.map(g => g.lab_score || 0)) : "-"}</div><div class="small dim">highest setup today</div></div>
+    <div class="kpi"><div class="label">Official picks</div><div class="value">${official.length}</div><div class="small dim">72% model prob + 80 Lab Score</div></div>
+    <div class="kpi"><div class="label">Value watch</div><div class="value">${valueWatch.length}</div><div class="small dim">good setup, not official</div></div>
     <div class="kpi"><div class="label">Market tracked</div><div class="value">${games.filter(g => g.market && g.market.best_price !== null).length}</div><div class="small dim">priced games</div></div>`;
 
   summaryEl.innerHTML = `<div class="notice">
-    <strong>Brief read:</strong> ${escapeHtml(data.summary || "Review the official picks first, then the high Lab Score watchlist and pass reasons.")}
+    <strong>Brief read:</strong> ${escapeHtml(data.summary || "Review official picks first, value watch second, then pass reasons.")}
     ${updated ? `<br><span class="small dim">Updated ${escapeHtml(updated)}</span>` : ""}
   </div>`;
 
-  officialEl.innerHTML = section("Official Picks", official, "No official picks cleared the full threshold for this slate.");
-  watchEl.innerHTML = section("High Lab Score Watchlist", watch, "No extra games reached the watchlist range.");
+  officialEl.innerHTML = section("Official Picks", official, "No official picks cleared the stricter model-probability and Lab Score gates for this slate.");
+  watchEl.innerHTML = section("Value Watch / Research Setups", valueWatch.concat(watch), "No extra games reached the research range.");
   passesEl.innerHTML = section("Pass / No Clear Setup", passes.slice(0, 12), "No pass notes available.");
 }
 
@@ -150,6 +165,7 @@ function renderCard(g) {
   const market = g.market || {};
   const pitcher = g.pitcher_edge || {};
   const bullpen = g.bullpen || {};
+  const gate = g.official_pick_gate || {};
   return `<div class="card brief-card">
     <div class="brief-head">
       <span class="matchup">${escapeHtml(g.game || "")}</span>
@@ -166,13 +182,14 @@ function renderCard(g) {
       <div class="metric-box"><div class="label">Model vs market</div><div class="value ${g.edge > 0 ? "pos-text" : g.edge < 0 ? "neg-text" : ""}">${edge(g.edge)}</div></div>
       <div class="metric-box"><div class="label">Current price</div><div class="value">${odds(market.best_price)}</div></div>
       <div class="metric-box"><div class="label">Pitcher edge</div><div class="value">${escapeHtml(pitcher.team || "-")}</div></div>
-      <div class="metric-box"><div class="label">Bullpen read</div><div class="value">${escapeHtml(bullpen.label || "-")}</div></div>
+      <div class="metric-box"><div class="label">Official gate</div><div class="value">${gate.model_probability_passed && gate.lab_score_passed ? "Passed" : "Not passed"}</div></div>
     </div>
     <div class="read">${escapeHtml(g.read || g.pass_reason || "")}</div>
   </div>`;
 }
 function labelStatus(s) {
   if (s === "official_pick") return "Official pick";
+  if (s === "value_watch") return "Value watch";
   if (s === "watchlist") return "Watchlist";
   if (s === "pass") return "Pass";
   return "Research";
