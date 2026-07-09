@@ -95,6 +95,7 @@ function normalizeHtml(html, rel) {
   out = normalizeFooter(out);
   out = normalizeAppScript(out, active);
   out = sanitizePublicLanguage(out);
+  out = ensureHeadTags(out, rel);
 
   // Clean up accidental whitespace caused by replacement.
   out = out.replace(/<footer id="footer"><\/footer>\s*<script src="\/js\/app\.js"><\/script>/i, '<footer id="footer"></footer><script src="/js/app.js"></script>');
@@ -163,4 +164,51 @@ function sanitizePublicLanguage(html) {
   out = out.replace(/Run the daily workflow or\s*the daily workflow\s*before opening this tool\./gi, "Run the daily publish workflow before opening this tool.");
 
   return out;
+}
+
+// --- Head tags: analytics + social cards, single source of truth ---
+function ensureHeadTags(html, rel) {
+  const GA_ID = "G-XVWTMDNBJK";
+  const OG_IMAGE = "https://mlbedges.com/img/og-card.png";
+  let out = html;
+  if (!/<head[\s>]/i.test(out)) return out;
+
+  // Google Analytics on every public page.
+  if (!out.includes("googletagmanager.com/gtag/js")) {
+    const ga = `<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=${GA_ID}"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', '${GA_ID}');
+</script>
+`;
+    out = out.replace(/<head([^>]*)>/i, `<head$1>\n${ga}`);
+  }
+
+  // Open Graph + Twitter Card, derived from existing title/description/canonical.
+  if (!/property=["']og:title["']/i.test(out)) {
+    const title = (out.match(/<title>([\s\S]*?)<\/title>/i) || [,"LyDia \u2014 Daily MLB Model"])[1].trim();
+    const desc = (out.match(/<meta name=["']description["'] content=["']([^"']*)["']/i) || [,"Daily MLB moneyline model previews, transparent results, and research tools."])[1];
+    const canon = (out.match(/<link rel=["']canonical["'] href=["']([^"']*)["']/i) || [,"https://mlbedges.com/" + rel.replace(/index\.html$/, "")])[1];
+    const block = `<meta property="og:type" content="website">
+<meta property="og:site_name" content="LyDia">
+<meta property="og:title" content="${escAttr(title)}">
+<meta property="og:description" content="${escAttr(desc)}">
+<meta property="og:url" content="${escAttr(canon)}">
+<meta property="og:image" content="${OG_IMAGE}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${escAttr(title)}">
+<meta name="twitter:description" content="${escAttr(desc)}">
+<meta name="twitter:image" content="${OG_IMAGE}">
+`;
+    if (/<\/title>/i.test(out)) out = out.replace(/<\/title>/i, `</title>\n${block}`);
+    else out = out.replace(/<head([^>]*)>/i, `<head$1>\n${block}`);
+  }
+  return out;
+}
+
+function escAttr(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }

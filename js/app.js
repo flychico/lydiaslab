@@ -91,9 +91,32 @@ function renderNav(active) {
 function renderFooter() {
   const el = document.getElementById("footer");
   if (!el) return;
-  el.innerHTML = "LyDia — analysis and education only, not betting advice. "
+  el.innerHTML = '<div style="max-width:420px;margin:0 auto 14px">'
+    + '<form id="footer-free-form" style="display:flex;gap:8px">'
+    + '<input type="email" id="footer-free-email" required placeholder="you@email.com" style="flex:1;min-width:0">'
+    + '<button class="btn blue" type="submit">Free daily card</button>'
+    + '</form>'
+    + '<div class="dim small" style="margin-top:5px">The morning slate and model reads, free by email. Unsubscribe anytime.</div>'
+    + '</div>'
+    + "LyDia — analysis and education only, not betting advice. "
     + "Odds and stats can change quickly; always verify with your sportsbook. "
     + "Please bet responsibly. If gambling stops being fun, call 1-800-GAMBLER.";
+  const form = document.getElementById("footer-free-form");
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const email = document.getElementById("footer-free-email").value.trim();
+    if (!email) return;
+    try {
+      await fetch("/", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ "form-name": "free-preview", email: email }).toString()
+      });
+      form.outerHTML = '<div class="small" style="color:#2f9e44;font-weight:600">You\u2019re on the list — first card arrives tomorrow morning. \u26be</div>';
+    } catch (err) {
+      form.outerHTML = '<div class="small dim">Signup hiccup — try the form on the homepage.</div>';
+    }
+  });
 }
 
 function escapeHtml(s) {

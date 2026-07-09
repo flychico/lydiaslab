@@ -210,6 +210,13 @@ function rebuildResultsPage(results) {
   let W = 0, L = 0, U = 0, hasUnits = false;
   for (const d of days) { W += d.wins; L += d.losses; if (d.units !== null) { U += d.units; hasUnits = true; } }
   const winPct = W + L ? (W / (W + L) * 100).toFixed(1) : "—";
+  // Official record: moneyline results only, on days graded under the current official model.
+  let OW = 0, OL = 0;
+  for (const d of days) {
+    if (d.current_official_model !== "moneyline_only") continue;
+    for (const p of d.picks) { if (p.mlResult === "W") OW++; else if (p.mlResult === "L") OL++; }
+  }
+  const oPct = OW + OL ? (OW / (OW + OL) * 100).toFixed(1) : "—";
 
   const pickLine = p => {
     const parts = [];
@@ -222,7 +229,7 @@ function rebuildResultsPage(results) {
   };
 
   const dayRows = days.slice(0, 60).map(d => `<tr>
-    <td>${esc(niceDate(d.date))}</td>
+    <td>${esc(niceDate(d.date))}${d.current_official_model !== "moneyline_only" ? ' <span class="dim small">(legacy markets)</span>' : ""}</td>
     <td class="num">${d.wins}-${d.losses}</td>
     <td class="num">${d.wins + d.losses ? (d.wins / (d.wins + d.losses) * 100).toFixed(0) + "%" : "—"}</td>
     <td class="num ${d.units > 0 ? "pos-text" : d.units < 0 ? "neg-text" : ""}">${d.units !== null ? (d.units > 0 ? "+" : "") + d.units.toFixed(2) : "—"}</td>
@@ -235,7 +242,7 @@ function rebuildResultsPage(results) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Results — verified pick record | LyDia</title>
-<meta name="description" content="LyDia verified results: ${W}-${L} (${winPct}%) — current official model is moneyline-only, with older legacy totals and run-line history labeled separately.">
+<meta name="description" content="LyDia verified results: official moneyline model ${OW}-${OL}, all graded markets including legacy ${W}-${L} — every pick graded in public, wins and losses alike.">
 <link rel="canonical" href="https://mlbedges.com/results/">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
@@ -250,8 +257,8 @@ function rebuildResultsPage(results) {
   <div class="loading">Loading live pick results...</div>
 </section>
 <div class="kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px">
-  <div class="card"><div class="dim small">RECORD</div><div style="font-size:1.6rem;font-weight:700">${W}-${L}</div></div>
-  <div class="card"><div class="dim small">WIN RATE</div><div style="font-size:1.6rem;font-weight:700">${winPct}%</div></div>
+  <div class="card"><div class="dim small">OFFICIAL RECORD (moneyline model)</div><div style="font-size:1.6rem;font-weight:700">${OW}-${OL}</div><div class="dim small">${oPct === "—" ? "no graded official picks yet" : oPct + "% win rate"}</div></div>
+  <div class="card"><div class="dim small">ALL GRADED MARKETS (incl. legacy)</div><div style="font-size:1.6rem;font-weight:700">${W}-${L}</div><div class="dim small">${winPct === "—" ? "—" : winPct + "% win rate"}</div></div>
   <div class="card"><div class="dim small">UNITS (flat 1u @ best price)</div><div style="font-size:1.6rem;font-weight:700" class="${U > 0 ? "pos-text" : U < 0 ? "neg-text" : ""}">${hasUnits ? (U > 0 ? "+" : "") + U.toFixed(2) : "—"}</div></div>
   <div class="card"><div class="dim small">DAYS TRACKED</div><div style="font-size:1.6rem;font-weight:700">${days.length}</div></div>
 </div>

@@ -1,9 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XVWTMDNBJK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XVWTMDNBJK');
+</script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LyDia — Daily MLB Picks, Previews &amp; Results</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="LyDia">
+<meta property="og:title" content="LyDia — Daily MLB Picks, Previews &amp;amp; Results">
+<meta property="og:description" content="LyDia publishes daily MLB moneyline model previews, transparent results, and research tools for pitcher matchups, bullpen fatigue, and market movement.">
+<meta property="og:url" content="https://mlbedges.com/">
+<meta property="og:image" content="https://mlbedges.com/img/og-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="LyDia — Daily MLB Picks, Previews &amp;amp; Results">
+<meta name="twitter:description" content="LyDia publishes daily MLB moneyline model previews, transparent results, and research tools for pitcher matchups, bullpen fatigue, and market movement.">
+<meta name="twitter:image" content="https://mlbedges.com/img/og-card.png">
+
 <meta name="description" content="LyDia publishes daily MLB moneyline model previews, transparent results, and research tools for pitcher matchups, bullpen fatigue, and market movement.">
 <link rel="canonical" href="https://mlbedges.com/">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
@@ -76,7 +96,16 @@
       <p id="status-agent"><strong>Daily agent:</strong> loading…</p>
       <p id="status-picks"><strong>Official picks:</strong> loading…</p>
       <p id="status-record"><strong>Record:</strong> loading…</p>
-      <p style="margin-top:14px"><a class="btn blue" href="/membership/" style="width:100%;text-align:center">Get the member brief →</a></p>
+      <form name="free-preview" method="POST" data-netlify="true" netlify-honeypot="bot-field" style="margin-top:14px">
+        <p hidden><label>Don't fill this out: <input name="bot-field"></label></p>
+        <input type="hidden" name="form-name" value="free-preview">
+        <div style="display:flex;gap:8px">
+          <input type="email" name="email" required placeholder="you@email.com" style="flex:1;min-width:0">
+          <button class="btn blue" type="submit">Get the free daily card</button>
+        </div>
+        <p class="dim small" style="margin-top:6px">Free. Every morning's slate, model reads, and official-pick count — in your inbox before first pitch. Unsubscribe anytime.</p>
+      </form>
+      <p style="margin-top:14px"><a class="btn" href="/membership/" style="width:100%;text-align:center">Get the full member brief →</a></p>
       <p class="dim small" style="margin-top:8px">$30/month. Cancel anytime. Every result is graded in public.</p>
     </div>
   </section>
