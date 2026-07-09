@@ -59,8 +59,11 @@ jobs:
           SNAPSHOT_INPUT="${{ github.event.inputs.snapshot }}"
           node scripts/generate-member-lab.js --date "${{ steps.publish_date.outputs.date }}" --snapshot "${SNAPSHOT_INPUT:-posted}"
 
-      - name: Render previews from source data
+      - name: Render bettor-friendly previews
         run: node scripts/generate-previews.js "${{ steps.publish_date.outputs.date }}"
+
+      - name: Refresh LyDia Research Desk
+        run: node scripts/generate-research-desk.js
 
       - name: Verify generated data and public copy
         run: |
@@ -68,16 +71,17 @@ jobs:
           test -f "data/member-brief/$DATE_INPUT.json" || { echo "ERROR: member brief missing"; exit 1; }
           test -f "data/published-picks/$DATE_INPUT.json" || { echo "ERROR: official pick file missing"; exit 1; }
           test -f "previews/$DATE_INPUT.html" || { echo "ERROR: preview page missing"; exit 1; }
+          test -f "articles/index.html" || { echo "ERROR: Research Desk page missing"; exit 1; }
           node -e "const fs=require('fs'); const b=JSON.parse(fs.readFileSync('data/member-brief/$DATE_INPUT.json','utf8')); const p=JSON.parse(fs.readFileSync('data/published-picks/$DATE_INPUT.json','utf8')); if(!Array.isArray(b.games)||b.games.length===0) throw new Error('member brief has zero games'); if(!Array.isArray(p.picks)) throw new Error('official pick file has no picks array'); console.log('Games:', b.games.length, 'Official picks:', p.picks.length);"
           node scripts/assert-public-clean.js
-          echo "Source data and public copy verified."
+          echo "Source data, previews, and Research Desk verified."
 
       - name: Commit and push if changed
         run: |
           DATE_INPUT="${{ steps.publish_date.outputs.date }}"
           git config user.name "lydia-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add previews/ picks/ data/ sitemap.xml
+          git add previews/ picks/ articles/ data/ sitemap.xml
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else

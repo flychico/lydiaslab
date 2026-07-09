@@ -1,13 +1,14 @@
 name: Daily recap and grading
 
 # Backward-looking only. Safe to run unattended.
-# Grades yesterday's finished games, builds recap/SEO pages, and generates the learning summary.
-# It does NOT generate today's picks or email members. That happens in publish-picks.yml.
+# Grades yesterday's finished games, builds true-game recap/SEO pages,
+# generates the learning summary, and refreshes the Research Desk.
+# It does NOT generate today's picks or email members.
 
 on:
   schedule:
-    # GitHub Actions cron is ALWAYS UTC and does not observe DST or accept a timezone key.
-    # 11:35 UTC = 7:35 AM EDT (summer) / 6:35 AM EST (winter). Runs after all games are final.
+    # GitHub Actions cron is UTC.
+    # 11:35 UTC = 7:35 AM EDT / 6:35 AM EST.
     - cron: "35 11 * * *"
   workflow_dispatch: {}
 
@@ -40,35 +41,40 @@ jobs:
       - name: Grade yesterday's picks
         run: node scripts/grade-results.js
 
-      - name: Generate yesterday's recap
+      - name: Generate true-game recap
         run: node scripts/generate-recap.js
 
       - name: Generate learning summary
         run: node scripts/generate-learning-summary.js
+
+      - name: Refresh LyDia Research Desk
+        run: node scripts/generate-research-desk.js
 
       - name: Keep live results block on Results page
         run: |
           node scripts/dedupe-clv.js
           node scripts/inject-live-results.js
 
-      - name: Verify recap and learning generated
+      - name: Verify recap, learning, and research generated
         run: |
           test -f results/index.html || { echo "ERROR: results/index.html missing"; exit 1; }
           grep -q "<table" results/index.html || { echo "ERROR: no results table in results/index.html"; exit 1; }
           grep -q "Today's Pick Status" results/index.html || { echo "ERROR: live pick status block missing"; exit 1; }
           test -f learning/index.html || { echo "ERROR: learning/index.html missing"; exit 1; }
           test -f data/learning-summary.json || { echo "ERROR: learning summary missing"; exit 1; }
-          echo "Recap, results, and learning summary look good."
+          test -f articles/index.html || { echo "ERROR: Research Desk page missing"; exit 1; }
+          test -f data/research-desk.json || { echo "ERROR: Research Desk data missing"; exit 1; }
+          echo "Recap, results, learning summary, and Research Desk look good."
 
       - name: Commit and push if changed
         run: |
           git config user.name "lydia-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add results/ recaps/ learning/ data/ sitemap.xml
+          git add results/ recaps/ learning/ articles/ data/ sitemap.xml
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "Daily recap and learning $(TZ='America/New_York' date +%F)"
+            git commit -m "Daily recap, learning and research $(TZ='America/New_York' date +%F)"
             git pull --rebase
             git push
           fi
