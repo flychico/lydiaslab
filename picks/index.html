@@ -12,17 +12,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Model Picks | LyDia</title>
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="LyDia">
-<meta property="og:title" content="Model Picks | LyDia">
-<meta property="og:description" content="LyDia official MLB moneyline picks with model probability, market value, pitcher matchup, bullpen workload, and bettor-friendly reasoning.">
-<meta property="og:url" content="https://mlbedges.com/picks/">
-<meta property="og:image" content="https://mlbedges.com/img/og-card.png">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Model Picks | LyDia">
-<meta name="twitter:description" content="LyDia official MLB moneyline picks with model probability, market value, pitcher matchup, bullpen workload, and bettor-friendly reasoning.">
-<meta name="twitter:image" content="https://mlbedges.com/img/og-card.png">
-
 <meta name="description" content="LyDia official MLB moneyline picks with model probability, market value, pitcher matchup, bullpen workload, and bettor-friendly reasoning.">
 <link rel="canonical" href="https://mlbedges.com/picks/">
 <link rel="stylesheet" href="/css/style.css">
@@ -52,7 +41,7 @@
   <p class="subtitle">Official moneyline picks with the probability, price, pitching matchup, bullpen condition, and plain-English reason behind the decision.</p>
 
   <div class="notice">
-    <strong>How to read this page:</strong> Model probability tells you how often LyDia expects the team to win. Lab Score grades the quality of the full setup. An official pick needs both.
+    <strong>How to read this page:</strong> Model probability tells you how often LyDia expects the team to win. Lab Rating grades the quality of the full setup. An official pick needs both.
   </div>
 
   <div class="controls">
@@ -91,6 +80,7 @@ function shiftDay(n) {
 function pct(v) { return typeof v === "number" ? (v * 100).toFixed(1) + "%" : "-"; }
 function edge(v) { return typeof v === "number" ? (v >= 0 ? "+" : "") + (v * 100).toFixed(1) + "%" : "-"; }
 function odds(v) { return typeof v === "number" ? Odds.fmtAm(v) : "-"; }
+function labRating(v) { return typeof v === "number" ? (v / 10).toFixed(1) + "/10" : "-"; }
 function friendlyTime(iso) {
   if (!iso) return "";
   const d = new Date(iso);
@@ -230,7 +220,7 @@ function renderGame(g) {
     <div class="pick-line">
       <span class="badge ${cls}">${label}</span>
       <span><b>LyDia side:</b> ${escapeHtml(g.pick_team || "-")} Money Line</span>
-      <span><b>Lab Score:</b> ${g.lab_score ?? "-"}/100</span>
+      <span><b>Lab Rating:</b> ${labRating(g.lab_score)}</span>
     </div>
     <div class="metric-grid">
       <div class="metric-box"><div class="label">Model probability</div><div class="value">${pct(g.model_probability)}</div></div>
