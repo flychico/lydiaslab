@@ -172,6 +172,80 @@ const EX = [
   {id:"outdoor-run",n:"Running (outdoor)",p:"cardio",e:"bw",m:"Cardio",inc:0,u:"time"}
 ];
 const EXBY = {}; EX.forEach(e => EXBY[e.id] = e);
+/* Short form cues — shown on every exercise card */
+const CUES = {
+"bb-squat":"Brace hard, sit between your hips, drive the floor away. Depth over weight.",
+"goblet-squat":"Elbows inside knees at the bottom, chest tall.",
+"leg-press":"Full foot pressure, don't let hips roll off the pad.",
+"hack-squat":"Slow down, controlled up. Knees track over toes.",
+"bw-squat":"Tempo: 3s down, pause, up. Make easy reps hard.",
+"bb-deadlift":"Bar over mid-foot, wedge in, push the floor. Never round under load.",
+"rdl":"Soft knees, hips BACK until hamstrings scream, bar close.",
+"db-rdl":"Same hinge — dumbbells slide down the thighs.",
+"sumo-dl":"Knees out over toes, chest up, hips through at the top.",
+"back-ext":"Squeeze glutes at the top — don't hyperextend the spine.",
+"leg-curl":"Slow negative. Don't let the weight slam.",
+"hip-thrust":"Chin tucked, ribs down, squeeze glutes 1s at lockout.",
+"db-hip-thrust":"Same — dumbbell on hips, full lockout every rep.",
+"glute-bridge":"Drive through heels, posterior tilt at top.",
+"cable-kickback":"Hinge slightly, kick back and UP, control the return.",
+"hip-abduction":"Lean slightly forward, pause at full spread.",
+"frog-pump":"Soles together, pump through heels, high reps.",
+"kas-bridge":"Small range at lockout — constant glute tension.",
+"walking-lunge":"Long stride = glutes, short stride = quads. Torso tall.",
+"bulgarian":"Front foot far enough to keep shin vertical. Lean slightly forward for glutes.",
+"step-up":"Drive through the TOP foot — don't push off the floor leg.",
+"curtsy-lunge":"Cross behind and sit — feel the outer glute.",
+"bw-lunge":"Knee kisses the floor, push through the front heel.",
+"leg-ext":"Pause 1s at the top, control down.",
+"bb-bench":"Shoulder blades pinned, feet planted, bar to mid-chest, elbows ~45°.",
+"db-bench":"Deeper stretch than barbell — use it, control it.",
+"incline-db":"30° bench. Press up and slightly back.",
+"pushup":"Body one straight line, chest to floor, full lockout.",
+"dips":"Lean forward for chest, stay upright for triceps. Shoulders down.",
+"cable-fly":"Slight elbow bend held constant — hug a barrel.",
+"machine-chest":"Drive evenly, squeeze chest, don't bounce the stack.",
+"ohp":"Squeeze glutes, ribs down, press to lockout over ears.",
+"db-ohp":"Back supported, forearms vertical, no clang at top.",
+"pike-pushup":"Hips high, head to floor between hands.",
+"bb-row":"Hinge ~45°, pull to lower ribs, no body English.",
+"db-row":"Full stretch at bottom, elbow to hip, no twist.",
+"cable-row":"Chest up, pull to sternum, squeeze the blades.",
+"machine-row":"Chest on pad, elbows back, slow return.",
+"inverted-row":"Rigid plank, chest to bar.",
+"pullup":"Full hang, chest to bar, no kipping.",
+"lat-pulldown":"Slight lean back, bar to collarbone, elbows down not back.",
+"assisted-pullup":"Same as pull-up — reduce assist over time, that's the progression.",
+"straight-arm":"Arms nearly straight, sweep to thighs, feel the lats.",
+"lateral-raise":"Lead with elbows, pour the water at the top, LIGHT weight.",
+"cable-lateral":"Constant tension — stop just above shoulder height.",
+"rear-delt-fly":"Hinge, swing wide not back, thumbs slightly down.",
+"face-pull":"Pull to eyebrows, elbows high, external rotate at the end.",
+"bb-curl":"Elbows pinned to sides. Swinging = ego, not biceps.",
+"db-curl":"Full supination — rotate pinky up as you curl.",
+"hammer-curl":"Neutral grip, control the negative.",
+"tri-pushdown":"Elbows glued to ribs, full lockout, slow return.",
+"skullcrusher":"Lower to forehead/behind head, elbows still.",
+"oh-tri-ext":"Elbows by ears, deep stretch behind the head.",
+"plank":"Squeeze glutes + abs, don't sag or pike. Quality seconds only.",
+"hanging-knee":"No swing — curl the pelvis, not just the legs.",
+"cable-crunch":"Crunch the ribs to the pelvis, hips still.",
+"ab-wheel":"Ribs down, go only as far as you can control.",
+"russian-twist":"Rotate from the torso, feet down is fine.",
+"calf-raise":"Full stretch at bottom, 2s pause at top.",
+"db-calf":"Same — pause at the top or it's bouncing, not training."
+};
+/* Barbell exercises get a plate calculator (45 lb bar) */
+const BARBELL = new Set(["bb-squat","bb-deadlift","rdl","sumo-dl","hip-thrust","kas-bridge","bb-bench","ohp","bb-row","bb-curl","skullcrusher"]);
+function platesFor(w) {
+  w = Number(w);
+  if (!isFinite(w) || w < 45) return null;
+  if (w === 45) return "empty bar";
+  let side = (w - 45) / 2;
+  const out = [];
+  for (const p of [45, 35, 25, 10, 5, 2.5]) { while (side >= p - 0.01) { out.push(p); side -= p; } }
+  return out.length ? out.join(" + ") + " per side" + (side > 0.01 ? " (+" + side.toFixed(1) + ")" : "") : "collars only";
+}
 function hydrateCustom(){ (S.customEx || []).forEach(c => { if (!EXBY[c.id]) { EX.push(c); } EXBY[c.id] = c; }); }
 function addCustomExercise(name, unit){
   const c = { id: "custom-" + Date.now(), n: name.slice(0, 40), p: "custom", e: "bw", m: unit === "time" ? "Custom cardio" : "Custom", inc: unit === "time" ? 0 : 5, u: unit === "time" ? "time" : undefined };
@@ -287,6 +361,16 @@ function generatePlan(p){
       const scheme = isComp ? goal.compound : goal.accessory;
       exercises.push({ ex: pick.id, sets: scheme[0], lo: scheme[1], hi: scheme[2], rest: isComp ? REST.compound : REST.accessory });
     }
+    // Superset pairing: adjacent ACCESSORIES with different patterns alternate as a
+    // pair (A set, B set, rest). Time-efficient with no growth cost per the research;
+    // heavy compounds are never supersetted — they need full rest.
+    let ssid = 0;
+    for (let i = 0; i < exercises.length - 1; i++) {
+      const a = exercises[i], b = exercises[i + 1];
+      const pa = EXBY[a.ex] ? EXBY[a.ex].p : "", pb = EXBY[b.ex] ? EXBY[b.ex].p : "";
+      const ok = x => x && !COMPOUND.has(x) && x !== "cardio" && x !== "custom";
+      if (!a.ss && !b.ss && ok(pa) && ok(pb) && pa !== pb) { ssid++; a.ss = ssid; b.ss = ssid; }
+    }
     if (p.goal === "recomp") {
       const cardio = pool.filter(e => e.p === "cardio");
       if (cardio.length) {
@@ -310,10 +394,29 @@ function lastEntry(exId){
   }
   return null;
 }
+function lastSessions(exId, n){
+  const out = [];
+  for (let i = S.logs.length - 1; i >= 0 && out.length < n; i--) {
+    const en = S.logs[i].entries.find(x => x.ex === exId && x.sets.some(s => s.done));
+    if (en) out.push({ date: S.logs[i].date, best: Math.max(...en.sets.filter(s => s.done).map(s => e1rm(s.w, s.r))) });
+  }
+  return out; // newest first
+}
+function plateaued(exId){
+  const ses = lastSessions(exId, 3);
+  if (ses.length < 3) return false;
+  // no meaningful e1RM gain across the last 3 sessions
+  return ses[0].best <= ses[1].best * 1.01 && ses[1].best <= ses[2].best * 1.01;
+}
 function suggestFor(exId, lo, hi){
   const last = lastEntry(exId);
   const ex = EXBY[exId];
   if (!last || !ex || ex.u === "time") return null;
+  if (ex.inc > 0 && plateaued(exId)) {
+    const maxW = Math.max(...last.sets.map(s => s.w || 0));
+    const deload = Math.max(ex.inc, Math.round(maxW * 0.8 / 5) * 5);
+    return { text: "Plateaued 3 sessions — deload: " + deload + " lb this week, then build back. Backing off IS the plan.", w: deload, deload: true };
+  }
   const sets = last.sets;
   const maxW = Math.max(...sets.map(s => s.w || 0));
   if (!isFinite(maxW)) return null;
@@ -417,6 +520,7 @@ function renderToday(){
   <h1>Today</h1>
   <p class="dim small">${new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})} · ${streakText()}</p>
   ${doneToday ? `<div class="card"><b class="green">✓ Workout logged today.</b><div class="dim small">Muscles grow between sessions — rest is part of the program.</div></div>` : ""}
+  ${(() => { const stalled = [...new Set(S.plan.days.flatMap(d => d.exercises.map(e => e.ex)))].filter(id => EXBY[id] && EXBY[id].inc > 0 && plateaued(id)); return stalled.length >= 3 ? `<div class="card" style="border-color:var(--gold)"><b class="gold">Deload week suggested</b><div class="dim small">${stalled.length} lifts have stalled for 3 straight sessions (${stalled.slice(0, 3).map(id => EXBY[id].n).join(", ")}${stalled.length > 3 ? "…" : ""}). Take a week at ~80% weight — planned recovery is how plateaus break. Each stalled exercise already shows its deload weight.</div></div>` : ""; })()}
   <div class="card">
     <div class="exhead"><h3>${esc(day.name)}</h3><span class="dim small">${day.exercises.length} exercises</span></div>
     ${day.exercises.map(s => { const ex = EXBY[s.ex]; return `<div class="exline"><span>${esc(ex.n)}</span><span class="dim">${s.sets}×${s.lo}–${s.hi}</span></div>`; }).join("")}
@@ -441,31 +545,53 @@ function startWorkout(dayIdx){
       const sug = suggestFor(s.ex, s.lo, s.hi);
       const le = lastEntry(s.ex);
       const w = sug && sug.w ? sug.w : (le ? Math.max(...le.sets.map(x => x.w || 0)) : "");
-      return { ex: s.ex, lo: s.lo, hi: s.hi, rest: s.rest || 120, sets: Array.from({length: s.sets}, () => ({ w: w === "" ? "" : w, r: "", done: false })) };
-    })
+      return { ex: s.ex, lo: s.lo, hi: s.hi, rest: s.rest || 120, ss: s.ss || null, sets: Array.from({length: s.sets}, () => ({ w: w === "" ? "" : w, r: "", done: false })) };
+    }),
+    cur: 0
   };
   save(); render();
+}
+function groupOf(a, i){
+  // indices of the superset group containing entry i (or just [i])
+  const ss = a.entries[i] && a.entries[i].ss;
+  if (!ss) return [i];
+  return a.entries.map((e, j) => e.ss === ss ? j : -1).filter(j => j >= 0);
+}
+function entryDone(en){ return en.sets.every(st => st.done); }
+function nextIncomplete(a){
+  for (let i = 0; i < a.entries.length; i++) if (!entryDone(a.entries[i])) return i;
+  return -1;
 }
 
 /* ---- Active workout ---- */
 function renderWorkout(){
   const a = S.active;
   const day = S.plan.days[a.dayIdx];
+  if (a.cur === undefined || a.cur === null) a.cur = 0;
+  if (entryDone(a.entries[a.cur] || { sets: [] }) ) { const n = nextIncomplete(a); if (n >= 0) a.cur = n; }
   const mins = Math.floor((Date.now() - a.start) / 60000);
-  V.innerHTML = `
-  <div class="exhead"><h1>${esc(day.name)}</h1><span class="dim small">${mins}m</span></div>
-  ${a.entries.map((en, ei) => {
+  const doneCount = a.entries.filter(entryDone).length;
+  const group = groupOf(a, a.cur);
+  const isSS = group.length > 1;
+
+  const exCard = (ei, ssTag) => {
+    const en = a.entries[ei];
     const ex = EXBY[en.ex];
     const last = lastEntry(en.ex);
     const sug = suggestFor(en.ex, en.lo, en.hi);
-    return `<div class="card">
-      <div class="exhead"><h3>${esc(ex.n)}</h3><span class="dim small">${ex.u === "time" ? en.lo + "–" + en.hi + " min" : en.lo + "–" + en.hi + " reps · rest " + Math.round((en.rest||120)/60*10)/10 + "m"}</span></div>
-      <div class="dim small" style="margin-bottom:6px">${esc(ex.m)}</div>
-      ${ex.u === "time"
+    const isTime = ex && ex.u === "time";
+    return `<div class="card" style="border-color:var(--pink)">
+      ${ssTag ? `<div class="small" style="color:var(--blue);font-weight:800;letter-spacing:.04em">${ssTag}</div>` : ""}
+      <div class="exhead"><h3>${esc(ex.n)}</h3><span class="dim small">${isTime ? en.lo + "–" + en.hi + " min" : en.lo + "–" + en.hi + " reps"}</span></div>
+      <div class="dim small" style="margin-bottom:4px">${esc(ex.m)}</div>
+      ${CUES[en.ex] ? `<div class="small" style="font-style:italic;color:var(--dim);margin-bottom:6px">☝ ${esc(CUES[en.ex])} <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(ex.n + " form")}" target="_blank" rel="noopener" style="color:var(--blue);font-style:normal">demo ↗</a></div>` : ""}
+      ${isTime
         ? (last ? `<div class="lastinfo">Last (${last.date.slice(5)}): ${last.sets.map(s => s.r + " min").join(" · ")}</div>` : "")
         : last ? `<div class="lastinfo">Last (${last.date.slice(5)}): ${last.sets.map(s => `${s.w || "bw"}×${s.r}`).join(" · ")}</div>` : `<div class="lastinfo">First time — pick a weight you could do ~${en.hi + 2} reps with, stop at ${en.hi}</div>`}
-      ${sug ? `<div class="suggest">▲ ${esc(sug.text)}</div>` : ""}
-      ${en.sets.map((st, si) => EXBY[en.ex] && EXBY[en.ex].u === "time" ? `<div class="setrow" style="grid-template-columns:34px 1fr 44px">
+      ${sug ? `<div class="suggest" ${sug.deload ? 'style="color:var(--red)"' : ""}>▲ ${esc(sug.text)}</div>` : ""}
+      ${(() => { const w0 = Number(en.sets[0] && en.sets[0].w); if (!COMPOUND.has(ex.p) || !isFinite(w0) || w0 < 95 || ex.u === "time") return ""; const ramp = [[Math.max(45, Math.round(w0 * 0.4 / 5) * 5), 8], [Math.round(w0 * 0.6 / 5) * 5, 5], [Math.round(w0 * 0.8 / 5) * 5, 3]]; return `<div class="small dim" style="background:var(--bg2);border-radius:8px;padding:6px 9px;margin-bottom:8px"><b>Warm-up ramp</b> (not logged): ${ramp.map(r => r[0] + "×" + r[1]).join(" → ")} → work sets</div>`; })()}
+      ${(() => { const w0 = Number(en.sets[0] && en.sets[0].w); const pl = BARBELL.has(en.ex) ? platesFor(w0) : null; return pl ? `<div class="small dim" style="margin-bottom:6px">🏋️ ${w0} lb = ${pl}</div>` : ""; })()}
+      ${en.sets.map((st, si) => isTime ? `<div class="setrow" style="grid-template-columns:34px 1fr 44px">
         <div class="setnum">${si + 1}</div>
         <input type="number" inputmode="numeric" placeholder="minutes" value="${st.r}" onchange="setVal(${ei},${si},'r',this.value)">
         <button class="chk ${st.done ? "done" : ""}" onclick="toggleSet(${ei},${si})">✓</button>
@@ -482,20 +608,55 @@ function renderWorkout(){
         <button class="btn ghost small-btn" onclick="dropSet(${ei})">− set</button>
       </div>
     </div>`;
-  }).join("")}
-  <button class="btn full" onclick="finishWorkout()">Finish workout ✓</button>
+  };
+
+  const queue = a.entries.map((en, i) => ({ en, i }))
+    .filter(({ en, i }) => !group.includes(i) && !entryDone(en));
+  const doneList = a.entries.map((en, i) => ({ en, i })).filter(({ en }) => entryDone(en));
+
+  V.innerHTML = `
+  <div class="exhead"><h1>${esc(day.name)}</h1><span class="dim small">${mins}m · ${doneCount}/${a.entries.length} done</span></div>
+  ${isSS ? `<p class="dim small" style="margin-bottom:8px">Superset: alternate — one set of each, then rest. No rest between the pair.</p>` : ""}
+  ${group.map((gi, k) => exCard(gi, isSS ? "⇄ SUPERSET " + String.fromCharCode(65 + k) : null)).join("")}
+  ${queue.length ? `<h2>Up next <span class="dim small" style="font-weight:400">· machine taken? tap any exercise to do it now</span></h2>` : ""}
+  ${queue.map(({ en, i }) => { const ex = EXBY[en.ex]; return `<div class="card daycard" onclick="jumpToExercise(${i})">
+    <b>${esc(ex.n)}</b> <span class="dim small">· ${en.sets.length}×${en.lo}–${en.hi}${en.ss ? " · superset pair" : ""}</span>
+    <span style="float:right;color:var(--blue);font-weight:700">do now →</span></div>`; }).join("")}
+  ${doneList.length ? `<h2 class="dim">Completed</h2>` + doneList.map(({ en }) => { const ex = EXBY[en.ex]; return `<div class="exline"><span>✓ ${esc(ex.n)}</span><span class="dim small">${en.sets.filter(s => s.done).map(s => (s.w || "bw") + "×" + s.r).join(" · ")}</span></div>`; }).join("") : ""}
+  <button class="btn full" style="margin-top:14px" onclick="finishWorkout()">Finish workout ✓</button>
   <button class="btn full danger" style="margin-top:8px" onclick="cancelWorkout()">Discard</button>
   <div id="swapmodal"></div>`;
 }
+function jumpToExercise(i){
+  S.active.cur = i; save(); render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
 function setVal(ei, si, k, v){ S.active.entries[ei].sets[si][k] = v === "" ? "" : Number(v); save(); }
 function toggleSet(ei, si){
-  const en = S.active.entries[ei];
+  const a = S.active;
+  const en = a.entries[ei];
   const st = en.sets[si];
   const isTime = EXBY[en.ex] && EXBY[en.ex].u === "time";
   st.done = !st.done;
   if (st.done && st.r === "") st.r = isTime ? en.lo : en.hi;
+
+  let advanced = false;
+  if (st.done) {
+    const group = groupOf(a, a.cur);
+    const groupDone = group.every(gi => entryDone(a.entries[gi]));
+    if (groupDone) {
+      const n = nextIncomplete(a);
+      if (n >= 0) { a.cur = n; advanced = true; }
+    }
+  }
   save(); render();
-  if (st.done && !isTime) startRest(en.rest || 120);
+  if (advanced) { toast("Next: " + EXBY[a.entries[a.cur].ex].n); window.scrollTo({ top: 0, behavior: "smooth" }); stopRest(); return; }
+  if (st.done && !isTime) {
+    // superset: no rest between the pair — rest only after the LAST exercise of the group's set
+    const group = groupOf(a, ei);
+    if (group.length > 1 && ei !== group[group.length - 1]) return;
+    startRest(group.length > 1 ? 90 : (en.rest || 120));
+  }
 }
 function addSet(ei){ const s = S.active.entries[ei].sets; s.push({ w: s[s.length-1] ? s[s.length-1].w : "", r: "", done: false }); save(); render(); }
 function dropSet(ei){ const s = S.active.entries[ei].sets; if (s.length > 1) s.pop(); save(); render(); }
@@ -548,7 +709,7 @@ function renderPlan(){
   <p class="dim small">${esc(planLabel())} · created ${S.plan.created}</p>
   ${S.plan.days.map((d, di) => `<div class="card">
     <div class="exhead"><h3>${esc(d.name)}</h3></div>
-    ${d.exercises.map((s, si) => { const ex = EXBY[s.ex] || { n: s.ex, u: null }; return `<div class="exline"><span>${esc(ex.n)}</span>
+    ${d.exercises.map((s, si) => { const ex = EXBY[s.ex] || { n: s.ex, u: null }; return `<div class="exline"><span>${s.ss ? '<span style="color:var(--blue);font-weight:800">⇄</span> ' : ""}${esc(ex.n)}${s.ss ? ' <span class="dim small">(superset)</span>' : ""}</span>
       <span class="dim">${ex.u === "time" ? s.lo + "–" + s.hi + "m" : s.sets + "×" + s.lo + "–" + s.hi}
       <span class="blue" style="cursor:pointer;margin-left:8px" onclick="planSwap(${di},${si})">swap</span>
       <span class="red" style="cursor:pointer;margin-left:8px" onclick="planRemove(${di},${si})">×</span></span></div>`; }).join("")}
@@ -639,18 +800,31 @@ function renderProgress(){
   <div class="card"><h3>Weekly volume (lb lifted)</h3><canvas id="volchart" width="520" height="150"></canvas>
   ${weeks.length ? "" : '<p class="dim small">Log workouts to see volume trends.</p>'}</div>
   <div class="card"><h3>Personal records <span class="dim small">(best est. 1RM)</span></h3>
-    ${prRows.length ? `<table><thead><tr><th>Exercise</th><th class="num">Best set</th><th class="num">e1RM</th></tr></thead><tbody>
-    ${prRows.map(([id, p]) => `<tr><td>${esc(EXBY[id] ? EXBY[id].n : id)}</td><td class="num">${p.w}×${p.r}</td><td class="num gold"><b>${Math.round(p.v)}</b></td></tr>`).join("")}</tbody></table>` : '<p class="dim small">PRs appear after your first logged workout.</p>'}
+    ${prRows.length ? `<p class="dim small" style="margin-bottom:6px">Tap any lift to see its strength curve.</p><table><thead><tr><th>Exercise</th><th class="num">Best set</th><th class="num">e1RM</th></tr></thead><tbody>
+    ${prRows.map(([id, p]) => `<tr style="cursor:pointer" onclick="exChart('${id}')"><td style="color:var(--blue);font-weight:600">${esc(EXBY[id] ? EXBY[id].n : id)}</td><td class="num">${p.w}×${p.r}</td><td class="num gold"><b>${Math.round(p.v)}</b></td></tr>`).join("")}</tbody></table>` : '<p class="dim small">PRs appear after your first logged workout.</p>'}
   </div>
   <div class="card"><h3>Body weight ${b ? `<span class="dim small">· BMI ${b}</span>` : ""}</h3>
     <div style="display:flex;gap:8px;margin:8px 0"><input type="number" inputmode="decimal" id="bw-in" placeholder="lbs today"><button class="btn small-btn" onclick="logBw()">Log</button></div>
     ${S.weights.length ? `<canvas id="bwchart" width="520" height="150"></canvas><div class="dim small">${S.weights.length} entries · latest ${S.weights[S.weights.length-1].lbs} lb (${S.weights[S.weights.length-1].date})</div>` : '<p class="dim small">Track weekly for the trend line.</p>'}
   </div>
+  <div id="chartmodal"></div>
   <div class="card"><h3>History</h3>
     ${logs.length ? [...logs].reverse().slice(0, 20).map(l => `<div class="exline"><span>${l.date} · <b>${esc(l.dayName || "Workout")}</b></span><span class="dim">${l.entries.reduce((a, en) => a + en.sets.length, 0)} sets · ${l.min}m</span></div>`).join("") : '<p class="dim small">No workouts yet.</p>'}
   </div>`;
   drawBars("volchart", weeks.map(w => w.vol), weeks.map(w => w.label));
   if (S.weights.length) drawLine("bwchart", S.weights.map(w => w.lbs));
+}
+function exChart(exId){
+  const ses = lastSessions(exId, 30).reverse(); // oldest → newest
+  const ex = EXBY[exId];
+  document.getElementById("chartmodal").innerHTML = `<div class="modal" onclick="if(event.target===this)this.parentNode.innerHTML=''">
+    <div class="inner"><h3 style="margin-bottom:2px">${esc(ex ? ex.n : exId)}</h3>
+    <p class="dim small" style="margin-bottom:10px">Estimated 1RM per session — the line that should climb (with planned dips for deloads).</p>
+    <canvas id="exchart" width="520" height="170"></canvas>
+    <div class="small dim" style="margin-top:8px">${ses.length} sessions · best <b class="gold">${Math.round(Math.max(...ses.map(x => x.best)))}</b> · latest ${Math.round(ses[ses.length - 1].best)} (${ses[ses.length - 1].date})</div>
+    ${plateaued(exId) ? '<div class="small" style="color:var(--red);margin-top:4px">Currently plateaued — deload suggested on your next session.</div>' : ""}
+    </div></div>`;
+  drawLine("exchart", ses.map(x => Math.round(x.best)));
 }
 function weeklyVolume(logs){
   const byWeek = {};
