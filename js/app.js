@@ -67,11 +67,10 @@ const ApiKey = {
 function renderNav(active) {
   const links = [
     ["/", "Home"],
-    ["/dashboard/", "Dashboard"],
+    ["/dashboard/", "Scoreboard"],
     ["/picks/", "Picks"],
     ["/previews/", "Previews"],
     ["/results/", "Results"],
-    ["/odds/", "Odds"],
     ["/tools/", "Lab"],
     ["/stats/", "Stats"],
     ["/recaps/", "Recap"],

@@ -186,7 +186,7 @@ ${links || '<p class="dim">No preview archive is available yet.</p>'}
   fs.writeFileSync(path.join(dir, "index.html"), html, "utf8");
 }
 function rebuildSitemap() {
-  const staticPages = ["", "dashboard/", "picks/", "odds/", "tools/", "stats/", "recaps/", "articles/", "membership/", "results/", "previews/", "member-brief/", "tools/market/",
+  const staticPages = ["", "dashboard/", "picks/", "tools/", "stats/", "recaps/", "articles/", "membership/", "results/", "previews/", "member-brief/",
     "mlb-betting-edge-explained/", "no-vig-odds-calculator-guide/", "how-to-find-value-in-mlb-moneylines/",
     "closing-line-value-mlb-betting/", "mlb-run-line-vs-moneyline/", "mlb-bullpen-fatigue-betting/",
     "mlb-park-factors-betting-guide/", "mlb-pitching-metrics-for-betting/"];

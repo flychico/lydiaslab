@@ -251,7 +251,7 @@ async function main() {
     const score = `${teamShort(story.a.team.name)} ${story.a.score}, ${teamShort(story.h.team.name)} ${story.h.score}`;
     body += `<article class="recap-game"><h2>${esc(story.headline)}</h2><div class="score">${esc(score)}</div><p>${esc(story.paragraph)}</p></article>\n`;
   }
-  body += `<p class="dim small">Generated from official MLB game data. <a href="/recaps/">All recaps</a> · <a href="/picks/">Today's model picks</a> · <a href="/odds/">Live odds</a></p>`;
+  body += `<p class="dim small">Generated from official MLB game data. <a href="/recaps/">All recaps</a> · <a href="/picks/">Today's model picks</a></p>`;
 
   fs.mkdirSync(RECAP_DIR, { recursive: true });
   const outFile = path.join(RECAP_DIR, `${DATE}.html`);
@@ -270,7 +270,7 @@ async function main() {
     `<h1>Daily MLB Recaps</h1>\n<p class="subtitle">Not just final scores. The performances, rallies, pitching gems, home runs, and moments that decided each game.</p>\n<div class="card archive-list">\n${list}\n</div>`,
     `${SITE}/recaps/`));
 
-  const staticPages = ["", "dashboard/", "picks/", "previews/", "results/", "odds/", "tools/", "stats/", "recaps/", "articles/", "membership/", "member-brief/", "tools/market/", "learning/"];
+  const staticPages = ["", "dashboard/", "picks/", "previews/", "results/", "tools/", "stats/", "recaps/", "articles/", "membership/", "member-brief/", "learning/"];
   const previewDir = path.join(ROOT, "previews");
   const previewPosts = fs.existsSync(previewDir) ? fs.readdirSync(previewDir).filter(f => /^\d{4}-\d{2}-\d{2}\.html$/.test(f)).sort().reverse().map(f => `previews/${f}`) : [];
   const urls = staticPages.map(p => `${SITE}/${p}`).concat(posts.map(f => `${SITE}/recaps/${f}`)).concat(previewPosts.map(p => `${SITE}/${p}`));

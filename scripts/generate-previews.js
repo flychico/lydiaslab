@@ -213,7 +213,7 @@ ${links.join("\n")}
 }
 
 function updateSitemap() {
-  const staticPages = ["", "dashboard/", "picks/", "odds/", "tools/", "stats/", "recaps/", "articles/", "membership/", "results/", "previews/", "member-brief/", "tools/market/", "learning/",
+  const staticPages = ["", "dashboard/", "picks/", "tools/", "stats/", "recaps/", "articles/", "membership/", "results/", "previews/", "member-brief/", "learning/",
     "mlb-betting-edge-explained/", "no-vig-odds-calculator-guide/", "how-to-find-value-in-mlb-moneylines/",
     "closing-line-value-mlb-betting/", "mlb-run-line-vs-moneyline/", "mlb-bullpen-fatigue-betting/",
     "mlb-park-factors-betting-guide/", "mlb-pitching-metrics-for-betting/"];
