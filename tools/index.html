@@ -1,184 +1,330 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-XVWTMDNBJK"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-XVWTMDNBJK');
-</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LyDia's Lab — MLB Research Tools</title>
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="LyDia">
-<meta property="og:title" content="LyDia's Lab — MLB Research Tools">
-<meta property="og:description" content="LyDia">
-<meta property="og:url" content="https://mlbedges.com/tools/">
-<meta property="og:image" content="https://mlbedges.com/img/og-card.png">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="LyDia's Lab — MLB Research Tools">
-<meta name="twitter:description" content="LyDia">
-<meta name="twitter:image" content="https://mlbedges.com/img/og-card.png">
-
-<meta name="description" content="LyDia's Lab gives MLB members research tools for pitcher matchups, bullpen fatigue, market movement, Lab Score, and odds value checks.">
-<link rel="canonical" href="https://mlbedges.com/tools/">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
+<title>Offense Matchup Tool — LyDia's Lab</title>
+<meta name="description" content="Compare both offenses in every MLB game: recent form vs season baseline, run scoring, strikeout rate, and how each lineup performs against tonight's starter handedness.">
+<link rel="canonical" href="https://mlbedges.com/tools/offense-matchups/">
 <link rel="stylesheet" href="/css/style.css">
 <style>
-.lab-hero { display:grid; grid-template-columns:1.2fr .8fr; gap:18px; align-items:stretch; margin-bottom:20px; }
-.lab-hero .card { border-color:rgba(214,80,142,.35); }
-.lab-kicker { color:var(--accent); font-size:.78rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em; margin-bottom:5px; }
-.tool-card { display:flex; flex-direction:column; gap:8px; }
-.tool-card h3 { margin:0; }
-.tool-card p { margin-bottom:6px; }
-.tool-card .btn-row { margin-top:auto; display:flex; gap:8px; flex-wrap:wrap; }
-.tool-status { font-size:.78rem; color:var(--text-dim); }
-.tools-divider { margin-top:32px; }
-@media (max-width:760px){ .lab-hero{ grid-template-columns:1fr; } }
+.controls { display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:16px; }
+.controls .field { margin-bottom:0; }
+.window-pills { display:flex; gap:6px; }
+.wpill { border:1px solid var(--border); background:var(--bg-card); border-radius:20px; padding:6px 14px; font-size:.83rem; font-weight:700; cursor:pointer; color:var(--text-dim); }
+.wpill.on { background:var(--accent2); border-color:var(--accent2); color:#fff; }
+.match-card { margin-bottom:14px; }
+.match-head { display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; align-items:baseline; margin-bottom:10px; }
+.match-head .matchup { font-weight:800; font-size:1.05rem; }
+.team-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:10px; }
+.team-box { background:var(--bg-elev); border:1px solid var(--border); border-radius:var(--radius); padding:12px; overflow:hidden; }
+.team-box h3 { margin:0 0 2px; }
+.heat { font-weight:800; font-size:.9rem; }
+.stat-row { display:flex; justify-content:space-between; gap:8px; font-size:.88rem; border-top:1px solid var(--border); padding-top:5px; margin-top:5px; }
+.read { margin-top:10px; font-size:.88rem; color:var(--text-dim); }
+.hand-row { background:rgba(77,159,220,.08); border-radius:6px; padding:5px 8px; margin-top:8px; font-size:.85rem; }
+.tier { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:1px 7px; margin-left:6px; white-space:nowrap; }
+@media (max-width:720px){ .team-grid{ grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
 <nav id="nav"></nav>
 <main>
-  <div class="lab-hero">
-    <div class="card">
-      <div class="lab-kicker">Member research workspace</div>
-      <h1>LyDia's Lab</h1>
-      <p class="subtitle" style="margin-bottom:0">Daily MLB research tools built around the way LyDia reads a card: starting pitching, bullpen condition, market movement, Lab Score, and transparent value math.</p>
-    </div>
-    <div class="card">
-      <h3>Best member workflow</h3>
-      <p>Start with the Daily Member Brief, then drill into pitcher matchups and bullpen fatigue when a game needs more context.</p>
-      <p><a class="btn blue" href="/member-brief/">Open Daily Member Brief →</a></p>
-    </div>
-  </div>
+  <p class="eyebrow">LyDia's Lab</p>
+  <h1>Offense Matchup Tool</h1>
+  <p class="subtitle">Which lineup is hot, which is actually good, and how each hits the hand of tonight's opposing starter. Quality and heat are different things — this tool shows both.</p>
 
-  <h2>Member Lab</h2>
-  <div class="grid grid-2">
-    <div class="card tool-card">
-      <span class="badge pos">New</span>
-      <h3>Daily Member Brief</h3>
-      <p>One morning dashboard with official picks, Lab Score, pitcher edges, bullpen flags, market notes, and pass reasons.</p>
-      <div class="tool-status">Uses generated JSON from the member-lab workflow.</div>
-      <div class="btn-row"><a class="btn" href="/member-brief/">Open daily brief →</a></div>
+  <div class="controls">
+    <div class="field">
+      <label for="date-pick">Date</label>
+      <input type="date" id="date-pick">
     </div>
-
-    <div class="card tool-card">
-      <span class="badge pos">New</span>
-      <h3>Offense Matchup Tool</h3>
-      <p>Compare both lineups in every game: recent form vs season baseline, run scoring, and how each offense hits the hand of tonight's opposing starter.</p>
-      <p class="small dim">Uses live MLB team hitting stats and probable starters.</p>
-      <div class="btn-row"><a class="btn" href="/tools/offense-matchups/">Open offense matchups →</a></div>
-    </div>
-
-    <div class="card tool-card">
-      <span class="badge neutral">Live tool</span>
-      <h3>Pitcher Matchup Tool</h3>
-      <p>Compare every probable starter on today's MLB card with a clean edge score, strength label, and early-game read.</p>
-      <div class="tool-status">Uses MLB probable starters and season pitching stats.</div>
-      <div class="btn-row"><a class="btn" href="/tools/pitcher-matchups/">Open pitcher matchups →</a></div>
-    </div>
-
-    <div class="card tool-card">
-      <span class="badge neutral">Beta</span>
-      <h3>Bullpen Fatigue Index</h3>
-      <p>See which teams enter today with fresh, normal, tired, or high-risk bullpen profiles based on recent workload.</p>
-      <div class="tool-status">Version one estimates workload from recent game logs.</div>
-      <div class="btn-row"><a class="btn" href="/tools/bullpen-fatigue/">Open bullpen index →</a></div>
-    </div>
-  </div>
-
-  <h2 class="tools-divider">Utility Calculators</h2>
-  <p class="subtitle">Useful math tools, now in the right seat. They support the Lab; they are not the whole product.</p>
-
-  <div class="grid grid-3">
-    <div class="card">
-      <h3>Odds Converter</h3>
-      <p>American ↔ decimal ↔ implied probability.</p>
-      <div class="field">
-        <label for="conv-am">American odds</label>
-        <input type="number" id="conv-am" placeholder="-150">
+    <button onclick="shiftDay(0)">Today</button>
+    <button class="secondary" onclick="shiftDay(1)">Tomorrow</button>
+    <div>
+      <label>Form window</label>
+      <div class="window-pills">
+        <span class="wpill" data-w="7" onclick="setWindow(7)">7d</span>
+        <span class="wpill on" data-w="15" onclick="setWindow(15)">15d</span>
+        <span class="wpill" data-w="30" onclick="setWindow(30)">30d</span>
       </div>
-      <button onclick="runConvert()">Convert</button>
-      <div class="result-box" id="conv-out" hidden></div>
     </div>
-
-    <div class="card">
-      <h3>No-Vig Fair Odds</h3>
-      <p>Enter both sides of a moneyline to remove the book's margin.</p>
-      <div class="field">
-        <label for="nv-1">Side 1 odds</label>
-        <input type="number" id="nv-1" placeholder="-150">
-      </div>
-      <div class="field">
-        <label for="nv-2">Side 2 odds</label>
-        <input type="number" id="nv-2" placeholder="+130">
-      </div>
-      <button onclick="runNoVig()">Calculate</button>
-      <div class="result-box" id="nv-out" hidden></div>
-    </div>
-
-    <div class="card">
-      <h3>Expected Value</h3>
-      <p>Compare your estimated probability against the offered odds using neutral risk units.</p>
-      <div class="field">
-        <label for="ev-prob">Estimated win probability (%)</label>
-        <input type="number" id="ev-prob" placeholder="55" min="1" max="99" step="0.1">
-      </div>
-      <div class="field">
-        <label for="ev-odds">Offered American odds</label>
-        <input type="number" id="ev-odds" placeholder="-110">
-      </div>
-      <button onclick="runEV()">Calculate EV</button>
-      <div class="result-box" id="ev-out" hidden></div>
+    <div>
+      <label for="game-jump">Jump to game</label>
+      <select id="game-jump" onchange="jumpToGame(this.value)"><option value="">All games…</option></select>
     </div>
   </div>
 
   <div class="notice">
-    <strong>Lab workflow:</strong> read the Daily Member Brief first, then use the individual tools to understand why a game cleared the model, why it landed on the watchlist, or why LyDia passed.
+    <strong>How to read it:</strong> <b>OPS (window)</b> is quality right now; <b>Δ vs season</b> is heat — a bad offense can be hot and an elite one can be cold. Tier labels translate the decimals: every ~25 OPS points is one class of offense (.700 below avg · .750 solid · .800 good · .850 All-Star · .900 elite). <b>HOW a team is hot matters</b>: contact-driven heat holds up; strikeout-heavy power binges collapse. The <b>vs-hand line</b> is each lineup's full-season OPS against tonight's opposing starter's throwing hand.
   </div>
+
+  <div id="status"></div>
+  <div id="games"></div>
 </main>
-<footer id="footer"></footer><script src="/js/app.js"></script>
+<footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/tools/"); renderFooter();</script>
 <script>
-renderNav("/tools/"); renderFooter();
+const datePick = document.getElementById("date-pick");
+datePick.value = localISODate(new Date());
+datePick.addEventListener("change", load);
+let WINDOW = 15;
+let seasonBy = null, splitsBy = null; // cached across window changes
+load();
 
-function show(id, html) { const el = document.getElementById(id); el.hidden = false; el.innerHTML = html; }
-function bad(id, msg) { show(id, `<span class="neg-text">${msg}</span>`); }
+function localISODate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function shiftDay(n) {
+  const d = new Date(); d.setDate(d.getDate() + n);
+  datePick.value = localISODate(d);
+  load();
+}
+function setWindow(w) {
+  WINDOW = w;
+  document.querySelectorAll(".wpill").forEach(p => p.classList.toggle("on", Number(p.dataset.w) === w));
+  load();
+}
+function jumpToGame(pk) {
+  if (!pk) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+  const el = document.getElementById("og-" + pk);
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function f3(v){ return Number.isFinite(v) ? v.toFixed(3).replace(/^0/, "") : "—"; }
+function seasonYear(){ const d = new Date(datePick.value + "T12:00"); return d.getMonth() >= 2 ? d.getFullYear() : d.getFullYear() - 1; }
 
-function runConvert() {
-  const am = Number(document.getElementById("conv-am").value);
-  if (!am || Math.abs(am) < 100) return bad("conv-out", "Enter valid American odds with absolute value of at least 100.");
-  const dec = Odds.amToDec(am), p = Odds.amToProb(am);
-  show("conv-out", `American <strong>${Odds.fmtAm(am)}</strong> = decimal <strong>${dec.toFixed(3)}</strong>
-    = implied probability <strong>${Odds.fmtPct(p, 2)}</strong>.`);
+async function teamStats(params) {
+  const res = await fetch(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${seasonYear()}&` + params);
+  if (!res.ok) throw new Error("team stats HTTP " + res.status);
+  const data = await res.json();
+  return ((data.stats || [])[0] || {}).splits || [];
+}
+function shape(st) {
+  const pa = Number(st.plateAppearances) || 0;
+  return {
+    g: Number(st.gamesPlayed) || 0,
+    avg: Number(st.avg), obp: Number(st.obp), slg: Number(st.slg), ops: Number(st.ops),
+    rpg: st.gamesPlayed ? (Number(st.runs) || 0) / Number(st.gamesPlayed) : null,
+    kPct: pa ? (Number(st.strikeOuts) || 0) / pa : null,
+    hr: Number(st.homeRuns) || 0
+  };
 }
 
-function runNoVig() {
-  const a1 = Number(document.getElementById("nv-1").value);
-  const a2 = Number(document.getElementById("nv-2").value);
-  if (!a1 || !a2 || Math.abs(a1) < 100 || Math.abs(a2) < 100) return bad("nv-out", "Enter valid odds for both sides.");
-  const { p1, p2, vig } = Odds.noVig(a1, a2);
-  show("nv-out", `Market implied total: <strong>${Odds.fmtPct(Odds.amToProb(a1) + Odds.amToProb(a2), 2)}</strong>
-    (margin = <span class="neg-text">${Odds.fmtPct(vig, 2)}</span>)<br>
-    Fair probabilities: <strong>${Odds.fmtPct(p1, 2)}</strong> / <strong>${Odds.fmtPct(p2, 2)}</strong><br>
-    Fair odds: <strong>${Odds.fmtAm(Odds.probToAm(p1))}</strong> / <strong>${Odds.fmtAm(Odds.probToAm(p2))}</strong>`);
+async function load() {
+  const statusEl = document.getElementById("status");
+  const gamesEl = document.getElementById("games");
+  statusEl.innerHTML = `<div class="loading">Loading offense matchups…</div>`;
+  gamesEl.innerHTML = "";
+  const date = datePick.value;
+  try {
+    const end = new Date(date + "T12:00");
+    const start = new Date(end.getTime() - WINDOW * 86400000);
+    const [schedRes, windowSplits] = await Promise.all([
+      fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher`).then(r => r.json()),
+      teamStats(`stats=byDateRange&startDate=${localISODate(start)}&endDate=${localISODate(end)}`)
+    ]);
+    if (!seasonBy) {
+      const [seasonSplits, vl, vr] = await Promise.all([
+        teamStats("stats=season"),
+        teamStats("stats=statSplits&sitCodes=vl"),
+        teamStats("stats=statSplits&sitCodes=vr")
+      ]);
+      seasonBy = {}; for (const t of seasonSplits) seasonBy[t.team.id] = shape(t.stat);
+      splitsBy = {};
+      for (const t of vl) (splitsBy[t.team.id] = splitsBy[t.team.id] || {}).vl = Number(t.stat.ops);
+      for (const t of vr) (splitsBy[t.team.id] = splitsBy[t.team.id] || {}).vr = Number(t.stat.ops);
+    }
+    const windowBy = {}; for (const t of windowSplits) windowBy[t.team.id] = shape(t.stat);
+
+    const games = ((((schedRes || {}).dates || [])[0]) || {}).games || [];
+    if (!games.length) { statusEl.innerHTML = `<div class="notice">No MLB games scheduled for ${date}.</div>`; return; }
+    games.sort((a, b) => new Date(a.gameDate) - new Date(b.gameDate));
+
+    // starter throwing hands (one batched call)
+    const pids = [...new Set(games.flatMap(g => ["away","home"].map(s => g.teams[s].probablePitcher && g.teams[s].probablePitcher.id).filter(Boolean)))];
+    let hands = {};
+    if (pids.length) {
+      try {
+        const pd = await fetch(`https://statsapi.mlb.com/api/v1/people?personIds=${pids.join(",")}`).then(r => r.json());
+        for (const p of pd.people || []) hands[p.id] = { hand: (p.pitchHand || {}).code || null, name: p.fullName };
+      } catch(e) {}
+    }
+
+    statusEl.innerHTML = "";
+    gamesEl.innerHTML = games.map(g => renderGame(g, windowBy, hands)).join("");
+    const jump = document.getElementById("game-jump");
+    jump.innerHTML = '<option value="">All games…</option>' + games.map(g =>
+      `<option value="${g.gamePk}">${escapeHtml(g.teams.away.team.name)} @ ${escapeHtml(g.teams.home.team.name)}</option>`).join("");
+  } catch (e) {
+    statusEl.innerHTML = `<div class="notice warn">Could not load offense data (${escapeHtml(e.message)}).</div>`;
+  }
 }
 
-function runEV() {
-  const p = Number(document.getElementById("ev-prob").value) / 100;
-  const am = Number(document.getElementById("ev-odds").value);
-  if (!p || p <= 0 || p >= 1 || !am || Math.abs(am) < 100) return bad("ev-out", "Enter a probability from 1 to 99 and valid odds.");
-  const ev = Odds.ev(p, am);
-  const breakeven = Odds.amToProb(am);
-  const edge = p - breakeven;
-  const cls = ev > 0 ? "pos-text" : "neg-text";
-  show("ev-out", `Break-even probability at ${Odds.fmtAm(am)}: <strong>${Odds.fmtPct(breakeven, 2)}</strong><br>
-    Estimated edge: <span class="${cls}">${edge >= 0 ? "+" : ""}${Odds.fmtPct(edge, 2)}</span><br>
-    <span class="big-num ${cls}">EV: ${ev >= 0 ? "+" : "−"}${Math.abs(ev).toFixed(3)} units</span>
-    <span class="dim small"> per 1 risk unit, assuming the probability estimate is accurate.</span>`);
+/* ---- Tiers: translate the decimals into plain English ----
+   OPS tiers use the scout calibration: every ~25 points is a class of offense. */
+function opsTier(v) {
+  if (!Number.isFinite(v)) return null;
+  if (v >= 0.900) return { t: "elite", cls: "pos-text" };
+  if (v >= 0.850) return { t: "All-Star level", cls: "pos-text" };
+  if (v >= 0.800) return { t: "good", cls: "pos-text" };
+  if (v >= 0.750) return { t: "solid", cls: "" };
+  if (v >= 0.700) return { t: "below avg", cls: "neg-text" };
+  if (v >= 0.640) return { t: "weak", cls: "neg-text" };
+  return { t: "broken", cls: "neg-text" };
+}
+function kTier(v) { // league K% ≈ 22%
+  if (!Number.isFinite(v)) return null;
+  if (v < 0.19) return { t: "great contact", cls: "pos-text" };
+  if (v < 0.215) return { t: "good contact", cls: "pos-text" };
+  if (v < 0.24) return { t: "average", cls: "" };
+  if (v < 0.27) return { t: "whiff-prone", cls: "neg-text" };
+  return { t: "severe whiffs", cls: "neg-text" };
+}
+function rpgTier(v) { // league ≈ 4.5 R/G
+  if (!Number.isFinite(v)) return null;
+  if (v >= 5.5) return { t: "big scoring", cls: "pos-text" };
+  if (v >= 4.8) return { t: "above avg", cls: "pos-text" };
+  if (v >= 4.2) return { t: "average", cls: "" };
+  if (v >= 3.6) return { t: "light", cls: "neg-text" };
+  return { t: "starved", cls: "neg-text" };
+}
+function tierChip(tier) {
+  return tier ? ` <span class="tier ${tier.cls}">${tier.t}</span>` : "";
+}
+/* Heat now judges HOW a team is hot, not just how much:
+   contact-driven heat is sturdier than a strikeout-heavy power binge,
+   and extreme deltas in either direction are regression candidates. */
+function heatTag(d, w) {
+  if (!Number.isFinite(d)) return { txt: "—", cls: "dim", note: "" };
+  const whiffy = w && Number.isFinite(w.kPct) && w.kPct >= 0.24;
+  let note = "";
+  if (d >= 0.120) note = whiffy ? "extreme + strikeout-heavy — a fragile power binge, expect cooling" : "extreme heat — good form, but this pace never holds";
+  else if (d >= 0.060) note = whiffy ? "power binge profile (high K%) — the fragile kind of hot" : "healthy heat — contact-driven, the sturdier kind";
+  else if (d <= -0.120) note = "extreme cold — snapback likely, but regression has no schedule";
+  else if (d <= -0.060) note = "real slump — but priced in by now; the question is the number";
+  if (d >= 0.060) return { txt: "🔥 hot +" + f3(d), cls: "pos-text", note };
+  if (d >= 0.025) return { txt: "warming +" + f3(d), cls: "pos-text", note };
+  if (d <= -0.060) return { txt: "❄️ cold −" + f3(-d), cls: "neg-text", note };
+  if (d <= -0.025) return { txt: "cooling −" + f3(-d), cls: "neg-text", note };
+  return { txt: "steady " + (d >= 0 ? "+" : "−") + f3(Math.abs(d)), cls: "dim", note };
+}
+
+function teamBox(teamName, id, win, season, oppStarter) {
+  const w = win || {}, sn = season || {};
+  const delta = (Number.isFinite(w.ops) && Number.isFinite(sn.ops)) ? w.ops - sn.ops : null;
+  const heat = heatTag(delta, w);
+  const sp = splitsBy && splitsBy[id] ? splitsBy[id] : {};
+  let handLine = "";
+  if (oppStarter && oppStarter.hand) {
+    const vs = oppStarter.hand === "L" ? sp.vl : sp.vr;
+    const lg = oppStarter.hand === "L" ? "LHP" : "RHP";
+    handLine = `<div class="hand-row">vs ${lg} (season): <b>${f3(vs)}</b>${tierChip(opsTier(vs))} — faces ${oppStarter.hand === "L" ? "lefty" : "righty"} ${escapeHtml(oppStarter.name)}</div>`;
+  } else if (oppStarter === null) {
+    handLine = `<div class="hand-row dim">Opposing starter TBD — no handedness read yet</div>`;
+  }
+  return `<div class="team-box">
+    <h3>${escapeHtml(teamName)}</h3>
+    <div class="heat ${heat.cls}">${heat.txt}</div>
+    ${heat.note ? `<div class="small dim" style="margin-top:2px">${heat.note}</div>` : ""}
+    <div class="stat-row"><span>OPS (last ${WINDOW}d)</span><span><b>${f3(w.ops)}</b>${tierChip(opsTier(w.ops))}</span></div>
+    <div class="stat-row"><span>Season OPS</span><span><b>${f3(sn.ops)}</b>${tierChip(opsTier(sn.ops))}</span></div>
+    <div class="stat-row"><span>R/G (window)</span><span><b>${Number.isFinite(w.rpg) ? w.rpg.toFixed(1) : "—"}</b>${tierChip(rpgTier(w.rpg))}</span></div>
+    <div class="stat-row"><span>AVG (window)</span><b>${f3(w.avg)}</b></div>
+    <div class="stat-row"><span>K% (window)</span><span><b>${Number.isFinite(w.kPct) ? (w.kPct * 100).toFixed(1) + "%" : "—"}</b>${tierChip(kTier(w.kPct))}</span></div>
+    <div class="stat-row"><span>HR (window)</span><b>${w.hr ?? "—"}</b></div>
+    ${handLine}
+  </div>`;
+}
+
+/* Compose a specific, actionable read from this game's actual numbers.
+   Sentences are only included when the data earns them — no boilerplate. */
+function buildRead(aT, hT, aWin, hWin, aSn, hSn, aOpp, hOpp) {
+  if (!aWin || !hWin || !aSn || !hSn || !Number.isFinite(aWin.ops) || !Number.isFinite(hWin.ops)) {
+    return "Window data unavailable for one or both teams.";
+  }
+  const A = { name: aT.name, id: aT.id, w: aWin, sn: aSn, d: aWin.ops - aSn.ops, opp: aOpp };
+  const H = { name: hT.name, id: hT.id, w: hWin, sn: hSn, d: hWin.ops - hSn.ops, opp: hOpp };
+  const lead = A.w.ops >= H.w.ops ? A : H;
+  const trail = lead === A ? H : A;
+  const gap = lead.w.ops - trail.w.ops;
+  const parts = [];
+
+  // 1. What is happening
+  if (gap < 0.030) {
+    parts.push(`Neither lineup separates itself over the last ${WINDOW} days (${f3(A.w.ops)} vs ${f3(H.w.ops)} OPS).`);
+  } else {
+    const lt = opsTier(lead.w.ops), tt = opsTier(trail.w.ops);
+    parts.push(`${lead.name} have hit like a${lt && /^[aeiou]/i.test(lt.t) ? "n" : ""} ${lt ? lt.t : ""} offense over the last ${WINDOW} days (${f3(lead.w.ops)} OPS, ${Number.isFinite(lead.w.rpg) ? lead.w.rpg.toFixed(1) : "—"} R/G) while ${trail.name} have been ${tt ? tt.t : "quiet"} (${f3(trail.w.ops)}).`);
+  }
+
+  // 2. HOW it's happening — contact contrast, only when the K% gap is real
+  const aK = A.w.kPct, hK = H.w.kPct;
+  if (Number.isFinite(aK) && Number.isFinite(hK) && Math.abs(aK - hK) >= 0.05) {
+    const contact = aK < hK ? A : H, whiff = contact === A ? H : A;
+    if (contact === lead) {
+      parts.push(`The shape favors it holding: ${contact.name} are doing this with contact (${(contact.w.kPct * 100).toFixed(1)}% K) while ${whiff.name} are swinging through pitches (${(whiff.w.kPct * 100).toFixed(1)}%).`);
+    } else {
+      parts.push(`One caution: ${lead.name}'s production is strikeout-heavy (${(lead.w.kPct * 100).toFixed(1)}% K vs ${trail.name}'s ${(trail.w.kPct * 100).toFixed(1)}%) — power-binge heat fades fastest.`);
+    }
+  }
+
+  // 3. Sustainability — only for extreme deltas
+  for (const t of [lead, trail]) {
+    if (t.d >= 0.120) {
+      const cooled = (t.sn.ops + 0.030);
+      parts.push(`+${f3(t.d)} above their own baseline never holds — expect ${t.name} to cool toward the ${f3(t.sn.ops)} season level${cooled > trail.w.ops && t === lead && gap >= 0.03 ? ", though even the cooled version out-hits what " + trail.name + " are doing right now" : ""}.`);
+    } else if (t.d <= -0.120) {
+      parts.push(`${t.name} sitting ${f3(Math.abs(t.d))} under their own baseline are in a slump, not at a talent level, not a talent level — snapback is coming, it just keeps no schedule.`);
+    }
+  }
+
+  // 4. Tonight's matchup check — vs-hand vs the window story
+  for (const t of [lead, trail]) {
+    if (!t.opp || !t.opp.hand) continue;
+    const sp = splitsBy && splitsBy[t.id] ? splitsBy[t.id] : {};
+    const vs = t.opp.hand === "L" ? sp.vl : sp.vr;
+    if (!Number.isFinite(vs)) continue;
+    const lg = t.opp.hand === "L" ? "lefties" : "righties";
+    if (t === lead && t.d >= 0.05 && vs < t.sn.ops - 0.020) {
+      parts.push(`A check on the heat: against ${lg} like ${t.opp.name}, ${t.name} have hit just ${f3(vs)} all season — tonight's matchup blunts some of it.`);
+    } else if (t === trail && vs >= t.sn.ops + 0.030) {
+      parts.push(`${t.name}'s counter: they hit ${lg} well (${f3(vs)} season) and get one in ${t.opp.name}.`);
+    }
+  }
+
+  // 5. The angle — derived, not canned
+  const bothHot = A.d >= 0.05 && H.d >= 0.05, bothCold = A.d <= -0.05 && H.d <= -0.05;
+  if (bothHot) parts.push(`With both lineups above their baselines, this reads more like an over angle than a side.`);
+  else if (bothCold) parts.push(`Two cold lineups is an under profile until one of them proves otherwise.`);
+  else if (gap >= 0.080 && lead.d >= 0.025 && Number.isFinite(lead.w.kPct) && lead.w.kPct < 0.24) {
+    parts.push(`Form, quality, and contact profile all point the same way: ${lead.name}.`);
+  } else if (gap >= 0.030 && lead.d < trail.d) {
+    parts.push(`Split signal — ${lead.name} own the window but ${trail.name} are the ones trending up. Thin edge either way.`);
+  }
+
+  return parts.join(" ");
+}
+
+function renderGame(g, windowBy, hands) {
+  const a = g.teams.away, h = g.teams.home;
+  const aWin = windowBy[a.team.id], hWin = windowBy[h.team.id];
+  const aSn = seasonBy[a.team.id], hSn = seasonBy[h.team.id];
+  const aOpp = h.probablePitcher ? (hands[h.probablePitcher.id] || null) : null;
+  const hOpp = a.probablePitcher ? (hands[a.probablePitcher.id] || null) : null;
+  const time = new Date(g.gameDate).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
+  const read = buildRead(a.team, h.team, aWin, hWin, aSn, hSn, aOpp, hOpp);
+
+  return `<div class="card match-card" id="og-${g.gamePk}" style="scroll-margin-top:70px">
+    <div class="match-head">
+      <span class="matchup">${escapeHtml(a.team.name)} @ ${escapeHtml(h.team.name)}</span>
+      <span class="dim small">${time}</span>
+    </div>
+    <div class="team-grid">
+      ${teamBox(a.team.name, a.team.id, aWin, aSn, aOpp)}
+      ${teamBox(h.team.name, h.team.id, hWin, hSn, hOpp)}
+    </div>
+    <div class="read">${escapeHtml(read)}</div>
+  </div>`;
 }
 </script>
 </body>
