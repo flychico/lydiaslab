@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-09T18:37:01.083Z",
+  "generated_at": "2026-07-10T13:27:41.225Z",
   "status": "ready",
   "latest_date": "2026-07-09",
   "days_reviewed": 4,
@@ -8,16 +8,16 @@
     "clv": "data/clv/clv_log.csv"
   },
   "current_official_model": "moneyline_only",
-  "headline": "Learning summary for 2026-07-09: no graded official moneyline picks yet.",
+  "headline": "Learning summary for 2026-07-09: moneyline record 1-0 (100.0%).",
   "day": {
     "date": "2026-07-09",
     "source": "published-picks",
-    "record_all_markets": "0-0",
-    "units_all_markets": null,
-    "ungraded": 1,
-    "moneyline_record": "0-0",
-    "moneyline_win_rate": null,
-    "official_moneyline_picks": 0,
+    "record_all_markets": "1-0",
+    "units_all_markets": 0.76,
+    "ungraded": 0,
+    "moneyline_record": "1-0",
+    "moneyline_win_rate": 1,
+    "official_moneyline_picks": 1,
     "legacy_market_entries": 0
   },
   "gates": {
@@ -27,34 +27,144 @@
     "note": "Official picks require high model probability and strong setup quality. A high Lab Score alone is not enough."
   },
   "process_metrics": {
-    "average_model_probability": null,
-    "average_lab_score": null,
-    "average_raw_edge": null,
-    "clv_counts": {},
-    "lesson_counts": {},
-    "strong_official_count": 0,
+    "average_model_probability": 0.8084,
+    "average_lab_score": 83,
+    "average_raw_edge": 0.2484,
+    "clv_counts": {
+      "beat_close": 1
+    },
+    "lesson_counts": {
+      "good_process_win": 1
+    },
+    "strong_official_count": 1,
     "protected_by_probability_gate_count": 0,
     "high_bullpen_risk_count": 0,
     "pitcher_conflict_count": 0
   },
   "findings": [
     {
-      "title": "No official moneyline picks graded yet",
-      "read": "Learning will become useful after a finished slate is graded under the current model."
+      "title": "Official-pick discipline",
+      "read": "1 moneyline pick were graded. Record: 1-0 (100.0%)."
+    },
+    {
+      "title": "Probability gate",
+      "read": "No high-Lab, low-probability moneyline setups appeared in the graded official set."
+    },
+    {
+      "title": "Market learning",
+      "read": "1 pick beat the closing price. That supports the pricing process."
+    },
+    {
+      "title": "Bullpen learning",
+      "read": "No graded moneyline picks carried a major bullpen caution."
+    },
+    {
+      "title": "Pitcher learning",
+      "read": "No major starting-pitcher conflicts showed up in the graded moneyline set."
     }
   ],
+  "calibration": {
+    "status": "ready",
+    "games_graded": 7,
+    "brier_score": 0.167,
+    "note": "Shadow ledger for learning only — never part of the public record. Official picks stay the only published record.",
+    "buckets": [
+      {
+        "range": "50-55%",
+        "games": 3,
+        "wins": 2,
+        "expected_win_rate": 0.512,
+        "actual_win_rate": 0.667
+      },
+      {
+        "range": "60-65%",
+        "games": 2,
+        "wins": 2,
+        "expected_win_rate": 0.628,
+        "actual_win_rate": 1
+      },
+      {
+        "range": "65-70%",
+        "games": 1,
+        "wins": 1,
+        "expected_win_rate": 0.658,
+        "actual_win_rate": 1
+      },
+      {
+        "range": "75-100%",
+        "games": 1,
+        "wins": 1,
+        "expected_win_rate": 0.808,
+        "actual_win_rate": 1
+      }
+    ],
+    "shadow_by_status": {
+      "official_pick": {
+        "games": 1,
+        "wins": 1,
+        "units": 0.81
+      },
+      "pass": {
+        "games": 4,
+        "wins": 3,
+        "units": 1.54
+      },
+      "value_watch": {
+        "games": 1,
+        "wins": 1,
+        "units": 0.77
+      },
+      "watchlist": {
+        "games": 1,
+        "wins": 1,
+        "units": 0.77
+      }
+    }
+  },
   "buckets": {
-    "strong_official": [],
+    "strong_official": [
+      {
+        "game": "Athletics @ Detroit Tigers",
+        "pick": "Detroit Tigers",
+        "result": "W",
+        "model_probability": 0.8084,
+        "lab_score": 83,
+        "raw_edge": 0.2484,
+        "clv_result": "beat_close",
+        "lesson_tag": "good_process_win",
+        "pitcher_edge_team": "Detroit Tigers",
+        "pitcher_gap": 16,
+        "bullpen_label": "Neutral",
+        "pick_side_bullpen_score": 41,
+        "opponent_bullpen_score": 39
+      }
+    ],
     "protected_by_probability_gate": [],
     "high_bullpen_risk": [],
     "pitcher_conflicts": [],
-    "all_moneyline": []
+    "all_moneyline": [
+      {
+        "game": "Athletics @ Detroit Tigers",
+        "pick": "Detroit Tigers",
+        "result": "W",
+        "model_probability": 0.8084,
+        "lab_score": 83,
+        "raw_edge": 0.2484,
+        "clv_result": "beat_close",
+        "lesson_tag": "good_process_win",
+        "pitcher_edge_team": "Detroit Tigers",
+        "pitcher_gap": 16,
+        "bullpen_label": "Neutral",
+        "pick_side_bullpen_score": 41,
+        "opponent_bullpen_score": 39
+      }
+    ]
   },
   "multi_day": {
-    "moneyline_record": "14-7",
-    "moneyline_win_rate": 0.6667,
-    "official_moneyline_entries": 21,
-    "strict_gate_candidates": 5,
+    "moneyline_record": "15-7",
+    "moneyline_win_rate": 0.6818,
+    "official_moneyline_entries": 22,
+    "strict_gate_candidates": 6,
     "high_lab_low_probability_entries": 11,
     "note": "Multi-day view includes whatever historical data exists. Older days may include legacy model behavior."
   },
