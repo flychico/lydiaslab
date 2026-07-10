@@ -109,9 +109,19 @@ function toggleTeam(i) {
   renderOffFilter(); renderOffense();
 }
 
+const OFF_CACHE_KEY = "lydia-offense-v1";
 async function loadOffense() {
   const el = document.getElementById("offense");
   const status = document.getElementById("off-status");
+  // paint instantly from the last good copy
+  try {
+    const c = JSON.parse(localStorage.getItem(OFF_CACHE_KEY));
+    if (c && Array.isArray(c.rows) && c.rows.length) {
+      offRows = c.rows;
+      status.textContent = "Updating…";
+      renderOffFilter(); renderOffense(); buildStories();
+    }
+  } catch (e) {}
   try {
     const end = new Date(), start = new Date(Date.now() - OFF_DAYS * 86400000);
     const fmt = d => d.toISOString().slice(0, 10);
@@ -142,15 +152,17 @@ async function loadOffense() {
       };
     }).filter(r => r.g > 0 && isFinite(r.ops) && isFinite(r.seasonOps));
 
-    status.remove();
+    if (status.parentNode) status.remove();
     // rank every team's delta so the table can say "#1 hottest in MLB"
     const ranked = [...offRows].sort((a, b) => b.dOps - a.dOps);
     ranked.forEach((r, i) => { r.heatRank = i + 1; });
+    try { localStorage.setItem(OFF_CACHE_KEY, JSON.stringify({ t: Date.now(), rows: offRows })); } catch (e) {}
     renderOffFilter();
     renderOffense();
     buildStories();
   } catch (e) {
-    status.textContent = "Offense trends unavailable right now — MLB stats API did not respond.";
+    if (offRows.length) { if (status.parentNode) status.remove(); } // cached copy is on screen — stay quiet
+    else status.textContent = "Offense trends unavailable right now — MLB stats API did not respond.";
   }
 }
 
