@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Offense Matchup Tool — LyDia's Lab</title>
+<meta name="description" content="Compare both offenses in every MLB game: recent form vs season baseline, run scoring, strikeout rate, and how each lineup performs against tonight's starter handedness.">
+<link rel="canonical" href="https://mlbedges.com/tools/offense-matchups/">
+<link rel="stylesheet" href="/css/style.css">
+<style>
+.controls { display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:16px; }
+.controls .field { margin-bottom:0; }
+.window-pills { display:flex; gap:6px; }
+.wpill { border:1px solid var(--border); background:var(--bg-card); border-radius:20px; padding:6px 14px; font-size:.83rem; font-weight:700; cursor:pointer; color:var(--text-dim); }
+.wpill.on { background:var(--accent2); border-color:var(--accent2); color:#fff; }
+.match-card { margin-bottom:14px; }
+.match-head { display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; align-items:baseline; margin-bottom:10px; }
+.match-head .matchup { font-weight:800; font-size:1.05rem; }
+.team-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:10px; }
+.team-box { background:var(--bg-elev); border:1px solid var(--border); border-radius:var(--radius); padding:12px; overflow:hidden; }
+.team-box h3 { margin:0 0 2px; }
+.heat { font-weight:800; font-size:.9rem; }
+.stat-row { display:flex; justify-content:space-between; gap:8px; font-size:.88rem; border-top:1px solid var(--border); padding-top:5px; margin-top:5px; }
+.read { margin-top:10px; font-size:.88rem; color:var(--text-dim); }
+.hand-row { background:rgba(77,159,220,.08); border-radius:6px; padding:5px 8px; margin-top:8px; font-size:.85rem; }
+@media (max-width:720px){ .team-grid{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main>
+  <p class="eyebrow">LyDia's Lab</p>
+  <h1>Offense Matchup Tool</h1>
+  <p class="subtitle">Which lineup is hot, which is actually good, and how each hits the hand of tonight's opposing starter. Quality and heat are different things — this tool shows both.</p>
+
+  <div class="controls">
+    <div class="field">
+      <label for="date-pick">Date</label>
+      <input type="date" id="date-pick">
+    </div>
+    <button onclick="shiftDay(0)">Today</button>
+    <button class="secondary" onclick="shiftDay(1)">Tomorrow</button>
+    <div>
+      <label>Form window</label>
+      <div class="window-pills">
+        <span class="wpill" data-w="7" onclick="setWindow(7)">7d</span>
+        <span class="wpill on" data-w="15" onclick="setWindow(15)">15d</span>
+        <span class="wpill" data-w="30" onclick="setWindow(30)">30d</span>
+      </div>
+    </div>
+    <div>
+      <label for="game-jump">Jump to game</label>
+      <select id="game-jump" onchange="jumpToGame(this.value)"><option value="">All games…</option></select>
+    </div>
+  </div>
+
+  <div class="notice">
+    <strong>How to read it:</strong> <b>OPS (window)</b> is quality right now; <b>Δ vs season</b> is heat — a bad offense can be hot and an elite one can be cold. The <b>vs-hand line</b> shows each lineup's full-season OPS against the throwing hand of tonight's opposing starter. Data only — no score. The learning system decides later what earns a place in the model.
+  </div>
+
+  <div id="status"></div>
+  <div id="games"></div>
+</main>
+<footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/tools/"); renderFooter();</script>
+<script>
+const datePick = document.getElementById("date-pick");
+datePick.value = localISODate(new Date());
+datePick.addEventListener("change", load);
+let WINDOW = 15;
+let seasonBy = null, splitsBy = null; // cached across window changes
+load();
+
+function localISODate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function shiftDay(n) {
+  const d = new Date(); d.setDate(d.getDate() + n);
+  datePick.value = localISODate(d);
+  load();
+}
+function setWindow(w) {
+  WINDOW = w;
+  document.querySelectorAll(".wpill").forEach(p => p.classList.toggle("on", Number(p.dataset.w) === w));
+  load();
+}
+function jumpToGame(pk) {
+  if (!pk) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+  const el = document.getElementById("og-" + pk);
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function f3(v){ return Number.isFinite(v) ? v.toFixed(3).replace(/^0/, "") : "—"; }
+function seasonYear(){ const d = new Date(datePick.value + "T12:00"); return d.getMonth() >= 2 ? d.getFullYear() : d.getFullYear() - 1; }
+
+async function teamStats(params) {
+  const res = await fetch(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${seasonYear()}&` + params);
+  if (!res.ok) throw new Error("team stats HTTP " + res.status);
+  const data = await res.json();
+  return ((data.stats || [])[0] || {}).splits || [];
+}
+function shape(st) {
+  const pa = Number(st.plateAppearances) || 0;
+  return {
+    g: Number(st.gamesPlayed) || 0,
+    avg: Number(st.avg), obp: Number(st.obp), slg: Number(st.slg), ops: Number(st.ops),
+    rpg: st.gamesPlayed ? (Number(st.runs) || 0) / Number(st.gamesPlayed) : null,
+    kPct: pa ? (Number(st.strikeOuts) || 0) / pa : null,
+    hr: Number(st.homeRuns) || 0
+  };
+}
+
+async function load() {
+  const statusEl = document.getElementById("status");
+  const gamesEl = document.getElementById("games");
+  statusEl.innerHTML = `<div class="loading">Loading offense matchups…</div>`;
+  gamesEl.innerHTML = "";
+  const date = datePick.value;
+  try {
+    const end = new Date(date + "T12:00");
+    const start = new Date(end.getTime() - WINDOW * 86400000);
+    const [schedRes, windowSplits] = await Promise.all([
+      fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher`).then(r => r.json()),
+      teamStats(`stats=byDateRange&startDate=${localISODate(start)}&endDate=${localISODate(end)}`)
+    ]);
+    if (!seasonBy) {
+      const [seasonSplits, vl, vr] = await Promise.all([
+        teamStats("stats=season"),
+        teamStats("stats=statSplits&sitCodes=vl"),
+        teamStats("stats=statSplits&sitCodes=vr")
+      ]);
+      seasonBy = {}; for (const t of seasonSplits) seasonBy[t.team.id] = shape(t.stat);
+      splitsBy = {};
+      for (const t of vl) (splitsBy[t.team.id] = splitsBy[t.team.id] || {}).vl = Number(t.stat.ops);
+      for (const t of vr) (splitsBy[t.team.id] = splitsBy[t.team.id] || {}).vr = Number(t.stat.ops);
+    }
+    const windowBy = {}; for (const t of windowSplits) windowBy[t.team.id] = shape(t.stat);
+
+    const games = ((((schedRes || {}).dates || [])[0]) || {}).games || [];
+    if (!games.length) { statusEl.innerHTML = `<div class="notice">No MLB games scheduled for ${date}.</div>`; return; }
+    games.sort((a, b) => new Date(a.gameDate) - new Date(b.gameDate));
+
+    // starter throwing hands (one batched call)
+    const pids = [...new Set(games.flatMap(g => ["away","home"].map(s => g.teams[s].probablePitcher && g.teams[s].probablePitcher.id).filter(Boolean)))];
+    let hands = {};
+    if (pids.length) {
+      try {
+        const pd = await fetch(`https://statsapi.mlb.com/api/v1/people?personIds=${pids.join(",")}`).then(r => r.json());
+        for (const p of pd.people || []) hands[p.id] = { hand: (p.pitchHand || {}).code || null, name: p.fullName };
+      } catch(e) {}
+    }
+
+    statusEl.innerHTML = "";
+    gamesEl.innerHTML = games.map(g => renderGame(g, windowBy, hands)).join("");
+    const jump = document.getElementById("game-jump");
+    jump.innerHTML = '<option value="">All games…</option>' + games.map(g =>
+      `<option value="${g.gamePk}">${escapeHtml(g.teams.away.team.name)} @ ${escapeHtml(g.teams.home.team.name)}</option>`).join("");
+  } catch (e) {
+    statusEl.innerHTML = `<div class="notice warn">Could not load offense data (${escapeHtml(e.message)}).</div>`;
+  }
+}
+
+function heatTag(d) {
+  if (!Number.isFinite(d)) return { txt: "—", cls: "dim" };
+  if (d >= 0.060) return { txt: "🔥 hot +" + f3(d), cls: "pos-text" };
+  if (d >= 0.025) return { txt: "warming +" + f3(d), cls: "pos-text" };
+  if (d <= -0.060) return { txt: "❄️ cold −" + f3(-d), cls: "neg-text" };
+  if (d <= -0.025) return { txt: "cooling −" + f3(-d), cls: "neg-text" };
+  return { txt: "steady " + (d >= 0 ? "+" : "−") + f3(Math.abs(d)), cls: "dim" };
+}
+
+function teamBox(teamName, id, win, season, oppStarter) {
+  const w = win || {}, sn = season || {};
+  const delta = (Number.isFinite(w.ops) && Number.isFinite(sn.ops)) ? w.ops - sn.ops : null;
+  const heat = heatTag(delta);
+  const sp = splitsBy && splitsBy[id] ? splitsBy[id] : {};
+  let handLine = "";
+  if (oppStarter && oppStarter.hand) {
+    const vs = oppStarter.hand === "L" ? sp.vl : sp.vr;
+    const lg = oppStarter.hand === "L" ? "LHP" : "RHP";
+    handLine = `<div class="hand-row">vs ${lg} (season): <b>${f3(vs)}</b> OPS — faces ${oppStarter.hand === "L" ? "lefty" : "righty"} ${escapeHtml(oppStarter.name)}</div>`;
+  } else if (oppStarter === null) {
+    handLine = `<div class="hand-row dim">Opposing starter TBD — no handedness read yet</div>`;
+  }
+  return `<div class="team-box">
+    <h3>${escapeHtml(teamName)}</h3>
+    <div class="heat ${heat.cls}">${heat.txt}</div>
+    <div class="stat-row"><span>OPS (last ${WINDOW}d)</span><b>${f3(w.ops)}</b></div>
+    <div class="stat-row"><span>Season OPS</span><b>${f3(sn.ops)}</b></div>
+    <div class="stat-row"><span>R/G (window)</span><b>${Number.isFinite(w.rpg) ? w.rpg.toFixed(1) : "—"}</b></div>
+    <div class="stat-row"><span>AVG (window)</span><b>${f3(w.avg)}</b></div>
+    <div class="stat-row"><span>K% (window)</span><b>${Number.isFinite(w.kPct) ? (w.kPct * 100).toFixed(1) + "%" : "—"}</b></div>
+    <div class="stat-row"><span>HR (window)</span><b>${w.hr ?? "—"}</b></div>
+    ${handLine}
+  </div>`;
+}
+
+function renderGame(g, windowBy, hands) {
+  const a = g.teams.away, h = g.teams.home;
+  const aWin = windowBy[a.team.id], hWin = windowBy[h.team.id];
+  const aSn = seasonBy[a.team.id], hSn = seasonBy[h.team.id];
+  const aOpp = h.probablePitcher ? (hands[h.probablePitcher.id] || null) : null;
+  const hOpp = a.probablePitcher ? (hands[a.probablePitcher.id] || null) : null;
+  const time = new Date(g.gameDate).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
+  // plain-English read: quality (window OPS) and heat (delta) called out separately
+  let read = "";
+  if (aWin && hWin && aSn && hSn && Number.isFinite(aWin.ops) && Number.isFinite(hWin.ops)) {
+    const qLead = aWin.ops > hWin.ops ? a.team.name : h.team.name;
+    const qGap = Math.abs(aWin.ops - hWin.ops);
+    const aD = aWin.ops - aSn.ops, hD = hWin.ops - hSn.ops;
+    const heatLead = aD > hD ? a.team.name : h.team.name;
+    if (qGap < 0.030) read = `Offenses are close over the last ${WINDOW} days (gap ${f3(qGap)} OPS). No meaningful edge either way.`;
+    else if (qLead === heatLead) read = `${qLead} is both the better and the hotter offense over the last ${WINDOW} days (${f3(qGap)} OPS gap).`;
+    else read = `${qLead} has the better window numbers, but ${heatLead} is trending up harder. Quality and heat point different ways — worth a closer look before leaning on either.`;
+    const bothCold = aD <= -0.05 && hD <= -0.05, bothHot = aD >= 0.05 && hD >= 0.05;
+    if (bothCold) read += " Both lineups are cold — relevant for the total.";
+    if (bothHot) read += " Both lineups are hot — relevant for the total.";
+  } else {
+    read = "Window data unavailable for one or both teams.";
+  }
+
+  return `<div class="card match-card" id="og-${g.gamePk}" style="scroll-margin-top:70px">
+    <div class="match-head">
+      <span class="matchup">${escapeHtml(a.team.name)} @ ${escapeHtml(h.team.name)}</span>
+      <span class="dim small">${time}</span>
+    </div>
+    <div class="team-grid">
+      ${teamBox(a.team.name, a.team.id, aWin, aSn, aOpp)}
+      ${teamBox(h.team.name, h.team.id, hWin, hSn, hOpp)}
+    </div>
+    <div class="read">${escapeHtml(read)}</div>
+  </div>`;
+}
+</script>
+</body>
+</html>
