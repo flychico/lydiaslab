@@ -224,7 +224,9 @@ function rebuildResultsPage(results) {
     if (p.total && p.total.pick) parts.push(`${p.totResult === "W" ? "✅" : p.totResult === "L" ? "❌" : p.totResult === "PUSH" ? "➖" : "⏸"} Total ${esc(p.total.pick)} ${p.total.line}`);
     if (p.runLine && p.runLine.pick) parts.push(`${p.rlResult === "W" ? "✅" : p.rlResult === "L" ? "❌" : p.rlResult === "PUSH" ? "➖" : "⏸"} RL ${esc(p.runLine.pick)} ${p.runLine.point > 0 ? "+" : ""}${p.runLine.point}`);
     if (!parts.length) return `<div class="small dim">No official play — ${esc(p.away)} @ ${esc(p.home)}</div>`;
-    const lesson = p.learning && p.learning.lesson_tag ? ` <span class="dim">· ${esc(p.learning.lesson_tag.replace(/_/g, " "))}</span>` : "";
+    const lessonTag = p.learning && p.learning.lesson_tag ? p.learning.lesson_tag : "";
+    const lessonText = lessonTag === "not_graded" ? "official grade posts each morning" : lessonTag.replace(/_/g, " ");
+    const lesson = lessonText ? ` <span class="dim">· ${esc(lessonText)}</span>` : "";
     return `<div class="small">${parts.join(" · ")} — ${esc(p.away)} @ ${esc(p.home)}${p.finalAway !== undefined ? ` · ${p.finalAway}-${p.finalHome}` : ""}${lesson}</div>`;
   };
 
