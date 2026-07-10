@@ -891,7 +891,7 @@ function renderSettings(){
   <div class="card"><h3>Profile</h3>
     <p class="dim small" style="margin-bottom:4px">${esc(planLabel())}</p>
     <p class="dim small" style="margin-bottom:10px">${p.heightIn ? Math.floor(p.heightIn/12) + "'" + (p.heightIn%12) + '"' : ""}${p.weightLb ? " · " + p.weightLb + " lb" : ""}${p.age ? " · " + p.age + " yrs" : ""}${bmi() ? " · BMI " + bmi() : ""}</p>
-    <button class="btn ghost full" onclick="Object.assign(Q,{goal:p.goal,focus:p.focus||'balanced',days:p.days,duration:p.duration,equip:p.equip,heightFt:p.heightIn?Math.floor(p.heightIn/12):5,heightInch:p.heightIn?p.heightIn%12:8,weightLb:p.weightLb||'',age:p.age||''});S.profile=null;save();render()">Redo questionnaire (keeps history)</button></div>
+    <button class="btn ghost full" onclick="redoQuestionnaire()">Redo questionnaire (keeps history)</button></div>
   <div class="card"><h3>The science</h3>
     <p class="dim small" style="margin-bottom:6px">Every plan MichelAngelo carves follows published resistance-training research:</p>
     <div class="exline"><span>Weekly sets per muscle</span><span class="dim">10–20 (dose-response, Schoenfeld 2017)</span></div>
@@ -911,6 +911,22 @@ function renderSettings(){
   <div class="card"><h3>Danger zone</h3>
     <button class="btn danger full" onclick="if(confirm('Delete ALL workout data? This cannot be undone.')){localStorage.removeItem(KEY);localStorage.removeItem('forge-v1');location.reload()}">Erase everything</button></div>
   <p class="dim small">MichelAngelo · runs offline once loaded · no account, no tracking, no subscription.</p>`;
+}
+function redoQuestionnaire(){
+  const p = S.profile;
+  if (p) Object.assign(Q, {
+    goal: p.goal || "muscle", focus: p.focus || "balanced",
+    days: p.days || 4, duration: p.duration || 60, equip: p.equip || "gym",
+    heightFt: p.heightIn ? Math.floor(p.heightIn / 12) : 5,
+    heightInch: p.heightIn ? p.heightIn % 12 : 8,
+    weightLb: p.weightLb || "", age: p.age || ""
+  });
+  S.profile = null;   // plan + logs + weights all kept; onboarding re-runs
+  save();
+  tab = "today";
+  document.querySelectorAll("#tabbar [data-tab]").forEach(x => x.classList.toggle("on", x.dataset.tab === "today"));
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 function exportData(){
   const blob = new Blob([JSON.stringify(S, null, 1)], { type: "application/json" });
