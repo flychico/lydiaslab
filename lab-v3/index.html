@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Model v3 Shadow View — private</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="/css/style.css">
+<style>
+.match-card { margin-bottom:14px; }
+.vhead { display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; align-items:baseline; }
+.vhead .matchup { font-weight:800; font-size:1.05rem; }
+.probgrid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:10px; }
+.probbox { background:var(--bg-elev); border:1px solid var(--border); border-radius:var(--radius); padding:12px; }
+.probbox .big { font-size:1.5rem; font-weight:800; }
+.v2c { color:var(--text-dim); } .v3c { color:var(--accent); }
+.disagree { border:2px solid var(--accent); }
+.tag { display:inline-block; font-size:.72rem; font-weight:700; border-radius:12px; padding:2px 10px; margin-left:6px; }
+.tag.pick { background:rgba(30,142,62,.15); color:var(--good); }
+.tag.diff { background:rgba(214,80,142,.15); color:var(--accent); }
+.small-note { font-size:.82rem; color:var(--text-dim); margin-top:8px; }
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main>
+  <p class="eyebrow">Private · not linked anywhere</p>
+  <h1>Model v3 — Shadow View</h1>
+  <p class="subtitle">What the new method (FIP-based pitcher input + offense form) says about today's card, next to the locked official v2. This page never affects picks — it's the A/B test made visible.</p>
+  <div class="notice">
+    <strong>Reading it:</strong> v2 is the locked number the site published. v3 is recomputed here from live data (or the locked value once the daily run records it). A <b>v3 pick?</b> tag means v3 clears the probability (72%) and market-edge (3%) gates — Lab Score and bullpen gates are not applied on this view. Cards with a pink border are games where the two models pick different sides — those are the games that decide the A/B.
+  </div>
+  <div id="summary"></div>
+  <div id="status"><div class="loading">Computing both models…</div></div>
+  <div id="games"></div>
+</main>
+<footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/articles/"); renderFooter();</script>
+<script>
+/* Constants mirrored from the daily engine — keep in sync if the engine's change. */
+const HFA = 54/46, PYTH_EXP = 1.83, FORM_WEIGHT = 0.25, ERA_K = 0.20, LEAGUE_ERA = 4.20;
+const ERA_CLAMP = [2.75, 6.00], MIN_IP = 20, OFFICIAL_PROB = 0.72, VALUE_EDGE = 0.03;
+const V3_FIP_C = 3.15, V3_OFF_K = 0.8;
+
+const pythag = (rs, ra) => Math.pow(rs, PYTH_EXP) / (Math.pow(rs, PYTH_EXP) + Math.pow(ra, PYTH_EXP));
+function log5Home(sH, sA) {
+  const raw = (sH * (1 - sA)) / (sH * (1 - sA) + sA * (1 - sH));
+  const odds = (raw / (1 - raw)) * HFA;
+  return odds / (1 + odds);
+}
+const clampEra = e => Math.min(ERA_CLAMP[1], Math.max(ERA_CLAMP[0], e));
+function ipToNum(ip) { if (!ip || ip === "-.--") return 0; const [w, f] = String(ip).split("."); return Number(w || 0) + Number(f || 0) / 3; }
+function fipLite(st) {
+  if (!st || !st.ip || st.ip < 10) return LEAGUE_ERA;
+  const fip = (13 * st.hr + 3 * st.bb - 2 * st.so) / st.ip + V3_FIP_C;
+  const wt = Math.min(st.ip, 80) / 80;
+  return clampEra(fip * wt + LEAGUE_ERA * (1 - wt));
+}
+const pct = v => (v * 100).toFixed(1) + "%";
+const f3 = v => Number.isFinite(v) ? v.toFixed(3).replace(/^0/, "") : "—";
+const seasonYear = () => { const d = new Date(); return d.getMonth() >= 2 ? d.getFullYear() : d.getFullYear() - 1; };
+
+async function j(url) { const r = await fetch(url); if (!r.ok) throw new Error(url.split("/").slice(-1)[0] + " HTTP " + r.status); return r.json(); }
+
+async function load() {
+  const statusEl = document.getElementById("status");
+  try {
+    const yr = seasonYear();
+    const date = new Date().toLocaleDateString("en-CA");
+    const [brief, sched, standings, offSeason, offWin] = await Promise.all([
+      j("/data/member-brief/today.json").catch(() => null),
+      j(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher`),
+      j(`https://statsapi.mlb.com/api/v1/standings?leagueId=103,104&season=${yr}&standingsTypes=regularSeason`),
+      j(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${yr}&stats=season`),
+      (() => { const e = new Date(), s = new Date(Date.now() - 15 * 864e5), f = d => d.toISOString().slice(0, 10);
+        return j(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${yr}&stats=byDateRange&startDate=${f(s)}&endDate=${f(e)}`); })()
+    ]);
+
+    // team strength (pyth + last-10 form)
+    const strength = {};
+    for (const rec of standings.records || []) for (const t of rec.teamRecords || []) {
+      const l10 = (((t.records || {}).splitRecords) || []).find(r => r.type === "lastTen");
+      strength[t.team.id] = { pyth: pythag(t.runsScored, t.runsAllowed), form: l10 ? l10.wins / Math.max(1, l10.wins + l10.losses) : null };
+    }
+    // offense deltas
+    const snOps = {}, winOps = {};
+    for (const t of (offSeason.stats[0] || {}).splits || []) snOps[t.team.id] = Number(t.stat.ops);
+    for (const t of (offWin.stats[0] || {}).splits || []) winOps[t.team.id] = Number(t.stat.ops);
+    // pitcher season stats
+    const games = (((sched.dates || [])[0]) || {}).games || [];
+    const pids = [...new Set(games.flatMap(g => ["away","home"].map(s => g.teams[s].probablePitcher && g.teams[s].probablePitcher.id).filter(Boolean)))];
+    const pstats = {};
+    if (pids.length) {
+      const pd = await j(`https://statsapi.mlb.com/api/v1/people?personIds=${pids.join(",")}&hydrate=stats(group=[pitching],type=[season])`);
+      for (const p of pd.people || []) {
+        const st = ((((p.stats || [])[0] || {}).splits || [])[0] || {}).stat || {};
+        pstats[p.id] = { name: p.fullName, era: Number(st.era), ip: ipToNum(st.inningsPitched), so: Number(st.strikeOuts || 0), bb: Number(st.baseOnBalls || 0), hr: Number(st.homeRuns || 0) };
+      }
+    }
+    // locked v2 + market from the brief, keyed by gamePk
+    const briefBy = {};
+    for (const g of (brief && brief.games) || []) briefBy[g.game_pk] = g;
+
+    const rows = [];
+    for (const g of games.sort((a, b) => new Date(a.gameDate) - new Date(b.gameDate))) {
+      const aT = g.teams.away.team, hT = g.teams.home.team;
+      const sA = strength[aT.id], sH = strength[hT.id];
+      if (!sA || !sH) continue;
+      const blendA = sA.form === null ? sA.pyth : 0.75 * sA.pyth + FORM_WEIGHT * sA.form;
+      const blendH = sH.form === null ? sH.pyth : 0.75 * sH.pyth + FORM_WEIGHT * sH.form;
+      const pBase = log5Home(blendH, blendA);
+      const pa = g.teams.away.probablePitcher && pstats[g.teams.away.probablePitcher.id];
+      const ph = g.teams.home.probablePitcher && pstats[g.teams.home.probablePitcher.id];
+
+      // v2 replica (locked value from brief preferred)
+      const eA = pa && isFinite(pa.era) && pa.ip >= MIN_IP ? clampEra(pa.era) : LEAGUE_ERA;
+      const eH = ph && isFinite(ph.era) && ph.ip >= MIN_IP ? clampEra(ph.era) : LEAGUE_ERA;
+      let o2 = (pBase / (1 - pBase)) * Math.exp(ERA_K * (eA - eH));
+      const pHome2live = o2 / (1 + o2);
+
+      // v3
+      const fA = fipLite(pa), fH = fipLite(ph);
+      let o3 = (pBase / (1 - pBase)) * Math.exp(ERA_K * (fA - fH));
+      const dA = Number.isFinite(winOps[aT.id]) && Number.isFinite(snOps[aT.id]) ? Math.max(-.1, Math.min(.1, winOps[aT.id] - snOps[aT.id])) : 0;
+      const dH = Number.isFinite(winOps[hT.id]) && Number.isFinite(snOps[hT.id]) ? Math.max(-.1, Math.min(.1, winOps[hT.id] - snOps[hT.id])) : 0;
+      o3 *= Math.exp(V3_OFF_K * (dH - dA));
+      const pHome3 = o3 / (1 + o3);
+
+      const b = briefBy[g.gamePk];
+      const locked3 = b && b.model_v3 && Number.isFinite(b.model_v3.p_home) ? b.model_v3.p_home : null;
+      const pHome3Final = locked3 !== null ? locked3 : pHome3;
+      const pHome2 = b ? (b.side === "home" ? b.model_probability : 1 - b.model_probability) : pHome2live;
+      const mkt = b && b.market && Number.isFinite(b.market.no_vig_probability)
+        ? (b.side === "home" ? b.market.no_vig_probability : 1 - b.market.no_vig_probability) : null; // market prob of HOME side
+      rows.push({
+        gamePk: g.gamePk, away: aT.name, home: hT.name,
+        spA: pa ? pa.name : "TBD", spH: ph ? ph.name : "TBD",
+        fA, fH, eA, eH, dA, dH,
+        pHome2, pHome3: pHome3Final, v3locked: locked3 !== null,
+        mktHome: mkt, status: b ? b.status : null,
+        time: new Date(g.gameDate).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+      });
+    }
+    render(rows);
+    statusEl.innerHTML = "";
+  } catch (e) {
+    statusEl.innerHTML = `<div class="notice warn">Could not compute (${escapeHtml(e.message)}).</div>`;
+  }
+}
+
+function sideOf(pHome, away, home) { return pHome >= 0.5 ? { team: home, p: pHome } : { team: away, p: 1 - pHome }; }
+
+function render(rows) {
+  const gamesEl = document.getElementById("games");
+  const v3picks = [], v2picks = [], disagreements = [];
+  gamesEl.innerHTML = rows.map(r => {
+    const v2 = sideOf(r.pHome2, r.away, r.home), v3 = sideOf(r.pHome3, r.away, r.home);
+    const disagree = v2.team !== v3.team;
+    if (disagree) disagreements.push(`${r.away} @ ${r.home}: v2 → ${v2.team}, v3 → ${v3.team}`);
+    const mktV3 = r.mktHome !== null ? (r.pHome3 >= 0.5 ? r.mktHome : 1 - r.mktHome) : null;
+    const v3edge = mktV3 !== null ? v3.p - mktV3 : null;
+    const v3official = v3.p >= OFFICIAL_PROB && v3edge !== null && v3edge >= VALUE_EDGE;
+    if (v3official) v3picks.push(`${v3.team} (${pct(v3.p)}${v3edge !== null ? ", edge " + pct(v3edge) : ""})`);
+    if (r.status === "official_pick") v2picks.push(v2.team);
+    return `<div class="card match-card ${disagree ? "disagree" : ""}">
+      <div class="vhead"><span class="matchup">${escapeHtml(r.away)} @ ${escapeHtml(r.home)}</span><span class="dim small">${r.time}${r.status === "official_pick" ? ' · <b>v2 OFFICIAL PICK</b>' : ""}</span></div>
+      <div class="dim small">${escapeHtml(r.spA)} (ERA-in ${r.eA.toFixed(2)} → FIP-in ${r.fA.toFixed(2)}) vs ${escapeHtml(r.spH)} (${r.eH.toFixed(2)} → ${r.fH.toFixed(2)}) · offense form ${r.dA >= 0 ? "+" : ""}${f3(r.dA)} / ${r.dH >= 0 ? "+" : ""}${f3(r.dH)}</div>
+      <div class="probgrid">
+        <div class="probbox"><div class="dim small">OFFICIAL MODEL (v2)</div><div class="big v2c">${escapeHtml(v2.team)} ${pct(v2.p)}</div></div>
+        <div class="probbox"><div class="dim small">SHADOW MODEL (v3) ${r.v3locked ? "· locked" : "· live compute"}</div>
+          <div class="big v3c">${escapeHtml(v3.team)} ${pct(v3.p)}${v3official ? '<span class="tag pick">v3 pick?</span>' : ""}${disagree ? '<span class="tag diff">disagrees</span>' : ""}</div>
+          ${v3edge !== null ? `<div class="small dim">edge vs market: ${v3edge >= 0 ? "+" : ""}${pct(v3edge)}</div>` : ""}
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+
+  document.getElementById("summary").innerHTML = `<div class="card">
+    <h3 style="margin-top:0">Today, side by side</h3>
+    <div class="exline"><span><b>v2 official picks</b> (published)</span><span>${v2picks.length ? v2picks.map(escapeHtml).join(" · ") : "none"}</span></div>
+    <div class="exline"><span><b>v3 would-be picks</b> (prob + edge gates only)</span><span>${v3picks.length ? v3picks.map(escapeHtml).join(" · ") : "none"}</span></div>
+    <div class="exline"><span><b>Disagreements</b></span><span>${disagreements.length ? disagreements.map(escapeHtml).join(" · ") : "models agree on every game"}</span></div>
+    <div class="small-note">v3 would-be picks skip the Lab Score and bullpen gates — treat them as "probability + price cleared," not full official criteria.</div>
+  </div>`;
+}
+load();
+</script>
+</body>
+</html>
