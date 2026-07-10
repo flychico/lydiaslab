@@ -1,29 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-XVWTMDNBJK"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-XVWTMDNBJK');
-</script>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Learning Summary | LyDia</title>
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="LyDia">
-<meta property="og:title" content="Learning Summary | LyDia">
-<meta property="og:description" content="LyDia learning summary: what the model learned from graded moneyline picks, market movement, pitcher signals, bullpen signals, and results.">
-<meta property="og:url" content="https://mlbedges.com/learning/">
-<meta property="og:image" content="https://mlbedges.com/img/og-card.png">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Learning Summary | LyDia">
-<meta name="twitter:description" content="LyDia learning summary: what the model learned from graded moneyline picks, market movement, pitcher signals, bullpen signals, and results.">
-<meta name="twitter:image" content="https://mlbedges.com/img/og-card.png">
-
 <meta name="description" content="LyDia learning summary: what the model learned from graded moneyline picks, market movement, pitcher signals, bullpen signals, and results.">
 <link rel="canonical" href="https://mlbedges.com/learning/">
 <link rel="stylesheet" href="/css/style.css">
@@ -52,12 +32,14 @@
   <div id="status" class="loading">Loading learning summary...</div>
   <div id="headline"></div>
   <div id="kpis" class="kpis"></div>
+  <div id="coach"></div>
   <div id="findings"></div>
   <div id="buckets"></div>
 </main>
-<footer id="footer"></footer><script src="/js/app.js"></script>
+<footer id="footer"></footer>
+<script src="/js/app.js"></script>
 <script>
-renderNav("/articles/"); renderFooter();
+renderNav("/results/"); renderFooter();
 
 loadLearning();
 
@@ -65,6 +47,7 @@ async function loadLearning() {
   const statusEl = document.getElementById("status");
   const headlineEl = document.getElementById("headline");
   const kpisEl = document.getElementById("kpis");
+  const coachEl = document.getElementById("coach");
   const findingsEl = document.getElementById("findings");
   const bucketsEl = document.getElementById("buckets");
 
@@ -89,10 +72,24 @@ async function loadLearning() {
     <div class="kpi"><div class="label">Date reviewed</div><div class="value">${esc(data.latest_date || "-")}</div><div class="small dim">${data.days_reviewed || 0} day${data.days_reviewed === 1 ? "" : "s"} in file</div></div>
     <div class="kpi"><div class="label">Moneyline record</div><div class="value">${esc(day.moneyline_record || "0-0")}</div><div class="small dim">${pct(day.moneyline_win_rate)} win rate</div></div>
     <div class="kpi"><div class="label">Avg model prob</div><div class="value">${pct(metrics.average_model_probability)}</div><div class="small dim">graded moneyline set</div></div>
-    <div class="kpi"><div class="label">Avg Lab Score</div><div class="value">${num(metrics.average_lab_score)}</div><div class="small dim">setup quality, not probability</div></div>
-    <div class="kpi"><div class="label">Protected by gate</div><div class="value">${metrics.protected_by_probability_gate_count || 0}</div><div class="small dim">high Lab, low probability</div></div>
+    <div class="kpi"><div class="label">Avg Lab Rating</div><div class="value">${labRating(metrics.average_lab_score)}</div><div class="small dim">setup quality, not win probability</div></div>
+    <div class="kpi"><div class="label">Protected by gate</div><div class="value">${metrics.protected_by_probability_gate_count || 0}</div><div class="small dim">high rating, low probability</div></div>
     <div class="kpi"><div class="label">CLV tracked</div><div class="value">${clvTotal(metrics.clv_counts)}</div><div class="small dim">needs market snapshots</div></div>
   `;
+
+
+  const coach = data.coach || {};
+  coachEl.innerHTML = `<h2>LyDia Coach</h2><div class="card">
+    <h3>${esc(coach.title || "Collecting the first full week")}</h3>
+    <p>${esc(coach.summary || "LyDia is recording results now. Threshold recommendations remain paused until at least seven current-model days are available.")}</p>
+    <div class="metric-grid">
+      <div class="metric-box"><div class="label">Current-model days</div><div class="value">${coach.current_model_days || 0}/7</div></div>
+      <div class="metric-box"><div class="label">Current-model picks</div><div class="value">${coach.current_model_picks || 0}</div></div>
+      <div class="metric-box"><div class="label">Coach status</div><div class="value small">${esc(coach.status || "collecting")}</div></div>
+    </div>
+    ${(coach.recommendations || []).length ? `<h3 style="margin-top:16px">Review notes</h3><ul>${coach.recommendations.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
+    <p class="small dim">The coach can recommend a review. It cannot change model weights or official-pick thresholds automatically.</p>
+  </div>`;
 
   const findings = data.findings || [];
   findingsEl.innerHTML = `<h2>What LyDia learned</h2>` + findings.map(f => `
@@ -102,30 +99,9 @@ async function loadLearning() {
     </div>
   `).join("");
 
-  const cal = data.calibration || {};
-  const calHtml = cal.status === "ready" ? `
-    <h2>Full-slate calibration</h2>
-    <div class="card" style="margin-bottom:14px">
-      <p class="dim small">Every analyzed game — official picks, value watches, watchlist, and passes — is graded nightly into a learning-only shadow ledger. This measures whether the model's probabilities are honest and what the games below the official gates would have returned. It is not the public record.</p>
-      <p><strong>${cal.games_graded}</strong> games graded · Brier score <strong>${cal.brier_score}</strong> <span class="dim small">(lower is better; 0.25 = coin flip)</span></p>
-      <table>
-        <thead><tr><th>Model probability</th><th class="num">Games</th><th class="num">Expected win%</th><th class="num">Actual win%</th></tr></thead>
-        <tbody>${(cal.buckets || []).map(b => `<tr><td>${esc(b.range)}</td><td class="num">${b.games}</td><td class="num">${(b.expected_win_rate * 100).toFixed(0)}%</td><td class="num">${(b.actual_win_rate * 100).toFixed(0)}%</td></tr>`).join("")}</tbody>
-      </table>
-      ${cal.shadow_model && cal.shadow_model.status === "ready" ? `
-      <div style="margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:8px">
-        <b>Model A/B — official v2 vs shadow v3</b> <span class="dim small">(v3: skill-based pitcher input + offense form)</span><br>
-        <span class="small">${cal.shadow_model.games} games · Brier v2 <b>${cal.shadow_model.brier_v2}</b> vs v3 <b>${cal.shadow_model.brier_v3}</b> → <b>${cal.shadow_model.leader}</b> leads · ${cal.shadow_model.disagreements} disagreement${cal.shadow_model.disagreements === 1 ? "" : "s"}${cal.shadow_model.disagreements ? `, v3 right in ${cal.shadow_model.v3_wins_disagreements}` : ""}</span>
-      </div>` : ""}
-      <table style="margin-top:10px">
-        <thead><tr><th>Tier</th><th class="num">Record</th><th class="num">Shadow units (flat 1u)</th></tr></thead>
-        <tbody>${Object.entries(cal.shadow_by_status || {}).map(([k, v]) => `<tr><td>${esc(k.replace(/_/g, " "))}</td><td class="num">${v.wins}-${v.games - v.wins}</td><td class="num">${v.units > 0 ? "+" : ""}${v.units}</td></tr>`).join("")}</tbody>
-      </table>
-    </div>` : "";
-
-  bucketsEl.innerHTML = calHtml + `
+  bucketsEl.innerHTML = `
     <h2>Review buckets</h2>
-    ${bucket("Strong official", (data.buckets || {}).strong_official || [], "Picks that cleared the strict 72% model probability and 80 Lab Score gates.")}
+    ${bucket("Strong official", (data.buckets || {}).strong_official || [], "Picks that cleared the strict 72% model probability and 8.0 Lab Rating gate.")}
     ${bucket("Protected by probability gate", (data.buckets || {}).protected_by_probability_gate || [], "High setup quality, but model probability below the official-pick gate. These should stay value watch.")}
     ${bucket("High bullpen risk", (data.buckets || {}).high_bullpen_risk || [], "Official moneyline picks with meaningful bullpen caution.")}
     ${bucket("Pitcher conflicts", (data.buckets || {}).pitcher_conflicts || [], "Official moneyline picks where the starting pitcher edge conflicted with the model side.")}
@@ -146,7 +122,7 @@ function row(x) {
     <div class="metric-grid">
       <div class="metric-box"><div class="label">Result</div><div class="value">${esc(x.result || "-")}</div></div>
       <div class="metric-box"><div class="label">Model probability</div><div class="value">${pct(x.model_probability)}</div></div>
-      <div class="metric-box"><div class="label">Lab Score</div><div class="value">${num(x.lab_score)}</div></div>
+      <div class="metric-box"><div class="label">Lab Rating</div><div class="value">${labRating(x.lab_score)}</div></div>
       <div class="metric-box"><div class="label">Raw edge</div><div class="value">${pct(x.raw_edge)}</div></div>
       <div class="metric-box"><div class="label">CLV</div><div class="value small">${esc(x.clv_result || "not_tracked")}</div></div>
       <div class="metric-box"><div class="label">Lesson</div><div class="value small">${esc(x.lesson_tag || "-")}</div></div>
@@ -157,6 +133,7 @@ function row(x) {
 function pct(v) {
   return typeof v === "number" ? (v * 100).toFixed(1) + "%" : "-";
 }
+function labRating(v) { return typeof v === "number" ? (v / 10).toFixed(1) + "/10" : "-"; }
 function num(v) {
   return typeof v === "number" ? String(Math.round(v * 10) / 10) : "-";
 }
