@@ -71,6 +71,9 @@ jobs:
       - name: Generate true-game recap
         run: node scripts/generate-recap.js "${{ steps.recap_date.outputs.date }}"
 
+      - name: Grade full-slate calibration ledger
+        run: node scripts/grade-calibration.js "${{ steps.recap_date.outputs.date }}"
+
       - name: Generate learning summary
         run: node scripts/generate-learning-summary.js --date "${{ steps.recap_date.outputs.date }}"
 
