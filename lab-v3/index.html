@@ -175,7 +175,9 @@ async function load() {
       const pHome3 = o3 / (1 + o3);
 
       const b = briefBy[g.gamePk];
-      const locked3 = b && b.model_v3 && Number.isFinite(b.model_v3.p_home) ? b.model_v3.p_home : null;
+      // Only trust the locked value if it was produced by v3.1 (has the bullpen adjustment).
+      // Older locked values (pre-bullpen) fall back to live compute so the page always shows current-method numbers.
+      const locked3 = b && b.model_v3 && Number.isFinite(b.model_v3.p_home) && Number.isFinite(b.model_v3.bp_adj) ? b.model_v3.p_home : null;
       const pHome3Final = locked3 !== null ? locked3 : pHome3;
       const pHome2 = b ? (b.side === "home" ? b.model_probability : 1 - b.model_probability) : pHome2live;
       const mkt = b && b.market && Number.isFinite(b.market.no_vig_probability)
