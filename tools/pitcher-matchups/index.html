@@ -41,6 +41,8 @@
 .pitcher-box { background:var(--bg-elev); border:1px solid var(--border); border-radius:var(--radius); padding:12px; }
 .pitcher-box h3 { margin:0 0 6px; }
 .score { font-size:1.7rem; font-weight:800; color:var(--accent); }
+.score-label { font-size:.62rem; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em; text-align:right; }
+.tier { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:1px 7px; margin-left:6px; white-space:nowrap; }
 .stat-row { display:flex; justify-content:space-between; gap:8px; font-size:.88rem; border-top:1px solid var(--border); padding-top:5px; margin-top:5px; }
 .read { margin-top:10px; font-size:.88rem; color:var(--text-dim); }
 @media (max-width:720px){ .pitcher-grid{ grid-template-columns:1fr; } }
@@ -51,7 +53,7 @@
 <main>
   <p class="eyebrow">LyDia's Lab</p>
   <h1>Pitcher Matchup Tool</h1>
-  <p class="subtitle">Compare every probable starter on the MLB card. The score blends run prevention, WHIP, strikeout/walk profile, and sample reliability into one clean matchup read.</p>
+  <p class="subtitle">Every probable starter on the card, translated: which numbers are real skill, which are luck waiting to correct, and how deep each arm takes you before the bullpen decides the rest.</p>
 
   <div class="controls">
     <div class="field">
@@ -68,7 +70,7 @@
   </div>
 
   <div class="notice">
-    <strong>How to read it:</strong> a strong starting pitcher edge matters most early. Full-game markets still need bullpen context, lineups, park, and weather.
+    <strong>How to read it:</strong> the big number is the <b>LyDia Pitcher Score</b> (0–100) — run prevention, WHIP, K/BB profile, and sample size in one grade. Tier labels translate the decimals: every ~0.50 of ERA and ~0.10 of WHIP is roughly one class of pitcher. <b>K-BB%</b> is the most skill-driven stat on the card; <b>BABIP</b> far from ~.300 flags luck that usually corrects; <b>IP/start</b> is how much of the game the bullpen inherits.
   </div>
 
   <div id="kpis" class="kpis"></div>
@@ -245,25 +247,99 @@ function matchupData(g, stats) {
   return { away, home, gap, strength, edgeTeam };
 }
 
+/* ---- Tiers: pitcher calibration (league ~4.20 ERA, ~1.30 WHIP, ~13% K-BB) ---- */
+function tEra(v){ if(!Number.isFinite(v))return null;
+  if(v<2.75)return{t:"ace",c:"pos-text"}; if(v<3.25)return{t:"frontline",c:"pos-text"}; if(v<3.75)return{t:"good",c:"pos-text"};
+  if(v<4.25)return{t:"average",c:""}; if(v<4.90)return{t:"shaky",c:"neg-text"}; return{t:"bad",c:"neg-text"}; }
+function tWhip(v){ if(!Number.isFinite(v))return null;
+  if(v<1.00)return{t:"elite",c:"pos-text"}; if(v<1.10)return{t:"excellent",c:"pos-text"}; if(v<1.20)return{t:"good",c:"pos-text"};
+  if(v<1.32)return{t:"average",c:""}; if(v<1.45)return{t:"leaky",c:"neg-text"}; return{t:"crowded bases",c:"neg-text"}; }
+function tK9(v){ if(!Number.isFinite(v))return null;
+  if(v>=10.5)return{t:"elite whiffs",c:"pos-text"}; if(v>=9.3)return{t:"high-K",c:"pos-text"}; if(v>=8.3)return{t:"above avg",c:"pos-text"};
+  if(v>=7.3)return{t:"average",c:""}; return{t:"low-K",c:"neg-text"}; }
+function tBb9(v){ if(!Number.isFinite(v))return null;
+  if(v<2.0)return{t:"elite command",c:"pos-text"}; if(v<2.7)return{t:"good command",c:"pos-text"};
+  if(v<3.4)return{t:"average",c:""}; if(v<4.1)return{t:"loose",c:"neg-text"}; return{t:"wild",c:"neg-text"}; }
+function tKbb(v){ if(!Number.isFinite(v))return null;
+  if(v>=0.22)return{t:"elite skill",c:"pos-text"}; if(v>=0.17)return{t:"very good",c:"pos-text"}; if(v>=0.12)return{t:"average",c:""};
+  if(v>=0.08)return{t:"below avg",c:"neg-text"}; return{t:"poor",c:"neg-text"}; }
+function tGb(v){ if(!Number.isFinite(v))return null;
+  if(v>=0.50)return{t:"ground-ball",c:""}; if(v>=0.43)return{t:"neutral",c:""}; return{t:"fly-ball",c:""}; }
+function tBabip(v){ if(!Number.isFinite(v))return null;
+  if(v<0.270)return{t:"running lucky",c:"neg-text"}; if(v<=0.330)return{t:"normal",c:""}; return{t:"unlucky",c:"pos-text"}; }
+function tHr9(v){ if(!Number.isFinite(v))return null;
+  if(v<0.8)return{t:"keeps it in",c:"pos-text"}; if(v<1.15)return{t:"average",c:""}; if(v<1.45)return{t:"homer-prone",c:"neg-text"}; return{t:"gopher-ball",c:"neg-text"}; }
+function tIpStart(v){ if(!Number.isFinite(v))return null;
+  if(v>=6.0)return{t:"workhorse",c:"pos-text"}; if(v>=5.3)return{t:"solid length",c:""}; if(v>=4.7)return{t:"short outings",c:"neg-text"}; return{t:"quick hook",c:"neg-text"}; }
+function chip(tier){ return tier ? ` <span class="tier ${tier.c}">${tier.t}</span>` : ""; }
+
+/* Compose the game read from this matchup's actual numbers. */
+function buildPitcherRead(d, awayTeam, homeTeam) {
+  const A = { ...d.away, team: awayTeam }, H = { ...d.home, team: homeTeam };
+  if (A.missing || H.missing || !Number.isFinite(A.era) || !Number.isFinite(H.era)) {
+    const known = !A.missing && Number.isFinite(A.era) ? A : (!H.missing && Number.isFinite(H.era) ? H : null);
+    return known
+      ? `${known.name} (${fmt(known.era)} ERA, ${Number.isFinite(known.kbbPct) ? (known.kbbPct*100).toFixed(1) + "% K-BB" : "—"}) faces a TBD starter — the market usually knows who is coming before the model does, so treat any apparent edge here with suspicion.`
+      : "Both starters are TBD — no pitching read until probables post.";
+  }
+  const lead = A.score >= H.score ? A : H;
+  const trail = lead === A ? H : A;
+  const gap = Math.abs(A.score - H.score);
+  const parts = [];
+
+  const lt = tEra(lead.era), tt = tEra(trail.era);
+  if (gap < 4) parts.push(`LyDia scores this nearly even (${A.score}–${H.score}) — ${A.name} and ${H.name} are the same class of starter tonight.`);
+  else parts.push(`LyDia scores it ${lead.score}–${trail.score} for ${lead.name}: a ${lt ? lt.t : ""}-level arm (${fmt(lead.era)} ERA, ${fmt(lead.whip)} WHIP) against a ${tt ? tt.t : ""} one (${fmt(trail.era)}, ${fmt(trail.whip)}).`);
+
+  if (Number.isFinite(lead.kbbPct) && Number.isFinite(trail.kbbPct)) {
+    const kg = lead.kbbPct - trail.kbbPct;
+    if (kg >= 0.06) parts.push(`The skill stats back it up: ${lead.name}'s ${(lead.kbbPct*100).toFixed(1)}% K-BB against ${(trail.kbbPct*100).toFixed(1)}% for ${trail.name} — that gap is ability, not results luck.`);
+    else if (kg <= -0.04) parts.push(`Caution: ${trail.name} actually owns the better strikeout-minus-walk profile (${(trail.kbbPct*100).toFixed(1)}% vs ${(lead.kbbPct*100).toFixed(1)}%) — the score gap leans on results the skill stats don't fully support.`);
+  }
+
+  for (const t of [lead, trail]) {
+    if (!Number.isFinite(t.babip)) continue;
+    if (t.babip < 0.265) parts.push(`${t.name}'s .${String(Math.round(t.babip*1000))} BABIP says balls in play keep finding gloves — the ERA is flattered, and that usually corrects.`);
+    else if (t.babip > 0.335) parts.push(`${t.name} is running a .${String(Math.round(t.babip*1000))} BABIP — he has pitched better than the ERA shows.`);
+  }
+
+  if (Number.isFinite(trail.hr9) && trail.hr9 >= 1.45) parts.push(`${trail.name} allows ${fmt(trail.hr9,1)} homers per 9 — one swing changes this game.`);
+  else if (Number.isFinite(lead.hr9) && lead.hr9 >= 1.45) parts.push(`The crack in ${lead.name}'s profile: ${fmt(lead.hr9,1)} HR/9 — homer-prone even in good outings.`);
+
+  if (Number.isFinite(lead.ipStart) && Number.isFinite(trail.ipStart) && Math.abs(lead.ipStart - trail.ipStart) >= 0.8) {
+    const longer = lead.ipStart > trail.ipStart ? lead : trail;
+    const shorter = longer === lead ? trail : lead;
+    parts.push(`${longer.name} averages ${fmt(longer.ipStart,1)} innings a start vs ${fmt(shorter.ipStart,1)} for ${shorter.name} — ${shorter.team}'s bullpen inherits more of this game.`);
+  }
+
+  for (const t of [lead, trail]) {
+    if (Number.isFinite(t.w) && (t.w + t.l) >= 8 && Number.isFinite(t.kbbPct)) {
+      if (t.l > t.w + 2 && t.kbbPct >= 0.15) { parts.push(`Ignore ${t.name}'s ${t.w}-${t.l} record — that is run support, not pitching; the skill profile is far better than the record.`); break; }
+      if (t.w > t.l + 2 && t.kbbPct < 0.10 && t.era > 4.3) { parts.push(`${t.name}'s ${t.w}-${t.l} record flatters him — the underlying profile is ordinary.`); break; }
+    }
+  }
+  return parts.join(" ");
+}
+
 function renderPitcherBox(label, team, p) {
   return `<div class="pitcher-box">
     <h3>${escapeHtml(team)}</h3>
     <div class="dim small">${escapeHtml(label)} starter</div>
     <div style="display:flex;justify-content:space-between;gap:10px;align-items:end">
       <div><b>${escapeHtml(p.name || "TBD")}</b><div class="small dim">${escapeHtml(p.grade || "Unknown")}</div></div>
-      <div class="score">${p.score}</div>
+      <div><div class="score-label">LyDia Pitcher Score</div><div class="score" style="text-align:right">${p.score}</div></div>
     </div>
-    <div class="stat-row"><span>ERA</span><b>${fmt(p.era)}</b></div>
-    <div class="stat-row"><span>WHIP</span><b>${fmt(p.whip)}</b></div>
+    <div class="stat-row"><span>ERA</span><span><b>${fmt(p.era)}</b>${chip(tEra(p.era))}</span></div>
+    <div class="stat-row"><span>WHIP</span><span><b>${fmt(p.whip)}</b>${chip(tWhip(p.whip))}</span></div>
     <div class="stat-row"><span>IP</span><b>${p.ip ? Math.round(p.ip) : "—"}</b></div>
-    <div class="stat-row"><span>W-L</span><b>${Number.isFinite(p.w) ? p.w + "-" + p.l : "—"}</b></div>
-    <div class="stat-row"><span>K/9</span><b>${p.k9 ? fmt(p.k9, 1) : "—"}</b></div>
-    <div class="stat-row"><span>BB/9</span><b>${p.bb9 ? fmt(p.bb9, 1) : "—"}</b></div>
-    <div class="stat-row" title="Strikeout rate minus walk rate — one of the most predictive pitcher skills"><span>K-BB%</span><b>${Number.isFinite(p.kbbPct) ? (p.kbbPct * 100).toFixed(1) + "%" : "—"}</b></div>
-    <div class="stat-row" title="Ground-out share of outs in play — higher keeps the ball in the park"><span>GB%</span><b>${Number.isFinite(p.gbPct) ? (p.gbPct * 100).toFixed(0) + "%" : "—"}</b></div>
-    <div class="stat-row" title="Batting average on balls in play against — far from ~.300 often signals luck due to regress"><span>BABIP</span><b>${Number.isFinite(p.babip) ? p.babip.toFixed(3).replace(/^0/, "") : "—"}</b></div>
-    <div class="stat-row" title="Home runs allowed per 9 innings"><span>HR/9</span><b>${Number.isFinite(p.hr9) ? fmt(p.hr9, 1) : "—"}</b></div>
-    <div class="stat-row" title="Average innings per start — how deep he goes before the bullpen"><span>IP/start</span><b>${Number.isFinite(p.ipStart) ? fmt(p.ipStart, 1) : "—"}</b></div>
+    <div class="stat-row" title="Wins and losses track run support more than pitching skill"><span>W-L</span><b>${Number.isFinite(p.w) ? p.w + "-" + p.l : "—"}</b></div>
+    <div class="stat-row"><span>K/9</span><span><b>${p.k9 ? fmt(p.k9, 1) : "—"}</b>${chip(tK9(p.k9))}</span></div>
+    <div class="stat-row"><span>BB/9</span><span><b>${p.bb9 ? fmt(p.bb9, 1) : "—"}</b>${chip(tBb9(p.bb9))}</span></div>
+    <div class="stat-row" title="Strikeout rate minus walk rate — one of the most predictive pitcher skills"><span>K-BB%</span><span><b>${Number.isFinite(p.kbbPct) ? (p.kbbPct * 100).toFixed(1) + "%" : "—"}</b>${chip(tKbb(p.kbbPct))}</span></div>
+    <div class="stat-row" title="Ground-out share of outs in play — higher keeps the ball in the park"><span>GB%</span><span><b>${Number.isFinite(p.gbPct) ? (p.gbPct * 100).toFixed(0) + "%" : "—"}</b>${chip(tGb(p.gbPct))}</span></div>
+    <div class="stat-row" title="Batting average on balls in play against — far from ~.300 often signals luck due to regress"><span>BABIP</span><span><b>${Number.isFinite(p.babip) ? p.babip.toFixed(3).replace(/^0/, "") : "—"}</b>${chip(tBabip(p.babip))}</span></div>
+    <div class="stat-row" title="Home runs allowed per 9 innings"><span>HR/9</span><span><b>${Number.isFinite(p.hr9) ? fmt(p.hr9, 1) : "—"}</b>${chip(tHr9(p.hr9))}</span></div>
+    <div class="stat-row" title="Average innings per start — how deep he goes before the bullpen"><span>IP/start</span><span><b>${Number.isFinite(p.ipStart) ? fmt(p.ipStart, 1) : "—"}</b>${chip(tIpStart(p.ipStart))}</span></div>
     ${p.note ? `<div class="small dim" style="margin-top:8px">${escapeHtml(p.note)}</div>` : ""}
   </div>`;
 }
@@ -274,9 +350,7 @@ function renderGame(g, stats) {
   const d = matchupData(g, stats);
   const time = new Date(g.gameDate).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   const badgeClass = d.strength === "Strong" ? "pos" : d.strength === "No clear edge" ? "neutral" : "neutral";
-  const read = d.strength === "No clear edge"
-    ? "The starting pitcher matchup does not create a meaningful separation by itself."
-    : `${d.edgeTeam} holds the starting pitcher edge. This is most relevant early; full-game reads still need bullpen and lineup context.`;
+  const read = buildPitcherRead(d, awayTeam, homeTeam);
 
   return `<div class="card match-card" id="game-${g.gamePk}" style="scroll-margin-top:70px">
     <div class="match-head">
