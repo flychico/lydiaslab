@@ -66,6 +66,7 @@ async function main() {
   const generatedAt = new Date().toISOString();
   const strength = buildStrength(standings);
   const pitchers = await fetchPitchers(openGames);
+  const offense = await fetchOffenseForm(DATE);
   const oddsMap = buildOddsMap(oddsEvents);
   const bullpenSource = await buildBullpenSource({ date: DATE, todayGames: openGames, fetchJson, generatedAt });
   const bullpen = bullpenSource.teams_by_name || {};
@@ -73,7 +74,7 @@ async function main() {
   writeJson(`data/bullpen/${DATE}.json`, bullpenSource);
   if (DATE === etToday()) writeJson("data/bullpen/today.json", bullpenSource);
 
-  const rows = openGames.map(g => modelGame(g, strength, pitchers, oddsMap, bullpen)).filter(Boolean)
+  const rows = openGames.map(g => modelGame(g, strength, pitchers, oddsMap, bullpen, offense)).filter(Boolean)
     .sort((a, b) => (b.lab_score || 0) - (a.lab_score || 0));
 
   if (!rows.length) {
@@ -213,6 +214,7 @@ async function fetchPitchers(games) {
       out[person.id] = {
         id: person.id,
         name: person.fullName,
+        hand: (person.pitchHand || {}).code || null,
         era: Number(st.era),
         whip: Number(st.whip),
         ip: ipToNum(st.inningsPitched),
@@ -297,7 +299,49 @@ function buildOddsMap(events) {
   return map;
 }
 
-function modelGame(g, strength, pitchers, oddsMap, bullpen) {
+async function fetchOffenseForm(date) {
+  // Team offense snapshots captured daily for relevance analysis (NOT in any score yet).
+  // Same gate as the pitcher advanced stats: the learning pass must establish
+  // predictive value before recent offensive form enters the model.
+  const out = { season: {}, window: {}, vsHand: {}, windowDays: 15 };
+  try {
+    const yr = Number(date.slice(0, 4));
+    const end = new Date(date + "T12:00:00Z");
+    const start = new Date(end.getTime() - 15 * 86400000);
+    const fmtD = d => d.toISOString().slice(0, 10);
+    const base = `https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${yr}`;
+    const [sn, win, vl, vr] = await Promise.all([
+      fetchJson(base + "&stats=season"),
+      fetchJson(base + `&stats=byDateRange&startDate=${fmtD(start)}&endDate=${fmtD(end)}`),
+      fetchJson(base + "&stats=statSplits&sitCodes=vl"),
+      fetchJson(base + "&stats=statSplits&sitCodes=vr")
+    ]);
+    const splitsOf = d => (((d || {}).stats || [])[0] || {}).splits || [];
+    for (const t of splitsOf(sn)) out.season[t.team.id] = Number(t.stat.ops);
+    for (const t of splitsOf(win)) out.window[t.team.id] = { ops: Number(t.stat.ops), rpg: t.stat.gamesPlayed ? Number(((t.stat.runs || 0) / t.stat.gamesPlayed).toFixed(2)) : null, g: Number(t.stat.gamesPlayed) || 0 };
+    for (const t of splitsOf(vl)) (out.vsHand[t.team.id] = out.vsHand[t.team.id] || {}).vl = Number(t.stat.ops);
+    for (const t of splitsOf(vr)) (out.vsHand[t.team.id] = out.vsHand[t.team.id] || {}).vr = Number(t.stat.ops);
+  } catch (e) {
+    console.warn("Offense form unavailable:", e.message);
+  }
+  return out;
+}
+function offenseFormFor(teamId, oppPitcher, offense) {
+  if (!offense || !offense.season || offense.season[teamId] === undefined) return null;
+  const w = offense.window[teamId] || {};
+  const sOps = offense.season[teamId];
+  const hand = oppPitcher && oppPitcher.hand ? oppPitcher.hand : null;
+  const vs = hand ? ((offense.vsHand[teamId] || {})[hand === "L" ? "vl" : "vr"] ?? null) : null;
+  return {
+    ops_15d: Number.isFinite(w.ops) ? w.ops : null,
+    season_ops: Number.isFinite(sOps) ? sOps : null,
+    delta_ops: (Number.isFinite(w.ops) && Number.isFinite(sOps)) ? Number((w.ops - sOps).toFixed(3)) : null,
+    rpg_15d: w.rpg ?? null,
+    opp_hand: hand,
+    ops_vs_opp_hand: Number.isFinite(vs) ? vs : null
+  };
+}
+function modelGame(g, strength, pitchers, oddsMap, bullpen, offense) {
   const aT = g.teams.away.team;
   const hT = g.teams.home.team;
   const sA = strength[aT.id];
@@ -406,6 +450,11 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen) {
       // K-BB%, GB%, or BABIP separation predicts outcomes better than ERA/WHIP.
       away_advanced: advStats(awayStats),
       home_advanced: advStats(homeStats)
+    },
+    offense_form: {
+      away: offenseFormFor(aT.id, homePitcher ? pitchers[homePitcher.id] : null, offense),
+      home: offenseFormFor(hT.id, awayPitcher ? pitchers[awayPitcher.id] : null, offense),
+      window_days: 15
     },
     bullpen: {
       pick_team: pickBullpen,
