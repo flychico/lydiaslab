@@ -12,15 +12,15 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Team Stats — LyDia</title>
+<title>MLB Team Stats — Offense Trends & Standings | LyDia</title>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="LyDia">
-<meta property="og:title" content="Team Stats — LyDia">
+<meta property="og:title" content="MLB Team Stats — Offense Trends &amp; Standings | LyDia">
 <meta property="og:description" content="MLB team stats that matter for betting: offense and defense per game, run differential, expected record from run differential, and last-10 form.">
 <meta property="og:url" content="https://mlbedges.com/stats/">
 <meta property="og:image" content="https://mlbedges.com/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Team Stats — LyDia">
+<meta name="twitter:title" content="MLB Team Stats — Offense Trends &amp; Standings | LyDia">
 <meta name="twitter:description" content="MLB team stats that matter for betting: offense and defense per game, run differential, expected record from run differential, and last-10 form.">
 <meta name="twitter:image" content="https://mlbedges.com/img/og-card.png">
 
@@ -39,7 +39,20 @@ td.team-cell { font-weight: 600; white-space: nowrap; }
 <nav id="nav"></nav>
 <main>
   <h1>Team Stats & Standings</h1>
-  <p class="subtitle">The numbers that actually predict games: scoring, run prevention, and whether a record is earned.</p>
+  <p class="subtitle">The numbers that actually predict games: who is hitting right now, scoring, run prevention, and whether a record is earned.</p>
+
+  <h2 style="margin-top:18px">Offense — hot & cold (last 15 days vs season)</h2>
+  <div class="notice legend">
+    <b>How to read this table:</b> the batting line is each team's offense over the <b>last 15 days</b>, compared
+    against its full-season baseline. <b>ΔOPS</b> is the difference — <span class="pos-text">green</span> means the
+    lineup is hitting well above its season self (hot), <span class="neg-text">red</span> means well below (cold).
+    <b>K%</b> and <b>BB%</b> are strikeout and walk rates over the window. Click any column header to sort.
+    Recent form is signal, not destiny — 15 days is roughly 13 games.
+  </div>
+  <div id="off-status" class="loading">Loading offense trends…</div>
+  <div id="offense"></div>
+
+  <h2 style="margin-top:26px">Standings & run environment</h2>
 
   <div class="notice legend">
     <b>How to read this table:</b> <b>RS/G</b> is offense (runs scored per game) and <b>RA/G</b> is defense + pitching
@@ -58,6 +71,101 @@ td.team-cell { font-weight: 600; white-space: nowrap; }
 renderNav("/stats/"); renderFooter();
 
 const season = new Date().getMonth() >= 2 ? new Date().getFullYear() : new Date().getFullYear() - 1;
+
+// ---------- Offense trends (last 15 days vs season) ----------
+const OFF_DAYS = 15;
+let offRows = [], offSort = { key: "dOps", dir: -1 };
+
+async function loadOffense() {
+  const el = document.getElementById("offense");
+  const status = document.getElementById("off-status");
+  try {
+    const end = new Date(), start = new Date(Date.now() - OFF_DAYS * 86400000);
+    const fmt = d => d.toISOString().slice(0, 10);
+    const base = "https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=" + season;
+    const [seasonRes, rangeRes] = await Promise.all([
+      fetch(base + "&stats=season"),
+      fetch(base + "&stats=byDateRange&startDate=" + fmt(start) + "&endDate=" + fmt(end))
+    ]);
+    if (!seasonRes.ok || !rangeRes.ok) throw new Error("MLB API unavailable");
+    const seasonSplits = (await seasonRes.json()).stats[0].splits;
+    const rangeSplits = (await rangeRes.json()).stats[0].splits;
+    const seasonBy = {};
+    for (const t of seasonSplits) seasonBy[t.team.id] = t.stat;
+
+    offRows = rangeSplits.map(t => {
+      const r = t.stat, sn = seasonBy[t.team.id] || {};
+      const pa = Number(r.plateAppearances) || 0;
+      return {
+        team: t.team.name,
+        g: Number(r.gamesPlayed) || 0,
+        avg: Number(r.avg), obp: Number(r.obp), slg: Number(r.slg), ops: Number(r.ops),
+        seasonOps: Number(sn.ops),
+        dOps: Number(r.ops) - Number(sn.ops),
+        hr: Number(r.homeRuns) || 0,
+        rpg: r.gamesPlayed ? (Number(r.runs) || 0) / Number(r.gamesPlayed) : 0,
+        kPct: pa ? (Number(r.strikeOuts) || 0) / pa : 0,
+        bbPct: pa ? (Number(r.baseOnBalls) || 0) / pa : 0
+      };
+    }).filter(r => r.g > 0 && isFinite(r.ops) && isFinite(r.seasonOps));
+
+    status.remove();
+    renderOffense();
+  } catch (e) {
+    status.textContent = "Offense trends unavailable right now — MLB stats API did not respond.";
+  }
+}
+
+function renderOffense() {
+  const el = document.getElementById("offense");
+  const rows = [...offRows].sort((a, b) => (a[offSort.key] < b[offSort.key] ? 1 : -1) * offSort.dir * -1);
+  const dCut = 0.040; // ±40 OPS points = meaningfully hot/cold
+  const cols = [
+    ["team", "Team", "Team name"],
+    ["g", "G", "Games in the last " + OFF_DAYS + " days"],
+    ["avg", "AVG", "Batting average, last " + OFF_DAYS + " days"],
+    ["obp", "OBP", "On-base percentage, last " + OFF_DAYS + " days"],
+    ["slg", "SLG", "Slugging, last " + OFF_DAYS + " days"],
+    ["ops", "OPS", "OPS, last " + OFF_DAYS + " days"],
+    ["seasonOps", "Season OPS", "Full-season OPS baseline"],
+    ["dOps", "ΔOPS", "Last-" + OFF_DAYS + "-day OPS minus season OPS — green hot, red cold"],
+    ["rpg", "R/G", "Runs per game over the window"],
+    ["hr", "HR", "Home runs over the window"],
+    ["kPct", "K%", "Strikeout rate over the window (lower is better)"],
+    ["bbPct", "BB%", "Walk rate over the window"]
+  ];
+  const f3 = v => isFinite(v) ? v.toFixed(3).replace(/^0/, "") : "—";
+  const body = rows.map(r => {
+    const dCls = r.dOps >= dCut ? "pos-text" : r.dOps <= -dCut ? "neg-text" : "dim";
+    return `<tr>
+      <td class="team-cell">${escapeHtml(r.team)}</td>
+      <td class="num">${r.g}</td>
+      <td class="num">${f3(r.avg)}</td>
+      <td class="num">${f3(r.obp)}</td>
+      <td class="num">${f3(r.slg)}</td>
+      <td class="num"><b>${f3(r.ops)}</b></td>
+      <td class="num dim">${f3(r.seasonOps)}</td>
+      <td class="num ${dCls}"><b>${r.dOps > 0 ? "+" : ""}${f3(r.dOps)}</b></td>
+      <td class="num">${r.rpg.toFixed(1)}</td>
+      <td class="num">${r.hr}</td>
+      <td class="num">${(r.kPct * 100).toFixed(1)}%</td>
+      <td class="num">${(r.bbPct * 100).toFixed(1)}%</td>
+    </tr>`;
+  }).join("");
+  el.innerHTML = `<div class="card game-card"><table>
+    <thead><tr>${cols.map(c =>
+      `<th class="${c[0] === "team" ? "" : "num"}" style="cursor:pointer" title="${c[2]}" onclick="sortOffense('${c[0]}')">${c[1]}${offSort.key === c[0] ? (offSort.dir === -1 ? " ▾" : " ▴") : ""}</th>`
+    ).join("")}</tr></thead>
+    <tbody>${body}</tbody>
+  </table></div>`;
+}
+
+function sortOffense(key) {
+  offSort = { key, dir: offSort.key === key ? -offSort.dir : -1 };
+  renderOffense();
+}
+
+loadOffense();
 const PYTH_EXP = 1.83;
 let rsCut = { hi: 0, lo: 0 }, raCut = { hi: 0, lo: 0 };
 
