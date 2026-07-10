@@ -23,6 +23,7 @@
 .stat-row { display:flex; justify-content:space-between; gap:8px; font-size:.88rem; border-top:1px solid var(--border); padding-top:5px; margin-top:5px; }
 .read { margin-top:10px; font-size:.88rem; color:var(--text-dim); }
 .hand-row { background:rgba(77,159,220,.08); border-radius:6px; padding:5px 8px; margin-top:8px; font-size:.85rem; }
+.tier { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:1px 7px; margin-left:6px; white-space:nowrap; }
 @media (max-width:720px){ .team-grid{ grid-template-columns:1fr; } }
 </style>
 </head>
@@ -55,7 +56,7 @@
   </div>
 
   <div class="notice">
-    <strong>How to read it:</strong> <b>OPS (window)</b> is quality right now; <b>Δ vs season</b> is heat — a bad offense can be hot and an elite one can be cold. The <b>vs-hand line</b> shows each lineup's full-season OPS against the throwing hand of tonight's opposing starter. Data only — no score. The learning system decides later what earns a place in the model.
+    <strong>How to read it:</strong> <b>OPS (window)</b> is quality right now; <b>Δ vs season</b> is heat — a bad offense can be hot and an elite one can be cold. Tier labels translate the decimals: every ~25 OPS points is one class of offense (.700 below avg · .750 solid · .800 good · .850 All-Star · .900 elite). <b>HOW a team is hot matters</b>: contact-driven heat holds up; strikeout-heavy power binges collapse. The <b>vs-hand line</b> is each lineup's full-season OPS against tonight's opposing starter's throwing hand. Data only — no score. The learning system decides later what earns a place in the model.
   </div>
 
   <div id="status"></div>
@@ -158,36 +159,77 @@ async function load() {
   }
 }
 
-function heatTag(d) {
-  if (!Number.isFinite(d)) return { txt: "—", cls: "dim" };
-  if (d >= 0.060) return { txt: "🔥 hot +" + f3(d), cls: "pos-text" };
-  if (d >= 0.025) return { txt: "warming +" + f3(d), cls: "pos-text" };
-  if (d <= -0.060) return { txt: "❄️ cold −" + f3(-d), cls: "neg-text" };
-  if (d <= -0.025) return { txt: "cooling −" + f3(-d), cls: "neg-text" };
-  return { txt: "steady " + (d >= 0 ? "+" : "−") + f3(Math.abs(d)), cls: "dim" };
+/* ---- Tiers: translate the decimals into plain English ----
+   OPS tiers use the scout calibration: every ~25 points is a class of offense. */
+function opsTier(v) {
+  if (!Number.isFinite(v)) return null;
+  if (v >= 0.900) return { t: "elite", cls: "pos-text" };
+  if (v >= 0.850) return { t: "All-Star level", cls: "pos-text" };
+  if (v >= 0.800) return { t: "good", cls: "pos-text" };
+  if (v >= 0.750) return { t: "solid", cls: "" };
+  if (v >= 0.700) return { t: "below avg", cls: "neg-text" };
+  if (v >= 0.640) return { t: "weak", cls: "neg-text" };
+  return { t: "broken", cls: "neg-text" };
+}
+function kTier(v) { // league K% ≈ 22%
+  if (!Number.isFinite(v)) return null;
+  if (v < 0.19) return { t: "great contact", cls: "pos-text" };
+  if (v < 0.215) return { t: "good contact", cls: "pos-text" };
+  if (v < 0.24) return { t: "average", cls: "" };
+  if (v < 0.27) return { t: "whiff-prone", cls: "neg-text" };
+  return { t: "severe whiffs", cls: "neg-text" };
+}
+function rpgTier(v) { // league ≈ 4.5 R/G
+  if (!Number.isFinite(v)) return null;
+  if (v >= 5.5) return { t: "big scoring", cls: "pos-text" };
+  if (v >= 4.8) return { t: "above avg", cls: "pos-text" };
+  if (v >= 4.2) return { t: "average", cls: "" };
+  if (v >= 3.6) return { t: "light", cls: "neg-text" };
+  return { t: "starved", cls: "neg-text" };
+}
+function tierChip(tier) {
+  return tier ? ` <span class="tier ${tier.cls}">${tier.t}</span>` : "";
+}
+/* Heat now judges HOW a team is hot, not just how much:
+   contact-driven heat is sturdier than a strikeout-heavy power binge,
+   and extreme deltas in either direction are regression candidates. */
+function heatTag(d, w) {
+  if (!Number.isFinite(d)) return { txt: "—", cls: "dim", note: "" };
+  const whiffy = w && Number.isFinite(w.kPct) && w.kPct >= 0.24;
+  let note = "";
+  if (d >= 0.120) note = whiffy ? "extreme + strikeout-heavy — a fragile power binge, expect cooling" : "extreme heat — good form, but this pace never holds";
+  else if (d >= 0.060) note = whiffy ? "power binge profile (high K%) — the fragile kind of hot" : "healthy heat — contact-driven, the sturdier kind";
+  else if (d <= -0.120) note = "extreme cold — snapback likely, but regression has no schedule";
+  else if (d <= -0.060) note = "real slump — but priced in by now; the question is the number";
+  if (d >= 0.060) return { txt: "🔥 hot +" + f3(d), cls: "pos-text", note };
+  if (d >= 0.025) return { txt: "warming +" + f3(d), cls: "pos-text", note };
+  if (d <= -0.060) return { txt: "❄️ cold −" + f3(-d), cls: "neg-text", note };
+  if (d <= -0.025) return { txt: "cooling −" + f3(-d), cls: "neg-text", note };
+  return { txt: "steady " + (d >= 0 ? "+" : "−") + f3(Math.abs(d)), cls: "dim", note };
 }
 
 function teamBox(teamName, id, win, season, oppStarter) {
   const w = win || {}, sn = season || {};
   const delta = (Number.isFinite(w.ops) && Number.isFinite(sn.ops)) ? w.ops - sn.ops : null;
-  const heat = heatTag(delta);
+  const heat = heatTag(delta, w);
   const sp = splitsBy && splitsBy[id] ? splitsBy[id] : {};
   let handLine = "";
   if (oppStarter && oppStarter.hand) {
     const vs = oppStarter.hand === "L" ? sp.vl : sp.vr;
     const lg = oppStarter.hand === "L" ? "LHP" : "RHP";
-    handLine = `<div class="hand-row">vs ${lg} (season): <b>${f3(vs)}</b> OPS — faces ${oppStarter.hand === "L" ? "lefty" : "righty"} ${escapeHtml(oppStarter.name)}</div>`;
+    handLine = `<div class="hand-row">vs ${lg} (season): <b>${f3(vs)}</b>${tierChip(opsTier(vs))} — faces ${oppStarter.hand === "L" ? "lefty" : "righty"} ${escapeHtml(oppStarter.name)}</div>`;
   } else if (oppStarter === null) {
     handLine = `<div class="hand-row dim">Opposing starter TBD — no handedness read yet</div>`;
   }
   return `<div class="team-box">
     <h3>${escapeHtml(teamName)}</h3>
     <div class="heat ${heat.cls}">${heat.txt}</div>
-    <div class="stat-row"><span>OPS (last ${WINDOW}d)</span><b>${f3(w.ops)}</b></div>
-    <div class="stat-row"><span>Season OPS</span><b>${f3(sn.ops)}</b></div>
-    <div class="stat-row"><span>R/G (window)</span><b>${Number.isFinite(w.rpg) ? w.rpg.toFixed(1) : "—"}</b></div>
+    ${heat.note ? `<div class="small dim" style="margin-top:2px">${heat.note}</div>` : ""}
+    <div class="stat-row"><span>OPS (last ${WINDOW}d)</span><span><b>${f3(w.ops)}</b>${tierChip(opsTier(w.ops))}</span></div>
+    <div class="stat-row"><span>Season OPS</span><span><b>${f3(sn.ops)}</b>${tierChip(opsTier(sn.ops))}</span></div>
+    <div class="stat-row"><span>R/G (window)</span><span><b>${Number.isFinite(w.rpg) ? w.rpg.toFixed(1) : "—"}</b>${tierChip(rpgTier(w.rpg))}</span></div>
     <div class="stat-row"><span>AVG (window)</span><b>${f3(w.avg)}</b></div>
-    <div class="stat-row"><span>K% (window)</span><b>${Number.isFinite(w.kPct) ? (w.kPct * 100).toFixed(1) + "%" : "—"}</b></div>
+    <div class="stat-row"><span>K% (window)</span><span><b>${Number.isFinite(w.kPct) ? (w.kPct * 100).toFixed(1) + "%" : "—"}</b>${tierChip(kTier(w.kPct))}</span></div>
     <div class="stat-row"><span>HR (window)</span><b>${w.hr ?? "—"}</b></div>
     ${handLine}
   </div>`;
@@ -208,12 +250,14 @@ function renderGame(g, windowBy, hands) {
     const qGap = Math.abs(aWin.ops - hWin.ops);
     const aD = aWin.ops - aSn.ops, hD = hWin.ops - hSn.ops;
     const heatLead = aD > hD ? a.team.name : h.team.name;
+    const gapWord = qGap >= 0.150 ? "a massive" : qGap >= 0.080 ? "a full class of offense" : qGap >= 0.030 ? "about one tier" : "negligible";
     if (qGap < 0.030) read = `Offenses are close over the last ${WINDOW} days (gap ${f3(qGap)} OPS). No meaningful edge either way.`;
-    else if (qLead === heatLead) read = `${qLead} is both the better and the hotter offense over the last ${WINDOW} days (${f3(qGap)} OPS gap).`;
+    else if (qLead === heatLead) read = `${qLead} is both the better and the hotter offense right now — the ${f3(qGap)} OPS gap is ${gapWord} of separation.`;
     else read = `${qLead} has the better window numbers, but ${heatLead} is trending up harder. Quality and heat point different ways — worth a closer look before leaning on either.`;
     const bothCold = aD <= -0.05 && hD <= -0.05, bothHot = aD >= 0.05 && hD >= 0.05;
-    if (bothCold) read += " Both lineups are cold — relevant for the total.";
-    if (bothHot) read += " Both lineups are hot — relevant for the total.";
+    if (bothCold) read += " Both lineups are cold — an under lean until proven otherwise.";
+    if (bothHot) read += " Both lineups are hot — more relevant for the over than either side.";
+    read += ` Next: check the starters on the Pitcher tool, then the price — a read everyone can see is already in the line.`;
   } else {
     read = "Window data unavailable for one or both teams.";
   }
