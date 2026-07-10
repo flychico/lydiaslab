@@ -28,7 +28,7 @@
   <h1>Model v3 — Shadow View</h1>
   <p class="subtitle">What the new method (FIP-based pitcher input + offense form) says about today's card, next to the locked official v2. This page never affects picks — it's the A/B test made visible.</p>
   <div class="notice">
-    <strong>Reading it:</strong> v2 is the locked number the site published. v3 is recomputed here from live data (or the locked value once the daily run records it). A <b>v3 pick?</b> tag means v3 clears the probability (72%) and market-edge (3%) gates — Lab Score and bullpen gates are not applied on this view. Cards with a pink border are games where the two models pick different sides — those are the games that decide the A/B.
+    <strong>Reading it:</strong> v2 is the locked number the site published. v3 is recomputed here from live data (or the locked value once the daily run records it). A <b>v3 pick?</b> tag means v3 clears the probability (72%) and market-edge (3%) gates — Lab Score and bullpen gates are not applied on this view. Cards with a pink border are games where the two models pick different sides — those are the games that decide the A/B. Each starter shows both grades: the live <b>LyDia Pitcher Score</b> (ERA/WHIP-based) and the <b>v3 skill score</b> (FIP, K-BB%, HR — luck stripped out). Big gaps between the two are the model disagreement, explained.
   </div>
   <div id="summary"></div>
   <div id="status"><div class="loading">Computing both models…</div></div>
@@ -54,6 +54,32 @@ function fipLite(st) {
   const fip = (13 * st.hr + 3 * st.bb - 2 * st.so) / st.ip + V3_FIP_C;
   const wt = Math.min(st.ip, 80) / 80;
   return clampEra(fip * wt + LEAGUE_ERA * (1 - wt));
+}
+/* v2 pitcher score — exact replica of the live Pitcher Matchup Tool formula */
+function scoreV2(st) {
+  if (!st || !Number.isFinite(st.era)) return null;
+  const clampN = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
+  const era = st.era || LEAGUE_ERA, whip = Number.isFinite(st.whip) ? st.whip : 1.30, ip = st.ip || 0;
+  const k9 = ip ? st.so / ip * 9 : null, bb9 = ip ? st.bb / ip * 9 : null;
+  const eraS = clampN(100 - (era - 2.0) * 16, 20, 92);
+  const whipS = clampN(100 - (whip - 0.9) * 90, 20, 92);
+  const kbbS = k9 !== null ? clampN(50 + (k9 - 8) * 4 - (bb9 - 3) * 6, 20, 90) : 50;
+  const sampS = clampN(35 + Math.min(ip, 100) * 0.35, 35, 70);
+  return Math.round(eraS * .40 + whipS * .25 + kbbS * .20 + sampS * .15);
+}
+/* v3 pitcher score — same scale, but graded on SKILL: FIP, K-BB%, HR rate.
+   ERA and WHIP (both luck-contaminated) are out entirely. */
+function scoreV3(st) {
+  if (!st || !st.ip) return null;
+  const clampN = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
+  const fip = fipLite(st);
+  const kbb = st.so + st.bb > 0 && st.ip ? (st.so - st.bb) / Math.round(st.ip * 4.3) : null; // ~batters faced est
+  const hr9 = st.hr / st.ip * 9;
+  const fipS = clampN(100 - (fip - 2.0) * 16, 20, 92);
+  const kbbS = kbb !== null ? clampN(50 + (kbb - 0.13) * 250, 20, 92) : 50;
+  const hrS = clampN(70 - (hr9 - 1.1) * 25, 20, 90);
+  const sampS = clampN(35 + Math.min(st.ip, 100) * 0.35, 35, 70);
+  return Math.round(fipS * .40 + kbbS * .30 + hrS * .15 + sampS * .15);
 }
 const pct = v => (v * 100).toFixed(1) + "%";
 const f3 = v => Number.isFinite(v) ? v.toFixed(3).replace(/^0/, "") : "—";
@@ -134,6 +160,7 @@ async function load() {
       rows.push({
         gamePk: g.gamePk, away: aT.name, home: hT.name,
         spA: pa ? pa.name : "TBD", spH: ph ? ph.name : "TBD",
+        sA2: scoreV2(pa), sA3: scoreV3(pa), sH2: scoreV2(ph), sH3: scoreV3(ph),
         fA, fH, eA, eH, dA, dH,
         pHome2, pHome3: pHome3Final, v3locked: locked3 !== null,
         mktHome: mkt, status: b ? b.status : null,
@@ -147,6 +174,13 @@ async function load() {
   }
 }
 
+function scoreShift(v2s, v3s) {
+  if (!Number.isFinite(v2s) || !Number.isFinite(v3s)) return "";
+  const d = v3s - v2s;
+  if (d >= 8) return ' <span class="tag pick">skill says better</span>';
+  if (d <= -8) return ' <span class="tag diff">results flattered him</span>';
+  return "";
+}
 function sideOf(pHome, away, home) { return pHome >= 0.5 ? { team: home, p: pHome } : { team: away, p: 1 - pHome }; }
 
 function render(rows) {
@@ -163,7 +197,11 @@ function render(rows) {
     if (r.status === "official_pick") v2picks.push(v2.team);
     return `<div class="card match-card ${disagree ? "disagree" : ""}">
       <div class="vhead"><span class="matchup">${escapeHtml(r.away)} @ ${escapeHtml(r.home)}</span><span class="dim small">${r.time}${r.status === "official_pick" ? ' · <b>v2 OFFICIAL PICK</b>' : ""}</span></div>
-      <div class="dim small">${escapeHtml(r.spA)} (ERA-in ${r.eA.toFixed(2)} → FIP-in ${r.fA.toFixed(2)}) vs ${escapeHtml(r.spH)} (${r.eH.toFixed(2)} → ${r.fH.toFixed(2)}) · offense form ${r.dA >= 0 ? "+" : ""}${f3(r.dA)} / ${r.dH >= 0 ? "+" : ""}${f3(r.dH)}</div>
+      <div class="dim small" style="margin-top:4px">
+        ${escapeHtml(r.spA)}: LyDia Pitcher Score <b>${r.sA2 ?? "—"}</b> → v3 skill score <b class="v3c">${r.sA3 ?? "—"}</b>${scoreShift(r.sA2, r.sA3)} (ERA-in ${r.eA.toFixed(2)} → FIP-in ${r.fA.toFixed(2)})<br>
+        ${escapeHtml(r.spH)}: LyDia Pitcher Score <b>${r.sH2 ?? "—"}</b> → v3 skill score <b class="v3c">${r.sH3 ?? "—"}</b>${scoreShift(r.sH2, r.sH3)} (${r.eH.toFixed(2)} → ${r.fH.toFixed(2)})<br>
+        offense form: ${escapeHtml(r.away)} ${r.dA >= 0 ? "+" : ""}${f3(r.dA)} · ${escapeHtml(r.home)} ${r.dH >= 0 ? "+" : ""}${f3(r.dH)}
+      </div>
       <div class="probgrid">
         <div class="probbox"><div class="dim small">OFFICIAL MODEL (v2)</div><div class="big v2c">${escapeHtml(v2.team)} ${pct(v2.p)}</div></div>
         <div class="probbox"><div class="dim small">SHADOW MODEL (v3) ${r.v3locked ? "· locked" : "· live compute"}</div>
