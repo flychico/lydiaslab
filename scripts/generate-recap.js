@@ -270,7 +270,7 @@ async function main() {
     `<h1>Daily MLB Recaps</h1>\n<p class="subtitle">Not just final scores. The performances, rallies, pitching gems, home runs, and moments that decided each game.</p>\n<div class="card archive-list">\n${list}\n</div>`,
     `${SITE}/recaps/`));
 
-  const staticPages = ["", "dashboard/", "picks/", "previews/", "results/", "tools/", "stats/", "recaps/", "articles/", "membership/", "member-brief/", "learning/"];
+  const staticPages = ["", "dashboard/", "picks/", "previews/", "results/", "tools/", "stats/", "recaps/", "articles/", "membership/", "member-brief/", "learning/", "how-to-bet-on-mlb/", "mlb-betting-edge-explained/", "no-vig-odds-calculator-guide/", "how-to-find-value-in-mlb-moneylines/", "closing-line-value-mlb-betting/", "mlb-run-line-vs-moneyline/", "mlb-bullpen-fatigue-betting/", "mlb-park-factors-betting-guide/", "mlb-pitching-metrics-for-betting/", "tools/offense-matchups/", "tools/pitcher-matchups/", "tools/bullpen-fatigue/"];
   const previewDir = path.join(ROOT, "previews");
   const previewPosts = fs.existsSync(previewDir) ? fs.readdirSync(previewDir).filter(f => /^\d{4}-\d{2}-\d{2}\.html$/.test(f)).sort().reverse().map(f => `previews/${f}`) : [];
   const urls = staticPages.map(p => `${SITE}/${p}`).concat(posts.map(f => `${SITE}/recaps/${f}`)).concat(previewPosts.map(p => `${SITE}/${p}`));

@@ -170,3 +170,11 @@ footer {
   main { padding: 20px 14px 48px; }
   nav a.navlink-cta { margin-left: 0; }
 }
+
+/* Lab dropdown */
+.nav-drop { position: relative; display: inline-block; }
+.nav-drop-menu { display: none; position: absolute; top: 100%; left: 0; min-width: 185px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 6px 18px rgba(31,35,40,.12); z-index: 60; padding: 6px 0; }
+.nav-drop:hover .nav-drop-menu, .nav-drop:focus-within .nav-drop-menu { display: block; }
+.nav-drop-menu a { display: block; padding: 8px 14px; color: var(--text); font-size: .92rem; white-space: nowrap; }
+.nav-drop-menu a:hover { background: var(--bg-elev); color: var(--accent2); text-decoration: none; }
+@media (max-width: 760px) { .nav-drop-menu { position: fixed; left: 10px; right: 10px; min-width: 0; } }

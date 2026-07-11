@@ -36,6 +36,7 @@
 
     const team = g.pick_team || "LyDia's side";
     const opponent = opponentName(g);
+    const ten = x => (x / 10).toFixed(1) + "/10";
     const pickScore = Math.round(pick.score);
     const oppScore = Math.round(opp.score);
     const pickIp = typeof pick.last3_bp_ip === "number" ? pick.last3_bp_ip.toFixed(1) : null;
@@ -46,7 +47,7 @@
     const oppB2b = Number(opp.back_to_back_arms || 0);
 
     if (pickScore >= 82 && oppScore >= 82) {
-      return `Both bullpens are high risk. ${team} is ${pickScore}/100 and ${opponent} is ${oppScore}/100, so the late innings carry meaningful volatility on both sides.`;
+      return `Both bullpens are high risk. ${team} is ${(pickScore/10).toFixed(1)}/10 and ${opponent} is ${(oppScore/10).toFixed(1)}/10, so the late innings carry meaningful volatility on both sides.`;
     }
 
     if (pickScore + 15 < oppScore) {
@@ -54,7 +55,7 @@
       if (oppIp !== null) facts.push(`${oppIp} relief innings over the last three days`);
       if (oppB2b) facts.push(`${oppB2b} back-to-back arm${oppB2b === 1 ? "" : "s"}`);
       if (oppRuns !== null && oppRuns >= 6) facts.push(`${oppRuns} bullpen runs allowed`);
-      return `${team} has the fresher bullpen, ${pickScore}/100 versus ${oppScore}/100. ${opponent}${facts.length ? " has " + facts.join(", ") + "." : " carries the heavier recent workload."}`;
+      return `${team} has the fresher bullpen, ${(pickScore/10).toFixed(1)}/10 versus ${(oppScore/10).toFixed(1)}/10. ${opponent}${facts.length ? " has " + facts.join(", ") + "." : " carries the heavier recent workload."}`;
     }
 
     if (pickScore > oppScore + 15) {
@@ -62,14 +63,14 @@
       if (pickIp !== null) facts.push(`${pickIp} relief innings over the last three days`);
       if (pickB2b) facts.push(`${pickB2b} back-to-back arm${pickB2b === 1 ? "" : "s"}`);
       if (pickRuns !== null && pickRuns >= 6) facts.push(`${pickRuns} bullpen runs allowed`);
-      return `${team} carries the heavier bullpen workload, ${pickScore}/100 versus ${oppScore}/100, which adds late-game risk.${facts.length ? " Recent context: " + facts.join(", ") + "." : ""}`;
+      return `${team} carries the heavier bullpen workload, ${(pickScore/10).toFixed(1)}/10 versus ${(oppScore/10).toFixed(1)}/10, which adds late-game risk.${facts.length ? " Recent context: " + facts.join(", ") + "." : ""}`;
     }
 
     if (pickScore >= 62 || oppScore >= 62) {
-      return `Bullpen workload is elevated but not decisive. ${team} is ${pickScore}/100 and ${opponent} is ${oppScore}/100.`;
+      return `Bullpen workload is elevated but not decisive. ${team} is ${(pickScore/10).toFixed(1)}/10 and ${opponent} is ${(oppScore/10).toFixed(1)}/10.`;
     }
 
-    return `No meaningful bullpen fatigue edge. ${team} is ${pickScore}/100 and ${opponent} is ${oppScore}/100.`;
+    return `No meaningful bullpen fatigue edge. ${team} is ${(pickScore/10).toFixed(1)}/10 and ${opponent} is ${(oppScore/10).toFixed(1)}/10.`;
   }
 
   function pitcherSentence(g) {

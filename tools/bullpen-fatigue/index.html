@@ -25,6 +25,10 @@
 
 <meta name="description" content="Review MLB bullpen workload by team using LyDia's generated bullpen fatigue source of truth.">
 <link rel="canonical" href="https://mlbedges.com/tools/bullpen-fatigue/">
+<link rel="manifest" href="/img/manifest-bullpen.json">
+<link rel="apple-touch-icon" href="/img/app-bullpen-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bullpen">
 <link rel="stylesheet" href="/css/style.css">
 <style>
 .controls { display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:16px; }
@@ -45,6 +49,11 @@
 .fpill{border:1px solid var(--border);background:var(--bg-card);border-radius:16px;padding:3px 10px;font-size:.76rem;font-weight:700;cursor:pointer;color:var(--text-dim);white-space:nowrap}
 .fpill.on{background:var(--accent2);border-color:var(--accent2);color:#fff}
 .hidden{display:none}
+.gauge { height:10px; background:var(--bg-elev); border:1px solid var(--border); border-radius:6px; overflow:hidden; margin-top:6px; }
+.gauge i { display:block; height:100%; border-radius:6px; }
+.pen-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:10px; }
+.pen-box { background:var(--bg-elev); border:1px solid var(--border); border-radius:var(--radius); padding:12px; }
+@media (max-width:720px){ .pen-grid{ grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
@@ -188,9 +197,49 @@ function toggleBpTeam(i) {
   if (bpFilter.has(name)) bpFilter.delete(name); else bpFilter.add(name);
   renderFilter(); renderTeams();
 }
+function gaugeColor(score) {
+  if (score >= 82) return "#cf222e";
+  if (score >= 62) return "#e08726";
+  if (score < 35) return "#1e8e3e";
+  return "#4d9fdc";
+}
+function penBox(t) {
+  const runs = Number.isFinite(t.last3_bp_runs) ? t.last3_bp_runs : null;
+  return `<div class="pen-box">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><b>${esc(t.team)}</b>
+      <span><b style="font-size:1.2rem">${t.score ?? "—"}</b><span class="dim small">/100</span> <span class="badge ${t.label === "High risk" || t.label === "Tired" ? "neg" : t.label === "Fresh" ? "pos" : "neutral"}">${esc(t.label || "?")}</span></span></div>
+    <div class="gauge"><i style="width:${Math.min(100, t.score ?? 0)}%;background:${gaugeColor(t.score ?? 0)}"></i></div>
+    <div class="small dim" style="margin-top:6px">${fmt(t.last3_bp_ip)} IP · ${t.last3_relievers ?? "—"} appearances · ${t.back_to_back_arms ?? 0} b2b arm${t.back_to_back_arms === 1 ? "" : "s"}${runs !== null ? ` · <b class="${runs >= 6 ? "neg-text" : ""}">${runs} runs allowed</b>` : ""}</div>
+    <div class="small dim" style="margin-top:4px">${esc(teamRead(t))}</div>
+  </div>`;
+}
 function renderTeams() {
   const rows = bpFilter.size ? allRows.filter(r => bpFilter.has(r.team)) : allRows;
-  document.getElementById("teams").innerHTML = rows.map(renderTeam).join("");
+  // group by game so both pens face each other, like the other matchup tools
+  const byGame = {};
+  const solo = [];
+  for (const t of rows) { if (t.game_pk) (byGame[t.game_pk] = byGame[t.game_pk] || []).push(t); else solo.push(t); }
+  const cards = [];
+  for (const pk of Object.keys(byGame)) {
+    const pair = byGame[pk];
+    if (pair.length === 2) {
+      const [x, y] = pair[0].side === "away" ? pair : [pair[1], pair[0]];
+      const gap = Math.abs(x.score - y.score);
+      const fresher = x.score < y.score ? x.team : y.team;
+      const verdict = gap >= 20 ? `<b>${esc(fresher)}</b> has the meaningfully fresher pen — a real late-inning lean (gap ${gap}).`
+        : gap >= 10 ? `${esc(fresher)}'s pen is somewhat fresher (gap ${gap}).`
+        : `No meaningful bullpen edge either way (gap ${gap}).`;
+      cards.push(`<div class="card team-card">
+        <div class="team-head"><span class="matchup">${esc(x.game || x.team + " vs " + y.team)}</span></div>
+        <div class="pen-grid">${penBox(x)}${penBox(y)}</div>
+        <div class="read">${verdict}</div>
+      </div>`);
+    } else {
+      pair.forEach(t => cards.push(`<div class="card team-card"><div class="pen-grid" style="grid-template-columns:1fr">${penBox(t)}</div></div>`));
+    }
+  }
+  solo.forEach(t => cards.push(`<div class="card team-card"><div class="pen-grid" style="grid-template-columns:1fr">${penBox(t)}</div></div>`));
+  document.getElementById("teams").innerHTML = cards.join("");
 }
 /* Plain-English read composed from fields — never shows internal formula text,
    works with both old and new generated files. */

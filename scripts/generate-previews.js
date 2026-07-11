@@ -60,17 +60,17 @@ function bullpenAnalysis(g) {
   const pickB2b = Number(pick.back_to_back_arms || 0);
   const oppB2b = Number(opp.back_to_back_arms || 0);
 
-  if (pickScore >= 78 && oppScore >= 78) return `Both bullpens are heavily taxed. ${team} is ${pickScore}/100 and ${opponent} is ${oppScore}/100, so late-game volatility is elevated on both sides.`;
+  if (pickScore >= 78 && oppScore >= 78) return `Both bullpens are heavily taxed. ${team} is ${(pickScore/10).toFixed(1)}/10 and ${opponent} is ${(oppScore/10).toFixed(1)}/10, so late-game volatility is elevated on both sides.`;
   if (pickScore + 15 < oppScore) {
     const detail = oppIp !== null ? `${opponent} has used ${oppIp} bullpen innings over the last three days${oppB2b ? ` with ${oppB2b} back-to-back arm${oppB2b === 1 ? "" : "s"}` : ""}.` : "";
-    return `${team} has the fresher bullpen, ${pickScore}/100 versus ${oppScore}/100. ${detail}`.trim();
+    return `${team} has the fresher bullpen, ${(pickScore/10).toFixed(1)}/10 versus ${(oppScore/10).toFixed(1)}/10. ${detail}`.trim();
   }
   if (pickScore > oppScore + 15) {
     const detail = pickIp !== null ? `${team} has used ${pickIp} bullpen innings over the last three days${pickB2b ? ` with ${pickB2b} back-to-back arm${pickB2b === 1 ? "" : "s"}` : ""}.` : "";
-    return `${team} carries the heavier bullpen workload, ${pickScore}/100 versus ${oppScore}/100, which adds late-game risk. ${detail}`.trim();
+    return `${team} carries the heavier bullpen workload, ${(pickScore/10).toFixed(1)}/10 versus ${(oppScore/10).toFixed(1)}/10, which adds late-game risk. ${detail}`.trim();
   }
-  if (pickScore >= 60 || oppScore >= 60) return `Bullpen workload is elevated but not decisive. ${team} is ${pickScore}/100 and ${opponent} is ${oppScore}/100.`;
-  return `No meaningful bullpen fatigue edge. ${team} is ${pickScore}/100 and ${opponent} is ${oppScore}/100.`;
+  if (pickScore >= 60 || oppScore >= 60) return `Bullpen workload is elevated but not decisive. ${team} is ${(pickScore/10).toFixed(1)}/10 and ${opponent} is ${(oppScore/10).toFixed(1)}/10.`;
+  return `No meaningful bullpen fatigue edge. ${team} is ${(pickScore/10).toFixed(1)}/10 and ${opponent} is ${(oppScore/10).toFixed(1)}/10.`;
 }
 function pitcherSentence(g) {
   const p = g.pitcher_edge || {};
@@ -218,7 +218,7 @@ function updateSitemap() {
   const staticPages = ["", "dashboard/", "picks/", "odds/", "tools/", "stats/", "recaps/", "articles/", "membership/", "results/", "previews/", "member-brief/", "tools/market/", "learning/",
     "mlb-betting-edge-explained/", "no-vig-odds-calculator-guide/", "how-to-find-value-in-mlb-moneylines/",
     "closing-line-value-mlb-betting/", "mlb-run-line-vs-moneyline/", "mlb-bullpen-fatigue-betting/",
-    "mlb-park-factors-betting-guide/", "mlb-pitching-metrics-for-betting/"];
+    "mlb-park-factors-betting-guide/", "mlb-pitching-metrics-for-betting/", "how-to-bet-on-mlb/", "tools/offense-matchups/", "tools/pitcher-matchups/", "tools/bullpen-fatigue/"];
   const recapsDir = path.join(ROOT, "recaps");
   const previewsDir = path.join(ROOT, "previews");
   const recapPosts = fs.existsSync(recapsDir) ? fs.readdirSync(recapsDir).filter(f => /^\d{4}-\d{2}-\d{2}\.html$/.test(f)).map(f => `recaps/${f}`) : [];

@@ -25,6 +25,10 @@
 
 <meta name="description" content="Compare today's MLB probable starters with LyDia's pitcher edge score, matchup strength, ERA, WHIP, strikeout profile, and reliability notes.">
 <link rel="canonical" href="https://mlbedges.com/tools/pitcher-matchups/">
+<link rel="manifest" href="/img/manifest-pitcher.json">
+<link rel="apple-touch-icon" href="/img/app-pitcher-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pitcher">
 <link rel="stylesheet" href="/css/style.css">
 <style>
 .controls { display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:16px; }
@@ -114,6 +118,17 @@ function num(v, fallback=null) {
 }
 function fmt(v, dp=2) { return Number.isFinite(v) ? Number(v).toFixed(dp) : "—"; }
 
+let BP = null; // today's bullpen map (teams_by_name), only valid for today
+async function loadBullpen(date) {
+  BP = null;
+  if (date !== localISODate(new Date())) return;
+  try {
+    const r = await fetch("/data/bullpen/today.json?v=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d && d.date === date && d.teams_by_name) BP = d.teams_by_name;
+  } catch (e) {}
+}
 async function load() {
   const statusEl = document.getElementById("status");
   const gamesEl = document.getElementById("games");
@@ -140,7 +155,7 @@ async function load() {
   games.sort((a,b) => new Date(a.gameDate) - new Date(b.gameDate));
 
   const ids = [...new Set(games.flatMap(g => ["away","home"].map(s => g.teams[s].probablePitcher && g.teams[s].probablePitcher.id).filter(Boolean)))];
-  const pitcherStats = await fetchPitchers(ids);
+  const [pitcherStats] = await Promise.all([fetchPitchers(ids), loadBullpen(date)]);
   const cards = games.map(g => renderGame(g, pitcherStats));
   statusEl.innerHTML = "";
   gamesEl.innerHTML = cards.join("");
@@ -367,7 +382,30 @@ function renderGame(g, stats) {
       ${renderPitcherBox("Away", awayTeam, d.away)}
       ${renderPitcherBox("Home", homeTeam, d.home)}
     </div>
+    ${bullpenStrip(awayTeam, homeTeam)}
     <div class="read">${escapeHtml(read)}</div>
+  </div>`;
+}
+
+/* Bullpens are pitchers too: same-page condition strip (today only — /100 scale, higher = more fatigued). */
+function bullpenStrip(awayTeam, homeTeam) {
+  if (!BP) return "";
+  const a = BP[awayTeam], h = BP[homeTeam];
+  if (!a || !h) return "";
+  const box = (team, b) => {
+    const cls = b.score >= 82 ? "neg-text" : b.score >= 62 ? "neg-text" : b.score < 35 ? "pos-text" : "";
+    return `<div style="flex:1;min-width:150px"><b>${escapeHtml(team)}</b> pen:
+      <b class="${cls}">${b.score}/100 ${escapeHtml(b.label)}</b>
+      <span class="dim small">· ${b.last3_bp_ip ?? "—"} IP${Number.isFinite(b.last3_bp_runs) ? ", " + b.last3_bp_runs + " runs allowed" : ""} last 3d</span></div>`;
+  };
+  const gap = Math.abs(a.score - h.score);
+  const fresher = a.score < h.score ? awayTeam : homeTeam;
+  const edgeLine = gap >= 20 ? `<div class="small" style="margin-top:4px;color:var(--accent)">${escapeHtml(fresher)} has the meaningfully fresher pen (gap ${gap}) — late innings lean their way.</div>`
+    : gap >= 10 ? `<div class="small dim" style="margin-top:4px">${escapeHtml(fresher)}'s pen is somewhat fresher (gap ${gap}).</div>` : "";
+  return `<div style="margin-top:10px;background:var(--bg-elev);border:1px solid var(--border);border-radius:8px;padding:9px 12px">
+    <div class="dim small" style="text-transform:uppercase;letter-spacing:.04em;font-size:.7rem;margin-bottom:4px">Bullpen condition (last 3 days · <a href="/tools/bullpen-fatigue/">full index</a>)</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap">${box(awayTeam, a)}${box(homeTeam, h)}</div>
+    ${edgeLine}
   </div>`;
 }
 </script>

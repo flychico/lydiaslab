@@ -81,6 +81,19 @@ function renderNav(active) {
   el.innerHTML = '<div class="nav-inner">'
     + '<a class="brand" href="/"><span class="brand-ly">Ly</span><span class="brand-dia">Dia</span></a>'
     + links.map(function (l) {
+        if (l[0] === "/tools/") {
+          var tools = [
+            ["/member-brief/", "Daily Member Brief"],
+            ["/tools/offense-matchups/", "Offense Matchup"],
+            ["/tools/pitcher-matchups/", "Pitcher Matchup"],
+            ["/tools/bullpen-fatigue/", "Bullpen Fatigue"]
+          ];
+          return '<span class="nav-drop' + (active === "/tools/" ? ' active-wrap' : '') + '">'
+            + '<a class="navlink' + (active === "/tools/" ? ' active' : '') + '" href="/tools/">Lab ▾</a>'
+            + '<span class="nav-drop-menu">'
+            + tools.map(function (t) { return '<a href="' + t[0] + '">' + t[1] + '</a>'; }).join("")
+            + '</span></span>';
+        }
         return '<a class="navlink' + (l[0] === active ? ' active' : '') + '" href="' + l[0] + '">' + l[1] + '</a>';
       }).join("")
     + '<a class="navlink navlink-cta' + (active === "/membership/" ? ' active' : '') + '" href="/membership/">Join $30/mo</a>'

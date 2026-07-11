@@ -189,7 +189,7 @@ function rebuildSitemap() {
   const staticPages = ["", "dashboard/", "picks/", "tools/", "stats/", "recaps/", "articles/", "membership/", "results/", "previews/", "member-brief/",
     "mlb-betting-edge-explained/", "no-vig-odds-calculator-guide/", "how-to-find-value-in-mlb-moneylines/",
     "closing-line-value-mlb-betting/", "mlb-run-line-vs-moneyline/", "mlb-bullpen-fatigue-betting/",
-    "mlb-park-factors-betting-guide/", "mlb-pitching-metrics-for-betting/"];
+    "mlb-park-factors-betting-guide/", "mlb-pitching-metrics-for-betting/", "how-to-bet-on-mlb/", "tools/offense-matchups/", "tools/pitcher-matchups/", "tools/bullpen-fatigue/"];
   const recapsDir = path.join(ROOT, "recaps");
   const previewsDir = path.join(ROOT, "previews");
   const recapPosts = fs.existsSync(recapsDir) ? fs.readdirSync(recapsDir).filter(f => /^\d{4}-\d{2}-\d{2}\.html$/.test(f)).map(f => `recaps/${f}`) : [];

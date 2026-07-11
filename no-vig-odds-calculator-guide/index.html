@@ -73,6 +73,32 @@
   <h1>No-Vig Odds Calculator Guide</h1>
   <p class="subtitle">Every betting line has the book's margin baked in. Here's exactly how to strip it out and see the market's real, fair probability — with the formulas and worked examples.</p>
 
+<div class="card" style="margin:18px 0;border:2px solid var(--accent2)">
+  <h2 style="margin-top:0">Try it live</h2>
+  <p class="dim small">Enter both sides' American odds — the math below updates as you read.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:420px">
+    <div><label class="dim small" for="nv-a">Side A odds</label><input type="number" id="nv-a" value="-150" oninput="nvCalc()"></div>
+    <div><label class="dim small" for="nv-b">Side B odds</label><input type="number" id="nv-b" value="+130" oninput="nvCalc()"></div>
+  </div>
+  <div id="nv-out" style="margin-top:12px"></div>
+</div>
+<script>
+function nvImp(am){ am=Number(am); if(!isFinite(am)||am===0) return null; return am>0 ? 100/(am+100) : Math.abs(am)/(Math.abs(am)+100); }
+function nvAm(p){ return p>=0.5 ? "-"+Math.round(100*p/(1-p)) : "+"+Math.round(100*(1-p)/p); }
+function nvCalc(){
+  const a=nvImp(document.getElementById("nv-a").value), b=nvImp(document.getElementById("nv-b").value);
+  const out=document.getElementById("nv-out");
+  if(a===null||b===null){ out.innerHTML='<span class="dim">Enter both prices (e.g. -150 and +130).</span>'; return; }
+  const total=a+b, vig=(total-1)*100, fa=a/total, fb=b/total;
+  out.innerHTML=`<table style="max-width:460px"><thead><tr><th></th><th class="num">Implied</th><th class="num">Fair (no-vig)</th><th class="num">Fair odds</th></tr></thead>
+  <tbody><tr><td>Side A</td><td class="num">${(a*100).toFixed(1)}%</td><td class="num"><b>${(fa*100).toFixed(1)}%</b></td><td class="num">${nvAm(fa)}</td></tr>
+  <tr><td>Side B</td><td class="num">${(b*100).toFixed(1)}%</td><td class="num"><b>${(fb*100).toFixed(1)}%</b></td><td class="num">${nvAm(fb)}</td></tr></tbody></table>
+  <p class="small" style="margin-top:8px">Combined implied probability: <b>${(total*100).toFixed(1)}%</b> — the extra <b>${vig.toFixed(1)}%</b> above 100% is the book's vig. Your edge only exists when your true probability beats the <b>fair</b> number, not the listed one.</p>`;
+}
+nvCalc();
+</script>
+
+
   <h2>What "the vig" actually is</h2>
   <p>Sportsbooks don't set prices to reflect true 50/50 probability on an even game — they set prices so that both sides of the bet, added together, total more than 100%. That extra percentage is the vig (also called juice or the overround), and it's how the book makes money regardless of who wins. A "pick'em" game priced at -110 / -110 isn't really a 50/50 proposition to the book — implied probability on each side is 52.4%, which sums to 104.8%. The extra 4.8% is margin.</p>
 
