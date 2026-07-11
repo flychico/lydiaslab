@@ -100,6 +100,8 @@ function processBoxSide(box, side, teamId, date, teams) {
 
   let totalIP = 0;
   let starterIP = 0;
+  let starterRuns = 0;
+  let starterId = null;
   let relievers = 0;
   let bpRuns = 0;
   const relieverIds = [];
@@ -112,6 +114,8 @@ function processBoxSide(box, side, teamId, date, teams) {
 
     if (i === 0) {
       starterIP = ip;
+      starterId = id;
+      starterRuns = Number(player && player.stats && player.stats.pitching && player.stats.pitching.runs) || 0;
     } else {
       relievers += 1;
       bpRuns += Number(player && player.stats && player.stats.pitching && player.stats.pitching.runs) || 0;
@@ -121,11 +125,23 @@ function processBoxSide(box, side, teamId, date, teams) {
     }
   }
 
+  // Opener rule: a "starter" who threw ≤2 IP in a multi-pitcher game is pen
+  // workload too (bullpen games, openers, blowup starts) — his innings, runs,
+  // and availability count against the pen. Without this, bullpen games
+  // undercount by exactly the opener's share.
+  const openerGame = starterIP <= 2 && tb.pitchers.length >= 3;
+  if (openerGame && starterId) {
+    relievers += 1;
+    bpRuns += starterRuns;
+    if (!team.pitcherDates[starterId]) team.pitcherDates[starterId] = new Set();
+    team.pitcherDates[starterId].add(date);
+  }
   team.games.push({
     date,
-    bpIP: Math.max(0, totalIP - starterIP),
+    bpIP: Math.max(0, openerGame ? totalIP : totalIP - starterIP),
     relievers,
     bpRuns,
+    opener_game: openerGame,
     relieverIds
   });
 }
