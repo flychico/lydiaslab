@@ -82,6 +82,7 @@ const season = new Date().getMonth() >= 2 ? new Date().getFullYear() : new Date(
 
 // ---------- Offense trends (last 15 days vs season) ----------
 const OFF_DAYS = 15;
+function f3(v){ return isFinite(v) ? v.toFixed(3).replace(/^0/, "") : "—"; }
 let offRows = [], offSort = { key: "dOps", dir: -1 };
 let offFilter = new Set(); // team names; empty = show all
 
@@ -206,7 +207,7 @@ function renderOffense() {
     ["kPct", "K%", "Strikeout rate over the window (lower is better)"],
     ["bbPct", "BB%", "Walk rate over the window"]
   ];
-  const f3 = v => isFinite(v) ? v.toFixed(3).replace(/^0/, "") : "—";
+
   const body = rows.map(r => {
     const dCls = r.dOps >= dCut ? "pos-text" : r.dOps <= -dCut ? "neg-text" : "dim";
     return `<tr>
@@ -234,6 +235,9 @@ function renderOffense() {
 
 /* ---- Storylines: the things a scanning eye misses in the tables ---- */
 function buildStories() {
+  try { buildStoriesInner(); } catch (e) { console.warn("stories skipped:", e.message); }
+}
+function buildStoriesInner() {
   const el = document.getElementById("stories");
   if (!el || !window._standRows || !offRows.length) return;
   const stories = [];
@@ -329,7 +333,7 @@ function renderStandings(data) {
       luck: pyth !== null ? t.wins - pyth * gp : null
     });
   }
-  buildStories();
+  setTimeout(buildStories, 0); // after the table paints — a stories hiccup can never blank the standings
 
   // league-wide RS/G and RA/G cutoffs for top/bottom-10 coloring
   const all = [];
