@@ -155,7 +155,7 @@ async function load() {
   games.sort((a,b) => new Date(a.gameDate) - new Date(b.gameDate));
 
   const ids = [...new Set(games.flatMap(g => ["away","home"].map(s => g.teams[s].probablePitcher && g.teams[s].probablePitcher.id).filter(Boolean)))];
-  const [pitcherStats] = await Promise.all([fetchPitchers(ids), loadBullpen(date)]);
+  const [pitcherStats] = await Promise.all([fetchPitchers(ids, date), loadBullpen(date)]);
   const cards = games.map(g => renderGame(g, pitcherStats));
   statusEl.innerHTML = "";
   gamesEl.innerHTML = cards.join("");
@@ -175,25 +175,34 @@ async function load() {
     <div class="kpi"><div class="label">TBD starters</div><div class="value">${tbd}</div><div class="small dim">monitor closer to first pitch</div></div>`;
 }
 
-async function fetchPitchers(ids) {
+async function fetchPitchers(ids, date) {
   const out = {};
   if (!ids.length) return out;
+
   try {
     const res = await fetch(`https://statsapi.mlb.com/api/v1/people?personIds=${ids.join(",")}&hydrate=stats(group=[pitching],type=[season])`);
     if (!res.ok) return out;
+
     const data = await res.json();
+    const mixedRoleIds = [];
+
     for (const p of data.people || []) {
       const split = (((p.stats || [])[0] || {}).splits || [])[0];
       const st = split && split.stat ? split.stat : {};
+      const ip = ipToNum(st.inningsPitched);
+      const gs = num(st.gamesStarted, 0);
+      const gp = num(st.gamesPitched, null);
+
       out[p.id] = {
         name: p.fullName,
         era: num(st.era),
         whip: num(st.whip),
-        ip: ipToNum(st.inningsPitched),
+        ip,
         so: num(st.strikeOuts, 0),
         bb: num(st.baseOnBalls, 0),
         hr: num(st.homeRuns, 0),
-        gs: num(st.gamesStarted, 0),
+        gs,
+        gp,
         w: num(st.wins, 0),
         l: num(st.losses, 0),
         bf: num(st.battersFaced, 0),
@@ -201,11 +210,56 @@ async function fetchPitchers(ids) {
         ao: num(st.airOuts, 0),
         h: num(st.hits, 0),
         ab: num(st.atBats, 0),
-        sf: num(st.sacFlies, 0)
+        sf: num(st.sacFlies, 0),
+        starterIp: gs > 0 && gp === gs ? ip : null,
+        starterGames: gs > 0 && gp === gs ? gs : null
       };
+
+      // Total season IP can only be divided by games started when every
+      // pitching appearance was a start. Mixed-role pitchers need starter-only usage.
+      if (gs > 0 && gp !== gs) mixedRoleIds.push(p.id);
+    }
+
+    if (mixedRoleIds.length) {
+      const season = Number(String(date || "").slice(0, 4)) || new Date().getFullYear();
+      const usageRows = await Promise.all(
+        mixedRoleIds.map(async id => [id, await fetchStarterUsage(id, season)])
+      );
+
+      for (const [id, usage] of usageRows) {
+        if (!usage || !out[id]) continue;
+        out[id].starterIp = usage.starterIp;
+        out[id].starterGames = usage.starterGames;
+      }
     }
   } catch(e) {}
+
   return out;
+}
+
+async function fetchStarterUsage(id, season) {
+  try {
+    const res = await fetch(`https://statsapi.mlb.com/api/v1/people/${id}/stats?stats=gameLog&group=pitching&season=${season}`);
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    const splits = (((data.stats || [])[0] || {}).splits || []);
+    let starterIp = 0;
+    let starterGames = 0;
+
+    for (const split of splits) {
+      const st = split && split.stat ? split.stat : {};
+      const started = num(st.gamesStarted, 0);
+      if (started <= 0) continue;
+
+      starterIp += ipToNum(st.inningsPitched);
+      starterGames += started;
+    }
+
+    return starterGames > 0 ? { starterIp, starterGames } : null;
+  } catch(e) {
+    return null;
+  }
 }
 
 function pitcher(side, stats) {
@@ -247,7 +301,7 @@ function scorePitcher(st) {
   const babipDen = st.ab - st.so - st.hr + (st.sf || 0);
   const babip = babipDen > 0 ? (st.h - st.hr) / babipDen : null;
   const hr9 = ip ? (st.hr / ip) * 9 : null;
-  const ipStart = st.gs ? ip / st.gs : null;
+  const ipStart = st.starterGames ? st.starterIp / st.starterGames : null;
   return { ...st, score, grade, note, k9, bb9, kbbPct, gbPct, babip, hr9, ipStart };
 }
 
