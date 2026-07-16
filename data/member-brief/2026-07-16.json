@@ -1,0 +1,183 @@
+{
+  "date": "2026-07-16",
+  "generated_at": "2026-07-16T16:20:32.386Z",
+  "snapshot_type": "posted",
+  "source_of_truth": "LyDia Daily Engine",
+  "current_official_model": "moneyline_only",
+  "official_pick_rules": {
+    "minimum_model_probability": 0.72,
+    "minimum_lab_score": 80,
+    "minimum_market_edge": 0.03,
+    "note": "Lab Rating is setup quality. It is not win probability. Official picks require both strong win probability and strong setup quality."
+  },
+  "summary": "No official picks cleared the stricter rules. 1 value-watch setup and 0 watchlist games remain research-only. 1 game reached a Lab Rating of 75+ but did not clear every official gate.",
+  "games": [
+    {
+      "game_pk": 823440,
+      "game_id": "new-york-mets-philadelphia-phillies-2026-07-16",
+      "game": "New York Mets @ Philadelphia Phillies",
+      "time": "7:10 PM",
+      "game_time_iso": "2026-07-16T23:10:00Z",
+      "away_team": "New York Mets",
+      "home_team": "Philadelphia Phillies",
+      "away_record": "40-57",
+      "home_record": "54-43",
+      "away_l10": "4-6",
+      "home_l10": "5-5",
+      "pick_team": "New York Mets",
+      "side": "away",
+      "model_probability": 0.5197,
+      "edge": 0.0626,
+      "status": "value_watch",
+      "value_tag": "VALUE WATCH",
+      "lab_score": 75,
+      "lab_score_breakdown": {
+        "score": 75,
+        "model_edge_points": 27.39,
+        "pitcher_points": 20,
+        "bullpen_points": 8,
+        "market_points": 15,
+        "base_points": 5,
+        "note": "Lab Rating grades setup quality. It is not win probability."
+      },
+      "official_pick_gate": {
+        "minimum_model_probability": 0.72,
+        "minimum_lab_score": 80,
+        "minimum_edge": 0.03,
+        "model_probability_passed": false,
+        "lab_score_passed": false,
+        "edge_passed": true
+      },
+      "pass_reason": null,
+      "read": "New York Mets is a value watch, not an official pick. LyDia projects 52.0% against a 45.7% no-vig market number, a 6.3% model edge at +114. Lab Rating 7.5/10: model edge 27.39, pitcher 20, bullpen 8, market 15, base 5. The setup is strong, but official picks require at least 72.0% model probability and 80/100 Lab Score.",
+      "pitcher_edge": {
+        "team": "New York Mets",
+        "gap": 16,
+        "conflict": false,
+        "away_score": 67,
+        "home_score": 51,
+        "away_pitcher": "Christian Scott",
+        "home_pitcher": "Aaron Nola",
+        "away_era": 3.17,
+        "home_era": 5.75,
+        "away_whip": 1.3,
+        "home_whip": 1.43,
+        "away_advanced": {
+          "w": 2,
+          "l": 1,
+          "kbb_pct": 0.1674,
+          "gb_pct": 0.3763,
+          "babip": 0.2846,
+          "hr9": 1.17,
+          "ip_per_start": 4.5
+        },
+        "home_advanced": {
+          "w": 3,
+          "l": 6,
+          "kbb_pct": 0.1671,
+          "gb_pct": 0.4645,
+          "babip": 0.3271,
+          "hr9": 1.86,
+          "ip_per_start": 5.1
+        }
+      },
+      "offense_form": {
+        "away": {
+          "ops_15d": 0.762,
+          "season_ops": 0.684,
+          "delta_ops": 0.078,
+          "rpg_15d": 5,
+          "opp_hand": "R",
+          "ops_vs_opp_hand": 0.682
+        },
+        "home": {
+          "ops_15d": 0.664,
+          "season_ops": 0.701,
+          "delta_ops": -0.037,
+          "rpg_15d": 3.73,
+          "opp_hand": "R",
+          "ops_vs_opp_hand": 0.716
+        },
+        "window_days": 15
+      },
+      "model_v3": {
+        "p_home": 0.5507,
+        "fip_away": 3.98,
+        "fip_home": 4.69,
+        "off_adj": -0.092,
+        "bp_adj": 0,
+        "version": "v3.1-bullpen",
+        "p_home_v2": 0.4803,
+        "note": "shadow A/B — does not drive picks"
+      },
+      "bullpen": {
+        "pick_team": {
+          "score": 0,
+          "label": "Fresh",
+          "last_game_bp_ip": 0,
+          "last3_bp_ip": 0,
+          "last3_bp_runs": 0,
+          "last_game_relievers": 0,
+          "last3_relievers": 0,
+          "back_to_back_arms": 0,
+          "workload_read": "Low recent workload. No major bullpen fatigue flag from the last three days.",
+          "score_reason": "Fresh (0.0/10). No completed games in the last three days — the pen comes in rested.",
+          "formula": "45 + ((Last 3 BP IP - 9) x 3.5) + ((Last game BP IP - 3) x 4) + (Back-to-back arms x 6) + clamp((Last 3 BP runs - 4) x 1.5, -6, 12)",
+          "context_only": {
+            "last_game_relievers": 0,
+            "last3_relievers": 0,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "last3_bp_ip": -31.5,
+            "last_game_bp_ip": -12,
+            "back_to_back_arms": 0,
+            "bp_runs_allowed_3d": 0,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": -18,
+            "raw_score": -16.5
+          },
+          "source_version": "bullpen-fatigue-v3-runs-aware"
+        },
+        "opponent": {
+          "score": 0,
+          "label": "Fresh",
+          "last_game_bp_ip": 0,
+          "last3_bp_ip": 0,
+          "last3_bp_runs": 0,
+          "last_game_relievers": 0,
+          "last3_relievers": 0,
+          "back_to_back_arms": 0,
+          "workload_read": "Low recent workload. No major bullpen fatigue flag from the last three days.",
+          "score_reason": "Fresh (0.0/10). No completed games in the last three days — the pen comes in rested.",
+          "formula": "45 + ((Last 3 BP IP - 9) x 3.5) + ((Last game BP IP - 3) x 4) + (Back-to-back arms x 6) + clamp((Last 3 BP runs - 4) x 1.5, -6, 12)",
+          "context_only": {
+            "last_game_relievers": 0,
+            "last3_relievers": 0,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "last3_bp_ip": -31.5,
+            "last_game_bp_ip": -12,
+            "back_to_back_arms": 0,
+            "bp_runs_allowed_3d": 0,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": -18,
+            "raw_score": -16.5
+          },
+          "source_version": "bullpen-fatigue-v3-runs-aware"
+        },
+        "label": "Neutral",
+        "major_caution": false,
+        "absolute_risk": "Normal"
+      },
+      "market": {
+        "no_vig_probability": 0.4571,
+        "best_price": 114,
+        "books": 9
+      }
+    }
+  ]
+}

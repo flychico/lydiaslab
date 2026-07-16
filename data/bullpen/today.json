@@ -1,0 +1,154 @@
+{
+  "date": "2026-07-16",
+  "generated_at": "2026-07-16T16:20:32.386Z",
+  "source_of_truth": "scripts/lib/bullpen-fatigue-core.js",
+  "version": "bullpen-fatigue-v3-runs-aware",
+  "method": "Generated single source of truth. Website pages display this JSON and do not calculate separate bullpen scores in the browser.",
+  "note": "v3 runs-aware formula. Reliever counts are context only and do not add hidden score points.",
+  "formula": "45 + ((Last 3 BP IP - 9) x 3.5) + ((Last game BP IP - 3) x 4) + (Back-to-back arms x 6) + clamp((Last 3 BP runs - 4) x 1.5, -6, 12)",
+  "lookback_days": 3,
+  "summary": {
+    "teams_tracked": 2,
+    "high_risk": 0,
+    "tired": 0,
+    "fresh": 2,
+    "normal": 0
+  },
+  "warnings": [],
+  "teams": [
+    {
+      "team_id": 121,
+      "team": "New York Mets",
+      "side": "away",
+      "opponent": "Philadelphia Phillies",
+      "game": "New York Mets @ Philadelphia Phillies",
+      "game_pk": 823440,
+      "game_time_iso": "2026-07-16T23:10:00Z",
+      "score": 0,
+      "label": "Fresh",
+      "workload_read": "Low recent workload. No major bullpen fatigue flag from the last three days.",
+      "score_reason": "Fresh (0.0/10). No completed games in the last three days — the pen comes in rested.",
+      "formula": "45 + ((Last 3 BP IP - 9) x 3.5) + ((Last game BP IP - 3) x 4) + (Back-to-back arms x 6) + clamp((Last 3 BP runs - 4) x 1.5, -6, 12)",
+      "last_game_date": null,
+      "last_game_bp_ip": 0,
+      "last3_bp_ip": 0,
+      "last3_bp_runs": 0,
+      "last_game_relievers": 0,
+      "last3_relievers": 0,
+      "back_to_back_arms": 0,
+      "recent_games_tracked": 0,
+      "context_only": {
+        "last_game_relievers": 0,
+        "last3_relievers": 0,
+        "note": "Reliever counts are displayed for context only and do not add score points."
+      },
+      "component_scores": {
+        "baseline": 45,
+        "last3_bp_ip": -31.5,
+        "last_game_bp_ip": -12,
+        "back_to_back_arms": 0,
+        "bp_runs_allowed_3d": 0,
+        "reliever_counts_context_only": 0,
+        "no_recent_games_credit": -18,
+        "raw_score": -16.5
+      }
+    },
+    {
+      "team_id": 143,
+      "team": "Philadelphia Phillies",
+      "side": "home",
+      "opponent": "New York Mets",
+      "game": "New York Mets @ Philadelphia Phillies",
+      "game_pk": 823440,
+      "game_time_iso": "2026-07-16T23:10:00Z",
+      "score": 0,
+      "label": "Fresh",
+      "workload_read": "Low recent workload. No major bullpen fatigue flag from the last three days.",
+      "score_reason": "Fresh (0.0/10). No completed games in the last three days — the pen comes in rested.",
+      "formula": "45 + ((Last 3 BP IP - 9) x 3.5) + ((Last game BP IP - 3) x 4) + (Back-to-back arms x 6) + clamp((Last 3 BP runs - 4) x 1.5, -6, 12)",
+      "last_game_date": null,
+      "last_game_bp_ip": 0,
+      "last3_bp_ip": 0,
+      "last3_bp_runs": 0,
+      "last_game_relievers": 0,
+      "last3_relievers": 0,
+      "back_to_back_arms": 0,
+      "recent_games_tracked": 0,
+      "context_only": {
+        "last_game_relievers": 0,
+        "last3_relievers": 0,
+        "note": "Reliever counts are displayed for context only and do not add score points."
+      },
+      "component_scores": {
+        "baseline": 45,
+        "last3_bp_ip": -31.5,
+        "last_game_bp_ip": -12,
+        "back_to_back_arms": 0,
+        "bp_runs_allowed_3d": 0,
+        "reliever_counts_context_only": 0,
+        "no_recent_games_credit": -18,
+        "raw_score": -16.5
+      }
+    }
+  ],
+  "teams_by_name": {
+    "New York Mets": {
+      "score": 0,
+      "label": "Fresh",
+      "last_game_bp_ip": 0,
+      "last3_bp_ip": 0,
+      "last3_bp_runs": 0,
+      "last_game_relievers": 0,
+      "last3_relievers": 0,
+      "back_to_back_arms": 0,
+      "workload_read": "Low recent workload. No major bullpen fatigue flag from the last three days.",
+      "score_reason": "Fresh (0.0/10). No completed games in the last three days — the pen comes in rested.",
+      "formula": "45 + ((Last 3 BP IP - 9) x 3.5) + ((Last game BP IP - 3) x 4) + (Back-to-back arms x 6) + clamp((Last 3 BP runs - 4) x 1.5, -6, 12)",
+      "context_only": {
+        "last_game_relievers": 0,
+        "last3_relievers": 0,
+        "note": "Reliever counts are displayed for context only and do not add score points."
+      },
+      "component_scores": {
+        "baseline": 45,
+        "last3_bp_ip": -31.5,
+        "last_game_bp_ip": -12,
+        "back_to_back_arms": 0,
+        "bp_runs_allowed_3d": 0,
+        "reliever_counts_context_only": 0,
+        "no_recent_games_credit": -18,
+        "raw_score": -16.5
+      },
+      "source_version": "bullpen-fatigue-v3-runs-aware"
+    },
+    "Philadelphia Phillies": {
+      "score": 0,
+      "label": "Fresh",
+      "last_game_bp_ip": 0,
+      "last3_bp_ip": 0,
+      "last3_bp_runs": 0,
+      "last_game_relievers": 0,
+      "last3_relievers": 0,
+      "back_to_back_arms": 0,
+      "workload_read": "Low recent workload. No major bullpen fatigue flag from the last three days.",
+      "score_reason": "Fresh (0.0/10). No completed games in the last three days — the pen comes in rested.",
+      "formula": "45 + ((Last 3 BP IP - 9) x 3.5) + ((Last game BP IP - 3) x 4) + (Back-to-back arms x 6) + clamp((Last 3 BP runs - 4) x 1.5, -6, 12)",
+      "context_only": {
+        "last_game_relievers": 0,
+        "last3_relievers": 0,
+        "note": "Reliever counts are displayed for context only and do not add score points."
+      },
+      "component_scores": {
+        "baseline": 45,
+        "last3_bp_ip": -31.5,
+        "last_game_bp_ip": -12,
+        "back_to_back_arms": 0,
+        "bp_runs_allowed_3d": 0,
+        "reliever_counts_context_only": 0,
+        "no_recent_games_credit": -18,
+        "raw_score": -16.5
+      },
+      "source_version": "bullpen-fatigue-v3-runs-aware"
+    }
+  }
+}
