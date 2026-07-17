@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strikeout Projections — LyDia's Lab</title>
+<meta name="description" content="A projected strikeout total for every MLB starter today, built from whiff skill, expected innings, and the opposing lineup's strikeout rate against his throwing hand.">
+<link rel="canonical" href="https://lydiaslab.com/tools/strikeout-projections/">
+<link rel="stylesheet" href="/css/style.css">
+<style>
+.controls { display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:16px; }
+.controls .field { margin-bottom:0; }
+.match-card { margin-bottom:14px; }
+.match-head { display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; align-items:baseline; margin-bottom:8px; }
+.match-head .matchup { font-weight:800; font-size:1.05rem; }
+.k-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:8px; }
+.k-box { background:var(--bg-elev); border:1px solid var(--border); border-radius:var(--radius); padding:12px; }
+.k-proj { font-size:1.9rem; font-weight:800; color:var(--accent); }
+.k-row { display:flex; justify-content:space-between; gap:8px; font-size:.86rem; border-top:1px solid var(--border); padding-top:5px; margin-top:5px; }
+.line-input { display:flex; gap:8px; align-items:center; margin-top:9px; }
+.line-input input { width:88px; text-align:center; font-weight:700; }
+.lean { font-weight:800; }
+.tier { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:1px 7px; margin-left:6px; white-space:nowrap; }
+@media (max-width:720px){ .k-grid{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main>
+  <p class="eyebrow">LyDia's Lab</p>
+  <h1>Strikeout Projections</h1>
+  <p class="subtitle">How many strikeouts should each starter get tonight? Built from three things: his whiff skill, how deep he pitches, and how much the opposing lineup swings and misses against his throwing hand.</p>
+
+  <div class="controls">
+    <div class="field">
+      <label for="date-pick">Date</label>
+      <input type="date" id="date-pick">
+    </div>
+    <button onclick="shiftDay(0)">Today</button>
+    <button class="secondary" onclick="shiftDay(1)">Tomorrow</button>
+    <div>
+      <label for="game-jump">Filter games</label>
+      <select id="game-jump" onchange="filterGame(this.value)"><option value="">All games…</option></select>
+    </div>
+  </div>
+
+  <div class="notice">
+    <strong>How to read it:</strong> the projection is a median expectation — a real outing lands within ±2 of it roughly two-thirds of the time, so treat small edges with respect and only lean when the gap to your book's line is <b>0.7+ strikeouts</b>. Live consensus lines load automatically each morning (the most common posted line across US books, with the best Over/Under price at it) — edit the line box if your book differs. Confidence drops when a starter has few innings or the projection leans on a short sample.
+  </div>
+
+  <div id="status"><div class="loading">Projecting strikeouts…</div></div>
+  <div id="games"></div>
+</main>
+<footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/tools/"); renderFooter();</script>
+<script>
+const datePick = document.getElementById("date-pick");
+datePick.value = localISODate(new Date());
+datePick.addEventListener("change", load);
+let PROJ = {}; // pitcherId -> projection data
+let LINES = {}, LINES_AT = null; // live K prop lines by pitcher name (server-fetched daily)
+load();
+
+function localISODate(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+function shiftDay(n){ const d=new Date(); d.setDate(d.getDate()+n); datePick.value=localISODate(d); load(); }
+function filterGame(pk){ document.querySelectorAll(".match-card").forEach(c=>{ c.style.display = (!pk || c.id === "kg-"+pk) ? "" : "none"; }); }
+function ipToNum(ip){ if(!ip||ip==="-.--")return 0; const [w,f]=String(ip).split("."); return Number(w||0)+Number(f||0)/3; }
+function seasonYear(){ const d=new Date(datePick.value+"T12:00"); return d.getMonth()>=2?d.getFullYear():d.getFullYear()-1; }
+async function j(u){ const r=await fetch(u); if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); }
+
+async function load(){
+  const statusEl=document.getElementById("status"), gamesEl=document.getElementById("games");
+  statusEl.innerHTML='<div class="loading">Projecting strikeouts…</div>'; gamesEl.innerHTML="";
+  try{
+    const yr=seasonYear(), date=datePick.value;
+    LINES={};
+    if(date===localISODate(new Date())){
+      try{ const kp=await fetch("/data/k-props/today.json?v="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null);
+        if(kp && kp.date===date && kp.pitchers){ LINES=kp.pitchers; LINES_AT=kp.generated_at; } }catch(e){}
+    }
+    const [sched, vl, vr] = await Promise.all([
+      j(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher`),
+      j(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${yr}&stats=statSplits&sitCodes=vl`),
+      j(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${yr}&stats=statSplits&sitCodes=vr`)
+    ]);
+    // opponent K% vs each hand + league baseline
+    const kv={L:{},R:{}}; let soT=0, paT=0;
+    for(const t of (vl.stats[0]||{}).splits||[]){ const so=+t.stat.strikeOuts||0, pa=+t.stat.plateAppearances||0; if(pa) kv.L[t.team.id]=so/pa; }
+    for(const t of (vr.stats[0]||{}).splits||[]){ const so=+t.stat.strikeOuts||0, pa=+t.stat.plateAppearances||0; if(pa){ kv.R[t.team.id]=so/pa; soT+=so; paT+=pa; } }
+    const leagueK = paT ? soT/paT : 0.223;
+
+    const games=(((sched.dates||[])[0])||{}).games||[];
+    if(!games.length){ statusEl.innerHTML=`<div class="notice">No MLB games scheduled for ${date}.</div>`; return; }
+    games.sort((a,b)=>new Date(a.gameDate)-new Date(b.gameDate));
+    const pids=[...new Set(games.flatMap(g=>["away","home"].map(s=>g.teams[s].probablePitcher&&g.teams[s].probablePitcher.id).filter(Boolean)))];
+    let ps={};
+    if(pids.length){
+      const pd=await j(`https://statsapi.mlb.com/api/v1/people?personIds=${pids.join(",")}&hydrate=stats(group=[pitching],type=[season])`);
+      for(const p of pd.people||[]){
+        const st=((((p.stats||[])[0]||{}).splits||[])[0]||{}).stat||{};
+        ps[p.id]={ name:p.fullName, hand:(p.pitchHand||{}).code||null,
+          ip:ipToNum(st.inningsPitched), so:+st.strikeOuts||0, gs:+st.gamesStarted||0, bf:+st.battersFaced||0 };
+      }
+    }
+
+    PROJ={};
+    gamesEl.innerHTML = games.map(g=>renderGame(g, ps, kv, leagueK)).join("");
+    Object.keys(PROJ).forEach(pid => { const el = document.getElementById("ln-" + pid); if (el && el.value) lean(pid); });
+    document.getElementById("game-jump").innerHTML = '<option value="">All games…</option>'+
+      games.map(g=>`<option value="${g.gamePk}">${escapeHtml(g.teams.away.team.name)} @ ${escapeHtml(g.teams.home.team.name)}</option>`).join("");
+    statusEl.innerHTML="";
+  }catch(e){ statusEl.innerHTML=`<div class="notice warn">Could not project (${escapeHtml(e.message)}).</div>`; }
+}
+
+/* Projection: expected batters faced × pitcher K rate, scaled by how much the
+   opposing lineup strikes out against his hand relative to league average. */
+function project(p, oppTeamId, kv){
+  if(!p || !p.ip || p.ip < 15 || !p.bf) return null;
+  const expIP = Math.max(3.8, Math.min(6.8, p.gs ? p.ip/p.gs : 5));
+  const kbf = p.so/p.bf;                     // pitcher whiff skill per batter
+  const expBF = expIP * 4.28;                // ~4.28 batters per inning
+  const oppK = p.hand && kv[p.hand] ? kv[p.hand][oppTeamId] : null;
+  // clamp the lineup adjustment — season splits are noisy enough that full strength overfits
+  const adj = (oppK && LEAGUE_K) ? Math.max(0.87, Math.min(1.13, oppK/LEAGUE_K)) : 1;
+  const raw = expBF * kbf * adj;
+  return { k: raw, expIP, kbf, oppK, adj, lowSample: p.ip < 40 };
+}
+let LEAGUE_K = 0.223;
+
+function kBox(pitcher, oppTeam, oppTeamId, kv, pid){
+  const p=pitcher;
+  if(!p) return `<div class="k-box"><b>TBD starter</b><div class="dim small">No projection until the probable posts.</div></div>`;
+  const pr=project(p, oppTeamId, kv);
+  if(!pr) return `<div class="k-box"><b>${escapeHtml(p.name)}</b><div class="dim small">Not enough innings this season for a reliable projection.</div></div>`;
+  PROJ[pid]=pr;
+  const oppTier = pr.oppK===null ? "" : pr.oppK>=0.245 ? ' <span class="tier neg-text">big whiff lineup</span>' : pr.oppK>=0.225 ? ' <span class="tier">above avg whiffs</span>' : pr.oppK<=0.195 ? ' <span class="tier pos-text">contact lineup</span>' : ' <span class="tier">average</span>';
+  return `<div class="k-box">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><b>${escapeHtml(p.name)}</b><span class="dim small">${p.hand==="L"?"LHP":"RHP"}</span></div>
+    <div><span class="k-proj">${pr.k.toFixed(1)}</span> <span class="dim small">projected Ks${pr.lowSample ? ' · <b class="gold">small sample</b>' : ""}</span></div>
+    <div class="k-row"><span>K per batter (season)</span><b>${(pr.kbf*100).toFixed(1)}%</b></div>
+    <div class="k-row"><span>Expected innings</span><b>${pr.expIP.toFixed(1)}</b></div>
+    <div class="k-row"><span>${escapeHtml(oppTeam)} K% vs ${p.hand==="L"?"LHP":"RHP"}</span><span><b>${pr.oppK!==null?(pr.oppK*100).toFixed(1)+"%":"—"}</b>${oppTier}</span></div>
+    ${(() => { const L = LINES[p.name.toLowerCase()]; if (!L) return ""; return `<div class="k-row"><span>Market line (${L.books} book${L.books === 1 ? "" : "s"})</span><span><b>${L.line}</b> <span class="dim small">O ${L.over > 0 ? "+" : ""}${L.over ?? "—"} / U ${L.under > 0 ? "+" : ""}${L.under ?? "—"}</span></span></div>`; })()}
+    <div class="line-input">
+      <label class="dim small" for="ln-${pid}">Line</label>
+      <input type="number" step="0.5" id="ln-${pid}" placeholder="e.g. 6.5" value="${(LINES[p.name.toLowerCase()] || {}).line ?? ""}" oninput="lean(${pid})">
+      <span id="lean-${pid}" class="lean"></span>
+    </div>
+  </div>`;
+}
+function lean(pid){
+  const pr=PROJ[pid]; const el=document.getElementById("lean-"+pid);
+  const line=Number(document.getElementById("ln-"+pid).value);
+  if(!pr||!isFinite(line)||line<=0){ el.textContent=""; return; }
+  const d=pr.k-line;
+  if(d>=0.7) el.innerHTML=`<span class="pos-text">OVER lean (+${d.toFixed(1)})</span>`;
+  else if(d<=-0.7) el.innerHTML=`<span class="neg-text">UNDER lean (${d.toFixed(1)})</span>`;
+  else el.innerHTML=`<span class="dim">no edge (${d>=0?"+":""}${d.toFixed(1)})</span>`;
+}
+function renderGame(g, ps, kv, leagueK){
+  LEAGUE_K=leagueK;
+  const a=g.teams.away, h=g.teams.home;
+  const pa=a.probablePitcher?ps[a.probablePitcher.id]:null;
+  const ph=h.probablePitcher?ps[h.probablePitcher.id]:null;
+  const time=new Date(g.gameDate).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+  return `<div class="card match-card" id="kg-${g.gamePk}">
+    <div class="match-head"><span class="matchup">${escapeHtml(a.team.name)} @ ${escapeHtml(h.team.name)}</span><span class="dim small">${time}</span></div>
+    <div class="k-grid">
+      ${kBox(pa, h.team.name, h.team.id, kv, a.probablePitcher?a.probablePitcher.id:0)}
+      ${kBox(ph, a.team.name, a.team.id, kv, h.probablePitcher?h.probablePitcher.id:0)}
+    </div>
+  </div>`;
+}
+</script>
+</body>
+</html>
