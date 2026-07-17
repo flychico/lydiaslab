@@ -68,6 +68,14 @@ function buildLearningSummary({ date, day, allDays, clvRows }) {
     .map(p => normalizePickForLearning(p, day.source))
     .filter(p => p.market === "moneyline" && p.result !== "NG" && p.pick);
 
+  // Review buckets span ALL graded days (a one-day window left them empty most mornings)
+  const allGradedMoneyline = (allDays || []).flatMap(d =>
+    (Array.isArray(d.picks) ? d.picks : [])
+      .map(p => normalizePickForLearning(p, d.source))
+      .filter(p => p.market === "moneyline" && p.result !== "NG" && p.pick)
+      .map(p => ({ ...p, date: d.date }))
+  );
+
   const legacyMarkets = picks.flatMap(p => legacyMarketRows(p)).filter(Boolean);
   const lessonCounts = countBy(gradedMoneyline, p => p.lesson_tag || "unlabeled");
   const clvCounts = countBy(gradedMoneyline, p => p.clv_result || "not_tracked");
@@ -80,27 +88,29 @@ function buildLearningSummary({ date, day, allDays, clvRows }) {
   const avgLabScore = avg(gradedMoneyline.map(p => p.lab_score));
   const avgRawEdge = avg(gradedMoneyline.map(p => p.raw_edge));
 
-  const strongOfficial = gradedMoneyline.filter(p =>
+  const strongOfficial = allGradedMoneyline.filter(p =>
     num(p.model_probability) >= 0.72 &&
     num(p.lab_score) >= 80
   );
 
-  const protectedByGate = picks
-    .map(p => normalizePickForLearning(p, day.source))
-    .filter(p =>
-      p.market === "moneyline" &&
-      p.pick &&
-      num(p.model_probability) < 0.72 &&
-      num(p.lab_score) >= 80
-    );
+  const protectedByGate = (allDays || []).flatMap(d =>
+    (Array.isArray(d.picks) ? d.picks : [])
+      .map(p => normalizePickForLearning(p, d.source))
+      .filter(p =>
+        p.market === "moneyline" &&
+        p.pick &&
+        num(p.model_probability) < 0.72 &&
+        num(p.lab_score) >= 80
+      ).map(p => ({ ...p, date: d.date }))
+  );
 
-  const highBullpenRisk = gradedMoneyline.filter(p =>
+  const highBullpenRisk = allGradedMoneyline.filter(p =>
     p.bullpen_label === "Adds caution" ||
     p.bullpen_label === "Both bullpens stressed" ||
     num(p.pick_side_bullpen_score) >= 78
   );
 
-  const pitcherConflict = gradedMoneyline.filter(p =>
+  const pitcherConflict = allGradedMoneyline.filter(p =>
     p.pitcher_edge_team &&
     p.pitcher_edge_team !== "No clear SP edge" &&
     p.pitcher_edge_team !== p.pick_team &&

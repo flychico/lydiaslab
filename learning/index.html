@@ -105,31 +105,17 @@ async function loadLearning() {
   `).join("");
 
   const cal = data.calibration || {};
-  const calHtml = cal.status === "ready" ? `
-    <h2>Full-slate calibration</h2>
-    <div class="card" style="margin-bottom:14px">
-      <p class="dim small">Every analyzed game — official picks, value watches, watchlist, and passes — is graded nightly into a learning-only shadow ledger. This measures whether the model's probabilities are honest and what the games below the official gates would have returned. It is not the public record.</p>
-      <p><strong>${cal.games_graded}</strong> games graded · Brier score <strong>${cal.brier_score}</strong> <span class="dim small">(lower is better; 0.25 = coin flip)</span></p>
-      <table>
-        <thead><tr><th>Model probability</th><th class="num">Games</th><th class="num">Expected win%</th><th class="num">Actual win%</th></tr></thead>
-        <tbody>${(cal.buckets || []).map(b => `<tr><td>${esc(b.range)}</td><td class="num">${b.games}</td><td class="num">${(b.expected_win_rate * 100).toFixed(0)}%</td><td class="num">${(b.actual_win_rate * 100).toFixed(0)}%</td></tr>`).join("")}</tbody>
-      </table>
-      ${cal.shadow_model && cal.shadow_model.status === "ready" ? `
-      <div style="margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:8px">
-        <b>Model A/B — official v2 vs shadow v3</b> <span class="dim small">(v3: skill-based pitcher input + offense form)</span><br>
-        <span class="small">${cal.shadow_model.games} games · Brier v2 <b>${cal.shadow_model.brier_v2}</b> vs v3 <b>${cal.shadow_model.brier_v3}</b> → <b>${cal.shadow_model.leader}</b> leads · ${cal.shadow_model.disagreements} disagreement${cal.shadow_model.disagreements === 1 ? "" : "s"}${cal.shadow_model.disagreements ? `, v3 right in ${cal.shadow_model.v3_wins_disagreements}` : ""}</span>
-      </div>` : ""}
-      <table style="margin-top:10px">
-        <thead><tr><th>Tier</th><th class="num">Record</th><th class="num">Shadow units (flat 1u)</th></tr></thead>
-        <tbody>${Object.entries(cal.shadow_by_status || {}).map(([k, v]) => `<tr><td>${esc(k.replace(/_/g, " "))}</td><td class="num">${v.wins}-${v.games - v.wins}</td><td class="num">${v.units > 0 ? "+" : ""}${v.units}</td></tr>`).join("")}</tbody>
-      </table>
-    </div>` : "";
-
   // Lab Rating distribution — where do ratings cluster and why
   let distHtml = "";
   try {
     const csv = await fetch("/data/calibration/calibration_log.csv?v=" + Date.now(), { cache: "no-store" }).then(r => r.ok ? r.text() : null);
     if (csv) {
+      // CSV has a quoted matchup field — split carefully
+      const parseRow = l => {
+        const m = l.match(/^([^,]*),([^,]*),("(?:[^"]|"")*"|[^,]*),("(?:[^"]|"")*"|[^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),(.*)$/);
+        return m ? { date: m[1], pk: m[2], matchup: m[3].replace(/^"|"$/g, ""), side: m[4].replace(/^"|"$/g, ""), status: m[5], prob: Number(m[6]), lab: Number(m[8]), result: m[10], score: m[11] } : null;
+      };
+      window._calGames = csv.trim().split("\n").slice(1).map(parseRow).filter(Boolean);
       const rows = csv.trim().split("\n").slice(1).map(l => l.split(","));
       const labs = rows.map(r => ({ lab: Number(r[7]), status: r[4] })).filter(x => Number.isFinite(x.lab));
       if (labs.length >= 10) {
@@ -149,6 +135,34 @@ async function loadLearning() {
     }
   } catch (e) {}
 
+  const gameLine = g => `<div class="small" style="padding:3px 0;border-top:1px solid var(--border)">${g.result === "W" ? "✅" : g.result === "L" ? "❌" : "⏸"} ${esc(g.date.slice(5))} · ${esc(g.matchup)} — ${esc(g.side)} ${(g.prob * 100).toFixed(0)}%${Number.isFinite(g.lab) ? ` · Lab ${(g.lab / 10).toFixed(1)}` : ""}${g.score ? ` · final ${esc(g.score)}` : ""}</div>`;
+  const gamesDetails = (label, games) => games.length ? `<details style="margin:2px 0 4px"><summary class="small dim" style="cursor:pointer">${label} — show ${games.length} game${games.length === 1 ? "" : "s"}</summary>${games.map(gameLine).join("")}</details>` : "";
+  const G = window._calGames || [];
+  const inBucket = range => { const [lo, hi] = range.replace("%", "").split("-").map(Number); return G.filter(g => Number.isFinite(g.prob) && g.prob * 100 >= lo && g.prob * 100 < (hi === 100 ? 101 : hi) && (g.result === "W" || g.result === "L")); };
+
+  const calHtml = cal.status === "ready" ? `
+    <h2>Full-slate calibration</h2>
+    <div class="card" style="margin-bottom:14px">
+      <p class="dim small">Every analyzed game — official picks, value watches, watchlist, and passes — is graded nightly into a learning-only shadow ledger. This measures whether the model's probabilities are honest and what the games below the official gates would have returned. It is not the public record.</p>
+      <p><strong>${cal.games_graded}</strong> games graded · Brier score <strong>${cal.brier_score}</strong> <span class="dim small">(lower is better; 0.25 = coin flip)</span></p>
+      <table>
+        <thead><tr><th>Model probability</th><th class="num">Games</th><th class="num">Expected win%</th><th class="num">Actual win%</th></tr></thead>
+        <tbody>${(cal.buckets || []).map(b => `<tr><td>${esc(b.range)}</td><td class="num">${b.games}</td><td class="num">${(b.expected_win_rate * 100).toFixed(0)}%</td><td class="num">${(b.actual_win_rate * 100).toFixed(0)}%</td></tr><tr><td colspan="4" style="padding:0 6px">${gamesDetails("games in " + b.range, inBucket(b.range))}</td></tr>`).join("")}</tbody>
+      </table>
+      ${cal.shadow_model && cal.shadow_model.status === "ready" ? `
+      <div style="margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:8px">
+        <b>Model A/B — official v2 vs shadow v3</b> <span class="dim small">(v3: skill-based pitcher input + offense form)</span><br>
+        <span class="small">${cal.shadow_model.games} games · Brier v2 <b>${cal.shadow_model.brier_v2}</b> vs v3 <b>${cal.shadow_model.brier_v3}</b> → <b>${cal.shadow_model.leader}</b> leads · ${cal.shadow_model.disagreements} disagreement${cal.shadow_model.disagreements === 1 ? "" : "s"}${cal.shadow_model.disagreements ? `, v3 right in ${cal.shadow_model.v3_wins_disagreements}` : ""}</span>
+        <div id="ab-games"></div>
+      </div>` : ""}
+      <table style="margin-top:10px">
+        <thead><tr><th>Tier</th><th class="num">Record</th><th class="num">Shadow units (flat 1u)</th></tr></thead>
+        <tbody>${Object.entries(cal.shadow_by_status || {}).map(([k, v]) => `<tr><td>${esc(k.replace(/_/g, " "))}</td><td class="num">${v.wins}-${v.games - v.wins}</td><td class="num">${v.units > 0 ? "+" : ""}${v.units}</td></tr><tr><td colspan="3" style="padding:0 6px">${gamesDetails(k.replace(/_/g, " ") + " games", G.filter(g => g.status === k && (g.result === "W" || g.result === "L")))}</td></tr>`).join("")}</tbody>
+      </table>
+    </div>` : "";
+
+
+
   bucketsEl.innerHTML = distHtml + calHtml + `
     <h2>Review buckets</h2>
     ${bucket("Strong official", (data.buckets || {}).strong_official || [], "Picks that cleared the strict 72% model probability and 80 Lab Score gates.")}
@@ -156,9 +170,34 @@ async function loadLearning() {
     ${bucket("High bullpen risk", (data.buckets || {}).high_bullpen_risk || [], "Official moneyline picks with meaningful bullpen caution.")}
     ${bucket("Pitcher conflicts", (data.buckets || {}).pitcher_conflicts || [], "Official moneyline picks where the starting pitcher edge conflicted with the model side.")}
   `;
+
+  // Name the A/B disagreement games — the ones that decide promotion
+  try {
+    const sh = await fetch("/data/calibration/shadow_v3_log.csv?v=" + Date.now(), { cache: "no-store" }).then(r => r.ok ? r.text() : null);
+    const el = document.getElementById("ab-games");
+    if (sh && el) {
+      const byPk = {}; (window._calGames || []).forEach(g => byPk[g.date + "," + g.pk] = g);
+      const dis = sh.trim().split("\n").slice(1).map(l => l.split(",")).filter(r => r.length >= 5 && (Number(r[2]) >= 0.5) !== (Number(r[3]) >= 0.5));
+      if (dis.length) {
+        el.innerHTML = `<details style="margin-top:6px"><summary class="small dim" style="cursor:pointer">show the ${dis.length} disagreement game${dis.length === 1 ? "" : "s"}</summary>` +
+          dis.map(r => {
+            const g = byPk[r[0] + "," + r[1]];
+            const hw = Number(r[4]) === 1, p2h = Number(r[2]) >= 0.5, p3h = Number(r[3]) >= 0.5;
+            const name = g ? g.matchup : "game " + r[1];
+            const [away, home] = (g ? g.matchup.split(" @ ") : ["away", "home"]);
+            const v2side = p2h ? home : away, v3side = p3h ? home : away, winner = hw ? home : away;
+            const v3right = p3h === hw;
+            return `<div class="small" style="padding:3px 0;border-top:1px solid var(--border)">${esc(r[0].slice(5))} · ${esc(name)} — v2: ${esc(v2side)} ${(Math.max(Number(r[2]), 1 - Number(r[2])) * 100).toFixed(0)}% · v3: ${esc(v3side)} ${(Math.max(Number(r[3]), 1 - Number(r[3])) * 100).toFixed(0)}% → <b>${esc(winner)}</b> won · ${v3right ? '<b class="pos-text">v3 right</b>' : '<b class="neg-text">v2 right</b>'}${g && Number.isFinite(g.lab) ? ` · Lab ${(g.lab / 10).toFixed(1)}` : ""}</div>`;
+          }).join("") + `</details>`;
+      }
+    }
+  } catch (e) {}
+
 }
 
 function bucket(title, rows, empty) {
+  if (!rows || !rows.length) return ""; // empty buckets stay invisible — no broken-looking boxes
+
   return `<div class="card" style="margin-bottom:14px">
     <h3>${esc(title)}</h3>
     <p class="dim small">${esc(empty)}</p>
