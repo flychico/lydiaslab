@@ -90,7 +90,7 @@ function renderNav(active) {
             ["/tools/strikeout-projections/", "Strikeout Projections"]
           ];
           return '<span class="nav-drop' + (active === "/tools/" ? ' active-wrap' : '') + '">'
-            + '<a class="navlink' + (active === "/tools/" ? ' active' : '') + '" href="/tools/">Lab ▾</a>'
+            + '<a class="navlink nav-drop-toggle' + (active === "/tools/" ? ' active' : '') + '" href="/tools/">Lab ▾</a>'
             + '<span class="nav-drop-menu">'
             + tools.map(function (t) { return '<a href="' + t[0] + '">' + t[1] + '</a>'; }).join("")
             + '</span></span>';
@@ -99,6 +99,23 @@ function renderNav(active) {
       }).join("")
     + '<a class="navlink navlink-cta' + (active === "/membership/" ? ' active' : '') + '" href="/membership/">Join $30/mo</a>'
     + '</div>';
+
+  // Mobile/touch: first tap on "Lab ▾" opens the menu instead of navigating;
+  // tapping elsewhere closes it. Desktop hover keeps working via CSS.
+  var toggle = el.querySelector(".nav-drop-toggle");
+  var drop = el.querySelector(".nav-drop");
+  if (toggle && drop) {
+    toggle.addEventListener("click", function (e) {
+      if (!drop.classList.contains("open")) {
+        e.preventDefault();
+        drop.classList.add("open");
+      }
+      // second tap (menu already open) follows the link to /tools/
+    });
+    document.addEventListener("click", function (e) {
+      if (!drop.contains(e.target)) drop.classList.remove("open");
+    });
+  }
 }
 
 function renderFooter() {

@@ -11,6 +11,7 @@
 </script>
 
 <meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Learning Summary | LyDia</title>
 <meta property="og:type" content="website">
@@ -123,7 +124,31 @@ async function loadLearning() {
       </table>
     </div>` : "";
 
-  bucketsEl.innerHTML = calHtml + `
+  // Lab Rating distribution — where do ratings cluster and why
+  let distHtml = "";
+  try {
+    const csv = await fetch("/data/calibration/calibration_log.csv?v=" + Date.now(), { cache: "no-store" }).then(r => r.ok ? r.text() : null);
+    if (csv) {
+      const rows = csv.trim().split("\n").slice(1).map(l => l.split(","));
+      const labs = rows.map(r => ({ lab: Number(r[7]), status: r[4] })).filter(x => Number.isFinite(x.lab));
+      if (labs.length >= 10) {
+        const buckets = new Array(10).fill(0);
+        labs.forEach(x => buckets[Math.min(9, Math.floor(x.lab / 10))]++);
+        const maxB = Math.max(...buckets);
+        const byStatus = {};
+        labs.forEach(x => (byStatus[x.status] = byStatus[x.status] || []).push(x.lab));
+        const avg = a => (a.reduce((p, c) => p + c, 0) / a.length / 10).toFixed(1);
+        distHtml = `<h2>Lab Rating distribution</h2><div class="card" style="margin-bottom:14px">
+          <p class="dim small">${labs.length} analyzed games. Ratings cluster in the 7.0–7.9 band because the edge and market components saturate quickly — any market edge above 8% already earns maximum edge points, so the pitcher matchup is usually what separates a 7 from an 8.</p>
+          ${buckets.map((n, i) => `<div style="display:flex;align-items:center;gap:8px;font-size:.82rem"><span style="width:52px" class="dim">${(i).toFixed(0)}.0–${i}.9</span><div style="flex:1;background:var(--bg-elev);border-radius:4px;height:14px"><div style="width:${maxB ? (n / maxB * 100) : 0}%;height:100%;background:var(--accent2);border-radius:4px"></div></div><span class="dim small" style="width:22px;text-align:right">${n}</span></div>`).join("")}
+          <table style="margin-top:10px"><thead><tr><th>Tier</th><th class="num">Games</th><th class="num">Avg rating</th></tr></thead><tbody>
+          ${["official_pick", "value_watch", "watchlist", "pass"].filter(k => byStatus[k]).map(k => `<tr><td>${k.replace(/_/g, " ")}</td><td class="num">${byStatus[k].length}</td><td class="num"><b>${avg(byStatus[k])}</b>/10</td></tr>`).join("")}</tbody></table>
+        </div>`;
+      }
+    }
+  } catch (e) {}
+
+  bucketsEl.innerHTML = distHtml + calHtml + `
     <h2>Review buckets</h2>
     ${bucket("Strong official", (data.buckets || {}).strong_official || [], "Picks that cleared the strict 72% model probability and 80 Lab Score gates.")}
     ${bucket("Protected by probability gate", (data.buckets || {}).protected_by_probability_gate || [], "High setup quality, but model probability below the official-pick gate. These should stay value watch.")}
