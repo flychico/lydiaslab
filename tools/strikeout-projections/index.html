@@ -69,7 +69,7 @@
   </div>
 
   <div class="notice">
-    <strong>How to read it:</strong> the projection is a median expectation — a real outing lands within ±2 of it roughly two-thirds of the time, so treat small edges with respect and only lean when the gap to your book's line is <b>0.7+ strikeouts</b>. Live consensus lines load automatically each morning (the most common posted line across US books, with the best Over/Under price at it) — edit the line box if your book differs. Confidence drops when a starter has few innings or the projection leans on a short sample.
+    <span id="kbias-note"></span><strong>How to read it:</strong> the projection is a median expectation — a real outing lands within ±2 of it roughly two-thirds of the time, so treat small edges with respect and only lean when the gap to your book's line is <b>0.7+ strikeouts</b>. Live consensus lines load automatically each morning (the most common posted line across US books, with the best Over/Under price at it) — edit the line box if your book differs. Confidence drops when a starter has few innings or the projection leans on a short sample.
   </div>
 
   <div id="status"><div class="loading">Projecting strikeouts…</div></div>
@@ -81,7 +81,7 @@ const datePick = document.getElementById("date-pick");
 datePick.value = localISODate(new Date());
 datePick.addEventListener("change", load);
 let PROJ = {}; // pitcherId -> projection data
-let LINES = {}, LINES_AT = null; // live K prop lines by pitcher name (server-fetched daily)
+let LINES = {}, LINES_AT = null, KBIAS = 0, KBIAS_N = 0; // live K prop lines by pitcher name (server-fetched daily)
 load();
 
 function localISODate(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
@@ -99,7 +99,7 @@ async function load(){
     LINES={};
     if(date===localISODate(new Date())){
       try{ const kp=await fetch("/data/k-props/today.json?v="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null);
-        if(kp && kp.date===date && kp.pitchers){ LINES=kp.pitchers; LINES_AT=kp.generated_at; } }catch(e){}
+        if(kp && kp.date===date && kp.pitchers){ LINES=kp.pitchers; LINES_AT=kp.generated_at; KBIAS=kp.learned_bias||0; KBIAS_N=kp.learned_n||0; } }catch(e){}
     }
     const [sched, vl, vr] = await Promise.all([
       j(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher`),
@@ -132,6 +132,8 @@ async function load(){
     document.getElementById("game-jump").innerHTML = '<option value="">All games…</option>'+
       games.map(g=>`<option value="${g.gamePk}">${escapeHtml(g.teams.away.team.name)} @ ${escapeHtml(g.teams.home.team.name)}</option>`).join("");
     statusEl.innerHTML="";
+    const bn=document.getElementById("kbias-note");
+    if(bn) bn.innerHTML = KBIAS ? `<b>Self-calibrated:</b> projections include a ${KBIAS>0?"+":""}${KBIAS}-strikeout correction learned from ${KBIAS_N} graded starts. ` : "";
   }catch(e){ statusEl.innerHTML=`<div class="notice warn">Could not project (${escapeHtml(e.message)}).</div>`; }
 }
 
@@ -145,7 +147,7 @@ function project(p, oppTeamId, kv){
   const oppK = p.hand && kv[p.hand] ? kv[p.hand][oppTeamId] : null;
   // clamp the lineup adjustment — season splits are noisy enough that full strength overfits
   const adj = (oppK && LEAGUE_K) ? Math.max(0.87, Math.min(1.13, oppK/LEAGUE_K)) : 1;
-  const raw = expBF * kbf * adj;
+  const raw = expBF * kbf * adj + (KBIAS || 0); // learned correction included so page and graded numbers agree
   return { k: raw, expIP, kbf, oppK, adj, lowSample: p.ip < 40 };
 }
 let LEAGUE_K = 0.223;

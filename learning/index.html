@@ -171,14 +171,14 @@ async function loadLearning() {
       <div style="margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:8px">
         <b>Totals projections — accuracy tracking</b>
         <p class="dim small" style="margin:4px 0 6px">${esc(cal.totals.note || "")}</p>
-        <span class="small">${cal.totals.graded} games graded · bias <b>${cal.totals.bias > 0 ? "+" : ""}${cal.totals.bias}</b> runs · avg miss <b>${cal.totals.mae}</b> runs · lean record <b>${cal.totals.lean_record}</b> <span class="dim">(over ${cal.totals.over_lean_record}, under ${cal.totals.under_lean_record})</span></span>
+        <span class="small">${cal.totals.graded} games graded · bias <b>${cal.totals.bias > 0 ? "+" : ""}${cal.totals.bias}</b> runs · avg miss <b>${cal.totals.mae}</b> runs · lean record <b>${cal.totals.lean_record}</b> · self-calibration: <b>${cal.totals.self_calibration || "—"}</b> <span class="dim">(over ${cal.totals.over_lean_record}, under ${cal.totals.under_lean_record})</span></span>
         <div id="totals-games"></div>
       </div>` : ""}
             ${cal.kprops && cal.kprops.status === "ready" ? `
       <div style="margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:8px">
         <b>Strikeout projections — accuracy tracking</b>
         <p class="dim small" style="margin:4px 0 6px">${esc(cal.kprops.note || "")}</p>
-        <span class="small">${cal.kprops.graded} pitchers graded (${cal.kprops.with_projection} with projections) · bias <b>${cal.kprops.bias > 0 ? "+" : ""}${cal.kprops.bias}</b> Ks · avg miss <b>${cal.kprops.mae}</b> Ks · lean record <b>${cal.kprops.lean_record}</b> <span class="dim">(over ${cal.kprops.over_lean_record}, under ${cal.kprops.under_lean_record}, no-edge ${cal.kprops.no_lean})</span></span>
+        <span class="small">${cal.kprops.graded} pitchers graded (${cal.kprops.with_projection} with projections) · bias <b>${cal.kprops.bias > 0 ? "+" : ""}${cal.kprops.bias}</b> Ks · avg miss <b>${cal.kprops.mae}</b> Ks · lean record <b>${cal.kprops.lean_record}</b> · self-calibration: <b>${cal.kprops.self_calibration || "—"}</b> <span class="dim">(over ${cal.kprops.over_lean_record}, under ${cal.kprops.under_lean_record}, no-edge ${cal.kprops.no_lean})</span></span>
       </div>` : ""}
       <table style="margin-top:10px">
         <thead><tr><th>Tier</th><th class="num">Record</th><th class="num">Shadow units (flat 1u)</th></tr></thead>

@@ -135,6 +135,23 @@ async function main() {
     } catch (e) { console.warn("totals odds unavailable:", e.message); }
   } else console.log("ODDS_API_KEY not set — projections only, no market lines.");
 
+  // SELF-CALIBRATION: rolling mean error over the last 100 graded totals;
+  // n ≥ 25 and |bias| ≥ 0.2 runs to act, capped ±0.8.
+  let learnedBias = 0, learnedN = 0;
+  try {
+    const tlog = path.join(ROOT, "data", "calibration", "totals_log.csv");
+    if (fs.existsSync(tlog)) {
+      const rows2 = fs.readFileSync(tlog, "utf8").trim().split("\n").slice(1).map(l => l.split(","))
+        .filter(r => r.length >= 7 && r[5] !== "" && r[6] !== "" && isFinite(Number(r[5])) && isFinite(Number(r[6]))).slice(-100);
+      learnedN = rows2.length;
+      if (learnedN >= 25) {
+        const b = rows2.reduce((a, r) => a + (Number(r[6]) - Number(r[5])), 0) / learnedN;
+        if (Math.abs(b) >= 0.2) learnedBias = Math.max(-0.8, Math.min(0.8, Number(b.toFixed(2))));
+      }
+    }
+  } catch (e) {}
+  if (learnedBias) console.log(`Totals self-calibration: applying ${learnedBias > 0 ? "+" : ""}${learnedBias} run learned correction (n=${learnedN}).`);
+
   // --- projection per game ---
   const out = {};
   for (const g of games) {
@@ -170,7 +187,8 @@ async function main() {
     };
     const A = side(aT.id, g.teams.home.probablePitcher, hT.name);
     const H = side(hT.id, g.teams.away.probablePitcher, aT.name);
-    const proj = Number((A.runs + H.runs).toFixed(1));
+    const projRaw = Number((A.runs + H.runs).toFixed(1));
+    const proj = Number((projRaw + learnedBias).toFixed(1));
     const mkt = lines[`${aT.name} @ ${hT.name}`] || {};
     const line = Number.isFinite(mkt.line) ? mkt.line : null;
     // Totals Lab Rating (0–100 internal, shown /10): setup quality, auditable.
@@ -195,6 +213,7 @@ async function main() {
       game: `${aT.name} @ ${hT.name}`,
       game_time_iso: g.gameDate,
       projection: proj,
+      projection_raw: projRaw,
       proj_away: Number(A.runs.toFixed(1)),
       proj_home: Number(H.runs.toFixed(1)),
       away: { team: aT.name, ...A, runs: undefined },
@@ -219,7 +238,7 @@ async function main() {
     }
   } catch (e) {}
 
-  const payload = { date: DATE, generated_at: new Date().toISOString(), source: "LyDia totals projection (offense factor × opposing pitching × park × pen fatigue) + the-odds-api totals consensus", league_rpg: Number(lgRPG.toFixed(2)), probables, games: out };
+  const payload = { date: DATE, generated_at: new Date().toISOString(), source: "LyDia totals projection (offense factor × opposing pitching × park × pen fatigue) + the-odds-api totals consensus", league_rpg: Number(lgRPG.toFixed(2)), probables, games: out, learned_bias: learnedBias, learned_n: learnedN };
   fs.mkdirSync(path.join(ROOT, "data", "totals"), { recursive: true });
   fs.writeFileSync(path.join(ROOT, "data", "totals", `${DATE}.json`), JSON.stringify(payload, null, 1));
   fs.writeFileSync(path.join(ROOT, "data", "totals", "today.json"), JSON.stringify(payload, null, 1));

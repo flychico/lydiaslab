@@ -111,6 +111,26 @@ async function main() {
 
   const probables = await currentProbables().catch(() => ({}));
 
+  // SELF-CALIBRATION: read our own graded history and correct systematic bias.
+  // Rolling mean error (actual − projection) over the last 100 graded pitchers;
+  // applied only with n ≥ 30 and |bias| ≥ 0.15 K, capped at ±0.6 so learning
+  // nudges, never lurches. The corrected number is what gets graded next —
+  // the loop measures its own medicine.
+  let learnedBias = 0, learnedN = 0;
+  try {
+    const klog = path.join(ROOT, "data", "calibration", "kprops_log.csv");
+    if (fs.existsSync(klog)) {
+      const rows = fs.readFileSync(klog, "utf8").trim().split("\n").slice(1).map(l => l.split(","))
+        .filter(r => r.length >= 7 && r[5] !== "" && r[6] !== "" && isFinite(Number(r[5])) && isFinite(Number(r[6]))).slice(-100);
+      learnedN = rows.length;
+      if (learnedN >= 30) {
+        const b = rows.reduce((a, r) => a + (Number(r[6]) - Number(r[5])), 0) / learnedN;
+        if (Math.abs(b) >= 0.15) learnedBias = Math.max(-0.6, Math.min(0.6, Number(b.toFixed(2))));
+      }
+    }
+  } catch (e) {}
+  if (learnedBias) console.log(`K self-calibration: applying ${learnedBias > 0 ? "+" : ""}${learnedBias} K learned correction (n=${learnedN}).`);
+
   // Our projection per pitcher, captured alongside the market line so the
   // nightly grader can score projection vs line vs actual. Mirrors the tool math.
   try {
@@ -141,10 +161,12 @@ async function main() {
           const expIP = Math.max(3.8, Math.min(6.8, pit.gs ? pit.ip / pit.gs : 5));
           const oppK = pit.hand && kv[pit.hand] ? kv[pit.hand][oppId] : null;
           const adj = (oppK && leagueK) ? Math.max(0.87, Math.min(1.13, oppK / leagueK)) : 1;
-          const proj = Number((expIP * 4.28 * (pit.so / pit.bf) * adj).toFixed(2));
+          const projRaw = Number((expIP * 4.28 * (pit.so / pit.bf) * adj).toFixed(2));
+          const proj = Number((projRaw + learnedBias).toFixed(2));
           const key = pit.name.toLowerCase();
           const rec = pitchers[key] || (pitchers[key] = { name: pit.name, line: null, over: null, under: null, books: 0, game: `${g.teams.away.team.name} @ ${g.teams.home.team.name}` });
           rec.projection = proj;
+          rec.projection_raw = projRaw;
           rec.game_pk = g.gamePk;
         }
       }
@@ -160,7 +182,7 @@ async function main() {
       }
     }
   } catch (e) {}
-  const out = { date: DATE, generated_at: new Date().toISOString(), source: "the-odds-api pitcher_strikeouts (us region; consensus = most common posted line, best price at it)", events_fetched: fetched, probables, pitchers };
+  const out = { date: DATE, generated_at: new Date().toISOString(), source: "the-odds-api pitcher_strikeouts (us region; consensus = most common posted line, best price at it)", events_fetched: fetched, probables, pitchers, learned_bias: learnedBias, learned_n: learnedN };
   fs.mkdirSync(path.join(ROOT, "data", "k-props"), { recursive: true });
   fs.writeFileSync(path.join(ROOT, "data", "k-props", `${DATE}.json`), JSON.stringify(out, null, 1));
   fs.writeFileSync(path.join(ROOT, "data", "k-props", "today.json"), JSON.stringify(out, null, 1));

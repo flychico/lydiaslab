@@ -107,7 +107,9 @@ async function load(){
     if(!d){ statusEl.innerHTML=`<div class="notice">No totals capture for ${date}${date>today?" yet — it arrives with that morning's update":date===today?" yet — it arrives with the morning update":""}.</div>`; return; }
     const games=Object.entries(d.games).map(([pk,g])=>({pk,...g})).sort((a,b)=>new Date(a.game_time_iso)-new Date(b.game_time_iso));
     if(!games.length){ statusEl.innerHTML='<div class="notice">No games in this capture.</div>'; return; }
-    statusEl.innerHTML="";
+    let head = d.learned_bias ? `<div class="dim small" style="margin-bottom:6px">Self-calibrated: projections include a ${d.learned_bias>0?"+":""}${d.learned_bias}-run correction learned from ${d.learned_n} graded games.</div>` : "";
+    if(d.date!==today && date===today) head += `<div class="notice warn">Showing the last capture (${escapeHtml(d.date)}).</div>`;
+    statusEl.innerHTML=head;
     PROJ={};
     gamesEl.innerHTML=games.map(g=>{
       PROJ[g.pk]=g.projection; GAMES[g.pk]=g;

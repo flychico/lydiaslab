@@ -562,8 +562,11 @@ function buildCalibration() {
       const leans = kRows.filter(r => r[9] === "W" || r[9] === "L");
       const overLeans = leans.filter(r => Number(r[8]) > 0), underLeans = leans.filter(r => Number(r[8]) < 0);
       const rec = a => `${a.filter(r => r[9] === "W").length}-${a.filter(r => r[9] === "L").length}`;
+      let kliveBias = 0, kliveN = 0;
+      try { const kf = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "k-props", "today.json"), "utf8")); kliveBias = kf.learned_bias || 0; kliveN = kf.learned_n || 0; } catch (e) {}
       kprops = {
         status: "ready",
+        self_calibration: kliveBias ? `${kliveBias > 0 ? "+" : ""}${kliveBias} K correction active (n=${kliveN})` : "no correction needed yet",
         graded: kRows.length,
         with_projection: withProj.length,
         bias: Number((errs.reduce((a, b) => a + b, 0) / errs.length).toFixed(2)),
@@ -586,8 +589,11 @@ function buildCalibration() {
       const errs = tRows.map(r => Number(r[6]) - Number(r[5]));
       const leans = tRows.filter(r => r[9] === "W" || r[9] === "L");
       const rec = a => `${a.filter(r => r[9] === "W").length}-${a.filter(r => r[9] === "L").length}`;
+      let tliveBias = 0, tliveN = 0;
+      try { const tf = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "totals", "today.json"), "utf8")); tliveBias = tf.learned_bias || 0; tliveN = tf.learned_n || 0; } catch (e) {}
       totals = {
         status: "ready", graded: tRows.length,
+        self_calibration: tliveBias ? `${tliveBias > 0 ? "+" : ""}${tliveBias} run correction active (n=${tliveN})` : "no correction needed yet",
         bias: Number((errs.reduce((a, b) => a + b, 0) / errs.length).toFixed(2)),
         mae: Number((errs.reduce((a, b) => a + Math.abs(b), 0) / errs.length).toFixed(2)),
         lean_record: rec(leans),
