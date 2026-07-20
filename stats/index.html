@@ -38,6 +38,13 @@ td.team-cell { font-weight: 600; white-space: nowrap; }
 .tier{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:1px 7px;margin-left:5px;white-space:nowrap}
 .fpill{border:1px solid var(--border);background:var(--bg-card);border-radius:16px;padding:3px 10px;font-size:.76rem;font-weight:700;cursor:pointer;color:var(--text-dim);white-space:nowrap}
 .fpill.on{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.modal { position:fixed; inset:0; background:rgba(15,20,30,.55); z-index:80; display:flex; align-items:flex-start; justify-content:center; overflow-y:auto; padding:30px 10px; }
+.modal > .inner { background:var(--bg); border:1px solid var(--border); border-radius:14px; padding:20px 18px; width:100%; max-width:680px; box-shadow:0 18px 50px rgba(0,0,0,.3); }
+.team-cell, .clickable-team { cursor:pointer; color:var(--accent2); font-weight:600; }
+.team-cell:hover, .clickable-team:hover { text-decoration:underline; }
+.win-cell { background:rgba(30,142,62,.10); font-weight:700; }
+.cmp-btn { background:var(--accent); color:#fff; border:none; border-radius:16px; padding:5px 14px; font-weight:700; cursor:pointer; font-size:.8rem; margin-left:6px; }
+.panel-links a { display:inline-block; margin:4px 8px 0 0; font-weight:600; }
 </style>
 </head>
 <body>
@@ -97,7 +104,7 @@ function renderOffFilter() {
   const el = document.getElementById("off-filter");
   if (!el || !offRows.length) return;
   const teams = [...offRows].sort((a, b) => shortTeam(a.team).localeCompare(shortTeam(b.team)));
-  el.innerHTML = `<div class="small dim" style="margin-bottom:4px">Compare teams — tap as many as you want${offFilter.size ? ` · showing ${offFilter.size} · ` : ""}${offFilter.size ? '<a style="cursor:pointer;color:var(--accent2);font-weight:700" onclick="offFilter.clear();renderOffFilter();renderOffense()">clear</a>' : ""}</div>
+  el.innerHTML = `<div class="small dim" style="margin-bottom:4px">Compare teams — tap as many as you want${offFilter.size ? ` · showing ${offFilter.size} · ` : ""}${offFilter.size ? '<a style="cursor:pointer;color:var(--accent2);font-weight:700" onclick="offFilter.clear();renderOffFilter();renderOffense()">clear</a>' : ""}${offFilter.size === 2 ? `<button class="cmp-btn" onclick="comparePanel()">⚔ Compare these two</button>` : ""}</div>
     <div style="display:flex;flex-wrap:wrap;gap:5px">
       <span class="fpill ${offFilter.size ? "" : "on"}" onclick="offFilter.clear();renderOffFilter();renderOffense()">All</span>
       ${teams.map((t, i) => `<span class="fpill ${offFilter.has(t.team) ? "on" : ""}" onclick="toggleTeam(${i})" data-team="${escapeHtml(t.team)}">${escapeHtml(shortTeam(t.team))}</span>`).join("")}
@@ -214,7 +221,7 @@ function renderOffense() {
   const body = rows.map(r => {
     const dCls = r.dOps >= dCut ? "pos-text" : r.dOps <= -dCut ? "neg-text" : "dim";
     return `<tr>
-      <td class="team-cell">${escapeHtml(r.team)}</td>
+      <td class="team-cell" onclick="teamPanel('${r.team.replace(/'/g, "\\'")}')">${escapeHtml(r.team)}</td>
       <td class="num">${r.g}</td>
       <td class="num"><b>${f3(r.avg)}</b>${tierChip(avgTier(r.avg))}</td>
       <td class="num"><b>${f3(r.obp)}</b>${tierChip(obpTier(r.obp))}</td>
@@ -334,7 +341,10 @@ function renderStandings(data) {
       name: t.team.name, w: t.wins, l: t.losses,
       streak: (t.streak && t.streak.streakCode) || "",
       l10: l10 ? `${l10.wins}-${l10.losses}` : "", l10w: l10 ? l10.wins : null,
-      luck: pyth !== null ? t.wins - pyth * gp : null
+      luck: pyth !== null ? t.wins - pyth * gp : null,
+      rsg: gp ? Number((t.runsScored / gp).toFixed(2)) : null,
+      rag: gp ? Number((t.runsAllowed / gp).toFixed(2)) : null,
+      pyth: pyth !== null ? Number(pyth.toFixed(3)) : null
     });
   }
   setTimeout(buildStories, 0); // after the table paints — a stories hiccup can never blank the standings
@@ -373,7 +383,7 @@ function renderDivision(rec) {
     const dTip = delta >= 1.5 ? "winning more than the runs justify — regression risk"
                : delta <= -1.5 ? "better than the record shows — potential value" : "record matches performance";
     return `<tr>
-      <td class="team-cell">${escapeHtml(t.team.name)}</td>
+      <td class="team-cell" onclick="teamPanel('${t.team.name.replace(/'/g, "\\'")}')">${escapeHtml(t.team.name)}</td>
       <td class="num">${t.wins}-${t.losses}</td>
       <td class="num">${Number(t.winningPercentage).toFixed(3)}</td>
       <td class="num ${rsCls}">${rsg.toFixed(2)}</td>
@@ -402,6 +412,140 @@ function renderDivision(rec) {
       <tbody>${rows}</tbody>
     </table>
   </div>`;
+}
+
+
+/* ================= Team drill-down + head-to-head compare ================= */
+const _winCache = {};   // days -> {teamId: shaped}
+const _nameToId = {};   // filled from offense season fetch
+let _vsHand = null;     // {teamId:{vl,vr}}
+let _sched = null;      // today's games
+
+async function ensureWindows(days) {
+  if (_winCache[days]) return _winCache[days];
+  const yr = season;
+  const end = new Date(), start = new Date(Date.now() - days * 864e5);
+  const f = d => d.toISOString().slice(0, 10);
+  const res = await fetch(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${yr}&stats=byDateRange&startDate=${f(start)}&endDate=${f(end)}`);
+  const data = await res.json();
+  const out = {};
+  for (const t of (data.stats[0] || {}).splits || []) {
+    const st = t.stat, pa = Number(st.plateAppearances) || 0;
+    _nameToId[t.team.name] = t.team.id;
+    out[t.team.id] = { g: Number(st.gamesPlayed) || 0, avg: Number(st.avg), ops: Number(st.ops), rpg: st.gamesPlayed ? (Number(st.runs) || 0) / Number(st.gamesPlayed) : null, kPct: pa ? (Number(st.strikeOuts) || 0) / pa : null, hr: Number(st.homeRuns) || 0 };
+  }
+  _winCache[days] = out;
+  return out;
+}
+async function ensureVsHand() {
+  if (_vsHand) return _vsHand;
+  const base = `https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${season}&stats=statSplits&sitCodes=`;
+  const [vl, vr] = await Promise.all([fetch(base + "vl").then(r => r.json()), fetch(base + "vr").then(r => r.json())]);
+  _vsHand = {};
+  for (const t of (vl.stats[0] || {}).splits || []) { _nameToId[t.team.name] = t.team.id; (_vsHand[t.team.id] = _vsHand[t.team.id] || {}).vl = Number(t.stat.ops); }
+  for (const t of (vr.stats[0] || {}).splits || []) (_vsHand[t.team.id] = _vsHand[t.team.id] || {}).vr = Number(t.stat.ops);
+  return _vsHand;
+}
+async function ensureSched() {
+  if (_sched) return _sched;
+  const d = new Date().toLocaleDateString("en-CA");
+  const r = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${d}&hydrate=probablePitcher`).then(x => x.json());
+  _sched = ((((r || {}).dates || [])[0]) || {}).games || [];
+  return _sched;
+}
+function teamId(name) {
+  if (_nameToId[name]) return _nameToId[name];
+  const row = offRows.find(r => r.team === name);
+  return row ? null : null;
+}
+function closePanel() { const m = document.getElementById("panel-modal"); if (m) m.remove(); }
+function openModal(html) {
+  closePanel();
+  const div = document.createElement("div");
+  div.id = "panel-modal"; div.className = "modal";
+  div.onclick = e => { if (e.target === div) closePanel(); };
+  div.innerHTML = `<div class="inner">${html}</div>`;
+  document.body.appendChild(div);
+}
+
+async function teamPanel(name) {
+  openModal('<div class="loading">Loading ' + escapeHtml(name) + '…</div>');
+  try {
+    const [w7, w15, w30] = await Promise.all([ensureWindows(7), ensureWindows(15), ensureWindows(30)]);
+    await ensureVsHand(); await ensureSched();
+    const id = _nameToId[name];
+    const st = (window._standRows || []).find(x => x.name === name) || {};
+    const sp = _vsHand[id] || {};
+    const seasonRow = offRows.find(r => r.team === name) || {};
+    const winRow = d => (d[id] || {});
+    const fmt3 = v => Number.isFinite(v) ? v.toFixed(3).replace(/^0/, "") : "—";
+    const trendRow = (label, d) => { const w = winRow(d); return `<tr><td>${label}</td><td class="num">${w.g ?? "—"}</td><td class="num">${fmt3(w.avg)}</td><td class="num"><b>${fmt3(w.ops)}</b>${Number.isFinite(w.ops) && Number.isFinite(seasonRow.seasonOps) ? tierChip({ t: (w.ops - seasonRow.seasonOps >= 0.03 ? "hot" : w.ops - seasonRow.seasonOps <= -0.03 ? "cold" : "steady"), cls: w.ops - seasonRow.seasonOps >= 0.03 ? "pos-text" : w.ops - seasonRow.seasonOps <= -0.03 ? "neg-text" : "" }) : ""}</td><td class="num">${Number.isFinite(w.rpg) ? w.rpg.toFixed(1) : "—"}</td><td class="num">${Number.isFinite(w.kPct) ? (w.kPct * 100).toFixed(1) + "%" : "—"}</td></tr>`; };
+    const g = (_sched || []).find(x => x.teams.away.team.name === name || x.teams.home.team.name === name);
+    let tonight = "No game today.";
+    if (g) {
+      const opp = g.teams.away.team.name === name ? g.teams.home.team.name : g.teams.away.team.name;
+      const time = new Date(g.gameDate).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      tonight = `${g.teams.away.team.name} @ ${g.teams.home.team.name} · ${time}`;
+    }
+    const luckLine = Number.isFinite(st.luck) ? (st.luck >= 3 ? `Winning ~${st.luck.toFixed(0)} more games than the runs justify — record flatters them.` : st.luck <= -3 ? `~${Math.abs(st.luck).toFixed(0)} wins worse than the runs say — better team than the record.` : `Record matches performance.`) : "";
+    openModal(`
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><h2 style="margin:0">${escapeHtml(name)}</h2><span class="dim" style="cursor:pointer;font-size:1.3rem" onclick="closePanel()">✕</span></div>
+      <p class="dim small" style="margin:4px 0 10px">${st.w ?? "?"}-${st.l ?? "?"} · ${st.l10 ? "L10 " + st.l10 : ""} ${st.streak ? "· streak " + st.streak : ""} · ${Number.isFinite(st.rsg) ? st.rsg + " RS/G, " + st.rag + " RA/G" : ""}</p>
+      ${luckLine ? `<div class="notice" style="margin-bottom:10px">${luckLine}</div>` : ""}
+      <h3>Offense by window</h3>
+      <table><thead><tr><th>Window</th><th class="num">G</th><th class="num">AVG</th><th class="num">OPS</th><th class="num">R/G</th><th class="num">K%</th></tr></thead><tbody>
+        ${trendRow("Last 7 days", w7)}${trendRow("Last 15 days", w15)}${trendRow("Last 30 days", w30)}
+        <tr><td>Season</td><td class="num">${(st.w ?? 0) + (st.l ?? 0)}</td><td class="num">${fmt3(seasonRow.avg)}</td><td class="num"><b>${fmt3(seasonRow.seasonOps)}</b></td><td class="num">${Number.isFinite(st.rsg) ? st.rsg.toFixed(1) : "—"}</td><td class="num">—</td></tr>
+      </tbody></table>
+      <h3 style="margin-top:12px">Splits</h3>
+      <div class="exline"><span>OPS vs left-handed pitching</span><b>${fmt3(sp.vl)}</b></div>
+      <div class="exline"><span>OPS vs right-handed pitching</span><b>${fmt3(sp.vr)}</b></div>
+      <h3 style="margin-top:12px">Today</h3>
+      <p class="small">${escapeHtml(tonight)}</p>
+      <div class="panel-links small">
+        <a href="/tools/offense-matchups/">Offense matchup →</a>
+        <a href="/tools/pitcher-matchups/">Pitcher matchup →</a>
+        <a href="/tools/bullpen-fatigue/">Bullpen →</a>
+        <a href="/tools/totals-projections/">Totals →</a>
+      </div>`);
+  } catch (e) { openModal(`<p>Could not load team detail (${escapeHtml(e.message)}). <span class="dim" style="cursor:pointer" onclick="closePanel()">close</span></p>`); }
+}
+
+async function comparePanel() {
+  const pair = [...offFilter];
+  if (pair.length !== 2) return;
+  openModal('<div class="loading">Comparing…</div>');
+  try {
+    const w15 = await ensureWindows(15); await ensureVsHand();
+    const rows = pair.map(n => ({ name: n, off: offRows.find(r => r.team === n) || {}, st: (window._standRows || []).find(x => x.name === n) || {}, sp: _vsHand[_nameToId[n]] || {} }));
+    const fmt3 = v => Number.isFinite(v) ? v.toFixed(3).replace(/^0/, "") : "—";
+    const better = (a, b, higherIsBetter = true) => !Number.isFinite(a) || !Number.isFinite(b) ? [0, 0] : (higherIsBetter ? a > b : a < b) ? [1, 0] : (a === b ? [0, 0] : [0, 1]);
+    const metric = (label, va, vb, fmt = fmt3, hib = true) => { const [wa, wb] = better(va, vb, hib); return `<tr><td>${label}</td><td class="num ${wa ? "win-cell" : ""}">${fmt(va)}</td><td class="num ${wb ? "win-cell" : ""}">${fmt(vb)}</td></tr>`; };
+    const [A, B] = rows;
+    const fInt = v => Number.isFinite(v) ? v.toFixed(1) : "—";
+    const fPct = v => Number.isFinite(v) ? (v * 100).toFixed(1) + "%" : "—";
+    const verdicts = [];
+    if (Number.isFinite(A.off.ops) && Number.isFinite(B.off.ops) && Math.abs(A.off.ops - B.off.ops) >= 0.03) verdicts.push(`${A.off.ops > B.off.ops ? A.name : B.name} is the better offense over the last 15 days.`);
+    if (Number.isFinite(A.off.dOps) && Number.isFinite(B.off.dOps) && Math.abs(A.off.dOps - B.off.dOps) >= 0.04) verdicts.push(`${A.off.dOps > B.off.dOps ? A.name : B.name} is trending up harder.`);
+    if (Number.isFinite(A.st.luck) && Number.isFinite(B.st.luck) && Math.abs(A.st.luck - B.st.luck) >= 4) verdicts.push(`${A.st.luck < B.st.luck ? A.name : B.name}'s record understates them the most.`);
+    openModal(`
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><h2 style="margin:0">${escapeHtml(A.name)} vs ${escapeHtml(B.name)}</h2><span class="dim" style="cursor:pointer;font-size:1.3rem" onclick="closePanel()">✕</span></div>
+      <table style="margin-top:10px"><thead><tr><th>Metric</th><th class="num">${escapeHtml(shortTeam(A.name))}</th><th class="num">${escapeHtml(shortTeam(B.name))}</th></tr></thead><tbody>
+        ${metric("Record", A.st.w + "-" + A.st.l, B.st.w + "-" + B.st.l, v => v ?? "—", true).replace(/win-cell/g, "")}
+        ${metric("OPS (last 15d)", A.off.ops, B.off.ops)}
+        ${metric("Season OPS", A.off.seasonOps, B.off.seasonOps)}
+        ${metric("ΔOPS (heat)", A.off.dOps, B.off.dOps, v => Number.isFinite(v) ? (v >= 0 ? "+" : "") + v.toFixed(3).replace("0.", ".") : "—")}
+        ${metric("R/G (window)", A.off.rpg, B.off.rpg, fInt)}
+        ${metric("K% (lower better)", A.off.kPct, B.off.kPct, fPct, false)}
+        ${metric("RS/G season", A.st.rsg, B.st.rsg, fInt)}
+        ${metric("RA/G season (lower better)", A.st.rag, B.st.rag, fInt, false)}
+        ${metric("OPS vs LHP", A.sp.vl, B.sp.vl)}
+        ${metric("OPS vs RHP", A.sp.vr, B.sp.vr)}
+        ${metric("Luck (± wins vs runs)", A.st.luck, B.st.luck, v => Number.isFinite(v) ? (v > 0 ? "+" : "") + v.toFixed(1) : "—", false)}
+      </tbody></table>
+      ${verdicts.length ? `<div class="notice" style="margin-top:10px">${verdicts.map(escapeHtml).join(" ")}</div>` : ""}
+      <p class="dim small" style="margin-top:8px">Green cells mark the better side of each metric. Tap a team name anywhere on the page for its full breakdown.</p>`);
+  } catch (e) { openModal(`<p>Could not compare (${escapeHtml(e.message)}). <span class="dim" style="cursor:pointer" onclick="closePanel()">close</span></p>`); }
 }
 </script>
 </body>
