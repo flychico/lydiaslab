@@ -68,7 +68,8 @@ td.team-cell { font-weight: 600; white-space: nowrap; }
       </div>
     </div>
     <canvas id="teammap" width="860" height="520" style="width:100%;height:auto;cursor:pointer"></canvas>
-    <p class="dim small" style="margin:6px 0 0" id="map-hint">Each dot is a team — tap one for its full breakdown. Change the axes and find your own story: who's lucky, who's fraudulent, who's quietly elite.</p>
+    <p class="dim small" style="margin:6px 0 0" id="map-hint"></p>
+    <div id="map-explain" style="margin-top:10px"></div>
   </div>
 
   <h2 style="margin-top:18px">Offense — hot & cold (last 15 days vs season)</h2>
@@ -568,6 +569,20 @@ async function comparePanel() {
 
 
 /* ================= The Map: metric-vs-metric team scatter ================= */
+/* Each metric knows what its HIGH end means for a team, in plain English. */
+const METRIC_MEANING = {
+  ops:   { what: "Overall offensive production over the last 15 days — on-base plus power.", high: "producing at the plate right now", low: "struggling to produce offense" },
+  seasonOps: { what: "Full-season offensive production — the stable baseline.", high: "a genuinely good offense over the long run", low: "a weak offense over the long run" },
+  dOps:  { what: "Heat: how far the last 15 days sit above or below the team's own season level.", high: "running hot — playing above their own baseline", low: "in a cold stretch — playing below their own baseline" },
+  rpg:   { what: "Actual runs scored per game over the last 15 days.", high: "putting real runs on the board", low: "starving for runs" },
+  kPct:  { what: "How often the lineup strikes out (last 15 days). Lower is better.", high: "swinging and missing a lot — boom-or-bust offense", low: "putting the ball in play — steadier offense" },
+  slg:   { what: "Power output over the last 15 days.", high: "hitting for real power", low: "producing little damage on contact" },
+  rsg:   { what: "Season-long scoring rate.", high: "a top-scoring team", low: "a low-scoring team" },
+  rag:   { what: "Season-long runs allowed. Lower is better.", high: "leaking runs — weak pitching and defense", low: "preventing runs — strong pitching and defense" },
+  pyth:  { what: "True strength: expected win% from run differential — predicts the future better than the actual record.", high: "genuinely strong regardless of record", low: "genuinely weak regardless of record" },
+  luck:  { what: "Wins above what the run differential justifies. High = winning more than they've earned.", high: "winning coin-flip games at an unsustainable rate — record flatters them, regression looms", low: "losing despite outscoring opponents — better than the record shows, a classic buy-low" },
+  winPct:{ what: "The actual standings win rate.", high: "winning games", low: "losing games" }
+};
 const MAP_METRICS = {
   ops:   { label: "OPS (last 15d)", get: r => r.off && r.off.ops, fmt: v => v.toFixed(3).replace(/^0/, "") },
   seasonOps: { label: "OPS (season)", get: r => r.off && r.off.seasonOps, fmt: v => v.toFixed(3).replace(/^0/, "") },
@@ -615,6 +630,17 @@ function drawMap() {
   ctx.beginPath(); ctx.moveTo(px(med(xs)), pad / 2); ctx.lineTo(px(med(xs)), H - pad / 2); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(pad / 2, py(med(ys))); ctx.lineTo(W - pad / 2, py(med(ys))); ctx.stroke();
   ctx.setLineDash([]);
+  // tick marks + values (5 per axis) with light gridlines
+  ctx.fillStyle = "#57606a"; ctx.font = "11px sans-serif";
+  ctx.strokeStyle = "#eef1f4"; ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const vx = xmin + (xr * i / 4), vy = ymin + (yr * i / 4);
+    const X = px(vx), Y = py(vy);
+    ctx.beginPath(); ctx.moveTo(X, pad / 2); ctx.lineTo(X, H - pad + 4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pad - 4, Y); ctx.lineTo(W - pad / 2, Y); ctx.stroke();
+    ctx.textAlign = "center"; ctx.fillText(MX.fmt(vx), X, H - pad + 18);
+    ctx.textAlign = "right"; ctx.fillText(MY.fmt(vy), pad - 8, Y + 4);
+  }
   // axis labels
   ctx.fillStyle = "#57606a"; ctx.font = "13px sans-serif"; ctx.textAlign = "center";
   ctx.fillText(MX.label + (MX.invert ? "  (right = worse)" : ""), W / 2, H - 10);
@@ -633,6 +659,47 @@ function drawMap() {
     _mapDots.push({ x: X, y: Y, team: r.team, vx: r.x, vy: r.y });
   }
   document.getElementById("map-hint").innerHTML = `Green = strong on both axes · red = weak on both · blue = split. Dotted lines are league medians. Tap any dot for the team's full breakdown.`;
+  renderMapExplain(xk, yk, rows, med(xs), med(ys));
+}
+
+/* The guide: what this comparison means, what each quadrant is, who stands out. */
+function renderMapExplain(xk, yk, rows, mx, my) {
+  const el = document.getElementById("map-explain");
+  if (!el) return;
+  const MX = MAP_METRICS[xk], MY = MAP_METRICS[yk];
+  const EX = METRIC_MEANING[xk] || {}, EY = METRIC_MEANING[yk] || {};
+  const strong = m => (METRIC_MEANING[m] || {});
+  // quadrant meaning composer: goodness per side accounts for inverted metrics
+  const q = (xHigh, yHigh) => {
+    const xGood = MX.invert ? !xHigh : xHigh, yGood = MY.invert ? !yHigh : yHigh;
+    const xPhrase = xHigh ? EX.high : EX.low, yPhrase = yHigh ? EY.high : EY.low;
+    const verdict = xGood && yGood ? "The strong corner" : !xGood && !yGood ? "The weak corner" : "The split corner";
+    return { verdict, text: `${cap(yPhrase || "")}, and ${xPhrase || ""}.` };
+  };
+  const cap = t => t ? t.charAt(0).toUpperCase() + t.slice(1) : "";
+  // deepest team per quadrant
+  const deepest = (xHigh, yHigh) => {
+    const inQ = rows.filter(r => (r.x > mx) === xHigh && (r.y > my) === yHigh);
+    if (!inQ.length) return null;
+    inQ.sort((a, b) => Math.abs(b.x - mx) * Math.abs(b.y - my) - Math.abs(a.x - mx) * Math.abs(a.y - my));
+    return inQ[0].team;
+  };
+  const quads = [
+    { pos: "Top-right", xH: true, yH: true }, { pos: "Top-left", xH: false, yH: true },
+    { pos: "Bottom-right", xH: true, yH: false }, { pos: "Bottom-left", xH: false, yH: false }
+  ].map(z => { const m = q(z.xH, z.yH); const t = deepest(z.xH, z.yH); return { ...z, ...m, team: t }; });
+  const takeaways = quads.filter(z => z.team).map(z =>
+    `<div class="exline"><span><b>${escapeHtml(z.team)}</b> <span class="dim small">(deepest ${z.pos.toLowerCase()})</span></span><span class="small">${escapeHtml(z.text)}</span></div>`).join("");
+  el.innerHTML = `
+    <div style="background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;padding:12px">
+      <b>What this view tells you</b>
+      <p class="small" style="margin:6px 0"><b>Horizontal:</b> ${escapeHtml(EX.what || "")} <b style="margin-left:8px">Vertical:</b> ${escapeHtml(EY.what || "")}</p>
+      <table style="margin-top:6px"><thead><tr><th>Corner</th><th>Means</th><th>Who reads it</th></tr></thead><tbody>
+        ${quads.map(z => `<tr><td>${z.pos}</td><td class="small">${escapeHtml(z.text)}</td><td class="small dim">${z.verdict === "The strong corner" ? "back these teams" : z.verdict === "The weak corner" ? "fade these teams" : "dig deeper — mixed signal"}</td></tr>`).join("")}
+      </tbody></table>
+      <b class="small" style="display:block;margin-top:8px">Standouts right now</b>
+      ${takeaways || '<span class="dim small">No team stands out sharply in any corner.</span>'}
+    </div>`;
 }
 document.getElementById("teammap") && document.getElementById("teammap").addEventListener("click", e => {
   const c = document.getElementById("teammap");
