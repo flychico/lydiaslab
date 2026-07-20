@@ -60,6 +60,11 @@ td.team-cell { font-weight: 600; white-space: nowrap; }
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:8px">
       <div><label class="dim small" for="ax-x">Horizontal</label><select id="ax-x" onchange="drawMap()"></select></div>
       <div><label class="dim small" for="ax-y">Vertical</label><select id="ax-y" onchange="drawMap()"></select></div>
+      <div><label class="dim small">Window</label><div style="display:flex;gap:6px">
+        <span class="fpill mapwin on" data-w="0" onclick="setMapWin(0)">Season</span>
+        <span class="fpill mapwin" data-w="15" onclick="setMapWin(15)">Last 15</span>
+        <span class="fpill mapwin" data-w="7" onclick="setMapWin(7)">Last 7</span>
+      </div></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <span class="fpill" onclick="preset('dOps','ops')">Heat vs Quality</span>
         <span class="fpill" onclick="preset('rsg','rag')">Offense vs Defense</span>
@@ -161,7 +166,13 @@ async function loadOffense() {
     const seasonSplits = (await seasonRes.json()).stats[0].splits;
     const rangeSplits = (await rangeRes.json()).stats[0].splits;
     const seasonBy = {};
-    for (const t of seasonSplits) seasonBy[t.team.id] = t.stat;
+    _winCache[0] = _winCache[0] || {};
+    for (const t of seasonSplits) {
+      seasonBy[t.team.id] = t.stat;
+      _nameToId[t.team.name] = t.team.id;
+      const st = t.stat, pa = Number(st.plateAppearances) || 0;
+      _winCache[0][t.team.id] = { g: Number(st.gamesPlayed) || 0, avg: Number(st.avg), ops: Number(st.ops), rpg: st.gamesPlayed ? (Number(st.runs) || 0) / Number(st.gamesPlayed) : null, kPct: pa ? (Number(st.strikeOuts) || 0) / pa : null, slg: Number(st.slg) };
+    }
 
     offRows = rangeSplits.map(t => {
       const r = t.stat, sn = seasonBy[t.team.id] || {};
@@ -584,22 +595,79 @@ const METRIC_MEANING = {
   winPct:{ what: "The actual standings win rate.", high: "winning games", low: "losing games" }
 };
 const MAP_METRICS = {
-  ops:   { label: "OPS (last 15d)", get: r => r.off && r.off.ops, fmt: v => v.toFixed(3).replace(/^0/, "") },
-  seasonOps: { label: "OPS (season)", get: r => r.off && r.off.seasonOps, fmt: v => v.toFixed(3).replace(/^0/, "") },
-  dOps:  { label: "Heat (ΔOPS vs season)", get: r => r.off && r.off.dOps, fmt: v => (v >= 0 ? "+" : "") + v.toFixed(3).replace("0.", ".") },
-  rpg:   { label: "Runs/game (last 15d)", get: r => r.off && r.off.rpg, fmt: v => v.toFixed(1) },
-  kPct:  { label: "Strikeout rate (15d)", get: r => r.off && r.off.kPct, fmt: v => (v * 100).toFixed(1) + "%", invert: true },
-  slg:   { label: "Slugging (15d)", get: r => r.off && r.off.slg, fmt: v => v.toFixed(3).replace(/^0/, "") },
-  rsg:   { label: "Runs scored/game (season)", get: r => r.st && r.st.rsg, fmt: v => v.toFixed(2) },
-  rag:   { label: "Runs allowed/game (season)", get: r => r.st && r.st.rag, fmt: v => v.toFixed(2), invert: true },
-  pyth:  { label: "True strength (Pythag win%)", get: r => r.st && r.st.pyth, fmt: v => v.toFixed(3).replace(/^0/, "") },
-  luck:  { label: "Luck (wins above run diff)", get: r => r.st && r.st.luck, fmt: v => (v > 0 ? "+" : "") + v.toFixed(1), invert: true },
-  winPct:{ label: "Actual win%", get: r => r.st && (r.st.w + r.st.l) ? r.st.w / (r.st.w + r.st.l) : null, fmt: v => v.toFixed(3).replace(/^0/, "") }
+  ops:   { label: "OPS", get: r => r.ops, fmt: v => v.toFixed(3).replace(/^0/, "") },
+  dOps:  { label: "Heat (OPS vs own season)", get: r => r.dOps, fmt: v => (v >= 0 ? "+" : "") + v.toFixed(3).replace("0.", ".") },
+  avg:   { label: "Batting average", get: r => r.avg, fmt: v => v.toFixed(3).replace(/^0/, "") },
+  slg:   { label: "Slugging", get: r => r.slg, fmt: v => v.toFixed(3).replace(/^0/, "") },
+  rpg:   { label: "Runs/game (batting)", get: r => r.rpg, fmt: v => v.toFixed(1) },
+  kPct:  { label: "Strikeout rate", get: r => r.kPct, fmt: v => (v * 100).toFixed(1) + "%", invert: true },
+  rsg:   { label: "Runs scored/game", get: r => r.rsg, fmt: v => v.toFixed(2) },
+  rag:   { label: "Runs allowed/game", get: r => r.rag, fmt: v => v.toFixed(2), invert: true },
+  pyth:  { label: "True strength (Pythag win%)", get: r => r.pyth, fmt: v => v.toFixed(3).replace(/^0/, "") },
+  luck:  { label: "Luck (wins above run diff)", get: r => r.luck, fmt: v => (v > 0 ? "+" : "") + v.toFixed(1), invert: true },
+  winPct:{ label: "Actual win%", get: r => r.winPct, fmt: v => v.toFixed(3).replace(/^0/, "") }
 };
+function winSuffix() { return mapWin === 0 ? " (season)" : ` (last ${mapWin} days)`; }
 let _mapDots = [];
-function mapRows() {
+let mapWin = 0; // 0 = season, else days
+const _recCache = {};
+async function ensureRecord(days) {
+  if (_recCache[days]) return _recCache[days];
+  const end = new Date(Date.now() - 864e5); // through yesterday (completed games)
+  const start = new Date(end.getTime() - (days - 1) * 864e5);
+  const f = d => d.toISOString().slice(0, 10);
+  const data = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate=${f(start)}&endDate=${f(end)}`).then(r => r.json());
+  const rec = {};
+  for (const day of data.dates || []) for (const g of day.games || []) {
+    if (!g.status || g.status.abstractGameState !== "Final" || g.teams.away.score === undefined) continue;
+    for (const side of ["away", "home"]) {
+      const t = g.teams[side], o = g.teams[side === "away" ? "home" : "away"];
+      const id = t.team.id;
+      (rec[id] = rec[id] || { w: 0, l: 0, rs: 0, ra: 0, g: 0 });
+      rec[id].g++; rec[id].rs += t.score; rec[id].ra += o.score;
+      if (t.score > o.score) rec[id].w++; else rec[id].l++;
+    }
+  }
+  for (const id of Object.keys(rec)) {
+    const r = rec[id];
+    r.winPct = r.g ? r.w / r.g : null;
+    r.rsg = r.g ? r.rs / r.g : null;
+    r.rag = r.g ? r.ra / r.g : null;
+    const num = Math.pow(r.rs, 1.83);
+    r.pyth = (r.rs || r.ra) ? num / (num + Math.pow(r.ra, 1.83)) : null;
+    r.luck = r.pyth !== null ? r.w - r.pyth * r.g : null;
+  }
+  _recCache[days] = rec;
+  return rec;
+}
+async function setMapWin(w) {
+  mapWin = w;
+  document.querySelectorAll(".fpill.mapwin").forEach(p => p.classList.toggle("on", Number(p.dataset.w) === w));
+  await drawMap();
+}
+async function mapRows() {
   const st = window._standRows || [];
-  return offRows.map(o => ({ team: o.team, off: o, st: st.find(x => x.name === o.team) || null }));
+  if (mapWin === 0) {
+    return offRows.map(o => {
+      const sr = st.find(x => x.name === o.team) || {};
+      const season = _winCache[0] && _winCache[0][_nameToId[o.team]];
+      return { team: o.team,
+        ops: season ? season.ops : o.seasonOps, avg: season ? season.avg : null, slg: season ? season.slg : null,
+        kPct: season ? season.kPct : null, rpg: season ? season.rpg : null, dOps: o.dOps,
+        rsg: sr.rsg, rag: sr.rag, pyth: sr.pyth, luck: sr.luck,
+        winPct: (sr.w + sr.l) ? sr.w / (sr.w + sr.l) : null };
+    });
+  }
+  const [hit, rec] = await Promise.all([ensureWindows(mapWin), ensureRecord(mapWin)]);
+  return offRows.map(o => {
+    const id = _nameToId[o.team];
+    const h = hit[id] || {}, r = rec[id] || {};
+    const season = _winCache[0] && _winCache[0][id];
+    return { team: o.team,
+      ops: h.ops, avg: h.avg, slg: h.slg, kPct: h.kPct, rpg: h.rpg,
+      dOps: (Number.isFinite(h.ops) && season && Number.isFinite(season.ops)) ? h.ops - season.ops : null,
+      rsg: r.rsg, rag: r.rag, pyth: r.pyth, luck: r.luck, winPct: r.winPct };
+  });
 }
 function initMapControls() {
   const opts = Object.entries(MAP_METRICS).map(([k, m]) => `<option value="${k}">${m.label}</option>`).join("");
@@ -610,12 +678,14 @@ function initMapControls() {
   drawMap();
 }
 function preset(xk, yk) { const x = document.getElementById("ax-x"), y = document.getElementById("ax-y"); x.value = xk; y.value = yk; drawMap(); }
-function drawMap() {
+async function drawMap() {
   const c = document.getElementById("teammap");
   if (!c || !offRows.length) return;
   const xk = document.getElementById("ax-x").value, yk = document.getElementById("ax-y").value;
   const MX = MAP_METRICS[xk], MY = MAP_METRICS[yk];
-  const rows = mapRows().map(r => ({ team: r.team, x: MX.get(r), y: MY.get(r) })).filter(r => Number.isFinite(r.x) && Number.isFinite(r.y));
+  const raw = await mapRows();
+  const rows = raw.map(r => ({ team: r.team, x: MX.get(r), y: MY.get(r) })).filter(r => Number.isFinite(r.x) && Number.isFinite(r.y));
+  if (!rows.length) { document.getElementById("map-hint").textContent = "No data for this window yet."; return; }
   const ctx = c.getContext("2d"), W = c.width, H = c.height;
   const dark = false;
   ctx.clearRect(0, 0, W, H);
@@ -643,8 +713,8 @@ function drawMap() {
   }
   // axis labels
   ctx.fillStyle = "#57606a"; ctx.font = "13px sans-serif"; ctx.textAlign = "center";
-  ctx.fillText(MX.label + (MX.invert ? "  (right = worse)" : ""), W / 2, H - 10);
-  ctx.save(); ctx.translate(14, H / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(MY.label + (MY.invert ? "  (up = worse)" : ""), 0, 0); ctx.restore();
+  ctx.fillText(MX.label + winSuffix() + (MX.invert ? "  (right = worse)" : ""), W / 2, H - 10);
+  ctx.save(); ctx.translate(14, H / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(MY.label + winSuffix() + (MY.invert ? "  (up = worse)" : ""), 0, 0); ctx.restore();
   // dots
   _mapDots = [];
   ctx.font = "11px sans-serif";
@@ -692,7 +762,7 @@ function renderMapExplain(xk, yk, rows, mx, my) {
     `<div class="exline"><span><b>${escapeHtml(z.team)}</b> <span class="dim small">(deepest ${z.pos.toLowerCase()})</span></span><span class="small">${escapeHtml(z.text)}</span></div>`).join("");
   el.innerHTML = `
     <div style="background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;padding:12px">
-      <b>What this view tells you</b>
+      <b>What this view tells you` + winSuffix() + `</b>
       <p class="small" style="margin:6px 0"><b>Horizontal:</b> ${escapeHtml(EX.what || "")} <b style="margin-left:8px">Vertical:</b> ${escapeHtml(EY.what || "")}</p>
       <table style="margin-top:6px"><thead><tr><th>Corner</th><th>Means</th><th>Who reads it</th></tr></thead><tbody>
         ${quads.map(z => `<tr><td>${z.pos}</td><td class="small">${escapeHtml(z.text)}</td><td class="small dim">${z.verdict === "The strong corner" ? "back these teams" : z.verdict === "The weak corner" ? "fade these teams" : "dig deeper — mixed signal"}</td></tr>`).join("")}
