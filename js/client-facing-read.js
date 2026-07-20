@@ -93,9 +93,19 @@
     const pitcher = pitcherSentence(g || {});
     const bullpen = bullpenAnalysis(g || {});
     const rating = labRating(g && g.lab_score);
+    // Disclose when bullpen fatigue meaningfully moved the win probability
+    // itself (not just Lab Rating) — only surfaced when the shift is real.
+    const bullpenProbNote = (() => {
+      const pre = g && g.model_probability_pre_bullpen;
+      if (typeof pre !== "number" || typeof (g && g.model_probability) !== "number") return "";
+      const shift = (g.model_probability - pre) * 100;
+      if (Math.abs(shift) < 1) return "";
+      const dir = shift > 0 ? "up" : "down";
+      return ` Bullpen fatigue moved this probability ${dir} ${Math.abs(shift).toFixed(1)} points from ${pct(pre)} (starting pitcher and team strength only) to ${modelProb}.`;
+    })();
 
     if (g && g.status === "official_pick") {
-      return `${team} is an official moneyline pick because LyDia gives it a ${modelProb} chance to win, compared with the market's ${marketProb} no-vig probability. The full setup earned a ${rating} Lab Rating. ${pitcher} ${bullpen} At ${price}, the price still offers enough value for the play to qualify as official.`;
+      return `${team} is an official moneyline pick because LyDia gives it a ${modelProb} chance to win, compared with the market's ${marketProb} no-vig probability. The full setup earned a ${rating} Lab Rating. ${pitcher} ${bullpen}${bullpenProbNote} At ${price}, the price still offers enough value for the play to qualify as official.`;
     }
 
     if (g && g.status === "value_watch") {
@@ -108,11 +118,11 @@
       const gateLine = failedGates.length
         ? `It stayed a value watch because ${failedGates.join("; and ")}.`
         : "It stayed a value watch under the stricter official-pick review.";
-      return `${team} grades as a strong value setup with ${modelProb} model win probability against a ${marketProb} market number and a ${rating} Lab Rating. ${pitcher} ${bullpen} ${gateLine}`;
+      return `${team} grades as a strong value setup with ${modelProb} model win probability against a ${marketProb} market number and a ${rating} Lab Rating. ${pitcher} ${bullpen}${bullpenProbNote} ${gateLine}`;
     }
 
     if (g && g.status === "watchlist") {
-      return `${team} is worth monitoring, but it does not clear every requirement for an official pick. LyDia projects ${modelProb} win probability, the market is at ${marketProb}, and the setup carries a ${rating} Lab Rating. ${pitcher} ${bullpen}`;
+      return `${team} is worth monitoring, but it does not clear every requirement for an official pick. LyDia projects ${modelProb} win probability, the market is at ${marketProb}, and the setup carries a ${rating} Lab Rating. ${pitcher} ${bullpen}${bullpenProbNote}`;
     }
 
     return (g && g.pass_reason) || `${team} does not have a strong enough overall setup for an official pick.`;

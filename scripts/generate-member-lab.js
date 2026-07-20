@@ -391,8 +391,18 @@ function offenseFormFor(teamId, oppPitcher, offense) {
    v3 probabilities are recorded next to v2 in the brief and graded nightly in
    data/calibration/shadow_v3_log.csv. Promotion requires beating v2 there. */
 const V3_OFF_K = 0.8;      // log-odds per full point of OPS-delta difference (capped ±0.1 → max ~±2%)
-const V3_BP_K = 0.3;       // log-odds per 100 pts of bullpen-fatigue gap (gap capped ±50 → max ~±3.7%)
 const V3_FIP_C = 3.15;     // FIP constant
+// Shared by v2 and v3 — a starter only covers 5-6 of 9 innings; the bullpen
+// covers the rest and was previously invisible to the probability itself
+// (it only affected Lab Rating and the official-pick gate). Coefficient and
+// cap were proven in v3 first (v3.1-bullpen) before being promoted here.
+const BULLPEN_PROB_K = 0.3; // log-odds per 100 pts of bullpen-fatigue gap (gap capped ±50 → max ~±3.7%)
+function bullpenProbAdjustment(bpAwayScore, bpHomeScore) {
+  const gap = (Number.isFinite(bpAwayScore) && Number.isFinite(bpHomeScore))
+    ? Math.max(-50, Math.min(50, bpAwayScore - bpHomeScore))
+    : 0;
+  return BULLPEN_PROB_K * (gap / 100);
+}
 function fipLite(st) {
   if (!st || !st.ip || st.ip < 10) return LEAGUE_ERA;
   const fip = (13 * (st.hr || 0) + 3 * (st.bb || 0) - 2 * (st.so || 0)) / st.ip + V3_FIP_C;
@@ -406,8 +416,7 @@ function modelV3(pBase, awayStats, homeStats, offAway, offHome, bpAway, bpHome) 
   const dH = offHome && Number.isFinite(offHome.delta_ops) ? Math.max(-0.1, Math.min(0.1, offHome.delta_ops)) : 0;
   odds *= Math.exp(V3_OFF_K * (dH - dA));
   // v3.1: bullpen fatigue differential — home gains when the AWAY pen is the tired one
-  const bpGap = (Number.isFinite(bpAway) && Number.isFinite(bpHome)) ? Math.max(-50, Math.min(50, bpAway - bpHome)) : 0;
-  const bpAdj = V3_BP_K * (bpGap / 100);
+  const bpAdj = bullpenProbAdjustment(bpAway, bpHome);
   odds *= Math.exp(bpAdj);
   const pHome = odds / (1 + odds);
   return { p_home: Number(pHome.toFixed(4)), fip_away: Number(spA.toFixed(2)), fip_home: Number(spH.toFixed(2)), off_adj: Number((V3_OFF_K * (dH - dA)).toFixed(4)), bp_adj: Number(bpAdj.toFixed(4)), version: "v3.1-bullpen" };
@@ -424,7 +433,15 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense) {
   const pBase = log5Home(blendH, blendA);
   const spA = starterEff(g, "away", pitchers);
   const spH = starterEff(g, "home", pitchers);
-  const pHome = ((pBase / (1 - pBase)) * Math.exp(ERA_K * (spA - spH))) / (1 + ((pBase / (1 - pBase)) * Math.exp(ERA_K * (spA - spH))));
+  // Bullpen fatigue now adjusts the probability itself, not just Lab Rating
+  // and the official-pick gate — a starter only covers part of the game.
+  const bpAwayScoreForModel = bullpen[aT.name] ? bullpen[aT.name].score : null;
+  const bpHomeScoreForModel = bullpen[hT.name] ? bullpen[hT.name].score : null;
+  const bullpenAdj = bullpenProbAdjustment(bpAwayScoreForModel, bpHomeScoreForModel);
+  const preBullpenOdds = (pBase / (1 - pBase)) * Math.exp(ERA_K * (spA - spH));
+  const preBullpenHomeProb = preBullpenOdds / (1 + preBullpenOdds);
+  const modelOdds = preBullpenOdds * Math.exp(bullpenAdj);
+  const pHome = modelOdds / (1 + modelOdds);
 
   const pickHome = pHome >= 0.5;
   const pickTeam = pickHome ? hT.name : aT.name;
@@ -471,10 +488,11 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense) {
 
   const pickOffCtx = offenseFormFor(pickHome ? hT.id : aT.id, null, offense);
   const oppOffCtx = offenseFormFor(pickHome ? aT.id : hT.id, null, offense);
+  const preBullpenModelProb = pickHome ? preBullpenHomeProb : 1 - preBullpenHomeProb;
   const read = buildRead({
     status, pickTeam, oppTeam, modelProb, marketProb, edge, lab, pitchEdgeTeam, pitchGap,
     pitcherConflict, bullpenRead, pickBullpen, oppBullpen, bestPrice, majorBullpenCaution, passReason,
-    pickOff: pickOffCtx, oppOff: oppOffCtx
+    pickOff: pickOffCtx, oppOff: oppOffCtx, preBullpenModelProb
   });
 
   return {
@@ -492,6 +510,10 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense) {
     pick_team: pickTeam,
     side,
     model_probability: round(modelProb, 4),
+    // Same team's win probability WITHOUT the bullpen adjustment, so the
+    // effect is auditable and can be disclosed as a plain percentage-point
+    // shift instead of a raw log-odds number.
+    model_probability_pre_bullpen: round(pickHome ? preBullpenHomeProb : 1 - preBullpenHomeProb, 4),
     edge: edge === null ? null : round(edge, 4),
     status,
     value_tag: status === "official_pick" ? "OFFICIAL PICK" : status === "value_watch" ? "VALUE WATCH" : status === "watchlist" ? "WATCHLIST" : "PASS",
@@ -610,6 +632,16 @@ function buildRead(ctx) {
     ? "The starting pitcher matchup does not create a meaningful separation."
     : `${ctx.pitchEdgeTeam} owns the starting pitcher edge by ${ctx.pitchGap} points.`;
   const bullpenLine = `Bullpen read: ${ctx.bullpenRead}.`;
+  // Disclose when bullpen fatigue meaningfully moved the win probability
+  // itself (not just Lab Rating) — only surfaced when the shift is real,
+  // so most games don't carry a near-zero footnote.
+  const bullpenProbLine = (() => {
+    if (!Number.isFinite(ctx.preBullpenModelProb)) return "";
+    const shift = (ctx.modelProb - ctx.preBullpenModelProb) * 100;
+    if (Math.abs(shift) < 1) return "";
+    const dir = shift > 0 ? "up" : "down";
+    return ` Bullpen fatigue moved this probability ${dir} ${Math.abs(shift).toFixed(1)} points from ${fmtPct(ctx.preBullpenModelProb)} (starting pitcher and team strength only) to ${fmtPct(ctx.modelProb)}.`;
+  })();
   // Lineup form context. Honest framing: season offense is already inside team
   // strength (runs scored drive the Pythagorean base); this line covers the
   // RECENT form the current model does not use (v3 is testing it).
@@ -626,7 +658,7 @@ function buildRead(ctx) {
   const labLine = `Lab Rating ${(ctx.lab.score/10).toFixed(1)}/10: model edge ${ctx.lab.model_edge_points}, pitcher ${ctx.lab.pitcher_points}, bullpen ${ctx.lab.bullpen_points}, market ${ctx.lab.market_points}, base ${ctx.lab.base_points}.`;
 
   if (ctx.status === "official_pick") {
-    return `${ctx.pickTeam} is an official moneyline pick because it clears both gates: ${fmtPct(ctx.modelProb)} model win probability and ${(ctx.lab.score/10).toFixed(1)}/10 Lab Rating. ${valueLine} ${pitcherLine} ${bullpenLine}${offenseLine}`;
+    return `${ctx.pickTeam} is an official moneyline pick because it clears both gates: ${fmtPct(ctx.modelProb)} model win probability and ${(ctx.lab.score/10).toFixed(1)}/10 Lab Rating. ${valueLine} ${pitcherLine} ${bullpenLine}${bullpenProbLine}${offenseLine}`;
   }
   if (ctx.status === "value_watch") {
     // Value watch already cleared the edge and Lab Rating floor for this tier —
@@ -639,10 +671,10 @@ function buildRead(ctx) {
     const gateLine = failedGates.length
       ? `It stayed a value watch because ${failedGates.join("; and ")}.`
       : "It stayed a value watch under the stricter official-pick review.";
-    return `${ctx.pickTeam} is a value watch, not an official pick. ${valueLine} ${labLine} ${gateLine}${offenseLine}`;
+    return `${ctx.pickTeam} is a value watch, not an official pick. ${valueLine} ${labLine}${bullpenProbLine} ${gateLine}${offenseLine}`;
   }
   if (ctx.status === "watchlist") {
-    return `${ctx.pickTeam} remains on the watchlist. ${labLine} ${valueLine} ${pitcherLine} ${bullpenLine}${offenseLine}`;
+    return `${ctx.pickTeam} remains on the watchlist. ${labLine} ${valueLine} ${pitcherLine} ${bullpenLine}${bullpenProbLine}${offenseLine}`;
   }
   return ctx.passReason || "No clear setup.";
 }
@@ -685,7 +717,7 @@ function buildPicksFile(rows, generatedAt) {
       labScore: r.lab_score,
       labScoreBreakdown: r.lab_score_breakdown,
       status: r.status,
-      modelVersion: "moneyline-v2-strict-probability-gate",
+      modelVersion: "moneyline-v2-strict-probability-gate-bullpen-aware",
       pitcherEdge: r.pitcher_edge,
       bullpen: r.bullpen,
       moneyline: {
