@@ -124,30 +124,61 @@ async function main() {
     const aT = g.teams.away.team, hT = g.teams.home.team;
     const park = PARKS[hT.name] ?? 1.0;
     const side = (batTeamId, oppStarter, oppPenName) => {
-      const offF = off[batTeamId] ? off[batTeamId] / lgRPG : 1;
+      const rpg = off[batTeamId] || lgRPG;
+      const offF = rpg / lgRPG;
       const st = oppStarter ? ps[oppStarter.id] : null;
       const fip = fipLite(st);
-      const share = st && st.gs ? Math.max(3.8, Math.min(6.8, st.ip / st.gs)) / 9 : 5.4 / 9;
+      const expIP = st && st.gs ? Math.max(3.8, Math.min(6.8, st.ip / st.gs)) : 5.4;
+      const share = expIP / 9;
       const pitchF = (fip / LEAGUE_ERA) * share + 1.0 * (1 - share);
       const pen = bullpen[oppPenName];
-      const penF = pen && Number.isFinite(pen.score) && pen.score > 55 ? 1 + Math.min(0.06, (pen.score - 55) / 500) : 1;
-      return lgRPG * offF * pitchF * penF * park;
+      const penScore = pen && Number.isFinite(pen.score) ? pen.score : null;
+      const penF = penScore !== null && penScore > 55 ? 1 + Math.min(0.06, (penScore - 55) / 500) : 1;
+      return {
+        runs: lgRPG * offF * pitchF * penF * park,
+        rpg: Number(rpg.toFixed(2)), off_factor: Number(offF.toFixed(3)),
+        opp_sp: st ? st.name : "TBD", opp_sp_fip: Number(fip.toFixed(2)), opp_sp_ip: st ? Number(expIP.toFixed(1)) : null,
+        pitch_factor: Number(pitchF.toFixed(3)),
+        opp_pen_score: penScore, pen_factor: Number(penF.toFixed(3)),
+        sp_sample_ok: !!(st && st.ip >= 40)
+      };
     };
-    const runsAway = side(aT.id, g.teams.home.probablePitcher, hT.name);
-    const runsHome = side(hT.id, g.teams.away.probablePitcher, aT.name);
-    const proj = Number((runsAway + runsHome).toFixed(1));
+    const A = side(aT.id, g.teams.home.probablePitcher, hT.name);
+    const H = side(hT.id, g.teams.away.probablePitcher, aT.name);
+    const proj = Number((A.runs + H.runs).toFixed(1));
     const mkt = lines[`${aT.name} @ ${hT.name}`] || {};
+    const line = Number.isFinite(mkt.line) ? mkt.line : null;
+    // Totals Lab Rating (0–100 internal, shown /10): setup quality, auditable.
+    // 40 edge pts (|proj − line| / 2.5 capped) + 25 data confidence (both starters
+    // listed with real samples) + 20 alignment (park + both offense factors point
+    // the same way as the lean) + 15 base. No line → edge/alignment unscored.
+    let tLab = 15;
+    const lean = line !== null ? proj - line : null;
+    if (lean !== null) tLab += Math.min(1, Math.abs(lean) / 2.5) * 40;
+    const dataConf = (A.sp_sample_ok ? 12.5 : A.opp_sp !== "TBD" ? 6 : 0) + (H.sp_sample_ok ? 12.5 : H.opp_sp !== "TBD" ? 6 : 0);
+    tLab += dataConf;
+    if (lean !== null && Math.abs(lean) >= 0.5) {
+      const dir = lean > 0 ? 1 : -1;
+      let align = 0;
+      if ((park - 1) * dir > 0.02) align += 7;
+      if ((A.off_factor - 1) * dir > 0.03) align += 6.5;
+      if ((H.off_factor - 1) * dir > 0.03) align += 6.5;
+      tLab += align;
+    }
+    const totalsLab = Math.round(Math.max(0, Math.min(100, tLab)));
     out[g.gamePk] = {
       game: `${aT.name} @ ${hT.name}`,
       game_time_iso: g.gameDate,
       projection: proj,
-      proj_away: Number(runsAway.toFixed(1)),
-      proj_home: Number(runsHome.toFixed(1)),
+      proj_away: Number(A.runs.toFixed(1)),
+      proj_home: Number(H.runs.toFixed(1)),
+      away: { team: aT.name, ...A, runs: undefined },
+      home: { team: hT.name, ...H, runs: undefined },
       park_factor: park,
       away_sp: (g.teams.away.probablePitcher || {}).fullName || "TBD",
       home_sp: (g.teams.home.probablePitcher || {}).fullName || "TBD",
-      line: Number.isFinite(mkt.line) ? mkt.line : null,
-      over: mkt.over ?? null, under: mkt.under ?? null, books: mkt.books || 0
+      line, over: mkt.over ?? null, under: mkt.under ?? null, books: mkt.books || 0,
+      lab: totalsLab
     };
   }
 

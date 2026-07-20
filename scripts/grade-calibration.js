@@ -225,7 +225,7 @@ async function main() {
         const lean = (hasLine && Number.isFinite(g.projection)) ? Number((g.projection - g.line).toFixed(1)) : "";
         let leanRes = "";
         if (lean !== "" && Math.abs(lean) >= 0.5 && ou !== "P" && ou !== "") leanRes = (lean > 0) === (ou === "O") ? "W" : "L";
-        tRows.push([DATE, pk, hasLine ? g.line : "", g.over ?? "", g.under ?? "", Number.isFinite(g.projection) ? g.projection : "", actual, ou, lean, leanRes].join(","));
+        tRows.push([DATE, pk, hasLine ? g.line : "", g.over ?? "", g.under ?? "", Number.isFinite(g.projection) ? g.projection : "", actual, ou, lean, leanRes, Number.isFinite(g.lab) ? g.lab : "", csvField(g.game || "")].join(","));
       }
       if (tRows.length) fs.appendFileSync(TLOG, tRows.join("\n") + "\n");
       console.log(`Totals: graded ${tRows.length}.`);

@@ -41,6 +41,13 @@
 .lean { font-weight:800; }
 .t-meta { font-size:.84rem; color:var(--text-dim); margin-top:8px; }
 .tier { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:1px 7px; margin-left:6px; white-space:nowrap; }
+.side-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:10px; }
+.side-box { background:var(--bg-elev); border:1px solid var(--border); border-radius:var(--radius); padding:12px; }
+.side-box h3 { margin:0 0 4px; font-size:.98rem; }
+.s-runs { font-size:1.5rem; font-weight:800; color:var(--accent); }
+.s-row { display:flex; justify-content:space-between; gap:8px; font-size:.85rem; border-top:1px solid var(--border); padding-top:5px; margin-top:5px; }
+.read { margin-top:10px; font-size:.88rem; color:var(--text-dim); }
+@media (max-width:720px){ .side-grid{ grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
@@ -104,9 +111,9 @@ async function load(){
       const hasLine=Number.isFinite(g.line);
       const parkTag=g.park_factor>=1.06?' <span class="tier pos-text">hitter-friendly park</span>':g.park_factor<=0.95?' <span class="tier neg-text">pitcher-friendly park</span>':"";
       return `<div class="card match-card" id="tg-${g.pk}">
-        <div class="t-head"><span class="matchup">${escapeHtml(g.game)}</span><span class="dim small">${time}</span></div>
+        <div class="t-head"><span class="matchup">${escapeHtml(g.game)}</span><span class="dim small">${time}${Number.isFinite(g.lab)?` · <b>Setup ${(g.lab/10).toFixed(1)}/10</b>`:""}</span></div>
         <div class="t-grid">
-          <div><div class="t-label">LyDia projects</div><span class="t-proj">${g.projection.toFixed(1)}</span> <span class="dim small">runs (${g.proj_away.toFixed(1)} away + ${g.proj_home.toFixed(1)} home)</span></div>
+          <div><div class="t-label">LyDia projects</div><span class="t-proj">${g.projection.toFixed(1)}</span> <span class="dim small">runs</span></div>
           <div><div class="t-label">Market line${hasLine?` (${g.books} book${g.books===1?"":"s"})`:""}</div>
             <div class="line-input">
               <input type="number" step="0.5" id="tl-${g.pk}" placeholder="e.g. 8.5" value="${hasLine?g.line:""}" oninput="lean('${g.pk}')">
@@ -114,13 +121,44 @@ async function load(){
             </div></div>
           <div><span id="lean-${g.pk}" class="lean"></span></div>
         </div>
-        <div class="t-meta">${escapeHtml(g.away_sp)} vs ${escapeHtml(g.home_sp)} · park factor ${g.park_factor}${parkTag}</div>
+        ${sideBoxes(g)}
+        <div class="t-meta">Park factor ${g.park_factor}${parkTag} — shared by both sides.</div>
+        <div class="read">${escapeHtml(gameRead(g))}</div>
       </div>`;
     }).join("");
     document.getElementById("game-jump").innerHTML='<option value="">All games…</option>'+
       games.map(g=>`<option value="${g.pk}">${escapeHtml(g.game)}</option>`).join("");
     games.forEach(g=>{ const el=document.getElementById("tl-"+g.pk); if(el&&el.value) lean(g.pk); });
   }catch(e){ statusEl.innerHTML=`<div class="notice warn">Could not load (${escapeHtml(e.message)}).</div>`; }
+}
+function fipTier(v){ return !Number.isFinite(v)?"":v<3.25?" <span class=\"tier pos-text\">great arm — suppresses runs</span>":v<3.75?" <span class=\"tier pos-text\">good</span>":v<4.25?" <span class=\"tier\">average</span>":v<4.9?" <span class=\"tier neg-text\">shaky — runs available</span>":" <span class=\"tier neg-text\">poor — runs available</span>"; }
+function offTier(f){ return !Number.isFinite(f)?"":f>=1.08?" <span class=\"tier pos-text\">high-scoring lineup</span>":f>=1.03?" <span class=\"tier pos-text\">above average</span>":f<=0.92?" <span class=\"tier neg-text\">low-scoring lineup</span>":f<=0.97?" <span class=\"tier neg-text\">below average</span>":" <span class=\"tier\">average</span>"; }
+function sideBoxes(g){
+  if(!g.away || !g.home) return "";
+  const box=(sideName, sd, runs)=>{
+    return `<div class="side-box">
+      <h3>${escapeHtml(sd.team)} <span class="dim small">projected</span> <span class="s-runs">${runs.toFixed(1)}</span></h3>
+      <div class="s-row"><span>Their scoring (season)</span><span><b>${sd.rpg}</b> runs/game${offTier(sd.off_factor)}</span></div>
+      <div class="s-row"><span>Facing starter</span><span><b>${escapeHtml(sd.opp_sp)}</b> <span class="dim small">${Number.isFinite(sd.opp_sp_fip)?"FIP-in "+sd.opp_sp_fip.toFixed(2):""}${sd.opp_sp_ip?" · ~"+sd.opp_sp_ip+" IP":""}</span>${fipTier(sd.opp_sp_fip)}</span></div>
+      <div class="s-row"><span>Facing bullpen</span><span>${Number.isFinite(sd.opp_pen_score)?`<b>${(sd.opp_pen_score/10).toFixed(1)}/10 fatigue</b>${sd.pen_factor>1?` <span class=\"tier pos-text\">tired pen — adds runs</span>`:""}`:'<span class="dim">—</span>'}</span></div>
+    </div>`;
+  };
+  return `<div class="side-grid">${box("away", g.away, g.proj_away)}${box("home", g.home, g.proj_home)}</div>`;
+}
+function gameRead(g){
+  if(!g.away || !g.home) return "";
+  const parts=[];
+  const arms=[[g.away, g.proj_away],[g.home, g.proj_home]];
+  for(const [sd, runs] of arms){
+    if(Number.isFinite(sd.opp_sp_fip) && sd.opp_sp_fip<3.25) parts.push(`${sd.opp_sp} is the story on ${sd.team}'s side — a ${sd.opp_sp_fip.toFixed(2)} FIP arm holds them to ${runs.toFixed(1)}.`);
+    else if(Number.isFinite(sd.opp_sp_fip) && sd.opp_sp_fip>=4.9) parts.push(`${sd.team} gets a favorable matchup — ${sd.opp_sp}'s ${sd.opp_sp_fip.toFixed(2)} FIP is where runs come from.`);
+    if(sd.pen_factor>1.02) parts.push(`${sd.team} also faces a tired pen late.`);
+  }
+  const both=g.away.off_factor>=1.05&&g.home.off_factor>=1.05, neither=g.away.off_factor<=0.95&&g.home.off_factor<=0.95;
+  if(both) parts.push("Two above-average offenses push this total up.");
+  if(neither) parts.push("Two light-scoring lineups hold this total down.");
+  if(!parts.length) parts.push("No single factor dominates — the projection is a balanced read of lineups, starters, and park.");
+  return parts.join(" ");
 }
 function lean(pk){
   const proj=PROJ[pk]; const el=document.getElementById("lean-"+pk);
