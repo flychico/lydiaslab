@@ -55,6 +55,22 @@ td.team-cell { font-weight: 600; white-space: nowrap; }
 
   <div id="stories"></div>
 
+  <h2 style="margin-top:18px">The Map — every team, two axes, your call</h2>
+  <div class="card">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:8px">
+      <div><label class="dim small" for="ax-x">Horizontal</label><select id="ax-x" onchange="drawMap()"></select></div>
+      <div><label class="dim small" for="ax-y">Vertical</label><select id="ax-y" onchange="drawMap()"></select></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <span class="fpill" onclick="preset('dOps','ops')">Heat vs Quality</span>
+        <span class="fpill" onclick="preset('rsg','rag')">Offense vs Defense</span>
+        <span class="fpill" onclick="preset('luck','pyth')">Luck Map</span>
+        <span class="fpill" onclick="preset('kPct','slg')">Whiffs vs Power</span>
+      </div>
+    </div>
+    <canvas id="teammap" width="860" height="520" style="width:100%;height:auto;cursor:pointer"></canvas>
+    <p class="dim small" style="margin:6px 0 0" id="map-hint">Each dot is a team — tap one for its full breakdown. Change the axes and find your own story: who's lucky, who's fraudulent, who's quietly elite.</p>
+  </div>
+
   <h2 style="margin-top:18px">Offense — hot & cold (last 15 days vs season)</h2>
   <div class="notice legend">
     <b>How to read this table:</b> the batting line is each team's offense over the <b>last 15 days</b>, compared
@@ -171,6 +187,7 @@ async function loadOffense() {
     renderOffFilter();
     renderOffense();
     buildStories();
+    initMapControls();
   } catch (e) {
     if (offRows.length) { status.textContent = "MLB stats feed didn\u2019t respond — showing your last saved copy (timestamp under the table)."; }
     else status.textContent = "Offense trends unavailable right now — MLB stats API did not respond.";
@@ -348,6 +365,7 @@ function renderStandings(data) {
     });
   }
   setTimeout(buildStories, 0); // after the table paints — a stories hiccup can never blank the standings
+  setTimeout(() => { if (typeof initMapControls === "function" && offRows.length) drawMap(); }, 50);
 
   // league-wide RS/G and RA/G cutoffs for top/bottom-10 coloring
   const all = [];
@@ -547,6 +565,84 @@ async function comparePanel() {
       <p class="dim small" style="margin-top:8px">Green cells mark the better side of each metric. Tap a team name anywhere on the page for its full breakdown.</p>`);
   } catch (e) { openModal(`<p>Could not compare (${escapeHtml(e.message)}). <span class="dim" style="cursor:pointer" onclick="closePanel()">close</span></p>`); }
 }
+
+
+/* ================= The Map: metric-vs-metric team scatter ================= */
+const MAP_METRICS = {
+  ops:   { label: "OPS (last 15d)", get: r => r.off && r.off.ops, fmt: v => v.toFixed(3).replace(/^0/, "") },
+  seasonOps: { label: "OPS (season)", get: r => r.off && r.off.seasonOps, fmt: v => v.toFixed(3).replace(/^0/, "") },
+  dOps:  { label: "Heat (ΔOPS vs season)", get: r => r.off && r.off.dOps, fmt: v => (v >= 0 ? "+" : "") + v.toFixed(3).replace("0.", ".") },
+  rpg:   { label: "Runs/game (last 15d)", get: r => r.off && r.off.rpg, fmt: v => v.toFixed(1) },
+  kPct:  { label: "Strikeout rate (15d)", get: r => r.off && r.off.kPct, fmt: v => (v * 100).toFixed(1) + "%", invert: true },
+  slg:   { label: "Slugging (15d)", get: r => r.off && r.off.slg, fmt: v => v.toFixed(3).replace(/^0/, "") },
+  rsg:   { label: "Runs scored/game (season)", get: r => r.st && r.st.rsg, fmt: v => v.toFixed(2) },
+  rag:   { label: "Runs allowed/game (season)", get: r => r.st && r.st.rag, fmt: v => v.toFixed(2), invert: true },
+  pyth:  { label: "True strength (Pythag win%)", get: r => r.st && r.st.pyth, fmt: v => v.toFixed(3).replace(/^0/, "") },
+  luck:  { label: "Luck (wins above run diff)", get: r => r.st && r.st.luck, fmt: v => (v > 0 ? "+" : "") + v.toFixed(1), invert: true },
+  winPct:{ label: "Actual win%", get: r => r.st && (r.st.w + r.st.l) ? r.st.w / (r.st.w + r.st.l) : null, fmt: v => v.toFixed(3).replace(/^0/, "") }
+};
+let _mapDots = [];
+function mapRows() {
+  const st = window._standRows || [];
+  return offRows.map(o => ({ team: o.team, off: o, st: st.find(x => x.name === o.team) || null }));
+}
+function initMapControls() {
+  const opts = Object.entries(MAP_METRICS).map(([k, m]) => `<option value="${k}">${m.label}</option>`).join("");
+  const x = document.getElementById("ax-x"), y = document.getElementById("ax-y");
+  if (!x || x.options.length) return;
+  x.innerHTML = opts; y.innerHTML = opts;
+  x.value = "dOps"; y.value = "ops";
+  drawMap();
+}
+function preset(xk, yk) { const x = document.getElementById("ax-x"), y = document.getElementById("ax-y"); x.value = xk; y.value = yk; drawMap(); }
+function drawMap() {
+  const c = document.getElementById("teammap");
+  if (!c || !offRows.length) return;
+  const xk = document.getElementById("ax-x").value, yk = document.getElementById("ax-y").value;
+  const MX = MAP_METRICS[xk], MY = MAP_METRICS[yk];
+  const rows = mapRows().map(r => ({ team: r.team, x: MX.get(r), y: MY.get(r) })).filter(r => Number.isFinite(r.x) && Number.isFinite(r.y));
+  const ctx = c.getContext("2d"), W = c.width, H = c.height;
+  const dark = false;
+  ctx.clearRect(0, 0, W, H);
+  const xs = rows.map(r => r.x), ys = rows.map(r => r.y);
+  const pad = 56, xmin = Math.min(...xs), xmax = Math.max(...xs), ymin = Math.min(...ys), ymax = Math.max(...ys);
+  const xr = (xmax - xmin) || 1, yr = (ymax - ymin) || 1;
+  const px = v => pad + ((v - xmin) / xr) * (W - pad * 2);
+  const py = v => H - pad - ((v - ymin) / yr) * (H - pad * 2);
+  // quadrant guides at medians
+  const med = a => { const s2 = [...a].sort((m, n) => m - n); return s2[Math.floor(s2.length / 2)]; };
+  ctx.strokeStyle = "#d0d7de"; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(px(med(xs)), pad / 2); ctx.lineTo(px(med(xs)), H - pad / 2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pad / 2, py(med(ys))); ctx.lineTo(W - pad / 2, py(med(ys))); ctx.stroke();
+  ctx.setLineDash([]);
+  // axis labels
+  ctx.fillStyle = "#57606a"; ctx.font = "13px sans-serif"; ctx.textAlign = "center";
+  ctx.fillText(MX.label + (MX.invert ? "  (right = worse)" : ""), W / 2, H - 10);
+  ctx.save(); ctx.translate(14, H / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(MY.label + (MY.invert ? "  (up = worse)" : ""), 0, 0); ctx.restore();
+  // dots
+  _mapDots = [];
+  ctx.font = "11px sans-serif";
+  for (const r of rows) {
+    const X = px(r.x), Y = py(r.y);
+    const goodX = MX.invert ? r.x <= med(xs) : r.x >= med(xs);
+    const goodY = MY.invert ? r.y <= med(ys) : r.y >= med(ys);
+    ctx.fillStyle = goodX && goodY ? "#1e8e3e" : (!goodX && !goodY) ? "#cf222e" : "#4d9fdc";
+    ctx.beginPath(); ctx.arc(X, Y, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#1f2328";
+    ctx.fillText(shortTeam(r.team), X, Y - 10);
+    _mapDots.push({ x: X, y: Y, team: r.team, vx: r.x, vy: r.y });
+  }
+  document.getElementById("map-hint").innerHTML = `Green = strong on both axes · red = weak on both · blue = split. Dotted lines are league medians. Tap any dot for the team's full breakdown.`;
+}
+document.getElementById("teammap") && document.getElementById("teammap").addEventListener("click", e => {
+  const c = document.getElementById("teammap");
+  const rect = c.getBoundingClientRect();
+  const scaleX = c.width / rect.width, scaleY = c.height / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX, my = (e.clientY - rect.top) * scaleY;
+  let best = null, bd = 1e9;
+  for (const d of _mapDots) { const dist = (d.x - mx) ** 2 + (d.y - my) ** 2; if (dist < bd) { bd = dist; best = d; } }
+  if (best && bd < 900) teamPanel(best.team);
+});
 </script>
 </body>
 </html>

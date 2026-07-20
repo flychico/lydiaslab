@@ -71,7 +71,7 @@
   </div>
 
   <div class="notice">
-    <strong>How to read it:</strong> the projection is a median expectation — real games land within ±2.5 runs of it routinely, so only lean when the gap to the line is <b>0.5+ runs</b>, and treat leans as research, not picks. Market lines are captured each morning and kept all day (re-captured only if a starter changes) — <b>edit the line box if your book differs</b> or before the capture lands. Every projection is graded in public against the final score — this tool earns trust or loses it in the open.
+    <strong>How to read it:</strong> every label answers one question — does this factor <b class="pos-text">add runs</b> (green) or <b class="neg-text">suppress runs</b> (red)? The projection is a median expectation — real games land within ±2.5 runs of it routinely, so only lean when the gap to the line is <b>0.5+ runs</b>, and treat leans as research, not picks. Market lines are captured each morning and kept all day (re-captured only if a starter changes) — <b>edit the line box if your book differs</b> or before the capture lands. Every projection is graded in public against the final score — this tool earns trust or loses it in the open.
   </div>
 
   <div id="status"><div class="loading">Loading projections…</div></div>
@@ -82,7 +82,7 @@
 const datePick = document.getElementById("date-pick");
 datePick.value = localISODate(new Date());
 datePick.addEventListener("change", load);
-let PROJ = {};
+let PROJ = {}; let GAMES = {};
 load();
 
 function localISODate(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
@@ -106,12 +106,12 @@ async function load(){
     statusEl.innerHTML="";
     PROJ={};
     gamesEl.innerHTML=games.map(g=>{
-      PROJ[g.pk]=g.projection;
+      PROJ[g.pk]=g.projection; GAMES[g.pk]=g;
       const time=new Date(g.game_time_iso).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
       const hasLine=Number.isFinite(g.line);
-      const parkTag=g.park_factor>=1.06?' <span class="tier pos-text">hitter-friendly park</span>':g.park_factor<=0.95?' <span class="tier neg-text">pitcher-friendly park</span>':"";
+      const parkTag=g.park_factor>=1.06?' <span class="tier pos-text">park adds runs</span>':g.park_factor<=0.95?' <span class="tier neg-text">park suppresses runs</span>':"";
       return `<div class="card match-card" id="tg-${g.pk}">
-        <div class="t-head"><span class="matchup">${escapeHtml(g.game)}</span><span class="dim small">${time}${Number.isFinite(g.lab)?` · <b>Setup ${(g.lab/10).toFixed(1)}/10</b>`:""}</span></div>
+        <div class="t-head"><span class="matchup">${escapeHtml(g.game)}</span><span class="dim small">${time}${` · <b id="lab-${g.pk}">${Number.isFinite(g.line)&&Number.isFinite(g.lab)?`Setup ${(g.lab/10).toFixed(1)}/10`:"Setup pending line"}</b>`}</span></div>
         <div class="t-grid">
           <div><div class="t-label">LyDia projects</div><span class="t-proj">${g.projection.toFixed(1)}</span> <span class="dim small">runs</span></div>
           <div><div class="t-label">Market line${hasLine?` (${g.books} book${g.books===1?"":"s"})`:""}</div>
@@ -131,8 +131,8 @@ async function load(){
     games.forEach(g=>{ const el=document.getElementById("tl-"+g.pk); if(el&&el.value) lean(g.pk); });
   }catch(e){ statusEl.innerHTML=`<div class="notice warn">Could not load (${escapeHtml(e.message)}).</div>`; }
 }
-function fipTier(v){ return !Number.isFinite(v)?"":v<3.25?" <span class=\"tier pos-text\">great arm — suppresses runs</span>":v<3.75?" <span class=\"tier pos-text\">good</span>":v<4.25?" <span class=\"tier\">average</span>":v<4.9?" <span class=\"tier neg-text\">shaky — runs available</span>":" <span class=\"tier neg-text\">poor — runs available</span>"; }
-function offTier(f){ return !Number.isFinite(f)?"":f>=1.08?" <span class=\"tier pos-text\">high-scoring lineup</span>":f>=1.03?" <span class=\"tier pos-text\">above average</span>":f<=0.92?" <span class=\"tier neg-text\">low-scoring lineup</span>":f<=0.97?" <span class=\"tier neg-text\">below average</span>":" <span class=\"tier\">average</span>"; }
+function fipTier(v){ return !Number.isFinite(v)?"":v<3.25?" <span class=\"tier neg-text\">suppresses runs hard</span>":v<3.75?" <span class=\"tier neg-text\">suppresses runs</span>":v<4.25?" <span class=\"tier\">neutral</span>":v<4.9?" <span class=\"tier pos-text\">adds runs</span>":" <span class=\"tier pos-text\">adds many runs</span>"; }
+function offTier(f){ return !Number.isFinite(f)?"":f>=1.08?" <span class=\"tier pos-text\">adds runs — high-scoring</span>":f>=1.03?" <span class=\"tier pos-text\">adds runs</span>":f<=0.92?" <span class=\"tier neg-text\">suppresses runs — light lineup</span>":f<=0.97?" <span class=\"tier neg-text\">below average scoring</span>":" <span class=\"tier\">neutral</span>"; }
 function sideBoxes(g){
   if(!g.away || !g.home) return "";
   const box=(sideName, sd, runs)=>{
@@ -161,10 +161,27 @@ function gameRead(g){
   if(!parts.length) parts.push("No single factor dominates — the projection is a balanced read of lineups, starters, and park.");
   return parts.join(" ");
 }
+function liveLab(g, line){
+  // mirrors the engine: 40 edge + 25 data confidence + 20 alignment + 15 base
+  if(!g || !Number.isFinite(line)) return null;
+  const lean=g.projection-line;
+  let lab=15+Math.min(1,Math.abs(lean)/2.5)*40;
+  const conf=sd=>sd?(sd.sp_sample_ok?12.5:sd.opp_sp!=="TBD"?6:0):0;
+  lab+=conf(g.away)+conf(g.home);
+  if(Math.abs(lean)>=0.5&&g.away&&g.home){
+    const dir=lean>0?1:-1; 
+    if((g.park_factor-1)*dir>0.02)lab+=7;
+    if((g.away.off_factor-1)*dir>0.03)lab+=6.5;
+    if((g.home.off_factor-1)*dir>0.03)lab+=6.5;
+  }
+  return Math.round(Math.max(0,Math.min(100,lab)));
+}
 function lean(pk){
   const proj=PROJ[pk]; const el=document.getElementById("lean-"+pk);
   const line=Number(document.getElementById("tl-"+pk).value);
-  if(!Number.isFinite(proj)||!isFinite(line)||line<=0){ el.textContent=""; return; }
+  const labEl=document.getElementById("lab-"+pk);
+  if(!Number.isFinite(proj)||!isFinite(line)||line<=0){ el.textContent=""; if(labEl)labEl.textContent="Setup pending line"; return; }
+  if(labEl){ const L=liveLab(GAMES[pk],line); if(L!==null)labEl.textContent=`Setup ${(L/10).toFixed(1)}/10`; }
   const d=proj-line;
   if(d>=0.5) el.innerHTML=`<span class="pos-text">OVER lean (+${d.toFixed(1)})</span>`;
   else if(d<=-0.5) el.innerHTML=`<span class="neg-text">UNDER lean (${d.toFixed(1)})</span>`;

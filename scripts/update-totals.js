@@ -79,17 +79,21 @@ async function main() {
   // Recent form: last-15-day scoring, blended 70/30 with season — same philosophy
   // as the moneyline model's Pythagorean + last-10 blend. Form matters; it just
   // doesn't get to shout over a 90-game sample.
-  const FORM_W = 0.30;
-  const off15 = {};
-  try {
-    const end = new Date(DATE + "T12:00:00Z"), start = new Date(end.getTime() - 15 * 864e5);
-    const f = d => d.toISOString().slice(0, 10);
+  // Three-tier blend: season 60% + last-15 25% + last-7 15%. Short-window weight
+  // scales DOWN with sample size (3 games of 7-6-2 is a whisper, not a shout).
+  const off15 = {}, off7 = {}, g15 = {}, g7 = {};
+  const f = d => d.toISOString().slice(0, 10);
+  const end = new Date(DATE + "T12:00:00Z");
+  const windowFetch = async (days, store, gstore) => {
+    const start = new Date(end.getTime() - days * 864e5);
     const win = await j(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${yr}&stats=byDateRange&startDate=${f(start)}&endDate=${f(end)}`);
     for (const t of (win.stats[0] || {}).splits || []) {
       const gp = Number(t.stat.gamesPlayed) || 0;
-      if (gp >= 8) off15[t.team.id] = (Number(t.stat.runs) || 0) / gp;
+      if (gp > 0) { store[t.team.id] = (Number(t.stat.runs) || 0) / gp; gstore[t.team.id] = gp; }
     }
-  } catch (e) { console.warn("form window unavailable:", e.message); }
+  };
+  try { await Promise.all([windowFetch(15, off15, g15), windowFetch(7, off7, g7)]); }
+  catch (e) { console.warn("form windows unavailable:", e.message); }
 
   const pids = [...new Set(games.flatMap(g => ["away", "home"].map(sd => g.teams[sd].probablePitcher && g.teams[sd].probablePitcher.id).filter(Boolean)))];
   const ps = {};
@@ -139,8 +143,10 @@ async function main() {
     const park = PARKS[hT.name] ?? 1.0;
     const side = (batTeamId, oppStarter, oppPenName) => {
       const seasonRpg = off[batTeamId] || lgRPG;
-      const formRpg = off15[batTeamId];
-      const rpg = Number.isFinite(formRpg) ? (1 - FORM_W) * seasonRpg + FORM_W * formRpg : seasonRpg;
+      // weights scale with each window's sample; unearned weight returns to season
+      let w15 = Number.isFinite(off15[batTeamId]) ? 0.25 * Math.min(1, (g15[batTeamId] || 0) / 12) : 0;
+      let w7 = Number.isFinite(off7[batTeamId]) ? 0.15 * Math.min(1, (g7[batTeamId] || 0) / 6) : 0;
+      const rpg = (1 - w15 - w7) * seasonRpg + w15 * (off15[batTeamId] || 0) + w7 * (off7[batTeamId] || 0);
       const offF = rpg / lgRPG;
       const st = oppStarter ? ps[oppStarter.id] : null;
       const fip = fipLite(st);
@@ -152,7 +158,10 @@ async function main() {
       const penF = penScore !== null && penScore > 55 ? 1 + Math.min(0.06, (penScore - 55) / 500) : 1;
       return {
         runs: lgRPG * offF * pitchF * penF * park,
-        rpg: Number(rpg.toFixed(2)), season_rpg: Number(seasonRpg.toFixed(2)), form_rpg: Number.isFinite(formRpg) ? Number(formRpg.toFixed(2)) : null, off_factor: Number(offF.toFixed(3)),
+        rpg: Number(rpg.toFixed(2)), season_rpg: Number(seasonRpg.toFixed(2)),
+        form15_rpg: Number.isFinite(off15[batTeamId]) ? Number(off15[batTeamId].toFixed(2)) : null, form15_g: g15[batTeamId] || 0,
+        form7_rpg: Number.isFinite(off7[batTeamId]) ? Number(off7[batTeamId].toFixed(2)) : null, form7_g: g7[batTeamId] || 0,
+        off_factor: Number(offF.toFixed(3)),
         opp_sp: st ? st.name : "TBD", opp_sp_fip: Number(fip.toFixed(2)), opp_sp_ip: st ? Number(expIP.toFixed(1)) : null,
         pitch_factor: Number(pitchF.toFixed(3)),
         opp_pen_score: penScore, pen_factor: Number(penF.toFixed(3)),
