@@ -94,7 +94,7 @@ jobs:
           DATE_INPUT="${{ steps.publish_date.outputs.date }}"
           git config user.name "lydia-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add previews/ picks/ articles/ data/ sitemap.xml
+          git add previews/ picks/ articles/ data/ sitemap.xml member-brief/ results/ tools/
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
