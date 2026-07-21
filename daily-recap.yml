@@ -1,16 +1,7 @@
 name: Daily recap and grading
 
-# Backward-looking only. Safe to run unattended.
-# Scheduled runs automatically process yesterday in America/New_York.
-# Manual runs require an explicit YYYY-MM-DD date.
-# Grades finished games, builds the true-game recap/SEO page,
-# generates the learning summary, and refreshes the Research Desk.
-# It does NOT generate today's picks or email members.
-
 on:
   schedule:
-    # GitHub Actions cron is UTC.
-    # 11:35 UTC = 7:35 AM EDT / 6:35 AM EST.
     - cron: "35 11 * * *"
 
   workflow_dispatch:
@@ -36,6 +27,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: true
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -74,6 +66,15 @@ jobs:
       - name: Generate true-game recap
         run: node scripts/generate-recap.js "${{ steps.recap_date.outputs.date }}"
 
+      - name: Refresh matchup pages with final scores and grades
+        run: node scripts/generate-matchup-pages.js "${{ steps.recap_date.outputs.date }}" --skip-weather
+
+      - name: Verify matchup pages still use Pitcher Matchup Tool data
+        run: node scripts/verify-pitcher-matchup-alignment.js "${{ steps.recap_date.outputs.date }}"
+
+      - name: Grade full-slate calibration ledger
+        run: node scripts/grade-calibration.js "${{ steps.recap_date.outputs.date }}"
+
       - name: Generate learning summary
         run: node scripts/generate-learning-summary.js --date "${{ steps.recap_date.outputs.date }}"
 
@@ -83,12 +84,15 @@ jobs:
       - name: Refresh LyDia Research Desk
         run: node scripts/generate-research-desk.js
 
+      - name: Normalize public shell and head tags
+        run: node scripts/normalize-public-shell.js
+
       - name: Keep live results block on Results page
         run: |
           node scripts/dedupe-clv.js
           node scripts/inject-live-results.js
 
-      - name: Verify recap, learning, and research generated
+      - name: Verify recap, matchup pages, learning, Coach and research generated
         shell: bash
         run: |
           DATE_INPUT="${{ steps.recap_date.outputs.date }}"
@@ -98,29 +102,56 @@ jobs:
           grep -q "Today's Pick Status" "results/index.html" || { echo "ERROR: live pick status block missing"; exit 1; }
 
           test -f "recaps/$DATE_INPUT.html" || { echo "ERROR: recap missing for $DATE_INPUT"; exit 1; }
+          test -f "data/pitcher-matchups/$DATE_INPUT.json" || { echo "ERROR: canonical pitcher data missing for $DATE_INPUT"; exit 1; }
+          test -f "data/matchup-pages/$DATE_INPUT.json" || { echo "ERROR: matchup manifest missing for $DATE_INPUT"; exit 1; }
+          test -f "mlb/matchups/index.html" || { echo "ERROR: matchup archive missing"; exit 1; }
           test -f "data/learning/$DATE_INPUT.json" || { echo "ERROR: learning summary missing for $DATE_INPUT"; exit 1; }
           test -f "learning/index.html" || { echo "ERROR: learning/index.html missing"; exit 1; }
           test -f "data/learning-summary.json" || { echo "ERROR: current learning summary missing"; exit 1; }
 
+          node -e "
+            const fs = require('fs');
+            const x = JSON.parse(fs.readFileSync('data/learning-summary.json', 'utf8'));
+            const m = JSON.parse(fs.readFileSync('data/matchup-pages/$DATE_INPUT.json', 'utf8'));
+            if (!x.coach) throw new Error('Coach object missing from learning summary');
+            if (!Array.isArray(m.pages) || !m.pages.length) throw new Error('Matchup manifest has no pages');
+            console.log('Coach:', x.coach.status, 'Days:', x.coach.current_model_days, 'Picks:', x.coach.current_model_picks);
+            console.log('Matchup pages:', m.total_pages, 'Indexable:', m.indexable_pages, 'Noindex:', m.noindex_pages);
+          "
+
           test -f "articles/index.html" || { echo "ERROR: Research Desk page missing"; exit 1; }
           test -f "data/research-desk.json" || { echo "ERROR: Research Desk data missing"; exit 1; }
-
-          echo "Recap, results, learning summary, and Research Desk look good for $DATE_INPUT."
 
       - name: Commit and push if changed
         shell: bash
         run: |
+          set -euo pipefail
           DATE_INPUT="${{ steps.recap_date.outputs.date }}"
 
           git config user.name "lydia-bot"
           git config user.email "actions@users.noreply.github.com"
 
-          git add results/ recaps/ learning/ articles/ data/ sitemap.xml
+          git add -A
 
           if git diff --cached --quiet; then
             echo "No changes to commit."
-          else
-            git commit -m "Daily recap, learning and research $DATE_INPUT"
-            git pull --rebase
-            git push
+            exit 0
           fi
+
+          git commit -m "Daily recap, matchup updates, learning and research $DATE_INPUT"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "ERROR: Working tree became dirty after commit."
+            git status --short
+            exit 1
+          fi
+
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "ERROR: Working tree is dirty after rebase."
+            git status --short
+            exit 1
+          fi
+
+          git push origin "HEAD:${GITHUB_REF_NAME}"
