@@ -44,6 +44,7 @@ const MANIFEST_PATH = path.join(MANIFEST_DIR, `${DATE}.json`);
 const MATCHUP_ROOT = path.join(ROOT, "mlb");
 const ARCHIVE_DIR = path.join(MATCHUP_ROOT, "matchups");
 const PREVIEW_PATH = path.join(ROOT, "previews", `${DATE}.html`);
+const PICKS_PATH = path.join(ROOT, "picks", "index.html");
 const SITEMAP_PATH = path.join(ROOT, "sitemap.xml");
 
 const TEAM_SHORT = {
@@ -210,6 +211,7 @@ async function main() {
   buildArchive();
   updateSitemap(manifest);
   linkDailyPreview(manifest);
+  linkPicksPage();
 
   console.log(`Generated ${pages.length} matchup pages for ${DATE}.`);
   console.log(`Indexable: ${manifest.indexable_pages}. Noindex: ${manifest.noindex_pages}.`);
@@ -875,6 +877,54 @@ function updateSitemap(manifest) {
 
 function escXml(value) {
   return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+}
+
+
+function linkPicksPage() {
+  if (!fs.existsSync(PICKS_PATH)) return;
+
+  let html = fs.readFileSync(PICKS_PATH, "utf8");
+  let changed = false;
+
+  const renderAnchor = "function renderGame(g) {";
+  const helperMarker = "function matchupPageUrl(g) {";
+
+  if (!html.includes(helperMarker)) {
+    if (!html.includes(renderAnchor)) {
+      throw new Error("Could not find renderGame() in picks/index.html.");
+    }
+
+    const helper = `const MATCHUP_TEAM_SHORT = {"Arizona Diamondbacks":"Diamondbacks","Athletics":"Athletics","Atlanta Braves":"Braves","Baltimore Orioles":"Orioles","Boston Red Sox":"Red Sox","Chicago Cubs":"Cubs","Chicago White Sox":"White Sox","Cincinnati Reds":"Reds","Cleveland Guardians":"Guardians","Colorado Rockies":"Rockies","Detroit Tigers":"Tigers","Houston Astros":"Astros","Kansas City Royals":"Royals","Los Angeles Angels":"Angels","Los Angeles Dodgers":"Dodgers","Miami Marlins":"Marlins","Milwaukee Brewers":"Brewers","Minnesota Twins":"Twins","New York Mets":"Mets","New York Yankees":"Yankees","Philadelphia Phillies":"Phillies","Pittsburgh Pirates":"Pirates","San Diego Padres":"Padres","San Francisco Giants":"Giants","Seattle Mariners":"Mariners","St. Louis Cardinals":"Cardinals","Tampa Bay Rays":"Rays","Texas Rangers":"Rangers","Toronto Blue Jays":"Blue Jays","Washington Nationals":"Nationals"};
+
+function matchupPageUrl(g) {
+  const date = (PICKS_DATA && PICKS_DATA.date) || datePick.value || localISODate(new Date());
+  const away = MATCHUP_TEAM_SHORT[g.away_team] || g.away_team || "";
+  const home = MATCHUP_TEAM_SHORT[g.home_team] || g.home_team || "";
+  const pageSlug = value => String(value)
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+  return "/mlb/" + pageSlug(away) + "-vs-" + pageSlug(home) + "-prediction-odds-" + date + "/";
+}
+
+`;
+
+    html = html.replace(renderAnchor, helper + renderAnchor);
+    changed = true;
+  }
+
+  const plainTitle = '<span class="matchup">${escapeHtml(g.game || "")}</span>';
+  const linkedTitle = '<a class="matchup" href="${matchupPageUrl(g)}">${escapeHtml(g.game || "")}</a>';
+
+  if (html.includes(plainTitle)) {
+    html = html.replace(plainTitle, linkedTitle);
+    changed = true;
+  } else if (!html.includes(linkedTitle)) {
+    throw new Error("Could not find the Picks matchup title markup.");
+  }
+
+  if (changed) fs.writeFileSync(PICKS_PATH, html, "utf8");
 }
 
 function linkDailyPreview(manifest) {
