@@ -37,6 +37,7 @@ if (!/^\d{4}-\d{2}-\d{2}$/.test(DATE)) {
 
 const MEMBER_BRIEF_PATH = path.join(ROOT, "data", "member-brief", `${DATE}.json`);
 const TOTALS_PATH = path.join(ROOT, "data", "totals", `${DATE}.json`);
+const PITCHER_PATH = path.join(ROOT, "data", "pitcher-matchups", `${DATE}.json`);
 const RESULTS_PATH = path.join(ROOT, "data", "results.json");
 const MANIFEST_DIR = path.join(ROOT, "data", "matchup-pages");
 const MANIFEST_PATH = path.join(MANIFEST_DIR, `${DATE}.json`);
@@ -124,6 +125,10 @@ async function main() {
   }
 
   const totals = readJsonSafe(TOTALS_PATH) || { games: {} };
+  const pitcherSource = readJsonSafe(PITCHER_PATH);
+  if (!pitcherSource || !pitcherSource.games) {
+    throw new Error(`Missing canonical pitcher source ${relative(PITCHER_PATH)}. Run generate-pitcher-matchup-data.js first.`);
+  }
   const results = readJsonSafe(RESULTS_PATH) || { days: {} };
   const previousManifest = readJsonSafe(MANIFEST_PATH) || { pages: [] };
   const previousBySlug = new Map((previousManifest.pages || []).map(page => [page.slug, page]));
@@ -140,13 +145,15 @@ async function main() {
     const urlPath = `/mlb/${slug}/`;
     const scheduleGame = scheduleByPk.get(String(game.game_pk)) || null;
     const totalsGame = (totals.games && totals.games[String(game.game_pk)]) || null;
+    const rawPitcherGame = (pitcherSource.games && pitcherSource.games[String(game.game_pk)]) || null;
+    const pitcherGame = rawPitcherGame ? { ...rawPitcherGame, source_version: pitcherSource.source_version || null } : null;
     const resultGame = findResult(results, DATE, game);
     const previous = previousBySlug.get(slug) || null;
     const weather = args.skipWeather
       ? (previous && previous.weather) || null
       : await weatherForGame(game, scheduleGame, previous && previous.weather);
     const venue = venueForGame(game, scheduleGame);
-    const quality = qualityGate(game);
+    const quality = qualityGate(game, pitcherGame);
     const outputDir = path.join(MATCHUP_ROOT, slug);
     const outputPath = path.join(outputDir, "index.html");
 
@@ -156,6 +163,7 @@ async function main() {
       game,
       scheduleGame,
       totalsGame,
+      pitcherGame,
       resultGame,
       weather,
       venue,
@@ -180,6 +188,7 @@ async function main() {
       missing: quality.missing,
       generated_at: new Date().toISOString(),
       weather,
+      pitcher_source_version: pitcherSource.source_version || null,
       final: finalSummary(scheduleGame, resultGame)
     });
   }
@@ -188,6 +197,8 @@ async function main() {
     date: DATE,
     generated_at: new Date().toISOString(),
     source: relative(MEMBER_BRIEF_PATH),
+    pitcher_source: relative(PITCHER_PATH),
+    pitcher_source_version: pitcherSource.source_version || null,
     total_pages: pages.length,
     indexable_pages: pages.filter(page => page.indexable).length,
     noindex_pages: pages.filter(page => !page.indexable).length,
@@ -318,8 +329,8 @@ function validPitcher(name) {
   return known(name) && !/^tbd$/i.test(String(name).trim()) && !/unknown/i.test(String(name));
 }
 
-function qualityGate(game) {
-  const pitcher = game.pitcher_edge || {};
+function qualityGate(game, pitcherGame) {
+  const pitcher = pitcherGame || {};
   const market = game.market || {};
   const bullpen = game.bullpen || {};
   const offense = game.offense_form || {};
@@ -327,8 +338,10 @@ function qualityGate(game) {
   const checks = {
     teams: Boolean(game.away_team && game.home_team),
     game_time: Boolean(game.game_time_iso || game.time),
-    probable_pitchers: validPitcher(pitcher.away_pitcher) && validPitcher(pitcher.home_pitcher),
-    pitcher_stats: [pitcher.away_era, pitcher.home_era, pitcher.away_whip, pitcher.home_whip].every(value => typeof value === "number" && Number.isFinite(value)),
+    probable_pitchers: validPitcher(pitcher.away && pitcher.away.name) && validPitcher(pitcher.home && pitcher.home.name),
+    pitcher_stats: [pitcher.away, pitcher.home].every(side =>
+      side && typeof side.era === "number" && Number.isFinite(side.era) && typeof side.whip === "number" && Number.isFinite(side.whip)
+    ),
     model_probability: typeof game.model_probability === "number" && Number.isFinite(game.model_probability),
     market_probability: typeof market.no_vig_probability === "number" && Number.isFinite(market.no_vig_probability),
     market_price: typeof market.best_price === "number" && Number.isFinite(market.best_price) && Number(market.books || 0) >= 3,
@@ -518,7 +531,7 @@ function decisionExplanation(game) {
 }
 
 function renderMatchupPage(context) {
-  const { brief, game, scheduleGame, totalsGame, resultGame, weather, venue, quality, slug, urlPath } = context;
+  const { brief, game, scheduleGame, totalsGame, pitcherGame, resultGame, weather, venue, quality, slug, urlPath } = context;
   const awayShort = shortTeam(game.away_team);
   const homeShort = shortTeam(game.home_team);
   const titleDate = niceDate(DATE);
@@ -526,7 +539,7 @@ function renderMatchupPage(context) {
   const description = `${awayShort} vs ${homeShort} prediction for ${titleDate}: LyDia model probability, moneyline odds, starting pitchers, offense form, bullpen risk, Lab Rating and pass or pick decision.`;
   const canonical = `${SITE}${urlPath}`;
   const robots = quality.indexable ? "index,follow,max-image-preview:large" : "noindex,follow";
-  const pitcher = game.pitcher_edge || {};
+  const pitcher = pitcherGame || {};
   const market = game.market || {};
   const bullpen = mapBullpen(game);
   const offense = game.offense_form || {};
@@ -633,15 +646,15 @@ function renderMatchupPage(context) {
         <tr><th>Date</th><td>${esc(titleDate)}</td></tr>
         <tr><th>First pitch</th><td>${esc(game.time ? `${game.time} ET` : prettyDateTime(gameTime) || "Not confirmed")}</td></tr>
         <tr><th>Venue</th><td>${esc(venue.name)}</td></tr>
-        <tr><th>Starting pitchers</th><td>${esc(pitcher.away_pitcher || "TBD")} vs ${esc(pitcher.home_pitcher || "TBD")}</td></tr>
+        <tr><th>Starting pitchers</th><td>${esc((pitcher.away && pitcher.away.name) || "TBD")} vs ${esc((pitcher.home && pitcher.home.name) || "TBD")}</td></tr>
       </tbody>
     </table>
   </section>
 
   <section class="card">
     <h2>Starting pitcher matchup</h2>
-    ${renderPitcherTable(game)}
-    <p class="small dim">Pitcher ratings and advanced metrics come from the same LyDia source data used to build the daily card.</p>
+    ${renderPitcherTable(game, pitcherGame)}
+    <p class="small dim">Pitcher ratings and advanced metrics come directly from the canonical data source used by LyDia\'s Pitcher Matchup Tool.</p>
   </section>
 
   <section class="card">
@@ -704,24 +717,27 @@ function renderQualityNotice(quality) {
   return `<div class="notice" style="margin-bottom:16px"><strong>Analysis still building.</strong> This page is available to users but is not submitted for search indexing until these inputs are complete: ${esc(labels.join(", "))}.</div>`;
 }
 
-function renderPitcherTable(game) {
-  const p = game.pitcher_edge || {};
-  const away = p.away_advanced || {};
-  const home = p.home_advanced || {};
-  return `<table class="matchup-table">
+function renderPitcherTable(game, pitcherGame) {
+  const p = pitcherGame || {};
+  const away = p.away || {};
+  const home = p.home || {};
+  const awayIpStart = oneDecimal(away.ipStart);
+  const homeIpStart = oneDecimal(home.ipStart);
+
+  return `<table class="matchup-table" data-pitcher-source="${esc(p.source_version || "pitcher-matchup-core-v1")}" data-away-ip-start="${esc(awayIpStart)}" data-home-ip-start="${esc(homeIpStart)}">
     <thead><tr><th>Metric</th><th>${esc(shortTeam(game.away_team))}</th><th>${esc(shortTeam(game.home_team))}</th></tr></thead>
     <tbody>
-      <tr><th>Probable pitcher</th><td>${esc(p.away_pitcher || "TBD")}</td><td>${esc(p.home_pitcher || "TBD")}</td></tr>
-      <tr><th>LyDia pitcher score</th><td>${esc(known(p.away_score) ? p.away_score : "Not available")}</td><td>${esc(known(p.home_score) ? p.home_score : "Not available")}</td></tr>
-      <tr><th>ERA</th><td>${esc(oneDecimal(p.away_era))}</td><td>${esc(oneDecimal(p.home_era))}</td></tr>
-      <tr><th>WHIP</th><td>${esc(typeof p.away_whip === "number" ? p.away_whip.toFixed(2) : "Not available")}</td><td>${esc(typeof p.home_whip === "number" ? p.home_whip.toFixed(2) : "Not available")}</td></tr>
-      <tr><th>K-BB%</th><td>${esc(pct(away.kbb_pct))}</td><td>${esc(pct(home.kbb_pct))}</td></tr>
-      <tr><th>Ground-ball rate</th><td>${esc(pct(away.gb_pct))}</td><td>${esc(pct(home.gb_pct))}</td></tr>
+      <tr><th>Probable pitcher</th><td>${esc(away.name || "TBD")}</td><td>${esc(home.name || "TBD")}</td></tr>
+      <tr><th>LyDia pitcher score</th><td>${esc(known(away.score) ? away.score : "Not available")}</td><td>${esc(known(home.score) ? home.score : "Not available")}</td></tr>
+      <tr><th>ERA</th><td>${esc(oneDecimal(away.era))}</td><td>${esc(oneDecimal(home.era))}</td></tr>
+      <tr><th>WHIP</th><td>${esc(typeof away.whip === "number" ? away.whip.toFixed(2) : "Not available")}</td><td>${esc(typeof home.whip === "number" ? home.whip.toFixed(2) : "Not available")}</td></tr>
+      <tr><th>K-BB%</th><td>${esc(pct(away.kbbPct))}</td><td>${esc(pct(home.kbbPct))}</td></tr>
+      <tr><th>Ground-ball rate</th><td>${esc(pct(away.gbPct))}</td><td>${esc(pct(home.gbPct))}</td></tr>
       <tr><th>HR/9</th><td>${esc(oneDecimal(away.hr9))}</td><td>${esc(oneDecimal(home.hr9))}</td></tr>
-      <tr><th>IP per start</th><td>${esc(oneDecimal(away.ip_per_start))}</td><td>${esc(oneDecimal(home.ip_per_start))}</td></tr>
+      <tr><th>IP per start</th><td>${esc(awayIpStart)}</td><td>${esc(homeIpStart)}</td></tr>
     </tbody>
   </table>
-  <p><strong>Pitcher edge:</strong> ${esc(p.team || "No clear starting pitcher edge")}${p.gap ? ` by ${esc(p.gap)} points` : ""}.</p>`;
+  <p><strong>Pitcher edge:</strong> ${esc(p.edge_team || "No clear starting pitcher edge")}${p.gap ? ` by ${esc(p.gap)} points` : ""}.</p>`;
 }
 
 function renderOffenseTable(game) {
