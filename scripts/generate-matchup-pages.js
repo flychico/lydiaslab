@@ -373,28 +373,57 @@ function qualityGate(game, pitcherGame) {
 }
 
 async function fetchTeamHitting(date) {
-  // Team strikeout rates, season and last 15 days. Same StatsAPI endpoints the
-  // public Stats page uses client-side. Failure degrades to "Not available"
-  // and never affects the indexing quality gate.
+  // Team offense rates plus standings-based run environment. Same StatsAPI the
+  // public Stats page uses. Failure degrades to "Not available" and never
+  // affects the indexing quality gate.
   const year = Number(String(date).slice(0, 4));
   const start = (() => { const d = new Date(`${date}T12:00:00Z`); d.setUTCDate(d.getUTCDate() - 15); return d.toISOString().slice(0, 10); })();
-  const out = { season: {}, recent: {} };
-  const grab = async (url, bucket) => {
+  const out = { season: {}, recent: {}, recentDetail: {}, standings: {} };
+  const grab = async (url, handler) => {
     const response = await fetch(url, { headers: { "user-agent": "LyDia matchup generator" } });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
+    handler(await response.json());
+  };
+  const hitSplits = (data, apply) => {
     for (const split of (((data.stats || [])[0] || {}).splits || [])) {
       const teamName = split.team && split.team.name;
-      const stat = split.stat || {};
-      const pa = Number(stat.plateAppearances);
-      const so = Number(stat.strikeOuts);
-      if (teamName && Number.isFinite(pa) && pa > 0 && Number.isFinite(so)) bucket[teamName] = so / pa;
+      if (teamName) apply(teamName, split.stat || {});
     }
   };
-  try { await grab(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${year}&stats=season`, out.season); }
-  catch (error) { console.warn(`Team season hitting unavailable: ${error.message}`); }
-  try { await grab(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${year}&stats=byDateRange&startDate=${start}&endDate=${date}`, out.recent); }
-  catch (error) { console.warn(`Team recent hitting unavailable: ${error.message}`); }
+  try {
+    await grab(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${year}&stats=season`, data =>
+      hitSplits(data, (team, stat) => {
+        const pa = Number(stat.plateAppearances), so = Number(stat.strikeOuts);
+        if (pa > 0 && Number.isFinite(so)) out.season[team] = so / pa;
+      }));
+  } catch (error) { console.warn(`Team season hitting unavailable: ${error.message}`); }
+  try {
+    await grab(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${year}&stats=byDateRange&startDate=${start}&endDate=${date}`, data =>
+      hitSplits(data, (team, stat) => {
+        const pa = Number(stat.plateAppearances), so = Number(stat.strikeOuts);
+        const games = Number(stat.gamesPlayed), hr = Number(stat.homeRuns);
+        if (pa > 0 && Number.isFinite(so)) out.recent[team] = so / pa;
+        out.recentDetail[team] = {
+          hr_pg: games > 0 && Number.isFinite(hr) ? hr / games : null
+        };
+      }));
+  } catch (error) { console.warn(`Team recent hitting unavailable: ${error.message}`); }
+  try {
+    await grab(`https://statsapi.mlb.com/api/v1/standings?leagueId=103,104&season=${year}&standingsTypes=regularSeason`, data => {
+      for (const record of (data.records || [])) {
+        for (const teamRecord of (record.teamRecords || [])) {
+          const teamName = teamRecord.team && teamRecord.team.name;
+          const games = Number(teamRecord.gamesPlayed);
+          if (!teamName || !(games > 0)) continue;
+          out.standings[teamName] = {
+            run_diff_pg: Number.isFinite(Number(teamRecord.runDifferential)) ? Number(teamRecord.runDifferential) / games : null,
+            rs_pg: Number.isFinite(Number(teamRecord.runsScored)) ? Number(teamRecord.runsScored) / games : null,
+            ra_pg: Number.isFinite(Number(teamRecord.runsAllowed)) ? Number(teamRecord.runsAllowed) / games : null
+          };
+        }
+      }
+    });
+  } catch (error) { console.warn(`Standings unavailable: ${error.message}`); }
   return out;
 }
 
@@ -684,20 +713,27 @@ function teamWinPct(record) {
   return wins + losses > 0 ? wins / (wins + losses) : null;
 }
 function renderTeamMap(brief, game, teamHitting) {
-  const hit = teamHitting || { season: {}, recent: {} };
+  const hit = teamHitting || { season: {}, recent: {}, recentDetail: {}, standings: {} };
+  const standings = hit.standings || {};
+  const recentDetail = hit.recentDetail || {};
   const teams = [];
   const push = (team, record, off, pen) => {
     if (!team || teams.some(t => t.team === team)) return;
+    const standing = standings[team] || standings[shortTeam(team)] || {};
+    const detail = recentDetail[team] || {};
     teams.push({
       team,
       short: shortTeam(team),
       wpct: teamWinPct(record),
+      run_diff_pg: typeof standing.run_diff_pg === "number" ? standing.run_diff_pg : null,
+      rs_pg: typeof standing.rs_pg === "number" ? standing.rs_pg : null,
+      ra_pg: typeof standing.ra_pg === "number" ? standing.ra_pg : null,
       delta_ops: off && typeof off.delta_ops === "number" ? off.delta_ops : null,
       ops_15d: off && typeof off.ops_15d === "number" ? off.ops_15d : null,
-      season_ops: off && typeof off.season_ops === "number" ? off.season_ops : null,
       rpg_15d: off && typeof off.rpg_15d === "number" ? off.rpg_15d : null,
+      hr_pg: typeof detail.hr_pg === "number" ? detail.hr_pg : null,
       risk: riskOf(pen),
-      kpct: typeof hit.season[team] === "number" ? hit.season[team] : null
+      kpct_15d: typeof hit.recent[team] === "number" ? hit.recent[team] : null
     });
   };
   for (const row of brief.games || []) {
@@ -711,18 +747,25 @@ function renderTeamMap(brief, game, teamHitting) {
     push(row.away_team, row.away_record, offense.away, pens.away);
     push(row.home_team, row.home_record, offense.home, pens.home);
   }
-  const usable = teams.filter(t => typeof t.wpct === "number" && typeof t.delta_ops === "number");
+  const usable = teams.filter(t => typeof t.wpct === "number");
   if (usable.length < 8) return "";
 
+  // Axes a bettor would actually cross-reference. Run differential is the
+  // cleanest single measure of team quality. Runs allowed is run prevention.
+  // The recent windows separate what a team IS from what it is doing lately.
   const axes = [
+    ["run_diff_pg", "Run differential per game", "sdec2"],
+    ["ra_pg", "Runs allowed per game", "dec2"],
+    ["rs_pg", "Runs scored per game", "dec2"],
     ["wpct", "Win %", "pct"],
-    ["delta_ops", "OPS vs season, last 15", "delta3"],
-    ["ops_15d", "OPS, last 15 days", "dec3"],
-    ["season_ops", "Season OPS", "dec3"],
     ["rpg_15d", "Runs per game, last 15", "dec1"],
-    ["risk", "Bullpen risk", "score10"],
-    ["kpct", "K% season", "pct"]
+    ["ops_15d", "OPS, last 15 days", "dec3"],
+    ["delta_ops", "OPS vs own season form", "delta3"],
+    ["hr_pg", "Home runs per game, last 15", "dec2"],
+    ["kpct_15d", "K% last 15 days", "pct"],
+    ["risk", "Bullpen risk", "score10"]
   ].filter(([key]) => teams.filter(t => typeof t[key] === "number").length >= 8);
+  if (axes.length < 2) return "";
 
   const payload = { teams, away: game.away_team, home: game.home_team, axes };
   const options = axes.map(([key, label]) => `<option value="${esc(key)}">${esc(label)}</option>`).join("");
@@ -742,14 +785,17 @@ function renderTeamMap(brief, game, teamHitting) {
       const fmts = {
         pct: v => (v * 100).toFixed(1) + "%",
         delta3: v => (v >= 0 ? "+" : "") + v.toFixed(3),
+        sdec2: v => (v >= 0 ? "+" : "") + v.toFixed(2),
         dec3: v => v.toFixed(3),
+        dec2: v => v.toFixed(2),
         dec1: v => v.toFixed(1),
         score10: v => (v / 10).toFixed(1) + "/10"
       };
       const selX = document.getElementById("map-x");
       const selY = document.getElementById("map-y");
-      selX.value = "wpct";
-      selY.value = data.axes.some(a => a[0] === "delta_ops") ? "delta_ops" : data.axes[0][0];
+      const has = key => data.axes.some(a => a[0] === key);
+      selX.value = has("run_diff_pg") ? "run_diff_pg" : "wpct";
+      selY.value = has("delta_ops") ? "delta_ops" : data.axes[0][0];
       window.drawMatchupMap = function () {
         const xKey = selX.value, yKey = selY.value;
         const xAxis = data.axes.find(a => a[0] === xKey), yAxis = data.axes.find(a => a[0] === yKey);
@@ -861,7 +907,7 @@ function renderMatchupPage(context) {
 <meta name="twitter:image" content="${SITE}/img/og-card.png">
 <link rel="stylesheet" href="/css/style.css">
 <style>
-.matchup-head{margin-bottom:18px}.matchup-head h1{margin-bottom:6px}.byline{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.byline img{width:42px;height:42px;border-radius:50%;object-fit:cover;border:1px solid var(--border)}.status-badge{display:inline-block;color:#fff;font-size:.76rem;font-weight:800;padding:4px 10px;border-radius:20px;background:var(--accent2)}.status-badge.official{background:var(--good)}.status-badge.pass{background:var(--text-dim)}.status-badge.watch{background:var(--accent2)}.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:14px 0}.metric{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.metric .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}.metric .value{font-size:1.15rem;font-weight:800;margin-top:2px}.matchup-table{width:100%;border-collapse:collapse;font-size:.88rem}.matchup-table th,.matchup-table td{padding:8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}.matchup-table th:not(:first-child),.matchup-table td:not(:first-child){text-align:right}.section-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}.decision-card{border-color:var(--accent2)}.decision-card.official{border-color:var(--good)}.quality-list{columns:2;column-gap:24px}.quality-list li{break-inside:avoid;margin-bottom:5px}.result-win{border-color:var(--good)}.result-loss{border-color:var(--bad)}.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}.sec-head h2{margin-bottom:6px}.tool-link{font-size:.82rem;font-weight:700;white-space:nowrap}.co-head{margin:16px 0 8px;font-size:.95rem}.co-head.for{color:var(--good)}.co-head.against{color:#e08726}.callout-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}.callout{border:1px solid var(--border);border-left:4px solid var(--border);border-radius:var(--radius);padding:12px;background:var(--bg-elev)}.callout.for{border-left-color:var(--good)}.callout.against{border-left-color:#e08726}.co-title{font-weight:800;margin-bottom:4px}.co-detail{font-size:.86rem;color:var(--text);line-height:1.5}.verdict{margin-top:14px;padding:14px;border:1px solid var(--accent2);border-radius:var(--radius);background:var(--bg-elev);font-size:.95rem;line-height:1.55}.verdict .v-label{display:inline-block;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--accent2);margin-right:8px}.full-read summary{cursor:pointer;font-weight:700;color:var(--text-dim);font-size:.85rem;margin-top:12px}.full-read p{font-size:.86rem;color:var(--text-dim);line-height:1.55}.edgebar{margin:12px 0 4px}.eb-row{display:flex;align-items:center;gap:10px;margin:6px 0}.eb-name{width:92px;font-size:.78rem;color:var(--text-dim);text-align:right}.eb-track{flex:1;height:14px;background:var(--bg-elev);border:1px solid var(--border);border-radius:7px;overflow:hidden}.eb-fill{height:100%;border-radius:7px}.eb-fill.model{background:var(--accent2)}.eb-fill.mkt{background:var(--text-dim)}.eb-val{width:56px;font-size:.82rem;font-weight:800;font-variant-numeric:tabular-nums}.gauge-row{display:flex;align-items:center;gap:10px;margin:6px 0}.g-label{width:120px;font-size:.78rem;color:var(--text-dim);text-align:right}.g-track{flex:1;height:11px;background:var(--bg-elev);border:1px solid var(--border);border-radius:6px;overflow:hidden}.g-fill{height:100%;border-radius:6px}.g-val{width:110px;font-size:.8rem;font-weight:700;font-variant-numeric:tabular-nums}.pen-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:10px}.pen-side{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.pen-side b{display:block;margin-bottom:6px}.adv{color:var(--good);font-weight:800}@media(max-width:640px){.quality-list{columns:1}.matchup-table{font-size:.8rem}.matchup-table th,.matchup-table td{padding:6px 4px}}
+.matchup-head{margin-bottom:18px}.matchup-head h1{margin-bottom:6px}.byline{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.byline img{width:42px;height:42px;border-radius:50%;object-fit:cover;border:1px solid var(--border)}.status-badge{display:inline-block;color:#fff;font-size:.76rem;font-weight:800;padding:4px 10px;border-radius:20px;background:var(--accent2)}.status-badge.official{background:var(--good)}.status-badge.pass{background:var(--text-dim)}.status-badge.watch{background:var(--accent2)}.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:14px 0}.metric{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.metric .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}.metric .value{font-size:1.15rem;font-weight:800;margin-top:2px}.matchup-table{width:100%;border-collapse:collapse;font-size:.88rem}.matchup-table th,.matchup-table td{padding:8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}.matchup-table th:not(:first-child),.matchup-table td:not(:first-child){text-align:right}.section-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}.decision-card{border-color:var(--accent2)}.decision-card.official{border-color:var(--good)}.quality-list{columns:2;column-gap:24px}.quality-list li{break-inside:avoid;margin-bottom:5px}.result-win{border-color:var(--good)}.result-loss{border-color:var(--bad)}.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}.sec-head h2{margin-bottom:6px}.tool-link{font-size:.82rem;font-weight:700;white-space:nowrap}.co-head{margin:16px 0 8px;font-size:.95rem}.co-head.for{color:var(--good)}.co-head.against{color:#e08726}.callout-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}.callout{border:1px solid var(--border);border-left:4px solid var(--border);border-radius:var(--radius);padding:12px;background:var(--bg-elev)}.callout.for{border-left-color:var(--good)}.callout.against{border-left-color:#e08726}.co-title{font-weight:800;margin-bottom:4px}.co-detail{font-size:.86rem;color:var(--text);line-height:1.5}.verdict{margin-top:14px;padding:14px;border:1px solid var(--accent2);border-radius:var(--radius);background:var(--bg-elev);font-size:.95rem;line-height:1.55}.verdict .v-label{display:inline-block;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--accent2);margin-right:8px}.full-read summary{cursor:pointer;font-weight:700;color:var(--text-dim);font-size:.85rem;margin-top:12px}.full-read p{font-size:.86rem;color:var(--text-dim);line-height:1.55}.edgebar{margin:12px 0 4px}.eb-row{display:flex;align-items:center;gap:10px;margin:6px 0}.eb-name{width:92px;font-size:.78rem;color:var(--text-dim);text-align:right}.eb-track{flex:1;height:14px;background:var(--bg-elev);border:1px solid var(--border);border-radius:7px;overflow:hidden}.eb-fill{height:100%;border-radius:7px}.eb-fill.model{background:var(--accent2)}.eb-fill.mkt{background:var(--text-dim)}.eb-val{width:56px;font-size:.82rem;font-weight:800;font-variant-numeric:tabular-nums}.gauge-row{display:flex;align-items:center;gap:10px;margin:6px 0}.g-label{width:120px;font-size:.78rem;color:var(--text-dim);text-align:right}.g-track{flex:1;height:11px;background:var(--bg-elev);border:1px solid var(--border);border-radius:6px;overflow:hidden}.g-fill{height:100%;border-radius:6px}.g-val{width:110px;font-size:.8rem;font-weight:700;font-variant-numeric:tabular-nums}.pen-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:10px}.pen-side{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.pen-side b{display:block;margin-bottom:6px}.adv{color:var(--good);font-weight:800}.k-lean{font-size:.98rem;font-weight:800;margin:6px 0 4px;padding:5px 10px;border-radius:6px;display:inline-block}.k-lean.over{background:rgba(30,142,62,.12);color:var(--good)}.k-lean.under{background:rgba(207,34,46,.10);color:var(--bad)}.k-lean.flat{background:var(--bg-card);color:var(--text-dim);font-weight:700}@media(max-width:640px){.quality-list{columns:1}.matchup-table{font-size:.8rem}.matchup-table th,.matchup-table td{padding:6px 4px}}
 </style>
 <script type="application/ld+json">${jsonScript(articleSchema)}</script>
 <script type="application/ld+json">${jsonScript(eventSchema)}</script>
@@ -986,23 +1032,44 @@ function renderPitcherTable(game, pitcherGame) {
   const awayIpStart = oneDecimal(away.ipStart);
   const homeIpStart = oneDecimal(home.ipStart);
 
+  // Every stat declares its direction and a materiality threshold. A cell only
+  // lights up when the gap actually matters, so a 2-run ERA edge is called out
+  // and a 0.1 K/9 difference is not.
+  const rows = [
+    { label: "LyDia pitcher score", a: away.score, h: home.score, better: "high", gap: 8, fmt: v => String(v) },
+    { label: "ERA", a: away.era, h: home.era, better: "low", gap: 0.5, fmt: v => v.toFixed(2) },
+    { label: "WHIP", a: away.whip, h: home.whip, better: "low", gap: 0.15, fmt: v => v.toFixed(2) },
+    { label: "K/9", a: away.k9, h: home.k9, better: "high", gap: 1.0, fmt: v => v.toFixed(1) },
+    { label: "BB/9", a: away.bb9, h: home.bb9, better: "low", gap: 1.0, fmt: v => v.toFixed(1) },
+    { label: "K-BB%", a: away.kbbPct, h: home.kbbPct, better: "high", gap: 0.04, fmt: v => (v * 100).toFixed(1) + "%" },
+    { label: "HR/9", a: away.hr9, h: home.hr9, better: "low", gap: 0.4, fmt: v => v.toFixed(1) },
+    { label: "Ground-ball rate", a: away.gbPct, h: home.gbPct, better: null, gap: 0, fmt: v => (v * 100).toFixed(1) + "%" },
+    { label: "IP per start", a: away.ipStart, h: home.ipStart, better: "high", gap: 0.6, fmt: v => v.toFixed(1) }
+  ];
+
+  const dirTag = better => better === "low" ? ' <span class="dim" style="font-weight:400">(lower is better)</span>'
+    : better === "high" ? ' <span class="dim" style="font-weight:400">(higher is better)</span>' : "";
+  const cellPair = row => {
+    const bothNumbers = typeof row.a === "number" && typeof row.h === "number";
+    let advAway = "", advHome = "";
+    if (bothNumbers && row.better && Math.abs(row.a - row.h) >= row.gap) {
+      const awayWins = row.better === "high" ? row.a > row.h : row.a < row.h;
+      if (awayWins) advAway = "adv"; else advHome = "adv";
+    }
+    const show = v => typeof v === "number" ? row.fmt(v) : "Not available";
+    return `<td class="${advAway}">${esc(show(row.a))}</td><td class="${advHome}">${esc(show(row.h))}</td>`;
+  };
+
   return `<table class="matchup-table" data-pitcher-source="${esc(p.source_version || "pitcher-matchup-core-v1")}" data-away-ip-start="${esc(awayIpStart)}" data-home-ip-start="${esc(homeIpStart)}">
     <thead><tr><th>Metric</th><th>${esc(shortTeam(game.away_team))}</th><th>${esc(shortTeam(game.home_team))}</th></tr></thead>
     <tbody>
       <tr><th>Probable pitcher</th><td>${esc(away.name || "TBD")}</td><td>${esc(home.name || "TBD")}</td></tr>
-      <tr><th>LyDia pitcher score</th><td class="${known(away.score) && known(home.score) && away.score > home.score ? "adv" : ""}">${esc(known(away.score) ? away.score : "Not available")}</td><td class="${known(away.score) && known(home.score) && home.score > away.score ? "adv" : ""}">${esc(known(home.score) ? home.score : "Not available")}</td></tr>
-      <tr><th>ERA</th><td>${esc(oneDecimal(away.era))}</td><td>${esc(oneDecimal(home.era))}</td></tr>
-      <tr><th>WHIP</th><td>${esc(typeof away.whip === "number" ? away.whip.toFixed(2) : "Not available")}</td><td>${esc(typeof home.whip === "number" ? home.whip.toFixed(2) : "Not available")}</td></tr>
       <tr><th>Throws</th><td>${esc(away.hand || "Not available")}</td><td>${esc(home.hand || "Not available")}</td></tr>
-      <tr><th>K/9</th><td class="${typeof away.k9 === "number" && typeof home.k9 === "number" && away.k9 > home.k9 ? "adv" : ""}">${esc(oneDecimal(away.k9))}</td><td class="${typeof away.k9 === "number" && typeof home.k9 === "number" && home.k9 > away.k9 ? "adv" : ""}">${esc(oneDecimal(home.k9))}</td></tr>
-      <tr><th>BB/9</th><td>${esc(oneDecimal(away.bb9))}</td><td>${esc(oneDecimal(home.bb9))}</td></tr>
-      <tr><th>K-BB%</th><td>${esc(pct(away.kbbPct))}</td><td>${esc(pct(home.kbbPct))}</td></tr>
-      <tr><th>Ground-ball rate</th><td>${esc(pct(away.gbPct))}</td><td>${esc(pct(home.gbPct))}</td></tr>
-      <tr><th>HR/9</th><td>${esc(oneDecimal(away.hr9))}</td><td>${esc(oneDecimal(home.hr9))}</td></tr>
-      <tr><th>IP per start</th><td>${esc(awayIpStart)}</td><td>${esc(homeIpStart)}</td></tr>
+      ${rows.map(row => `<tr><th>${esc(row.label)}${dirTag(row.better)}</th>${cellPair(row)}</tr>`).join("\n      ")}
     </tbody>
   </table>
-  <p><strong>Pitcher edge:</strong> ${esc(p.edge_team || "No clear starting pitcher edge")}${p.gap ? ` by ${esc(p.gap)} points` : ""}.</p>`;
+  <p><strong>Pitcher edge:</strong> ${esc(p.edge_team || "No clear starting pitcher edge")}${p.gap ? ` by ${esc(p.gap)} points` : ""}.</p>
+  <p class="small dim"><strong>How to read this:</strong> highlighted cells mark a gap big enough to matter, not just any difference. K-BB% is strikeouts minus walks per batter faced, one of the most predictive skill stats in pitching. HR/9 is home runs allowed per nine innings. Ground-ball rate is neither good nor bad on its own: high ground-ball pitchers trade strikeouts for double plays and fewer home runs.</p>`;
 }
 
 function kpropFor(kprops, name) {
@@ -1019,12 +1086,18 @@ function renderStrikeoutProjections(game, pitcherGame, kprops) {
   if (!rows.length) return "";
   const cells = rows.map(entry => {
     const prop = entry.prop;
-    const lean = typeof prop.projection === "number" && typeof prop.line === "number"
-      ? prop.projection - prop.line : null;
-    const leanText = lean === null ? "" : Math.abs(lean) < 0.3
-      ? " Model and market agree."
-      : ` LyDia leans ${lean > 0 ? "over" : "under"} by ${Math.abs(lean).toFixed(1)}K.`;
-    return `<div class="metric"><div class="label">${esc(entry.pitcher.name)} strikeouts</div><div class="value">${esc(oneDecimal(prop.projection))} <span class="dim small">proj</span></div><div class="small dim">Market ${esc(oneDecimal(prop.line))}K · O ${esc(odds(prop.over))} / U ${esc(odds(prop.under))} · ${esc(prop.books)} book${prop.books === 1 ? "" : "s"}.${esc(leanText)}</div></div>`;
+    const hasLine = typeof prop.line === "number";
+    const lean = hasLine && typeof prop.projection === "number" ? prop.projection - prop.line : null;
+    let leanHtml = "";
+    if (lean !== null && Math.abs(lean) >= 0.3) {
+      leanHtml = `<div class="k-lean ${lean > 0 ? "over" : "under"}">LyDia leans ${lean > 0 ? "OVER" : "UNDER"} ${esc(oneDecimal(prop.line))}K by ${Math.abs(lean).toFixed(1)}</div>`;
+    } else if (lean !== null) {
+      leanHtml = `<div class="k-lean flat">Model and market agree</div>`;
+    }
+    const marketLine = hasLine
+      ? `Market ${esc(oneDecimal(prop.line))}K &middot; O ${esc(odds(prop.over))} / U ${esc(odds(prop.under))} &middot; ${esc(prop.books)} book${prop.books === 1 ? "" : "s"}`
+      : `No strikeout line posted when this page was generated`;
+    return `<div class="metric"><div class="label">${esc(entry.pitcher.name)} strikeouts</div><div class="value">${esc(oneDecimal(prop.projection))} <span class="dim small">projected</span></div>${leanHtml}<div class="small dim">${marketLine}</div></div>`;
   }).join("");
   return `<h3 style="margin:16px 0 4px">Strikeout projections <a class="tool-link" style="font-size:.78rem" href="/tools/strikeout-projections/">Full K board &rarr;</a></h3>
   <div class="metric-grid">${cells}</div>
