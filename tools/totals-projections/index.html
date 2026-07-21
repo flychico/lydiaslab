@@ -147,7 +147,8 @@ function sideBoxes(g){
       <div class="s-row"><span>Their scoring</span><span><b>${sd.rpg}</b> runs/game${offTier(sd.off_factor)}</span></div>
       ${Number.isFinite(sd.form_rpg) ? `<div class="s-row"><span class="dim small">= season ${sd.season_rpg} blended 70/30 with last-15 ${sd.form_rpg}</span><span class="dim small">${sd.form_rpg - sd.season_rpg >= 0.6 ? "hot" : sd.form_rpg - sd.season_rpg <= -0.6 ? "cold" : ""}</span></div>` : ""}
       <div class="s-row"><span>Facing starter</span><span><b>${escapeHtml(sd.opp_sp)}</b> <span class="dim small">${Number.isFinite(sd.opp_sp_fip)?"FIP-in "+sd.opp_sp_fip.toFixed(2):""}${sd.opp_sp_ip?" · ~"+sd.opp_sp_ip+" IP":""}</span>${fipTier(sd.opp_sp_fip)}</span></div>
-      <div class="s-row"><span>Facing bullpen</span><span>${Number.isFinite(sd.opp_pen_score)?`<b>${(sd.opp_pen_score/10).toFixed(1)}/10 fatigue</b>${sd.pen_factor>1?` <span class=\"tier pos-text\">tired pen — adds runs</span>`:""}`:'<span class="dim">—</span>'}</span></div>
+      <div class="s-row"><span>Facing bullpen</span><span>${Number.isFinite(sd.opp_pen_risk)?`<b>${(sd.opp_pen_risk/10).toFixed(1)}/10 risk</b>${sd.pen_factor>1?` <span class=\"tier pos-text\">elevated risk — adds runs</span>`:""}`:'<span class="dim">—</span>'}</span></div>
+      ${Number.isFinite(sd.opp_pen_fatigue)||Number.isFinite(sd.opp_pen_efficiency)?`<div class="s-row"><span class="dim small">= fatigue ${Number.isFinite(sd.opp_pen_fatigue)?(sd.opp_pen_fatigue/10).toFixed(1):"—"}/10 blended with efficiency ${Number.isFinite(sd.opp_pen_efficiency)?(sd.opp_pen_efficiency/10).toFixed(1):"—"}/10${sd.opp_pen_efficiency_label?` (${escapeHtml(sd.opp_pen_efficiency_label)})`:""}</span></div>`:""}
     </div>`;
   };
   return `<div class="side-grid">${box("away", g.away, g.proj_away)}${box("home", g.home, g.proj_home)}</div>`;
@@ -159,7 +160,7 @@ function gameRead(g){
   for(const [sd, runs] of arms){
     if(Number.isFinite(sd.opp_sp_fip) && sd.opp_sp_fip<3.25) parts.push(`${sd.opp_sp} is the story on ${sd.team}'s side — a ${sd.opp_sp_fip.toFixed(2)} FIP arm holds them to ${runs.toFixed(1)}.`);
     else if(Number.isFinite(sd.opp_sp_fip) && sd.opp_sp_fip>=4.9) parts.push(`${sd.team} gets a favorable matchup — ${sd.opp_sp}'s ${sd.opp_sp_fip.toFixed(2)} FIP is where runs come from.`);
-    if(sd.pen_factor>1.02) parts.push(`${sd.team} also faces a tired pen late.`);
+    if(sd.pen_factor>1.02) parts.push(`${sd.team} also faces elevated bullpen risk late.`);
   }
   const both=g.away.off_factor>=1.05&&g.home.off_factor>=1.05, neither=g.away.off_factor<=0.95&&g.home.off_factor<=0.95;
   if(both) parts.push("Two above-average offenses push this total up.");

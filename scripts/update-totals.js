@@ -171,8 +171,19 @@ async function main() {
       const share = expIP / 9;
       const pitchF = (fip / LEAGUE_ERA) * share + 1.0 * (1 - share);
       const pen = bullpen[oppPenName];
-      const penScore = pen && Number.isFinite(pen.score) ? pen.score : null;
-      const penF = penScore !== null && penScore > 55 ? 1 + Math.min(0.06, (penScore - 55) / 500) : 1;
+      // Run projection should react to how likely the pen is to actually give
+      // up runs, not just how much it's pitched — a tired-but-dominant pen
+      // (heavy IP, low ERA/WHIP) shouldn't inflate the total the same way a
+      // tired-and-bad one does. Uses the combined risk index (fatigue blended
+      // with efficiency), same field the moneyline model and Lab Rating use,
+      // so this page's run bump agrees with the rest of the site instead of
+      // reacting to raw workload alone. Falls back to raw fatigue score for
+      // any bullpen file generated before the efficiency split existed.
+      const penRisk = pen && Number.isFinite(pen.risk_index ?? pen.score) ? (pen.risk_index ?? pen.score) : null;
+      const penFatigue = pen && Number.isFinite(pen.score) ? pen.score : null;
+      const penEfficiency = pen && Number.isFinite(pen.efficiency_score) ? pen.efficiency_score : null;
+      const penEfficiencyLabel = pen && pen.efficiency_label ? pen.efficiency_label : null;
+      const penF = penRisk !== null && penRisk > 55 ? 1 + Math.min(0.06, (penRisk - 55) / 500) : 1;
       return {
         runs: lgRPG * offF * pitchF * penF * park,
         rpg: Number(rpg.toFixed(2)), season_rpg: Number(seasonRpg.toFixed(2)),
@@ -181,7 +192,8 @@ async function main() {
         off_factor: Number(offF.toFixed(3)),
         opp_sp: st ? st.name : "TBD", opp_sp_fip: Number(fip.toFixed(2)), opp_sp_ip: st ? Number(expIP.toFixed(1)) : null,
         pitch_factor: Number(pitchF.toFixed(3)),
-        opp_pen_score: penScore, pen_factor: Number(penF.toFixed(3)),
+        opp_pen_risk: penRisk, opp_pen_fatigue: penFatigue, opp_pen_efficiency: penEfficiency, opp_pen_efficiency_label: penEfficiencyLabel,
+        pen_factor: Number(penF.toFixed(3)),
         sp_sample_ok: !!(st && st.ip >= 40)
       };
     };

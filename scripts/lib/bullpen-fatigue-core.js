@@ -247,19 +247,32 @@ function scoreTeam(team) {
   const efficiencyRaw = gamesTracked && last3BP > 0 ? 50 + eraTerm + whipTerm : null;
   const efficiencyScore = efficiencyRaw === null ? null : Math.round(clamp(efficiencyRaw, 0, 100));
 
+  // 50 is the league-average neutral point (see baseline above), so bands
+  // are centered on it — a pen sitting right at 50 reads "Average," not
+  // "Below average." Previously "Below average" started at 55, which meant
+  // a pen with a BETTER-than-average ERA could still land in that band.
   let efficiencyLabel = "No data";
   if (efficiencyScore !== null) {
     if (efficiencyScore >= 75) efficiencyLabel = "Dominant";
     else if (efficiencyScore >= 55) efficiencyLabel = "Effective";
+    else if (efficiencyScore >= 45) efficiencyLabel = "Average";
     else if (efficiencyScore >= 30) efficiencyLabel = "Below average";
     else efficiencyLabel = "Struggling";
   }
 
-  // COMBINED RISK: what probability and Lab Rating actually consume. A
-  // tired-but-dominant pen reads less risky than fatigue alone would say; a
-  // fresh-but-bad pen reads more risky than fatigue alone would say. Efficiency
-  // is centered at 50, so this is a no-op when efficiency is exactly average.
+  // COMBINED RISK: what probability, Lab Rating, and the totals model
+  // actually consume. A tired-but-dominant pen reads less risky than fatigue
+  // alone would say; a fresh-but-bad pen reads more risky than fatigue alone
+  // would say. Efficiency is centered at 50, so this is a no-op when
+  // efficiency is exactly average.
   const riskIndex = Math.round(clamp(score - 0.5 * ((efficiencyScore ?? 50) - 50), 0, 100));
+  // Same band cutoffs as the fatigue label, applied to the blended number —
+  // this is the label every other page's "High risk"/"Adds caution" wording
+  // should be reading, not the fatigue-only one.
+  let riskLabel = "Normal";
+  if (riskIndex >= 82) riskLabel = "High risk";
+  else if (riskIndex >= 62) riskLabel = "Tired";
+  else if (riskIndex < 35) riskLabel = "Fresh";
 
   return {
     team_id: team.team_id,
@@ -279,6 +292,7 @@ function scoreTeam(team) {
     efficiency_reason: efficiencyReason({ efficiencyLabel, efficiencyScore, era3d, whip3d, last3ER, last3H, last3BB, last3BP, gamesTracked }),
     efficiency_formula: "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
     risk_index: riskIndex,
+    risk_label: riskLabel,
     last_game_date: last.date,
     last_game_bp_ip: round(last.bpIP, 1),
     last3_bp_ip: round(last3BP, 1),
@@ -361,6 +375,7 @@ function buildTeamsByName(rows) {
       era_3d: row.era_3d,
       whip_3d: row.whip_3d,
       risk_index: row.risk_index,
+      risk_label: row.risk_label,
       source_version: VERSION
     };
   }
