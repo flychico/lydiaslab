@@ -66,6 +66,9 @@ jobs:
       - name: Generate true-game recap
         run: node scripts/generate-recap.js "${{ steps.recap_date.outputs.date }}"
 
+      - name: Refresh matchup pages with final scores and grades
+        run: node scripts/generate-matchup-pages.js "${{ steps.recap_date.outputs.date }}" --skip-weather
+
       - name: Grade full-slate calibration ledger
         run: node scripts/grade-calibration.js "${{ steps.recap_date.outputs.date }}"
 
@@ -86,7 +89,7 @@ jobs:
           node scripts/dedupe-clv.js
           node scripts/inject-live-results.js
 
-      - name: Verify recap, learning, Coach, and research generated
+      - name: Verify recap, matchup pages, learning, Coach and research generated
         shell: bash
         run: |
           DATE_INPUT="${{ steps.recap_date.outputs.date }}"
@@ -96,6 +99,8 @@ jobs:
           grep -q "Today's Pick Status" "results/index.html" || { echo "ERROR: live pick status block missing"; exit 1; }
 
           test -f "recaps/$DATE_INPUT.html" || { echo "ERROR: recap missing for $DATE_INPUT"; exit 1; }
+          test -f "data/matchup-pages/$DATE_INPUT.json" || { echo "ERROR: matchup manifest missing for $DATE_INPUT"; exit 1; }
+          test -f "mlb/matchups/index.html" || { echo "ERROR: matchup archive missing"; exit 1; }
           test -f "data/learning/$DATE_INPUT.json" || { echo "ERROR: learning summary missing for $DATE_INPUT"; exit 1; }
           test -f "learning/index.html" || { echo "ERROR: learning/index.html missing"; exit 1; }
           test -f "data/learning-summary.json" || { echo "ERROR: current learning summary missing"; exit 1; }
@@ -103,8 +108,11 @@ jobs:
           node -e "
             const fs = require('fs');
             const x = JSON.parse(fs.readFileSync('data/learning-summary.json', 'utf8'));
+            const m = JSON.parse(fs.readFileSync('data/matchup-pages/$DATE_INPUT.json', 'utf8'));
             if (!x.coach) throw new Error('Coach object missing from learning summary');
+            if (!Array.isArray(m.pages) || !m.pages.length) throw new Error('Matchup manifest has no pages');
             console.log('Coach:', x.coach.status, 'Days:', x.coach.current_model_days, 'Picks:', x.coach.current_model_picks);
+            console.log('Matchup pages:', m.total_pages, 'Indexable:', m.indexable_pages, 'Noindex:', m.noindex_pages);
           "
 
           test -f "articles/index.html" || { echo "ERROR: Research Desk page missing"; exit 1; }
@@ -126,7 +134,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Daily recap, learning and research $DATE_INPUT"
+          git commit -m "Daily recap, matchup updates, learning and research $DATE_INPUT"
 
           if [ -n "$(git status --porcelain)" ]; then
             echo "ERROR: Working tree became dirty after commit."
