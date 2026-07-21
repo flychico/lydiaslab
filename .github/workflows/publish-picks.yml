@@ -57,6 +57,9 @@ jobs:
       - name: Clean invalid generated artifacts
         run: node scripts/site-health-cleanup.js --fix
 
+      - name: Normalize Pitcher Matchup Tool source
+        run: node scripts/normalize-pitcher-tool-source.js
+
       - name: Generate source data and locked official picks
         run: |
           SNAPSHOT_INPUT="${{ github.event.inputs.snapshot }}"
@@ -78,8 +81,14 @@ jobs:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
         run: node scripts/update-totals.js "${{ steps.publish_date.outputs.date }}"
 
+      - name: Generate canonical Pitcher Matchup Tool data
+        run: node scripts/generate-pitcher-matchup-data.js "${{ steps.publish_date.outputs.date }}"
+
       - name: Generate matchup pages with indexing quality gate
         run: node scripts/generate-matchup-pages.js "${{ steps.publish_date.outputs.date }}"
+
+      - name: Verify matchup pages use Pitcher Matchup Tool data
+        run: node scripts/verify-pitcher-matchup-alignment.js "${{ steps.publish_date.outputs.date }}"
 
       - name: Verify generated data and public copy
         run: |
@@ -88,9 +97,10 @@ jobs:
           test -f "data/published-picks/$DATE_INPUT.json" || { echo "ERROR: official pick file missing"; exit 1; }
           test -f "previews/$DATE_INPUT.html" || { echo "ERROR: preview page missing"; exit 1; }
           test -f "articles/index.html" || { echo "ERROR: Research Desk page missing"; exit 1; }
+          test -f "data/pitcher-matchups/$DATE_INPUT.json" || { echo "ERROR: canonical pitcher data missing"; exit 1; }
           test -f "data/matchup-pages/$DATE_INPUT.json" || { echo "ERROR: matchup manifest missing"; exit 1; }
           test -f "mlb/matchups/index.html" || { echo "ERROR: matchup archive missing"; exit 1; }
-          node -e "const fs=require('fs'); const b=JSON.parse(fs.readFileSync('data/member-brief/$DATE_INPUT.json','utf8')); const p=JSON.parse(fs.readFileSync('data/published-picks/$DATE_INPUT.json','utf8')); const m=JSON.parse(fs.readFileSync('data/matchup-pages/$DATE_INPUT.json','utf8')); if(!Array.isArray(b.games)||b.games.length===0) throw new Error('member brief has zero games'); if(!Array.isArray(p.picks)) throw new Error('official pick file has no picks array'); if(m.total_pages!==b.games.length) throw new Error('matchup page count does not match member brief'); if(!Array.isArray(m.pages)||m.pages.some(x=>!fs.existsSync(x.output))) throw new Error('one or more matchup pages are missing'); console.log('Games:', b.games.length, 'Official picks:', p.picks.length, 'Matchup pages:', m.total_pages, 'Indexable:', m.indexable_pages);"
+          node -e "const fs=require('fs'); const b=JSON.parse(fs.readFileSync('data/member-brief/$DATE_INPUT.json','utf8')); const p=JSON.parse(fs.readFileSync('data/published-picks/$DATE_INPUT.json','utf8')); const s=JSON.parse(fs.readFileSync('data/pitcher-matchups/$DATE_INPUT.json','utf8')); const m=JSON.parse(fs.readFileSync('data/matchup-pages/$DATE_INPUT.json','utf8')); if(!Array.isArray(b.games)||b.games.length===0) throw new Error('member brief has zero games'); if(!Array.isArray(p.picks)) throw new Error('official pick file has no picks array'); if(!s.games||Object.keys(s.games).length!==b.games.length) throw new Error('pitcher source count does not match member brief'); if(m.total_pages!==b.games.length) throw new Error('matchup page count does not match member brief'); if(!Array.isArray(m.pages)||m.pages.some(x=>!fs.existsSync(x.output))) throw new Error('one or more matchup pages are missing'); console.log('Games:', b.games.length, 'Official picks:', p.picks.length, 'Pitcher rows:', Object.keys(s.games).length, 'Matchup pages:', m.total_pages, 'Indexable:', m.indexable_pages);"
           node scripts/assert-public-clean.js
           echo "Source data, previews, matchup pages and Research Desk verified."
 

@@ -69,6 +69,9 @@ jobs:
       - name: Refresh matchup pages with final scores and grades
         run: node scripts/generate-matchup-pages.js "${{ steps.recap_date.outputs.date }}" --skip-weather
 
+      - name: Verify matchup pages still use Pitcher Matchup Tool data
+        run: node scripts/verify-pitcher-matchup-alignment.js "${{ steps.recap_date.outputs.date }}"
+
       - name: Grade full-slate calibration ledger
         run: node scripts/grade-calibration.js "${{ steps.recap_date.outputs.date }}"
 
@@ -99,6 +102,7 @@ jobs:
           grep -q "Today's Pick Status" "results/index.html" || { echo "ERROR: live pick status block missing"; exit 1; }
 
           test -f "recaps/$DATE_INPUT.html" || { echo "ERROR: recap missing for $DATE_INPUT"; exit 1; }
+          test -f "data/pitcher-matchups/$DATE_INPUT.json" || { echo "ERROR: canonical pitcher data missing for $DATE_INPUT"; exit 1; }
           test -f "data/matchup-pages/$DATE_INPUT.json" || { echo "ERROR: matchup manifest missing for $DATE_INPUT"; exit 1; }
           test -f "mlb/matchups/index.html" || { echo "ERROR: matchup archive missing"; exit 1; }
           test -f "data/learning/$DATE_INPUT.json" || { echo "ERROR: learning summary missing for $DATE_INPUT"; exit 1; }
