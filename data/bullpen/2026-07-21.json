@@ -1,18 +1,18 @@
 {
   "date": "2026-07-21",
-  "generated_at": "2026-07-21T21:05:13.076Z",
+  "generated_at": "2026-07-21T21:57:07.078Z",
   "source_of_truth": "scripts/lib/bullpen-fatigue-core.js",
-  "version": "bullpen-fatigue-v3-runs-aware",
+  "version": "bullpen-fatigue-v4-fatigue-efficiency-split",
   "method": "Generated single source of truth. Website pages display this JSON and do not calculate separate bullpen scores in the browser.",
-  "note": "v3 runs-aware formula. Reliever counts are context only and do not add hidden score points.",
-  "formula": "45 + ((Last 3 BP IP - 9) x 3.5) + ((Last game BP IP - 3) x 4) + (Back-to-back arms x 6) + clamp((Last 3 BP runs - 4) x 1.5, -6, 12)",
+  "note": "v4 split scores: fatigue is workload only, efficiency is ERA and WHIP, risk_index blends the two. Reliever counts are context only.",
+  "formula": "Fatigue = 45 + ((Last 3 BP IP - 3 x games) x 3.5) + ((Last game BP IP - 3) x 4) + (Back-to-back arms x 6). Runs allowed moved to the efficiency score.",
   "lookback_days": 3,
   "summary": {
-    "teams_tracked": 28,
+    "teams_tracked": 26,
     "high_risk": 3,
     "tired": 12,
     "fresh": 0,
-    "normal": 13
+    "normal": 11
   },
   "warnings": [],
   "teams": [
@@ -935,60 +935,6 @@
       }
     },
     {
-      "team_id": 111,
-      "team": "Boston Red Sox",
-      "side": "home",
-      "opponent": "Baltimore Orioles",
-      "game": "Baltimore Orioles @ Boston Red Sox",
-      "game_pk": 824735,
-      "game_time_iso": "2026-07-21T23:10:00Z",
-      "score": 57,
-      "label": "Normal",
-      "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
-      "score_reason": "Normal (5.7/10): 10.3 relief innings over the last three days, 1 arm pitched back-to-back days. 9 reliever appearances in the window. Workload only — see efficiency for how well the pen has actually pitched.",
-      "formula": "45 + ((Last 3 BP IP - 9) x 3.5) + ((Last game BP IP - 3) x 4) + (Back-to-back arms x 6)",
-      "efficiency_score": 68,
-      "efficiency_label": "Effective",
-      "efficiency_reason": "Effective (6.8/10): 1.74 ERA and 1.06 WHIP over 10.3 relief innings (2 ER, 7 H, 4 BB) in the last three days.",
-      "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
-      "risk_index": 48,
-      "risk_label": "Normal",
-      "last_game_date": "2026-07-20",
-      "last_game_bp_ip": 3.3,
-      "last3_bp_ip": 10.3,
-      "last3_bp_runs": 2,
-      "last3_bp_er": 2,
-      "last3_bp_hits": 7,
-      "last3_bp_bb": 4,
-      "era_3d": 1.74,
-      "whip_3d": 1.06,
-      "last_game_relievers": 3,
-      "last3_relievers": 9,
-      "back_to_back_arms": 1,
-      "recent_games_tracked": 3,
-      "context_only": {
-        "last_game_relievers": 3,
-        "last3_relievers": 9,
-        "note": "Reliever counts are displayed for context only and do not add score points."
-      },
-      "component_scores": {
-        "baseline": 45,
-        "last3_bp_ip": 4.7,
-        "last_game_bp_ip": 1.3,
-        "back_to_back_arms": 6,
-        "reliever_counts_context_only": 0,
-        "no_recent_games_credit": 0,
-        "raw_score": 57
-      },
-      "efficiency_component_scores": {
-        "baseline": 50,
-        "era_term": 14.7,
-        "whip_term": 3.5,
-        "confidence": 1,
-        "raw_score": 68.3
-      }
-    },
-    {
       "team_id": 115,
       "team": "Colorado Rockies",
       "side": "home",
@@ -1421,60 +1367,6 @@
       }
     },
     {
-      "team_id": 110,
-      "team": "Baltimore Orioles",
-      "side": "away",
-      "opponent": "Boston Red Sox",
-      "game": "Baltimore Orioles @ Boston Red Sox",
-      "game_pk": 824735,
-      "game_time_iso": "2026-07-21T23:10:00Z",
-      "score": 46,
-      "label": "Normal",
-      "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
-      "score_reason": "Normal (4.6/10): 8.7 relief innings over the last three days, 1 arm pitched back-to-back days. 9 reliever appearances in the window. Workload only — see efficiency for how well the pen has actually pitched.",
-      "formula": "45 + ((Last 3 BP IP - 9) x 3.5) + ((Last game BP IP - 3) x 4) + (Back-to-back arms x 6)",
-      "efficiency_score": 62,
-      "efficiency_label": "Effective",
-      "efficiency_reason": "Effective (6.2/10): 3.12 ERA and 0.92 WHIP over 8.7 relief innings (3 ER, 7 H, 1 BB) in the last three days.",
-      "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
-      "risk_index": 40,
-      "risk_label": "Normal",
-      "last_game_date": "2026-07-20",
-      "last_game_bp_ip": 2,
-      "last3_bp_ip": 8.7,
-      "last3_bp_runs": 4,
-      "last3_bp_er": 3,
-      "last3_bp_hits": 7,
-      "last3_bp_bb": 1,
-      "era_3d": 3.12,
-      "whip_3d": 0.92,
-      "last_game_relievers": 2,
-      "last3_relievers": 9,
-      "back_to_back_arms": 1,
-      "recent_games_tracked": 3,
-      "context_only": {
-        "last_game_relievers": 2,
-        "last3_relievers": 9,
-        "note": "Reliever counts are displayed for context only and do not add score points."
-      },
-      "component_scores": {
-        "baseline": 45,
-        "last3_bp_ip": -1.2,
-        "last_game_bp_ip": -4,
-        "back_to_back_arms": 6,
-        "reliever_counts_context_only": 0,
-        "no_recent_games_credit": 0,
-        "raw_score": 45.8
-      },
-      "efficiency_component_scores": {
-        "baseline": 50,
-        "era_term": 6.5,
-        "whip_term": 5.7,
-        "confidence": 1,
-        "raw_score": 62.2
-      }
-    },
-    {
       "team_id": 121,
       "team": "New York Mets",
       "side": "away",
@@ -1571,7 +1463,7 @@
       "whip_3d": 1.74,
       "risk_index": 87,
       "risk_label": "High risk",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "Atlanta Braves": {
       "score": 84,
@@ -1614,7 +1506,7 @@
       "whip_3d": 1.27,
       "risk_index": 84,
       "risk_label": "High risk",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "Texas Rangers": {
       "score": 84,
@@ -1657,7 +1549,7 @@
       "whip_3d": 1.71,
       "risk_index": 98,
       "risk_label": "High risk",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "Arizona Diamondbacks": {
       "score": 79,
@@ -1700,7 +1592,7 @@
       "whip_3d": 1.5,
       "risk_index": 79,
       "risk_label": "Tired",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "Minnesota Twins": {
       "score": 72,
@@ -1743,7 +1635,7 @@
       "whip_3d": 1.83,
       "risk_index": 77,
       "risk_label": "Tired",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "Cleveland Guardians": {
       "score": 70,
@@ -1786,7 +1678,7 @@
       "whip_3d": 1.15,
       "risk_index": 69,
       "risk_label": "Tired",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "Houston Astros": {
       "score": 70,
@@ -1829,7 +1721,7 @@
       "whip_3d": 1.23,
       "risk_index": 63,
       "risk_label": "Tired",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "Milwaukee Brewers": {
       "score": 70,
@@ -1872,7 +1764,7 @@
       "whip_3d": 1,
       "risk_index": 67,
       "risk_label": "Tired",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "Philadelphia Phillies": {
       "score": 67,
@@ -1915,7 +1807,7 @@
       "whip_3d": 1.5,
       "risk_index": 67,
       "risk_label": "Tired",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "Seattle Mariners": {
       "score": 67,
@@ -1958,7 +1850,7 @@
       "whip_3d": 0.5,
       "risk_index": 49,
       "risk_label": "Normal",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "San Diego Padres": {
       "score": 66,
@@ -2001,7 +1893,7 @@
       "whip_3d": 0.75,
       "risk_index": 56,
       "risk_label": "Normal",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "San Francisco Giants": {
       "score": 65,
@@ -2044,7 +1936,7 @@
       "whip_3d": 1.06,
       "risk_index": 60,
       "risk_label": "Normal",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "Miami Marlins": {
       "score": 63,
@@ -2087,7 +1979,7 @@
       "whip_3d": 1.76,
       "risk_index": 78,
       "risk_label": "Tired",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "Chicago Cubs": {
       "score": 62,
@@ -2130,7 +2022,7 @@
       "whip_3d": 1.69,
       "risk_index": 63,
       "risk_label": "Tired",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "St. Louis Cardinals": {
       "score": 62,
@@ -2173,7 +2065,7 @@
       "whip_3d": 1.39,
       "risk_index": 68,
       "risk_label": "Tired",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "Kansas City Royals": {
       "score": 60,
@@ -2216,7 +2108,7 @@
       "whip_3d": 1.71,
       "risk_index": 76,
       "risk_label": "Tired",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "Athletics": {
       "score": 57,
@@ -2259,50 +2151,7 @@
       "whip_3d": 1.32,
       "risk_index": 54,
       "risk_label": "Normal",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
-    },
-    "Boston Red Sox": {
-      "score": 57,
-      "label": "Normal",
-      "last_game_bp_ip": 3.3,
-      "last3_bp_ip": 10.3,
-      "last3_bp_runs": 2,
-      "last_game_relievers": 3,
-      "last3_relievers": 9,
-      "back_to_back_arms": 1,
-      "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
-      "score_reason": "Normal (5.7/10): 10.3 relief innings over the last three days, 1 arm pitched back-to-back days. 9 reliever appearances in the window. Workload only — see efficiency for how well the pen has actually pitched.",
-      "formula": "45 + ((Last 3 BP IP - 9) x 3.5) + ((Last game BP IP - 3) x 4) + (Back-to-back arms x 6)",
-      "context_only": {
-        "last_game_relievers": 3,
-        "last3_relievers": 9,
-        "note": "Reliever counts are displayed for context only and do not add score points."
-      },
-      "component_scores": {
-        "baseline": 45,
-        "last3_bp_ip": 4.7,
-        "last_game_bp_ip": 1.3,
-        "back_to_back_arms": 6,
-        "reliever_counts_context_only": 0,
-        "no_recent_games_credit": 0,
-        "raw_score": 57
-      },
-      "efficiency_score": 68,
-      "efficiency_label": "Effective",
-      "efficiency_reason": "Effective (6.8/10): 1.74 ERA and 1.06 WHIP over 10.3 relief innings (2 ER, 7 H, 4 BB) in the last three days.",
-      "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
-      "efficiency_component_scores": {
-        "baseline": 50,
-        "era_term": 14.7,
-        "whip_term": 3.5,
-        "confidence": 1,
-        "raw_score": 68.3
-      },
-      "era_3d": 1.74,
-      "whip_3d": 1.06,
-      "risk_index": 48,
-      "risk_label": "Normal",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "Colorado Rockies": {
       "score": 57,
@@ -2345,7 +2194,7 @@
       "whip_3d": 1.05,
       "risk_index": 52,
       "risk_label": "Normal",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "Washington Nationals": {
       "score": 57,
@@ -2388,7 +2237,7 @@
       "whip_3d": 1.62,
       "risk_index": 72,
       "risk_label": "Tired",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "Los Angeles Dodgers": {
       "score": 56,
@@ -2431,7 +2280,7 @@
       "whip_3d": 1.59,
       "risk_index": 61,
       "risk_label": "Normal",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "Chicago White Sox": {
       "score": 55,
@@ -2474,7 +2323,7 @@
       "whip_3d": 0.93,
       "risk_index": 43,
       "risk_label": "Normal",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "Los Angeles Angels": {
       "score": 54,
@@ -2517,7 +2366,7 @@
       "whip_3d": 0.64,
       "risk_index": 42,
       "risk_label": "Normal",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "Cincinnati Reds": {
       "score": 53,
@@ -2560,7 +2409,7 @@
       "whip_3d": 1.88,
       "risk_index": 70,
       "risk_label": "Tired",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "Tampa Bay Rays": {
       "score": 52,
@@ -2603,7 +2452,7 @@
       "whip_3d": 0.91,
       "risk_index": 42,
       "risk_label": "Normal",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "Toronto Blue Jays": {
       "score": 51,
@@ -2646,50 +2495,7 @@
       "whip_3d": 1.11,
       "risk_index": 43,
       "risk_label": "Normal",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
-    },
-    "Baltimore Orioles": {
-      "score": 46,
-      "label": "Normal",
-      "last_game_bp_ip": 2,
-      "last3_bp_ip": 8.7,
-      "last3_bp_runs": 4,
-      "last_game_relievers": 2,
-      "last3_relievers": 9,
-      "back_to_back_arms": 1,
-      "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
-      "score_reason": "Normal (4.6/10): 8.7 relief innings over the last three days, 1 arm pitched back-to-back days. 9 reliever appearances in the window. Workload only — see efficiency for how well the pen has actually pitched.",
-      "formula": "45 + ((Last 3 BP IP - 9) x 3.5) + ((Last game BP IP - 3) x 4) + (Back-to-back arms x 6)",
-      "context_only": {
-        "last_game_relievers": 2,
-        "last3_relievers": 9,
-        "note": "Reliever counts are displayed for context only and do not add score points."
-      },
-      "component_scores": {
-        "baseline": 45,
-        "last3_bp_ip": -1.2,
-        "last_game_bp_ip": -4,
-        "back_to_back_arms": 6,
-        "reliever_counts_context_only": 0,
-        "no_recent_games_credit": 0,
-        "raw_score": 45.8
-      },
-      "efficiency_score": 62,
-      "efficiency_label": "Effective",
-      "efficiency_reason": "Effective (6.2/10): 3.12 ERA and 0.92 WHIP over 8.7 relief innings (3 ER, 7 H, 1 BB) in the last three days.",
-      "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
-      "efficiency_component_scores": {
-        "baseline": 50,
-        "era_term": 6.5,
-        "whip_term": 5.7,
-        "confidence": 1,
-        "raw_score": 62.2
-      },
-      "era_3d": 3.12,
-      "whip_3d": 0.92,
-      "risk_index": 40,
-      "risk_label": "Normal",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     },
     "New York Mets": {
       "score": 44,
@@ -2732,7 +2538,7 @@
       "whip_3d": 1.78,
       "risk_index": 47,
       "risk_label": "Normal",
-      "source_version": "bullpen-fatigue-v3-runs-aware"
+      "source_version": "bullpen-fatigue-v4-fatigue-efficiency-split"
     }
   }
 }
