@@ -1,22 +1,23 @@
 "use strict";
 
 /*
-  LyDia Bullpen Fatigue Core v3-runs-aware
+  LyDia Bullpen Core v4, fatigue and efficiency split
 
-  One source of truth for bullpen workload scoring.
+  One source of truth for bullpen scoring.
   Used by:
   - scripts/generate-bullpen-index.js
   - scripts/generate-member-lab.js
   - tools/bullpen-fatigue/index.html through generated JSON only
 
-  Active owned scoring rule (v3, runs-aware):
-  Score = 45
-    + ((Last 3 BP IP - 9) × 3.5)
-    + ((Last game BP IP - 3) × 4)
-    + (Back-to-back arms × 6)
-    + clamp((Last 3 BP runs allowed - 4) × 1.5, -6, 12)
-  A shelled pen is a stressed pen: runs allowed capture blown leads, long
-  outings from leverage arms, and manager trust burned — workload IP alone misses that.
+  Three scores per team:
+  Fatigue (workload only) = 45
+    + ((Last 3 days BP IP - 3 x games played) x 3.5)
+    + ((Last game BP IP - 3) x 4)
+    + (Back-to-back arms x 6)
+  Efficiency (performance only) = 50 centered on league-average reliever
+    ERA 4.20 and WHIP 1.30, confidence-weighted for thin samples.
+  risk_index = Fatigue - 0.5 x (Efficiency - 50). Every downstream consumer
+  reads risk_index. Runs allowed lives in efficiency, never in fatigue.
 
   Reliever counts are context only. They are displayed, but they do not add hidden points.
 
@@ -24,7 +25,7 @@
   Browser pages display generated bullpen data. They do not maintain a separate scoring model.
 */
 
-const VERSION = "bullpen-fatigue-v3-runs-aware";
+const VERSION = "bullpen-fatigue-v4-fatigue-efficiency-split";
 const SOURCE_OF_TRUTH = "scripts/lib/bullpen-fatigue-core.js";
 const LOOKBACK_DAYS = 3;
 
@@ -440,8 +441,8 @@ async function buildBullpenSource({ date, todayGames, fetchJson, generatedAt }) 
     source_of_truth: SOURCE_OF_TRUTH,
     version: VERSION,
     method: "Generated single source of truth. Website pages display this JSON and do not calculate separate bullpen scores in the browser.",
-    note: "v3 runs-aware formula. Reliever counts are context only and do not add hidden score points.",
-    formula: "45 + ((Last 3 BP IP - 9) x 3.5) + ((Last game BP IP - 3) x 4) + (Back-to-back arms x 6) + clamp((Last 3 BP runs - 4) x 1.5, -6, 12)",
+    note: "v4 split scores: fatigue is workload only, efficiency is ERA and WHIP, risk_index blends the two. Reliever counts are context only.",
+    formula: "Fatigue = 45 + ((Last 3 BP IP - 3 x games) x 3.5) + ((Last game BP IP - 3) x 4) + (Back-to-back arms x 6). Runs allowed moved to the efficiency score.",
     lookback_days: LOOKBACK_DAYS,
     summary: {
       teams_tracked: teamsRows.length,

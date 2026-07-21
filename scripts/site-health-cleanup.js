@@ -194,7 +194,17 @@ function rebuildSitemap() {
   const previewsDir = path.join(ROOT, "previews");
   const recapPosts = fs.existsSync(recapsDir) ? fs.readdirSync(recapsDir).filter(f => /^\d{4}-\d{2}-\d{2}\.html$/.test(f)).map(f => `recaps/${f}`) : [];
   const previewPosts = fs.existsSync(previewsDir) ? fs.readdirSync(previewsDir).filter(f => /^\d{4}-\d{2}-\d{2}\.html$/.test(f)).map(f => `previews/${f}`) : [];
-  const urls = staticPages.map(p => `${SITE}/${p}`).concat(recapPosts.map(p => `${SITE}/${p}`)).concat(previewPosts.map(p => `${SITE}/${p}`));
+  // Keep pages owned by other generators alive: the author entity page, the
+  // matchup archive, and every indexable matchup page from the manifests.
+  // Without this, whichever sitemap writer runs last silently drops them.
+  const extraPages = ["writers/lynold/", "mlb/matchups/"];
+  const matchupManifestDir = path.join(ROOT, "data", "matchup-pages");
+  const matchupUrls = fs.existsSync(matchupManifestDir)
+    ? fs.readdirSync(matchupManifestDir).filter(f => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
+        .flatMap(f => { try { return (JSON.parse(fs.readFileSync(path.join(matchupManifestDir, f), "utf8")).pages || []); } catch (e) { return []; } })
+        .filter(p => p.indexable && p.url).map(p => p.url)
+    : [];
+  const urls = staticPages.map(p => `${SITE}/${p}`).concat(recapPosts.map(p => `${SITE}/${p}`)).concat(previewPosts.map(p => `${SITE}/${p}`)).concat(extraPages.map(p => `${SITE}/${p}`)).concat(matchupUrls);
   fs.writeFileSync(path.join(ROOT, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` + urls.map(u => `  <url><loc>${u}</loc></url>`).join("\n") + `\n</urlset>\n`, "utf8");
 }
 function writeHealthReport(badDates) {

@@ -273,7 +273,17 @@ async function main() {
   const staticPages = ["", "dashboard/", "picks/", "previews/", "results/", "tools/", "stats/", "recaps/", "articles/", "membership/", "member-brief/", "how-to-bet-on-mlb/", "mlb-betting-edge-explained/", "no-vig-odds-calculator-guide/", "how-to-find-value-in-mlb-moneylines/", "closing-line-value-mlb-betting/", "mlb-run-line-vs-moneyline/", "mlb-bullpen-fatigue-betting/", "mlb-park-factors-betting-guide/", "mlb-pitching-metrics-for-betting/", "tools/offense-matchups/", "tools/pitcher-matchups/", "tools/bullpen-fatigue/", "tools/strikeout-projections/", "tools/totals-projections/"];
   const previewDir = path.join(ROOT, "previews");
   const previewPosts = fs.existsSync(previewDir) ? fs.readdirSync(previewDir).filter(f => /^\d{4}-\d{2}-\d{2}\.html$/.test(f)).sort().reverse().map(f => `previews/${f}`) : [];
-  const urls = staticPages.map(p => `${SITE}/${p}`).concat(posts.map(f => `${SITE}/recaps/${f}`)).concat(previewPosts.map(p => `${SITE}/${p}`));
+  // Keep pages owned by other generators alive: the author entity page, the
+  // matchup archive, and every indexable matchup page from the manifests.
+  // Without this, whichever sitemap writer runs last silently drops them.
+  const extraPages = ["writers/lynold/", "mlb/matchups/"];
+  const matchupManifestDir = path.join(ROOT, "data", "matchup-pages");
+  const matchupUrls = fs.existsSync(matchupManifestDir)
+    ? fs.readdirSync(matchupManifestDir).filter(f => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
+        .flatMap(f => { try { return (JSON.parse(fs.readFileSync(path.join(matchupManifestDir, f), "utf8")).pages || []); } catch (e) { return []; } })
+        .filter(p => p.indexable && p.url).map(p => p.url)
+    : [];
+  const urls = staticPages.map(p => `${SITE}/${p}`).concat(posts.map(f => `${SITE}/recaps/${f}`)).concat(previewPosts.map(p => `${SITE}/${p}`)).concat(extraPages.map(p => `${SITE}/${p}`)).concat(matchupUrls);
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` + [...new Set(urls)].map(u => `  <url><loc>${u}</loc></url>`).join("\n") + `\n</urlset>\n`;
   fs.writeFileSync(path.join(ROOT, "sitemap.xml"), sitemap);
   console.log("wrote recaps/index.html and sitemap.xml");

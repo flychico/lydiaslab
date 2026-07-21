@@ -532,6 +532,171 @@ function decisionExplanation(game) {
   return `${game.pick_team || "This matchup"} does not clear every LyDia official-pick requirement.`;
 }
 
+
+/* ---------- Insight engine: turn the metric soup into an argument ---------- */
+function pickSideBullpen(game) {
+  const bullpen = game.bullpen || {};
+  return { pick: bullpen.pick_team || null, opp: bullpen.opponent || null };
+}
+function riskOf(side) {
+  if (!side) return null;
+  const value = side.risk_index ?? side.score;
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+function pickOffense(game) {
+  const offense = game.offense_form || {};
+  if (game.pick_team === game.away_team) return { pick: offense.away || null, opp: offense.home || null };
+  if (game.pick_team === game.home_team) return { pick: offense.home || null, opp: offense.away || null };
+  return { pick: null, opp: null };
+}
+function buildInsights(game, pitcherGame) {
+  const market = game.market || {};
+  const gate = game.official_pick_gate || {};
+  const pitcher = pitcherGame || {};
+  const pens = pickSideBullpen(game);
+  const off = pickOffense(game);
+  const pickRisk = riskOf(pens.pick);
+  const oppRisk = riskOf(pens.opp);
+  const caseFor = [];
+  const concerns = [];
+
+  if (typeof game.edge === "number" && game.edge >= 0.03 && known(market.no_vig_probability)) {
+    caseFor.push({ title: `Market mispricing: ${signedPct(game.edge)}`, detail: `LyDia makes ${game.pick_team} ${pct(game.model_probability)} to win. The no-vig market says ${pct(market.no_vig_probability)}. That gap is the entire reason this game is on the board.` });
+  }
+  if (pitcher.edge_team && pitcher.edge_team === game.pick_team && Number(pitcher.gap) >= 8) {
+    caseFor.push({ title: `Starting pitcher edge: ${pitcher.gap} points`, detail: `${pitcher.edge_team} sends the clearly better starter by LyDia's pitcher score. Gaps this size are one of the model's strongest inputs.` });
+  }
+  if (pickRisk !== null && oppRisk !== null && oppRisk - pickRisk >= 15) {
+    caseFor.push({ title: `Late-inning bullpen advantage`, detail: `${game.pick_team}'s pen carries ${ (pickRisk/10).toFixed(1) }/10 risk against ${ (oppRisk/10).toFixed(1) }/10 for the other side. If this is close after six, the risk profile favors the pick.` });
+  }
+  if (off.pick && typeof off.pick.delta_ops === "number" && off.pick.delta_ops >= 0.03) {
+    caseFor.push({ title: `Bats are hot: ${signedDecimal(off.pick.delta_ops, 3)} OPS`, detail: `${game.pick_team} is outhitting its own season form over the last 15 days. Recent form is context, not a model input, but it points the same way here.` });
+  }
+
+  if (gate.model_probability_passed === false) {
+    concerns.push({ title: `Below the ${pct(gate.minimum_model_probability)} official gate`, detail: `Win probability is ${pct(game.model_probability)}. LyDia does not make a game official below ${pct(gate.minimum_model_probability)}, no matter how good the price is. This is a value spot, not a high-confidence winner.` });
+  }
+  if (gate.lab_score_passed === false) {
+    concerns.push({ title: `Setup quality below the bar`, detail: `Lab Rating is ${rating(game.lab_score)}, under the ${rating(gate.minimum_lab_score)} required for an official pick.` });
+  }
+  if (gate.edge_passed === false) {
+    concerns.push({ title: `Not enough market edge`, detail: `The model and the market are too close for the price to matter.` });
+  }
+  if (pitcher.edge_team && pitcher.edge_team !== game.pick_team && pitcher.edge_team !== "No clear SP edge" && Number(pitcher.gap) >= 8) {
+    concerns.push({ title: `Pitcher edge points the other way`, detail: `${pitcher.edge_team} has the better starter by ${pitcher.gap} points, and that is not the side the model likes. When the model and the mound disagree, tread carefully.` });
+  }
+  if (pickRisk !== null && pickRisk >= 60) {
+    concerns.push({ title: `Own bullpen carries risk: ${(pickRisk/10).toFixed(1)}/10`, detail: `${game.pick_team}'s pen comes in ${pens.pick && pens.pick.risk_label ? String(pens.pick.risk_label).toLowerCase() : "elevated"}. A lead after six innings is less safe than usual.` });
+  }
+  if (off.opp && typeof off.opp.delta_ops === "number" && off.opp.delta_ops >= 0.05) {
+    concerns.push({ title: `Opponent is swinging it`, detail: `The other lineup is ${signedDecimal(off.opp.delta_ops, 3)} OPS above its season form over the last 15 days.` });
+  }
+  if (off.pick && typeof off.pick.delta_ops === "number" && off.pick.delta_ops <= -0.03) {
+    concerns.push({ title: `Cold stretch at the plate`, detail: `${game.pick_team} is ${signedDecimal(off.pick.delta_ops, 3)} OPS below its own season form.` });
+  }
+
+  let verdict;
+  if (game.status === "official_pick") {
+    verdict = `LyDia backs ${game.pick_team} at ${odds(market.best_price)}. ${pct(game.model_probability)} to win against a market implying ${pct(market.no_vig_probability)} - the model sees value and the setup clears every gate.`;
+  } else if (game.status === "value_watch") {
+    const lead = concerns.length ? concerns[0].title.charAt(0).toLowerCase() + concerns[0].title.slice(1) : "the stricter official review";
+    verdict = `Real value, not an official bet. The ${signedPct(game.edge)} edge on ${game.pick_team} is genuine, but ${lead}. If you play it, you are taking on risk LyDia's official card will not.`;
+  } else if (game.status === "watchlist") {
+    verdict = `Worth monitoring, nothing more. The setup has pieces but does not add up to a bet at today's price.`;
+  } else {
+    verdict = game.pass_reason ? `LyDia passes. ${game.pass_reason}` : `LyDia passes. Nothing about this matchup clears the bar, and passing is a position.`;
+  }
+
+  return { caseFor: caseFor.slice(0, 3), concerns: concerns.slice(0, 3), verdict };
+}
+
+function renderInsights(game, pitcherGame) {
+  const insights = buildInsights(game, pitcherGame);
+  const forCards = insights.caseFor.map(item => `<div class="callout for"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
+  const conCards = insights.concerns.map(item => `<div class="callout against"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
+  return `
+    ${insights.caseFor.length ? `<h3 class="co-head for">The case for ${esc(game.pick_team || "this side")}</h3><div class="callout-grid">${forCards}</div>` : ""}
+    ${insights.concerns.length ? `<h3 class="co-head against">${game.status === "official_pick" ? "What to watch" : "Why it is not official"}</h3><div class="callout-grid">${conCards}</div>` : ""}
+    <div class="verdict"><span class="v-label">The verdict</span> ${esc(insights.verdict)}</div>`;
+}
+
+/* ---------- Probability bar: model vs market, one glance ---------- */
+function renderEdgeBar(game) {
+  const market = game.market || {};
+  if (!known(game.model_probability) || !known(market.no_vig_probability)) return "";
+  const model = Math.max(0, Math.min(100, game.model_probability * 100));
+  const mkt = Math.max(0, Math.min(100, market.no_vig_probability * 100));
+  return `<div class="edgebar">
+    <div class="eb-row"><span class="eb-name">LyDia model</span><div class="eb-track"><div class="eb-fill model" style="width:${model.toFixed(1)}%"></div></div><span class="eb-val">${pct(game.model_probability)}</span></div>
+    <div class="eb-row"><span class="eb-name">Market</span><div class="eb-track"><div class="eb-fill mkt" style="width:${mkt.toFixed(1)}%"></div></div><span class="eb-val">${pct(market.no_vig_probability)}</span></div>
+  </div>`;
+}
+
+/* ---------- Bullpen gauges ---------- */
+function gaugeColor(score) {
+  if (score >= 82) return "var(--bad)";
+  if (score >= 62) return "#e08726";
+  if (score < 35) return "var(--good)";
+  return "var(--accent2)";
+}
+function renderGauge(label, score, text, higherIsBetter) {
+  if (typeof score !== "number") return "";
+  const width = Math.max(2, Math.min(100, score));
+  const color = gaugeColor(higherIsBetter ? 100 - score : score);
+  return `<div class="gauge-row"><span class="g-label">${esc(label)}</span><div class="g-track"><div class="g-fill" style="width:${width}%;background:${color}"></div></div><span class="g-val">${(score/10).toFixed(1)}${text ? ` ${esc(text)}` : ""}</span></div>`;
+}
+
+/* ---------- The mini Map: every team on today\'s slate, two axes ---------- */
+function teamWinPct(record) {
+  const match = /^(\d+)-(\d+)$/.exec(String(record || "").trim());
+  if (!match) return null;
+  const wins = Number(match[1]), losses = Number(match[2]);
+  return wins + losses > 0 ? wins / (wins + losses) : null;
+}
+function renderTeamMap(brief, game) {
+  const teams = [];
+  for (const row of brief.games || []) {
+    const offense = row.offense_form || {};
+    const entries = [
+      { team: row.away_team, wpct: teamWinPct(row.away_record), delta: offense.away && offense.away.delta_ops },
+      { team: row.home_team, wpct: teamWinPct(row.home_record), delta: offense.home && offense.home.delta_ops }
+    ];
+    for (const entry of entries) {
+      if (entry.team && typeof entry.wpct === "number" && typeof entry.delta === "number" && !teams.some(t => t.team === entry.team)) teams.push(entry);
+    }
+  }
+  if (teams.length < 8) return "";
+  const width = 720, height = 400, padLeft = 52, padRight = 20, padTop = 26, padBottom = 44;
+  const xs = teams.map(t => t.wpct), ys = teams.map(t => t.delta);
+  const xMin = Math.min(...xs) - 0.02, xMax = Math.max(...xs) + 0.02;
+  const yAbs = Math.max(0.05, ...ys.map(Math.abs)) + 0.01;
+  const X = v => padLeft + (v - xMin) / (xMax - xMin) * (width - padLeft - padRight);
+  const Y = v => padTop + (yAbs - v) / (2 * yAbs) * (height - padTop - padBottom);
+  const midX = X(0.5) >= padLeft && X(0.5) <= width - padRight ? X(0.5) : null;
+  const dots = teams.map(t => {
+    const isAway = t.team === game.away_team, isHome = t.team === game.home_team;
+    if (!isAway && !isHome) return `<circle cx="${X(t.wpct).toFixed(1)}" cy="${Y(t.delta).toFixed(1)}" r="5" fill="var(--text-dim)" opacity="0.35"/>`;
+    const color = isAway ? "var(--accent2)" : "var(--good)";
+    const anchor = X(t.wpct) > width - 130 ? "end" : "start";
+    const dx = anchor === "end" ? -10 : 10;
+    return `<circle cx="${X(t.wpct).toFixed(1)}" cy="${Y(t.delta).toFixed(1)}" r="8" fill="${color}"/><text x="${(X(t.wpct)+dx).toFixed(1)}" y="${(Y(t.delta)+4).toFixed(1)}" text-anchor="${anchor}" font-size="13" font-weight="800" fill="${color}">${esc(shortTeam(t.team))}</text>`;
+  }).join("");
+  return `<section class="card">
+    <div class="sec-head"><h2>The Map: quality vs current form</h2><a class="tool-link" href="/stats/">Full interactive map &rarr;</a></div>
+    <p class="small dim" style="margin-top:0">Every team on today\'s slate. Right means a better record, up means hotter than its own season form over the last 15 days. <span style="color:var(--accent2);font-weight:700">${esc(shortTeam(game.away_team))}</span> and <span style="color:var(--good);font-weight:700">${esc(shortTeam(game.home_team))}</span> are highlighted.</p>
+    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Win percentage against recent offensive form for today\'s teams" style="width:100%;height:auto">
+      <line x1="${padLeft}" y1="${Y(0).toFixed(1)}" x2="${width - padRight}" y2="${Y(0).toFixed(1)}" stroke="var(--border)" stroke-dasharray="4 4"/>
+      ${midX !== null ? `<line x1="${midX.toFixed(1)}" y1="${padTop}" x2="${midX.toFixed(1)}" y2="${height - padBottom}" stroke="var(--border)" stroke-dasharray="4 4"/>` : ""}
+      <text x="${width - padRight}" y="${padTop - 8}" text-anchor="end" font-size="11" fill="var(--text-dim)">HOT</text>
+      <text x="${width - padRight}" y="${height - padBottom + 16}" text-anchor="end" font-size="11" fill="var(--text-dim)">COLD</text>
+      <text x="${padLeft}" y="${height - 8}" font-size="11" fill="var(--text-dim)">Worse record</text>
+      <text x="${width - padRight}" y="${height - 8}" text-anchor="end" font-size="11" fill="var(--text-dim)">Better record</text>
+      <text x="14" y="${Y(0).toFixed(1)}" font-size="11" fill="var(--text-dim)" transform="rotate(-90 14 ${Y(0).toFixed(1)})" text-anchor="middle">OPS vs season</text>
+      ${dots}
+    </svg>
+  </section>`;
+}
+
 function renderMatchupPage(context) {
   const { brief, game, scheduleGame, totalsGame, pitcherGame, resultGame, weather, venue, quality, slug, urlPath } = context;
   const awayShort = shortTeam(game.away_team);
@@ -603,7 +768,7 @@ function renderMatchupPage(context) {
 <meta name="twitter:image" content="${SITE}/img/og-card.png">
 <link rel="stylesheet" href="/css/style.css">
 <style>
-.matchup-head{margin-bottom:18px}.matchup-head h1{margin-bottom:6px}.byline{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.byline img{width:42px;height:42px;border-radius:50%;object-fit:cover;border:1px solid var(--border)}.status-badge{display:inline-block;color:#fff;font-size:.76rem;font-weight:800;padding:4px 10px;border-radius:20px;background:var(--accent2)}.status-badge.official{background:var(--good)}.status-badge.pass{background:var(--text-dim)}.status-badge.watch{background:var(--accent2)}.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:14px 0}.metric{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.metric .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}.metric .value{font-size:1.15rem;font-weight:800;margin-top:2px}.matchup-table{width:100%;border-collapse:collapse;font-size:.88rem}.matchup-table th,.matchup-table td{padding:8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}.matchup-table th:not(:first-child),.matchup-table td:not(:first-child){text-align:right}.section-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}.decision-card{border-color:var(--accent2)}.decision-card.official{border-color:var(--good)}.quality-list{columns:2;column-gap:24px}.quality-list li{break-inside:avoid;margin-bottom:5px}.result-win{border-color:var(--good)}.result-loss{border-color:var(--bad)}@media(max-width:640px){.quality-list{columns:1}.matchup-table{font-size:.8rem}.matchup-table th,.matchup-table td{padding:6px 4px}}
+.matchup-head{margin-bottom:18px}.matchup-head h1{margin-bottom:6px}.byline{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.byline img{width:42px;height:42px;border-radius:50%;object-fit:cover;border:1px solid var(--border)}.status-badge{display:inline-block;color:#fff;font-size:.76rem;font-weight:800;padding:4px 10px;border-radius:20px;background:var(--accent2)}.status-badge.official{background:var(--good)}.status-badge.pass{background:var(--text-dim)}.status-badge.watch{background:var(--accent2)}.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:14px 0}.metric{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.metric .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}.metric .value{font-size:1.15rem;font-weight:800;margin-top:2px}.matchup-table{width:100%;border-collapse:collapse;font-size:.88rem}.matchup-table th,.matchup-table td{padding:8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}.matchup-table th:not(:first-child),.matchup-table td:not(:first-child){text-align:right}.section-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}.decision-card{border-color:var(--accent2)}.decision-card.official{border-color:var(--good)}.quality-list{columns:2;column-gap:24px}.quality-list li{break-inside:avoid;margin-bottom:5px}.result-win{border-color:var(--good)}.result-loss{border-color:var(--bad)}.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}.sec-head h2{margin-bottom:6px}.tool-link{font-size:.82rem;font-weight:700;white-space:nowrap}.co-head{margin:16px 0 8px;font-size:.95rem}.co-head.for{color:var(--good)}.co-head.against{color:#e08726}.callout-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}.callout{border:1px solid var(--border);border-left:4px solid var(--border);border-radius:var(--radius);padding:12px;background:var(--bg-elev)}.callout.for{border-left-color:var(--good)}.callout.against{border-left-color:#e08726}.co-title{font-weight:800;margin-bottom:4px}.co-detail{font-size:.86rem;color:var(--text);line-height:1.5}.verdict{margin-top:14px;padding:14px;border:1px solid var(--accent2);border-radius:var(--radius);background:var(--bg-elev);font-size:.95rem;line-height:1.55}.verdict .v-label{display:inline-block;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--accent2);margin-right:8px}.full-read summary{cursor:pointer;font-weight:700;color:var(--text-dim);font-size:.85rem;margin-top:12px}.full-read p{font-size:.86rem;color:var(--text-dim);line-height:1.55}.edgebar{margin:12px 0 4px}.eb-row{display:flex;align-items:center;gap:10px;margin:6px 0}.eb-name{width:92px;font-size:.78rem;color:var(--text-dim);text-align:right}.eb-track{flex:1;height:14px;background:var(--bg-elev);border:1px solid var(--border);border-radius:7px;overflow:hidden}.eb-fill{height:100%;border-radius:7px}.eb-fill.model{background:var(--accent2)}.eb-fill.mkt{background:var(--text-dim)}.eb-val{width:56px;font-size:.82rem;font-weight:800;font-variant-numeric:tabular-nums}.gauge-row{display:flex;align-items:center;gap:10px;margin:6px 0}.g-label{width:120px;font-size:.78rem;color:var(--text-dim);text-align:right}.g-track{flex:1;height:11px;background:var(--bg-elev);border:1px solid var(--border);border-radius:6px;overflow:hidden}.g-fill{height:100%;border-radius:6px}.g-val{width:110px;font-size:.8rem;font-weight:700;font-variant-numeric:tabular-nums}.pen-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:10px}.pen-side{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.pen-side b{display:block;margin-bottom:6px}.adv{color:var(--good);font-weight:800}@media(max-width:640px){.quality-list{columns:1}.matchup-table{font-size:.8rem}.matchup-table th,.matchup-table td{padding:6px 4px}}
 </style>
 <script type="application/ld+json">${jsonScript(articleSchema)}</script>
 <script type="application/ld+json">${jsonScript(eventSchema)}</script>
@@ -634,8 +799,9 @@ function renderMatchupPage(context) {
       <div class="metric"><div class="label">Best moneyline</div><div class="value">${esc(odds(market.best_price))}</div></div>
       <div class="metric"><div class="label">Sportsbooks checked</div><div class="value">${esc(known(market.books) ? market.books : "Not available")}</div></div>
     </div>
-    <h3>Why LyDia made this decision</h3>
-    <p>${esc(decisionExplanation(game))}</p>
+    ${renderEdgeBar(game)}
+    ${renderInsights(game, pitcherGame)}
+    <details class="full-read"><summary>Read the full model output</summary><p>${esc(decisionExplanation(game))}</p></details>
   </section>
 
   ${renderFinal(final, game)}
@@ -654,18 +820,22 @@ function renderMatchupPage(context) {
   </section>
 
   <section class="card">
-    <h2>Starting pitcher matchup</h2>
+    <div class="sec-head"><h2>Starting pitcher matchup</h2><a class="tool-link" href="/tools/pitcher-matchups/">Full Pitcher Matchup Tool &rarr;</a></div>
     ${renderPitcherTable(game, pitcherGame)}
-    <p class="small dim">Pitcher ratings and advanced metrics come directly from the canonical data source used by LyDia\'s Pitcher Matchup Tool.</p>
+    <p class="small dim">Same data source as the <a href="/tools/pitcher-matchups/">Pitcher Matchup Tool</a>, where every starter on the slate is compared side by side.</p>
   </section>
 
   <section class="card">
-    <h2>Offense and recent form</h2>
+    <div class="sec-head"><h2>Offense and recent form</h2><a class="tool-link" href="/stats/">Full Stats page &rarr;</a></div>
     ${renderOffenseTable(game)}
+    <p class="small dim">Season and 15-day splits for all 30 teams live on the <a href="/stats/">Stats page</a>, including hot and cold streaks and the run environment table.</p>
   </section>
 
+  ${renderTeamMap(brief, game)}
+
   <section class="card">
-    <h2>Bullpen matchup</h2>
+    <div class="sec-head"><h2>Bullpen matchup</h2><a class="tool-link" href="/tools/bullpen-fatigue/">Full Bullpen Fatigue Index &rarr;</a></div>
+    ${renderBullpenGauges(game, bullpen)}
     ${renderBullpenTable(game, bullpen)}
     <p class="small dim">Fatigue measures workload. Efficiency measures recent run prevention. Combined risk is what the moneyline and totals systems use.</p>
   </section>
@@ -730,7 +900,7 @@ function renderPitcherTable(game, pitcherGame) {
     <thead><tr><th>Metric</th><th>${esc(shortTeam(game.away_team))}</th><th>${esc(shortTeam(game.home_team))}</th></tr></thead>
     <tbody>
       <tr><th>Probable pitcher</th><td>${esc(away.name || "TBD")}</td><td>${esc(home.name || "TBD")}</td></tr>
-      <tr><th>LyDia pitcher score</th><td>${esc(known(away.score) ? away.score : "Not available")}</td><td>${esc(known(home.score) ? home.score : "Not available")}</td></tr>
+      <tr><th>LyDia pitcher score</th><td class="${known(away.score) && known(home.score) && away.score > home.score ? "adv" : ""}">${esc(known(away.score) ? away.score : "Not available")}</td><td class="${known(away.score) && known(home.score) && home.score > away.score ? "adv" : ""}">${esc(known(home.score) ? home.score : "Not available")}</td></tr>
       <tr><th>ERA</th><td>${esc(oneDecimal(away.era))}</td><td>${esc(oneDecimal(home.era))}</td></tr>
       <tr><th>WHIP</th><td>${esc(typeof away.whip === "number" ? away.whip.toFixed(2) : "Not available")}</td><td>${esc(typeof home.whip === "number" ? home.whip.toFixed(2) : "Not available")}</td></tr>
       <tr><th>K-BB%</th><td>${esc(pct(away.kbbPct))}</td><td>${esc(pct(home.kbbPct))}</td></tr>
@@ -751,7 +921,7 @@ function renderOffenseTable(game) {
     <tbody>
       <tr><th>Record</th><td>${esc(game.away_record || "Not available")}</td><td>${esc(game.home_record || "Not available")}</td></tr>
       <tr><th>Last 10</th><td>${esc(game.away_l10 || "Not available")}</td><td>${esc(game.home_l10 || "Not available")}</td></tr>
-      <tr><th>OPS, last 15 days</th><td>${esc(typeof away.ops_15d === "number" ? away.ops_15d.toFixed(3) : "Not available")}</td><td>${esc(typeof home.ops_15d === "number" ? home.ops_15d.toFixed(3) : "Not available")}</td></tr>
+      <tr><th>OPS, last 15 days</th><td class="${typeof away.ops_15d === "number" && typeof home.ops_15d === "number" && away.ops_15d > home.ops_15d ? "adv" : ""}">${esc(typeof away.ops_15d === "number" ? away.ops_15d.toFixed(3) : "Not available")}</td><td class="${typeof away.ops_15d === "number" && typeof home.ops_15d === "number" && home.ops_15d > away.ops_15d ? "adv" : ""}">${esc(typeof home.ops_15d === "number" ? home.ops_15d.toFixed(3) : "Not available")}</td></tr>
       <tr><th>Season OPS</th><td>${esc(typeof away.season_ops === "number" ? away.season_ops.toFixed(3) : "Not available")}</td><td>${esc(typeof home.season_ops === "number" ? home.season_ops.toFixed(3) : "Not available")}</td></tr>
       <tr><th>OPS change</th><td>${esc(typeof away.delta_ops === "number" ? signedDecimal(away.delta_ops, 3) : "Not available")}</td><td>${esc(typeof home.delta_ops === "number" ? signedDecimal(home.delta_ops, 3) : "Not available")}</td></tr>
       <tr><th>Runs per game, last 15 days</th><td>${esc(oneDecimal(away.rpg_15d))}</td><td>${esc(oneDecimal(home.rpg_15d))}</td></tr>
@@ -764,6 +934,19 @@ function signedDecimal(value, digits) {
   return `${value >= 0 ? "+" : ""}${value.toFixed(digits)}`;
 }
 
+function renderBullpenGauges(game, bullpen) {
+  const away = bullpen.away || {}, home = bullpen.home || {};
+  const awayRisk = away.risk_index ?? away.score, homeRisk = home.risk_index ?? home.score;
+  if (typeof awayRisk !== "number" && typeof homeRisk !== "number") return "";
+  const side = (team, pen, risk) => `<div class="pen-side"><b>${esc(shortTeam(team))}</b>
+    ${renderGauge("Combined risk", risk, pen.risk_label || "")}
+    ${renderGauge("Fatigue", typeof pen.score === "number" ? pen.score : null, pen.label || "")}
+    ${renderGauge("Efficiency", typeof pen.efficiency_score === "number" ? pen.efficiency_score : null, pen.efficiency_label || "", true)}
+  </div>`;
+  return `<div class="pen-pair">${side(game.away_team, away, awayRisk)}${side(game.home_team, home, homeRisk)}</div>
+  <p class="small dim" style="margin-top:8px">Risk is what the model actually uses: fatigue blended with how well the pen has pitched. High fatigue with high efficiency is a tired pen that is still getting outs.</p>`;
+}
+
 function renderBullpenTable(game, bullpen) {
   const away = bullpen.away || {};
   const home = bullpen.home || {};
@@ -772,7 +955,7 @@ function renderBullpenTable(game, bullpen) {
     <tbody>
       <tr><th>Fatigue</th><td>${esc(scoreAndLabel(away.score, away.label))}</td><td>${esc(scoreAndLabel(home.score, home.label))}</td></tr>
       <tr><th>Efficiency</th><td>${esc(scoreAndLabel(away.efficiency_score, away.efficiency_label))}</td><td>${esc(scoreAndLabel(home.efficiency_score, home.efficiency_label))}</td></tr>
-      <tr><th>Combined risk</th><td>${esc(scoreAndLabel(away.risk_index, away.risk_label))}</td><td>${esc(scoreAndLabel(home.risk_index, home.risk_label))}</td></tr>
+      <tr><th>Combined risk</th><td class="${typeof away.risk_index === "number" && typeof home.risk_index === "number" && away.risk_index < home.risk_index ? "adv" : ""}">${esc(scoreAndLabel(away.risk_index, away.risk_label))}</td><td class="${typeof away.risk_index === "number" && typeof home.risk_index === "number" && home.risk_index < away.risk_index ? "adv" : ""}">${esc(scoreAndLabel(home.risk_index, home.risk_label))}</td></tr>
       <tr><th>Relief innings, last 3 days</th><td>${esc(oneDecimal(away.last3_bp_ip))}</td><td>${esc(oneDecimal(home.last3_bp_ip))}</td></tr>
       <tr><th>Back-to-back arms</th><td>${esc(known(away.back_to_back_arms) ? away.back_to_back_arms : "Not available")}</td><td>${esc(known(home.back_to_back_arms) ? home.back_to_back_arms : "Not available")}</td></tr>
       <tr><th>3-day ERA</th><td>${esc(typeof away.era_3d === "number" ? away.era_3d.toFixed(2) : "Not available")}</td><td>${esc(typeof home.era_3d === "number" ? home.era_3d.toFixed(2) : "Not available")}</td></tr>
@@ -787,7 +970,7 @@ function scoreAndLabel(score, label) {
 }
 
 function renderTotals(total) {
-  if (!total) return `<section class="card"><h2>Run total projection</h2><p>A verified LyDia totals projection was not available when this page was generated.</p></section>`;
+  if (!total) return `<section class="card"><div class="sec-head"><h2>Run total projection</h2><a class="tool-link" href="/tools/totals-projections/">Full Totals Projections &rarr;</a></div><p>A verified LyDia totals projection was not available when this page was generated. Every game\'s projection lives on the <a href="/tools/totals-projections/">Totals Projections tool</a>.</p></section>`;
   const difference = typeof total.projection === "number" && typeof total.line === "number" ? total.projection - total.line : null;
   const context = difference === null
     ? "The current model and market total cannot be compared yet."
@@ -795,7 +978,7 @@ function renderTotals(total) {
       ? "The model and market are close."
       : `The model projects ${Math.abs(difference).toFixed(1)} runs ${difference > 0 ? "above" : "below"} the market total.`;
   return `<section class="card">
-    <h2>Run total projection</h2>
+    <div class="sec-head"><h2>Run total projection</h2><a class="tool-link" href="/tools/totals-projections/">Full Totals Projections &rarr;</a></div>
     <div class="metric-grid">
       <div class="metric"><div class="label">LyDia projection</div><div class="value">${esc(oneDecimal(total.projection))}</div></div>
       <div class="metric"><div class="label">Market total</div><div class="value">${esc(oneDecimal(total.line))}</div></div>
@@ -859,6 +1042,7 @@ function buildArchive() {
 
 function updateSitemap(manifest) {
   const archiveUrl = `${SITE}/mlb/matchups/`;
+  const authorUrl = `${SITE}/writers/lynold/`;
   let urls = [];
   if (fs.existsSync(SITEMAP_PATH)) {
     const existing = fs.readFileSync(SITEMAP_PATH, "utf8");
@@ -868,6 +1052,7 @@ function updateSitemap(manifest) {
   const dateSuffix = `-prediction-odds-${DATE}/`;
   urls = urls.filter(url => !(url.startsWith(`${SITE}/mlb/`) && url.endsWith(dateSuffix)));
   urls.push(archiveUrl);
+  urls.push(authorUrl);
   for (const page of manifest.pages.filter(page => page.indexable)) urls.push(page.url);
   urls = [...new Set(urls)].sort();
 
