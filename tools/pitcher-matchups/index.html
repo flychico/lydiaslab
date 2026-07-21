@@ -82,6 +82,7 @@
   <div id="games"></div>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
+<script src="/js/pitcher-matchup-core.js"></script>
 <script>
 renderNav("/tools/"); renderFooter();
 
@@ -155,7 +156,7 @@ async function load() {
   games.sort((a,b) => new Date(a.gameDate) - new Date(b.gameDate));
 
   const ids = [...new Set(games.flatMap(g => ["away","home"].map(s => g.teams[s].probablePitcher && g.teams[s].probablePitcher.id).filter(Boolean)))];
-  const [pitcherStats] = await Promise.all([fetchPitchers(ids, date), loadBullpen(date)]);
+  const [pitcherStats] = await Promise.all([LyDiaPitcherCore.loadPitchersForDate(ids, date), loadBullpen(date)]);
   const cards = games.map(g => renderGame(g, pitcherStats));
   statusEl.innerHTML = "";
   gamesEl.innerHTML = cards.join("");
@@ -264,9 +265,9 @@ async function fetchStarterUsage(id, season) {
 
 function pitcher(side, stats) {
   const p = side.probablePitcher;
-  if (!p) return scorePitcher({ name: "TBD", missing: true });
+  if (!p) return LyDiaPitcherCore.scorePitcher({ name: "TBD", missing: true });
   const st = stats[p.id] || { name: p.fullName, missing: true };
-  return scorePitcher(st);
+  return LyDiaPitcherCore.scorePitcher(st);
 }
 
 function scorePitcher(st) {
