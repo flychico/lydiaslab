@@ -283,6 +283,16 @@ async function buildBullpenSource({ date, todayGames, fetchJson, generatedAt }) 
 
   const teams = createTeamState(todayGames || []);
   const lookupWarnings = [];
+  // A postponed/suspended game's ORIGINAL listing can still report
+  // abstractGameState "Final" even though detailedState says it never
+  // played that day (MLB schedule API quirk). If a doubleheader makeup
+  // lands inside the same 3-day window, the same gamePk then appears
+  // under two different dates and would otherwise get boxscore-processed
+  // twice — double-counting one game's entire relief line. Dedupe by
+  // gamePk across the whole window, and explicitly skip listings that
+  // weren't actually played, regardless of abstractGameState.
+  const NOT_PLAYED_STATES = new Set(["Postponed", "Suspended", "Cancelled", "Suspended: Rain"]);
+  const processedGamePks = new Set();
 
   for (const priorDate of Array.from({ length: LOOKBACK_DAYS }, (_, i) => dateShift(date, -(i + 1)))) {
     let schedule = [];
@@ -295,6 +305,8 @@ async function buildBullpenSource({ date, todayGames, fetchJson, generatedAt }) 
 
     for (const g of schedule) {
       if (!g.status || g.status.abstractGameState !== "Final") continue;
+      if (g.status.detailedState && NOT_PLAYED_STATES.has(g.status.detailedState)) continue;
+      if (processedGamePks.has(g.gamePk)) continue;
       const awayId = g.teams && g.teams.away && g.teams.away.team && g.teams.away.team.id;
       const homeId = g.teams && g.teams.home && g.teams.home.team && g.teams.home.team.id;
       if (!teams[awayId] && !teams[homeId]) continue;
@@ -303,6 +315,7 @@ async function buildBullpenSource({ date, todayGames, fetchJson, generatedAt }) 
         const box = await fetchJson(`https://statsapi.mlb.com/api/v1/game/${g.gamePk}/boxscore`);
         processBoxSide(box, "away", awayId, priorDate, teams);
         processBoxSide(box, "home", homeId, priorDate, teams);
+        processedGamePks.add(g.gamePk);
       } catch (err) {
         lookupWarnings.push(`Could not load boxscore ${g.gamePk}: ${err.message}`);
       }
