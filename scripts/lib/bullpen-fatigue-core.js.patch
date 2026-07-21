@@ -1,0 +1,38 @@
+diff --git a/scripts/lib/bullpen-fatigue-core.js b/scripts/lib/bullpen-fatigue-core.js
+--- a/scripts/lib/bullpen-fatigue-core.js
++++ b/scripts/lib/bullpen-fatigue-core.js
+@@
+-  LyDia Bullpen Fatigue Core v3-runs-aware
++  LyDia Bullpen Fatigue Core v3-workload-efficiency
+@@
+-  Active owned scoring rule (v3, runs-aware):
+-  Score = 45
+-    + ((Last 3 BP IP - 9) × 3.5)
+-    + ((Last game BP IP - 3) × 4)
+-    + (Back-to-back arms × 6)
+-    + clamp((Last 3 BP runs allowed - 4) × 1.5, -6, 12)
+-  A shelled pen is a stressed pen: runs allowed capture blown leads, long
+-  outings from leverage arms, and manager trust burned — workload IP alone misses that.
++  Active fatigue rule (workload only):
++  Fatigue = 45
++    + ((Last 3 BP IP - expected BP IP) × 3.5)
++    + ((Last game BP IP - 3) × 4)
++    + (Back-to-back arms × 6)
++    + no-recent-games credit
++
++  expected BP IP = 3 × recent games tracked.
++  The no-recent-games credit is -18 when no completed games are available.
++
++  Bullpen efficiency is scored separately from recent ERA and WHIP.
++  The combined risk index blends fatigue with efficiency for downstream use.
+@@
+-const VERSION = "bullpen-fatigue-v3-runs-aware";
++const VERSION = "bullpen-fatigue-v3-workload-efficiency";
+@@
+-    formula: "45 + ((Last 3 BP IP - 9) x 3.5) + ((Last game BP IP - 3) x 4) + (Back-to-back arms x 6)",
++    formula: "45 + ((Last 3 BP IP - (3 x recent games tracked)) x 3.5) + ((Last game BP IP - 3) x 4) + (Back-to-back arms x 6) + no-recent-games credit (-18 when no recent games)",
+@@
+-    note: "v3 runs-aware formula. Reliever counts are context only and do not add hidden score points.",
+-    formula: "45 + ((Last 3 BP IP - 9) x 3.5) + ((Last game BP IP - 3) x 4) + (Back-to-back arms x 6) + clamp((Last 3 BP runs - 4) x 1.5, -6, 12)",
++    note: "v3 workload fatigue plus separate efficiency and combined risk. Reliever counts are context only and do not add hidden score points.",
++    formula: "45 + ((Last 3 BP IP - (3 x recent games tracked)) x 3.5) + ((Last game BP IP - 3) x 4) + (Back-to-back arms x 6) + no-recent-games credit (-18 when no recent games)",
