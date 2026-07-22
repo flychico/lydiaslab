@@ -474,9 +474,14 @@ function renderGameCard(item) {
   const status = brief ? normalizeStatus(brief.status) : "building";
   const statusLabel = brief ? (brief.value_tag || statusText(status)) : (isFinal ? "Final" : "Analysis Building");
   const statusClass = isLive ? "live" : isFinal ? "final" : statusClassName(status);
-  const matchupUrl = page && page.url ? new URL(page.url).pathname : fallbackMatchupUrl(game, datePick.value);
-  const cardTarget = page ? matchupUrl : "/mlb/matchups/";
-  const directPage = !!page;
+  // Permanent matchup pages are generated before first pitch. A live refresh
+  // can temporarily omit a game from the manifest, so never demote a live card
+  // to the archive just because that lookup is missing.
+  const matchupUrl = page && page.url
+    ? new URL(page.url).pathname
+    : fallbackMatchupUrl(game, datePick.value, renderedGames.map(item => item.game));
+  const cardTarget = matchupUrl;
+  const directPage = true;
 
   const model = modelProbabilities(brief, away.team.name, home.team.name);
   const marketMoneyline = market && market.moneyline;
@@ -637,10 +642,17 @@ function inferPublishedPrice(brief, teamName) {
   return null;
 }
 
-function fallbackMatchupUrl(game, date) {
+function fallbackMatchupUrl(game, date, scheduleGames) {
   const away = TEAM_SHORT[game.teams.away.team.name] || game.teams.away.team.name;
   const home = TEAM_SHORT[game.teams.home.team.name] || game.teams.home.team.name;
-  return `/mlb/${slugify(away)}-vs-${slugify(home)}-prediction-odds-${date}/`;
+  let url = `/mlb/${slugify(away)}-vs-${slugify(home)}-prediction-odds-${date}/`;
+  const same = (scheduleGames || []).filter(candidate =>
+    candidate.teams.away.team.name === game.teams.away.team.name &&
+    candidate.teams.home.team.name === game.teams.home.team.name
+  ).sort((a,b) => String(a.gameDate || "").localeCompare(String(b.gameDate || "")));
+  const gameNumber = same.findIndex(candidate => String(candidate.gamePk) === String(game.gamePk)) + 1;
+  if (gameNumber > 1) url = url.slice(0, -1) + `-game-${gameNumber}/`;
+  return url;
 }
 
 function slugify(value) {

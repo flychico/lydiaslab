@@ -135,8 +135,20 @@ async function main() {
   const teamHitting = args.offline ? { season: {}, recent: {} } : await fetchTeamHitting(DATE);
   const previousManifest = readJsonSafe(MANIFEST_PATH) || { pages: [] };
   const previousBySlug = new Map((previousManifest.pages || []).map(page => [page.slug, page]));
+  const previousByPk = new Map((previousManifest.pages || []).map(page => [String(page.game_pk), page]));
   const schedule = args.offline ? null : await fetchSchedule(DATE);
-  const scheduleByPk = new Map((((schedule && schedule.dates || [])[0] || {}).games || []).map(game => [String(game.gamePk), game]));
+  const scheduleGames = (((schedule && schedule.dates || [])[0] || {}).games || []);
+  const scheduleByPk = new Map(scheduleGames.map(game => [String(game.gamePk), game]));
+  const briefByPk = new Map(brief.games.map(game => [String(game.game_pk), game]));
+  const scheduleAsBrief = scheduleGames.map(game => ({
+    game_pk: game.gamePk,
+    game: `${game.teams.away.team.name} @ ${game.teams.home.team.name}`,
+    away_team: game.teams.away.team.name,
+    home_team: game.teams.home.team.name,
+    game_time_iso: game.gameDate,
+    status: (briefByPk.get(String(game.gamePk)) || {}).status || (previousByPk.get(String(game.gamePk)) || {}).status || "research"
+  }));
+  const fullDayGames = scheduleAsBrief.length ? scheduleAsBrief : brief.games;
 
   fs.mkdirSync(MATCHUP_ROOT, { recursive: true });
   fs.mkdirSync(ARCHIVE_DIR, { recursive: true });
@@ -147,7 +159,7 @@ async function main() {
   // Red Sox split doubleheader proved it. Number games by start time and
   // suffix every game after the first.
   const slugGroups = new Map();
-  for (const game of brief.games) {
+  for (const game of fullDayGames) {
     const base = matchupSlug(game);
     if (!slugGroups.has(base)) slugGroups.set(base, []);
     slugGroups.get(base).push(game);
@@ -160,16 +172,18 @@ async function main() {
   }
 
   // Precompute every game's URL so each page can link to its sibling games.
-  const dayLinks = brief.games.map(g => {
+  const dayLinks = fullDayGames.map(g => {
     const n = dhNumber.get(String(g.game_pk)) || null;
-    const slug = matchupSlug(g) + (n && n > 1 ? `-game-${n}` : "");
+    const prior = previousByPk.get(String(g.game_pk));
+    const slug = (prior && prior.slug) || (matchupSlug(g) + (n && n > 1 ? `-game-${n}` : ""));
     return { game_pk: g.game_pk, game: g.game, away_team: g.away_team, home_team: g.home_team, status: g.status, url: `/mlb/${slug}/` };
   });
 
   const pages = [];
   for (const game of brief.games) {
     const gameNumber = dhNumber.get(String(game.game_pk)) || null;
-    const slug = matchupSlug(game) + (gameNumber && gameNumber > 1 ? `-game-${gameNumber}` : "");
+    const priorForGame = previousByPk.get(String(game.game_pk));
+    const slug = (priorForGame && priorForGame.slug) || (matchupSlug(game) + (gameNumber && gameNumber > 1 ? `-game-${gameNumber}` : ""));
     const urlPath = `/mlb/${slug}/`;
     const scheduleGame = scheduleByPk.get(String(game.game_pk)) || null;
     const totalsGame = (totals.games && totals.games[String(game.game_pk)]) || null;
@@ -224,6 +238,56 @@ async function main() {
       final: finalSummary(scheduleGame, resultGame)
     });
   }
+
+  // A refreshed member brief may stop carrying games once they go live. Those
+  // permanent pages still exist and must remain in the manifest, archive,
+  // sitemap, and scoreboard lookup. Recover any same-day schedule page that was
+  // generated earlier instead of silently dropping it from navigation.
+  const generatedPk = new Set(pages.map(page => String(page.game_pk)));
+  for (const game of fullDayGames) {
+    const pk = String(game.game_pk);
+    if (generatedPk.has(pk)) continue;
+    const gameNumber = dhNumber.get(pk) || null;
+    const prior = previousByPk.get(pk) || null;
+    const slug = (prior && prior.slug) || (matchupSlug(game) + (gameNumber && gameNumber > 1 ? `-game-${gameNumber}` : ""));
+    const outputPath = path.join(MATCHUP_ROOT, slug, "index.html");
+    if (!fs.existsSync(outputPath)) continue;
+    const existingHtml = fs.readFileSync(outputPath, "utf8");
+    const scheduleGame = scheduleByPk.get(pk) || null;
+    pages.push({
+      date: DATE,
+      game_pk: game.game_pk,
+      game: game.game,
+      away_team: game.away_team,
+      home_team: game.home_team,
+      slug,
+      url: `${SITE}/mlb/${slug}/`,
+      output: relative(outputPath),
+      status: (prior && prior.status) || game.status || "research",
+      indexable: prior ? !!prior.indexable : /<meta name="robots" content="index,follow/i.test(existingHtml),
+      quality_score: prior ? prior.quality_score : null,
+      quality_total: prior ? prior.quality_total : null,
+      missing: prior ? (prior.missing || []) : [],
+      generated_at: (prior && prior.generated_at) || fs.statSync(outputPath).mtime.toISOString(),
+      weather: (prior && prior.weather) || null,
+      pitcher_source_version: (prior && prior.pitcher_source_version) || pitcherSource.source_version || null,
+      final: finalSummary(scheduleGame, null)
+    });
+    generatedPk.add(pk);
+  }
+
+  // Network-safe fallback: if the schedule enrichment is unavailable, keep
+  // every prior same-day page whose generated file still exists.
+  for (const prior of (previousManifest.pages || [])) {
+    const pk = String(prior.game_pk);
+    if (generatedPk.has(pk)) continue;
+    const outputPath = path.join(ROOT, prior.output || path.join("mlb", prior.slug || "", "index.html"));
+    if (!prior.slug || !fs.existsSync(outputPath)) continue;
+    pages.push(prior);
+    generatedPk.add(pk);
+  }
+
+  pages.sort((a, b) => String((scheduleByPk.get(String(a.game_pk)) || {}).gameDate || "").localeCompare(String((scheduleByPk.get(String(b.game_pk)) || {}).gameDate || "")));
 
   const manifest = {
     date: DATE,
