@@ -1243,19 +1243,44 @@ function buildArchive() {
     b.date.localeCompare(a.date) || String(a.game || "").localeCompare(String(b.game || ""))
   );
 
-  const rows = allPages.map(page => `<article class="card matchup-row">
-    <div><a href="${esc(new URL(page.url).pathname)}"><strong>${esc(page.game)}</strong></a></div>
-    <div class="small dim">${esc(niceDate(page.date))} · ${esc(decisionLabel(page.status))} · ${page.indexable ? "Search ready" : "Analysis building"}</div>
-  </article>`).join("\n");
+  // Group by date so the page reads like a dated set of daily analyses.
+  const byDate = new Map();
+  for (const page of allPages) {
+    if (!byDate.has(page.date)) byDate.set(page.date, []);
+    byDate.get(page.date).push(page);
+  }
+  const dateSections = [...byDate.keys()].sort((a, b) => b.localeCompare(a)).map(date => {
+    const rows = byDate.get(date).map(page => `<article class="card matchup-row">
+      <div><a href="${esc(new URL(page.url).pathname)}"><strong>${esc(page.game)}</strong></a></div>
+      <div class="small dim">${esc(decisionLabel(page.status))}${page.indexable ? "" : " · analysis building"}</div>
+    </article>`).join("\n");
+    return `<h2 style="margin-top:22px">${esc(niceDate(date))}</h2>${rows}`;
+  }).join("\n");
+  const body = dateSections || '<div class="notice">No matchup analyses have been published yet.</div>';
 
-  const html = `<!DOCTYPE html>
+  const page = (canonical, navActive, eyebrow, h1, sub) => `<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MLB Matchup Predictions and Odds Archive | LyDia</title>
-<meta name="description" content="LyDia MLB matchup pages with model probabilities, odds, starting pitchers, offense form, bullpen risk and public results.">
-<link rel="canonical" href="${SITE}/mlb/matchups/">
-<link rel="stylesheet" href="/css/style.css"><style>.matchup-row{margin:10px 0}</style></head>
-<body><nav id="nav"></nav><main><p class="eyebrow">LyDia matchup archive</p><h1>MLB Matchup Predictions and Odds</h1><p class="subtitle">Permanent matchup pages generated from LyDia's daily model card. Complete pages are submitted for indexing. Pages with missing inputs remain available but are held out of search.</p>${rows || '<div class="notice">No matchup pages have been generated yet.</div>'}</main><footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/picks/");renderFooter();</script></body></html>`;
-  fs.writeFileSync(path.join(ARCHIVE_DIR, "index.html"), html, "utf8");
+<title>${esc(h1)} | LyDia</title>
+<meta name="description" content="LyDia MLB matchup analysis: model probability, moneyline odds, starting pitchers, offense form, bullpen risk and public grading for every game.">
+<link rel="canonical" href="${SITE}${canonical}">
+<link rel="stylesheet" href="/css/style.css"><style>.matchup-row{margin:8px 0}</style></head>
+<body><nav id="nav"></nav><main><p class="eyebrow">${esc(eyebrow)}</p><h1>${esc(h1)}</h1><p class="subtitle">${esc(sub)}</p>${body}
+<div class="lead-box" style="border-color:var(--accent2);margin-top:22px"><h3 style="margin:0 0 4px">Get tomorrow's MLB model card free</h3><p class="dim small" style="margin:0">One email each morning with the featured game and the previous day's graded result.</p><p style="margin-top:10px"><a class="btn blue" href="/membership/#free">Get the free card &rarr;</a></p></div>
+</main><footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("${navActive}");renderFooter();</script></body></html>`;
+
+  const sub = "Every game gets its own permanent analysis page built from LyDia's model: win probability, market odds, starting pitchers, offense form, bullpen risk and final grading. These are LyDia's own analyses, not aggregated from other sites.";
+
+  // Canonical archive stays at /mlb/matchups/.
+  fs.writeFileSync(path.join(ARCHIVE_DIR, "index.html"),
+    page("/mlb/matchups/", "/articles/", "LyDia matchup archive", "MLB Matchup Predictions and Odds", sub), "utf8");
+
+  // The Articles tab now shows LyDia's own matchup analyses instead of scraped
+  // outside content. This runs after the Research Desk step in the workflow, so
+  // it overwrites that page. External aggregation is dropped from what users see.
+  const articlesDir = path.join(ROOT, "articles");
+  fs.mkdirSync(articlesDir, { recursive: true });
+  fs.writeFileSync(path.join(articlesDir, "index.html"),
+    page("/articles/", "/articles/", "LyDia analysis", "MLB Matchup Analysis", sub), "utf8");
 }
 
 function updateSitemap(manifest) {
@@ -1321,7 +1346,17 @@ function matchupPageUrl(g) {
 
 `;
 
-    html = html.replace(renderAnchor, helper + renderAnchor);
+    // Inject at the TOP of the page script, right after PICKS_DATA is declared,
+    // NOT before renderGame. The initial inline render runs synchronously at the
+    // top of the script; a MATCHUP_TEAM_SHORT const declared lower down is still
+    // in the temporal dead zone at that point, so the first paint throws and the
+    // page shows empty until a manual refresh.
+    const topAnchor = "let PICKS_DATA = null;";
+    if (html.includes(topAnchor)) {
+      html = html.replace(topAnchor, topAnchor + "\n" + helper);
+    } else {
+      html = html.replace(renderAnchor, helper + renderAnchor);
+    }
     changed = true;
   }
 
