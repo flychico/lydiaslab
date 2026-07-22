@@ -7,266 +7,651 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-
   gtag('config', 'G-XVWTMDNBJK');
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scoreboard — live MLB games | LyDia</title>
+<title>MLB Scoreboard, Predictions and Odds | LyDia</title>
+<meta name="description" content="Today's MLB scoreboard with live scores, probable pitchers, moneyline odds, totals, LyDia win probabilities, and permanent matchup analysis pages.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="LyDia">
-<meta property="og:title" content="Scoreboard — live MLB games | LyDia">
-<meta property="og:description" content="Daily MLB games dashboard: scores, probable pitchers, team records, and market win probabilities for every matchup.">
+<meta property="og:title" content="MLB Scoreboard, Predictions and Odds | LyDia">
+<meta property="og:description" content="Every MLB matchup in one place with live scores, market odds, LyDia probabilities, totals projections, and matchup analysis.">
 <meta property="og:url" content="https://lydiaslab.com/dashboard/">
 <meta property="og:image" content="https://lydiaslab.com/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Scoreboard — live MLB games | LyDia">
-<meta name="twitter:description" content="Daily MLB games dashboard: scores, probable pitchers, team records, and market win probabilities for every matchup.">
+<meta name="twitter:title" content="MLB Scoreboard, Predictions and Odds | LyDia">
+<meta name="twitter:description" content="Every MLB matchup in one place with live scores, market odds, LyDia probabilities, totals projections, and matchup analysis.">
 <meta name="twitter:image" content="https://lydiaslab.com/img/og-card.png">
-
-<meta name="description" content="Daily MLB games dashboard: scores, probable pitchers, team records, and market win probabilities for every matchup.">
 <link rel="canonical" href="https://lydiaslab.com/dashboard/">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
 <style>
-.controls { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin-bottom: 20px; }
-.controls .field { margin-bottom: 0; }
-.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 24px; }
-.kpi { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
-.kpi .label { font-size: .78rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; }
-.kpi .value { font-size: 1.35rem; font-weight: 700; margin-top: 2px; }
-.kpi .sub { font-size: .8rem; color: var(--text-dim); }
-.games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 14px; }
-.gcard { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-.gcard .time { font-size: .8rem; color: var(--text-dim); display: flex; justify-content: space-between; }
-.teamline { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.teamline .tname { font-weight: 600; }
-.teamline .rec { color: var(--text-dim); font-size: .82rem; }
-.teamline .ml { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 54px; text-align: right; }
-.teamline .prob { color: var(--text-dim); font-size: .82rem; min-width: 48px; text-align: right; }
-.pitchers { font-size: .82rem; color: var(--text-dim); border-top: 1px solid var(--border); padding-top: 8px; }
-.fav { color: var(--accent2); }
-.score { font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 30px; text-align: right; display: inline-block; }
-.tname.winner { color: var(--accent); }
-.score.winner { color: var(--accent); }
-.badge.live { background: rgba(207,34,46,.10); color: var(--danger); }
-.gcard.is-live { border-color: rgba(207,34,46,.45); }
-.probbar { height: 6px; border-radius: 3px; background: var(--bg-elev); overflow: hidden; display: flex; }
-.probbar .away-seg { background: var(--accent2); }
-.probbar .home-seg { background: #f2a7cd; }
+.scoreboard-shell { max-width: 1220px; }
+.score-hero {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(109,93,252,.25);
+  border-radius: 24px;
+  padding: 28px;
+  margin-bottom: 22px;
+  background:
+    radial-gradient(circle at 92% 0%, rgba(217,70,143,.24), transparent 34%),
+    radial-gradient(circle at 5% 100%, rgba(35,184,199,.22), transparent 38%),
+    linear-gradient(135deg, rgba(109,93,252,.13), rgba(255,255,255,.92) 48%, rgba(217,70,143,.10));
+  box-shadow: 0 24px 65px rgba(74,58,150,.14);
+}
+.score-hero::after {
+  content: "";
+  position: absolute;
+  width: 230px;
+  height: 230px;
+  border-radius: 50%;
+  right: -90px;
+  bottom: -125px;
+  background: linear-gradient(135deg, rgba(109,93,252,.26), rgba(217,70,143,.18));
+  filter: blur(2px);
+}
+.score-hero > * { position: relative; z-index: 1; }
+.score-hero h1 { font-size: clamp(2rem, 4vw, 3.35rem); max-width: 850px; line-height: 1.02; letter-spacing: -.045em; }
+.score-hero .subtitle { max-width: 790px; font-size: 1rem; margin-bottom: 0; }
+.score-hero-chips { display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; }
+.hero-chip {
+  display:inline-flex; align-items:center; gap:6px; padding:7px 11px;
+  border:1px solid rgba(109,93,252,.18); border-radius:999px;
+  background:rgba(255,255,255,.72); color:var(--text); font-size:.82rem; font-weight:700;
+  backdrop-filter: blur(10px);
+}
+.score-controls {
+  display:flex; align-items:end; justify-content:space-between; gap:14px; flex-wrap:wrap;
+  background:rgba(255,255,255,.78); border:1px solid var(--border); border-radius:18px;
+  padding:14px; margin-bottom:16px; box-shadow:var(--shadow-sm); backdrop-filter:blur(12px);
+}
+.date-controls, .view-controls { display:flex; align-items:end; gap:8px; flex-wrap:wrap; }
+.date-controls .field { margin:0; min-width:165px; }
+.control-btn {
+  min-height:42px; padding:9px 14px; border-radius:12px; background:#fff;
+  color:var(--text); border:1px solid var(--border); box-shadow:none;
+}
+.control-btn:hover { border-color:rgba(109,93,252,.45); background:var(--bg-elev); }
+.control-btn.active { background:linear-gradient(135deg,var(--accent2),var(--accent)); color:#fff; border-color:transparent; }
+.kpis {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:20px;
+}
+.kpi {
+  position:relative; overflow:hidden; background:rgba(255,255,255,.88); border:1px solid var(--border);
+  border-radius:17px; padding:15px 16px; box-shadow:var(--shadow-sm);
+}
+.kpi::after {
+  content:""; position:absolute; width:70px; height:70px; border-radius:50%;
+  right:-25px; top:-28px; background:rgba(109,93,252,.10);
+}
+.kpi:nth-child(2)::after { background:rgba(217,70,143,.11); }
+.kpi:nth-child(3)::after { background:rgba(35,184,199,.12); }
+.kpi:nth-child(4)::after { background:rgba(246,170,28,.13); }
+.kpi .label { font-size:.73rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.08em; font-weight:800; }
+.kpi .value { font-size:1.45rem; line-height:1.1; font-weight:850; margin-top:4px; letter-spacing:-.03em; }
+.kpi .sub { font-size:.78rem; color:var(--text-dim); margin-top:3px; }
+.games-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(350px,1fr)); gap:16px; }
+.score-card {
+  --away-color:#6d5dfc; --home-color:#d9468f;
+  position:relative; display:flex; flex-direction:column; min-height:100%;
+  color:var(--text); text-decoration:none; overflow:hidden;
+  background:rgba(255,255,255,.94); border:1px solid rgba(109,93,252,.16);
+  border-radius:22px; box-shadow:0 12px 32px rgba(31,35,40,.08);
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.score-card::before {
+  content:""; height:6px; display:block;
+  background:linear-gradient(90deg,var(--away-color) 0 50%,var(--home-color) 50% 100%);
+}
+.score-card:hover {
+  transform:translateY(-4px); box-shadow:0 24px 55px rgba(74,58,150,.17);
+  border-color:rgba(109,93,252,.38); text-decoration:none;
+}
+.score-card:focus-visible { outline:3px solid rgba(109,93,252,.32); outline-offset:3px; }
+.score-card.is-live { border-color:rgba(207,34,46,.44); box-shadow:0 14px 34px rgba(207,34,46,.11); }
+.card-body { padding:15px 16px 16px; display:flex; flex-direction:column; gap:12px; flex:1; }
+.card-top { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.game-meta { min-width:0; }
+.game-time { font-size:.92rem; font-weight:850; }
+.game-venue { display:block; color:var(--text-dim); font-size:.73rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:230px; }
+.game-status {
+  flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; border-radius:999px;
+  padding:5px 9px; font-size:.7rem; line-height:1; font-weight:850; letter-spacing:.04em; text-transform:uppercase;
+  background:rgba(109,93,252,.10); color:var(--accent2);
+}
+.game-status.live { background:rgba(207,34,46,.10); color:var(--danger); }
+.game-status.live::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; animation:pulse 1.4s infinite; }
+.game-status.final { background:rgba(31,35,40,.07); color:var(--text-dim); }
+.game-status.official { background:rgba(30,142,62,.12); color:var(--good); }
+.game-status.value { background:rgba(217,70,143,.12); color:var(--accent); }
+.game-status.watch { background:rgba(246,170,28,.14); color:#8d5c00; }
+.game-status.pass { background:rgba(87,96,106,.10); color:var(--text-dim); }
+.teams { display:grid; gap:9px; }
+.team-row {
+  display:grid; grid-template-columns:42px minmax(0,1fr) auto; align-items:center; gap:10px;
+  padding:8px 9px; border-radius:14px; background:linear-gradient(90deg,rgba(109,93,252,.045),rgba(255,255,255,.2));
+}
+.team-row.home { background:linear-gradient(90deg,rgba(217,70,143,.045),rgba(255,255,255,.2)); }
+.team-logo-wrap {
+  width:42px; height:42px; display:grid; place-items:center; border-radius:12px;
+  background:#fff; border:1px solid rgba(31,35,40,.08); box-shadow:0 4px 12px rgba(31,35,40,.06);
+}
+.team-logo { width:34px; height:34px; object-fit:contain; }
+.team-initials { display:none; font-size:.75rem; font-weight:900; color:var(--text-dim); }
+.team-copy { min-width:0; }
+.team-name { font-weight:850; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.team-record { color:var(--text-dim); font-size:.74rem; margin-top:2px; }
+.team-numbers { text-align:right; font-variant-numeric:tabular-nums; }
+.team-score { font-size:1.65rem; line-height:1; font-weight:900; }
+.team-price { font-size:1rem; line-height:1.1; font-weight:900; }
+.team-prob { display:block; font-size:.72rem; color:var(--text-dim); margin-top:2px; }
+.team-row.winner .team-name, .team-row.winner .team-score { color:var(--good); }
+.market-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.market-box {
+  min-width:0; border:1px solid rgba(109,93,252,.13); border-radius:13px;
+  padding:9px; background:linear-gradient(180deg,rgba(246,243,255,.75),rgba(255,255,255,.85));
+}
+.market-box.total { border-color:rgba(35,184,199,.18); background:linear-gradient(180deg,rgba(232,252,253,.76),rgba(255,255,255,.88)); }
+.market-box.rating { border-color:rgba(217,70,143,.18); background:linear-gradient(180deg,rgba(255,239,248,.76),rgba(255,255,255,.88)); }
+.market-label { display:block; color:var(--text-dim); font-size:.65rem; font-weight:850; text-transform:uppercase; letter-spacing:.07em; }
+.market-value { display:block; font-size:.93rem; font-weight:900; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.market-sub { display:block; color:var(--text-dim); font-size:.68rem; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.prob-compare { display:grid; gap:6px; }
+.prob-line { display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:.72rem; color:var(--text-dim); }
+.prob-track { height:8px; border-radius:999px; overflow:hidden; display:flex; background:var(--bg-elev); }
+.prob-away { background:var(--away-color); }
+.prob-home { background:var(--home-color); }
+.pitcher-line {
+  display:flex; align-items:center; gap:8px; padding-top:10px; border-top:1px solid var(--border);
+  color:var(--text-dim); font-size:.76rem;
+}
+.card-cta {
+  margin-top:auto; padding-top:2px; display:flex; justify-content:space-between; align-items:center;
+  color:var(--accent2); font-size:.79rem; font-weight:850;
+}
+.card-cta span:last-child { font-size:1rem; transition:transform .18s ease; }
+.score-card:hover .card-cta span:last-child { transform:translateX(4px); }
+.score-empty {
+  grid-column:1/-1; padding:32px; text-align:center; border-radius:20px;
+  border:1px dashed var(--border); background:rgba(255,255,255,.72); color:var(--text-dim);
+}
+.data-note { margin-top:16px; font-size:.76rem; color:var(--text-dim); }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.35;transform:scale(.75)} }
+@media (max-width:760px) {
+  .score-hero { padding:22px 18px; border-radius:20px; }
+  .score-controls { align-items:stretch; }
+  .date-controls,.view-controls { width:100%; }
+  .date-controls .field { flex:1; }
+  .view-controls .control-btn { flex:1; padding-left:8px; padding-right:8px; }
+  .games-grid { grid-template-columns:1fr; }
+}
+@media (max-width:420px) {
+  .market-grid { grid-template-columns:1fr 1fr; }
+  .market-box.rating { grid-column:1/-1; }
+  .game-venue { max-width:180px; }
+}
 </style>
 </head>
 <body>
 <nav id="nav"></nav>
-<main>
-  <h1>Scoreboard</h1>
-  <p class="subtitle">Upcoming MLB games with probable pitchers, records, and market win probabilities.</p>
-
-  <div class="controls">
-    <div class="field">
-      <label for="date-pick">Date</label>
-      <input type="date" id="date-pick">
+<main class="scoreboard-shell">
+  <section class="score-hero">
+    <p class="eyebrow">Every game. One clear starting point.</p>
+    <h1>MLB Scoreboard, Predictions and Odds</h1>
+    <p class="subtitle">Follow the full slate from pregame to final. Compare moneyline prices, market probabilities, LyDia win probabilities, projected totals, and open the complete matchup analysis from every card.</p>
+    <div class="score-hero-chips">
+      <span class="hero-chip">⚾ Full daily slate</span>
+      <span class="hero-chip">📈 Moneyline and totals</span>
+      <span class="hero-chip">🧪 LyDia model reads</span>
+      <span class="hero-chip">🔗 Permanent matchup pages</span>
     </div>
-    <button onclick="shiftDay(0)">Today</button>
-    <button class="secondary" onclick="shiftDay(1)">Tomorrow</button>
-    <button class="secondary" onclick="load()">Refresh</button>
-  </div>
+  </section>
+
+  <section class="score-controls" aria-label="Scoreboard controls">
+    <div class="date-controls">
+      <button class="control-btn" type="button" onclick="shiftSelectedDay(-1)" aria-label="Previous day">←</button>
+      <div class="field">
+        <label for="date-pick">Scoreboard date</label>
+        <input type="date" id="date-pick">
+      </div>
+      <button class="control-btn" type="button" onclick="setToday()">Today</button>
+      <button class="control-btn" type="button" onclick="shiftSelectedDay(1)" aria-label="Next day">→</button>
+      <button class="control-btn" type="button" onclick="loadScoreboard()">Refresh</button>
+    </div>
+    <div class="view-controls" role="group" aria-label="Filter games">
+      <button class="control-btn active" type="button" data-filter="all">All</button>
+      <button class="control-btn" type="button" data-filter="preview">Pregame</button>
+      <button class="control-btn" type="button" data-filter="live">Live</button>
+      <button class="control-btn" type="button" data-filter="final">Final</button>
+    </div>
+  </section>
 
   <div id="odds-note"></div>
-  <div class="kpis" id="kpis"></div>
-  <div id="status" class="loading">Loading schedule…</div>
-  <div class="games-grid" id="games"></div>
+  <section class="kpis" id="kpis" aria-label="Slate summary"></section>
+  <div id="status" class="loading">Loading the MLB slate…</div>
+  <section class="games-grid" id="games" aria-live="polite"></section>
+  <p class="data-note">Official LyDia picks remain moneyline-only. Totals are shown as market information and LyDia projections, not official picks. Pregame odds can remain visible during live and completed games for context.</p>
 </main>
-<footer id="footer"></footer><script src="/js/app.js"></script>
+
+<footer id="footer"></footer>
+<script src="/js/app.js"></script>
 <script>
-renderNav("/dashboard/"); renderFooter();
+renderNav("/dashboard/");
+renderFooter();
+
+const TEAM_SHORT = {
+  "Arizona Diamondbacks":"Diamondbacks","Athletics":"Athletics","Atlanta Braves":"Braves",
+  "Baltimore Orioles":"Orioles","Boston Red Sox":"Red Sox","Chicago Cubs":"Cubs",
+  "Chicago White Sox":"White Sox","Cincinnati Reds":"Reds","Cleveland Guardians":"Guardians",
+  "Colorado Rockies":"Rockies","Detroit Tigers":"Tigers","Houston Astros":"Astros",
+  "Kansas City Royals":"Royals","Los Angeles Angels":"Angels","Los Angeles Dodgers":"Dodgers",
+  "Miami Marlins":"Marlins","Milwaukee Brewers":"Brewers","Minnesota Twins":"Twins",
+  "New York Mets":"Mets","New York Yankees":"Yankees","Philadelphia Phillies":"Phillies",
+  "Pittsburgh Pirates":"Pirates","San Diego Padres":"Padres","San Francisco Giants":"Giants",
+  "Seattle Mariners":"Mariners","St. Louis Cardinals":"Cardinals","Tampa Bay Rays":"Rays",
+  "Texas Rangers":"Rangers","Toronto Blue Jays":"Blue Jays","Washington Nationals":"Nationals"
+};
+
+const TEAM_COLORS = {
+  108:"#ba0021",109:"#a71930",110:"#df4601",111:"#bd3039",112:"#0e3386",113:"#c6011f",
+  114:"#e31937",115:"#33006f",116:"#0c2340",117:"#eb6e1f",118:"#004687",119:"#ba0c2f",
+  120:"#00a3e0",121:"#002d72",133:"#ba0021",134:"#ce1141",135:"#0c2c56",136:"#ffc425",
+  137:"#ff5910",138:"#fd5a1e",139:"#003831",140:"#2f241d",141:"#c41e3a",142:"#002b5c",
+  143:"#003278",144:"#8fbce6",145:"#e81828",146:"#134a8e",147:"#e4002b",158:"#ff6f00"
+};
 
 const datePick = document.getElementById("date-pick");
+const gamesEl = document.getElementById("games");
+const statusEl = document.getElementById("status");
+const kpisEl = document.getElementById("kpis");
+const oddsNoteEl = document.getElementById("odds-note");
+let activeFilter = "all";
+let renderedGames = [];
+
 datePick.value = localISODate(new Date());
-datePick.addEventListener("change", load);
-load();
+datePick.addEventListener("change", loadScoreboard);
+document.querySelectorAll("[data-filter]").forEach(button => {
+  button.addEventListener("click", () => {
+    activeFilter = button.dataset.filter;
+    document.querySelectorAll("[data-filter]").forEach(x => x.classList.toggle("active", x === button));
+    renderCards();
+  });
+});
 
-function localISODate(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-function shiftDay(n) {
-  const d = new Date(); d.setDate(d.getDate() + n);
-  datePick.value = localISODate(d);
-  load();
+loadScoreboard();
+setInterval(() => {
+  if (datePick.value === localISODate(new Date())) loadScoreboard({ quiet: true });
+}, 120000);
+
+function localISODate(date) {
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
 }
 
-async function load() {
-  const statusEl = document.getElementById("status");
-  const gamesEl = document.getElementById("games");
-  const kpisEl = document.getElementById("kpis");
-  const noteEl = document.getElementById("odds-note");
-  statusEl.innerHTML = `<div class="loading">Loading schedule…</div>`;
-  gamesEl.innerHTML = ""; kpisEl.innerHTML = ""; noteEl.innerHTML = "";
+function parseLocalDate(value) {
+  const [year,month,day] = value.split("-").map(Number);
+  return new Date(year, month-1, day, 12, 0, 0);
+}
+
+function setToday() {
+  datePick.value = localISODate(new Date());
+  loadScoreboard();
+}
+
+function shiftSelectedDay(amount) {
+  const date = parseLocalDate(datePick.value);
+  date.setDate(date.getDate() + amount);
+  datePick.value = localISODate(date);
+  loadScoreboard();
+}
+
+async function loadJson(url) {
+  try {
+    const response = await fetch(url, { cache:"no-store" });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+async function loadScoreboard(options = {}) {
+  if (!options.quiet) {
+    statusEl.innerHTML = "Loading the MLB slate…";
+    gamesEl.innerHTML = "";
+    kpisEl.innerHTML = "";
+  }
 
   const date = datePick.value;
-  const schedUrl = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher,linescore`;
-
-  // Fetch schedule and (optionally) odds in parallel
+  const scheduleUrl = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher,linescore`;
   const oddsUrl = ApiKey.get()
-    ? `https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?apiKey=${encodeURIComponent(ApiKey.get())}&regions=us&markets=h2h&oddsFormat=american`
+    ? `https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?apiKey=${encodeURIComponent(ApiKey.get())}&regions=us&markets=h2h,totals&oddsFormat=american`
     : null;
 
-  let sched, oddsMap = null;
   try {
-    const [sRes, oRes] = await Promise.all([
-      fetch(schedUrl),
-      oddsUrl ? fetch(oddsUrl).catch(() => null) : Promise.resolve(null)
+    const [scheduleResponse, oddsResponse, brief, totals, manifest] = await Promise.all([
+      fetch(scheduleUrl),
+      oddsUrl ? fetch(oddsUrl).catch(() => null) : Promise.resolve(null),
+      loadJson(`/data/member-brief/${date}.json`),
+      loadJson(`/data/totals/${date}.json`),
+      loadJson(`/data/matchup-pages/${date}.json`)
     ]);
-    if (!sRes.ok) throw new Error("Schedule HTTP " + sRes.status);
-    sched = await sRes.json();
-    if (oRes && oRes.ok) oddsMap = buildOddsMap(await oRes.json());
-    else if (oddsUrl) noteEl.innerHTML = `<div class="notice warn">Live odds are unavailable right now — showing the schedule. </div>`;
-    else noteEl.innerHTML = `<div class="notice">Live odds are unavailable right now — showing the schedule. <a href="/odds/">Live Odds</a> page to see market win probabilities here.</div>`;
-  } catch (e) {
-    statusEl.innerHTML = `<div class="notice warn">Failed to load schedule (${escapeHtml(e.message)}).</div>`;
-    return;
+
+    if (!scheduleResponse.ok) throw new Error(`Schedule HTTP ${scheduleResponse.status}`);
+    const schedule = await scheduleResponse.json();
+    const scheduleGames = (((schedule.dates || [])[0]) || {}).games || [];
+
+    let oddsMap = {};
+    if (oddsResponse && oddsResponse.ok) {
+      oddsMap = buildOddsMap(await oddsResponse.json());
+      oddsNoteEl.innerHTML = "";
+    } else if (oddsUrl) {
+      oddsNoteEl.innerHTML = `<div class="notice warn">Live market prices are temporarily unavailable. LyDia model data and the MLB schedule are still shown.</div>`;
+    } else {
+      oddsNoteEl.innerHTML = `<div class="notice">Live market prices require the Odds API key saved in this browser. Published LyDia probabilities and totals projections still appear when available. <a href="/odds/">Open Live Odds</a>.</div>`;
+    }
+
+    const briefByPk = Object.fromEntries(((brief && brief.games) || []).map(game => [String(game.game_pk), game]));
+    const totalsByPk = (totals && totals.games) || {};
+    const pageByPk = Object.fromEntries(((manifest && manifest.pages) || []).map(page => [String(page.game_pk), page]));
+
+    renderedGames = scheduleGames
+      .sort((a,b) => new Date(a.gameDate) - new Date(b.gameDate))
+      .map(game => {
+        const awayName = game.teams.away.team.name;
+        const homeName = game.teams.home.team.name;
+        return {
+          game,
+          market: oddsMap[`${awayName}@${homeName}`] || null,
+          brief: briefByPk[String(game.gamePk)] || null,
+          total: totalsByPk[String(game.gamePk)] || null,
+          page: pageByPk[String(game.gamePk)] || null
+        };
+      });
+
+    statusEl.innerHTML = renderedGames.length ? "" : `<div class="score-empty">No MLB games are scheduled for ${escapeHtml(date)}.</div>`;
+    renderKPIs();
+    renderCards();
+  } catch (error) {
+    statusEl.innerHTML = `<div class="notice warn">The scoreboard could not load: ${escapeHtml(error.message)}.</div>`;
   }
-
-  const games = ((sched.dates && sched.dates[0]) || {}).games || [];
-  if (!games.length) {
-    statusEl.innerHTML = `<div class="notice">No MLB games scheduled for ${date}.</div>`;
-    return;
-  }
-  statusEl.innerHTML = "";
-  games.sort((a, b) => new Date(a.gameDate) - new Date(b.gameDate));
-
-  // Attach market data
-  const enriched = games.map(g => {
-    const away = g.teams.away.team.name, home = g.teams.home.team.name;
-    const mkt = oddsMap ? oddsMap[away + "@" + home] : null;
-    return { g, mkt };
-  });
-
-  renderKPIs(kpisEl, enriched);
-  document.getElementById("games").innerHTML = enriched.map(renderGameCard).join("");
 }
 
-// Consensus no-vig probabilities per matchup from The Odds API payload
 function buildOddsMap(events) {
   const map = {};
-  for (const ev of events) {
-    const rows = [];
-    for (const bk of ev.bookmakers || []) {
-      const m = (bk.markets || []).find(m => m.key === "h2h");
-      if (!m) continue;
-      const oA = m.outcomes.find(o => o.name === ev.away_team);
-      const oH = m.outcomes.find(o => o.name === ev.home_team);
-      if (oA && oH) rows.push([oA.price, oH.price]);
+  for (const event of events || []) {
+    const h2hRows = [];
+    const totalRows = [];
+
+    for (const bookmaker of event.bookmakers || []) {
+      for (const market of bookmaker.markets || []) {
+        if (market.key === "h2h") {
+          const away = market.outcomes.find(x => x.name === event.away_team);
+          const home = market.outcomes.find(x => x.name === event.home_team);
+          if (away && home) h2hRows.push({ away:away.price, home:home.price });
+        }
+        if (market.key === "totals") {
+          const over = market.outcomes.find(x => x.name === "Over");
+          const under = market.outcomes.find(x => x.name === "Under");
+          if (over && under && Number.isFinite(over.point) && over.point === under.point) {
+            totalRows.push({ line:over.point, over:over.price, under:under.price });
+          }
+        }
+      }
     }
-    if (!rows.length) continue;
-    const avgA = rows.reduce((s, r) => s + Odds.amToProb(r[0]), 0) / rows.length;
-    const avgH = rows.reduce((s, r) => s + Odds.amToProb(r[1]), 0) / rows.length;
-    const tot = avgA + avgH;
-    const bestA = Math.max(...rows.map(r => Odds.amToDec(r[0])));
-    const bestH = Math.max(...rows.map(r => Odds.amToDec(r[1])));
-    map[ev.away_team + "@" + ev.home_team] = {
-      pAway: avgA / tot, pHome: avgH / tot,
-      mlAway: Odds.decToAm(bestA), mlHome: Odds.decToAm(bestH),
-      books: rows.length
-    };
+
+    let moneyline = null;
+    if (h2hRows.length) {
+      const averageAway = h2hRows.reduce((sum,row) => sum + Odds.amToProb(row.away),0) / h2hRows.length;
+      const averageHome = h2hRows.reduce((sum,row) => sum + Odds.amToProb(row.home),0) / h2hRows.length;
+      const totalProbability = averageAway + averageHome;
+      const bestAwayDecimal = Math.max(...h2hRows.map(row => Odds.amToDec(row.away)));
+      const bestHomeDecimal = Math.max(...h2hRows.map(row => Odds.amToDec(row.home)));
+      moneyline = {
+        awayProbability:averageAway/totalProbability,
+        homeProbability:averageHome/totalProbability,
+        awayPrice:Odds.decToAm(bestAwayDecimal),
+        homePrice:Odds.decToAm(bestHomeDecimal),
+        books:h2hRows.length
+      };
+    }
+
+    let total = null;
+    if (totalRows.length) {
+      const lines = totalRows.map(row => row.line).sort((a,b) => a-b);
+      const median = lines[Math.floor(lines.length/2)];
+      const matching = totalRows.filter(row => row.line === median);
+      total = {
+        line:median,
+        overPrice:Odds.decToAm(Math.max(...matching.map(row => Odds.amToDec(row.over)))),
+        underPrice:Odds.decToAm(Math.max(...matching.map(row => Odds.amToDec(row.under)))),
+        books:matching.length
+      };
+    }
+
+    map[`${event.away_team}@${event.home_team}`] = { moneyline, total };
   }
   return map;
 }
 
-function renderKPIs(el, enriched) {
-  const n = enriched.length;
-  const live = enriched.filter(x => x.g.status.abstractGameState === "Live").length;
-  const final = enriched.filter(x => x.g.status.abstractGameState === "Final").length;
-  const withOdds = enriched.filter(x => x.mkt && x.g.status.abstractGameState === "Preview");
-  let favHtml = `<div class="kpi"><div class="label">Biggest favorite</div><div class="value dim">—</div><div class="sub">needs odds key</div></div>`;
-  let dogHtml = `<div class="kpi"><div class="label">Closest game</div><div class="value dim">—</div><div class="sub">needs odds key</div></div>`;
-  if (withOdds.length) {
-    const byFav = [...withOdds].sort((a, b) =>
-      Math.max(b.mkt.pAway, b.mkt.pHome) - Math.max(a.mkt.pAway, a.mkt.pHome));
-    const top = byFav[0], close = byFav[byFav.length - 1];
-    const topTeam = top.mkt.pHome >= top.mkt.pAway ? top.g.teams.home.team.name : top.g.teams.away.team.name;
-    favHtml = `<div class="kpi"><div class="label">Biggest favorite</div>
-      <div class="value">${Odds.fmtPct(Math.max(top.mkt.pAway, top.mkt.pHome))}</div>
-      <div class="sub">${escapeHtml(topTeam)}</div></div>`;
-    dogHtml = `<div class="kpi"><div class="label">Closest game</div>
-      <div class="value">${Odds.fmtPct(Math.max(close.mkt.pAway, close.mkt.pHome))}</div>
-      <div class="sub">${escapeHtml(close.g.teams.away.team.name)} @ ${escapeHtml(close.g.teams.home.team.name)}</div></div>`;
-  }
-  const first = enriched[0], last = enriched[n - 1];
-  const t = d => new Date(d).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  el.innerHTML = `
-    <div class="kpi"><div class="label">Games</div><div class="value">${n}</div>
-      <div class="sub">${live ? `<span class="neg-text">${live} live</span> · ` : ""}${final} final · ${n - live - final} upcoming</div></div>
-    <div class="kpi"><div class="label">First pitch</div><div class="value">${t(first.g.gameDate)}</div>
-      <div class="sub">last: ${t(last.g.gameDate)}</div></div>
-    ${favHtml}${dogHtml}
-    <div class="kpi"><div class="label">Odds coverage</div>
-      <div class="value">${withOdds.length}/${n - live - final}</div><div class="sub">upcoming games priced</div></div>`;
+function renderKPIs() {
+  const totalGames = renderedGames.length;
+  const liveGames = renderedGames.filter(item => stateKey(item.game) === "live").length;
+  const finalGames = renderedGames.filter(item => stateKey(item.game) === "final").length;
+  const pregameGames = totalGames - liveGames - finalGames;
+  const officialPicks = renderedGames.filter(item => item.brief && normalizeStatus(item.brief.status) === "official").length;
+  const withModel = renderedGames.filter(item => item.brief).length;
+  const withTotals = renderedGames.filter(item => item.total && Number.isFinite(item.total.projection)).length;
+  const first = renderedGames[0];
+  const firstPitch = first ? formatTime(first.game.gameDate) : "—";
+
+  kpisEl.innerHTML = `
+    <article class="kpi"><div class="label">Games</div><div class="value">${totalGames}</div><div class="sub">${pregameGames} pregame · ${liveGames} live · ${finalGames} final</div></article>
+    <article class="kpi"><div class="label">First pitch</div><div class="value">${firstPitch}</div><div class="sub">${escapeHtml(datePick.value)}</div></article>
+    <article class="kpi"><div class="label">LyDia coverage</div><div class="value">${withModel}/${totalGames}</div><div class="sub">${officialPicks} official moneyline pick${officialPicks === 1 ? "" : "s"}</div></article>
+    <article class="kpi"><div class="label">Totals projected</div><div class="value">${withTotals}/${totalGames}</div><div class="sub">market and model context</div></article>
+  `;
 }
 
-function renderGameCard({ g, mkt }) {
-  const away = g.teams.away, home = g.teams.home;
-  const time = new Date(g.gameDate).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  const abstract = g.status.abstractGameState; // Preview | Live | Final
-  const isLive = abstract === "Live";
-  const isFinal = abstract === "Final";
-  const hasScore = (isLive || isFinal) && away.score !== undefined && home.score !== undefined;
-  const rec = t => t.leagueRecord ? `${t.leagueRecord.wins}-${t.leagueRecord.losses}` : "";
-  const pitcher = t => t.probablePitcher ? escapeHtml(t.probablePitcher.fullName) : "TBD";
-  const series = g.seriesGameNumber && g.gamesInSeries ? `Game ${g.seriesGameNumber} of ${g.gamesInSeries}` : "";
+function renderCards() {
+  const visible = renderedGames.filter(item => activeFilter === "all" || stateKey(item.game) === activeFilter);
+  gamesEl.innerHTML = visible.length
+    ? visible.map(renderGameCard).join("")
+    : `<div class="score-empty">No ${escapeHtml(activeFilter)} games for this date.</div>`;
+}
 
-  // Status badge: inning for live, Final (+extras) for finished, series info otherwise
-  let statusHtml = escapeHtml(series);
-  if (isLive) {
-    const ls = g.linescore || {};
-    const inning = ls.currentInningOrdinal ? `${ls.inningState || ""} ${ls.currentInningOrdinal}`.trim() : "Live";
-    statusHtml = `<span class="badge live">● ${escapeHtml(inning)}</span>`;
-  } else if (isFinal) {
-    const ls = g.linescore || {};
-    const extras = ls.currentInning && ls.currentInning > 9 ? `/${ls.currentInning}` : "";
-    statusHtml = `<span class="badge neutral">Final${extras}</span>`;
-  } else if (g.status.detailedState !== "Scheduled") {
-    statusHtml = `<span class="badge neutral">${escapeHtml(g.status.detailedState)}</span>`;
-  }
+function renderGameCard(item) {
+  const { game, market, brief, total, page } = item;
+  const away = game.teams.away;
+  const home = game.teams.home;
+  const state = stateKey(game);
+  const isLive = state === "live";
+  const isFinal = state === "final";
+  const hasScore = (isLive || isFinal) && Number.isFinite(away.score) && Number.isFinite(home.score);
+  const awayWinner = isFinal && hasScore && away.score > home.score;
+  const homeWinner = isFinal && hasScore && home.score > away.score;
+  const status = brief ? normalizeStatus(brief.status) : "building";
+  const statusLabel = brief ? (brief.value_tag || statusText(status)) : (isFinal ? "Final" : "Analysis Building");
+  const statusClass = isLive ? "live" : isFinal ? "final" : statusClassName(status);
+  const matchupUrl = page && page.url ? new URL(page.url).pathname : fallbackMatchupUrl(game, datePick.value);
+  const cardTarget = page ? matchupUrl : "/mlb/matchups/";
+  const directPage = !!page;
 
-  // Show market data whenever we have it (pre-game consensus stays visible during/after the game)
-  const showMkt = !!mkt;
-  const favA = showMkt && !isFinal && mkt.pAway > mkt.pHome;
-  const favH = showMkt && !isFinal && mkt.pHome >= mkt.pAway;
-  const mktHtml = showMkt ? `<div class="probbar" title="Market win probability">
-      <div class="away-seg" style="width:${(mkt.pAway * 100).toFixed(1)}%"></div>
-      <div class="home-seg" style="width:${(mkt.pHome * 100).toFixed(1)}%"></div>
-    </div>` : "";
+  const model = modelProbabilities(brief, away.team.name, home.team.name);
+  const marketMoneyline = market && market.moneyline;
+  const marketTotal = market && market.total;
+  const projectedTotal = total && Number.isFinite(total.projection) ? total.projection : null;
+  const consensusLine = total && Number.isFinite(total.line) ? total.line : marketTotal && marketTotal.line;
+  const overPrice = total && Number.isFinite(total.over) ? total.over : marketTotal && marketTotal.overPrice;
+  const underPrice = total && Number.isFinite(total.under) ? total.under : marketTotal && marketTotal.underPrice;
+  const labRating = brief && Number.isFinite(brief.lab_score) ? (brief.lab_score/10).toFixed(1) : null;
 
-  const winA = isFinal && hasScore && away.score > home.score;
-  const winH = isFinal && hasScore && home.score > away.score;
+  const awayPrice = marketMoneyline ? marketMoneyline.awayPrice : inferPublishedPrice(brief, away.team.name);
+  const homePrice = marketMoneyline ? marketMoneyline.homePrice : inferPublishedPrice(brief, home.team.name);
 
-  const line = (t, p, ml, isFav, isWinner) => `<div class="teamline">
-    <span>
-      <span class="tname ${isFav ? "fav" : ""} ${isWinner ? "winner" : ""}">${escapeHtml(t.team.name)}</span>
-      <span class="rec">${rec(t)}</span>
-    </span>
-    <span>
-      ${showMkt ? `<span class="prob">${Odds.fmtPct(p)}</span> <span class="ml">${Odds.fmtAm(ml)}</span>` : ""}
-      ${hasScore ? `<span class="score ${isWinner ? "winner" : isFinal ? "dim" : ""}">${t.score}</span>` : ""}
-    </span>
-  </div>`;
+  const inning = liveLabel(game);
+  const topStatus = isLive ? inning : isFinal ? "Final" : statusLabel;
 
-  const footHtml = isFinal
-    ? `<div class="pitchers">Final score${showMkt ? `<span class="dim"> &middot; odds shown were pre-game market consensus</span>` : ""}</div>`
-    : `<div class="pitchers">⚾ ${pitcher(away)} vs ${pitcher(home)}
-        ${showMkt ? `<span class="dim"> · best price across ${mkt.books} books</span>` : ""}</div>`;
+  const awayColor = TEAM_COLORS[away.team.id] || "#6d5dfc";
+  const homeColor = TEAM_COLORS[home.team.id] || "#d9468f";
 
-  return `<div class="gcard ${isLive ? "is-live" : ""}">
-    <div class="time">
-      <span>${time} · ${escapeHtml(g.venue.name)}</span>
-      <span>${statusHtml}</span>
+  const pitcherAway = away.probablePitcher ? away.probablePitcher.fullName : (total && total.away_sp) || "TBD";
+  const pitcherHome = home.probablePitcher ? home.probablePitcher.fullName : (total && total.home_sp) || "TBD";
+
+  const modelFavoriteAway = model && model.away >= model.home;
+  const modelFavoriteProbability = model ? Math.max(model.away, model.home) : null;
+  const modelFavoriteMarketProbability = model && marketMoneyline
+    ? (modelFavoriteAway ? marketMoneyline.awayProbability : marketMoneyline.homeProbability)
+    : null;
+  const modelFavoriteName = model
+    ? (modelFavoriteAway ? TEAM_SHORT[away.team.name] || away.team.name : TEAM_SHORT[home.team.name] || home.team.name)
+    : null;
+  const modelBox = model
+    ? `<span class="market-value">${Odds.fmtPct(modelFavoriteProbability)} ${escapeHtml(modelFavoriteName)}</span><span class="market-sub">${modelFavoriteMarketProbability != null ? `Market ${Odds.fmtPct(modelFavoriteMarketProbability)} · Edge ${Odds.fmtPct(modelFavoriteProbability-modelFavoriteMarketProbability)}` : "LyDia win probability"}</span>`
+    : `<span class="market-value">Building</span><span class="market-sub">model read not published</span>`;
+
+  const totalBox = consensusLine != null || projectedTotal != null
+    ? `<span class="market-value">${consensusLine != null ? `O/U ${formatNumber(consensusLine)}` : "Market pending"}</span><span class="market-sub">${projectedTotal != null ? `LyDia ${formatNumber(projectedTotal)}` : pricePair(overPrice,underPrice)}</span>`
+    : `<span class="market-value">Pending</span><span class="market-sub">total not published</span>`;
+
+  const ratingBox = labRating
+    ? `<span class="market-value">${labRating}/10</span><span class="market-sub">${escapeHtml(statusLabel)}</span>`
+    : `<span class="market-value">—</span><span class="market-sub">Lab Rating pending</span>`;
+
+  const probabilityCompare = model || marketMoneyline
+    ? `<div class="prob-compare">
+        <div class="prob-line"><span>${model ? "LyDia probability" : "Market probability"}</span><span>${escapeHtml(TEAM_SHORT[away.team.name] || away.team.name)} ${Odds.fmtPct(model ? model.away : marketMoneyline.awayProbability)} · ${escapeHtml(TEAM_SHORT[home.team.name] || home.team.name)} ${Odds.fmtPct(model ? model.home : marketMoneyline.homeProbability)}</span></div>
+        <div class="prob-track" title="${model ? "LyDia win probability" : "No-vig market probability"}">
+          <div class="prob-away" style="width:${((model ? model.away : marketMoneyline.awayProbability)*100).toFixed(1)}%"></div>
+          <div class="prob-home" style="width:${((model ? model.home : marketMoneyline.homeProbability)*100).toFixed(1)}%"></div>
+        </div>
+      </div>`
+    : "";
+
+  return `<a class="score-card ${isLive ? "is-live" : ""}" href="${cardTarget}" style="--away-color:${awayColor};--home-color:${homeColor}" aria-label="${escapeHtml(away.team.name)} at ${escapeHtml(home.team.name)} matchup analysis">
+    <div class="card-body">
+      <div class="card-top">
+        <div class="game-meta">
+          <span class="game-time">${formatTime(game.gameDate)}</span>
+          <span class="game-venue">${escapeHtml((game.venue && game.venue.name) || "Venue TBD")}</span>
+        </div>
+        <span class="game-status ${statusClass}">${escapeHtml(topStatus)}</span>
+      </div>
+
+      <div class="teams">
+        ${teamRow(away, model && model.away, awayPrice, hasScore, awayWinner, "away")}
+        ${teamRow(home, model && model.home, homePrice, hasScore, homeWinner, "home")}
+      </div>
+
+      ${probabilityCompare}
+
+      <div class="market-grid">
+        <div class="market-box">
+          <span class="market-label">Moneyline read</span>
+          ${modelBox}
+        </div>
+        <div class="market-box total">
+          <span class="market-label">Over / Under</span>
+          ${totalBox}
+        </div>
+        <div class="market-box rating">
+          <span class="market-label">Lab Rating</span>
+          ${ratingBox}
+        </div>
+      </div>
+
+      <div class="pitcher-line">⚾ <span>${escapeHtml(pitcherAway)} vs ${escapeHtml(pitcherHome)}</span></div>
+      <div class="card-cta"><span>${directPage ? (isFinal ? "View prediction and final result" : "View prediction, picks and odds") : "Open matchup archive"}</span><span>→</span></div>
     </div>
-    ${line(away, showMkt && mkt.pAway, showMkt && mkt.mlAway, favA, winA)}
-    ${line(home, showMkt && mkt.pHome, showMkt && mkt.mlHome, favH, winH)}
-    ${mktHtml}
-    ${footHtml}
+  </a>`;
+}
+
+function teamRow(team, modelProbability, price, hasScore, winner, side) {
+  const record = team.leagueRecord ? `${team.leagueRecord.wins}-${team.leagueRecord.losses}` : "";
+  const initials = (TEAM_SHORT[team.team.name] || team.team.name).split(/\s+/).map(x => x[0]).join("").slice(0,3).toUpperCase();
+  const number = hasScore
+    ? `<span class="team-score">${team.score}</span>`
+    : `<span class="team-price">${price == null ? "—" : Odds.fmtAm(price)}</span><span class="team-prob">${modelProbability == null ? "model pending" : `${Odds.fmtPct(modelProbability)} LyDia`}</span>`;
+
+  return `<div class="team-row ${side} ${winner ? "winner" : ""}">
+    <span class="team-logo-wrap">
+      <img class="team-logo" src="https://www.mlbstatic.com/team-logos/${team.team.id}.svg" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <span class="team-initials">${escapeHtml(initials)}</span>
+    </span>
+    <span class="team-copy">
+      <span class="team-name">${escapeHtml(team.team.name)}</span>
+      <span class="team-record">${escapeHtml(record)}</span>
+    </span>
+    <span class="team-numbers">${number}</span>
   </div>`;
+}
+
+function stateKey(game) {
+  const state = game.status && game.status.abstractGameState;
+  return state === "Live" ? "live" : state === "Final" ? "final" : "preview";
+}
+
+function liveLabel(game) {
+  const linescore = game.linescore || {};
+  if (linescore.currentInningOrdinal) return `${linescore.inningState || ""} ${linescore.currentInningOrdinal}`.trim();
+  return (game.status && game.status.detailedState) || "Live";
+}
+
+function normalizeStatus(value) {
+  const status = String(value || "").toLowerCase().replace(/[\s-]+/g,"_");
+  if (["official","official_pick","pick"].includes(status)) return "official";
+  if (["value_watch","value"].includes(status)) return "value";
+  if (["watchlist","watch"].includes(status)) return "watch";
+  if (status === "pass") return "pass";
+  return "building";
+}
+
+function statusText(status) {
+  return { official:"Official Pick", value:"Value Watch", watch:"Watchlist", pass:"Pass", building:"Analysis Building" }[status] || "Analysis Building";
+}
+
+function statusClassName(status) {
+  return { official:"official", value:"value", watch:"watch", pass:"pass", building:"" }[status] || "";
+}
+
+function modelProbabilities(brief, awayName, homeName) {
+  if (!brief || !Number.isFinite(brief.model_probability)) return null;
+  const pickProbability = brief.model_probability;
+  const pickedAway = brief.side === "away" || brief.pick_team === awayName;
+  const pickedHome = brief.side === "home" || brief.pick_team === homeName;
+  if (!pickedAway && !pickedHome) return null;
+  return pickedAway
+    ? { away:pickProbability, home:1-pickProbability }
+    : { away:1-pickProbability, home:pickProbability };
+}
+
+function inferPublishedPrice(brief, teamName) {
+  if (!brief || !brief.market || brief.pick_team !== teamName || !Number.isFinite(brief.market.best_price)) return null;
+  return brief.market.best_price;
+}
+
+function fallbackMatchupUrl(game, date) {
+  const away = TEAM_SHORT[game.teams.away.team.name] || game.teams.away.team.name;
+  const home = TEAM_SHORT[game.teams.home.team.name] || game.teams.home.team.name;
+  return `/mlb/${slugify(away)}-vs-${slugify(home)}-prediction-odds-${date}/`;
+}
+
+function slugify(value) {
+  return String(value).toLowerCase().replace(/&/g,"and").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
+}
+
+function formatTime(value) {
+  return new Date(value).toLocaleTimeString([], { hour:"numeric", minute:"2-digit" });
+}
+
+function formatNumber(value) {
+  return Number.isInteger(Number(value)) ? String(Number(value)) : Number(value).toFixed(1);
+}
+
+function pricePair(over, under) {
+  if (over == null && under == null) return "market prices pending";
+  return `Over ${over == null ? "—" : Odds.fmtAm(over)} · Under ${under == null ? "—" : Odds.fmtAm(under)}`;
 }
 </script>
 </body>
