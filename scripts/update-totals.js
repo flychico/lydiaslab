@@ -107,11 +107,19 @@ async function main() {
   let bullpen = {};
   try { const bp = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "bullpen", `${DATE}.json`), "utf8")); if (bp.date === DATE) bullpen = bp.teams_by_name || {}; } catch (e) {}
 
-  // --- market total lines: one bulk request ---
+  // --- market total lines: one bulk request, retried ---
   let lines = {};
   if (KEY) {
-    try {
-      const odds = await j(`https://api.the-odds-api.com/v4/sports/baseball_mlb/odds?apiKey=${KEY}&regions=us&markets=totals&oddsFormat=american`);
+    const url = `https://api.the-odds-api.com/v4/sports/baseball_mlb/odds?apiKey=${KEY}&regions=us&markets=h2h,totals&oddsFormat=american`;
+    let odds = null;
+    for (let attempt = 1; attempt <= 3 && !odds; attempt++) {
+      try { odds = await j(url); }
+      catch (e) {
+        console.warn(`totals odds attempt ${attempt} failed: ${e.message}`);
+        if (attempt < 3) await new Promise(r => setTimeout(r, 1500 * attempt));
+      }
+    }
+    if (odds) {
       for (const ev of odds || []) {
         const rows = [];
         for (const bk of ev.bookmakers || []) {
@@ -132,7 +140,7 @@ async function main() {
           books: rows.length
         };
       }
-    } catch (e) { console.warn("totals odds unavailable:", e.message); }
+    } else console.warn("totals odds unavailable after retries — reusing prior capture if present.");
   } else console.log("ODDS_API_KEY not set — projections only, no market lines.");
 
   // SELF-CALIBRATION: rolling mean error over the last 100 graded totals;
@@ -245,7 +253,14 @@ async function main() {
     if (fs.existsSync(prevPath)) {
       const prev = JSON.parse(fs.readFileSync(prevPath, "utf8"));
       if (prev && prev.date === DATE && prev.games) {
-        for (const [pk, g] of Object.entries(prev.games)) if (!out[pk]) out[pk] = g;
+        for (const [pk, g] of Object.entries(prev.games)) {
+          if (!out[pk]) { out[pk] = g; continue; }
+          // A failed/empty live call must never wipe a line captured earlier.
+          if (out[pk].line == null && g.line != null) {
+            out[pk].line = g.line; out[pk].over = g.over ?? null;
+            out[pk].under = g.under ?? null; out[pk].books = g.books || 0;
+          }
+        }
       }
     }
   } catch (e) {}
