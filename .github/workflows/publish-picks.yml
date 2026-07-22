@@ -60,16 +60,10 @@ jobs:
       - name: Normalize Pitcher Matchup Tool source
         run: node scripts/normalize-pitcher-tool-source.js
 
-      - name: Generate source data and locked official picks
+      - name: Generate provisional source data and bullpen inputs
         run: |
           SNAPSHOT_INPUT="${{ github.event.inputs.snapshot }}"
-          node scripts/generate-member-lab.js --date "${{ steps.publish_date.outputs.date }}" --snapshot "${SNAPSHOT_INPUT:-posted}"
-
-      - name: Render bettor-friendly previews
-        run: node scripts/generate-previews.js "${{ steps.publish_date.outputs.date }}"
-
-      - name: Refresh LyDia Research Desk
-        run: node scripts/generate-research-desk.js
+          node scripts/generate-member-lab.js --date "${{ steps.publish_date.outputs.date }}" --snapshot "${SNAPSHOT_INPUT:-posted}" --defer-publish true
 
       - name: Update strikeout prop lines
         env:
@@ -80,6 +74,17 @@ jobs:
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
         run: node scripts/update-totals.js "${{ steps.publish_date.outputs.date }}"
+
+      - name: Enhance moneyline probabilities with projected runs and lock picks
+        run: |
+          SNAPSHOT_INPUT="${{ github.event.inputs.snapshot }}"
+          node scripts/generate-member-lab.js --date "${{ steps.publish_date.outputs.date }}" --snapshot "${SNAPSHOT_INPUT:-posted}"
+
+      - name: Render bettor-friendly previews
+        run: node scripts/generate-previews.js "${{ steps.publish_date.outputs.date }}"
+
+      - name: Refresh LyDia Research Desk
+        run: node scripts/generate-research-desk.js
 
       - name: Generate canonical Pitcher Matchup Tool data
         run: node scripts/generate-pitcher-matchup-data.js "${{ steps.publish_date.outputs.date }}"
