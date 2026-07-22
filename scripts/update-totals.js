@@ -187,8 +187,13 @@ async function main() {
       const penFatigue = pen && Number.isFinite(pen.score) ? pen.score : null;
       const penEfficiency = pen && Number.isFinite(pen.efficiency_score) ? pen.efficiency_score : null;
       const penEfficiencyLabel = pen && pen.efficiency_label ? pen.efficiency_label : null;
+      // The combined bullpen risk score already blends workload/fatigue with
+      // recent ERA/WHIP efficiency. Convert it directly around neutral 50:
+      // risk 76 = 1.26 run factor, risk 40 = 0.90. Apply that factor only to
+      // the innings assigned to the bullpen, so an opener handing over 7.9
+      // innings has a materially larger effect than a starter handing over 2.2.
       const penF = penRisk !== null
-        ? Math.max(0.94, Math.min(1.10, 1 + (penRisk - 50) / 500))
+        ? Math.max(0.75, Math.min(1.35, 1 + (penRisk - 50) / 100))
         : 1;
       // Allocate the probable pitcher's quality only to his expected workload.
       // The bullpen factor owns every remaining inning, which is the majority
@@ -311,3 +316,4 @@ async function main() {
   console.log(`Totals: ${Object.keys(out).length} games projected, ${Object.values(out).filter(x => x.line !== null).length} with market lines.`);
 }
 main().catch(e => { console.error("totals error:", e.message); process.exit(0); });
+
