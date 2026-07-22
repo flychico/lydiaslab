@@ -142,9 +142,27 @@ async function main() {
   fs.mkdirSync(ARCHIVE_DIR, { recursive: true });
   fs.mkdirSync(MANIFEST_DIR, { recursive: true });
 
+  // Doubleheaders: two games, same teams, same date, collide on one slug and
+  // the second page silently overwrites the first. The 2026-07-22 Orioles at
+  // Red Sox split doubleheader proved it. Number games by start time and
+  // suffix every game after the first.
+  const slugGroups = new Map();
+  for (const game of brief.games) {
+    const base = matchupSlug(game);
+    if (!slugGroups.has(base)) slugGroups.set(base, []);
+    slugGroups.get(base).push(game);
+  }
+  const dhNumber = new Map();
+  for (const [, group] of slugGroups) {
+    if (group.length < 2) continue;
+    group.sort((a, b) => String(a.game_time_iso || a.time || "").localeCompare(String(b.game_time_iso || b.time || "")));
+    group.forEach((game, index) => dhNumber.set(String(game.game_pk), index + 1));
+  }
+
   const pages = [];
   for (const game of brief.games) {
-    const slug = matchupSlug(game);
+    const gameNumber = dhNumber.get(String(game.game_pk)) || null;
+    const slug = matchupSlug(game) + (gameNumber && gameNumber > 1 ? `-game-${gameNumber}` : "");
     const urlPath = `/mlb/${slug}/`;
     const scheduleGame = scheduleByPk.get(String(game.game_pk)) || null;
     const totalsGame = (totals.games && totals.games[String(game.game_pk)]) || null;
@@ -174,7 +192,8 @@ async function main() {
       slug,
       urlPath,
       kprops,
-      teamHitting
+      teamHitting,
+      gameNumber
     }), "utf8");
 
     pages.push({
@@ -837,11 +856,12 @@ function renderTeamMap(brief, game, teamHitting) {
 }
 
 function renderMatchupPage(context) {
-  const { brief, game, scheduleGame, totalsGame, pitcherGame, resultGame, weather, venue, quality, slug, urlPath, kprops, teamHitting } = context;
+  const { brief, game, scheduleGame, totalsGame, pitcherGame, resultGame, weather, venue, quality, slug, urlPath, kprops, teamHitting, gameNumber } = context;
+  const dhSuffix = gameNumber ? ` (Game ${gameNumber})` : "";
   const awayShort = shortTeam(game.away_team);
   const homeShort = shortTeam(game.home_team);
   const titleDate = niceDate(DATE);
-  const title = `${awayShort} vs ${homeShort} Prediction, Odds and Model Pick | ${DATE}`;
+  const title = `${awayShort} vs ${homeShort}${dhSuffix} Prediction, Odds and Model Pick | ${DATE}`;
   const description = `${awayShort} vs ${homeShort} prediction for ${titleDate}: LyDia model probability, moneyline odds, starting pitchers, offense form, bullpen risk, Lab Rating and pass or pick decision.`;
   const canonical = `${SITE}${urlPath}`;
   const robots = quality.indexable ? "index,follow,max-image-preview:large" : "noindex,follow";
@@ -874,7 +894,7 @@ function renderMatchupPage(context) {
     "@context": "https://schema.org",
     "@type": "SportsEvent",
     "@id": `${canonical}#event`,
-    name: `${game.away_team} at ${game.home_team}`,
+    name: `${game.away_team} at ${game.home_team}${dhSuffix}`,
     startDate: gameTime || DATE,
     eventStatus: eventStatusSchema(scheduleGame),
     location: { "@type": "Place", name: venue.name },
@@ -917,7 +937,7 @@ function renderMatchupPage(context) {
 <main>
   <div class="matchup-head">
     <p class="eyebrow">MLB matchup analysis</p>
-    <h1>${esc(awayShort)} vs ${esc(homeShort)} Prediction, Odds and Model Pick</h1>
+    <h1>${esc(awayShort)} vs ${esc(homeShort)}${esc(dhSuffix)} Prediction, Odds and Model Pick</h1>
     <p class="subtitle">${esc(titleDate)} at ${esc(venue.name)}${game.time ? ` · ${esc(game.time)} ET` : ""}</p>
     <div class="byline">
       <img src="/img/lynold-mercado-headshot.jpg" alt="Lynold Mercado">
@@ -1288,12 +1308,34 @@ function matchupPageUrl(g) {
     .replace(/&/g, "and")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
-  return "/mlb/" + pageSlug(away) + "-vs-" + pageSlug(home) + "-prediction-odds-" + date + "/";
+  let url = "/mlb/" + pageSlug(away) + "-vs-" + pageSlug(home) + "-prediction-odds-" + date + "/";
+  const games = (PICKS_DATA && PICKS_DATA.games) || [];
+  const same = games.filter(x => x.away_team === g.away_team && x.home_team === g.home_team);
+  if (same.length > 1) {
+    same.sort((a, b) => String(a.game_time_iso || a.time || "").localeCompare(String(b.game_time_iso || b.time || "")));
+    const n = same.findIndex(x => String(x.game_pk) === String(g.game_pk)) + 1;
+    if (n > 1) url = url.slice(0, -1) + "-game-" + n + "/";
+  }
+  return url;
 }
 
 `;
 
     html = html.replace(renderAnchor, helper + renderAnchor);
+    changed = true;
+  }
+
+  // Upgrade a previously baked helper to the doubleheader-aware version.
+  const legacyReturn = 'return "/mlb/" + pageSlug(away) + "-vs-" + pageSlug(home) + "-prediction-odds-" + date + "/";';
+  if (html.includes(legacyReturn)) {
+    const dhReturn = [
+      'let url = "/mlb/" + pageSlug(away) + "-vs-" + pageSlug(home) + "-prediction-odds-" + date + "/";',
+      'const gms = (PICKS_DATA && PICKS_DATA.games) || [];',
+      'const same = gms.filter(function (x) { return x.away_team === g.away_team && x.home_team === g.home_team; });',
+      'if (same.length > 1) { same.sort(function (a, b) { return String(a.game_time_iso || a.time || "").localeCompare(String(b.game_time_iso || b.time || "")); }); var n = same.findIndex(function (x) { return String(x.game_pk) === String(g.game_pk); }) + 1; if (n > 1) url = url.slice(0, -1) + "-game-" + n + "/"; }',
+      'return url;'
+    ].join("\n  ");
+    html = html.replace(legacyReturn, dhReturn);
     changed = true;
   }
 
