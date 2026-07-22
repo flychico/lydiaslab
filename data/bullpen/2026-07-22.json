@@ -1,6 +1,6 @@
 {
   "date": "2026-07-22",
-  "generated_at": "2026-07-22T18:29:35.139Z",
+  "generated_at": "2026-07-22T19:26:32.324Z",
   "source_of_truth": "scripts/lib/bullpen-fatigue-core.js",
   "version": "bullpen-fatigue-v5-recency-weighted",
   "method": "Generated single source of truth. Website pages display this JSON and do not calculate separate bullpen scores in the browser.",
@@ -8,11 +8,11 @@
   "formula": "Fatigue = 45 + (recency-weighted relief innings above 3/game x 4.2) + (recency-weighted back-to-back arms x 8). Half-life 2 days, so an idle or rained-out day lowers fatigue. Runs allowed live in the efficiency score.",
   "lookback_days": 5,
   "summary": {
-    "teams_tracked": 26,
-    "high_risk": 5,
-    "tired": 12,
+    "teams_tracked": 22,
+    "high_risk": 4,
+    "tired": 10,
     "fresh": 0,
-    "normal": 9
+    "normal": 8
   },
   "warnings": [],
   "teams": [
@@ -125,60 +125,6 @@
       }
     },
     {
-      "team_id": 120,
-      "team": "Washington Nationals",
-      "side": "away",
-      "opponent": "Colorado Rockies",
-      "game": "Washington Nationals @ Colorado Rockies",
-      "game_pk": 824327,
-      "game_time_iso": "2026-07-22T19:10:00Z",
-      "score": 84,
-      "label": "High risk",
-      "workload_read": "Heavy recent workload. Late-game pitching condition could materially affect the read.",
-      "score_reason": "High risk (8.4/10): 14.7 recent relief innings, recency-weighted — 8 in the last game (pitched yesterday), 3 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
-      "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
-      "efficiency_score": 41,
-      "efficiency_label": "Below average",
-      "efficiency_reason": "Below average (4.1/10): 5.52 ERA and 1.36 WHIP over 14.7 relief innings (9 ER, 15 H, 5 BB) in the last three days.",
-      "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
-      "risk_index": 89,
-      "risk_label": "High risk",
-      "days_rest": 1,
-      "last_game_date": "2026-07-21",
-      "last_game_bp_ip": 8,
-      "last3_bp_ip": 14.7,
-      "last3_bp_runs": 9,
-      "last3_bp_er": 9,
-      "last3_bp_hits": 15,
-      "last3_bp_bb": 5,
-      "era_3d": 5.52,
-      "whip_3d": 1.36,
-      "last_game_relievers": 5,
-      "last3_relievers": 10,
-      "back_to_back_arms": 3,
-      "recent_games_tracked": 3,
-      "context_only": {
-        "last_game_relievers": 5,
-        "last3_relievers": 10,
-        "note": "Reliever counts are displayed for context only and do not add score points."
-      },
-      "component_scores": {
-        "baseline": 45,
-        "weighted_bp_ip": 22.4,
-        "back_to_back_arms": 16.5,
-        "reliever_counts_context_only": 0,
-        "no_recent_games_credit": 0,
-        "raw_score": 83.9
-      },
-      "efficiency_component_scores": {
-        "baseline": 50,
-        "era_term": -7.9,
-        "whip_term": -1,
-        "confidence": 1,
-        "raw_score": 41.1
-      }
-    },
-    {
       "team_id": 133,
       "team": "Athletics",
       "side": "away",
@@ -284,60 +230,6 @@
         "whip_term": -0.1,
         "confidence": 1,
         "raw_score": 54
-      }
-    },
-    {
-      "team_id": 115,
-      "team": "Colorado Rockies",
-      "side": "home",
-      "opponent": "Washington Nationals",
-      "game": "Washington Nationals @ Colorado Rockies",
-      "game_pk": 824327,
-      "game_time_iso": "2026-07-22T19:10:00Z",
-      "score": 79,
-      "label": "Tired",
-      "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
-      "score_reason": "Tired (7.9/10): 15 recent relief innings, recency-weighted — 5.3 in the last game (pitched yesterday), 2 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
-      "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
-      "efficiency_score": 64,
-      "efficiency_label": "Effective",
-      "efficiency_reason": "Effective (6.4/10): 3 ERA and 0.87 WHIP over 15 relief innings (5 ER, 11 H, 2 BB) in the last three days.",
-      "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
-      "risk_index": 72,
-      "risk_label": "Tired",
-      "days_rest": 1,
-      "last_game_date": "2026-07-21",
-      "last_game_bp_ip": 5.3,
-      "last3_bp_ip": 15,
-      "last3_bp_runs": 5,
-      "last3_bp_er": 5,
-      "last3_bp_hits": 11,
-      "last3_bp_bb": 2,
-      "era_3d": 3,
-      "whip_3d": 0.87,
-      "last_game_relievers": 5,
-      "last3_relievers": 10,
-      "back_to_back_arms": 2,
-      "recent_games_tracked": 3,
-      "context_only": {
-        "last_game_relievers": 5,
-        "last3_relievers": 10,
-        "note": "Reliever counts are displayed for context only and do not add score points."
-      },
-      "component_scores": {
-        "baseline": 45,
-        "weighted_bp_ip": 17.7,
-        "back_to_back_arms": 16,
-        "reliever_counts_context_only": 0,
-        "no_recent_games_credit": 0,
-        "raw_score": 78.7
-      },
-      "efficiency_component_scores": {
-        "baseline": 50,
-        "era_term": 7.2,
-        "whip_term": 6.5,
-        "confidence": 1,
-        "raw_score": 63.7
       }
     },
     {
@@ -773,60 +665,6 @@
       }
     },
     {
-      "team_id": 136,
-      "team": "Seattle Mariners",
-      "side": "home",
-      "opponent": "Cincinnati Reds",
-      "game": "Cincinnati Reds @ Seattle Mariners",
-      "game_pk": 823110,
-      "game_time_iso": "2026-07-22T19:40:00Z",
-      "score": 65,
-      "label": "Tired",
-      "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
-      "score_reason": "Tired (6.5/10): 8 recent relief innings, recency-weighted (pitched yesterday), 5 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
-      "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
-      "efficiency_score": 79,
-      "efficiency_label": "Dominant",
-      "efficiency_reason": "Dominant (7.9/10): 1.13 ERA and 0.63 WHIP over 8 relief innings (1 ER, 2 H, 3 BB) in the last three days.",
-      "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
-      "risk_index": 51,
-      "risk_label": "Normal",
-      "days_rest": 1,
-      "last_game_date": "2026-07-21",
-      "last_game_bp_ip": 2,
-      "last3_bp_ip": 8,
-      "last3_bp_runs": 1,
-      "last3_bp_er": 1,
-      "last3_bp_hits": 2,
-      "last3_bp_bb": 3,
-      "era_3d": 1.13,
-      "whip_3d": 0.63,
-      "last_game_relievers": 2,
-      "last3_relievers": 8,
-      "back_to_back_arms": 5,
-      "recent_games_tracked": 3,
-      "context_only": {
-        "last_game_relievers": 2,
-        "last3_relievers": 8,
-        "note": "Reliever counts are displayed for context only and do not add score points."
-      },
-      "component_scores": {
-        "baseline": 45,
-        "weighted_bp_ip": -2.4,
-        "back_to_back_arms": 22.8,
-        "reliever_counts_context_only": 0,
-        "no_recent_games_credit": 0,
-        "raw_score": 65.5
-      },
-      "efficiency_component_scores": {
-        "baseline": 50,
-        "era_term": 18.5,
-        "whip_term": 10.1,
-        "confidence": 1,
-        "raw_score": 78.6
-      }
-    },
-    {
       "team_id": 145,
       "team": "Chicago White Sox",
       "side": "away",
@@ -1205,60 +1043,6 @@
       }
     },
     {
-      "team_id": 113,
-      "team": "Cincinnati Reds",
-      "side": "away",
-      "opponent": "Seattle Mariners",
-      "game": "Cincinnati Reds @ Seattle Mariners",
-      "game_pk": 823110,
-      "game_time_iso": "2026-07-22T19:40:00Z",
-      "score": 53,
-      "label": "Normal",
-      "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
-      "score_reason": "Normal (5.3/10): 9 recent relief innings, recency-weighted — 4 in the last game (pitched yesterday), 1 arm worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
-      "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
-      "efficiency_score": 9,
-      "efficiency_label": "Struggling",
-      "efficiency_reason": "Struggling (0.9/10): 12 ERA and 2.33 WHIP over 9 relief innings (12 ER, 16 H, 5 BB) in the last three days.",
-      "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
-      "risk_index": 74,
-      "risk_label": "Tired",
-      "days_rest": 1,
-      "last_game_date": "2026-07-21",
-      "last_game_bp_ip": 4,
-      "last3_bp_ip": 9,
-      "last3_bp_runs": 12,
-      "last3_bp_er": 12,
-      "last3_bp_hits": 16,
-      "last3_bp_bb": 5,
-      "era_3d": 12,
-      "whip_3d": 2.33,
-      "last_game_relievers": 5,
-      "last3_relievers": 11,
-      "back_to_back_arms": 1,
-      "recent_games_tracked": 3,
-      "context_only": {
-        "last_game_relievers": 5,
-        "last3_relievers": 11,
-        "note": "Reliever counts are displayed for context only and do not add score points."
-      },
-      "component_scores": {
-        "baseline": 45,
-        "weighted_bp_ip": 4.1,
-        "back_to_back_arms": 4,
-        "reliever_counts_context_only": 0,
-        "no_recent_games_credit": 0,
-        "raw_score": 53.1
-      },
-      "efficiency_component_scores": {
-        "baseline": 50,
-        "era_term": -25,
-        "whip_term": -15.5,
-        "confidence": 1,
-        "raw_score": 9.5
-      }
-    },
-    {
       "team_id": 108,
       "team": "Los Angeles Angels",
       "side": "home",
@@ -1508,49 +1292,6 @@
       "days_rest": 1,
       "source_version": "bullpen-fatigue-v5-recency-weighted"
     },
-    "Washington Nationals": {
-      "score": 84,
-      "label": "High risk",
-      "last_game_bp_ip": 8,
-      "last3_bp_ip": 14.7,
-      "last3_bp_runs": 9,
-      "last_game_relievers": 5,
-      "last3_relievers": 10,
-      "back_to_back_arms": 3,
-      "workload_read": "Heavy recent workload. Late-game pitching condition could materially affect the read.",
-      "score_reason": "High risk (8.4/10): 14.7 recent relief innings, recency-weighted — 8 in the last game (pitched yesterday), 3 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
-      "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
-      "context_only": {
-        "last_game_relievers": 5,
-        "last3_relievers": 10,
-        "note": "Reliever counts are displayed for context only and do not add score points."
-      },
-      "component_scores": {
-        "baseline": 45,
-        "weighted_bp_ip": 22.4,
-        "back_to_back_arms": 16.5,
-        "reliever_counts_context_only": 0,
-        "no_recent_games_credit": 0,
-        "raw_score": 83.9
-      },
-      "efficiency_score": 41,
-      "efficiency_label": "Below average",
-      "efficiency_reason": "Below average (4.1/10): 5.52 ERA and 1.36 WHIP over 14.7 relief innings (9 ER, 15 H, 5 BB) in the last three days.",
-      "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
-      "efficiency_component_scores": {
-        "baseline": 50,
-        "era_term": -7.9,
-        "whip_term": -1,
-        "confidence": 1,
-        "raw_score": 41.1
-      },
-      "era_3d": 5.52,
-      "whip_3d": 1.36,
-      "risk_index": 89,
-      "risk_label": "High risk",
-      "days_rest": 1,
-      "source_version": "bullpen-fatigue-v5-recency-weighted"
-    },
     "Athletics": {
       "score": 83,
       "label": "High risk",
@@ -1635,49 +1376,6 @@
       "risk_index": 80,
       "risk_label": "Tired",
       "days_rest": 2,
-      "source_version": "bullpen-fatigue-v5-recency-weighted"
-    },
-    "Colorado Rockies": {
-      "score": 79,
-      "label": "Tired",
-      "last_game_bp_ip": 5.3,
-      "last3_bp_ip": 15,
-      "last3_bp_runs": 5,
-      "last_game_relievers": 5,
-      "last3_relievers": 10,
-      "back_to_back_arms": 2,
-      "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
-      "score_reason": "Tired (7.9/10): 15 recent relief innings, recency-weighted — 5.3 in the last game (pitched yesterday), 2 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
-      "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
-      "context_only": {
-        "last_game_relievers": 5,
-        "last3_relievers": 10,
-        "note": "Reliever counts are displayed for context only and do not add score points."
-      },
-      "component_scores": {
-        "baseline": 45,
-        "weighted_bp_ip": 17.7,
-        "back_to_back_arms": 16,
-        "reliever_counts_context_only": 0,
-        "no_recent_games_credit": 0,
-        "raw_score": 78.7
-      },
-      "efficiency_score": 64,
-      "efficiency_label": "Effective",
-      "efficiency_reason": "Effective (6.4/10): 3 ERA and 0.87 WHIP over 15 relief innings (5 ER, 11 H, 2 BB) in the last three days.",
-      "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
-      "efficiency_component_scores": {
-        "baseline": 50,
-        "era_term": 7.2,
-        "whip_term": 6.5,
-        "confidence": 1,
-        "raw_score": 63.7
-      },
-      "era_3d": 3,
-      "whip_3d": 0.87,
-      "risk_index": 72,
-      "risk_label": "Tired",
-      "days_rest": 1,
       "source_version": "bullpen-fatigue-v5-recency-weighted"
     },
     "Cleveland Guardians": {
@@ -2024,49 +1722,6 @@
       "days_rest": 2,
       "source_version": "bullpen-fatigue-v5-recency-weighted"
     },
-    "Seattle Mariners": {
-      "score": 65,
-      "label": "Tired",
-      "last_game_bp_ip": 2,
-      "last3_bp_ip": 8,
-      "last3_bp_runs": 1,
-      "last_game_relievers": 2,
-      "last3_relievers": 8,
-      "back_to_back_arms": 5,
-      "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
-      "score_reason": "Tired (6.5/10): 8 recent relief innings, recency-weighted (pitched yesterday), 5 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
-      "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
-      "context_only": {
-        "last_game_relievers": 2,
-        "last3_relievers": 8,
-        "note": "Reliever counts are displayed for context only and do not add score points."
-      },
-      "component_scores": {
-        "baseline": 45,
-        "weighted_bp_ip": -2.4,
-        "back_to_back_arms": 22.8,
-        "reliever_counts_context_only": 0,
-        "no_recent_games_credit": 0,
-        "raw_score": 65.5
-      },
-      "efficiency_score": 79,
-      "efficiency_label": "Dominant",
-      "efficiency_reason": "Dominant (7.9/10): 1.13 ERA and 0.63 WHIP over 8 relief innings (1 ER, 2 H, 3 BB) in the last three days.",
-      "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
-      "efficiency_component_scores": {
-        "baseline": 50,
-        "era_term": 18.5,
-        "whip_term": 10.1,
-        "confidence": 1,
-        "raw_score": 78.6
-      },
-      "era_3d": 1.13,
-      "whip_3d": 0.63,
-      "risk_index": 51,
-      "risk_label": "Normal",
-      "days_rest": 1,
-      "source_version": "bullpen-fatigue-v5-recency-weighted"
-    },
     "Chicago White Sox": {
       "score": 64,
       "label": "Tired",
@@ -2366,49 +2021,6 @@
       "risk_index": 62,
       "risk_label": "Tired",
       "days_rest": 2,
-      "source_version": "bullpen-fatigue-v5-recency-weighted"
-    },
-    "Cincinnati Reds": {
-      "score": 53,
-      "label": "Normal",
-      "last_game_bp_ip": 4,
-      "last3_bp_ip": 9,
-      "last3_bp_runs": 12,
-      "last_game_relievers": 5,
-      "last3_relievers": 11,
-      "back_to_back_arms": 1,
-      "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
-      "score_reason": "Normal (5.3/10): 9 recent relief innings, recency-weighted — 4 in the last game (pitched yesterday), 1 arm worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
-      "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
-      "context_only": {
-        "last_game_relievers": 5,
-        "last3_relievers": 11,
-        "note": "Reliever counts are displayed for context only and do not add score points."
-      },
-      "component_scores": {
-        "baseline": 45,
-        "weighted_bp_ip": 4.1,
-        "back_to_back_arms": 4,
-        "reliever_counts_context_only": 0,
-        "no_recent_games_credit": 0,
-        "raw_score": 53.1
-      },
-      "efficiency_score": 9,
-      "efficiency_label": "Struggling",
-      "efficiency_reason": "Struggling (0.9/10): 12 ERA and 2.33 WHIP over 9 relief innings (12 ER, 16 H, 5 BB) in the last three days.",
-      "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
-      "efficiency_component_scores": {
-        "baseline": 50,
-        "era_term": -25,
-        "whip_term": -15.5,
-        "confidence": 1,
-        "raw_score": 9.5
-      },
-      "era_3d": 12,
-      "whip_3d": 2.33,
-      "risk_index": 74,
-      "risk_label": "Tired",
-      "days_rest": 1,
       "source_version": "bullpen-fatigue-v5-recency-weighted"
     },
     "Los Angeles Angels": {
