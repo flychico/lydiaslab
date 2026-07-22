@@ -114,12 +114,36 @@ jobs:
           DATE_INPUT="${{ steps.publish_date.outputs.date }}"
           git config user.name "lydia-bot"
           git config user.email "actions@users.noreply.github.com"
+
+          # Generated outputs are authoritative for these paths. Snapshot them
+          # before synchronizing with main so a concurrent manual upload cannot
+          # cause a rebase conflict at the end of an otherwise valid publish.
+          GENERATED_PATHS=(previews picks articles data sitemap.xml member-brief results tools mlb)
+          SNAPSHOT_DIR=$(mktemp -d)
+          for path in "${GENERATED_PATHS[@]}"; do
+            if [ -e "$path" ]; then
+              mkdir -p "$SNAPSHOT_DIR/$(dirname "$path")"
+              cp -a "$path" "$SNAPSHOT_DIR/$path"
+            fi
+          done
+
+          git fetch origin main
+          git reset --hard origin/main
+
+          for path in "${GENERATED_PATHS[@]}"; do
+            if [ -d "$SNAPSHOT_DIR/$path" ]; then
+              mkdir -p "$path"
+              rsync -a --delete "$SNAPSHOT_DIR/$path/" "$path/"
+            elif [ -f "$SNAPSHOT_DIR/$path" ]; then
+              cp -a "$SNAPSHOT_DIR/$path" "$path"
+            fi
+          done
+
           git add previews/ picks/ articles/ data/ sitemap.xml member-brief/ results/ tools/ mlb/
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
             git commit -m "Publish picks $DATE_INPUT"
-            git pull --rebase
             git push
           fi
 
@@ -147,3 +171,4 @@ jobs:
           NETLIFY_API_TOKEN: ${{ secrets.NETLIFY_API_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         run: node scripts/send-free-preview-emails.js "${{ steps.publish_date.outputs.date }}"
+
