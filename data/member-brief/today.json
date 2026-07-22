@@ -1,6 +1,6 @@
 {
   "date": "2026-07-22",
-  "generated_at": "2026-07-22T19:31:20.098Z",
+  "generated_at": "2026-07-22T20:11:48.742Z",
   "snapshot_type": "posted",
   "source_of_truth": "LyDia Daily Engine",
   "current_official_model": "moneyline_only",
@@ -1056,13 +1056,13 @@
       "run_model_probability": 0.5277,
       "run_model_weight": 0.5,
       "model_probability_pre_bullpen": null,
-      "edge": 0.0417,
+      "edge": 0.0407,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 56,
       "lab_score_breakdown": {
         "score": 56,
-        "model_edge_points": 18.24,
+        "model_edge_points": 17.81,
         "pitcher_points": 10,
         "bullpen_points": 7.84,
         "market_points": 15,
@@ -1231,12 +1231,213 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": 0.5161,
+        "no_vig_probability": 0.5171,
         "best_price": -110,
         "away_price": 105,
         "home_price": -110,
-        "away_no_vig": 0.4839,
-        "home_no_vig": 0.5161,
+        "away_no_vig": 0.4829,
+        "home_no_vig": 0.5171,
+        "books": 9
+      }
+    },
+    {
+      "game_pk": 824732,
+      "game_id": "baltimore-orioles-boston-red-sox-2026-07-22",
+      "game": "Baltimore Orioles @ Boston Red Sox",
+      "time": "7:10 PM",
+      "game_time_iso": "2026-07-22T23:10:00Z",
+      "away_team": "Baltimore Orioles",
+      "home_team": "Boston Red Sox",
+      "away_record": "49-53",
+      "home_record": "52-48",
+      "away_l10": "7-3",
+      "home_l10": "10-0",
+      "pick_team": "Boston Red Sox",
+      "side": "home",
+      "model_probability": 0.6001,
+      "model_source": "moneyline-v2-plus-runs-v1",
+      "projected_runs": {
+        "away": 4.8,
+        "home": 5.2,
+        "total": 10
+      },
+      "legacy_strength_probability": 0.6484,
+      "run_model_probability": 0.5497,
+      "run_model_weight": 0.5,
+      "model_probability_pre_bullpen": null,
+      "edge": 0.0528,
+      "status": "pass",
+      "value_tag": "PASS",
+      "lab_score": 55,
+      "lab_score_breakdown": {
+        "score": 55,
+        "model_edge_points": 23.11,
+        "pitcher_points": 2.4,
+        "bullpen_points": 9.4,
+        "market_points": 15,
+        "base_points": 5,
+        "note": "Lab Rating grades setup quality. It is not win probability."
+      },
+      "official_pick_gate": {
+        "minimum_model_probability": 0.72,
+        "minimum_lab_score": 80,
+        "minimum_edge": 0.03,
+        "model_probability_passed": false,
+        "lab_score_passed": false,
+        "edge_passed": true
+      },
+      "pass_reason": "Starting pitcher edge conflicts with the model side.",
+      "read": "Starting pitcher edge conflicts with the model side.",
+      "pitcher_edge": {
+        "team": "Baltimore Orioles",
+        "gap": 14,
+        "conflict": true,
+        "away_score": 64,
+        "home_score": 50,
+        "away_pitcher": "Kyle Bradish",
+        "home_pitcher": "TBD",
+        "away_era": 3.61,
+        "home_era": null,
+        "away_whip": 1.35,
+        "home_whip": null,
+        "away_advanced": {
+          "w": 6,
+          "l": 9,
+          "kbb_pct": 0.1233,
+          "gb_pct": 0.5842,
+          "babip": 0.2912,
+          "hr9": 1.01,
+          "ip_per_start": 5.6
+        },
+        "home_advanced": null
+      },
+      "offense_form": {
+        "away": {
+          "ops_15d": 0.768,
+          "season_ops": 0.719,
+          "delta_ops": 0.049,
+          "rpg_15d": 4.64,
+          "opp_hand": null,
+          "ops_vs_opp_hand": null
+        },
+        "home": {
+          "ops_15d": 0.797,
+          "season_ops": 0.71,
+          "delta_ops": 0.087,
+          "rpg_15d": 5.67,
+          "opp_hand": "R",
+          "ops_vs_opp_hand": 0.686
+        },
+        "window_days": 15
+      },
+      "model_v3": {
+        "p_home": 0.6739,
+        "fip_away": 4.03,
+        "fip_home": 4.2,
+        "off_adj": 0.0304,
+        "bp_adj": 0.027,
+        "version": "v3.1-bullpen",
+        "p_home_v2": 0.6001,
+        "note": "shadow A/B — does not drive picks"
+      },
+      "bullpen": {
+        "pick_team": {
+          "score": 61,
+          "label": "Normal",
+          "last_game_bp_ip": 3.3,
+          "last3_bp_ip": 6.3,
+          "last3_bp_runs": 1,
+          "last_game_relievers": 3,
+          "last3_relievers": 6,
+          "back_to_back_arms": 3,
+          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
+          "score_reason": "Normal (6.1/10): 6.3 recent relief innings, recency-weighted (2 days since last game), 3 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 3,
+            "last3_relievers": 6,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 6.3,
+            "back_to_back_arms": 9.7,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 61
+          },
+          "efficiency_score": 67,
+          "efficiency_label": "Effective",
+          "efficiency_reason": "Effective (6.7/10): 1.42 ERA and 1.26 WHIP over 6.3 relief innings (1 ER, 6 H, 2 BB) in the last three days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": 16.7,
+            "whip_term": 0.6,
+            "confidence": 1,
+            "raw_score": 67.2
+          },
+          "era_3d": 1.42,
+          "whip_3d": 1.26,
+          "risk_index": 53,
+          "risk_label": "Normal",
+          "days_rest": 2,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "opponent": {
+          "score": 57,
+          "label": "Normal",
+          "last_game_bp_ip": 2,
+          "last3_bp_ip": 4,
+          "last3_bp_runs": 3,
+          "last_game_relievers": 2,
+          "last3_relievers": 4,
+          "back_to_back_arms": 4,
+          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
+          "score_reason": "Normal (5.7/10): 4 recent relief innings, recency-weighted (2 days since last game), 4 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 2,
+            "last3_relievers": 4,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": -0.5,
+            "back_to_back_arms": 12.5,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 57
+          },
+          "efficiency_score": 40,
+          "efficiency_label": "Below average",
+          "efficiency_reason": "Below average (4.0/10): 6.75 ERA and 1.25 WHIP over 4 relief innings (3 ER, 5 H, 0 BB) in the last three days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": -10.2,
+            "whip_term": 0.5,
+            "confidence": 0.67,
+            "raw_score": 40.3
+          },
+          "era_3d": 6.75,
+          "whip_3d": 1.25,
+          "risk_index": 62,
+          "risk_label": "Tired",
+          "days_rest": 2,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "label": "Elevated volatility",
+        "major_caution": false,
+        "absolute_risk": "Elevated"
+      },
+      "market": {
+        "no_vig_probability": 0.5473,
+        "best_price": -126,
+        "away_price": 122,
+        "home_price": -126,
+        "away_no_vig": 0.4527,
+        "home_no_vig": 0.5473,
         "books": 9
       }
     },
@@ -1265,13 +1466,13 @@
       "run_model_probability": 0.5643,
       "run_model_weight": 0.5,
       "model_probability_pre_bullpen": null,
-      "edge": 0.0401,
+      "edge": 0.042,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 53,
       "lab_score_breakdown": {
         "score": 53,
-        "model_edge_points": 17.56,
+        "model_edge_points": 18.37,
         "pitcher_points": 12.5,
         "bullpen_points": 2.58,
         "market_points": 15,
@@ -1440,12 +1641,12 @@
         "absolute_risk": "Pick side high"
       },
       "market": {
-        "no_vig_probability": 0.5009,
-        "best_price": -105,
+        "no_vig_probability": 0.499,
+        "best_price": -104,
         "away_price": -105,
-        "home_price": -105,
-        "away_no_vig": 0.4991,
-        "home_no_vig": 0.5009,
+        "home_price": -104,
+        "away_no_vig": 0.501,
+        "home_no_vig": 0.499,
         "books": 9
       }
     },
@@ -1656,207 +1857,6 @@
         "away_no_vig": 0.4558,
         "home_no_vig": 0.5442,
         "books": 4
-      }
-    },
-    {
-      "game_pk": 824732,
-      "game_id": "baltimore-orioles-boston-red-sox-2026-07-22",
-      "game": "Baltimore Orioles @ Boston Red Sox",
-      "time": "7:10 PM",
-      "game_time_iso": "2026-07-22T23:10:00Z",
-      "away_team": "Baltimore Orioles",
-      "home_team": "Boston Red Sox",
-      "away_record": "49-52",
-      "home_record": "51-48",
-      "away_l10": "7-3",
-      "home_l10": "10-0",
-      "pick_team": "Boston Red Sox",
-      "side": "home",
-      "model_probability": 0.5979,
-      "model_source": "moneyline-v2-plus-runs-v1",
-      "projected_runs": {
-        "away": 4.8,
-        "home": 5.2,
-        "total": 10
-      },
-      "legacy_strength_probability": 0.6444,
-      "run_model_probability": 0.5497,
-      "run_model_weight": 0.5,
-      "model_probability_pre_bullpen": null,
-      "edge": 0.0368,
-      "status": "pass",
-      "value_tag": "PASS",
-      "lab_score": 48,
-      "lab_score_breakdown": {
-        "score": 48,
-        "model_edge_points": 16.11,
-        "pitcher_points": 2.4,
-        "bullpen_points": 9.4,
-        "market_points": 15,
-        "base_points": 5,
-        "note": "Lab Rating grades setup quality. It is not win probability."
-      },
-      "official_pick_gate": {
-        "minimum_model_probability": 0.72,
-        "minimum_lab_score": 80,
-        "minimum_edge": 0.03,
-        "model_probability_passed": false,
-        "lab_score_passed": false,
-        "edge_passed": true
-      },
-      "pass_reason": "Starting pitcher edge conflicts with the model side.",
-      "read": "Starting pitcher edge conflicts with the model side.",
-      "pitcher_edge": {
-        "team": "Baltimore Orioles",
-        "gap": 14,
-        "conflict": true,
-        "away_score": 64,
-        "home_score": 50,
-        "away_pitcher": "Kyle Bradish",
-        "home_pitcher": "TBD",
-        "away_era": 3.61,
-        "home_era": null,
-        "away_whip": 1.35,
-        "home_whip": null,
-        "away_advanced": {
-          "w": 6,
-          "l": 9,
-          "kbb_pct": 0.1233,
-          "gb_pct": 0.5842,
-          "babip": 0.2912,
-          "hr9": 1.01,
-          "ip_per_start": 5.6
-        },
-        "home_advanced": null
-      },
-      "offense_form": {
-        "away": {
-          "ops_15d": 0.772,
-          "season_ops": 0.72,
-          "delta_ops": 0.052,
-          "rpg_15d": 4.64,
-          "opp_hand": null,
-          "ops_vs_opp_hand": null
-        },
-        "home": {
-          "ops_15d": 0.803,
-          "season_ops": 0.71,
-          "delta_ops": 0.093,
-          "rpg_15d": 5.67,
-          "opp_hand": "R",
-          "ops_vs_opp_hand": 0.688
-        },
-        "window_days": 15
-      },
-      "model_v3": {
-        "p_home": 0.6705,
-        "fip_away": 4.03,
-        "fip_home": 4.2,
-        "off_adj": 0.0328,
-        "bp_adj": 0.027,
-        "version": "v3.1-bullpen",
-        "p_home_v2": 0.5979,
-        "note": "shadow A/B — does not drive picks"
-      },
-      "bullpen": {
-        "pick_team": {
-          "score": 61,
-          "label": "Normal",
-          "last_game_bp_ip": 3.3,
-          "last3_bp_ip": 6.3,
-          "last3_bp_runs": 1,
-          "last_game_relievers": 3,
-          "last3_relievers": 6,
-          "back_to_back_arms": 3,
-          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
-          "score_reason": "Normal (6.1/10): 6.3 recent relief innings, recency-weighted (2 days since last game), 3 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
-          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
-          "context_only": {
-            "last_game_relievers": 3,
-            "last3_relievers": 6,
-            "note": "Reliever counts are displayed for context only and do not add score points."
-          },
-          "component_scores": {
-            "baseline": 45,
-            "weighted_bp_ip": 6.3,
-            "back_to_back_arms": 9.7,
-            "reliever_counts_context_only": 0,
-            "no_recent_games_credit": 0,
-            "raw_score": 61
-          },
-          "efficiency_score": 67,
-          "efficiency_label": "Effective",
-          "efficiency_reason": "Effective (6.7/10): 1.42 ERA and 1.26 WHIP over 6.3 relief innings (1 ER, 6 H, 2 BB) in the last three days.",
-          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
-          "efficiency_component_scores": {
-            "baseline": 50,
-            "era_term": 16.7,
-            "whip_term": 0.6,
-            "confidence": 1,
-            "raw_score": 67.2
-          },
-          "era_3d": 1.42,
-          "whip_3d": 1.26,
-          "risk_index": 53,
-          "risk_label": "Normal",
-          "days_rest": 2,
-          "source_version": "bullpen-fatigue-v5-recency-weighted"
-        },
-        "opponent": {
-          "score": 57,
-          "label": "Normal",
-          "last_game_bp_ip": 2,
-          "last3_bp_ip": 4,
-          "last3_bp_runs": 3,
-          "last_game_relievers": 2,
-          "last3_relievers": 4,
-          "back_to_back_arms": 4,
-          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
-          "score_reason": "Normal (5.7/10): 4 recent relief innings, recency-weighted (2 days since last game), 4 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
-          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
-          "context_only": {
-            "last_game_relievers": 2,
-            "last3_relievers": 4,
-            "note": "Reliever counts are displayed for context only and do not add score points."
-          },
-          "component_scores": {
-            "baseline": 45,
-            "weighted_bp_ip": -0.5,
-            "back_to_back_arms": 12.5,
-            "reliever_counts_context_only": 0,
-            "no_recent_games_credit": 0,
-            "raw_score": 57
-          },
-          "efficiency_score": 40,
-          "efficiency_label": "Below average",
-          "efficiency_reason": "Below average (4.0/10): 6.75 ERA and 1.25 WHIP over 4 relief innings (3 ER, 5 H, 0 BB) in the last three days.",
-          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
-          "efficiency_component_scores": {
-            "baseline": 50,
-            "era_term": -10.2,
-            "whip_term": 0.5,
-            "confidence": 0.67,
-            "raw_score": 40.3
-          },
-          "era_3d": 6.75,
-          "whip_3d": 1.25,
-          "risk_index": 62,
-          "risk_label": "Tired",
-          "days_rest": 2,
-          "source_version": "bullpen-fatigue-v5-recency-weighted"
-        },
-        "label": "Elevated volatility",
-        "major_caution": false,
-        "absolute_risk": "Elevated"
-      },
-      "market": {
-        "no_vig_probability": 0.5611,
-        "best_price": -132,
-        "away_price": 124,
-        "home_price": -132,
-        "away_no_vig": 0.4389,
-        "home_no_vig": 0.5611,
-        "books": 9
       }
     },
     {
@@ -2093,13 +2093,13 @@
       "run_model_probability": 0.5,
       "run_model_weight": 0.5,
       "model_probability_pre_bullpen": null,
-      "edge": 0.0285,
+      "edge": 0.0272,
       "status": "pass",
       "value_tag": "PASS",
-      "lab_score": 45,
+      "lab_score": 44,
       "lab_score_breakdown": {
-        "score": 45,
-        "model_edge_points": 12.48,
+        "score": 44,
+        "model_edge_points": 11.9,
         "pitcher_points": 6.25,
         "bullpen_points": 10.96,
         "market_points": 10,
@@ -2268,12 +2268,12 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": 0.5293,
+        "no_vig_probability": 0.5307,
         "best_price": -118,
         "away_price": -118,
-        "home_price": 108,
-        "away_no_vig": 0.5293,
-        "home_no_vig": 0.4707,
+        "home_price": 110,
+        "away_no_vig": 0.5307,
+        "home_no_vig": 0.4693,
         "books": 9
       }
     },
@@ -2302,13 +2302,13 @@
       "run_model_probability": 0.5743,
       "run_model_weight": 0.5,
       "model_probability_pre_bullpen": null,
-      "edge": 0.0222,
+      "edge": 0.0214,
       "status": "pass",
       "value_tag": "PASS",
-      "lab_score": 40,
+      "lab_score": 39,
       "lab_score_breakdown": {
-        "score": 40,
-        "model_edge_points": 9.72,
+        "score": 39,
+        "model_edge_points": 9.37,
         "pitcher_points": 0,
         "bullpen_points": 15,
         "market_points": 10,
@@ -2477,12 +2477,12 @@
         "absolute_risk": "Opponent high"
       },
       "market": {
-        "no_vig_probability": 0.529,
-        "best_price": -117,
-        "away_price": 107,
-        "home_price": -117,
-        "away_no_vig": 0.471,
-        "home_no_vig": 0.529,
+        "no_vig_probability": 0.5298,
+        "best_price": -118,
+        "away_price": 110,
+        "home_price": -118,
+        "away_no_vig": 0.4702,
+        "home_no_vig": 0.5298,
         "books": 9
       }
     },
@@ -2700,18 +2700,18 @@
       "home_l10": "6-4",
       "pick_team": "New York Yankees",
       "side": "home",
-      "model_probability": 0.5641,
+      "model_probability": 0.5579,
       "model_source": "moneyline-v2-plus-runs-v1",
       "projected_runs": {
-        "away": 4.8,
+        "away": 4.9,
         "home": 4.8,
         "total": 9.7
       },
       "legacy_strength_probability": 0.6261,
-      "run_model_probability": 0.5,
+      "run_model_probability": 0.4874,
       "run_model_weight": 0.5,
       "model_probability_pre_bullpen": null,
-      "edge": -0.0566,
+      "edge": -0.0648,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 32,
@@ -2770,14 +2770,14 @@
           "ops_15d": 0.807,
           "season_ops": 0.767,
           "delta_ops": 0.04,
-          "rpg_15d": 6,
+          "rpg_15d": 6.18,
           "opp_hand": "L",
           "ops_vs_opp_hand": 0.726
         },
         "home": {
-          "ops_15d": 0.757,
+          "ops_15d": 0.754,
           "season_ops": 0.738,
-          "delta_ops": 0.019,
+          "delta_ops": 0.016,
           "rpg_15d": 4.18,
           "opp_hand": "R",
           "ops_vs_opp_hand": 0.738
@@ -2785,13 +2785,13 @@
         "window_days": 15
       },
       "model_v3": {
-        "p_home": 0.6174,
+        "p_home": 0.6168,
         "fip_away": 4.48,
         "fip_home": 3.02,
-        "off_adj": -0.0168,
+        "off_adj": -0.0192,
         "bp_adj": -0.102,
         "version": "v3.1-bullpen",
-        "p_home_v2": 0.5641,
+        "p_home_v2": 0.5579,
         "note": "shadow A/B — does not drive picks"
       },
       "bullpen": {
@@ -2886,12 +2886,12 @@
         "absolute_risk": "Pick side high"
       },
       "market": {
-        "no_vig_probability": 0.6207,
-        "best_price": -174,
+        "no_vig_probability": 0.6226,
+        "best_price": -177,
         "away_price": 160,
-        "home_price": -174,
-        "away_no_vig": 0.3793,
-        "home_no_vig": 0.6207,
+        "home_price": -177,
+        "away_no_vig": 0.3774,
+        "home_no_vig": 0.6226,
         "books": 9
       }
     },
