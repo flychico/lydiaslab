@@ -171,19 +171,39 @@ async function main() {
     group.forEach((game, index) => dhNumber.set(String(game.game_pk), index + 1));
   }
 
+  // Doubleheader URLs are owned by schedule order, never by a stale manifest.
+  // A prior bad run can otherwise assign the base slug to Game 2 and then let
+  // Game 1 recover into the same output path, overwriting one page with the
+  // other. Single-game slugs may still reuse their prior permanent URL.
+  function resolvedSlug(game) {
+    const pk = String(game.game_pk);
+    const gameNumber = dhNumber.get(pk) || null;
+    const base = matchupSlug(game);
+    if (gameNumber) return base + (gameNumber > 1 ? `-game-${gameNumber}` : "");
+    const prior = previousByPk.get(pk);
+    return (prior && prior.slug) || base;
+  }
+
+  const slugOwner = new Map();
+  for (const game of fullDayGames) {
+    const slug = resolvedSlug(game);
+    const owner = slugOwner.get(slug);
+    if (owner && owner !== String(game.game_pk)) {
+      throw new Error(`Duplicate matchup output ${slug}: games ${owner} and ${game.game_pk}`);
+    }
+    slugOwner.set(slug, String(game.game_pk));
+  }
+
   // Precompute every game's URL so each page can link to its sibling games.
   const dayLinks = fullDayGames.map(g => {
-    const n = dhNumber.get(String(g.game_pk)) || null;
-    const prior = previousByPk.get(String(g.game_pk));
-    const slug = (prior && prior.slug) || (matchupSlug(g) + (n && n > 1 ? `-game-${n}` : ""));
+    const slug = resolvedSlug(g);
     return { game_pk: g.game_pk, game: g.game, away_team: g.away_team, home_team: g.home_team, status: g.status, url: `/mlb/${slug}/` };
   });
 
   const pages = [];
   for (const game of brief.games) {
     const gameNumber = dhNumber.get(String(game.game_pk)) || null;
-    const priorForGame = previousByPk.get(String(game.game_pk));
-    const slug = (priorForGame && priorForGame.slug) || (matchupSlug(game) + (gameNumber && gameNumber > 1 ? `-game-${gameNumber}` : ""));
+    const slug = resolvedSlug(game);
     const urlPath = `/mlb/${slug}/`;
     const scheduleGame = scheduleByPk.get(String(game.game_pk)) || null;
     const totalsGame = (totals.games && totals.games[String(game.game_pk)]) || null;
@@ -249,7 +269,7 @@ async function main() {
     if (generatedPk.has(pk)) continue;
     const gameNumber = dhNumber.get(pk) || null;
     const prior = previousByPk.get(pk) || null;
-    const slug = (prior && prior.slug) || (matchupSlug(game) + (gameNumber && gameNumber > 1 ? `-game-${gameNumber}` : ""));
+    const slug = resolvedSlug(game);
     const outputPath = path.join(MATCHUP_ROOT, slug, "index.html");
     if (!fs.existsSync(outputPath)) continue;
     const existingHtml = fs.readFileSync(outputPath, "utf8");
