@@ -255,6 +255,7 @@ async function main() {
       generated_at: new Date().toISOString(),
       weather,
       pitcher_source_version: pitcherSource.source_version || null,
+      preserved: false,
       final: finalSummary(scheduleGame, resultGame)
     });
   }
@@ -291,6 +292,7 @@ async function main() {
       generated_at: (prior && prior.generated_at) || fs.statSync(outputPath).mtime.toISOString(),
       weather: (prior && prior.weather) || null,
       pitcher_source_version: (prior && prior.pitcher_source_version) || pitcherSource.source_version || null,
+      preserved: true,
       final: finalSummary(scheduleGame, null)
     });
     generatedPk.add(pk);
@@ -303,7 +305,7 @@ async function main() {
     if (generatedPk.has(pk)) continue;
     const outputPath = path.join(ROOT, prior.output || path.join("mlb", prior.slug || "", "index.html"));
     if (!prior.slug || !fs.existsSync(outputPath)) continue;
-    pages.push(prior);
+    pages.push({ ...prior, preserved: true });
     generatedPk.add(pk);
   }
 

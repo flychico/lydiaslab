@@ -23,7 +23,19 @@ if (!fs.existsSync(manifestPath)) throw new Error(`Missing ${manifestPath}`);
 const source = JSON.parse(fs.readFileSync(sourcePath, "utf8"));
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 
+let verified = 0;
+let preserved = 0;
+
 for (const page of manifest.pages || []) {
+  // Once a game leaves the live Member Brief, its permanent page is a frozen
+  // pregame artifact. The canonical pitcher feed continues to change during
+  // and after the game, so comparing fresh season aggregates with frozen HTML
+  // creates false failures. Freshly generated pages remain strictly verified.
+  if (page.preserved) {
+    preserved++;
+    continue;
+  }
+
   const canonical = source.games && source.games[String(page.game_pk)];
   if (!canonical) throw new Error(`No canonical pitcher row for game ${page.game_pk}`);
 
@@ -41,9 +53,13 @@ for (const page of manifest.pages || []) {
       throw new Error(`${page.output} does not contain canonical ${side} IP/start ${ipStart}`);
     }
   }
+  verified++;
 }
 
-console.log(`PASS: ${manifest.pages.length} matchup pages match the canonical Pitcher Matchup Tool data for ${DATE}.`);
+console.log(
+  `PASS: ${verified} freshly generated matchup pages match canonical Pitcher Matchup Tool data for ${DATE}; ` +
+  `${preserved} frozen pregame pages retained.`
+);
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, char => ({
