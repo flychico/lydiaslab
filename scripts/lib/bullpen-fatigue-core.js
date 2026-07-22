@@ -25,9 +25,12 @@
   Browser pages display generated bullpen data. They do not maintain a separate scoring model.
 */
 
-const VERSION = "bullpen-fatigue-v4-fatigue-efficiency-split";
+const VERSION = "bullpen-fatigue-v5-recency-weighted";
 const SOURCE_OF_TRUTH = "scripts/lib/bullpen-fatigue-core.js";
-const LOOKBACK_DAYS = 3;
+const LOOKBACK_DAYS = 5;        // scan 5 days so a rest/rainout day does not drop all games
+const RECENCY_HALF_LIFE = 2;   // a game's fatigue weight halves every 2 days
+const FATIGUE_IP_K = 4.2;      // points per weighted relief inning above the per-game baseline
+const FATIGUE_B2B_K = 8;       // points per recency-weighted back-to-back arm
 
 function clamp(n, min, max) {
   return Math.min(max, Math.max(min, n));
@@ -169,6 +172,36 @@ function processBoxSide(box, side, teamId, date, teams, seq) {
   });
 }
 
+function daysAgoBetween(targetDate, gameDate) {
+  const t = new Date(targetDate + "T12:00:00");
+  const g = new Date(gameDate + "T12:00:00");
+  return Math.max(1, Math.round((t - g) / 86400000));
+}
+function recencyWeight(daysAgo) {
+  // 1.0 for a game the day before the target, halving every RECENCY_HALF_LIFE days.
+  return Math.pow(0.5, (daysAgo - 1) / RECENCY_HALF_LIFE);
+}
+// Back-to-back arms, weighted by how recent the second appearance was. An arm
+// that worked consecutive days ending yesterday counts full; one that ended
+// three days ago counts little, because the rest since then has recovered it.
+function weightedBackToBackArms(pitcherDates, targetDate) {
+  let weighted = 0, rawCount = 0;
+  for (const dates of Object.values(pitcherDates || {})) {
+    const arr = [...dates].sort();
+    let latestPairSecond = null;
+    for (let i = 1; i < arr.length; i++) {
+      const prev = new Date(arr[i - 1] + "T12:00:00");
+      const curr = new Date(arr[i] + "T12:00:00");
+      if ((curr - prev) / 86400000 === 1) latestPairSecond = arr[i];
+    }
+    if (latestPairSecond) {
+      rawCount += 1;
+      weighted += recencyWeight(daysAgoBetween(targetDate, latestPairSecond));
+    }
+  }
+  return { weighted, rawCount };
+}
+
 function countBackToBackArms(pitcherDates) {
   let count = 0;
   for (const dates of Object.values(pitcherDates || {})) {
@@ -185,7 +218,7 @@ function countBackToBackArms(pitcherDates) {
   return count;
 }
 
-function scoreTeam(team) {
+function scoreTeam(team, targetDate) {
   // Sort most-recent-game-first. Same calendar date can hold two games
   // (doubleheader) — date alone can't order those, so seq (assigned in
   // schedule/gameNumber order during collection) breaks the tie and puts
@@ -193,36 +226,47 @@ function scoreTeam(team) {
   // pushed first.
   const games = [...(team.games || [])].sort((a, b) => (new Date(b.date) - new Date(a.date)) || ((b.seq || 0) - (a.seq || 0)));
   const last = games[0] || { bpIP: 0, relievers: 0, bpRuns: 0, bpER: 0, bpH: 0, bpBB: 0, date: null };
-  const last3BP = games.reduce((s, g) => s + g.bpIP, 0);
-  const last3Runs = games.reduce((s, g) => s + (g.bpRuns || 0), 0);
-  const last3ER = games.reduce((s, g) => s + (g.bpER || 0), 0);
-  const last3H = games.reduce((s, g) => s + (g.bpH || 0), 0);
-  const last3BB = games.reduce((s, g) => s + (g.bpBB || 0), 0);
-  const last3Relievers = games.reduce((s, g) => s + g.relievers, 0);
-  const b2b = countBackToBackArms(team.pitcherDates);
-  const gamesTracked = games.length;
-  // Expected bullpen IP baseline scales with actual games played in the
-  // window, not calendar days — a doubleheader means 4 team-games can land
-  // inside a 3-calendar-day lookback, and comparing that against a flat
-  // 3-game assumption (9 IP) overstates fatigue for volume that was never
-  // unusual per game, just unusually scheduled. 3 IP/game matches the same
-  // assumption already used for the single-game baseline below.
-  const expectedBP = 3 * gamesTracked;
+  const ref = targetDate || (last.date ? dateShift(last.date, 1) : null);
 
-  // FATIGUE: pure workload/rest. No outcome data — how much a pen has
-  // pitched and how little rest it's had, nothing about how well it pitched.
+  // The SCORE uses the full 5-day window with recency decay so a rest day
+  // lowers fatigue. But every DISPLAYED stat and the efficiency calc use only
+  // the true last-3-days games, so "last 3 days: 15.3 IP" stays honest and
+  // matches what the score reason and the tool page show. A game 4-5 days out
+  // still nudges the decayed score but never inflates the displayed 3-day sum.
+  const recent3 = ref ? games.filter(g => daysAgoBetween(ref, g.date) <= 3) : games;
+  const last3BP = recent3.reduce((s, g) => s + g.bpIP, 0);
+  const last3Runs = recent3.reduce((s, g) => s + (g.bpRuns || 0), 0);
+  const last3ER = recent3.reduce((s, g) => s + (g.bpER || 0), 0);
+  const last3H = recent3.reduce((s, g) => s + (g.bpH || 0), 0);
+  const last3BB = recent3.reduce((s, g) => s + (g.bpBB || 0), 0);
+  const last3Relievers = recent3.reduce((s, g) => s + g.relievers, 0);
+  const gamesTracked = recent3.length;
+
+  // RECENCY-WEIGHTED FATIGUE. Each game's relief innings are weighted by how
+  // many days before the target game it was pitched, decaying by half every
+  // RECENCY_HALF_LIFE days. A rest day (including a rainout) pushes every game
+  // one day older and lowers its weight, so an idle day genuinely reduces
+  // fatigue instead of the old fixed-window behaviour where it did nothing.
+  let weightedIP = 0, weightedExpected = 0;
+  for (const g of games) {
+    const w = ref ? recencyWeight(daysAgoBetween(ref, g.date)) : 1;
+    weightedIP += g.bpIP * w;
+    weightedExpected += 3 * w;   // 3 relief innings per game is the neutral load
+  }
+  const b2bInfo = ref ? weightedBackToBackArms(team.pitcherDates, ref) : { weighted: countBackToBackArms(team.pitcherDates), rawCount: countBackToBackArms(team.pitcherDates) };
+  const b2b = b2bInfo.rawCount;
+  const daysRest = ref && last.date ? daysAgoBetween(ref, last.date) : null;
+
   const components = {
     baseline: 45,
-    last3_bp_ip: (last3BP - expectedBP) * 3.5,
-    last_game_bp_ip: (last.bpIP - 3) * 4,
-    back_to_back_arms: b2b * 6,
+    weighted_bp_ip: (weightedIP - weightedExpected) * FATIGUE_IP_K,
+    back_to_back_arms: b2bInfo.weighted * FATIGUE_B2B_K,
     reliever_counts_context_only: 0,
     no_recent_games_credit: gamesTracked === 0 ? -18 : 0
   };
 
   const rawScore = components.baseline
-    + components.last3_bp_ip
-    + components.last_game_bp_ip
+    + components.weighted_bp_ip
     + components.back_to_back_arms
     + components.reliever_counts_context_only
     + components.no_recent_games_credit;
@@ -286,14 +330,15 @@ function scoreTeam(team) {
     score,
     label,
     workload_read: workloadRead(label),
-    score_reason: scoreReason({ label, score, last, last3BP, last3Relievers, b2b, gamesTracked }),
-    formula: "45 + ((Last 3 BP IP - 9) x 3.5) + ((Last game BP IP - 3) x 4) + (Back-to-back arms x 6)",
+    score_reason: scoreReason({ label, score, last, last3BP, last3Relievers, b2b, gamesTracked, daysRest }),
+    formula: "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
     efficiency_score: efficiencyScore,
     efficiency_label: efficiencyLabel,
     efficiency_reason: efficiencyReason({ efficiencyLabel, efficiencyScore, era3d, whip3d, last3ER, last3H, last3BB, last3BP, gamesTracked }),
     efficiency_formula: "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
     risk_index: riskIndex,
     risk_label: riskLabel,
+    days_rest: daysRest,
     last_game_date: last.date,
     last_game_bp_ip: round(last.bpIP, 1),
     last3_bp_ip: round(last3BP, 1),
@@ -314,8 +359,7 @@ function scoreTeam(team) {
     },
     component_scores: {
       baseline: round(components.baseline, 1),
-      last3_bp_ip: round(components.last3_bp_ip, 1),
-      last_game_bp_ip: round(components.last_game_bp_ip, 1),
+      weighted_bp_ip: round(components.weighted_bp_ip, 1),
       back_to_back_arms: round(components.back_to_back_arms, 1),
       reliever_counts_context_only: 0,
       no_recent_games_credit: round(components.no_recent_games_credit, 1),
@@ -343,12 +387,13 @@ function workloadRead(label) {
   return "Manageable recent workload. Bullpen should still be part of the full-game read.";
 }
 
-function scoreReason({ label, score, last, last3BP, last3Relievers, b2b, gamesTracked }) {
-  if (!gamesTracked) return `${label} (${(score/10).toFixed(1)}/10). No completed games in the last three days — the pen comes in rested.`;
+function scoreReason({ label, score, last, last3BP, last3Relievers, b2b, gamesTracked, daysRest }) {
+  if (!gamesTracked) return `${label} (${(score/10).toFixed(1)}/10). No completed games in the recent window — the pen comes in rested.`;
+  const restText = daysRest === 1 ? "pitched yesterday" : daysRest ? `${daysRest} days since last game` : "";
   const bits = [];
-  bits.push(`${round(last3BP, 1)} relief innings over the last three days` + (last.bpIP >= 4 ? ` — ${round(last.bpIP, 1)} of them in the last game` : ""));
-  if (b2b > 0) bits.push(`${b2b} arm${b2b === 1 ? "" : "s"} pitched back-to-back days`);
-  return `${label} (${(score/10).toFixed(1)}/10): ` + bits.join(", ") + `. ${last3Relievers} reliever appearances in the window. Workload only — see efficiency for how well the pen has actually pitched.`;
+  bits.push(`${round(last3BP, 1)} recent relief innings, recency-weighted` + (last.bpIP >= 4 ? ` — ${round(last.bpIP, 1)} in the last game (${restText})` : restText ? ` (${restText})` : ""));
+  if (b2b > 0) bits.push(`${b2b} arm${b2b === 1 ? "" : "s"} worked back-to-back days`);
+  return `${label} (${(score/10).toFixed(1)}/10): ` + bits.join(", ") + `. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.`;
 }
 
 function buildTeamsByName(rows) {
@@ -377,6 +422,7 @@ function buildTeamsByName(rows) {
       whip_3d: row.whip_3d,
       risk_index: row.risk_index,
       risk_label: row.risk_label,
+      days_rest: row.days_rest,
       source_version: VERSION
     };
   }
@@ -430,7 +476,7 @@ async function buildBullpenSource({ date, todayGames, fetchJson, generatedAt }) 
     }
   }
 
-  const teamsRows = Object.values(teams).map(scoreTeam).sort((a, b) => b.score - a.score || String(a.team).localeCompare(String(b.team)));
+  const teamsRows = Object.values(teams).map(t => scoreTeam(t, date)).sort((a, b) => b.score - a.score || String(a.team).localeCompare(String(b.team)));
   const highRisk = teamsRows.filter(t => t.label === "High risk").length;
   const tired = teamsRows.filter(t => t.label === "Tired").length;
   const fresh = teamsRows.filter(t => t.label === "Fresh").length;
@@ -441,8 +487,8 @@ async function buildBullpenSource({ date, todayGames, fetchJson, generatedAt }) 
     source_of_truth: SOURCE_OF_TRUTH,
     version: VERSION,
     method: "Generated single source of truth. Website pages display this JSON and do not calculate separate bullpen scores in the browser.",
-    note: "v4 split scores: fatigue is workload only, efficiency is ERA and WHIP, risk_index blends the two. Reliever counts are context only.",
-    formula: "Fatigue = 45 + ((Last 3 BP IP - 3 x games) x 3.5) + ((Last game BP IP - 3) x 4) + (Back-to-back arms x 6). Runs allowed moved to the efficiency score.",
+    note: "v5: fatigue is recency-weighted workload (rest days lower it), efficiency is ERA and WHIP, risk_index blends the two. Reliever counts are context only.",
+    formula: "Fatigue = 45 + (recency-weighted relief innings above 3/game x 4.2) + (recency-weighted back-to-back arms x 8). Half-life 2 days, so an idle or rained-out day lowers fatigue. Runs allowed live in the efficiency score.",
     lookback_days: LOOKBACK_DAYS,
     summary: {
       teams_tracked: teamsRows.length,
