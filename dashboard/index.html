@@ -347,7 +347,7 @@ async function loadScoreboard(options = {}) {
     } else if (oddsUrl) {
       oddsNoteEl.innerHTML = `<div class="notice warn">Live market prices are temporarily unavailable. LyDia model data and the MLB schedule are still shown.</div>`;
     } else {
-      oddsNoteEl.innerHTML = `<div class="notice">Live market prices require the Odds API key saved in this browser. Published LyDia probabilities and totals projections still appear when available. <a href="/odds/">Open Live Odds</a>.</div>`;
+      oddsNoteEl.innerHTML = `<div class="notice">Live market prices require your saved Odds access in this browser. Published LyDia probabilities and totals projections still appear when available. <a href="/odds/">Open Live Odds</a>.</div>`;
     }
 
     const briefByPk = Object.fromEntries(((brief && brief.games) || []).map(game => [String(game.game_pk), game]));
