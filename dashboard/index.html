@@ -95,7 +95,7 @@
 .games-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(350px,1fr)); gap:16px; }
 .score-card {
   --away-color:#6d5dfc; --home-color:#d9468f;
-  position:relative; display:flex; flex-direction:column; min-height:100%;
+  position:relative; display:flex; flex-direction:column; min-height:100%; cursor:pointer;
   color:var(--text); text-decoration:none; overflow:hidden;
   background:rgba(255,255,255,.94); border:1px solid rgba(109,93,252,.16);
   border-radius:22px; box-shadow:0 12px 32px rgba(31,35,40,.08);
@@ -532,7 +532,7 @@ function renderGameCard(item) {
       </div>`
     : "";
 
-  return `<div class="score-card ${isLive ? "is-live" : ""}" style="--away-color:${awayColor};--home-color:${homeColor}">
+  return `<div class="score-card ${isLive ? "is-live" : ""}" style="--away-color:${awayColor};--home-color:${homeColor}" role="link" tabindex="0" aria-label="${escapeHtml(away.team.name)} at ${escapeHtml(home.team.name)} matchup analysis" data-matchup-url="${cardTarget}" onclick="openScorecardMatchup(event,this)" onkeydown="openScorecardMatchup(event,this)">
     <div class="card-body">
       <div class="card-top">
         <div class="game-meta">
@@ -568,6 +568,16 @@ function renderGameCard(item) {
       <a class="card-cta" href="${cardTarget}" aria-label="${escapeHtml(away.team.name)} at ${escapeHtml(home.team.name)} matchup analysis"><span>${directPage ? (isFinal ? "View prediction and final result" : "View prediction, picks and odds") : "Open matchup archive"}</span><span>→</span></a>
     </div>
   </div>`;
+}
+
+function openScorecardMatchup(event, card) {
+  // Keep the official MLB pitcher links and the explicit matchup CTA working
+  // independently. Anywhere else on the scoreboard card opens the matchup.
+  if (event.target.closest("a")) return;
+  if (event.type === "keydown" && event.key !== "Enter" && event.key !== " ") return;
+  if (event.type === "keydown") event.preventDefault();
+  const url = card && card.dataset && card.dataset.matchupUrl;
+  if (url) window.location.href = url;
 }
 
 function teamRow(team, modelProbability, price, hasScore, winner, side) {
