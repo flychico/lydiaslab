@@ -35,6 +35,18 @@ if (!preview.includes("Lynold Mercado") || !preview.includes("/writers/lynold/")
   throw new Error("Unified Picks cards are missing author attribution.");
 }
 
+for (const game of Object.values(canonical.games || {})) {
+  for (const side of ["away", "home"]) {
+    const pitcher = game[side] || {};
+    const isBullpenGame = Boolean(pitcher.bullpenGame || (pitcher.role && pitcher.role.bullpenGame));
+    if (!isBullpenGame) continue;
+    const team = side === "away" ? game.away_team : game.home_team;
+    if (!preview.includes(`${team} is using a bullpen game.`)) {
+      throw new Error(`Unified Picks explanation omits bullpen-game impact for ${team}.`);
+    }
+  }
+}
+
 const briefPks = new Set((brief.games || []).map(game => String(game.game_pk)));
 const bullpenPks = new Set((bullpen.teams || []).map(team => String(team.game_pk)));
 const missingBullpenGames = [...briefPks].filter(gamePk => !bullpenPks.has(gamePk));

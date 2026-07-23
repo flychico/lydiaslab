@@ -87,6 +87,53 @@ function pitcherSentence(g) {
   if (p.team === g.pick_team) return `${g.pick_team} has the stronger starting pitcher matchup${p.gap ? ` by ${p.gap} points` : ""}.`;
   return `${p.team} has the starting pitcher advantage${p.gap ? ` by ${p.gap} points` : ""}, which works against LyDia's side.`;
 }
+function pitcherPlan(pitcher) {
+  const p = pitcher || {};
+  const role = p.role || {};
+  return {
+    name: p.name || "TBD",
+    expected_innings: Number.isFinite(p.expectedInnings) ? p.expectedInnings
+      : Number.isFinite(role.expectedInnings) ? role.expectedInnings : null,
+    bullpen_innings: Number.isFinite(p.bullpenInnings) ? p.bullpenInnings
+      : Number.isFinite(role.bullpenInnings) ? role.bullpenInnings : null,
+    bullpen_game: Boolean(p.bullpenGame || role.bullpenGame)
+  };
+}
+function bullpenGameAnalysis(g) {
+  const plan = g.pitching_plan || {};
+  const bullpen = g.bullpen || {};
+  const pickIsAway = g.pick_team === g.away_team;
+  const sides = [
+    { team:g.away_team, plan:plan.away || {}, pen:pickIsAway ? bullpen.pick_team : bullpen.opponent, picked:pickIsAway },
+    { team:g.home_team, plan:plan.home || {}, pen:pickIsAway ? bullpen.opponent : bullpen.pick_team, picked:!pickIsAway }
+  ];
+  const bullpenSides = sides.filter(item => item.plan.bullpen_game);
+  if (!bullpenSides.length) return "";
+
+  const describe = item => {
+    const allocation = Number.isFinite(item.plan.expected_innings) && Number.isFinite(item.plan.bullpen_innings)
+      ? `${item.plan.name} is expected to cover about ${item.plan.expected_innings.toFixed(1)} innings, leaving roughly ${item.plan.bullpen_innings.toFixed(1)} innings to the bullpen.`
+      : "The relief staff is expected to cover most of the game.";
+    const risk = item.pen && Number.isFinite(item.pen.risk_index)
+      ? `The pen carries ${(item.pen.risk_index/10).toFixed(1)}/10 risk`
+      : "";
+    const efficiency = item.pen && Number.isFinite(item.pen.efficiency_score)
+      ? `${risk ? " with" : "The pen has"} ${(item.pen.efficiency_score/10).toFixed(1)}/10 recent efficiency`
+      : "";
+    const impact = item.picked
+      ? "Because this is LyDia's side, bullpen quality is central to the pick."
+      : `That heavy bullpen exposure strengthens the case for ${g.pick_team}.`;
+    return `${item.team} is using a bullpen game. ${allocation} ${risk}${efficiency ? efficiency : ""}${risk || efficiency ? "." : ""} ${impact}`;
+  };
+
+  let text = bullpenSides.map(describe).join(" ");
+  if (bullpen.pick_team && bullpen.opponent &&
+      Number.isFinite(bullpen.pick_team.efficiency_score) &&
+      Number.isFinite(bullpen.opponent.efficiency_score)) {
+    text += ` The bullpen efficiency comparison is ${(bullpen.pick_team.efficiency_score/10).toFixed(1)}/10 for ${g.pick_team} versus ${(bullpen.opponent.efficiency_score/10).toFixed(1)}/10 for ${opponentName(g)}.`;
+  }
+  return text.trim();
+}
 function clientRead(g) {
   const m = g.market || {};
   const team = g.pick_team || "This side";
@@ -139,6 +186,11 @@ async function main() {
     if (!canonical || !game.pitcher_edge) continue;
     game.pitcher_edge.away_pitcher_id = game.pitcher_edge.away_pitcher_id || (canonical.away && canonical.away.id) || null;
     game.pitcher_edge.home_pitcher_id = game.pitcher_edge.home_pitcher_id || (canonical.home && canonical.home.id) || null;
+    game.pitching_plan = {
+      away: pitcherPlan(canonical.away),
+      home: pitcherPlan(canonical.home)
+    };
+    game.bullpen_game = Boolean(game.pitching_plan.away.bullpen_game || game.pitching_plan.home.bullpen_game);
   }
 
   fs.mkdirSync(path.join(ROOT, "previews"), { recursive: true });
@@ -224,7 +276,7 @@ function renderCard(g, featured) {
     <dt>Pitcher edge</dt><dd>${esc(pe.team || "-")}${pe.gap ? ` by ${esc(pe.gap)} points` : ""}</dd>
     <dt>Bullpen read</dt><dd>${esc(bullpenAnalysis(g))}</dd>
   </dl>
-  <div class="why-block"><b>Why LyDia made this decision</b>${esc(LyDiaRead.clientRead(g))}</div>
+  <div class="why-block"><b>Why LyDia made this decision</b>${bullpenGameAnalysis(g) ? `<strong>Bullpen game impact</strong><br>${esc(bullpenGameAnalysis(g))}<br><br>` : ""}${esc(LyDiaRead.clientRead(g))}</div>
   ${isPass ? `<div class="risk-block"><b>Pass reason</b>${esc(g.pass_reason || "No clear setup.")}</div>` : `<div class="risk-block"><b>Risk note</b>${esc(riskNote(g))}</div>`}
 </div>`;
 }
