@@ -27,7 +27,9 @@ if (!retired.includes('window.location.replace("/previews/"')) {
 const brief = json(`data/member-brief/${DATE}.json`);
 const bullpen = json(`data/bullpen/${DATE}.json`);
 const preview = read(`previews/${DATE}.html`);
+const previewHub = read("previews/index.html");
 const canonical = json(`data/pitcher-matchups/${DATE}.json`);
+const matchupManifest = json(`data/matchup-pages/${DATE}.json`);
 
 if (!preview.includes("Lynold Mercado") || !preview.includes("/writers/lynold/")) {
   throw new Error("Unified Picks cards are missing author attribution.");
@@ -48,6 +50,13 @@ for (const game of Object.values(canonical.games || {})) {
     if (!preview.includes(expected)) {
       throw new Error(`Unified Picks page is missing MLB link for ${pitcher.name}.`);
     }
+  }
+}
+
+for (const page of matchupManifest.pages || []) {
+  const pathname = new URL(page.url).pathname;
+  if (!preview.includes(pathname) || !previewHub.includes(pathname)) {
+    throw new Error(`Unified Picks page is missing matchup link ${pathname}.`);
   }
 }
 

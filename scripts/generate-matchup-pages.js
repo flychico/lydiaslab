@@ -44,7 +44,6 @@ const MANIFEST_PATH = path.join(MANIFEST_DIR, `${DATE}.json`);
 const MATCHUP_ROOT = path.join(ROOT, "mlb");
 const ARCHIVE_DIR = path.join(MATCHUP_ROOT, "matchups");
 const PREVIEW_PATH = path.join(ROOT, "previews", `${DATE}.html`);
-const PICKS_PATH = path.join(ROOT, "picks", "index.html");
 const SITEMAP_PATH = path.join(ROOT, "sitemap.xml");
 
 const TEAM_SHORT = {
@@ -328,7 +327,6 @@ async function main() {
   buildArchive();
   updateSitemap(manifest);
   linkDailyPreview(manifest);
-  linkPicksPage();
 
   console.log(`Generated ${pages.length} matchup pages for ${DATE}.`);
   console.log(`Indexable: ${manifest.indexable_pages}. Noindex: ${manifest.noindex_pages}.`);
@@ -1451,97 +1449,21 @@ function escXml(value) {
 }
 
 
-function linkPicksPage() {
-  if (!fs.existsSync(PICKS_PATH)) return;
-
-  let html = fs.readFileSync(PICKS_PATH, "utf8");
-  let changed = false;
-
-  const renderAnchor = "function renderGame(g) {";
-  const helperMarker = "function matchupPageUrl(g) {";
-
-  if (!html.includes(helperMarker)) {
-    if (!html.includes(renderAnchor)) {
-      throw new Error("Could not find renderGame() in picks/index.html.");
-    }
-
-    const helper = `const MATCHUP_TEAM_SHORT = {"Arizona Diamondbacks":"Diamondbacks","Athletics":"Athletics","Atlanta Braves":"Braves","Baltimore Orioles":"Orioles","Boston Red Sox":"Red Sox","Chicago Cubs":"Cubs","Chicago White Sox":"White Sox","Cincinnati Reds":"Reds","Cleveland Guardians":"Guardians","Colorado Rockies":"Rockies","Detroit Tigers":"Tigers","Houston Astros":"Astros","Kansas City Royals":"Royals","Los Angeles Angels":"Angels","Los Angeles Dodgers":"Dodgers","Miami Marlins":"Marlins","Milwaukee Brewers":"Brewers","Minnesota Twins":"Twins","New York Mets":"Mets","New York Yankees":"Yankees","Philadelphia Phillies":"Phillies","Pittsburgh Pirates":"Pirates","San Diego Padres":"Padres","San Francisco Giants":"Giants","Seattle Mariners":"Mariners","St. Louis Cardinals":"Cardinals","Tampa Bay Rays":"Rays","Texas Rangers":"Rangers","Toronto Blue Jays":"Blue Jays","Washington Nationals":"Nationals"};
-
-function matchupPageUrl(g) {
-  const date = (PICKS_DATA && PICKS_DATA.date) || datePick.value || localISODate(new Date());
-  const away = MATCHUP_TEAM_SHORT[g.away_team] || g.away_team || "";
-  const home = MATCHUP_TEAM_SHORT[g.home_team] || g.home_team || "";
-  const pageSlug = value => String(value)
-    .toLowerCase()
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-  let url = "/mlb/" + pageSlug(away) + "-vs-" + pageSlug(home) + "-prediction-odds-" + date + "/";
-  const games = (PICKS_DATA && PICKS_DATA.games) || [];
-  const same = games.filter(x => x.away_team === g.away_team && x.home_team === g.home_team);
-  if (same.length > 1) {
-    same.sort((a, b) => String(a.game_time_iso || a.time || "").localeCompare(String(b.game_time_iso || b.time || "")));
-    const n = same.findIndex(x => String(x.game_pk) === String(g.game_pk)) + 1;
-    if (n > 1) url = url.slice(0, -1) + "-game-" + n + "/";
-  }
-  return url;
-}
-
-`;
-
-    // Inject at the TOP of the page script, right after PICKS_DATA is declared,
-    // NOT before renderGame. The initial inline render runs synchronously at the
-    // top of the script; a MATCHUP_TEAM_SHORT const declared lower down is still
-    // in the temporal dead zone at that point, so the first paint throws and the
-    // page shows empty until a manual refresh.
-    const topAnchor = "let PICKS_DATA = null;";
-    if (html.includes(topAnchor)) {
-      html = html.replace(topAnchor, topAnchor + "\n" + helper);
-    } else {
-      html = html.replace(renderAnchor, helper + renderAnchor);
-    }
-    changed = true;
-  }
-
-  // Upgrade a previously baked helper to the doubleheader-aware version.
-  const legacyReturn = 'return "/mlb/" + pageSlug(away) + "-vs-" + pageSlug(home) + "-prediction-odds-" + date + "/";';
-  if (html.includes(legacyReturn)) {
-    const dhReturn = [
-      'let url = "/mlb/" + pageSlug(away) + "-vs-" + pageSlug(home) + "-prediction-odds-" + date + "/";',
-      'const gms = (PICKS_DATA && PICKS_DATA.games) || [];',
-      'const same = gms.filter(function (x) { return x.away_team === g.away_team && x.home_team === g.home_team; });',
-      'if (same.length > 1) { same.sort(function (a, b) { return String(a.game_time_iso || a.time || "").localeCompare(String(b.game_time_iso || b.time || "")); }); var n = same.findIndex(function (x) { return String(x.game_pk) === String(g.game_pk); }) + 1; if (n > 1) url = url.slice(0, -1) + "-game-" + n + "/"; }',
-      'return url;'
-    ].join("\n  ");
-    html = html.replace(legacyReturn, dhReturn);
-    changed = true;
-  }
-
-  const plainTitle = '<span class="matchup">${escapeHtml(g.game || "")}</span>';
-  const linkedTitle = '<a class="matchup" href="${matchupPageUrl(g)}">${escapeHtml(g.game || "")}</a>';
-
-  if (html.includes(plainTitle)) {
-    html = html.replace(plainTitle, linkedTitle);
-    changed = true;
-  } else if (!html.includes(linkedTitle)) {
-    throw new Error("Could not find the Picks matchup title markup.");
-  }
-
-  if (changed) fs.writeFileSync(PICKS_PATH, html, "utf8");
-}
-
 function linkDailyPreview(manifest) {
-  if (!fs.existsSync(PREVIEW_PATH)) return;
-  let html = fs.readFileSync(PREVIEW_PATH, "utf8");
-  let changed = false;
-  for (const page of manifest.pages) {
-    const gameText = esc(page.game);
-    const unlinked = `<h2>${gameText}</h2>`;
-    const linked = `<h2><a href="${new URL(page.url).pathname}">${gameText}</a></h2>`;
-    if (html.includes(unlinked)) {
-      html = html.replace(unlinked, linked);
-      changed = true;
+  const targets = [PREVIEW_PATH, path.join(ROOT, "previews", "index.html")];
+  for (const target of targets) {
+    if (!fs.existsSync(target)) continue;
+    let html = fs.readFileSync(target, "utf8");
+    let changed = false;
+    for (const page of manifest.pages) {
+      const gameText = esc(page.game);
+      const unlinked = `<h2>${gameText}</h2>`;
+      const linked = `<h2><a href="${new URL(page.url).pathname}">${gameText}</a></h2>`;
+      if (html.includes(unlinked)) {
+        html = html.replace(unlinked, linked);
+        changed = true;
+      }
     }
+    if (changed) fs.writeFileSync(target, html, "utf8");
   }
-  if (changed) fs.writeFileSync(PREVIEW_PATH, html, "utf8");
 }
