@@ -103,6 +103,11 @@ jobs:
           node scripts/generate-learning-summary.js
           node scripts/verify-learning-lab.js --require-current-totals
 
+      - name: Normalize and verify Google Analytics
+        run: |
+          node scripts/normalize-public-shell.js
+          node scripts/verify-google-analytics.js
+
       - name: Verify generated data and public copy
         run: |
           DATE_INPUT="${{ steps.publish_date.outputs.date }}"
@@ -166,9 +171,6 @@ jobs:
           NETLIFY_API_TOKEN: ${{ secrets.NETLIFY_API_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         run: node scripts/send-member-emails.js "${{ steps.publish_date.outputs.date }}"
-
-      - name: Normalize public shell and head tags
-        run: node scripts/normalize-public-shell.js
 
       - name: Email free daily preview to the free list
         if: ${{ github.event_name == 'schedule' || github.event.inputs.send_email == 'true' }}

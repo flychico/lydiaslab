@@ -28,7 +28,9 @@ jobs:
         run: node scripts/site-health-cleanup.js --fix
 
       - name: Normalize public nav and footer
-        run: node scripts/normalize-public-shell.js
+        run: |
+          node scripts/normalize-public-shell.js
+          node scripts/verify-google-analytics.js
 
       - name: Verify public pages are clean
         run: node scripts/assert-public-clean.js
