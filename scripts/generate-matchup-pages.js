@@ -643,9 +643,13 @@ function windDirection(degrees) {
 function findResult(results, date, game) {
   const day = results && results.days && results.days[date];
   if (!day || !Array.isArray(day.picks)) return null;
+  // A team/date lookup is ambiguous for doubleheaders. It caused Game 2 pages
+  // to inherit Game 1's final score and grade because both games have the same
+  // away and home teams. Results must belong to the exact MLB game.
+  const gamePk = String(game.game_pk || "");
+  if (!gamePk) return null;
   return day.picks.find(pick =>
-    String(pick.gamePk || pick.game_pk) === String(game.game_pk) ||
-    (pick.away === game.away_team && pick.home === game.home_team)
+    String(pick.gamePk || pick.game_pk || "") === gamePk
   ) || null;
 }
 
