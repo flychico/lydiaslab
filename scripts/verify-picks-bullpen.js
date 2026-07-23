@@ -42,15 +42,30 @@ if (missingBullpenGames.length) {
   throw new Error(`Bullpen tool dropped daily game(s): ${missingBullpenGames.join(",")}`);
 }
 
-for (const game of Object.values(canonical.games || {})) {
+let verifiedPitcherLinks = 0;
+for (const game of brief.games || []) {
+  const source = (canonical.games || {})[String(game.game_pk)] || {};
+  const edge = game.pitcher_edge || {};
   for (const side of ["away", "home"]) {
-    const pitcher = game[side];
-    if (!pitcher || !pitcher.id || !pitcher.name) continue;
-    const expected = `https://www.mlb.com/player/${slug(pitcher.name)}-${pitcher.id}`;
+    const name = edge[`${side}_pitcher`];
+    if (!name || name === "TBD") continue;
+    const canonicalPitcher = source[side] || {};
+    const id = edge[`${side}_pitcher_id`] ||
+      (canonicalPitcher.name === name ? canonicalPitcher.id : null);
+    // A locked pregame pitcher can differ from a later probable-pitcher
+    // refresh. Do not demand a link for a different pitcher that Picks does
+    // not display, and do not block publication when the locked row predates
+    // ID capture.
+    if (!id) continue;
+    const expected = `https://www.mlb.com/player/${slug(name)}-${id}`;
     if (!preview.includes(expected)) {
-      throw new Error(`Unified Picks page is missing MLB link for ${pitcher.name}.`);
+      throw new Error(`Unified Picks page is missing MLB link for displayed pitcher ${name}.`);
     }
+    verifiedPitcherLinks++;
   }
+}
+if (!verifiedPitcherLinks) {
+  throw new Error("Unified Picks verification could not validate any displayed pitcher links.");
 }
 
 for (const page of matchupManifest.pages || []) {
