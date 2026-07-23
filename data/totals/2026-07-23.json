@@ -1,6 +1,15 @@
 {
  "date": "2026-07-23",
- "generated_at": "2026-07-23T16:39:15.339Z",
+ "generated_at": "2026-07-23T16:41:39.096Z",
+ "model_version": "totals-runs-v2-innings-allocation",
+ "policy": {
+  "version": "totals-policy-v2",
+  "research_min_edge": 0.7,
+  "research_min_setup": 70,
+  "strong_min_edge": 1,
+  "strong_min_setup": 80,
+  "official_totals_enabled": false
+ },
  "source": "LyDia totals projection (offense factor × opposing pitching × park × pen fatigue) + the-odds-api totals consensus",
  "league_rpg": 4.52,
  "probables": {
@@ -90,7 +99,14 @@
    "over": -107,
    "under": -105,
    "books": 9,
-   "lab": 57
+   "lab": 50,
+   "setup_components": {
+    "base": 15,
+    "data_confidence": 25,
+    "edge_points": 9.6,
+    "alignment_threshold": 0.7
+   },
+   "classification": "no_lean"
   },
   "823042": {
    "game": "Arizona Diamondbacks @ St. Louis Cardinals",
@@ -160,7 +176,14 @@
    "over": 100,
    "under": -107,
    "books": 9,
-   "lab": 79
+   "lab": 79,
+   "setup_components": {
+    "base": 15,
+    "data_confidence": 25,
+    "edge_points": 32,
+    "alignment_threshold": 0.7
+   },
+   "classification": "research_lean"
   },
   "824247": {
    "game": "Kansas City Royals @ Detroit Tigers",
@@ -230,7 +253,14 @@
    "over": -105,
    "under": -106,
    "books": 9,
-   "lab": 43
+   "lab": 43,
+   "setup_components": {
+    "base": 15,
+    "data_confidence": 25,
+    "edge_points": 3.2,
+    "alignment_threshold": 0.7
+   },
+   "classification": "no_lean"
   },
   "824406": {
    "game": "Minnesota Twins @ Cleveland Guardians",
@@ -300,24 +330,31 @@
    "over": 105,
    "under": -113,
    "books": 9,
-   "lab": 67
+   "lab": 67,
+   "setup_components": {
+    "base": 15,
+    "data_confidence": 25,
+    "edge_points": 27.2,
+    "alignment_threshold": 0.7
+   },
+   "classification": "no_lean_low_setup"
   },
   "824893": {
    "game": "San Diego Padres @ Atlanta Braves",
    "game_time_iso": "2026-07-23T16:15:00Z",
    "projection": 9.4,
    "projection_raw": 9.4,
-   "proj_away": 4,
+   "proj_away": 4.1,
    "proj_home": 5.4,
    "away": {
     "team": "San Diego Padres",
-    "rpg": 4.83,
+    "rpg": 4.94,
     "season_rpg": 4.13,
-    "form15_rpg": 5.83,
+    "form15_rpg": 6,
     "form15_g": 12,
-    "form7_rpg": 6,
+    "form7_rpg": 6.43,
     "form7_g": 7,
-    "off_factor": 1.069,
+    "off_factor": 1.093,
     "opp_sp": "Chris Sale",
     "opp_sp_fip": 2.75,
     "opp_sp_ip": 5.6,
@@ -366,13 +403,20 @@
    "park_factor": 1.05,
    "away_sp": "Kyle Hart",
    "home_sp": "Chris Sale",
-   "line": 7.5,
-   "over": 104,
-   "under": -125,
-   "books": 5,
-   "lab": 81
+   "line": 10,
+   "over": -114,
+   "under": -110,
+   "books": 6,
+   "lab": 41,
+   "setup_components": {
+    "base": 15,
+    "data_confidence": 16,
+    "edge_points": 9.6,
+    "alignment_threshold": 0.7
+   },
+   "classification": "no_lean"
   }
  },
  "learned_bias": 0,
- "learned_n": 74
+ "learned_n": 0
 }

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-23T16:09:40.017Z",
+  "generated_at": "2026-07-23T16:41:45.734Z",
   "status": "ready",
   "latest_date": "2026-07-22",
   "days_reviewed": 14,
@@ -51,10 +51,6 @@
       "read": "Across all reviewed days, 11 graded setups had strong Lab Rating but model probability below 72%. Those should remain value watch, not official picks."
     },
     {
-      "title": "Market learning",
-      "read": "Closing price data is not strong enough yet. Keep the market snapshot automation running."
-    },
-    {
       "title": "Bullpen learning",
       "read": "Across all reviewed days, 6 graded moneyline picks carried a meaningful bullpen caution. Review these before adjusting thresholds."
     },
@@ -97,17 +93,6 @@
       "under_lean_record": "3-5",
       "no_lean": 35,
       "note": "Bias = actual minus projection (positive means we under-project). Leans only counted at 0.7+ strikeout edges. Small samples early — a lean record means little before ~100 graded pitchers."
-    },
-    "totals": {
-      "status": "ready",
-      "graded": 74,
-      "self_calibration": "no correction needed yet",
-      "bias": -0.09,
-      "mae": 3.42,
-      "lean_record": "32-24",
-      "over_lean_record": "22-18",
-      "under_lean_record": "10-6",
-      "note": "Bias = actual total minus projection. Leans counted at 0.5+ run edges. Totals are the noisiest market — judge nothing before ~100 graded games."
     },
     "note": "Shadow ledger for learning only — never part of the public record. Official picks stay the only published record.",
     "buckets": [
@@ -716,17 +701,5 @@
     "Watch whether official picks with model probability >= 72% beat low-probability value watches over a larger sample.",
     "Track closing price movement once market snapshots have enough data.",
     "Keep value watch separate from official picks."
-  ],
-  "coach": {
-    "status": "collecting",
-    "title": "Collecting a trustworthy current-model sample",
-    "summary": "LyDia has 7 of 7 required current-model days and 9 of 20 required current-model official picks. Recommendations remain paused until both minimums are reached.",
-    "current_model_days": 7,
-    "current_model_picks": 9,
-    "minimum_days": 7,
-    "minimum_picks": 20,
-    "bullpen_model_owner": "bullpen-fatigue-v3-runs-aware",
-    "recommendations": [],
-    "hard_stop": "Coach findings are review prompts only. No automatic threshold, weight, formula, publishing, or betting change is permitted."
-  }
+  ]
 }
