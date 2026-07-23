@@ -80,14 +80,14 @@ jobs:
           SNAPSHOT_INPUT="${{ github.event.inputs.snapshot }}"
           node scripts/generate-member-lab.js --date "${{ steps.publish_date.outputs.date }}" --snapshot "${SNAPSHOT_INPUT:-posted}"
 
-      - name: Render bettor-friendly previews
-        run: node scripts/generate-previews.js "${{ steps.publish_date.outputs.date }}"
-
       - name: Refresh LyDia Research Desk
         run: node scripts/generate-research-desk.js
 
       - name: Generate canonical Pitcher Matchup Tool data
         run: node scripts/generate-pitcher-matchup-data.js "${{ steps.publish_date.outputs.date }}"
+
+      - name: Render bettor-friendly previews
+        run: node scripts/generate-previews.js "${{ steps.publish_date.outputs.date }}"
 
       - name: Generate matchup pages with indexing quality gate
         run: node scripts/generate-matchup-pages.js "${{ steps.publish_date.outputs.date }}"
