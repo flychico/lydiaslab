@@ -239,7 +239,22 @@ async function gradeDay() {
     fs.appendFileSync(CLV_PATH, lines);
   }
 
-  return { date: DATE, wins, losses, ungraded, voided, units: unitsCounted ? Number(units.toFixed(2)) : null, source: loaded.source, current_official_model: loaded.source === "published-picks" ? "moneyline_only" : "legacy_mixed_markets", picks: graded };
+  const modelVersion = loaded.data.model_version ||
+    (graded.find(p => p.modelVersion || p.model_version) || {}).modelVersion ||
+    (graded.find(p => p.modelVersion || p.model_version) || {}).model_version ||
+    (loaded.source === "published-picks" ? "unknown" : "legacy");
+  return {
+    date: DATE,
+    wins,
+    losses,
+    ungraded,
+    voided,
+    units: unitsCounted ? Number(units.toFixed(2)) : null,
+    source: loaded.source,
+    current_official_model: loaded.source === "published-picks" ? "moneyline_only" : "legacy_mixed_markets",
+    model_version: modelVersion,
+    picks: graded
+  };
 }
 
 function rebuildResultsPage(results) {

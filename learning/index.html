@@ -59,7 +59,7 @@
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script>
 function esc(v){ return escapeHtml(String(v ?? "")); }
-renderNav("/articles/"); renderFooter();
+renderNav("/learning/"); renderFooter();
 
 loadLearning();
 
@@ -89,10 +89,10 @@ async function loadLearning() {
   const metrics = data.process_metrics || {};
   kpisEl.innerHTML = `
     <div class="kpi"><div class="label">Date reviewed</div><div class="value">${esc(data.latest_date || "-")}</div><div class="small dim">${data.days_reviewed || 0} day${data.days_reviewed === 1 ? "" : "s"} in file</div></div>
-    <div class="kpi"><div class="label">Moneyline record</div><div class="value">${esc(day.moneyline_record || "0-0")}</div><div class="small dim">${pct(day.moneyline_win_rate)} win rate</div></div>
+    <div class="kpi"><div class="label">Daily moneyline record</div><div class="value">${esc(day.moneyline_record || "0-0")}</div><div class="small dim">${pct(day.moneyline_win_rate)} win rate for reviewed date</div></div>
     <div class="kpi"><div class="label">Avg model prob</div><div class="value">${pct(metrics.average_model_probability)}</div><div class="small dim">graded moneyline set</div></div>
     <div class="kpi"><div class="label">Avg Lab Rating</div><div class="value">${typeof metrics.average_lab_score === "number" ? (metrics.average_lab_score/10).toFixed(1)+"/10" : "-"}</div><div class="small dim">setup quality, not probability</div></div>
-    <div class="kpi"><div class="label">Protected by gate</div><div class="value">${metrics.protected_by_probability_gate_count || 0}</div><div class="small dim">high Lab, low probability</div></div>
+    <div class="kpi"><div class="label">Historical gate saves</div><div class="value">${metrics.protected_by_probability_gate_count || 0}</div><div class="small dim">graded high-Lab, low-probability setups</div></div>
     <div class="kpi"><div class="label">CLV tracked</div><div class="value">${clvTotal(metrics.clv_counts)}</div><div class="small dim">needs market snapshots</div></div>
   `;
 
@@ -108,16 +108,16 @@ async function loadLearning() {
   // Lab Rating distribution — where do ratings cluster and why
   let distHtml = "";
   try {
-    const csv = await fetch("/data/calibration/calibration_log.csv?v=" + Date.now(), { cache: "no-store" }).then(r => r.ok ? r.text() : null);
+    const csv = await fetch("/data/calibration/calibration_model_log.csv?v=" + Date.now(), { cache: "no-store" }).then(r => r.ok ? r.text() : null);
     if (csv) {
       // CSV has a quoted matchup field — split carefully
       const parseRow = l => {
-        const m = l.match(/^([^,]*),([^,]*),("(?:[^"]|"")*"|[^,]*),("(?:[^"]|"")*"|[^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),(.*)$/);
-        return m ? { date: m[1], pk: m[2], matchup: m[3].replace(/^"|"$/g, ""), side: m[4].replace(/^"|"$/g, ""), status: m[5], prob: Number(m[6]), lab: Number(m[8]), result: m[10], score: m[11] } : null;
+        const m = l.match(/^([^,]*),([^,]*),([^,]*),("(?:[^"]|"")*"|[^,]*),("(?:[^"]|"")*"|[^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),(.*)$/);
+        return m ? { date: m[1], pk: m[2], model: m[3], matchup: m[4].replace(/^"|"$/g, ""), side: m[5].replace(/^"|"$/g, ""), status: m[6], prob: Number(m[7]), lab: Number(m[9]), result: m[11], score: m[12] } : null;
       };
       window._calGames = csv.trim().split("\n").slice(1).map(parseRow).filter(Boolean);
-      const rows = csv.trim().split("\n").slice(1).map(l => l.split(","));
-      const labs = rows.map(r => ({ lab: Number(r[7]), status: r[4] })).filter(x => Number.isFinite(x.lab));
+      const rows = window._calGames;
+      const labs = rows.map(r => ({ lab: r.lab, status: r.status })).filter(x => Number.isFinite(x.lab));
       if (labs.length >= 10) {
         const buckets = new Array(10).fill(0);
         labs.forEach(x => buckets[Math.min(9, Math.floor(x.lab / 10))]++);
@@ -126,7 +126,7 @@ async function loadLearning() {
         labs.forEach(x => (byStatus[x.status] = byStatus[x.status] || []).push(x.lab));
         const avg = a => (a.reduce((p, c) => p + c, 0) / a.length / 10).toFixed(1);
         distHtml = `<h2>Lab Rating distribution</h2><div class="card" style="margin-bottom:14px">
-          <p class="dim small">${labs.length} analyzed games. Ratings cluster in the 7.0–7.9 band because the edge and market components saturate quickly — any market edge above 8% already earns maximum edge points, so the pitcher matchup is usually what separates a 7 from an 8.</p>
+          <p class="dim small">${labs.length} analyzed games from the current model-version ledger. This distribution shows how often each setup-quality band occurs; it does not measure win probability.</p>
           ${buckets.map((n, i) => `<div style="display:flex;align-items:center;gap:8px;font-size:.82rem"><span style="width:52px" class="dim">${(i).toFixed(0)}.0–${i}.9</span><div style="flex:1;background:var(--bg-elev);border-radius:4px;height:14px"><div style="width:${maxB ? (n / maxB * 100) : 0}%;height:100%;background:var(--accent2);border-radius:4px"></div></div><span class="dim small" style="width:22px;text-align:right">${n}</span></div>`).join("")}
           <table style="margin-top:10px"><thead><tr><th>Tier</th><th class="num">Games</th><th class="num">Avg rating</th></tr></thead><tbody>
           ${["official_pick", "value_watch", "watchlist", "pass"].filter(k => byStatus[k]).map(k => `<tr><td>${k.replace(/_/g, " ")}</td><td class="num">${byStatus[k].length}</td><td class="num"><b>${avg(byStatus[k])}</b>/10</td></tr>`).join("")}</tbody></table>
@@ -143,16 +143,16 @@ async function loadLearning() {
   const calHtml = cal.status === "ready" ? `
     <h2>Full-slate calibration</h2>
     <div class="card" style="margin-bottom:14px">
-      <p class="dim small">Every analyzed game — official picks, value watches, watchlist, and passes — is graded nightly into a learning-only shadow ledger. This measures whether the model's probabilities are honest and what the games below the official gates would have returned. It is not the public record.</p>
-      <p><strong>${cal.games_graded}</strong> games graded · Brier score <strong>${cal.brier_score}</strong> <span class="dim small">(lower is better; 0.25 = coin flip)</span></p>
+      <p class="dim small">Every analyzed game from the current model version is graded nightly into a learning-only ledger. This measures whether the model's probabilities are honest and what the games below the official gates would have returned. It is not the public record.</p>
+      <p><strong>${cal.games_graded}</strong> games graded for <strong>${esc(cal.model_version || "current model")}</strong> · Brier score <strong>${cal.brier_score}</strong> <span class="dim small">(lower is better; 0.25 = coin flip)</span></p>
       <table>
         <thead><tr><th>Model probability</th><th class="num">Games</th><th class="num">Expected win%</th><th class="num">Actual win%</th></tr></thead>
         <tbody>${(cal.buckets || []).map(b => `<tr><td>${esc(b.range)}</td><td class="num">${b.games}</td><td class="num">${(b.expected_win_rate * 100).toFixed(0)}%</td><td class="num">${(b.actual_win_rate * 100).toFixed(0)}%</td></tr><tr><td colspan="4" style="padding:0 6px">${gamesDetails("games in " + b.range, inBucket(b.range))}</td></tr>`).join("")}</tbody>
       </table>
       ${cal.shadow_model && cal.shadow_model.status === "ready" ? `
       <div style="margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:8px">
-        <b>Model A/B — official v2 vs shadow v3</b> <span class="dim small">(v3: skill-based pitcher input + offense form)</span><br>
-        <span class="small">${cal.shadow_model.games} games · Brier v2 <b>${cal.shadow_model.brier_v2}</b> vs v3 <b>${cal.shadow_model.brier_v3}</b> → <b>${cal.shadow_model.leader}</b> leads · ${cal.shadow_model.disagreements} disagreement${cal.shadow_model.disagreements === 1 ? "" : "s"}${cal.shadow_model.disagreements ? `, v3 right in ${cal.shadow_model.v3_wins_disagreements}` : ""}</span>
+        <b>Versioned model A/B</b><br>
+        <span class="small">${esc(cal.shadow_model.official_model_version)} vs ${esc(cal.shadow_model.shadow_model_version)} · ${cal.shadow_model.games} games · Brier official <b>${cal.shadow_model.brier_official}</b> vs shadow <b>${cal.shadow_model.brier_shadow}</b> → <b>${cal.shadow_model.leader}</b> leads · ${cal.shadow_model.disagreements} disagreement${cal.shadow_model.disagreements === 1 ? "" : "s"}${cal.shadow_model.disagreements ? `, shadow right in ${cal.shadow_model.shadow_wins_disagreements}` : ""}</span>
         <div id="ab-games"></div>
       </div>` : ""}
       ${cal.attribution ? (cal.attribution.status === "ready" ? `
@@ -190,7 +190,7 @@ async function loadLearning() {
 
   bucketsEl.innerHTML = distHtml + calHtml + `
     <h2>Review buckets</h2>
-    ${bucket("Strong official", (data.buckets || {}).strong_official || [], "Picks that cleared the strict 72% model probability and 8.0/10 Lab Rating gates.")}
+    ${bucket("Verified official picks", (data.buckets || {}).strong_official || [], "Graded official picks that cleared all three gates: 72% model probability, 8.0/10 Lab Rating, and 3% market edge.")}
     ${bucket("Protected by probability gate", (data.buckets || {}).protected_by_probability_gate || [], "High setup quality, but model probability below the official-pick gate. These should stay value watch.")}
     ${bucket("High bullpen risk", (data.buckets || {}).high_bullpen_risk || [], "Official moneyline picks with meaningful bullpen caution.")}
     ${bucket("Pitcher conflicts", (data.buckets || {}).pitcher_conflicts || [], "Official moneyline picks where the starting pitcher edge conflicted with the model side.")}
@@ -198,21 +198,21 @@ async function loadLearning() {
 
   // Name the A/B disagreement games — the ones that decide promotion
   try {
-    const sh = await fetch("/data/calibration/shadow_v3_log.csv?v=" + Date.now(), { cache: "no-store" }).then(r => r.ok ? r.text() : null);
+    const sh = await fetch("/data/calibration/shadow_model_log.csv?v=" + Date.now(), { cache: "no-store" }).then(r => r.ok ? r.text() : null);
     const el = document.getElementById("ab-games");
     if (sh && el) {
       const byPk = {}; (window._calGames || []).forEach(g => byPk[g.date + "," + g.pk] = g);
-      const dis = sh.trim().split("\n").slice(1).map(l => l.split(",")).filter(r => r.length >= 5 && (Number(r[2]) >= 0.5) !== (Number(r[3]) >= 0.5));
+      const dis = sh.trim().split("\n").slice(1).map(l => l.split(",")).filter(r => r.length >= 7 && (Number(r[4]) >= 0.5) !== (Number(r[5]) >= 0.5));
       if (dis.length) {
         el.innerHTML = `<details style="margin-top:6px"><summary class="small dim" style="cursor:pointer">show the ${dis.length} disagreement game${dis.length === 1 ? "" : "s"}</summary>` +
           dis.map(r => {
             const g = byPk[r[0] + "," + r[1]];
-            const hw = Number(r[4]) === 1, p2h = Number(r[2]) >= 0.5, p3h = Number(r[3]) >= 0.5;
+            const hw = Number(r[6]) === 1, officialHome = Number(r[4]) >= 0.5, shadowHome = Number(r[5]) >= 0.5;
             const name = g ? g.matchup : "game " + r[1];
             const [away, home] = (g ? g.matchup.split(" @ ") : ["away", "home"]);
-            const v2side = p2h ? home : away, v3side = p3h ? home : away, winner = hw ? home : away;
-            const v3right = p3h === hw;
-            return `<div class="small" style="padding:3px 0;border-top:1px solid var(--border)">${esc(r[0].slice(5))} · ${esc(name)} — v2: ${esc(v2side)} ${(Math.max(Number(r[2]), 1 - Number(r[2])) * 100).toFixed(0)}% · v3: ${esc(v3side)} ${(Math.max(Number(r[3]), 1 - Number(r[3])) * 100).toFixed(0)}% → <b>${esc(winner)}</b> won · ${v3right ? '<b class="pos-text">v3 right</b>' : '<b class="neg-text">v2 right</b>'}${g && Number.isFinite(g.lab) ? ` · Lab ${(g.lab / 10).toFixed(1)}` : ""}</div>`;
+            const officialSide = officialHome ? home : away, shadowSide = shadowHome ? home : away, winner = hw ? home : away;
+            const shadowRight = shadowHome === hw;
+            return `<div class="small" style="padding:3px 0;border-top:1px solid var(--border)">${esc(r[0].slice(5))} · ${esc(name)} — official: ${esc(officialSide)} ${(Math.max(Number(r[4]), 1 - Number(r[4])) * 100).toFixed(0)}% · shadow: ${esc(shadowSide)} ${(Math.max(Number(r[5]), 1 - Number(r[5])) * 100).toFixed(0)}% → <b>${esc(winner)}</b> won · ${shadowRight ? '<b class="pos-text">shadow right</b>' : '<b class="neg-text">official right</b>'}${g && Number.isFinite(g.lab) ? ` · Lab ${(g.lab / 10).toFixed(1)}` : ""}</div>`;
           }).join("") + `</details>`;
       }
     }
@@ -249,14 +249,14 @@ function bucket(title, rows, empty) {
 
 function row(x) {
   return `<div class="learning-row">
-    <strong>${esc(x.pick || "-")}</strong> <span class="dim">in ${esc(x.game || "")}</span>
+    <strong>${esc(x.pick || "-")}</strong> <span class="dim">in ${esc(x.game || "")}${x.date ? ` · ${esc(x.date)}` : ""}${x.model_version ? ` · ${esc(x.model_version)}` : ""}</span>
     <div class="metric-grid">
       <div class="metric-box"><div class="label">Result</div><div class="value">${esc(x.result || "-")}</div></div>
       <div class="metric-box"><div class="label">Model probability</div><div class="value">${pct(x.model_probability)}</div></div>
       <div class="metric-box"><div class="label">Lab Rating</div><div class="value">${typeof x.lab_score === "number" ? (x.lab_score/10).toFixed(1)+"/10" : "-"}</div></div>
       <div class="metric-box"><div class="label">Raw edge</div><div class="value">${pct(x.raw_edge)}</div></div>
-      <div class="metric-box"><div class="label">CLV</div><div class="value small">${esc(x.clv_result || "not_tracked")}</div></div>
-      <div class="metric-box"><div class="label">Lesson</div><div class="value small">${esc(x.lesson_tag || "-")}</div></div>
+      <div class="metric-box"><div class="label">CLV</div><div class="value small">${esc(humanize(x.clv_result || "not_tracked"))}</div></div>
+      <div class="metric-box"><div class="label">Lesson</div><div class="value small">${esc(humanize(x.lesson_tag || "-"))}</div></div>
     </div>
   </div>`;
 }
@@ -266,6 +266,9 @@ function pct(v) {
 }
 function num(v) {
   return typeof v === "number" ? String(Math.round(v * 10) / 10) : "-";
+}
+function humanize(v) {
+  return String(v || "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 }
 function clvTotal(obj) {
   if (!obj) return 0;

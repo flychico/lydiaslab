@@ -89,8 +89,10 @@ function buildLearningSummary({ date, day, allDays, clvRows }) {
   const avgRawEdge = avg(gradedMoneyline.map(p => p.raw_edge));
 
   const strongOfficial = allGradedMoneyline.filter(p =>
+    p.status === "official_pick" &&
     num(p.model_probability) >= 0.72 &&
-    num(p.lab_score) >= 80
+    num(p.lab_score) >= 80 &&
+    num(p.raw_edge) >= 0.03
   );
 
   const protectedByGate = (allDays || []).flatMap(d =>
@@ -99,6 +101,7 @@ function buildLearningSummary({ date, day, allDays, clvRows }) {
       .filter(p =>
         p.market === "moneyline" &&
         p.pick &&
+        (p.result === "W" || p.result === "L") &&
         num(p.model_probability) < 0.72 &&
         num(p.lab_score) >= 80
       ).map(p => ({ ...p, date: d.date }))
@@ -142,7 +145,7 @@ function buildLearningSummary({ date, day, allDays, clvRows }) {
       results: "data/results.json",
       clv: fs.existsSync(CLV_PATH) ? "data/clv/clv_log.csv" : null
     },
-    current_official_model: day.current_official_model || "moneyline_only",
+    current_official_model: currentModelVersion(gradedMoneyline, allGradedMoneyline, day),
     headline: makeHeadline({ date, wins, losses, winRate, day }),
     day: {
       date,
@@ -217,6 +220,8 @@ function normalizePickForLearning(p, source) {
     side: ml.side || null,
     result,
     source: source || learning.result_source || "unknown",
+    date: p.date || null,
+    status: p.status || learning.status || null,
     model_version: learning.model_version || p.modelVersion || p.model_version || (source === "published-picks" ? "moneyline-v2-strict-probability-gate" : "legacy"),
     lab_score: labScore,
     model_probability: modelProbability,
@@ -263,13 +268,13 @@ function buildFindings(ctx) {
 
   findings.push({
     title: "Official-pick discipline",
-    read: `${ctx.gradedMoneyline.length} moneyline pick${ctx.gradedMoneyline.length === 1 ? "" : "s"} were graded. Record: ${ctx.wins}-${ctx.losses}${ctx.winRate !== null ? ` (${pct(ctx.winRate)})` : ""}.`
+    read: `${ctx.gradedMoneyline.length} moneyline pick${ctx.gradedMoneyline.length === 1 ? "" : "s"} ${ctx.gradedMoneyline.length === 1 ? "was" : "were"} graded. Record: ${ctx.wins}-${ctx.losses}${ctx.winRate !== null ? ` (${pct(ctx.winRate)})` : ""}.`
   });
 
   findings.push({
     title: "Probability gate",
     read: ctx.protectedByGate.length
-      ? `${ctx.protectedByGate.length} setup${ctx.protectedByGate.length === 1 ? "" : "s"} had strong Lab Rating but model probability below 72%. Those should remain value watch, not official picks.`
+      ? `Across all reviewed days, ${ctx.protectedByGate.length} graded setup${ctx.protectedByGate.length === 1 ? "" : "s"} had strong Lab Rating but model probability below 72%. Those should remain value watch, not official picks.`
       : "No high-Lab, low-probability moneyline setups appeared in the graded official set."
   });
 
@@ -283,14 +288,14 @@ function buildFindings(ctx) {
   findings.push({
     title: "Bullpen learning",
     read: ctx.highBullpenRisk.length
-      ? `${ctx.highBullpenRisk.length} graded moneyline pick${ctx.highBullpenRisk.length === 1 ? "" : "s"} carried a meaningful bullpen caution. Review these before adjusting thresholds.`
+      ? `Across all reviewed days, ${ctx.highBullpenRisk.length} graded moneyline pick${ctx.highBullpenRisk.length === 1 ? "" : "s"} carried a meaningful bullpen caution. Review these before adjusting thresholds.`
       : "No graded moneyline picks carried a major bullpen caution."
   });
 
   findings.push({
     title: "Pitcher learning",
     read: ctx.pitcherConflict.length
-      ? `${ctx.pitcherConflict.length} graded pick${ctx.pitcherConflict.length === 1 ? "" : "s"} had a starting-pitcher conflict. These need manual review.`
+      ? `Across all reviewed days, ${ctx.pitcherConflict.length} graded pick${ctx.pitcherConflict.length === 1 ? "" : "s"} had a starting-pitcher conflict. These need manual review.`
       : "No major starting-pitcher conflicts showed up in the graded moneyline set."
   });
 
@@ -311,7 +316,7 @@ function buildMultiDayView(days) {
       officialMoneyline++;
       if (row.result === "W") wins++;
       if (row.result === "L") losses++;
-      if (num(row.model_probability) >= 0.72 && num(row.lab_score) >= 80) strictGateCandidates++;
+      if (row.status === "official_pick" && num(row.model_probability) >= 0.72 && num(row.lab_score) >= 80 && num(row.raw_edge) >= 0.03) strictGateCandidates++;
       if (num(row.model_probability) < 0.72 && num(row.lab_score) >= 80) lowProbHighLab++;
     }
   }
@@ -328,6 +333,9 @@ function buildMultiDayView(days) {
 
 function publicPickRow(p) {
   return {
+    date: p.date || null,
+    status: p.status || null,
+    model_version: p.model_version || null,
     game: p.game,
     pick: p.pick,
     result: p.result,
@@ -342,6 +350,13 @@ function publicPickRow(p) {
     pick_side_bullpen_score: p.pick_side_bullpen_score,
     opponent_bullpen_score: p.opponent_bullpen_score
   };
+}
+
+function currentModelVersion(dayRows, allRows, day) {
+  const versions = dayRows.map(p => p.model_version).filter(Boolean);
+  if (versions.length) return versions[versions.length - 1];
+  const historical = allRows.map(p => p.model_version).filter(Boolean);
+  return day.model_version || historical[historical.length - 1] || day.current_official_model || "unknown";
 }
 
 function makeHeadline({ date, wins, losses, winRate, day }) {
@@ -450,24 +465,25 @@ function pct(v) {
   return typeof v === "number" && Number.isFinite(v) ? `${(v * 100).toFixed(1)}%` : "-";
 }
 
-// ---- Full-slate calibration (data/calibration/calibration_log.csv) ----
+// ---- Full-slate calibration (versioned model ledger) ----
 // Every analyzed game — official, value watch, watchlist, pass — graded nightly.
 // Measures whether model probabilities are honest (does 65% mean 65%?) and
 // what the games below the official gates would have returned.
 function buildCalibration() {
-  const logPath = path.join(ROOT, "data", "calibration", "calibration_log.csv");
+  const logPath = path.join(ROOT, "data", "calibration", "calibration_model_log.csv");
   if (!fs.existsSync(logPath)) return { status: "no_data", games_graded: 0 };
   const lines = fs.readFileSync(logPath, "utf8").split("\n").slice(1).filter(Boolean);
-  const rows = [];
+  const parsed = [];
   for (const line of lines) {
-    // simple CSV parse (quoted matchup field)
-    const m = line.match(/^([^,]*),([^,]*),("(?:[^"]|"")*"|[^,]*),("(?:[^"]|"")*"|[^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),(.*)$/);
-    if (!m) continue;
-    const prob = parseFloat(m[6]);
-    const result = m[10];
+    const cols = splitCsvLine(line);
+    if (cols.length < 12) continue;
+    const prob = parseFloat(cols[6]);
+    const result = cols[10];
     if (!isFinite(prob) || (result !== "W" && result !== "L")) continue;
-    rows.push({ status: m[5], prob, mkt: parseFloat(m[7]), price: parseFloat(m[9]), won: result === "W" });
+    parsed.push({ date: cols[0], game_pk: cols[1], model_version: cols[2], matchup: cols[3], side: cols[4], status: cols[5], prob, mkt: parseFloat(cols[7]), lab: parseFloat(cols[8]), price: parseFloat(cols[9]), won: result === "W", result, final_score: cols[11] });
   }
+  const latestModelVersion = parsed.length ? parsed[parsed.length - 1].model_version : null;
+  const rows = parsed.filter(r => r.model_version === latestModelVersion);
   if (!rows.length) return { status: "no_data", games_graded: 0 };
 
   // Probability buckets
@@ -498,39 +514,45 @@ function buildCalibration() {
   }
   for (const k of Object.keys(byStatus)) byStatus[k].units = Number(byStatus[k].units.toFixed(2));
 
-  // shadow model A/B: v2 vs v3 on identical games
+  // Versioned A/B: current official model vs shadow model on identical games.
+  // The retired shadow_v3_log.csv mixed model eras and is intentionally not
+  // used for current comparisons.
   let shadow = { status: "no_data" };
-  const sPath = path.join(ROOT, "data", "calibration", "shadow_v3_log.csv");
+  const sPath = path.join(ROOT, "data", "calibration", "shadow_model_log.csv");
   if (fs.existsSync(sPath)) {
-    const sRows = fs.readFileSync(sPath, "utf8").split("\n").slice(1).filter(Boolean).map(l => {
-      const [d, pk, p2, p3, hw] = l.split(",");
-      return { p2: parseFloat(p2), p3: parseFloat(p3), hw: Number(hw) };
-    }).filter(r => isFinite(r.p2) && isFinite(r.p3) && (r.hw === 0 || r.hw === 1));
-    if (sRows.length) {
+    const parsed = fs.readFileSync(sPath, "utf8").split("\n").slice(1).filter(Boolean).map(l => {
+      const [d, pk, officialVersion, shadowVersion, pOfficial, pShadow, hw] = l.split(",");
+      return { date: d, game_pk: pk, official_version: officialVersion, shadow_version: shadowVersion, p_official: parseFloat(pOfficial), p_shadow: parseFloat(pShadow), hw: Number(hw) };
+    }).filter(r => isFinite(r.p_official) && isFinite(r.p_shadow) && (r.hw === 0 || r.hw === 1));
+    if (parsed.length) {
+      const latest = parsed[parsed.length - 1];
+      const sRows = parsed.filter(r => r.official_version === latest.official_version && r.shadow_version === latest.shadow_version);
       const b = (rowsArr, key) => Number((rowsArr.reduce((a, r) => a + Math.pow(r[key] - r.hw, 2), 0) / rowsArr.length).toFixed(4));
-      const diff = sRows.filter(r => (r.p2 >= 0.5) !== (r.p3 >= 0.5));
+      const diff = sRows.filter(r => (r.p_official >= 0.5) !== (r.p_shadow >= 0.5));
       shadow = {
         status: "ready",
         games: sRows.length,
-        brier_v2: b(sRows, "p2"),
-        brier_v3: b(sRows, "p3"),
-        leader: b(sRows, "p3") < b(sRows, "p2") ? "v3" : b(sRows, "p3") > b(sRows, "p2") ? "v2" : "tied",
+        official_model_version: latest.official_version,
+        shadow_model_version: latest.shadow_version,
+        brier_official: b(sRows, "p_official"),
+        brier_shadow: b(sRows, "p_shadow"),
+        leader: b(sRows, "p_shadow") < b(sRows, "p_official") ? "shadow" : b(sRows, "p_shadow") > b(sRows, "p_official") ? "official" : "tied",
         disagreements: diff.length,
-        v3_wins_disagreements: diff.filter(r => (r.p3 >= 0.5) === (r.hw === 1)).length,
-        note: "v3 = FIP-based pitcher input + offense form. Promote only if v3 leads over 200+ games."
+        shadow_wins_disagreements: diff.filter(r => (r.p_shadow >= 0.5) === (r.hw === 1)).length,
+        note: "Only rows from the latest matching official/shadow model-version pair are compared. Promote nothing from a mixed-version sample."
       };
     }
   }
 
   // Attribution: input-metric relevance — dormant until n >= 150
   let attribution = { status: "collecting", games: 0, needed: 150 };
-  const aPath = path.join(ROOT, "data", "calibration", "attribution_log.csv");
+  const aPath = path.join(ROOT, "data", "calibration", "attribution_model_log.csv");
   if (fs.existsSync(aPath)) {
-    const aRows = fs.readFileSync(aPath, "utf8").trim().split("\n").slice(1).map(l => l.split(",")).filter(r => r.length >= 12 && (r[3] === "W" || r[3] === "L"));
+    const aRows = fs.readFileSync(aPath, "utf8").trim().split("\n").slice(1).map(splitCsvLine).filter(r => r.length >= 13 && r[2] === latestModelVersion && (r[4] === "W" || r[4] === "L"));
     attribution.games = aRows.length;
     if (aRows.length >= 150) {
       const factor = (label, idx, fmt) => {
-        const have = aRows.filter(r => r[idx] !== "" && isFinite(Number(r[idx]))).map(r => ({ v: Number(r[idx]), won: r[3] === "W" }));
+        const have = aRows.filter(r => r[idx] !== "" && isFinite(Number(r[idx]))).map(r => ({ v: Number(r[idx]), won: r[4] === "W" }));
         if (have.length < 100) return null;
         const sorted = [...have].sort((a, b) => a.v - b.v);
         const cut = n => sorted[Math.floor(sorted.length * n)].v;
@@ -539,12 +561,12 @@ function buildCalibration() {
         return { factor: label, tertiles: tert.map((t, i) => ({ band: i === 0 ? "low" : i === 1 ? "mid" : "high", games: t.length, win_rate: Number((t.filter(x => x.won).length / t.length).toFixed(3)) })), spread: Number((tert[2].filter(x => x.won).length / tert[2].length - tert[0].filter(x => x.won).length / tert[0].length).toFixed(3)) };
       };
       const factors = [
-        factor("Pitcher score gap (pick − opp)", 6),
-        factor("K-BB% gap (pick − opp)", 7),
-        factor("Offense form gap (ΔOPS diff)", 10),
-        factor("Bullpen fatigue gap (opp − pick)", 11),
-        factor("Lab Rating", 5),
-        factor("Model probability", 4)
+        factor("Pitcher score gap (pick − opp)", 7),
+        factor("K-BB% gap (pick − opp)", 8),
+        factor("Offense form gap (ΔOPS diff)", 11),
+        factor("Bullpen fatigue gap (opp − pick)", 12),
+        factor("Lab Rating", 6),
+        factor("Model probability", 5)
       ].filter(Boolean).sort((a, b) => Math.abs(b.spread) - Math.abs(a.spread));
       attribution = { status: "ready", games: aRows.length, factors,
         note: "Win rate by input tertile, pick-side relative. |spread| = high-band win rate minus low-band — bigger magnitude = the metric separates winners from losers harder, and deserves weight. Read direction too: a NEGATIVE spread on a should-be-positive factor is a red flag." };
@@ -606,6 +628,7 @@ function buildCalibration() {
 
   return {
     status: "ready",
+    model_version: latestModelVersion,
     games_graded: rows.length,
     brier_score: brier,
     shadow_model: shadow,

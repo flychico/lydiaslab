@@ -8,7 +8,7 @@
   official pick per day that clears the strict gates.
 
   - Input:  data/member-brief/<date>.json (every game's model read, locked pregame)
-  - Output: appends to data/calibration/calibration_log.csv (idempotent per date+gamePk)
+  - Output: appends to data/calibration/calibration_model_log.csv (idempotent per date+gamePk)
   - Never touches the public record: this is a learning ledger, not results.
 
   Usage: node scripts/grade-calibration.js [YYYY-MM-DD]   (defaults to yesterday ET)
@@ -17,8 +17,8 @@ const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
-const LOG = path.join(ROOT, "data", "calibration", "calibration_log.csv");
-const HEADER = "date,gamePk,matchup,model_side,status,model_prob,market_prob,lab_score,best_price,result,final_score\n";
+const LOG = path.join(ROOT, "data", "calibration", "calibration_model_log.csv");
+const HEADER = "date,gamePk,model_version,matchup,model_side,status,model_prob,market_prob,lab_score,best_price,result,final_score\n";
 
 const DATE = (process.argv[2] || "").match(/^\d{4}-\d{2}-\d{2}$/)
   ? process.argv[2]
@@ -105,7 +105,7 @@ async function main() {
     const homeWon = f.homeScore > f.awayScore;
     const pickWon = g.side === "home" ? homeWon : !homeWon;
     rows.push([
-      DATE, g.game_pk, csvField(g.game), csvField(g.pick_team),
+      DATE, g.game_pk, csvField(g.model_source || brief.model_version || "unknown"), csvField(g.game), csvField(g.pick_team),
       g.status || "", g.model_probability,
       (g.market && typeof g.market.no_vig_probability === "number") ? g.market.no_vig_probability : "",
       typeof g.lab_score === "number" ? g.lab_score : "",
@@ -118,8 +118,8 @@ async function main() {
 
   // ---- Attribution ledger: the INPUTS behind each graded game, for the
   // n>=150 weight-relevance analysis. All values are pick-side relative. ----
-  const ALOG = path.join(ROOT, "data", "calibration", "attribution_log.csv");
-  const AHEAD = "date,gamePk,status,result,model_prob,lab,pitcher_gap,kbb_diff,gb_pick,babip_pick,off_delta_diff,bullpen_gap\n";
+  const ALOG = path.join(ROOT, "data", "calibration", "attribution_model_log.csv");
+  const AHEAD = "date,gamePk,model_version,status,result,model_prob,lab,pitcher_gap,kbb_diff,gb_pick,babip_pick,off_delta_diff,bullpen_gap\n";
   if (!fs.existsSync(ALOG)) fs.writeFileSync(ALOG, AHEAD);
   const aSeen = new Set(fs.readFileSync(ALOG, "utf8").split("\n").slice(1).map(l => l.split(",").slice(0, 2).join(",")).filter(Boolean));
   const aRows = [];
@@ -142,7 +142,7 @@ async function main() {
     const pOff = pickHome ? of_.home : of_.away;
     const oOff = pickHome ? of_.away : of_.home;
     const bp = g.bullpen || {};
-    aRows.push([DATE, g.game_pk, g.status || "", won ? "W" : "L",
+    aRows.push([DATE, g.game_pk, csvField(g.model_source || brief.model_version || "unknown"), g.status || "", won ? "W" : "L",
       n2(g.model_probability), n2(g.lab_score),
       (isFinite(pScore) && isFinite(oScore)) ? pScore - oScore : "",
       (pAdv && oAdv && isFinite(pAdv.kbb_pct) && isFinite(oAdv.kbb_pct)) ? Number((pAdv.kbb_pct - oAdv.kbb_pct).toFixed(4)) : "",
@@ -203,12 +203,18 @@ async function main() {
 
   // ---- Totals grading: projection vs line vs actual final score ----
   const TLOG = path.join(ROOT, "data", "calibration", "totals_log.csv");
-  const THEAD = "date,gamePk,line,over_price,under_price,projection,actual_total,ou_result,lean,lean_result\n";
+  const THEAD = "date,gamePk,line,over_price,under_price,projection,actual_total,ou_result,lean,lean_result,lab_score,matchup\n";
   const tPath = path.join(ROOT, "data", "totals", `${DATE}.json`);
   if (fs.existsSync(tPath)) {
     let tp; try { tp = JSON.parse(fs.readFileSync(tPath, "utf8")); } catch (e) { tp = null; }
     if (tp && tp.games) {
       if (!fs.existsSync(TLOG)) fs.writeFileSync(TLOG, THEAD);
+      else {
+        const existingTotals = fs.readFileSync(TLOG, "utf8");
+        if (!existingTotals.startsWith(THEAD)) {
+          fs.writeFileSync(TLOG, THEAD + existingTotals.split("\n").slice(1).join("\n"));
+        }
+      }
       const tSeen = new Set(fs.readFileSync(TLOG, "utf8").split("\n").slice(1).map(l => l.split(",").slice(0, 2).join(",")).filter(Boolean));
       const tRows = [];
       for (const [pk, g] of Object.entries(tp.games)) {
@@ -232,9 +238,11 @@ async function main() {
     }
   }
 
-  // ---- shadow model v3 ledger (A/B vs the official v2) ----
-  const SLOG = path.join(ROOT, "data", "calibration", "shadow_v3_log.csv");
-  if (!fs.existsSync(SLOG)) fs.writeFileSync(SLOG, "date,gamePk,p_home_v2,p_home_v3,home_won\n");
+  // ---- Versioned shadow-model ledger ----
+  // Start a clean ledger instead of mixing the current run-enhanced official
+  // model with historical p_home_v2 values from the retired ERA-only model.
+  const SLOG = path.join(ROOT, "data", "calibration", "shadow_model_log.csv");
+  if (!fs.existsSync(SLOG)) fs.writeFileSync(SLOG, "date,gamePk,official_model_version,shadow_model_version,p_home_official,p_home_shadow,home_won\n");
   const sExisting = new Set(fs.readFileSync(SLOG, "utf8").split("\n").slice(1).map(l => l.split(",").slice(0, 2).join(",")).filter(Boolean));
   const sRows = [];
   for (const g of games) {
@@ -242,9 +250,12 @@ async function main() {
     if (sExisting.has(key)) continue;
     const f = finals[g.game_pk];
     const v3 = g.model_v3;
-    if (!f || !v3 || !Number.isFinite(v3.p_home) || !Number.isFinite(v3.p_home_v2)) continue;
+    if (!f || !v3 || !Number.isFinite(v3.p_home) || !Number.isFinite(g.model_probability) || !["home", "away"].includes(g.side)) continue;
     if (await gameVoided(g)) continue;
-    sRows.push([DATE, g.game_pk, v3.p_home_v2, v3.p_home, f.homeScore > f.awayScore ? 1 : 0].join(","));
+    const pHomeOfficial = g.side === "home" ? g.model_probability : 1 - g.model_probability;
+    const officialVersion = g.model_source || brief.model_version || "unknown";
+    const shadowVersion = v3.version || "unknown";
+    sRows.push([DATE, g.game_pk, csvField(officialVersion), csvField(shadowVersion), pHomeOfficial, v3.p_home, f.homeScore > f.awayScore ? 1 : 0].join(","));
   }
   if (sRows.length) fs.appendFileSync(SLOG, sRows.join("\n") + "\n");
   if (voidRows.length) {
@@ -254,7 +265,7 @@ async function main() {
     if (fresh.length) fs.appendFileSync(VOIDLOG, fresh.join("\n") + "\n");
     console.log(`Voided ${new Set(voidRows).size} game(s) — starter scratched (see voided_log.csv).`);
   }
-  console.log(`Calibration ${DATE}: logged ${added}, already-logged ${skippedDone}, not-final ${notFinal}, slate ${games.length}. Shadow v3: ${sRows.length} graded.`);
+  console.log(`Calibration ${DATE}: logged ${added}, already-logged ${skippedDone}, not-final ${notFinal}, slate ${games.length}. Versioned shadow model: ${sRows.length} graded.`);
 }
 
 main().catch(e => { console.error("calibration error:", e.message); process.exit(0); });

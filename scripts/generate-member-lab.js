@@ -412,12 +412,13 @@ function offenseFormFor(teamId, oppPitcher, offense) {
   };
 }
 /* ============ Shadow model v3 (A/B test — NEVER drives official picks) ============
-   Differences from v2:
-   1. Pitcher input is FIP-lite (K, BB, HR per IP) instead of raw ERA — skill-based,
-      immune to the BABIP/sequencing luck that inflates or flatters ERA.
-   2. Small offensive-form adjustment from each lineup's 15-day OPS delta (capped).
-   v3 probabilities are recorded next to v2 in the brief and graded nightly in
-   data/calibration/shadow_v3_log.csv. Promotion requires beating v2 there. */
+   Candidate inputs:
+   1. FIP-lite pitcher skill (K, BB, HR per IP).
+   2. A capped 15-day OPS-form adjustment.
+   3. Bullpen workload differential.
+   The locked shadow probability is recorded beside the locked production
+   probability. grade-calibration.js writes both with explicit model versions
+   to data/calibration/shadow_model_log.csv. Never compare mixed model eras. */
 const V3_OFF_K = 0.8;      // log-odds per full point of OPS-delta difference (capped ±0.1 → max ~±2%)
 const V3_FIP_C = 3.15;     // FIP constant
 // Shared by v2 and v3 — a starter only covers 5-6 of 9 innings; the bullpen
