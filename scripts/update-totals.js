@@ -25,6 +25,15 @@ const DATE = (process.argv[2] || "").match(/^\d{4}-\d{2}-\d{2}$/)
 const IF_CHANGED = process.argv.includes("--if-changed");
 
 const LEAGUE_ERA = 4.20;
+const TOTALS_MODEL_VERSION = "totals-runs-v2-innings-allocation";
+const TOTALS_POLICY = Object.freeze({
+  version: "totals-policy-v2",
+  research_min_edge: 0.7,
+  research_min_setup: 70,
+  strong_min_edge: 1.0,
+  strong_min_setup: 80,
+  official_totals_enabled: false
+});
 const PARKS = {"Colorado Rockies": 1.18, "Cincinnati Reds": 1.07, "Boston Red Sox": 1.06, "Philadelphia Phillies": 1.06, "Atlanta Braves": 1.05, "New York Yankees": 1.05, "Chicago White Sox": 1.04, "Toronto Blue Jays": 1.03, "Arizona Diamondbacks": 1.02, "Chicago Cubs": 1.02, "Texas Rangers": 1.0, "Baltimore Orioles": 1.0, "Milwaukee Brewers": 1.0, "Los Angeles Angels": 1.0, "Cleveland Guardians": 0.99, "Minnesota Twins": 0.99, "Houston Astros": 0.99, "Washington Nationals": 0.98, "Tampa Bay Rays": 0.98, "Pittsburgh Pirates": 0.97, "St. Louis Cardinals": 0.97, "Kansas City Royals": 0.96, "New York Mets": 0.96, "Detroit Tigers": 0.95, "Los Angeles Dodgers": 0.94, "Miami Marlins": 0.93, "San Diego Padres": 0.93, "Seattle Mariners": 0.92, "San Francisco Giants": 0.91};
 
 async function j(u) { const r = await fetch(u); if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }
@@ -143,13 +152,13 @@ async function main() {
   // n ≥ 25 and |bias| ≥ 0.2 runs to act, capped ±0.8.
   let learnedBias = 0, learnedN = 0;
   try {
-    const tlog = path.join(ROOT, "data", "calibration", "totals_log.csv");
+    const tlog = path.join(ROOT, "data", "calibration", "totals_model_log.csv");
     if (fs.existsSync(tlog)) {
       const rows2 = fs.readFileSync(tlog, "utf8").trim().split("\n").slice(1).map(l => l.split(","))
-        .filter(r => r.length >= 7 && r[5] !== "" && r[6] !== "" && isFinite(Number(r[5])) && isFinite(Number(r[6]))).slice(-100);
+        .filter(r => r.length >= 8 && r[2] === TOTALS_MODEL_VERSION && r[6] !== "" && r[7] !== "" && isFinite(Number(r[6])) && isFinite(Number(r[7]))).slice(-100);
       learnedN = rows2.length;
       if (learnedN >= 25) {
-        const b = rows2.reduce((a, r) => a + (Number(r[6]) - Number(r[5])), 0) / learnedN;
+        const b = rows2.reduce((a, r) => a + (Number(r[7]) - Number(r[6])), 0) / learnedN;
         if (Math.abs(b) >= 0.2) learnedBias = Math.max(-0.8, Math.min(0.8, Number(b.toFixed(2))));
       }
     }
@@ -264,7 +273,7 @@ async function main() {
     };
     const dataConf = sideConfidence(A) + sideConfidence(H);
     tLab += dataConf;
-    if (lean !== null && Math.abs(lean) >= 0.5) {
+    if (lean !== null && Math.abs(lean) >= TOTALS_POLICY.research_min_edge) {
       const dir = lean > 0 ? 1 : -1;
       let align = 0;
       if ((park - 1) * dir > 0.02) align += 7;
@@ -273,6 +282,16 @@ async function main() {
       tLab += align;
     }
     const totalsLab = Math.round(Math.max(0, Math.min(100, tLab)));
+    const absLean = lean === null ? null : Math.abs(lean);
+    const classification = lean === null
+      ? "line_pending"
+      : absLean < TOTALS_POLICY.research_min_edge
+        ? "no_lean"
+        : totalsLab < TOTALS_POLICY.research_min_setup
+          ? "no_lean_low_setup"
+          : absLean >= TOTALS_POLICY.strong_min_edge && totalsLab >= TOTALS_POLICY.strong_min_setup
+            ? "strong_research_lean"
+            : "research_lean";
     out[g.gamePk] = {
       game: `${aT.name} @ ${hT.name}`,
       game_time_iso: g.gameDate,
@@ -286,7 +305,14 @@ async function main() {
       away_sp: (g.teams.away.probablePitcher || {}).fullName || "TBD",
       home_sp: (g.teams.home.probablePitcher || {}).fullName || "TBD",
       line, over: mkt.over ?? null, under: mkt.under ?? null, books: mkt.books || 0,
-      lab: totalsLab
+      lab: totalsLab,
+      setup_components: {
+        base: 15,
+        data_confidence: dataConf,
+        edge_points: lean === null ? 0 : Number((Math.min(1, Math.abs(lean) / 2.5) * 40).toFixed(2)),
+        alignment_threshold: TOTALS_POLICY.research_min_edge
+      },
+      classification
     };
   }
 
@@ -309,11 +335,10 @@ async function main() {
     }
   } catch (e) {}
 
-  const payload = { date: DATE, generated_at: new Date().toISOString(), source: "LyDia totals projection (offense factor × opposing pitching × park × pen fatigue) + the-odds-api totals consensus", league_rpg: Number(lgRPG.toFixed(2)), probables, games: out, learned_bias: learnedBias, learned_n: learnedN };
+  const payload = { date: DATE, generated_at: new Date().toISOString(), model_version: TOTALS_MODEL_VERSION, policy: TOTALS_POLICY, source: "LyDia totals projection (offense factor × opposing pitching × park × pen fatigue) + the-odds-api totals consensus", league_rpg: Number(lgRPG.toFixed(2)), probables, games: out, learned_bias: learnedBias, learned_n: learnedN };
   fs.mkdirSync(path.join(ROOT, "data", "totals"), { recursive: true });
   fs.writeFileSync(path.join(ROOT, "data", "totals", `${DATE}.json`), JSON.stringify(payload, null, 1));
   fs.writeFileSync(path.join(ROOT, "data", "totals", "today.json"), JSON.stringify(payload, null, 1));
   console.log(`Totals: ${Object.keys(out).length} games projected, ${Object.values(out).filter(x => x.line !== null).length} with market lines.`);
 }
 main().catch(e => { console.error("totals error:", e.message); process.exit(0); });
-

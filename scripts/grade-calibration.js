@@ -202,21 +202,21 @@ async function main() {
   }
 
   // ---- Totals grading: projection vs line vs actual final score ----
-  const TLOG = path.join(ROOT, "data", "calibration", "totals_log.csv");
-  const THEAD = "date,gamePk,line,over_price,under_price,projection,actual_total,ou_result,lean,lean_result,lab_score,matchup\n";
+  const TLOG = path.join(ROOT, "data", "calibration", "totals_model_log.csv");
+  const THEAD = "date,gamePk,model_version,line,over_price,under_price,projection,actual_total,ou_result,lean,lean_result,setup_rating,classification,matchup\n";
   const tPath = path.join(ROOT, "data", "totals", `${DATE}.json`);
   if (fs.existsSync(tPath)) {
     let tp; try { tp = JSON.parse(fs.readFileSync(tPath, "utf8")); } catch (e) { tp = null; }
-    if (tp && tp.games) {
+    if (tp && tp.games && tp.model_version !== "totals-runs-v2-innings-allocation") {
+      console.log(`Totals: skipped legacy/unversioned capture (${tp.model_version || "unknown"}).`);
+    } else if (tp && tp.games) {
       if (!fs.existsSync(TLOG)) fs.writeFileSync(TLOG, THEAD);
-      else {
-        const existingTotals = fs.readFileSync(TLOG, "utf8");
-        if (!existingTotals.startsWith(THEAD)) {
-          fs.writeFileSync(TLOG, THEAD + existingTotals.split("\n").slice(1).join("\n"));
-        }
-      }
       const tSeen = new Set(fs.readFileSync(TLOG, "utf8").split("\n").slice(1).map(l => l.split(",").slice(0, 2).join(",")).filter(Boolean));
       const tRows = [];
+      const totalsPolicy = tp.policy || {};
+      const minEdge = Number.isFinite(totalsPolicy.research_min_edge) ? totalsPolicy.research_min_edge : 0.7;
+      const minSetup = Number.isFinite(totalsPolicy.research_min_setup) ? totalsPolicy.research_min_setup : 70;
+      const totalsModelVersion = tp.model_version || "unknown";
       for (const [pk, g] of Object.entries(tp.games)) {
         const key = `${DATE},${pk}`;
         if (tSeen.has(key)) continue;
@@ -230,8 +230,9 @@ async function main() {
         const ou = hasLine ? (actual > g.line ? "O" : actual < g.line ? "U" : "P") : "";
         const lean = (hasLine && Number.isFinite(g.projection)) ? Number((g.projection - g.line).toFixed(1)) : "";
         let leanRes = "";
-        if (lean !== "" && Math.abs(lean) >= 0.5 && ou !== "P" && ou !== "") leanRes = (lean > 0) === (ou === "O") ? "W" : "L";
-        tRows.push([DATE, pk, hasLine ? g.line : "", g.over ?? "", g.under ?? "", Number.isFinite(g.projection) ? g.projection : "", actual, ou, lean, leanRes, Number.isFinite(g.lab) ? g.lab : "", csvField(g.game || "")].join(","));
+        const qualifies = lean !== "" && Math.abs(lean) >= minEdge && Number.isFinite(g.lab) && g.lab >= minSetup;
+        if (qualifies && ou !== "P" && ou !== "") leanRes = (lean > 0) === (ou === "O") ? "W" : "L";
+        tRows.push([DATE, pk, csvField(totalsModelVersion), hasLine ? g.line : "", g.over ?? "", g.under ?? "", Number.isFinite(g.projection) ? g.projection : "", actual, ou, lean, leanRes, Number.isFinite(g.lab) ? g.lab : "", g.classification || (qualifies ? "research_lean" : "no_lean"), csvField(g.game || "")].join(","));
       }
       if (tRows.length) fs.appendFileSync(TLOG, tRows.join("\n") + "\n");
       console.log(`Totals: graded ${tRows.length}.`);

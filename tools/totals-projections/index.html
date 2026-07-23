@@ -24,7 +24,7 @@
 <meta name="twitter:description" content="A projected total-runs number for every MLB game — lineups, starting pitchers, park, and bullpen condition — next to the market">
 <meta name="twitter:image" content="https://lydiaslab.com/img/og-card.png">
 
-<meta name="description" content="A projected total-runs number for every MLB game — lineups, starting pitchers, park, and bullpen condition — next to the market's over/under line, with leans at 0.5+ run edges.">
+<meta name="description" content="A projected total-runs number for every MLB game — lineups, starting pitchers, park, and bullpen condition — next to the market's over/under line, with research leans requiring a 0.7+ run edge and a 7.0+ setup rating.">
 <link rel="canonical" href="https://lydiaslab.com/tools/totals-projections/">
 <link rel="manifest" href="/img/manifest-totals.json">
 <link rel="apple-touch-icon" href="/img/app-totals-192.png">
@@ -77,7 +77,7 @@
   </div>
 
   <div class="notice">
-    <strong>How to read it:</strong> every label answers one question — does this factor <b class="pos-text">add runs</b> (green) or <b class="neg-text">suppress runs</b> (red)? The projection is a median expectation — real games land within ±2.5 runs of it routinely, so only lean when the gap to the line is <b>0.5+ runs</b>, and treat leans as research, not picks. Market lines are captured each morning and kept all day (re-captured only if a starter changes) — <b>edit the line box if your book differs</b> or before the capture lands. Every projection is graded in public against the final score — this tool earns trust or loses it in the open.
+    <strong>How to read it:</strong> every label answers one question — does this factor <b class="pos-text">add runs</b> (green) or <b class="neg-text">suppress runs</b> (red)? A research lean requires both a <b>0.7+ run edge</b> and a <b>7.0+ setup rating</b>. A 1.0+ edge with an 8.0+ setup is labeled a strong research lean. These are research signals, not official bets. Market lines are captured each morning and kept all day (re-captured only if a starter changes) — <b>edit the line box if your book differs</b> or before the capture lands.
   </div>
 
   <div id="status"><div class="loading">Loading projections…</div></div>
@@ -89,6 +89,7 @@ const datePick = document.getElementById("date-pick");
 datePick.value = localISODate(new Date());
 datePick.addEventListener("change", load);
 let PROJ = {}; let GAMES = {};
+let POLICY = {research_min_edge:0.7,research_min_setup:70,strong_min_edge:1.0,strong_min_setup:80,official_totals_enabled:false};
 load();
 
 function localISODate(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
@@ -116,6 +117,7 @@ async function load(){
         const c=await r.json(); if(c && c.date===date && c.games){ d=c; break; } }catch(e){}
     }
     if(!d){ statusEl.innerHTML=`<div class="notice">No totals capture for ${date}${date>today?" yet — it arrives with that morning's update":date===today?" yet — it arrives with the morning update":""}.</div>`; return; }
+    POLICY={...POLICY,...(d.policy||{})};
     const games=Object.entries(d.games).map(([pk,g])=>({pk,...g})).sort((a,b)=>new Date(a.game_time_iso)-new Date(b.game_time_iso));
     if(!games.length){ statusEl.innerHTML='<div class="notice">No games in this capture.</div>'; return; }
     let head = d.learned_bias ? `<div class="dim small" style="margin-bottom:6px">Self-calibrated: projections include a ${d.learned_bias>0?"+":""}${d.learned_bias}-run correction learned from ${d.learned_n} graded games.</div>` : "";
@@ -184,9 +186,17 @@ function liveLab(g, line){
   if(!g || !Number.isFinite(line)) return null;
   const lean=g.projection-line;
   let lab=15+Math.min(1,Math.abs(lean)/2.5)*40;
-  const conf=sd=>sd?(sd.sp_sample_ok?12.5:sd.opp_sp!=="TBD"?6:0):0;
-  lab+=conf(g.away)+conf(g.home);
-  if(Math.abs(lean)>=0.5&&g.away&&g.home){
+  const conf=sd=>{
+    if(!sd)return 0;
+    const hasPitcher=sd.opp_sp!=="TBD"&&sd.opp_pitcher_role!=="unknown";
+    const hasBullpen=Number.isFinite(sd.opp_pen_risk);
+    return hasPitcher&&hasBullpen?12.5:hasPitcher?8:0;
+  };
+  const dataConfidence=g.setup_components&&Number.isFinite(g.setup_components.data_confidence)
+    ? g.setup_components.data_confidence
+    : conf(g.away)+conf(g.home);
+  lab+=dataConfidence;
+  if(Math.abs(lean)>=POLICY.research_min_edge&&g.away&&g.home){
     const dir=lean>0?1:-1; 
     if((g.park_factor-1)*dir>0.02)lab+=7;
     if((g.away.off_factor-1)*dir>0.03)lab+=6.5;
@@ -201,9 +211,16 @@ function lean(pk){
   if(!Number.isFinite(proj)||!isFinite(line)||line<=0){ el.textContent=""; if(labEl)labEl.textContent="Setup pending line"; return; }
   if(labEl){ const L=liveLab(GAMES[pk],line); if(L!==null)labEl.textContent=`Setup ${(L/10).toFixed(1)}/10`; }
   const d=proj-line;
-  if(d>=0.5) el.innerHTML=`<span class="pos-text">OVER lean (+${d.toFixed(1)})</span>`;
-  else if(d<=-0.5) el.innerHTML=`<span class="neg-text">UNDER lean (${d.toFixed(1)})</span>`;
-  else el.innerHTML=`<span class="dim">no edge (${d>=0?"+":""}${d.toFixed(1)})</span>`;
+  const L=liveLab(GAMES[pk],line);
+  const abs=Math.abs(d);
+  if(abs<POLICY.research_min_edge) el.innerHTML=`<span class="dim">no lean (${d>=0?"+":""}${d.toFixed(1)} runs)</span>`;
+  else if(L<POLICY.research_min_setup) el.innerHTML=`<span class="dim">no lean — setup ${(L/10).toFixed(1)}/10</span>`;
+  else {
+    const direction=d>0?"OVER":"UNDER";
+    const cls=d>0?"pos-text":"neg-text";
+    const label=abs>=POLICY.strong_min_edge&&L>=POLICY.strong_min_setup?"strong research lean":"research lean";
+    el.innerHTML=`<span class="${cls}">${direction} ${label} (${d>=0?"+":""}${d.toFixed(1)})</span>`;
+  }
 }
 </script>
 </body>

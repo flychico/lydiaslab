@@ -59,7 +59,7 @@
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script>
 function esc(v){ return escapeHtml(String(v ?? "")); }
-renderNav("/articles/"); renderFooter();
+renderNav("/learning/"); renderFooter();
 
 loadLearning();
 
@@ -167,13 +167,6 @@ async function loadLearning() {
         <div style="display:flex;align-items:center;gap:10px;margin-top:6px"><div style="flex:1;background:var(--bg-elev);border-radius:6px;height:12px"><div style="width:${Math.min(100, (cal.attribution.games / cal.attribution.needed * 100)).toFixed(0)}%;height:100%;background:var(--accent2);border-radius:6px"></div></div><span class="small dim">${cal.attribution.games}/${cal.attribution.needed} games</span></div>
         <p class="dim small" style="margin:6px 0 0">When it wakes up: win rate by tertile for pitcher gap, K-BB% gap, offense form, bullpen fatigue, Lab Rating, and model probability — the evidence for re-weighting the model.</p>
       </div>`) : ""}
-      ${cal.totals && cal.totals.status === "ready" ? `
-      <div style="margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:8px">
-        <b>Totals projections — accuracy tracking</b>
-        <p class="dim small" style="margin:4px 0 6px">${esc(cal.totals.note || "")}</p>
-        <span class="small">${cal.totals.graded} games graded · bias <b>${cal.totals.bias > 0 ? "+" : ""}${cal.totals.bias}</b> runs · avg miss <b>${cal.totals.mae}</b> runs · lean record <b>${cal.totals.lean_record}</b> · self-calibration: <b>${cal.totals.self_calibration || "—"}</b> <span class="dim">(over ${cal.totals.over_lean_record}, under ${cal.totals.under_lean_record})</span></span>
-        <div id="totals-games"></div>
-      </div>` : ""}
             ${cal.kprops && cal.kprops.status === "ready" ? `
       <div style="margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:8px">
         <b>Strikeout projections — accuracy tracking</b>
@@ -214,23 +207,6 @@ async function loadLearning() {
             const shadowRight = shadowHome === hw;
             return `<div class="small" style="padding:3px 0;border-top:1px solid var(--border)">${esc(r[0].slice(5))} · ${esc(name)} — official: ${esc(officialSide)} ${(Math.max(Number(r[4]), 1 - Number(r[4])) * 100).toFixed(0)}% · shadow: ${esc(shadowSide)} ${(Math.max(Number(r[5]), 1 - Number(r[5])) * 100).toFixed(0)}% → <b>${esc(winner)}</b> won · ${shadowRight ? '<b class="pos-text">shadow right</b>' : '<b class="neg-text">official right</b>'}${g && Number.isFinite(g.lab) ? ` · Lab ${(g.lab / 10).toFixed(1)}` : ""}</div>`;
           }).join("") + `</details>`;
-      }
-    }
-  } catch (e) {}
-
-  // Totals: every graded game with our projection vs the line vs what happened
-  try {
-    const tl = await fetch("/data/calibration/totals_log.csv?v=" + Date.now(), { cache: "no-store" }).then(r => r.ok ? r.text() : null);
-    const tEl = document.getElementById("totals-games");
-    if (tl && tEl) {
-      const byPk2 = {}; (window._calGames || []).forEach(g => byPk2[g.date + "," + g.pk] = g.matchup);
-      const trows = tl.trim().split("\n").slice(1).map(l => {
-        const m = l.match(/^([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*)(?:,([^,]*))?(?:,("(?:[^"]|"")*"|[^,]*))?$/);
-        return m ? { date: m[1], pk: m[2], line: m[3], proj: m[6], actual: m[7], ou: m[8], lean: m[9], leanRes: m[10], lab: m[11] || "", name: (m[12] || "").replace(/^"|"$/g, "") || byPk2[m[1] + "," + m[2]] || ("game " + m[2]) } : null;
-      }).filter(Boolean).reverse();
-      if (trows.length) {
-        tEl.innerHTML = `<details style="margin-top:6px"><summary class="small dim" style="cursor:pointer">show all ${trows.length} graded totals</summary>` +
-          trows.map(r => `<div class="small" style="padding:3px 0;border-top:1px solid var(--border)">${r.leanRes === "W" ? "✅" : r.leanRes === "L" ? "❌" : "▫️"} ${esc(r.date.slice(5))} · ${esc(r.name)} — projected <b>${esc(r.proj)}</b>${r.line ? `, line ${esc(r.line)}` : ", no line"} → actual <b>${esc(r.actual)}</b>${r.ou ? " (" + (r.ou === "O" ? "Over" : r.ou === "U" ? "Under" : "Push") + ")" : ""}${r.leanRes ? ` · lean ${r.leanRes === "W" ? "won" : "lost"}` : ""}${r.lab ? ` · setup ${(Number(r.lab) / 10).toFixed(1)}/10` : ""}</div>`).join("") + `</details>`;
       }
     }
   } catch (e) {}

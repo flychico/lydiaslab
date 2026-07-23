@@ -1328,9 +1328,9 @@ function renderTotals(total) {
   const difference = typeof total.projection === "number" && typeof total.line === "number" ? total.projection - total.line : null;
   const context = difference === null
     ? "The current model and market total cannot be compared yet."
-    : Math.abs(difference) < 0.5
+    : Math.abs(difference) < 0.7
       ? "The model and market are close."
-      : `The model projects ${Math.abs(difference).toFixed(1)} runs ${difference > 0 ? "above" : "below"} the market total.`;
+      : `The model projects ${Math.abs(difference).toFixed(1)} runs ${difference > 0 ? "above" : "below"} the market total. A research lean still requires a setup rating of at least 7.0/10.`;
   return `<section class="card">
     <div class="sec-head"><h2>Run total projection</h2><a class="tool-link" href="/tools/totals-projections/">Full Totals Projections &rarr;</a></div>
     <div class="metric-grid">
@@ -1341,7 +1341,7 @@ function renderTotals(total) {
       <div class="metric"><div class="label">Over price</div><div class="value">${esc(odds(total.over))}</div></div>
       <div class="metric"><div class="label">Under price</div><div class="value">${esc(odds(total.under))}</div></div>
     </div>
-    <p>${esc(context)} This projection is matchup context, not an official total pick unless LyDia explicitly labels it as one.</p>
+    <p>${esc(context)} Totals are research context only; official totals are currently disabled.</p>
   </section>`;
 }
 

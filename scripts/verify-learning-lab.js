@@ -45,11 +45,37 @@ if (summary.status === "ready") {
   }
 }
 
+const totals = json("data/totals/today.json");
+const requireCurrentTotals = process.argv.includes("--require-current-totals");
+if (totals.model_version || requireCurrentTotals) {
+  if (totals.model_version !== "totals-runs-v2-innings-allocation") fail("Totals capture uses the wrong model version.");
+  if (!totals.policy || totals.policy.research_min_edge !== 0.7 || totals.policy.research_min_setup !== 70) {
+    fail("Totals research-lean policy is not synchronized.");
+  }
+  if (totals.policy.official_totals_enabled !== false) fail("Official totals must remain disabled.");
+}
+
+const totalsSource = read("scripts/update-totals.js");
+if (!totalsSource.includes('const TOTALS_MODEL_VERSION = "totals-runs-v2-innings-allocation"')) {
+  fail("Totals generator does not declare the synchronized model version.");
+}
+if (!totalsSource.includes("research_min_edge: 0.7") || !totalsSource.includes("research_min_setup: 70")) {
+  fail("Totals generator thresholds disagree with the synchronized policy.");
+}
+if (!totalsSource.includes("official_totals_enabled: false")) {
+  fail("Totals generator must keep official totals disabled.");
+}
+
+const totalsTool = read("tools/totals-projections/index.html");
+if (!totalsTool.includes("POLICY.research_min_edge") || !totalsTool.includes("POLICY.research_min_setup")) {
+  fail("Totals tool is not using the synchronized policy.");
+}
+
 const headerChecks = [
   ["data/calibration/calibration_model_log.csv", "date,gamePk,model_version,"],
   ["data/calibration/attribution_model_log.csv", "date,gamePk,model_version,"],
   ["data/calibration/shadow_model_log.csv", "date,gamePk,official_model_version,shadow_model_version,"],
-  ["data/calibration/totals_log.csv", "date,gamePk,line,over_price,under_price,projection,actual_total,ou_result,lean,lean_result,lab_score,matchup"]
+  ["data/calibration/totals_model_log.csv", "date,gamePk,model_version,line,over_price,under_price,projection,actual_total,ou_result,lean,lean_result,setup_rating,classification,matchup"]
 ];
 for (const [rel, header] of headerChecks) {
   const full = path.join(ROOT, rel);

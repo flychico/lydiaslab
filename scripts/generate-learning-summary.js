@@ -279,13 +279,6 @@ function buildFindings(ctx) {
   });
 
   findings.push({
-    title: "Market learning",
-    read: ctx.clvCounts.beat_close
-      ? `${ctx.clvCounts.beat_close} pick${ctx.clvCounts.beat_close === 1 ? "" : "s"} beat the closing price. That supports the pricing process.`
-      : "Closing price data is not strong enough yet. Keep the market snapshot automation running."
-  });
-
-  findings.push({
     title: "Bullpen learning",
     read: ctx.highBullpenRisk.length
       ? `Across all reviewed days, ${ctx.highBullpenRisk.length} graded moneyline pick${ctx.highBullpenRisk.length === 1 ? "" : "s"} carried a meaningful bullpen caution. Review these before adjusting thresholds.`
@@ -602,30 +595,6 @@ function buildCalibration() {
     }
   }
 
-  // Totals learning — mirrors the K-props tracker
-  let totals = { status: "no_data" };
-  const tPath2 = path.join(ROOT, "data", "calibration", "totals_log.csv");
-  if (fs.existsSync(tPath2)) {
-    const tRows = fs.readFileSync(tPath2, "utf8").trim().split("\n").slice(1).map(l => l.split(",")).filter(r => r.length >= 10 && r[6] !== "" && r[5] !== "");
-    if (tRows.length) {
-      const errs = tRows.map(r => Number(r[6]) - Number(r[5]));
-      const leans = tRows.filter(r => r[9] === "W" || r[9] === "L");
-      const rec = a => `${a.filter(r => r[9] === "W").length}-${a.filter(r => r[9] === "L").length}`;
-      let tliveBias = 0, tliveN = 0;
-      try { const tf = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "totals", "today.json"), "utf8")); tliveBias = tf.learned_bias || 0; tliveN = tf.learned_n || 0; } catch (e) {}
-      totals = {
-        status: "ready", graded: tRows.length,
-        self_calibration: tliveBias ? `${tliveBias > 0 ? "+" : ""}${tliveBias} run correction active (n=${tliveN})` : "no correction needed yet",
-        bias: Number((errs.reduce((a, b) => a + b, 0) / errs.length).toFixed(2)),
-        mae: Number((errs.reduce((a, b) => a + Math.abs(b), 0) / errs.length).toFixed(2)),
-        lean_record: rec(leans),
-        over_lean_record: rec(leans.filter(r => Number(r[8]) > 0)),
-        under_lean_record: rec(leans.filter(r => Number(r[8]) < 0)),
-        note: "Bias = actual total minus projection. Leans counted at 0.5+ run edges. Totals are the noisiest market — judge nothing before ~100 graded games."
-      };
-    }
-  }
-
   return {
     status: "ready",
     model_version: latestModelVersion,
@@ -634,7 +603,6 @@ function buildCalibration() {
     shadow_model: shadow,
     attribution,
     kprops,
-    totals,
     note: "Shadow ledger for learning only — never part of the public record. Official picks stay the only published record.",
     buckets,
     shadow_by_status: byStatus
