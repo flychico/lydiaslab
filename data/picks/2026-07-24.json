@@ -1,0 +1,176 @@
+{
+  "date": "2026-07-24",
+  "generated": "2026-07-24T02:47:20.881Z",
+  "generated_at": "2026-07-24T02:47:20.881Z",
+  "locked_at": "2026-07-24T02:47:20.881Z",
+  "source_of_truth": "LyDia Daily Engine",
+  "current_official_model": "moneyline_only",
+  "lock_policy": "Dated official pick files are append-only. Re-running the engine for the same date reuses the existing dated file instead of changing official picks.",
+  "note": "Official picks require market edge, model probability >= 72%, Lab Rating >= 8.0/10, pitcher support, and no major bullpen caution.",
+  "picks": [
+    {
+      "gamePk": 823759,
+      "away": "Colorado Rockies",
+      "home": "Milwaukee Brewers",
+      "time": "2026-07-24T20:10:00Z",
+      "labScore": 85,
+      "labScoreBreakdown": {
+        "score": 85,
+        "model_edge_points": 35,
+        "pitcher_points": 17.5,
+        "bullpen_points": 12.36,
+        "market_points": 15,
+        "base_points": 5,
+        "note": "Lab Rating grades setup quality. It is not win probability."
+      },
+      "status": "official_pick",
+      "modelVersion": "moneyline-v2-plus-runs-v1",
+      "pitcherEdge": {
+        "team": "Milwaukee Brewers",
+        "gap": 14,
+        "conflict": false,
+        "away_score": 57,
+        "home_score": 71,
+        "away_pitcher": "Tomoyuki Sugano",
+        "home_pitcher": "Shane Drohan",
+        "away_pitcher_id": 608372,
+        "home_pitcher_id": 675660,
+        "away_era": 4.76,
+        "home_era": 3.2,
+        "away_whip": 1.29,
+        "home_whip": 1.18,
+        "away_advanced": {
+          "w": 9,
+          "l": 4,
+          "kbb_pct": 0.0733,
+          "gb_pct": 0.4387,
+          "babip": 0.2639,
+          "hr9": 1.79,
+          "ip_per_start": 5.3,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 5.3,
+          "bullpen_innings": 3.7
+        },
+        "home_advanced": {
+          "w": 5,
+          "l": 3,
+          "kbb_pct": 0.1735,
+          "gb_pct": 0.4797,
+          "babip": 0.3,
+          "hr9": 0.71,
+          "ip_per_start": 5.1,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 5.1,
+          "bullpen_innings": 3.9
+        }
+      },
+      "bullpen": {
+        "pick_team": {
+          "score": 58,
+          "label": "Normal",
+          "last_game_bp_ip": 4,
+          "last3_bp_ip": 8.3,
+          "last3_bp_runs": 3,
+          "last_game_relievers": 3,
+          "last3_relievers": 5,
+          "back_to_back_arms": 1,
+          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
+          "score_reason": "Normal (5.8/10): 8.3 recent relief innings, recency-weighted — 4 in the last game (2 days since last game), 1 arm worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 3,
+            "last3_relievers": 5,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 9.8,
+            "back_to_back_arms": 2.8,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 57.6
+          },
+          "efficiency_score": 50,
+          "efficiency_label": "Average",
+          "efficiency_reason": "Average (5.0/10): 3.24 ERA and 1.68 WHIP over 8.3 relief innings (3 ER, 12 H, 2 BB) in the last three days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": 5.8,
+            "whip_term": -5.7,
+            "confidence": 1,
+            "raw_score": 50.1
+          },
+          "era_3d": 3.24,
+          "whip_3d": 1.68,
+          "risk_index": 58,
+          "risk_label": "Normal",
+          "days_rest": 2,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "opponent": {
+          "score": 76,
+          "label": "Tired",
+          "last_game_bp_ip": 4,
+          "last3_bp_ip": 9.3,
+          "last3_bp_runs": 8,
+          "last_game_relievers": 3,
+          "last3_relievers": 8,
+          "back_to_back_arms": 4,
+          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+          "score_reason": "Tired (7.6/10): 9.3 recent relief innings, recency-weighted — 4 in the last game (2 days since last game), 4 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 3,
+            "last3_relievers": 8,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 11.7,
+            "back_to_back_arms": 19.3,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 76
+          },
+          "efficiency_score": 30,
+          "efficiency_label": "Below average",
+          "efficiency_reason": "Below average (3.0/10): 6.75 ERA and 1.61 WHIP over 9.3 relief innings (7 ER, 12 H, 3 BB) in the last three days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": -15.3,
+            "whip_term": -4.6,
+            "confidence": 1,
+            "raw_score": 30.1
+          },
+          "era_3d": 6.75,
+          "whip_3d": 1.61,
+          "risk_index": 86,
+          "risk_label": "High risk",
+          "days_rest": 2,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "label": "Supports LyDia side",
+        "major_caution": false,
+        "absolute_risk": "Opponent high"
+      },
+      "moneyline": {
+        "pick": "Milwaukee Brewers",
+        "side": "home",
+        "prob": 0.792,
+        "mktProb": 0.679,
+        "bestAm": -230,
+        "valueTag": "OFFICIAL PICK",
+        "isPass": false,
+        "tier": "Qualified Official",
+        "edgeScore": 85,
+        "rawEdge": 0.113,
+        "why": "Milwaukee Brewers is an official moneyline pick because it clears both gates: 79.2% model win probability and 8.5/10 Lab Rating. LyDia projects 79.2% against a 67.9% no-vig market number, a 11.3% model edge at -230. Milwaukee Brewers owns the starting pitcher edge by 14 points. Bullpen read: Supports LyDia side. Milwaukee Brewers's pen efficiency: Average (5.0/10). Lineup check: Milwaukee Brewers is near its season form (-0.009 OPS); Colorado Rockies is in a cold stretch (-0.068 OPS).",
+        "risk": "No model can see every live lineup, injury, or late bullpen availability update. Recheck official news before first pitch."
+      }
+    }
+  ]
+}
