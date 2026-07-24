@@ -76,7 +76,15 @@ async function main() {
   const strength = buildStrength(standings);
   const pitchers = await fetchPitchers(openGames);
   const offense = await fetchOffenseForm(DATE);
-  const oddsMap = buildOddsMap(oddsEvents);
+  // A second publish pass must never erase a valid morning price because a
+  // later odds request was rate-limited or temporarily empty. Current odds
+  // win when present; otherwise reuse the already captured member-brief or
+  // locked market snapshot for that game.
+  const oddsMap = {
+    ...buildLockedMarketOddsMap(readJsonSafe(`data/market/${DATE}.json`)),
+    ...buildPreviousOddsMap(previousRows),
+    ...buildOddsMap(oddsEvents)
+  };
   const bullpenSource = allGames.length
     ? await buildBullpenSource({ date: DATE, todayGames: allGames, fetchJson, generatedAt })
     : readJsonSafe(`data/bullpen/${DATE}.json`);
@@ -109,6 +117,15 @@ async function main() {
     .map(game => freshByPk.get(String(game.gamePk)) || previousByPk.get(String(game.gamePk)) || null)
     .filter(Boolean)
     .sort((a, b) => (b.lab_score || 0) - (a.lab_score || 0));
+
+  const previousMarketCoverage = previousRows.filter(row => row.market && Number(row.market.books) > 0).length;
+  const currentMarketCoverage = rows.filter(row => row.market && Number(row.market.books) > 0).length;
+  if (previousMarketCoverage > 0 && currentMarketCoverage < previousMarketCoverage) {
+    throw new Error(
+      `Moneyline retention guard: market coverage fell from ${previousMarketCoverage} to ${currentMarketCoverage} games. ` +
+      "Refusing to overwrite captured Lab Ratings with a partial odds response."
+    );
+  }
 
   const retainedPks = new Set(rows.map(row => String(row.game_pk)));
   const missingGames = allGames.filter(game => !retainedPks.has(String(game.gamePk)));
@@ -370,6 +387,42 @@ function buildOddsMap(events) {
       bestAway: decToAm(Math.max(...rows.map(r => amToDec(r[0])))),
       bestHome: decToAm(Math.max(...rows.map(r => amToDec(r[1])))),
       books: rows.length
+    };
+  }
+  return map;
+}
+
+function buildPreviousOddsMap(rows) {
+  const map = {};
+  for (const row of rows || []) {
+    const m = row && row.market;
+    if (!row || !m || !Number.isFinite(m.away_no_vig) || !Number.isFinite(m.home_no_vig)) continue;
+    map[`${row.away_team}@${row.home_team}`] = {
+      pAway: m.away_no_vig,
+      pHome: m.home_no_vig,
+      bestAway: Number.isFinite(m.away_price) ? m.away_price : null,
+      bestHome: Number.isFinite(m.home_price) ? m.home_price : null,
+      books: Number(m.books) || 0,
+      fallback_source: "member_brief_capture"
+    };
+  }
+  return map;
+}
+
+function buildLockedMarketOddsMap(snapshot) {
+  const map = {};
+  for (const item of (snapshot && snapshot.items) || []) {
+    if (!item || !item.game || !item.pick_team || !Number.isFinite(item.market_probability)) continue;
+    const [away, home] = String(item.game).split(" @ ");
+    if (!away || !home) continue;
+    const pickedHome = item.pick_team === home;
+    map[`${away}@${home}`] = {
+      pAway: pickedHome ? 1 - item.market_probability : item.market_probability,
+      pHome: pickedHome ? item.market_probability : 1 - item.market_probability,
+      bestAway: pickedHome ? null : item.posted_price,
+      bestHome: pickedHome ? item.posted_price : null,
+      books: 1,
+      fallback_source: "locked_market_snapshot"
     };
   }
   return map;

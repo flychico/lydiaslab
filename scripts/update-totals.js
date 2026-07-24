@@ -117,7 +117,7 @@ async function main() {
   let lines = {};
   const eventIds = {};
   if (KEY) {
-    const url = `https://api.the-odds-api.com/v4/sports/baseball_mlb/odds?apiKey=${KEY}&regions=us&markets=h2h,totals&oddsFormat=american`;
+    const url = `https://api.the-odds-api.com/v4/sports/baseball_mlb/odds?apiKey=${KEY}&regions=us&markets=totals&oddsFormat=american`;
     let odds = null;
     for (let attempt = 1; attempt <= 3 && !odds; attempt++) {
       try { odds = await j(url); }
