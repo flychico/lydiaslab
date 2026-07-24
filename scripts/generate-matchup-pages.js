@@ -79,6 +79,12 @@ const TEAM_SHORT = {
   "Washington Nationals": "Nationals"
 };
 
+const TEAM_CANONICAL_ALIASES = {
+  arizonadiamondbacks: "Arizona Diamondbacks",
+  diamondbacks: "Arizona Diamondbacks",
+  dbacks: "Arizona Diamondbacks"
+};
+
 const PARKS = {
   "Arizona Diamondbacks": { venue: "Chase Field", lat: 33.445, lon: -112.067, roof: true },
   "Athletics": { venue: "Sutter Health Park", lat: 38.580, lon: -121.514, roof: false },
@@ -132,6 +138,7 @@ async function main() {
   const results = readJsonSafe(RESULTS_PATH) || { days: {} };
   const kprops = readJsonSafe(path.join(ROOT, "data", "k-props", `${DATE}.json`));
   const teamHitting = args.offline ? { season: {}, recent: {} } : await fetchTeamHitting(DATE);
+  if (!args.offline) verifyStandingsCoverage(brief.games, teamHitting);
   const previousManifest = readJsonSafe(MANIFEST_PATH) || { pages: [] };
   const previousBySlug = new Map((previousManifest.pages || []).map(page => [page.slug, page]));
   const previousByPk = new Map((previousManifest.pages || []).map(page => [String(page.game_pk), page]));
@@ -397,7 +404,14 @@ function mlbPitcherLink(pitcher) {
 }
 
 function shortTeam(team) {
-  return TEAM_SHORT[team] || team;
+  const canonical = canonicalTeamName(team);
+  return TEAM_SHORT[canonical] || canonical;
+}
+
+function canonicalTeamName(team) {
+  const raw = String(team || "").trim();
+  const key = raw.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return TEAM_CANONICAL_ALIASES[key] || raw;
 }
 
 function matchupSlug(game) {
@@ -504,7 +518,7 @@ async function fetchTeamHitting(date) {
   };
   const hitSplits = (data, apply) => {
     for (const split of (((data.stats || [])[0] || {}).splits || [])) {
-      const teamName = split.team && split.team.name;
+      const teamName = canonicalTeamName(split.team && split.team.name);
       if (teamName) apply(teamName, split.stat || {});
     }
   };
@@ -527,10 +541,13 @@ async function fetchTeamHitting(date) {
       }));
   } catch (error) { console.warn(`Team recent hitting unavailable: ${error.message}`); }
   try {
-    await grab(`https://statsapi.mlb.com/api/v1/standings?leagueId=103,104&season=${year}&standingsTypes=regularSeason`, data => {
+    // hydrate=team is required here. Without it MLB currently labels Arizona
+    // as "D-backs" in the compact response while the schedule/member brief use
+    // "Arizona Diamondbacks", causing only Arizona's run fields to disappear.
+    await grab(`https://statsapi.mlb.com/api/v1/standings?leagueId=103,104&season=${year}&standingsTypes=regularSeason&hydrate=team`, data => {
       for (const record of (data.records || [])) {
         for (const teamRecord of (record.teamRecords || [])) {
-          const teamName = teamRecord.team && teamRecord.team.name;
+          const teamName = canonicalTeamName(teamRecord.team && teamRecord.team.name);
           const games = Number(teamRecord.gamesPlayed);
           if (!teamName || !(games > 0)) continue;
           out.standings[teamName] = {
@@ -543,6 +560,25 @@ async function fetchTeamHitting(date) {
     });
   } catch (error) { console.warn(`Standings unavailable: ${error.message}`); }
   return out;
+}
+
+function verifyStandingsCoverage(games, teamHitting) {
+  const standings = (teamHitting && teamHitting.standings) || {};
+  const missing = [];
+  const teams = new Set();
+  for (const game of games || []) {
+    if (game.away_team) teams.add(game.away_team);
+    if (game.home_team) teams.add(game.home_team);
+  }
+  for (const team of teams) {
+    const canonical = canonicalTeamName(team);
+    const row = standings[canonical] || standings[shortTeam(canonical)] || {};
+    const absent = ["run_diff_pg", "rs_pg", "ra_pg"].filter(field => !Number.isFinite(row[field]));
+    if (absent.length) missing.push(`${team}: ${absent.join(", ")}`);
+  }
+  if (missing.length) {
+    throw new Error(`Standings coverage incomplete; refusing to publish partial matchup data.\n${missing.join("\n")}`);
+  }
 }
 
 async function fetchSchedule(date) {
@@ -841,8 +877,9 @@ function renderTeamMap(brief, game, teamHitting) {
   const teams = [];
   const push = (team, record, off, pen) => {
     if (!team || teams.some(t => t.team === team)) return;
-    const standing = standings[team] || standings[shortTeam(team)] || {};
-    const detail = recentDetail[team] || {};
+    const canonical = canonicalTeamName(team);
+    const standing = standings[canonical] || standings[shortTeam(canonical)] || {};
+    const detail = recentDetail[canonical] || {};
     teams.push({
       team,
       short: shortTeam(team),
@@ -1263,10 +1300,12 @@ function renderOffenseTable(game, teamHitting) {
   const home = offense.home || {};
   const hit = teamHitting || { season: {}, recent: {}, standings: {} };
   const st = hit.standings || {};
-  const sa = st[game.away_team] || st[shortTeam(game.away_team)] || {};
-  const sh = st[game.home_team] || st[shortTeam(game.home_team)] || {};
-  const awayKSeason = hit.season[game.away_team], homeKSeason = hit.season[game.home_team];
-  const awayKRecent = hit.recent[game.away_team], homeKRecent = hit.recent[game.home_team];
+  const awayCanonical = canonicalTeamName(game.away_team);
+  const homeCanonical = canonicalTeamName(game.home_team);
+  const sa = st[awayCanonical] || st[shortTeam(awayCanonical)] || {};
+  const sh = st[homeCanonical] || st[shortTeam(homeCanonical)] || {};
+  const awayKSeason = hit.season[awayCanonical], homeKSeason = hit.season[homeCanonical];
+  const awayKRecent = hit.recent[awayCanonical], homeKRecent = hit.recent[homeCanonical];
   const kCell = (mine, theirs) => typeof mine === "number" && typeof theirs === "number" && mine < theirs ? "adv" : "";
   const advHi = (mine, theirs) => typeof mine === "number" && typeof theirs === "number" && mine > theirs ? "adv" : "";
   const advLo = (mine, theirs) => typeof mine === "number" && typeof theirs === "number" && mine < theirs ? "adv" : "";
