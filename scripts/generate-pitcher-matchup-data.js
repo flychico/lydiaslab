@@ -61,9 +61,49 @@ async function main() {
       };
     }
     if (Object.keys(plans).length) {
+      row.schedule_probable = {};
+      for (const side of ["away", "home"]) {
+        const plan = plans[side];
+        if (!plan) continue;
+        const scheduled = game.teams[side].probablePitcher || null;
+        row.schedule_probable[side] = scheduled
+          ? { id: scheduled.id, name: scheduled.fullName }
+          : null;
+        const opener = plan.segments.find(segment => segment.role === "opener");
+        if (opener && opener.stats) {
+          const scored = PitcherCore.scorePitcher(opener.stats);
+          row[side] = {
+            ...scored,
+            roleKey: "opener",
+            roleLabel: "Reported opener",
+            expectedInnings: Number(opener.expected_innings),
+            bullpenInnings: Number((9 - Number(opener.expected_innings)).toFixed(1)),
+            roleConfidence: plan.confidence || "manual",
+            bullpenGame: true,
+            note: `${opener.pitcher} is the reported opener; see the full pitching plan below.`
+          };
+        }
+      }
+      const planScore = (side, fallback) => {
+        const plan = plans[side];
+        const arms = ((plan && plan.segments) || []).filter(segment => segment.role !== "bullpen" && segment.stats);
+        const innings = arms.reduce((sum, segment) => sum + Number(segment.expected_innings), 0);
+        return innings > 0
+          ? Math.round(arms.reduce((sum, segment) =>
+              sum + PitcherCore.scorePitcher(segment.stats).score * Number(segment.expected_innings), 0
+            ) / innings)
+          : fallback;
+      };
+      row.away_plan_score = planScore("away", row.away.score);
+      row.home_plan_score = planScore("home", row.home.score);
+      row.gap = Math.abs(row.home_plan_score - row.away_plan_score);
+      row.strength = row.gap >= 14 ? "Strong" : row.gap >= 8 ? "Moderate" : row.gap >= 4 ? "Slight" : "No clear edge";
+      row.edge_team = row.gap < 4
+        ? "No clear pitching-plan edge"
+        : row.home_plan_score > row.away_plan_score ? row.home_team : row.away_team;
       row.pitching_plan = plans;
       row.bullpen_game = true;
-      row.pitching_plan_confidence = "reported";
+      row.pitching_plan_confidence = Object.values(plans).some(plan => plan.confidence === "manual") ? "manual" : "reported";
     }
   }
   source.pitching_plan_version = PitchingPlan.VERSION;

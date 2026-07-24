@@ -641,6 +641,23 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
     pitchingPlan, bullpenGame,
     pickOff: pickOffCtx, oppOff: oppOffCtx, preBullpenModelProb
   });
+  const planIdentity = (plan, scheduled) => {
+    const named = ((plan && plan.segments) || []).filter(segment => segment.role !== "bullpen" && segment.pitcher);
+    if (!plan || !plan.reported || !named.length) {
+      return {
+        name: scheduled ? scheduled.fullName : "TBD",
+        id: scheduled ? scheduled.id : null,
+        overridden: false
+      };
+    }
+    return {
+      name: named[0].pitcher,
+      id: named[0].pitcher_id || null,
+      overridden: true
+    };
+  };
+  const awayIdentity = planIdentity(pitchingPlan && pitchingPlan.away, awayPitcher);
+  const homeIdentity = planIdentity(pitchingPlan && pitchingPlan.home, homePitcher);
 
   return {
     game_pk: g.gamePk,
@@ -697,19 +714,19 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
       conflict: pitcherConflict,
       away_score: awayScore.score,
       home_score: homeScore.score,
-      away_pitcher: awayPitcher ? awayPitcher.fullName : "TBD",
-      home_pitcher: homePitcher ? homePitcher.fullName : "TBD",
-      away_pitcher_id: awayPitcher ? awayPitcher.id : null,
-      home_pitcher_id: homePitcher ? homePitcher.id : null,
-      away_era: awayStats && Number.isFinite(awayStats.era) ? awayStats.era : null,
-      home_era: homeStats && Number.isFinite(homeStats.era) ? homeStats.era : null,
-      away_whip: awayStats && Number.isFinite(awayStats.whip) ? awayStats.whip : null,
-      home_whip: homeStats && Number.isFinite(homeStats.whip) ? homeStats.whip : null,
+      away_pitcher: awayIdentity.name,
+      home_pitcher: homeIdentity.name,
+      away_pitcher_id: awayIdentity.id,
+      home_pitcher_id: homeIdentity.id,
+      away_era: !awayIdentity.overridden && awayStats && Number.isFinite(awayStats.era) ? awayStats.era : null,
+      home_era: !homeIdentity.overridden && homeStats && Number.isFinite(homeStats.era) ? homeStats.era : null,
+      away_whip: !awayIdentity.overridden && awayStats && Number.isFinite(awayStats.whip) ? awayStats.whip : null,
+      home_whip: !homeIdentity.overridden && homeStats && Number.isFinite(homeStats.whip) ? homeStats.whip : null,
       // Advanced stats captured daily for relevance analysis (NOT in any score yet).
       // Once enough graded games accumulate, the learning pass can test whether
       // K-BB%, GB%, or BABIP separation predicts outcomes better than ERA/WHIP.
-      away_advanced: advStats(awayStats),
-      home_advanced: advStats(homeStats)
+      away_advanced: awayIdentity.overridden ? null : advStats(awayStats),
+      home_advanced: homeIdentity.overridden ? null : advStats(homeStats)
     },
     offense_form: {
       away: offenseFormFor(aT.id, homePitcher ? pitchers[homePitcher.id] : null, offense),
