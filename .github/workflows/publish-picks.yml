@@ -18,6 +18,38 @@ on:
         description: "Email picks to paid members? Only set true after approval."
         required: false
         default: "false"
+      pitching_plan_action:
+        description: "Manual pitching plan: none, set, or clear"
+        required: false
+        default: "none"
+        type: choice
+        options: [none, set, clear]
+      pitching_plan_game_pk:
+        description: "Game ID or matchup, for example Royals @ Tigers. Use ID for doubleheaders."
+        required: false
+        default: ""
+      pitching_plan_side:
+        description: "Team receiving the override"
+        required: false
+        default: "away"
+        type: choice
+        options: [away, home]
+      pitching_plan_opener:
+        description: "Opener full name, for example Beck Way"
+        required: false
+        default: ""
+      pitching_plan_opener_innings:
+        description: "Expected opener innings, for example 2"
+        required: false
+        default: ""
+      pitching_plan_bulk:
+        description: "Bulk pitcher full name; leave blank if none"
+        required: false
+        default: ""
+      pitching_plan_bulk_innings:
+        description: "Expected bulk innings; leave blank if none"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -56,6 +88,19 @@ jobs:
 
       - name: Clean invalid generated artifacts
         run: node scripts/site-health-cleanup.js --fix
+
+      - name: Apply manual pitching plan
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pitching_plan_action != 'none' }}
+        run: |
+          node scripts/set-pitching-plan.js \
+            --date "${{ steps.publish_date.outputs.date }}" \
+            --action "${{ github.event.inputs.pitching_plan_action }}" \
+            --game-pk "${{ github.event.inputs.pitching_plan_game_pk }}" \
+            --side "${{ github.event.inputs.pitching_plan_side }}" \
+            --opener "${{ github.event.inputs.pitching_plan_opener }}" \
+            --opener-innings "${{ github.event.inputs.pitching_plan_opener_innings }}" \
+            --bulk "${{ github.event.inputs.pitching_plan_bulk }}" \
+            --bulk-innings "${{ github.event.inputs.pitching_plan_bulk_innings }}"
 
       - name: Normalize Pitcher Matchup Tool source
         run: node scripts/normalize-pitcher-tool-source.js
