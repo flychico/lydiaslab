@@ -95,6 +95,9 @@ jobs:
       - name: Verify matchup pages use Pitcher Matchup Tool data
         run: node scripts/verify-pitcher-matchup-alignment.js "${{ steps.publish_date.outputs.date }}"
 
+      - name: Verify opener and bulk pitching plans flow through every model
+        run: node scripts/verify-pitching-plans.js "${{ steps.publish_date.outputs.date }}"
+
       - name: Verify unified Picks and full-day bullpen retention
         run: node scripts/verify-picks-bullpen.js "${{ steps.publish_date.outputs.date }}"
 
