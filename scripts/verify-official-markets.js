@@ -12,7 +12,7 @@ const json = rel => JSON.parse(read(rel));
 const fail = msg => { throw new Error(msg); };
 
 const totals = json(`data/totals/${DATE}.json`);
-if (totals.model_version !== "totals-runs-v2-innings-allocation") fail("Wrong totals model version.");
+if (totals.model_version !== "totals-runs-v3-pitching-plan") fail("Wrong totals model version.");
 if (!totals.policy || totals.policy.official_totals_enabled !== true) fail("Official game totals are not enabled.");
 if (totals.policy.team_totals_official_enabled !== false) fail("Team totals must remain research-only.");
 for (const [pk, game] of Object.entries(totals.games || {})) {

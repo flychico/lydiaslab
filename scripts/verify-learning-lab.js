@@ -48,7 +48,7 @@ if (summary.status === "ready") {
 const totals = json("data/totals/today.json");
 const requireCurrentTotals = process.argv.includes("--require-current-totals");
 if (totals.model_version || requireCurrentTotals) {
-  if (totals.model_version !== "totals-runs-v2-innings-allocation") fail("Totals capture uses the wrong model version.");
+  if (totals.model_version !== "totals-runs-v3-pitching-plan") fail("Totals capture uses the wrong model version.");
   if (!totals.policy || totals.policy.research_min_edge !== 0.7 || totals.policy.research_min_setup !== 70) {
     fail("Totals research-lean policy is not synchronized.");
   }
@@ -57,7 +57,7 @@ if (totals.model_version || requireCurrentTotals) {
 }
 
 const totalsSource = read("scripts/update-totals.js");
-if (!totalsSource.includes('const TOTALS_MODEL_VERSION = "totals-runs-v2-innings-allocation"')) {
+if (!totalsSource.includes('const TOTALS_MODEL_VERSION = "totals-runs-v3-pitching-plan"')) {
   fail("Totals generator does not declare the synchronized model version.");
 }
 if (!totalsSource.includes("research_min_edge: 0.7") || !totalsSource.includes("research_min_setup: 70")) {

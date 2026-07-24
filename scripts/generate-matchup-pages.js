@@ -1128,6 +1128,7 @@ section.card>h2{text-align:center}
     <div class="sec-head"><h2>Starting pitcher matchup</h2><a class="tool-link" href="/tools/pitcher-matchups/">Full Pitcher Matchup Tool &rarr;</a></div>
     ${renderPitcherCard(game, pitcherGame)}
     ${renderPitcherTable(game, pitcherGame)}
+    ${renderPitchingPlan(pitcherGame)}
     ${renderStrikeoutProjections(game, pitcherGame, kprops)}
     <p class="small dim">Same data source as the <a href="/tools/pitcher-matchups/">Pitcher Matchup Tool</a>, where every starter on the slate is compared side by side.</p>
   </section>
@@ -1265,12 +1266,45 @@ function kpropFor(kprops, name) {
   if (!kprops || !kprops.pitchers || !name) return null;
   return kprops.pitchers[String(name).trim().toLowerCase()] || null;
 }
+
+function renderPitchingPlan(pitcherGame) {
+  const plans = pitcherGame && pitcherGame.pitching_plan;
+  if (!plans || !Object.keys(plans).length) return "";
+  const sides = ["away", "home"].filter(side => plans[side]).map(side => {
+    const plan = plans[side];
+    const segments = (plan.segments || []).map(segment => {
+      const label = segment.role === "bullpen"
+        ? "Remaining bullpen"
+        : `${segment.pitcher} · ${segment.role === "bulk" ? "Bulk pitcher" : "Opener"}`;
+      return `<div class="metric"><div class="label">${esc(label)}</div><div class="value">${esc(Number(segment.expected_innings).toFixed(1))} <span class="small dim">expected IP</span></div></div>`;
+    }).join("");
+    const team = side === "away" ? pitcherGame.away_team : pitcherGame.home_team;
+    return `<h3 style="text-align:center">${esc(team)} pitching plan</h3><div class="metric-grid">${segments}</div>`;
+  }).join("");
+  return `<div class="notice" style="margin-top:16px"><strong>Reported pitching plan</strong>${sides}<p class="small dim" style="text-align:center;margin-bottom:0">Each named pitcher is modeled only for his assigned innings. Bullpen fatigue, efficiency, and risk apply only to the remaining bullpen innings.</p></div>`;
+}
+
 function renderStrikeoutProjections(game, pitcherGame, kprops) {
   const p = pitcherGame || {};
-  const rows = [
+  const entries = [
     { team: game.away_team, pitcher: p.away },
     { team: game.home_team, pitcher: p.home }
-  ].map(entry => ({ ...entry, prop: kpropFor(kprops, entry.pitcher && entry.pitcher.name) }))
+  ];
+  for (const side of ["away", "home"]) {
+    const plan = p.pitching_plan && p.pitching_plan[side];
+    for (const segment of (plan && plan.segments) || []) {
+      if (segment.role === "bulk" && segment.stats) {
+        entries.push({ team: side === "away" ? game.away_team : game.home_team, pitcher: segment.stats });
+      }
+    }
+  }
+  const seen = new Set();
+  const rows = entries.filter(entry => {
+    const name = entry.pitcher && entry.pitcher.name;
+    if (!name || seen.has(name)) return false;
+    seen.add(name);
+    return true;
+  }).map(entry => ({ ...entry, prop: kpropFor(kprops, entry.pitcher && entry.pitcher.name) }))
    .filter(entry => entry.prop);
   if (!rows.length) return "";
   const cells = rows.map(entry => {

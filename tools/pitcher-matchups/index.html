@@ -158,8 +158,14 @@ async function load() {
   games.sort((a,b) => new Date(a.gameDate) - new Date(b.gameDate));
 
   const ids = [...new Set(games.flatMap(g => ["away","home"].map(s => g.teams[s].probablePitcher && g.teams[s].probablePitcher.id).filter(Boolean)))];
-  const [pitcherStats] = await Promise.all([LyDiaPitcherCore.loadPitchersForDate(ids, date), loadBullpen(date)]);
-  const cards = games.map(g => renderGame(g, pitcherStats, games, date));
+  let canonical = null;
+  try {
+    const response = await fetch(`/data/pitcher-matchups/${date}.json?v=${Date.now()}`, { cache:"no-store" });
+    if (response.ok) canonical = await response.json();
+  } catch(e) {}
+  const [fallbackStats] = await Promise.all([LyDiaPitcherCore.loadPitchersForDate(ids, date), loadBullpen(date)]);
+  const pitcherStats = canonical && canonical.pitchers_by_id ? canonical.pitchers_by_id : fallbackStats;
+  const cards = games.map(g => renderGame(g, pitcherStats, games, date, canonical && canonical.games ? canonical.games[String(g.gamePk)] : null));
   statusEl.innerHTML = "";
   gamesEl.innerHTML = cards.join("");
 
@@ -167,7 +173,7 @@ async function load() {
   jump.innerHTML = '<option value="">All games…</option>' + games.map(g =>
     `<option value="${g.gamePk}">${escapeHtml(g.teams.away.team.name)} @ ${escapeHtml(g.teams.home.team.name)}</option>`).join("");
 
-  const withEdges = games.map(g => matchupData(g, pitcherStats));
+  const withEdges = games.map(g => matchupData(g, pitcherStats, canonical && canonical.games ? canonical.games[String(g.gamePk)] : null));
   const strong = withEdges.filter(x => x.strength === "Strong").length;
   const moderate = withEdges.filter(x => x.strength === "Moderate").length;
   const tbd = withEdges.filter(x => x.away.name === "TBD" || x.home.name === "TBD").length;
@@ -308,16 +314,27 @@ function scorePitcher(st) {
   return { ...st, score, grade, note, k9, bb9, kbbPct, gbPct, babip, hr9, ipStart };
 }
 
-function matchupData(g, stats) {
+function matchupData(g, stats, canonicalGame=null) {
   const away = pitcher(g.teams.away, stats);
   const home = pitcher(g.teams.home, stats);
-  const gap = Math.abs(home.score - away.score);
+  const planScore = (side, fallback) => {
+    const plan = canonicalGame && canonicalGame.pitching_plan && canonicalGame.pitching_plan[side];
+    const arms = ((plan && plan.segments) || []).filter(segment => segment.role !== "bullpen" && segment.stats);
+    if (!arms.length) return fallback;
+    const innings = arms.reduce((sum, segment) => sum + Number(segment.expected_innings), 0);
+    return innings > 0
+      ? Math.round(arms.reduce((sum, segment) => sum + LyDiaPitcherCore.scorePitcher(segment.stats).score * Number(segment.expected_innings), 0) / innings)
+      : fallback;
+  };
+  const awayPlanScore = planScore("away", away.score);
+  const homePlanScore = planScore("home", home.score);
+  const gap = Math.abs(homePlanScore - awayPlanScore);
   let strength = "No clear edge";
   if (gap >= 14) strength = "Strong";
   else if (gap >= 8) strength = "Moderate";
   else if (gap >= 4) strength = "Slight";
-  const edgeTeam = gap < 4 ? "No clear SP edge" : (home.score > away.score ? g.teams.home.team.name : g.teams.away.team.name);
-  return { away, home, gap, strength, edgeTeam };
+  const edgeTeam = gap < 4 ? "No clear pitching-plan edge" : (homePlanScore > awayPlanScore ? g.teams.home.team.name : g.teams.away.team.name);
+  return { away, home, gap, strength, edgeTeam, pitchingPlan: canonicalGame && canonicalGame.pitching_plan };
 }
 
 /* ---- Tiers: pitcher calibration (league ~4.20 ERA, ~1.30 WHIP, ~13% K-BB) ---- */
@@ -421,10 +438,10 @@ function renderPitcherBox(label, team, p) {
   </div>`;
 }
 
-function renderGame(g, stats, allGames, date) {
+function renderGame(g, stats, allGames, date, canonicalGame=null) {
   const awayTeam = g.teams.away.team.name;
   const homeTeam = g.teams.home.team.name;
-  const d = matchupData(g, stats);
+  const d = matchupData(g, stats, canonicalGame);
   const time = new Date(g.gameDate).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   const badgeClass = d.strength === "Strong" ? "pos" : d.strength === "No clear edge" ? "neutral" : "neutral";
   const read = buildPitcherRead(d, awayTeam, homeTeam);
@@ -443,9 +460,21 @@ function renderGame(g, stats, allGames, date) {
       ${renderPitcherBox("Away", awayTeam, d.away)}
       ${renderPitcherBox("Home", homeTeam, d.home)}
     </div>
+    ${pitchingPlanStrip(d.pitchingPlan, awayTeam, homeTeam)}
     ${bullpenStrip(awayTeam, homeTeam)}
     <div class="read">${escapeHtml(read)}</div>
   </div>`;
+}
+
+function pitchingPlanStrip(plans, awayTeam, homeTeam) {
+  if(!plans) return "";
+  const rows=["away","home"].filter(side=>plans[side]).map(side=>{
+    const plan=plans[side];
+    const team=side==="away"?awayTeam:homeTeam;
+    const detail=(plan.segments||[]).map(segment=>`${segment.role==="bullpen"?"remaining bullpen":segment.pitcher} ${Number(segment.expected_innings).toFixed(1)} IP`).join(" + ");
+    return `<div><b>${escapeHtml(team)}:</b> ${escapeHtml(detail)}</div>`;
+  }).join("");
+  return rows?`<div class="notice" style="margin-top:10px"><b>Reported pitching plan</b>${rows}<div class="small dim">The edge uses the innings-weighted opener and bulk-pitcher scores. Bullpen condition applies only to the remaining bullpen innings.</div></div>`:"";
 }
 
 /* Bullpens are pitchers too: same-page condition strip (today only — /10 scale, higher = more fatigued). */

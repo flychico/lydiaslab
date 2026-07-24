@@ -16,6 +16,7 @@
 const fs = require("fs");
 const path = require("path");
 const PitcherCore = require("../js/pitcher-matchup-core.js");
+const PitchingPlan = require("./lib/pitching-plan-core.js");
 
 const ROOT = path.join(__dirname, "..");
 const KEY = (process.env.ODDS_API_KEY || "").trim();
@@ -25,7 +26,7 @@ const DATE = (process.argv[2] || "").match(/^\d{4}-\d{2}-\d{2}$/)
 const IF_CHANGED = process.argv.includes("--if-changed");
 
 const LEAGUE_ERA = 4.20;
-const TOTALS_MODEL_VERSION = "totals-runs-v2-innings-allocation";
+const TOTALS_MODEL_VERSION = "totals-runs-v3-pitching-plan";
 const TOTALS_POLICY = Object.freeze({
   version: "totals-policy-v3-official",
   research_min_edge: 0.7,
@@ -58,6 +59,8 @@ async function main() {
   const sched = await j(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${DATE}&hydrate=probablePitcher`);
   const games = (((sched.dates || [])[0]) || {}).games || [];
   const probables = await currentProbables(games);
+  const reportedPlans = PitchingPlan.load(ROOT, DATE);
+  const pitchingPlanSignature = JSON.stringify(reportedPlans.games || {});
 
   if (IF_CHANGED) {
     const tPath = path.join(ROOT, "data", "totals", "today.json");
@@ -65,6 +68,7 @@ async function main() {
     let prev; try { prev = JSON.parse(fs.readFileSync(tPath, "utf8")); } catch (e) { prev = null; }
     if (!prev || prev.date !== DATE || !prev.probables) { console.log("Totals: no comparable capture."); return; }
     const changes = [];
+    if (prev.pitching_plan_signature !== pitchingPlanSignature) changes.push("reported pitching plan updated");
     for (const [pk, cur] of Object.entries(probables)) {
       const was = prev.probables[pk];
       if (!was) continue;
@@ -105,11 +109,15 @@ async function main() {
   try { await Promise.all([windowFetch(15, off15, g15), windowFetch(7, off7, g7)]); }
   catch (e) { console.warn("form windows unavailable:", e.message); }
 
-  const pids = [...new Set(games.flatMap(g => ["away", "home"].map(sd => g.teams[sd].probablePitcher && g.teams[sd].probablePitcher.id).filter(Boolean)))];
+  const pids = [...new Set([
+    ...games.flatMap(g => ["away", "home"].map(sd => g.teams[sd].probablePitcher && g.teams[sd].probablePitcher.id).filter(Boolean)),
+    ...PitchingPlan.participantIds(reportedPlans)
+  ])];
   // Use the same starter-only usage and role classifier as the Pitcher Matchup
   // Tool. Total season innings divided by starts is invalid for mixed-role
   // pitchers because it incorrectly assigns their relief innings to starts.
   const ps = await PitcherCore.fetchPitchers(pids, DATE, j);
+  const bulkRoleStats = await PitchingPlan.fetchBulkRoleStats(reportedPlans, DATE, j, LEAGUE_ERA);
   let bullpen = {};
   try { const bp = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "bullpen", `${DATE}.json`), "utf8")); if (bp.date === DATE) bullpen = bp.teams_by_name || {}; } catch (e) {}
 
@@ -194,6 +202,38 @@ async function main() {
     }
   }
 
+  // A temporary Odds API failure must not erase a market captured earlier in
+  // the day. Restore the prior prices before calculating edges, classifications,
+  // and Lab Rating so every downstream field is recomputed consistently.
+  try {
+    const priorPath = path.join(ROOT, "data", "totals", `${DATE}.json`);
+    const prior = fs.existsSync(priorPath) ? JSON.parse(fs.readFileSync(priorPath, "utf8")) : null;
+    for (const game of Object.values((prior && prior.games) || {})) {
+      if (!lines[game.game] && Number.isFinite(game.line)) {
+        lines[game.game] = {
+          line: game.line,
+          over: game.over ?? null,
+          under: game.under ?? null,
+          books: game.books || 0
+        };
+      }
+      const restored = (teamTotalLines[game.game] = teamTotalLines[game.game] || {});
+      for (const side of ["away", "home"]) {
+        const priorTeam = game.team_totals && game.team_totals[side];
+        if (priorTeam && priorTeam.team && Number.isFinite(priorTeam.line) && !restored[priorTeam.team]) {
+          restored[priorTeam.team] = {
+            line: priorTeam.line,
+            over: priorTeam.over ?? null,
+            under: priorTeam.under ?? null,
+            books: priorTeam.books || 0
+          };
+        }
+      }
+    }
+  } catch (error) {
+    console.warn(`prior totals market restore skipped: ${error.message}`);
+  }
+
   // SELF-CALIBRATION: rolling mean error over the last 100 graded totals;
   // n ≥ 25 and |bias| ≥ 0.2 runs to act, capped ±0.8.
   let learnedBias = 0, learnedN = 0;
@@ -217,7 +257,7 @@ async function main() {
     if (!g.status || !["Preview", "Live"].includes(g.status.abstractGameState)) continue;
     const aT = g.teams.away.team, hT = g.teams.home.team;
     const park = PARKS[hT.name] ?? 1.0;
-    const side = (batTeamId, oppStarter, oppPenName) => {
+    const side = (batTeamId, oppStarter, oppPenName, pitchingSide) => {
       const seasonRpg = off[batTeamId] || lgRPG;
       // weights scale with each window's sample; unearned weight returns to season
       let w15 = Number.isFinite(off15[batTeamId]) ? 0.25 * Math.min(1, (g15[batTeamId] || 0) / 12) : 0;
@@ -226,9 +266,7 @@ async function main() {
       const offF = rpg / lgRPG;
       const st = oppStarter ? ps[oppStarter.id] : null;
       const role = PitcherCore.classifyPitcherRole(st);
-      const fip = fipLite(st);
-      const expIP = role.expectedInnings;
-      const share = expIP / 9;
+      const plan = PitchingPlan.resolveSidePlan(reportedPlans, g.gamePk, pitchingSide, oppStarter, role);
       const pen = bullpen[oppPenName];
       // Run projection should react to how likely the pen is to actually give
       // up runs, not just how much it's pitched — a tired-but-dominant pen
@@ -250,33 +288,74 @@ async function main() {
       const penF = penRisk !== null
         ? Math.max(0.75, Math.min(1.35, 1 + (penRisk - 50) / 100))
         : 1;
-      // Allocate the probable pitcher's quality only to his expected workload.
-      // The bullpen factor owns every remaining inning, which is the majority
-      // of an opener or bullpen game.
-      const pitchF = (fip / LEAGUE_ERA) * share + penF * (1 - share);
+      // Allocate every known pitcher only to his assigned innings. The generic
+      // bullpen owns only the innings left after the opener and bulk pitcher.
+      let pitchF = 0;
+      let effectiveEra = 0;
+      let plannedPitcherInnings = 0;
+      let weightedPitcherScore = 0;
+      const segments = plan.segments.map(segment => {
+        const innings = Number(segment.expected_innings);
+        if (segment.role === "bullpen") {
+          pitchF += penF * (innings / 9);
+          effectiveEra += LEAGUE_ERA * penF * innings;
+          return { ...segment };
+        }
+        const segmentStats = ps[Number(segment.pitcher_id)] || null;
+        const roleStats = segment.role === "bulk" ? bulkRoleStats[Number(segment.pitcher_id)] || null : null;
+        const segmentFip = roleStats ? roleStats.fip_lite : fipLite(segmentStats);
+        const segmentScore = PitcherCore.scorePitcher(segmentStats || { name: segment.pitcher, missing: true }).score;
+        pitchF += (segmentFip / LEAGUE_ERA) * (innings / 9);
+        effectiveEra += segmentFip * innings;
+        plannedPitcherInnings += innings;
+        weightedPitcherScore += segmentScore * innings;
+        return {
+          ...segment,
+          fip_lite: Number(segmentFip.toFixed(2)),
+          pitcher_score: segmentScore,
+          role_stats: roleStats
+        };
+      });
+      const bullpenInnings = segments.filter(segment => segment.role === "bullpen")
+        .reduce((sum, segment) => sum + Number(segment.expected_innings), 0);
+      const expIP = segments.filter(segment => segment.role !== "bullpen")
+        .reduce((sum, segment) => sum + Number(segment.expected_innings), 0);
+      const planOutput = {
+        ...plan,
+        segments,
+        expected_innings: Number(expIP.toFixed(1)),
+        bullpen_innings: Number(bullpenInnings.toFixed(1)),
+        effective_era: Number((effectiveEra / 9).toFixed(2)),
+        pitcher_score: plannedPitcherInnings > 0 ? Math.round(weightedPitcherScore / plannedPitcherInnings) : null,
+        description: PitchingPlan.describe(plan)
+      };
+      const primaryFip = segments.find(segment => segment.role !== "bullpen");
       return {
         runs: lgRPG * offF * pitchF * park,
         rpg: Number(rpg.toFixed(2)), season_rpg: Number(seasonRpg.toFixed(2)),
         form15_rpg: Number.isFinite(off15[batTeamId]) ? Number(off15[batTeamId].toFixed(2)) : null, form15_g: g15[batTeamId] || 0,
         form7_rpg: Number.isFinite(off7[batTeamId]) ? Number(off7[batTeamId].toFixed(2)) : null, form7_g: g7[batTeamId] || 0,
         off_factor: Number(offF.toFixed(3)),
-        opp_sp: st ? st.name : "TBD", opp_sp_fip: Number(fip.toFixed(2)), opp_sp_ip: st ? Number(expIP.toFixed(1)) : null,
-        opp_pitcher_role: role.key, opp_pitcher_role_label: role.label,
-        opp_pitcher_role_confidence: role.confidence,
-        opp_bullpen_game: role.bullpenGame,
-        opp_bullpen_ip: Number(role.bullpenInnings.toFixed(1)),
+        opp_sp: st ? st.name : "TBD", opp_sp_fip: primaryFip ? primaryFip.fip_lite : LEAGUE_ERA, opp_sp_ip: Number(expIP.toFixed(1)),
+        opp_pitcher_role: plan.type === "opener_bulk" ? "opener_bulk" : role.key,
+        opp_pitcher_role_label: plan.type === "opener_bulk" ? "Opener + bulk pitcher" : role.label,
+        opp_pitcher_role_confidence: plan.confidence || role.confidence,
+        opp_bullpen_game: Boolean(plan.type && plan.type.startsWith("opener")),
+        opp_bullpen_ip: Number(bullpenInnings.toFixed(1)),
         opp_pitcher_role_reason: role.reason,
+        pitching_plan: planOutput,
         pitch_factor: Number(pitchF.toFixed(3)),
         opp_pen_risk: penRisk, opp_pen_fatigue: penFatigue, opp_pen_efficiency: penEfficiency, opp_pen_efficiency_label: penEfficiencyLabel,
         pen_factor: Number(penF.toFixed(3)),
         sp_sample_ok: !!(st && st.ip >= 40 && role.confidence !== "low"),
-        pitching_plan_confident: role.confidence === "high" && !role.bullpenGame
+        pitching_plan_confident: plan.reported || (role.confidence === "high" && !role.bullpenGame)
       };
     };
-    const A = side(aT.id, g.teams.home.probablePitcher, hT.name);
-    const H = side(hT.id, g.teams.away.probablePitcher, aT.name);
+    const A = side(aT.id, g.teams.home.probablePitcher, hT.name, "home");
+    const H = side(hT.id, g.teams.away.probablePitcher, aT.name, "away");
     const pitchingPlan = {
       away: {
+        ...H.pitching_plan,
         pitcher: g.teams.away.probablePitcher ? g.teams.away.probablePitcher.fullName : "TBD",
         role: H.opp_pitcher_role,
         label: H.opp_pitcher_role_label,
@@ -286,6 +365,7 @@ async function main() {
         bullpen_game: H.opp_bullpen_game
       },
       home: {
+        ...A.pitching_plan,
         pitcher: g.teams.home.probablePitcher ? g.teams.home.probablePitcher.fullName : "TBD",
         role: A.opp_pitcher_role,
         label: A.opp_pitcher_role_label,
@@ -370,6 +450,8 @@ async function main() {
       park_factor: park,
       away_sp: (g.teams.away.probablePitcher || {}).fullName || "TBD",
       home_sp: (g.teams.home.probablePitcher || {}).fullName || "TBD",
+      pitching_plan: pitchingPlan,
+      bullpen_game: Boolean(pitchingPlan.away.bullpen_game || pitchingPlan.home.bullpen_game),
       line, over: mkt.over ?? null, under: mkt.under ?? null, books: mkt.books || 0,
       team_totals: {
         away: teamTotal(aT.name, Number(A.runs.toFixed(1))),
@@ -422,7 +504,7 @@ async function main() {
     }
   } catch (e) {}
 
-  const payload = { date: DATE, generated_at: new Date().toISOString(), model_version: TOTALS_MODEL_VERSION, policy: TOTALS_POLICY, source: "LyDia totals projection (offense factor × opposing pitching × park × pen fatigue) + the-odds-api totals consensus", league_rpg: Number(lgRPG.toFixed(2)), probables, games: out, learned_bias: learnedBias, learned_n: learnedN };
+  const payload = { date: DATE, generated_at: new Date().toISOString(), model_version: TOTALS_MODEL_VERSION, policy: TOTALS_POLICY, source: "LyDia totals projection (reported opener/bulk allocation × remaining bullpen risk × offense × park) + the-odds-api totals consensus", league_rpg: Number(lgRPG.toFixed(2)), probables, pitching_plan_signature: pitchingPlanSignature, games: out, learned_bias: learnedBias, learned_n: learnedN };
   fs.mkdirSync(path.join(ROOT, "data", "totals"), { recursive: true });
   fs.writeFileSync(path.join(ROOT, "data", "totals", `${DATE}.json`), JSON.stringify(payload, null, 1));
   fs.writeFileSync(path.join(ROOT, "data", "totals", "today.json"), JSON.stringify(payload, null, 1));

@@ -12,6 +12,7 @@
 const fs = require("fs");
 const path = require("path");
 const PitcherCore = require("../js/pitcher-matchup-core.js");
+const PitchingPlan = require("./lib/pitching-plan-core.js");
 
 const ROOT = path.join(__dirname, "..");
 const KEY = (process.env.ODDS_API_KEY || "").trim();
@@ -45,6 +46,8 @@ async function currentProbables() {
 
 async function main() {
   if (!KEY) { console.log("ODDS_API_KEY not set — strikeout props skipped."); return; }
+  const reportedPlans = PitchingPlan.load(ROOT, DATE);
+  const pitchingPlanSignature = JSON.stringify(reportedPlans.games || {});
 
   if (IF_CHANGED) {
     // Lines are captured once at publish and kept all day — only a pitcher change re-captures.
@@ -54,6 +57,7 @@ async function main() {
     if (!prev || prev.date !== DATE || !prev.probables) { console.log("No comparable capture — skipping."); return; }
     const now = await currentProbables();
     const changes = [];
+    if (prev.pitching_plan_signature !== pitchingPlanSignature) changes.push("reported pitching plan updated");
     for (const [pk, cur] of Object.entries(now)) {
       const was = prev.probables[pk];
       if (!was) continue;
@@ -144,30 +148,47 @@ async function main() {
     for (const t of (vl.stats[0] || {}).splits || []) { const so = +t.stat.strikeOuts || 0, pa = +t.stat.plateAppearances || 0; if (pa) kv.L[t.team.id] = so / pa; }
     for (const t of (vr.stats[0] || {}).splits || []) { const so = +t.stat.strikeOuts || 0, pa = +t.stat.plateAppearances || 0; if (pa) { kv.R[t.team.id] = so / pa; soT += so; paT += pa; } }
     const leagueK = paT ? soT / paT : 0.223;
-    const pids = [...new Set(games.flatMap(g => ["away", "home"].map(sd => g.teams[sd].probablePitcher && g.teams[sd].probablePitcher.id).filter(Boolean)))];
+    const pids = [...new Set([
+      ...games.flatMap(g => ["away", "home"].map(sd => g.teams[sd].probablePitcher && g.teams[sd].probablePitcher.id).filter(Boolean)),
+      ...PitchingPlan.participantIds(reportedPlans)
+    ])];
     if (pids.length) {
       const ps = await PitcherCore.fetchPitchers(pids, DATE, j);
+      const bulkRoleStats = await PitchingPlan.fetchBulkRoleStats(reportedPlans, DATE, j);
       for (const g of games) {
         for (const sd of ["away", "home"]) {
-          const pid = g.teams[sd].probablePitcher && g.teams[sd].probablePitcher.id;
-          const pit = pid && ps[pid];
-          if (!pit || !pit.ip || pit.ip < 15 || !pit.bf) continue;
-          const oppId = g.teams[sd === "away" ? "home" : "away"].team.id;
-          const role = PitcherCore.classifyPitcherRole(pit);
-          const expIP = role.expectedInnings;
-          const oppK = pit.hand && kv[pit.hand] ? kv[pit.hand][oppId] : null;
-          const adj = (oppK && leagueK) ? Math.max(0.87, Math.min(1.13, oppK / leagueK)) : 1;
-          const projRaw = Number((expIP * 4.28 * (pit.so / pit.bf) * adj).toFixed(2));
-          const proj = Number((projRaw + learnedBias).toFixed(2));
-          const key = pit.name.toLowerCase();
-          const rec = pitchers[key] || (pitchers[key] = { name: pit.name, line: null, over: null, under: null, books: 0, game: `${g.teams.away.team.name} @ ${g.teams.home.team.name}` });
-          rec.projection = proj;
-          rec.projection_raw = projRaw;
-          rec.game_pk = g.gamePk;
-          rec.pitcher_role = role.key;
-          rec.pitcher_role_label = role.label;
-          rec.expected_innings = Number(expIP.toFixed(1));
-          rec.bullpen_game = role.bullpenGame;
+          const probable = g.teams[sd].probablePitcher || null;
+          const reported = PitchingPlan.getSidePlan(reportedPlans, g.gamePk, sd);
+          const candidates = reported
+            ? reported.segments.filter(segment => segment.role !== "bullpen")
+            : probable ? [{ role: null, pitcher_id: probable.id, pitcher: probable.fullName, expected_innings: null }] : [];
+          for (const candidate of candidates) {
+            const pit = ps[Number(candidate.pitcher_id)];
+            if (!pit || !pit.ip || pit.ip < 15 || !pit.bf) continue;
+            const oppId = g.teams[sd === "away" ? "home" : "away"].team.id;
+            const inferredRole = PitcherCore.classifyPitcherRole(pit);
+            const expIP = Number.isFinite(Number(candidate.expected_innings))
+              ? Number(candidate.expected_innings)
+              : inferredRole.expectedInnings;
+            const roleStats = candidate.role === "bulk" ? bulkRoleStats[Number(candidate.pitcher_id)] || null : null;
+            const skillSo = roleStats && roleStats.bf ? roleStats.so : pit.so;
+            const skillBf = roleStats && roleStats.bf ? roleStats.bf : pit.bf;
+            const oppK = pit.hand && kv[pit.hand] ? kv[pit.hand][oppId] : null;
+            const adj = (oppK && leagueK) ? Math.max(0.87, Math.min(1.13, oppK / leagueK)) : 1;
+            const projRaw = Number((expIP * 4.28 * (skillSo / skillBf) * adj).toFixed(2));
+            const proj = Number((projRaw + learnedBias).toFixed(2));
+            const key = pit.name.toLowerCase();
+            const rec = pitchers[key] || (pitchers[key] = { name: pit.name, line: null, over: null, under: null, books: 0, game: `${g.teams.away.team.name} @ ${g.teams.home.team.name}` });
+            rec.projection = proj;
+            rec.projection_raw = projRaw;
+            rec.game_pk = g.gamePk;
+            rec.pitcher_role = candidate.role || inferredRole.key;
+            rec.pitcher_role_label = candidate.role === "bulk" ? "Bulk pitcher" : candidate.role === "opener" ? "Opener" : inferredRole.label;
+            rec.expected_innings = Number(expIP.toFixed(1));
+            rec.bullpen_game = candidate.role === "opener" || (!candidate.role && inferredRole.bullpenGame);
+            rec.pitching_plan_reported = Boolean(reported);
+            rec.role_stats = roleStats;
+          }
         }
       }
     }
@@ -182,11 +203,10 @@ async function main() {
       }
     }
   } catch (e) {}
-  const out = { date: DATE, generated_at: new Date().toISOString(), source: "the-odds-api pitcher_strikeouts (us region; consensus = most common posted line, best price at it)", events_fetched: fetched, probables, pitchers, learned_bias: learnedBias, learned_n: learnedN };
+  const out = { date: DATE, generated_at: new Date().toISOString(), source: "the-odds-api pitcher_strikeouts (us region; consensus = most common posted line, best price at it)", events_fetched: fetched, probables, pitching_plan_signature: pitchingPlanSignature, pitchers, learned_bias: learnedBias, learned_n: learnedN };
   fs.mkdirSync(path.join(ROOT, "data", "k-props"), { recursive: true });
   fs.writeFileSync(path.join(ROOT, "data", "k-props", `${DATE}.json`), JSON.stringify(out, null, 1));
   fs.writeFileSync(path.join(ROOT, "data", "k-props", "today.json"), JSON.stringify(out, null, 1));
   console.log(`K-props: wrote lines for ${Object.keys(pitchers).length} pitcher(s) from ${fetched} event call(s).`);
 }
 main().catch(e => { console.error("k-props error:", e.message); process.exit(0); });
-

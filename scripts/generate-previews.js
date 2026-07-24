@@ -111,7 +111,11 @@ function bullpenGameAnalysis(g) {
   if (!bullpenSides.length) return "";
 
   const describe = item => {
-    const allocation = Number.isFinite(item.plan.expected_innings) && Number.isFinite(item.plan.bullpen_innings)
+    const allocation = Array.isArray(item.plan.segments) && item.plan.segments.length
+      ? `The reported allocation is ${item.plan.segments.map(segment =>
+          `${segment.role === "bullpen" ? "the remaining bullpen" : segment.pitcher} for about ${Number(segment.expected_innings).toFixed(1)} innings`
+        ).join(", ")}.`
+      : Number.isFinite(item.plan.expected_innings) && Number.isFinite(item.plan.bullpen_innings)
       ? `${item.plan.name} is expected to cover about ${item.plan.expected_innings.toFixed(1)} innings, leaving roughly ${item.plan.bullpen_innings.toFixed(1)} innings to the bullpen.`
       : "The relief staff is expected to cover most of the game.";
     const risk = item.pen && Number.isFinite(item.pen.risk_index)
@@ -187,8 +191,12 @@ async function main() {
     game.pitcher_edge.away_pitcher_id = game.pitcher_edge.away_pitcher_id || (canonical.away && canonical.away.id) || null;
     game.pitcher_edge.home_pitcher_id = game.pitcher_edge.home_pitcher_id || (canonical.home && canonical.home.id) || null;
     game.pitching_plan = {
-      away: pitcherPlan(canonical.away),
-      home: pitcherPlan(canonical.home)
+      away: canonical.pitching_plan && canonical.pitching_plan.away
+        ? { ...canonical.pitching_plan.away, bullpen_game: true }
+        : pitcherPlan(canonical.away),
+      home: canonical.pitching_plan && canonical.pitching_plan.home
+        ? { ...canonical.pitching_plan.home, bullpen_game: true }
+        : pitcherPlan(canonical.home)
     };
     game.bullpen_game = Boolean(game.pitching_plan.away.bullpen_game || game.pitching_plan.home.bullpen_game);
   }

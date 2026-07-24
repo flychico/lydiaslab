@@ -207,7 +207,7 @@ async function main() {
   const tPath = path.join(ROOT, "data", "totals", `${DATE}.json`);
   if (fs.existsSync(tPath)) {
     let tp; try { tp = JSON.parse(fs.readFileSync(tPath, "utf8")); } catch (e) { tp = null; }
-    if (tp && tp.games && tp.model_version !== "totals-runs-v2-innings-allocation") {
+    if (tp && tp.games && tp.model_version !== "totals-runs-v3-pitching-plan") {
       console.log(`Totals: skipped legacy/unversioned capture (${tp.model_version || "unknown"}).`);
     } else if (tp && tp.games) {
       if (!fs.existsSync(TLOG)) fs.writeFileSync(TLOG, THEAD);

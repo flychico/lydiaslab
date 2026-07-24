@@ -152,6 +152,11 @@ async function load(){
 }
 function fipTier(v){ return !Number.isFinite(v)?"":v<3.25?" <span class=\"tier neg-text\">suppresses runs hard</span>":v<3.75?" <span class=\"tier neg-text\">suppresses runs</span>":v<4.25?" <span class=\"tier\">neutral</span>":v<4.9?" <span class=\"tier pos-text\">adds runs</span>":" <span class=\"tier pos-text\">adds many runs</span>"; }
 function offTier(f){ return !Number.isFinite(f)?"":f>=1.08?" <span class=\"tier pos-text\">adds runs — high-scoring</span>":f>=1.03?" <span class=\"tier pos-text\">adds runs</span>":f<=0.92?" <span class=\"tier neg-text\">suppresses runs — light lineup</span>":f<=0.97?" <span class=\"tier neg-text\">below average scoring</span>":" <span class=\"tier\">neutral</span>"; }
+function planSummary(sd){
+  const plan=sd&&sd.pitching_plan;
+  if(!plan||!plan.reported||!Array.isArray(plan.segments)) return null;
+  return plan.segments.map(s=>`${s.role==="bullpen"?"bullpen":s.pitcher} ${Number(s.expected_innings).toFixed(1)} IP`).join(" + ");
+}
 function sideBoxes(g){
   if(!g.away || !g.home) return "";
   const box=(sideName, sd, runs)=>{
@@ -163,7 +168,9 @@ function sideBoxes(g){
       <div class="s-row"><span class="dim small">${escapeHtml(ttRead)}</span><span class="tier">research only</span></div>
       <div class="s-row"><span>Their scoring</span><span><b>${sd.rpg}</b> runs/game${offTier(sd.off_factor)}</span></div>
       ${Number.isFinite(sd.form_rpg) ? `<div class="s-row"><span class="dim small">= season ${sd.season_rpg} blended 70/30 with last-15 ${sd.form_rpg}</span><span class="dim small">${sd.form_rpg - sd.season_rpg >= 0.6 ? "hot" : sd.form_rpg - sd.season_rpg <= -0.6 ? "cold" : ""}</span></div>` : ""}
-      <div class="s-row"><span>Facing starter</span><span><b>${escapeHtml(sd.opp_sp)}</b> <span class="dim small">${Number.isFinite(sd.opp_sp_fip)?"FIP-in "+sd.opp_sp_fip.toFixed(2):""}${sd.opp_sp_ip?" · ~"+sd.opp_sp_ip+" IP":""}</span>${fipTier(sd.opp_sp_fip)}</span></div>
+      ${planSummary(sd)
+        ? `<div class="s-row"><span>Facing pitching plan</span><span><b>${escapeHtml(planSummary(sd))}</b></span></div>`
+        : `<div class="s-row"><span>Facing starter</span><span><b>${escapeHtml(sd.opp_sp)}</b> <span class="dim small">${Number.isFinite(sd.opp_sp_fip)?"FIP-in "+sd.opp_sp_fip.toFixed(2):""}${sd.opp_sp_ip?" · ~"+sd.opp_sp_ip+" IP":""}</span>${fipTier(sd.opp_sp_fip)}</span></div>`}
       <div class="s-row"><span>Facing bullpen</span><span>${Number.isFinite(sd.opp_pen_risk)?`<b>${(sd.opp_pen_risk/10).toFixed(1)}/10 risk</b>${sd.pen_factor>1?` <span class=\"tier pos-text\">elevated risk — adds runs</span>`:""}`:'<span class="dim">—</span>'}</span></div>
       ${Number.isFinite(sd.opp_pen_fatigue)||Number.isFinite(sd.opp_pen_efficiency)?`<div class="s-row"><span class="dim small">= fatigue ${Number.isFinite(sd.opp_pen_fatigue)?(sd.opp_pen_fatigue/10).toFixed(1):"—"}/10 blended with efficiency ${Number.isFinite(sd.opp_pen_efficiency)?(sd.opp_pen_efficiency/10).toFixed(1):"—"}/10${sd.opp_pen_efficiency_label?` (${escapeHtml(sd.opp_pen_efficiency_label)})`:""}</span></div>`:""}
     </div>`;
@@ -175,6 +182,7 @@ function gameRead(g){
   const parts=[];
   const arms=[[g.away, g.proj_away],[g.home, g.proj_home]];
   for(const [sd, runs] of arms){
+    if(planSummary(sd)) parts.push(`${sd.team} faces the reported plan: ${planSummary(sd)}.`);
     if(Number.isFinite(sd.opp_sp_fip) && sd.opp_sp_fip<3.25) parts.push(`${sd.opp_sp} is the story on ${sd.team}'s side — a ${sd.opp_sp_fip.toFixed(2)} FIP arm holds them to ${runs.toFixed(1)}.`);
     else if(Number.isFinite(sd.opp_sp_fip) && sd.opp_sp_fip>=4.9) parts.push(`${sd.team} gets a favorable matchup — ${sd.opp_sp}'s ${sd.opp_sp_fip.toFixed(2)} FIP is where runs come from.`);
     if(sd.pen_factor>1.02) parts.push(`${sd.team} also faces elevated bullpen risk late.`);

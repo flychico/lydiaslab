@@ -552,8 +552,14 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
   const blendA = sA.form === null ? sA.pyth : (1 - FORM_WEIGHT) * sA.pyth + FORM_WEIGHT * sA.form;
   const blendH = sH.form === null ? sH.pyth : (1 - FORM_WEIGHT) * sH.pyth + FORM_WEIGHT * sH.form;
   const pBase = log5Home(blendH, blendA);
-  const spA = starterEff(g, "away", pitchers);
-  const spH = starterEff(g, "home", pitchers);
+  const runProjection = runProjections && runProjections[String(g.gamePk)];
+  const pitchingPlan = runProjection && runProjection.pitching_plan ? runProjection.pitching_plan : null;
+  const spA = pitchingPlan && Number.isFinite(pitchingPlan.away && pitchingPlan.away.effective_era)
+    ? pitchingPlan.away.effective_era
+    : starterEff(g, "away", pitchers);
+  const spH = pitchingPlan && Number.isFinite(pitchingPlan.home && pitchingPlan.home.effective_era)
+    ? pitchingPlan.home.effective_era
+    : starterEff(g, "home", pitchers);
   // Bullpen risk adjusts the probability itself, not just Lab Rating and the
   // official-pick gate — a starter only covers part of the game. Uses the
   // combined risk index (fatigue blended with efficiency), not raw fatigue,
@@ -567,8 +573,6 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
   const preBullpenHomeProb = preBullpenOdds / (1 + preBullpenOdds);
   const modelOdds = preBullpenOdds * Math.exp(bullpenAdj);
   const legacyPHome = modelOdds / (1 + modelOdds);
-  const runProjection = runProjections && runProjections[String(g.gamePk)];
-  const pitchingPlan = runProjection && runProjection.pitching_plan ? runProjection.pitching_plan : null;
   const bullpenGame = Boolean(runProjection && runProjection.bullpen_game);
   const runPHome = runProjection
     ? winProbabilityFromRuns(Number(runProjection.proj_home), Number(runProjection.proj_away))
@@ -590,8 +594,12 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
   const homePitcher = g.teams.home.probablePitcher;
   const awayStats = awayPitcher ? pitchers[awayPitcher.id] : null;
   const homeStats = homePitcher ? pitchers[homePitcher.id] : null;
-  const awayScore = pitcherScore(awayStats);
-  const homeScore = pitcherScore(homeStats);
+  const awayScore = pitchingPlan && Number.isFinite(pitchingPlan.away && pitchingPlan.away.pitcher_score)
+    ? { score: pitchingPlan.away.pitcher_score }
+    : pitcherScore(awayStats);
+  const homeScore = pitchingPlan && Number.isFinite(pitchingPlan.home && pitchingPlan.home.pitcher_score)
+    ? { score: pitchingPlan.home.pitcher_score }
+    : pitcherScore(homeStats);
   const pitchGap = Math.abs(homeScore.score - awayScore.score);
   const pitchEdgeTeam = pitchGap < 4 ? "No clear SP edge" : (homeScore.score > awayScore.score ? hT.name : aT.name);
   const pitcherConflict = pitchEdgeTeam !== "No clear SP edge" && pitchEdgeTeam !== pickTeam && pitchGap >= 8;
@@ -840,11 +848,15 @@ function buildRead(ctx) {
     const plans = [ctx.pitchingPlan.away, ctx.pitchingPlan.home].filter(Boolean);
     const flagged = plans.filter(plan => plan.bullpen_game || plan.role === "limited_starter");
     if (!flagged.length) return "";
-    const detail = flagged.map(plan =>
-      `${plan.pitcher}: ${plan.label}, ${Number(plan.expected_innings).toFixed(1)} expected innings`
-    ).join("; ");
-    return ` Pitching plan: ${detail}. The remaining innings are assigned to the bullpen.` +
-      " Bullpen fatigue, efficiency, and combined risk determine how LyDia grades those remaining innings.";
+    const detail = flagged.map(plan => {
+      if (Array.isArray(plan.segments) && plan.segments.length) {
+        return plan.segments.map(segment =>
+          `${segment.role === "bullpen" ? "remaining bullpen" : segment.pitcher} ${Number(segment.expected_innings).toFixed(1)} IP`
+        ).join(" + ");
+      }
+      return `${plan.pitcher}: ${plan.label}, ${Number(plan.expected_innings).toFixed(1)} expected innings`;
+    }).join("; ");
+    return ` Pitching plan: ${detail}. Bullpen fatigue, efficiency, and combined risk grade only the innings assigned to the bullpen.`;
   })();
 
   if (ctx.status === "official_pick") {
@@ -944,7 +956,7 @@ function buildPicksFile(rows, generatedAt) {
       edge,
       labScore: t.lab,
       books: t.books || 0,
-      modelVersion: totals.model_version || "totals-runs-v2-innings-allocation",
+      modelVersion: totals.model_version || "totals-runs-v3-pitching-plan",
       valueTag: "OFFICIAL PICK"
     };
   }

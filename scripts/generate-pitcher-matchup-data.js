@@ -4,6 +4,7 @@
 const fs = require("fs");
 const path = require("path");
 const PitcherCore = require("../js/pitcher-matchup-core.js");
+const PitchingPlan = require("./lib/pitching-plan-core.js");
 
 const ROOT = path.join(__dirname, "..");
 const DATE = process.argv[2] || easternDate();
@@ -27,6 +28,7 @@ async function main() {
     .sort((a, b) => new Date(a.gameDate) - new Date(b.gameDate));
 
   if (!games.length) throw new Error(`No MLB games found for ${DATE}.`);
+  const reportedPlans = PitchingPlan.load(ROOT, DATE);
 
   const source = await PitcherCore.buildSource({
     date: DATE,
@@ -34,6 +36,37 @@ async function main() {
     getJson,
     generatedAt: new Date().toISOString()
   });
+  const extraIds = PitchingPlan.participantIds(reportedPlans)
+    .filter(id => !source.pitchers_by_id[String(id)]);
+  if (extraIds.length) {
+    Object.assign(source.pitchers_by_id, await PitcherCore.fetchPitchers(extraIds, DATE, getJson));
+  }
+  const bulkRoleStats = await PitchingPlan.fetchBulkRoleStats(reportedPlans, DATE, getJson);
+  for (const game of games) {
+    const row = source.games[String(game.gamePk)];
+    if (!row) continue;
+    const plans = {};
+    for (const side of ["away", "home"]) {
+      const plan = PitchingPlan.getSidePlan(reportedPlans, game.gamePk, side);
+      if (!plan) continue;
+      plans[side] = {
+        ...plan,
+        reported: true,
+        description: PitchingPlan.describe(plan),
+        segments: plan.segments.map(segment => ({
+          ...segment,
+          stats: segment.pitcher_id ? source.pitchers_by_id[String(segment.pitcher_id)] || null : null,
+          role_stats: segment.role === "bulk" ? bulkRoleStats[Number(segment.pitcher_id)] || null : null
+        }))
+      };
+    }
+    if (Object.keys(plans).length) {
+      row.pitching_plan = plans;
+      row.bullpen_game = true;
+      row.pitching_plan_confidence = "reported";
+    }
+  }
+  source.pitching_plan_version = PitchingPlan.VERSION;
 
   writeJson(`data/pitcher-matchups/${DATE}.json`, source);
   if (DATE === easternDate()) writeJson("data/pitcher-matchups/today.json", source);
