@@ -27,12 +27,13 @@ const IF_CHANGED = process.argv.includes("--if-changed");
 const LEAGUE_ERA = 4.20;
 const TOTALS_MODEL_VERSION = "totals-runs-v2-innings-allocation";
 const TOTALS_POLICY = Object.freeze({
-  version: "totals-policy-v2",
+  version: "totals-policy-v3-official",
   research_min_edge: 0.7,
   research_min_setup: 70,
   strong_min_edge: 1.0,
   strong_min_setup: 80,
-  official_totals_enabled: false
+  official_totals_enabled: true,
+  team_totals_official_enabled: false
 });
 const PARKS = {"Colorado Rockies": 1.18, "Cincinnati Reds": 1.07, "Boston Red Sox": 1.06, "Philadelphia Phillies": 1.06, "Atlanta Braves": 1.05, "New York Yankees": 1.05, "Chicago White Sox": 1.04, "Toronto Blue Jays": 1.03, "Arizona Diamondbacks": 1.02, "Chicago Cubs": 1.02, "Texas Rangers": 1.0, "Baltimore Orioles": 1.0, "Milwaukee Brewers": 1.0, "Los Angeles Angels": 1.0, "Cleveland Guardians": 0.99, "Minnesota Twins": 0.99, "Houston Astros": 0.99, "Washington Nationals": 0.98, "Tampa Bay Rays": 0.98, "Pittsburgh Pirates": 0.97, "St. Louis Cardinals": 0.97, "Kansas City Royals": 0.96, "New York Mets": 0.96, "Detroit Tigers": 0.95, "Los Angeles Dodgers": 0.94, "Miami Marlins": 0.93, "San Diego Padres": 0.93, "Seattle Mariners": 0.92, "San Francisco Giants": 0.91};
 
@@ -114,6 +115,7 @@ async function main() {
 
   // --- market total lines: one bulk request, retried ---
   let lines = {};
+  const eventIds = {};
   if (KEY) {
     const url = `https://api.the-odds-api.com/v4/sports/baseball_mlb/odds?apiKey=${KEY}&regions=us&markets=h2h,totals&oddsFormat=american`;
     let odds = null;
@@ -126,6 +128,7 @@ async function main() {
     }
     if (odds) {
       for (const ev of odds || []) {
+        eventIds[`${ev.away_team} @ ${ev.home_team}`] = ev.id;
         const rows = [];
         for (const bk of ev.bookmakers || []) {
           const mkt = (bk.markets || []).find(m => m.key === "totals");
@@ -147,6 +150,49 @@ async function main() {
       }
     } else console.warn("totals odds unavailable after retries — reusing prior capture if present.");
   } else console.log("ODDS_API_KEY not set — projections only, no market lines.");
+
+  // Team totals are an additional market and must be requested one event at a
+  // time. They are stored beside each team's run projection. Coverage varies
+  // by book, so missing team totals never block the daily publish.
+  const teamTotalLines = {};
+  if (KEY) {
+    for (const [gameName, eventId] of Object.entries(eventIds)) {
+      let data = null;
+      try {
+        data = await j(`https://api.the-odds-api.com/v4/sports/baseball_mlb/events/${eventId}/odds?apiKey=${KEY}&regions=us&markets=team_totals&oddsFormat=american`);
+      } catch (e) {
+        console.warn(`team totals ${gameName}: ${e.message}`);
+        continue;
+      }
+      const byTeam = {};
+      for (const bk of data.bookmakers || []) {
+        const mkt = (bk.markets || []).find(m => m.key === "team_totals");
+        if (!mkt) continue;
+        for (const o of mkt.outcomes || []) {
+          const team = String(o.description || "").trim();
+          if (!team || !Number.isFinite(o.point) || !["Over", "Under"].includes(o.name)) continue;
+          const row = (byTeam[team] = byTeam[team] || {});
+          const key = `${o.point}`;
+          const line = (row[key] = row[key] || { point: o.point, over: null, under: null, books: new Set() });
+          if (o.name === "Over" && (line.over === null || o.price > line.over)) line.over = o.price;
+          if (o.name === "Under" && (line.under === null || o.price > line.under)) line.under = o.price;
+          line.books.add(bk.key);
+        }
+      }
+      teamTotalLines[gameName] = {};
+      for (const [team, linesByPoint] of Object.entries(byTeam)) {
+        const offered = Object.values(linesByPoint);
+        if (!offered.length) continue;
+        const featured = offered.sort((a, b) => b.books.size - a.books.size || Math.abs(a.point - 4.5) - Math.abs(b.point - 4.5))[0];
+        teamTotalLines[gameName][team] = {
+          line: featured.point,
+          over: featured.over,
+          under: featured.under,
+          books: featured.books.size
+        };
+      }
+    }
+  }
 
   // SELF-CALIBRATION: rolling mean error over the last 100 graded totals;
   // n ≥ 25 and |bias| ≥ 0.2 runs to act, capped ±0.8.
@@ -283,15 +329,35 @@ async function main() {
     }
     const totalsLab = Math.round(Math.max(0, Math.min(100, tLab)));
     const absLean = lean === null ? null : Math.abs(lean);
+    const officialEligible = lean !== null
+      && absLean >= TOTALS_POLICY.strong_min_edge
+      && totalsLab >= TOTALS_POLICY.strong_min_setup
+      && (lean > 0 ? Number.isFinite(mkt.over) : Number.isFinite(mkt.under));
     const classification = lean === null
       ? "line_pending"
       : absLean < TOTALS_POLICY.research_min_edge
         ? "no_lean"
         : totalsLab < TOTALS_POLICY.research_min_setup
           ? "no_lean_low_setup"
-          : absLean >= TOTALS_POLICY.strong_min_edge && totalsLab >= TOTALS_POLICY.strong_min_setup
-            ? "strong_research_lean"
+          : officialEligible
+            ? "official_pick"
             : "research_lean";
+    const postedTeamTotals = teamTotalLines[`${aT.name} @ ${hT.name}`] || {};
+    const teamTotal = (team, projected) => {
+      const market = postedTeamTotals[team] || {};
+      const edge = Number.isFinite(market.line) ? Number((projected - market.line).toFixed(1)) : null;
+      return {
+        team,
+        projection: projected,
+        line: Number.isFinite(market.line) ? market.line : null,
+        over: market.over ?? null,
+        under: market.under ?? null,
+        books: market.books || 0,
+        edge,
+        lean: edge === null || Math.abs(edge) < TOTALS_POLICY.research_min_edge ? null : (edge > 0 ? "Over" : "Under"),
+        classification: edge === null ? "line_pending" : Math.abs(edge) < TOTALS_POLICY.research_min_edge ? "no_lean" : "research_lean"
+      };
+    };
     out[g.gamePk] = {
       game: `${aT.name} @ ${hT.name}`,
       game_time_iso: g.gameDate,
@@ -305,7 +371,12 @@ async function main() {
       away_sp: (g.teams.away.probablePitcher || {}).fullName || "TBD",
       home_sp: (g.teams.home.probablePitcher || {}).fullName || "TBD",
       line, over: mkt.over ?? null, under: mkt.under ?? null, books: mkt.books || 0,
+      team_totals: {
+        away: teamTotal(aT.name, Number(A.runs.toFixed(1))),
+        home: teamTotal(hT.name, Number(H.runs.toFixed(1)))
+      },
       lab: totalsLab,
+      official_eligible: officialEligible,
       setup_components: {
         base: 15,
         data_confidence: dataConf,
@@ -324,11 +395,27 @@ async function main() {
       const prev = JSON.parse(fs.readFileSync(prevPath, "utf8"));
       if (prev && prev.date === DATE && prev.games) {
         for (const [pk, g] of Object.entries(prev.games)) {
-          if (!out[pk]) { out[pk] = g; continue; }
+          if (!out[pk]) {
+            out[pk] = g;
+            if (!out[pk].team_totals) {
+              out[pk].team_totals = {
+                away: { team: g.away && g.away.team, projection: g.proj_away, line: null, over: null, under: null, books: 0, edge: null, lean: null, classification: "line_pending" },
+                home: { team: g.home && g.home.team, projection: g.proj_home, line: null, over: null, under: null, books: 0, edge: null, lean: null, classification: "line_pending" }
+              };
+            }
+            continue;
+          }
           // A failed/empty live call must never wipe a line captured earlier.
           if (out[pk].line == null && g.line != null) {
             out[pk].line = g.line; out[pk].over = g.over ?? null;
             out[pk].under = g.under ?? null; out[pk].books = g.books || 0;
+          }
+          for (const side of ["away", "home"]) {
+            const current = out[pk].team_totals && out[pk].team_totals[side];
+            const captured = g.team_totals && g.team_totals[side];
+            if (current && captured && current.line == null && captured.line != null) {
+              out[pk].team_totals[side] = captured;
+            }
           }
         }
       }
