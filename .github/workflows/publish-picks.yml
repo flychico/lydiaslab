@@ -98,6 +98,11 @@ jobs:
       - name: Verify unified Picks and full-day bullpen retention
         run: node scripts/verify-picks-bullpen.js "${{ steps.publish_date.outputs.date }}"
 
+      - name: Verify official totals, K props, and team-total research markets
+        run: |
+          node scripts/test-official-market-grading.js
+          node scripts/verify-official-markets.js "${{ steps.publish_date.outputs.date }}"
+
       - name: Refresh learning summary and verify synchronized policy
         run: |
           node scripts/generate-learning-summary.js
