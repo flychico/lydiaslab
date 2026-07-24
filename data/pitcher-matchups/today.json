@@ -1,6 +1,6 @@
 {
   "date": "2026-07-24",
-  "generated_at": "2026-07-24T14:56:08.513Z",
+  "generated_at": "2026-07-24T15:24:32.350Z",
   "source_of_truth": "LyDia Pitcher Matchup Tool",
   "source_version": "pitcher-matchup-core-v2-role-aware",
   "method": "Role-aware pitcher model using starter-only game logs. Traditional starters, limited starters, openers, and unknown roles receive workload-appropriate innings; the remainder belongs to the bullpen.",
@@ -626,6 +626,29 @@
       "starterIp": 81,
       "starterGames": 15
     },
+    "702070": {
+      "id": 702070,
+      "name": "Noah Cameron",
+      "hand": "L",
+      "era": 5.27,
+      "whip": 1.46,
+      "ip": 100.66666666666667,
+      "so": 92,
+      "bb": 34,
+      "hr": 14,
+      "gs": 19,
+      "gp": 19,
+      "w": 5,
+      "l": 8,
+      "bf": 449,
+      "go": 90,
+      "ao": 118,
+      "h": 113,
+      "ab": 405,
+      "sf": 5,
+      "starterIp": 100.66666666666667,
+      "starterGames": 19
+    },
     "805673": {
       "id": 805673,
       "name": "Zebby Matthews",
@@ -756,7 +779,7 @@
         "rawScore": 35,
         "score": 44,
         "grade": "Weak",
-        "note": "Starter-only usage is 2.3 innings per start; most innings belong to the bullpen.",
+        "note": "Carson Palmquist is the reported opener; see the full pitching plan below.",
         "role": {
           "key": "opener",
           "label": "Opener / bullpen game",
@@ -770,10 +793,10 @@
           "reason": "Starter-only usage is 2.3 innings per start; most innings belong to the bullpen."
         },
         "roleKey": "opener",
-        "roleLabel": "Opener / bullpen game",
-        "expectedInnings": 2.25,
-        "bullpenInnings": 6.75,
-        "roleConfidence": "medium",
+        "roleLabel": "Reported opener",
+        "expectedInnings": 1.5,
+        "bullpenInnings": 7.5,
+        "roleConfidence": "reported",
         "bullpenGame": true,
         "k9": 11.117647058823527,
         "bb9": 2.3823529411764706,
@@ -783,11 +806,19 @@
         "hr9": 0.7941176470588235,
         "ipStart": 2.25
       },
-      "gap": 30,
+      "gap": 24,
       "strength": "Strong",
       "edge_team": "Arizona Diamondbacks",
       "bullpen_game": true,
       "pitching_plan_confidence": "reported",
+      "schedule_probable": {
+        "home": {
+          "id": 687223,
+          "name": "Carson Palmquist"
+        }
+      },
+      "away_plan_score": 74,
+      "home_plan_score": 50,
       "pitching_plan": {
         "home": {
           "team": "Washington Nationals",
@@ -2035,7 +2066,7 @@
         "rawScore": 59,
         "score": 57,
         "grade": "Average",
-        "note": "Starter-only innings are unavailable.",
+        "note": "Beck Way is the reported opener; see the full pitching plan below.",
         "role": {
           "key": "unknown",
           "label": "Role unknown",
@@ -2045,11 +2076,11 @@
           "bullpenGame": true,
           "reason": "Starter-only innings are unavailable."
         },
-        "roleKey": "unknown",
-        "roleLabel": "Role unknown",
-        "expectedInnings": 4.5,
-        "bullpenInnings": 4.5,
-        "roleConfidence": "low",
+        "roleKey": "opener",
+        "roleLabel": "Reported opener",
+        "expectedInnings": 2,
+        "bullpenInnings": 7,
+        "roleConfidence": "manual",
         "bullpenGame": true,
         "k9": 8.46268656716418,
         "bb9": 4.029850746268657,
@@ -2111,11 +2142,97 @@
         "hr9": 1.0887096774193548,
         "ipStart": 5.904761904761905
       },
-      "gap": 27,
+      "gap": 31,
       "strength": "Strong",
       "edge_team": "Detroit Tigers",
       "bullpen_game": true,
-      "pitching_plan_confidence": "low"
+      "pitching_plan_confidence": "manual",
+      "schedule_probable": {
+        "away": {
+          "id": 694360,
+          "name": "Beck Way"
+        }
+      },
+      "away_plan_score": 53,
+      "home_plan_score": 84,
+      "pitching_plan": {
+        "away": {
+          "team": "Kansas City Royals",
+          "type": "opener_bulk",
+          "confidence": "manual",
+          "source_note": "Manual pitching update: Beck Way 2 IP, Noah Cameron 5 IP, bullpen 2 IP.",
+          "segments": [
+            {
+              "role": "opener",
+              "pitcher_id": 694360,
+              "pitcher": "Beck Way",
+              "expected_innings": 2,
+              "stats": {
+                "id": 694360,
+                "name": "Beck Way",
+                "hand": "R",
+                "era": 3.22,
+                "whip": 1.52,
+                "ip": 22.333333333333332,
+                "so": 21,
+                "bb": 10,
+                "hr": 4,
+                "gs": 0,
+                "gp": 18,
+                "w": 1,
+                "l": 0,
+                "bf": 98,
+                "go": 26,
+                "ao": 17,
+                "h": 24,
+                "ab": 87,
+                "sf": 1,
+                "starterIp": null,
+                "starterGames": null
+              },
+              "role_stats": null
+            },
+            {
+              "role": "bulk",
+              "pitcher_id": 702070,
+              "pitcher": "Noah Cameron",
+              "expected_innings": 5,
+              "stats": {
+                "id": 702070,
+                "name": "Noah Cameron",
+                "hand": "L",
+                "era": 5.27,
+                "whip": 1.46,
+                "ip": 100.66666666666667,
+                "so": 92,
+                "bb": 34,
+                "hr": 14,
+                "gs": 19,
+                "gp": 19,
+                "w": 5,
+                "l": 8,
+                "bf": 449,
+                "go": 90,
+                "ao": 118,
+                "h": 113,
+                "ab": 405,
+                "sf": 5,
+                "starterIp": 100.66666666666667,
+                "starterGames": 19
+              },
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 2,
+              "stats": null,
+              "role_stats": null
+            }
+          ],
+          "reported": true,
+          "description": "Beck Way 2.0 IP + Noah Cameron 5.0 IP + remaining bullpen 2.0 IP"
+        }
+      }
     },
     "824573": {
       "game_pk": 824573,

@@ -1,6 +1,6 @@
 {
  "date": "2026-07-24",
- "generated_at": "2026-07-24T14:56:04.476Z",
+ "generated_at": "2026-07-24T15:24:28.393Z",
  "model_version": "totals-runs-v3-pitching-plan",
  "policy": {
   "version": "totals-policy-v3-official",
@@ -75,7 +75,7 @@
    "home": "TBD"
   }
  },
- "pitching_plan_signature": "{\"822707\":{\"game\":\"Arizona Diamondbacks @ Washington Nationals\",\"home\":{\"team\":\"Washington Nationals\",\"type\":\"opener_bulk\",\"confidence\":\"reported\",\"source_note\":\"Carson Palmquist is expected to open for 1-2 innings, followed by Zack Littell for approximately five innings.\",\"segments\":[{\"role\":\"opener\",\"pitcher_id\":687223,\"pitcher\":\"Carson Palmquist\",\"expected_innings\":1.5},{\"role\":\"bulk\",\"pitcher_id\":641793,\"pitcher\":\"Zack Littell\",\"expected_innings\":5},{\"role\":\"bullpen\",\"expected_innings\":2.5}]}}}",
+ "pitching_plan_signature": "{\"822707\":{\"game\":\"Arizona Diamondbacks @ Washington Nationals\",\"home\":{\"team\":\"Washington Nationals\",\"type\":\"opener_bulk\",\"confidence\":\"reported\",\"source_note\":\"Carson Palmquist is expected to open for 1-2 innings, followed by Zack Littell for approximately five innings.\",\"segments\":[{\"role\":\"opener\",\"pitcher_id\":687223,\"pitcher\":\"Carson Palmquist\",\"expected_innings\":1.5},{\"role\":\"bulk\",\"pitcher_id\":641793,\"pitcher\":\"Zack Littell\",\"expected_innings\":5},{\"role\":\"bullpen\",\"expected_innings\":2.5}]}},\"824248\":{\"game\":\"Kansas City Royals @ Detroit Tigers\",\"away\":{\"team\":\"Kansas City Royals\",\"type\":\"opener_bulk\",\"confidence\":\"manual\",\"source_note\":\"Manual pitching update: Beck Way 2 IP, Noah Cameron 5 IP, bullpen 2 IP.\",\"segments\":[{\"role\":\"opener\",\"pitcher_id\":694360,\"pitcher\":\"Beck Way\",\"expected_innings\":2},{\"role\":\"bulk\",\"pitcher_id\":702070,\"pitcher\":\"Noah Cameron\",\"expected_innings\":5},{\"role\":\"bullpen\",\"expected_innings\":2}]}}}",
  "games": {
   "822707": {
    "game": "Arizona Diamondbacks @ Washington Nationals",
@@ -2465,10 +2465,10 @@
   "824248": {
    "game": "Kansas City Royals @ Detroit Tigers",
    "game_time_iso": "2026-07-24T22:40:00Z",
-   "projection": 7.8,
-   "projection_raw": 7.8,
+   "projection": 7.6,
+   "projection_raw": 7.6,
    "proj_away": 3.5,
-   "proj_home": 4.3,
+   "proj_home": 4.1,
    "away": {
     "team": "Kansas City Royals",
     "rpg": 4.09,
@@ -2532,78 +2532,100 @@
     "off_factor": 0.937,
     "opp_sp": "Beck Way",
     "opp_sp_fip": 4.41,
-    "opp_sp_ip": 4.5,
-    "opp_pitcher_role": "unknown",
-    "opp_pitcher_role_label": "Role unknown",
-    "opp_pitcher_role_confidence": "low",
+    "opp_sp_ip": 7,
+    "opp_pitcher_role": "opener_bulk",
+    "opp_pitcher_role_label": "Opener + bulk pitcher",
+    "opp_pitcher_role_confidence": "manual",
     "opp_bullpen_game": true,
-    "opp_bullpen_ip": 4.5,
+    "opp_bullpen_ip": 2,
     "opp_pitcher_role_reason": "Starter-only innings are unavailable.",
     "pitching_plan": {
-     "type": "opener_bullpen",
-     "confidence": "low",
-     "reported": false,
+     "team": "Kansas City Royals",
+     "type": "opener_bulk",
+     "confidence": "manual",
+     "source_note": "Manual pitching update: Beck Way 2 IP, Noah Cameron 5 IP, bullpen 2 IP.",
      "segments": [
       {
        "role": "opener",
        "pitcher_id": 694360,
        "pitcher": "Beck Way",
-       "expected_innings": 4.5,
+       "expected_innings": 2,
        "fip_lite": 4.41,
        "pitcher_score": 57,
        "role_stats": null
       },
       {
+       "role": "bulk",
+       "pitcher_id": 702070,
+       "pitcher": "Noah Cameron",
+       "expected_innings": 5,
+       "fip_lite": 4.14,
+       "pitcher_score": 52,
+       "role_stats": null
+      },
+      {
        "role": "bullpen",
-       "expected_innings": 4.5
+       "expected_innings": 2
       }
      ],
-     "expected_innings": 4.5,
-     "bullpen_innings": 4.5,
-     "effective_era": 4.49,
-     "pitcher_score": 57,
-     "description": "Beck Way 4.5 IP + remaining bullpen 4.5 IP"
+     "reported": true,
+     "expected_innings": 7,
+     "bullpen_innings": 2,
+     "effective_era": 4.3,
+     "pitcher_score": 53,
+     "description": "Beck Way 2.0 IP + Noah Cameron 5.0 IP + remaining bullpen 2.0 IP"
     },
-    "pitch_factor": 1.07,
+    "pitch_factor": 1.023,
     "opp_pen_risk": 59,
     "opp_pen_fatigue": 54,
     "opp_pen_efficiency": 40,
     "opp_pen_efficiency_label": "Below average",
     "pen_factor": 1.09,
     "sp_sample_ok": false,
-    "pitching_plan_confident": false
+    "pitching_plan_confident": true
    },
    "park_factor": 0.95,
    "away_sp": "Beck Way",
    "home_sp": "Tarik Skubal",
    "pitching_plan": {
     "away": {
-     "type": "opener_bullpen",
-     "confidence": "low",
-     "reported": false,
+     "team": "Kansas City Royals",
+     "type": "opener_bulk",
+     "confidence": "manual",
+     "source_note": "Manual pitching update: Beck Way 2 IP, Noah Cameron 5 IP, bullpen 2 IP.",
      "segments": [
       {
        "role": "opener",
        "pitcher_id": 694360,
        "pitcher": "Beck Way",
-       "expected_innings": 4.5,
+       "expected_innings": 2,
        "fip_lite": 4.41,
        "pitcher_score": 57,
        "role_stats": null
       },
       {
+       "role": "bulk",
+       "pitcher_id": 702070,
+       "pitcher": "Noah Cameron",
+       "expected_innings": 5,
+       "fip_lite": 4.14,
+       "pitcher_score": 52,
+       "role_stats": null
+      },
+      {
        "role": "bullpen",
-       "expected_innings": 4.5
+       "expected_innings": 2
       }
      ],
-     "expected_innings": 4.5,
-     "bullpen_innings": 4.5,
-     "effective_era": 4.49,
-     "pitcher_score": 57,
-     "description": "Beck Way 4.5 IP + remaining bullpen 4.5 IP",
+     "reported": true,
+     "expected_innings": 7,
+     "bullpen_innings": 2,
+     "effective_era": 4.3,
+     "pitcher_score": 53,
+     "description": "Beck Way 2.0 IP + Noah Cameron 5.0 IP + remaining bullpen 2.0 IP",
      "pitcher": "Beck Way",
-     "role": "unknown",
-     "label": "Role unknown",
+     "role": "opener_bulk",
+     "label": "Opener + bulk pitcher",
      "bullpen_game": true
     },
     "home": {
@@ -2655,22 +2677,22 @@
     },
     "home": {
      "team": "Detroit Tigers",
-     "projection": 4.3,
+     "projection": 4.1,
      "line": 4.5,
      "over": -113,
      "under": 100,
      "books": 3,
-     "edge": -0.2,
+     "edge": -0.4,
      "lean": null,
      "classification": "no_lean"
     }
    },
-   "lab": 32,
+   "lab": 42,
    "official_eligible": false,
    "setup_components": {
     "base": 15,
-    "data_confidence": 12.5,
-    "edge_points": 4.8,
+    "data_confidence": 25,
+    "edge_points": 1.6,
     "alignment_threshold": 0.7
    },
    "classification": "no_lean"

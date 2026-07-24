@@ -1,6 +1,6 @@
 {
   "date": "2026-07-24",
-  "generated_at": "2026-07-24T14:56:04.692Z",
+  "generated_at": "2026-07-24T15:24:28.625Z",
   "snapshot_type": "posted",
   "source_of_truth": "LyDia Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -2090,9 +2090,9 @@
         "away_pitcher_id": 593958,
         "home_pitcher_id": 687223,
         "away_era": 2.62,
-        "home_era": 8.74,
+        "home_era": null,
         "away_whip": 1.22,
-        "home_whip": 1.68,
+        "home_whip": null,
         "away_advanced": {
           "w": 8,
           "l": 3,
@@ -2106,19 +2106,7 @@
           "expected_innings": 5.8,
           "bullpen_innings": 3.2
         },
-        "home_advanced": {
-          "w": 0,
-          "l": 1,
-          "kbb_pct": 0.2037,
-          "gb_pct": 0.2778,
-          "babip": 0.4545,
-          "hr9": 0.79,
-          "ip_per_start": 2.3,
-          "role": "opener",
-          "role_label": "Opener / bullpen game",
-          "expected_innings": 2.3,
-          "bullpen_innings": 6.8
-        }
+        "home_advanced": null
       },
       "offense_form": {
         "away": {
@@ -3664,41 +3652,52 @@
       "home_l10": "6-4",
       "pick_team": "Detroit Tigers",
       "side": "home",
-      "model_probability": 0.6345,
+      "model_probability": 0.6173,
       "model_source": "moneyline-v2-plus-runs-v1",
       "projected_runs": {
         "away": 3.5,
-        "home": 4.3,
-        "total": 7.8
+        "home": 4.1,
+        "total": 7.6
       },
       "pitching_plan": {
         "away": {
-          "type": "opener_bullpen",
-          "confidence": "low",
-          "reported": false,
+          "team": "Kansas City Royals",
+          "type": "opener_bulk",
+          "confidence": "manual",
+          "source_note": "Manual pitching update: Beck Way 2 IP, Noah Cameron 5 IP, bullpen 2 IP.",
           "segments": [
             {
               "role": "opener",
               "pitcher_id": 694360,
               "pitcher": "Beck Way",
-              "expected_innings": 4.5,
+              "expected_innings": 2,
               "fip_lite": 4.41,
               "pitcher_score": 57,
               "role_stats": null
             },
             {
+              "role": "bulk",
+              "pitcher_id": 702070,
+              "pitcher": "Noah Cameron",
+              "expected_innings": 5,
+              "fip_lite": 4.14,
+              "pitcher_score": 52,
+              "role_stats": null
+            },
+            {
               "role": "bullpen",
-              "expected_innings": 4.5
+              "expected_innings": 2
             }
           ],
-          "expected_innings": 4.5,
-          "bullpen_innings": 4.5,
-          "effective_era": 4.49,
-          "pitcher_score": 57,
-          "description": "Beck Way 4.5 IP + remaining bullpen 4.5 IP",
+          "reported": true,
+          "expected_innings": 7,
+          "bullpen_innings": 2,
+          "effective_era": 4.3,
+          "pitcher_score": 53,
+          "description": "Beck Way 2.0 IP + Noah Cameron 5.0 IP + remaining bullpen 2.0 IP",
           "pitcher": "Beck Way",
-          "role": "unknown",
-          "label": "Role unknown",
+          "role": "opener_bulk",
+          "label": "Opener + bulk pitcher",
           "bullpen_game": true
         },
         "home": {
@@ -3732,11 +3731,11 @@
         }
       },
       "bullpen_game": true,
-      "legacy_strength_probability": 0.6574,
-      "run_model_probability": 0.6111,
+      "legacy_strength_probability": 0.6488,
+      "run_model_probability": 0.5848,
       "run_model_weight": 0.5,
       "model_probability_pre_bullpen": null,
-      "edge": -0.0801,
+      "edge": -0.0973,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 31,
@@ -3761,31 +3760,19 @@
       "read": "Market is higher than LyDia's model probability.",
       "pitcher_edge": {
         "team": "Detroit Tigers",
-        "gap": 27,
+        "gap": 31,
         "conflict": false,
-        "away_score": 57,
+        "away_score": 53,
         "home_score": 84,
         "away_pitcher": "Beck Way",
         "home_pitcher": "Tarik Skubal",
         "away_pitcher_id": 694360,
         "home_pitcher_id": 669373,
-        "away_era": 3.22,
+        "away_era": null,
         "home_era": 2.83,
-        "away_whip": 1.52,
+        "away_whip": null,
         "home_whip": 0.93,
-        "away_advanced": {
-          "w": 1,
-          "l": 0,
-          "kbb_pct": 0.1122,
-          "gb_pct": 0.6047,
-          "babip": 0.3175,
-          "hr9": 1.61,
-          "ip_per_start": null,
-          "role": "unknown",
-          "role_label": "Role unknown",
-          "expected_innings": 4.5,
-          "bullpen_innings": 4.5
-        },
+        "away_advanced": null,
         "home_advanced": {
           "w": 6,
           "l": 5,
@@ -3826,7 +3813,7 @@
         "off_adj": 0.008,
         "bp_adj": -0.123,
         "version": "v3.1-bullpen",
-        "p_home_v2": 0.6345,
+        "p_home_v2": 0.6173,
         "note": "shadow A/B — does not drive picks"
       },
       "bullpen": {
