@@ -1,6 +1,6 @@
 {
   "date": "2026-07-24",
-  "generated_at": "2026-07-24T15:24:28.625Z",
+  "generated_at": "2026-07-24T15:34:11.139Z",
   "snapshot_type": "posted",
   "source_of_truth": "LyDia Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -11,7 +11,7 @@
     "minimum_market_edge": 0.03,
     "note": "Lab Rating is setup quality. It is not win probability. Official picks require both strong win probability and strong setup quality."
   },
-  "summary": "1 official moneyline pick cleared the stricter model-probability and Lab Rating gates. 1 value-watch setup had good price math but did not clear official-pick probability rules.",
+  "summary": "1 official moneyline pick cleared the stricter model-probability and Lab Rating gates. 2 value-watch setups had good price math but did not clear official-pick probability rules.",
   "games": [
     {
       "game_pk": 823759,
@@ -587,12 +587,12 @@
       "home_l10": "8-2",
       "pick_team": "Baltimore Orioles",
       "side": "home",
-      "model_probability": 0.6108,
+      "model_probability": 0.626,
       "model_source": "moneyline-v2-plus-runs-v1",
       "projected_runs": {
-        "away": 4.8,
+        "away": 4.6,
         "home": 5.7,
-        "total": 10.4
+        "total": 10.3
       },
       "pitching_plan": {
         "away": {
@@ -625,29 +625,31 @@
           "bullpen_game": false
         },
         "home": {
+          "team": "Baltimore Orioles",
           "type": "opener_bullpen",
-          "confidence": "low",
-          "reported": false,
+          "confidence": "manual",
+          "source_note": "Manual pitching update: Trevor Rogers 5 IP, bullpen 4 IP.",
           "segments": [
             {
               "role": "opener",
-              "pitcher_id": null,
-              "pitcher": "TBD",
-              "expected_innings": 4.5,
-              "fip_lite": 4.2,
-              "pitcher_score": 50,
+              "pitcher_id": 669432,
+              "pitcher": "Trevor Rogers",
+              "expected_innings": 5,
+              "fip_lite": 3.89,
+              "pitcher_score": 61,
               "role_stats": null
             },
             {
               "role": "bullpen",
-              "expected_innings": 4.5
+              "expected_innings": 4
             }
           ],
-          "expected_innings": 4.5,
-          "bullpen_innings": 4.5,
-          "effective_era": 3.68,
-          "pitcher_score": 50,
-          "description": "TBD 4.5 IP + remaining bullpen 4.5 IP",
+          "reported": true,
+          "expected_innings": 5,
+          "bullpen_innings": 4,
+          "effective_era": 3.56,
+          "pitcher_score": 61,
+          "description": "Trevor Rogers 5.0 IP + remaining bullpen 4.0 IP",
           "pitcher": "TBD",
           "role": "unknown",
           "label": "Role unknown",
@@ -655,18 +657,18 @@
         }
       },
       "bullpen_game": true,
-      "legacy_strength_probability": 0.6135,
-      "run_model_probability": 0.6082,
+      "legacy_strength_probability": 0.6192,
+      "run_model_probability": 0.6327,
       "run_model_weight": 0.5,
       "model_probability_pre_bullpen": null,
-      "edge": 0.0914,
-      "status": "watchlist",
-      "value_tag": "WATCHLIST",
-      "lab_score": 73,
+      "edge": 0.1066,
+      "status": "value_watch",
+      "value_tag": "VALUE WATCH",
+      "lab_score": 78,
       "lab_score_breakdown": {
-        "score": 73,
+        "score": 78,
         "model_edge_points": 35,
-        "pitcher_points": 3.2,
+        "pitcher_points": 7.6,
         "bullpen_points": 15,
         "market_points": 15,
         "base_points": 5,
@@ -681,17 +683,17 @@
         "edge_passed": true
       },
       "pass_reason": null,
-      "read": "Baltimore Orioles remains on the watchlist. Lab Rating 7.3/10: model edge 35, pitcher 3.2, bullpen 15, market 15, base 5. LyDia projects 61.1% against a 51.9% no-vig market number, a 9.1% model edge at -113. Atlanta Braves owns the starting pitcher edge by 12 points. Bullpen read: Supports LyDia side. Baltimore Orioles's pen efficiency: Dominant (8.2/10). Pitching plan: TBD 4.5 IP + remaining bullpen 4.5 IP. Bullpen fatigue, efficiency, and combined risk grade only the innings assigned to the bullpen. Lineup check: Baltimore Orioles is a touch above its season form (+0.034 OPS); Atlanta Braves is swinging a hot bat (+0.091 OPS).",
+      "read": "Baltimore Orioles is a value watch, not an official pick. LyDia projects 62.6% against a 51.9% no-vig market number, a 10.7% model edge at -113. Lab Rating 7.8/10: model edge 35, pitcher 7.6, bullpen 15, market 15, base 5. Baltimore Orioles's pen efficiency: Dominant (8.2/10). It stayed a value watch because model win probability is 62.6%, below the 72.0% official-pick gate; and Lab Rating is 7.8/10, below the 8.0/10 official-pick gate. Lineup check: Baltimore Orioles is a touch above its season form (+0.034 OPS); Atlanta Braves is swinging a hot bat (+0.091 OPS).",
       "pitcher_edge": {
-        "team": "Atlanta Braves",
-        "gap": 12,
-        "conflict": true,
+        "team": "No clear SP edge",
+        "gap": 1,
+        "conflict": false,
         "away_score": 62,
-        "home_score": 50,
+        "home_score": 61,
         "away_pitcher": "Grant Holmes",
-        "home_pitcher": "TBD",
+        "home_pitcher": "Trevor Rogers",
         "away_pitcher_id": 656550,
-        "home_pitcher_id": null,
+        "home_pitcher_id": 669432,
         "away_era": 3.7,
         "home_era": null,
         "away_whip": 1.34,
@@ -737,7 +739,7 @@
         "off_adj": -0.0456,
         "bp_adj": 0.15,
         "version": "v3.1-bullpen",
-        "p_home_v2": 0.6108,
+        "p_home_v2": 0.626,
         "note": "shadow A/B — does not drive picks"
       },
       "bullpen": {

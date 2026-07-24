@@ -1,6 +1,6 @@
 {
  "date": "2026-07-24",
- "generated_at": "2026-07-24T15:24:28.393Z",
+ "generated_at": "2026-07-24T15:34:10.859Z",
  "model_version": "totals-runs-v3-pitching-plan",
  "policy": {
   "version": "totals-policy-v3-official",
@@ -75,7 +75,7 @@
    "home": "TBD"
   }
  },
- "pitching_plan_signature": "{\"822707\":{\"game\":\"Arizona Diamondbacks @ Washington Nationals\",\"home\":{\"team\":\"Washington Nationals\",\"type\":\"opener_bulk\",\"confidence\":\"reported\",\"source_note\":\"Carson Palmquist is expected to open for 1-2 innings, followed by Zack Littell for approximately five innings.\",\"segments\":[{\"role\":\"opener\",\"pitcher_id\":687223,\"pitcher\":\"Carson Palmquist\",\"expected_innings\":1.5},{\"role\":\"bulk\",\"pitcher_id\":641793,\"pitcher\":\"Zack Littell\",\"expected_innings\":5},{\"role\":\"bullpen\",\"expected_innings\":2.5}]}},\"824248\":{\"game\":\"Kansas City Royals @ Detroit Tigers\",\"away\":{\"team\":\"Kansas City Royals\",\"type\":\"opener_bulk\",\"confidence\":\"manual\",\"source_note\":\"Manual pitching update: Beck Way 2 IP, Noah Cameron 5 IP, bullpen 2 IP.\",\"segments\":[{\"role\":\"opener\",\"pitcher_id\":694360,\"pitcher\":\"Beck Way\",\"expected_innings\":2},{\"role\":\"bulk\",\"pitcher_id\":702070,\"pitcher\":\"Noah Cameron\",\"expected_innings\":5},{\"role\":\"bullpen\",\"expected_innings\":2}]}}}",
+ "pitching_plan_signature": "{\"822707\":{\"game\":\"Arizona Diamondbacks @ Washington Nationals\",\"home\":{\"team\":\"Washington Nationals\",\"type\":\"opener_bulk\",\"confidence\":\"reported\",\"source_note\":\"Carson Palmquist is expected to open for 1-2 innings, followed by Zack Littell for approximately five innings.\",\"segments\":[{\"role\":\"opener\",\"pitcher_id\":687223,\"pitcher\":\"Carson Palmquist\",\"expected_innings\":1.5},{\"role\":\"bulk\",\"pitcher_id\":641793,\"pitcher\":\"Zack Littell\",\"expected_innings\":5},{\"role\":\"bullpen\",\"expected_innings\":2.5}]}},\"824248\":{\"game\":\"Kansas City Royals @ Detroit Tigers\",\"away\":{\"team\":\"Kansas City Royals\",\"type\":\"opener_bulk\",\"confidence\":\"manual\",\"source_note\":\"Manual pitching update: Beck Way 2 IP, Noah Cameron 5 IP, bullpen 2 IP.\",\"segments\":[{\"role\":\"opener\",\"pitcher_id\":694360,\"pitcher\":\"Beck Way\",\"expected_innings\":2},{\"role\":\"bulk\",\"pitcher_id\":702070,\"pitcher\":\"Noah Cameron\",\"expected_innings\":5},{\"role\":\"bullpen\",\"expected_innings\":2}]}},\"824812\":{\"game\":\"Atlanta Braves @ Baltimore Orioles\",\"home\":{\"team\":\"Baltimore Orioles\",\"type\":\"opener_bullpen\",\"confidence\":\"manual\",\"source_note\":\"Manual pitching update: Trevor Rogers 5 IP, bullpen 4 IP.\",\"segments\":[{\"role\":\"opener\",\"pitcher_id\":669432,\"pitcher\":\"Trevor Rogers\",\"expected_innings\":5},{\"role\":\"bullpen\",\"expected_innings\":4}]}}}",
  "games": {
   "822707": {
    "game": "Arizona Diamondbacks @ Washington Nationals",
@@ -3126,9 +3126,9 @@
   "824812": {
    "game": "Atlanta Braves @ Baltimore Orioles",
    "game_time_iso": "2026-07-24T23:05:00Z",
-   "projection": 10.4,
-   "projection_raw": 10.4,
-   "proj_away": 4.8,
+   "projection": 10.3,
+   "projection_raw": 10.3,
+   "proj_away": 4.6,
    "proj_home": 5.7,
    "away": {
     "team": "Atlanta Braves",
@@ -3140,47 +3140,49 @@
     "form7_g": 7,
     "off_factor": 1.206,
     "opp_sp": "TBD",
-    "opp_sp_fip": 4.2,
-    "opp_sp_ip": 4.5,
+    "opp_sp_fip": 3.89,
+    "opp_sp_ip": 5,
     "opp_pitcher_role": "unknown",
     "opp_pitcher_role_label": "Role unknown",
-    "opp_pitcher_role_confidence": "low",
+    "opp_pitcher_role_confidence": "manual",
     "opp_bullpen_game": true,
-    "opp_bullpen_ip": 4.5,
+    "opp_bullpen_ip": 4,
     "opp_pitcher_role_reason": "No confirmed starter usage is available.",
     "pitching_plan": {
+     "team": "Baltimore Orioles",
      "type": "opener_bullpen",
-     "confidence": "low",
-     "reported": false,
+     "confidence": "manual",
+     "source_note": "Manual pitching update: Trevor Rogers 5 IP, bullpen 4 IP.",
      "segments": [
       {
        "role": "opener",
-       "pitcher_id": null,
-       "pitcher": "TBD",
-       "expected_innings": 4.5,
-       "fip_lite": 4.2,
-       "pitcher_score": 50,
+       "pitcher_id": 669432,
+       "pitcher": "Trevor Rogers",
+       "expected_innings": 5,
+       "fip_lite": 3.89,
+       "pitcher_score": 61,
        "role_stats": null
       },
       {
        "role": "bullpen",
-       "expected_innings": 4.5
+       "expected_innings": 4
       }
      ],
-     "expected_innings": 4.5,
-     "bullpen_innings": 4.5,
-     "effective_era": 3.68,
-     "pitcher_score": 50,
-     "description": "TBD 4.5 IP + remaining bullpen 4.5 IP"
+     "reported": true,
+     "expected_innings": 5,
+     "bullpen_innings": 4,
+     "effective_era": 3.56,
+     "pitcher_score": 61,
+     "description": "Trevor Rogers 5.0 IP + remaining bullpen 4.0 IP"
     },
-    "pitch_factor": 0.875,
+    "pitch_factor": 0.849,
     "opp_pen_risk": 23,
     "opp_pen_fatigue": 39,
     "opp_pen_efficiency": 82,
     "opp_pen_efficiency_label": "Dominant",
     "pen_factor": 0.75,
     "sp_sample_ok": false,
-    "pitching_plan_confident": false
+    "pitching_plan_confident": true
    },
    "home": {
     "team": "Baltimore Orioles",
@@ -3268,29 +3270,31 @@
      "bullpen_game": false
     },
     "home": {
+     "team": "Baltimore Orioles",
      "type": "opener_bullpen",
-     "confidence": "low",
-     "reported": false,
+     "confidence": "manual",
+     "source_note": "Manual pitching update: Trevor Rogers 5 IP, bullpen 4 IP.",
      "segments": [
       {
        "role": "opener",
-       "pitcher_id": null,
-       "pitcher": "TBD",
-       "expected_innings": 4.5,
-       "fip_lite": 4.2,
-       "pitcher_score": 50,
+       "pitcher_id": 669432,
+       "pitcher": "Trevor Rogers",
+       "expected_innings": 5,
+       "fip_lite": 3.89,
+       "pitcher_score": 61,
        "role_stats": null
       },
       {
        "role": "bullpen",
-       "expected_innings": 4.5
+       "expected_innings": 4
       }
      ],
-     "expected_innings": 4.5,
-     "bullpen_innings": 4.5,
-     "effective_era": 3.68,
-     "pitcher_score": 50,
-     "description": "TBD 4.5 IP + remaining bullpen 4.5 IP",
+     "reported": true,
+     "expected_innings": 5,
+     "bullpen_innings": 4,
+     "effective_era": 3.56,
+     "pitcher_score": 61,
+     "description": "Trevor Rogers 5.0 IP + remaining bullpen 4.0 IP",
      "pitcher": "TBD",
      "role": "unknown",
      "label": "Role unknown",
@@ -3305,12 +3309,12 @@
    "team_totals": {
     "away": {
      "team": "Atlanta Braves",
-     "projection": 4.8,
+     "projection": 4.6,
      "line": 4.5,
      "over": 100,
      "under": -130,
      "books": 2,
-     "edge": 0.3,
+     "edge": 0.1,
      "lean": null,
      "classification": "no_lean"
     },
@@ -3326,12 +3330,12 @@
      "classification": "research_lean"
     }
    },
-   "lab": 56,
+   "lab": 55,
    "official_eligible": false,
    "setup_components": {
     "base": 15,
     "data_confidence": 12.5,
-    "edge_points": 22.4,
+    "edge_points": 20.8,
     "alignment_threshold": 0.7
    },
    "classification": "no_lean_low_setup"
