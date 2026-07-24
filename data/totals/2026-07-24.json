@@ -1,14 +1,15 @@
 {
  "date": "2026-07-24",
- "generated_at": "2026-07-24T02:47:20.597Z",
+ "generated_at": "2026-07-24T03:02:14.807Z",
  "model_version": "totals-runs-v2-innings-allocation",
  "policy": {
-  "version": "totals-policy-v2",
+  "version": "totals-policy-v3-official",
   "research_min_edge": 0.7,
   "research_min_setup": 70,
   "strong_min_edge": 1,
   "strong_min_setup": 80,
-  "official_totals_enabled": false
+  "official_totals_enabled": true,
+  "team_totals_official_enabled": false
  },
  "source": "LyDia totals projection (offense factor × opposing pitching × park × pen fatigue) + the-odds-api totals consensus",
  "league_rpg": 4.52,
@@ -143,14 +144,39 @@
    "over": -102,
    "under": -108,
    "books": 9,
+   "team_totals": {
+    "away": {
+     "team": "Arizona Diamondbacks",
+     "projection": 6.2,
+     "line": 4.5,
+     "over": -130,
+     "under": 102,
+     "books": 3,
+     "edge": 1.7,
+     "lean": "Over",
+     "classification": "research_lean"
+    },
+    "home": {
+     "team": "Washington Nationals",
+     "projection": 6.5,
+     "line": 4.5,
+     "over": 100,
+     "under": -125,
+     "books": 3,
+     "edge": 2,
+     "lean": "Over",
+     "classification": "research_lean"
+    }
+   },
    "lab": 93,
+   "official_eligible": true,
    "setup_components": {
     "base": 15,
     "data_confidence": 25,
     "edge_points": 40,
     "alignment_threshold": 0.7
    },
-   "classification": "strong_research_lean"
+   "classification": "official_pick"
   },
   "822872": {
    "game": "Seattle Mariners @ Texas Rangers",
@@ -220,7 +246,32 @@
    "over": -109,
    "under": -105,
    "books": 9,
+   "team_totals": {
+    "away": {
+     "team": "Seattle Mariners",
+     "projection": 4,
+     "line": 3.5,
+     "over": -135,
+     "under": 106,
+     "books": 3,
+     "edge": 0.5,
+     "lean": null,
+     "classification": "no_lean"
+    },
+    "home": {
+     "team": "Texas Rangers",
+     "projection": 4,
+     "line": 3.5,
+     "over": -106,
+     "under": -120,
+     "books": 3,
+     "edge": 0.5,
+     "lean": null,
+     "classification": "no_lean"
+    }
+   },
    "lab": 48,
+   "official_eligible": false,
    "setup_components": {
     "base": 15,
     "data_confidence": 25,
@@ -297,7 +348,32 @@
    "over": -102,
    "under": -113,
    "books": 9,
+   "team_totals": {
+    "away": {
+     "team": "Cleveland Guardians",
+     "projection": 3.6,
+     "line": 3.5,
+     "over": -104,
+     "under": -122,
+     "books": 3,
+     "edge": 0.1,
+     "lean": null,
+     "classification": "no_lean"
+    },
+    "home": {
+     "team": "Tampa Bay Rays",
+     "projection": 4.6,
+     "line": 3.5,
+     "over": -122,
+     "under": 105,
+     "books": 3,
+     "edge": 1.1,
+     "lean": "Over",
+     "classification": "research_lean"
+    }
+   },
    "lab": 51,
+   "official_eligible": false,
    "setup_components": {
     "base": 15,
     "data_confidence": 25,
@@ -374,7 +450,32 @@
    "over": 103,
    "under": -110,
    "books": 9,
+   "team_totals": {
+    "away": {
+     "team": "Cincinnati Reds",
+     "projection": 3.7,
+     "line": 3.5,
+     "over": -115,
+     "under": -111,
+     "books": 3,
+     "edge": 0.2,
+     "lean": null,
+     "classification": "no_lean"
+    },
+    "home": {
+     "team": "St. Louis Cardinals",
+     "projection": 4.1,
+     "line": 4.5,
+     "over": -104,
+     "under": -122,
+     "books": 3,
+     "edge": -0.4,
+     "lean": null,
+     "classification": "no_lean"
+    }
+   },
    "lab": 71,
+   "official_eligible": false,
    "setup_components": {
     "base": 15,
     "data_confidence": 25,
@@ -451,14 +552,39 @@
    "over": -102,
    "under": -113,
    "books": 9,
+   "team_totals": {
+    "away": {
+     "team": "Los Angeles Angels",
+     "projection": 3.1,
+     "line": null,
+     "over": null,
+     "under": null,
+     "books": 0,
+     "edge": null,
+     "lean": null,
+     "classification": "line_pending"
+    },
+    "home": {
+     "team": "San Francisco Giants",
+     "projection": 3.5,
+     "line": null,
+     "over": null,
+     "under": null,
+     "books": 0,
+     "edge": null,
+     "lean": null,
+     "classification": "line_pending"
+    }
+   },
    "lab": 82,
+   "official_eligible": true,
    "setup_components": {
     "base": 15,
     "data_confidence": 25,
     "edge_points": 22.4,
     "alignment_threshold": 0.7
    },
-   "classification": "strong_research_lean"
+   "classification": "official_pick"
   },
   "823352": {
    "game": "Chicago Cubs @ Pittsburgh Pirates",
@@ -528,14 +654,39 @@
    "over": -113,
    "under": -102,
    "books": 9,
+   "team_totals": {
+    "away": {
+     "team": "Chicago Cubs",
+     "projection": 5,
+     "line": 3.5,
+     "over": -135,
+     "under": 108,
+     "books": 3,
+     "edge": 1.5,
+     "lean": "Over",
+     "classification": "research_lean"
+    },
+    "home": {
+     "team": "Pittsburgh Pirates",
+     "projection": 4.7,
+     "line": 3.5,
+     "over": -145,
+     "under": 115,
+     "books": 3,
+     "edge": 1.2,
+     "lean": "Over",
+     "classification": "research_lean"
+    }
+   },
    "lab": 82,
+   "official_eligible": true,
    "setup_components": {
     "base": 15,
     "data_confidence": 25,
     "edge_points": 28.8,
     "alignment_threshold": 0.7
    },
-   "classification": "strong_research_lean"
+   "classification": "official_pick"
   },
   "823434": {
    "game": "New York Yankees @ Philadelphia Phillies",
@@ -603,9 +754,34 @@
    "home_sp": "Jesús Luzardo",
    "line": 8,
    "over": -102,
-   "under": -112,
+   "under": -113,
    "books": 9,
+   "team_totals": {
+    "away": {
+     "team": "New York Yankees",
+     "projection": 3.9,
+     "line": 3.5,
+     "over": -125,
+     "under": 100,
+     "books": 3,
+     "edge": 0.4,
+     "lean": null,
+     "classification": "no_lean"
+    },
+    "home": {
+     "team": "Philadelphia Phillies",
+     "projection": 4.6,
+     "line": 3.5,
+     "over": -125,
+     "under": 115,
+     "books": 3,
+     "edge": 1.1,
+     "lean": "Over",
+     "classification": "research_lean"
+    }
+   },
    "lab": 46,
+   "official_eligible": false,
    "setup_components": {
     "base": 15,
     "data_confidence": 25,
@@ -682,7 +858,32 @@
    "over": -102,
    "under": -113,
    "books": 9,
+   "team_totals": {
+    "away": {
+     "team": "Los Angeles Dodgers",
+     "projection": 4.4,
+     "line": 4.5,
+     "over": -122,
+     "under": 105,
+     "books": 3,
+     "edge": -0.1,
+     "lean": null,
+     "classification": "no_lean"
+    },
+    "home": {
+     "team": "New York Mets",
+     "projection": 4.1,
+     "line": 3.5,
+     "over": -130,
+     "under": 108,
+     "books": 3,
+     "edge": 0.6,
+     "lean": null,
+     "classification": "no_lean"
+    }
+   },
    "lab": 48,
+   "official_eligible": false,
    "setup_components": {
     "base": 15,
     "data_confidence": 25,
@@ -759,7 +960,32 @@
    "over": -102,
    "under": 100,
    "books": 9,
+   "team_totals": {
+    "away": {
+     "team": "Athletics",
+     "projection": 5.7,
+     "line": 4.5,
+     "over": -104,
+     "under": -122,
+     "books": 3,
+     "edge": 1.2,
+     "lean": "Over",
+     "classification": "research_lean"
+    },
+    "home": {
+     "team": "Minnesota Twins",
+     "projection": 5.7,
+     "line": 4.5,
+     "over": -135,
+     "under": 114,
+     "books": 3,
+     "edge": 1.2,
+     "lean": "Over",
+     "classification": "research_lean"
+    }
+   },
    "lab": 70,
+   "official_eligible": false,
    "setup_components": {
     "base": 15,
     "data_confidence": 25,
@@ -836,7 +1062,32 @@
    "over": -102,
    "under": -110,
    "books": 9,
+   "team_totals": {
+    "away": {
+     "team": "Colorado Rockies",
+     "projection": 4,
+     "line": 3.5,
+     "over": 114,
+     "under": -140,
+     "books": 3,
+     "edge": 0.5,
+     "lean": null,
+     "classification": "no_lean"
+    },
+    "home": {
+     "team": "Milwaukee Brewers",
+     "projection": 6.3,
+     "line": 4.5,
+     "over": -125,
+     "under": 110,
+     "books": 3,
+     "edge": 1.8,
+     "lean": "Over",
+     "classification": "research_lean"
+    }
+   },
    "lab": 75,
+   "official_eligible": false,
    "setup_components": {
     "base": 15,
     "data_confidence": 25,
@@ -913,7 +1164,32 @@
    "over": -105,
    "under": -110,
    "books": 6,
+   "team_totals": {
+    "away": {
+     "team": "San Diego Padres",
+     "projection": 4.3,
+     "line": 4.5,
+     "over": 110,
+     "under": -140,
+     "books": 2,
+     "edge": -0.2,
+     "lean": null,
+     "classification": "no_lean"
+    },
+    "home": {
+     "team": "Miami Marlins",
+     "projection": 4.9,
+     "line": 4.5,
+     "over": -120,
+     "under": -110,
+     "books": 2,
+     "edge": 0.4,
+     "lean": null,
+     "classification": "no_lean"
+    }
+   },
    "lab": 29,
+   "official_eligible": false,
    "setup_components": {
     "base": 15,
     "data_confidence": 12.5,
@@ -990,7 +1266,32 @@
    "over": -107,
    "under": 100,
    "books": 7,
+   "team_totals": {
+    "away": {
+     "team": "Kansas City Royals",
+     "projection": 3.5,
+     "line": 2.5,
+     "over": -120,
+     "under": -104,
+     "books": 3,
+     "edge": 1,
+     "lean": "Over",
+     "classification": "research_lean"
+    },
+    "home": {
+     "team": "Detroit Tigers",
+     "projection": 4.3,
+     "line": 4.5,
+     "over": -113,
+     "under": 100,
+     "books": 3,
+     "edge": -0.2,
+     "lean": null,
+     "classification": "no_lean"
+    }
+   },
    "lab": 32,
+   "official_eligible": false,
    "setup_components": {
     "base": 15,
     "data_confidence": 12.5,
@@ -1067,7 +1368,32 @@
    "over": -115,
    "under": 103,
    "books": 9,
+   "team_totals": {
+    "away": {
+     "team": "Houston Astros",
+     "projection": 4,
+     "line": 3.5,
+     "over": -136,
+     "under": 115,
+     "books": 3,
+     "edge": 0.5,
+     "lean": null,
+     "classification": "no_lean"
+    },
+    "home": {
+     "team": "Chicago White Sox",
+     "projection": 5.3,
+     "line": 4.5,
+     "over": 100,
+     "under": -120,
+     "books": 3,
+     "edge": 0.8,
+     "lean": "Over",
+     "classification": "research_lean"
+    }
+   },
    "lab": 66,
+   "official_eligible": false,
    "setup_components": {
     "base": 15,
     "data_confidence": 25,
@@ -1144,7 +1470,32 @@
    "over": -107,
    "under": -105,
    "books": 9,
+   "team_totals": {
+    "away": {
+     "team": "Toronto Blue Jays",
+     "projection": 3.8,
+     "line": 3.5,
+     "over": -145,
+     "under": 116,
+     "books": 3,
+     "edge": 0.3,
+     "lean": null,
+     "classification": "no_lean"
+    },
+    "home": {
+     "team": "Boston Red Sox",
+     "projection": 5.5,
+     "line": 4.5,
+     "over": 112,
+     "under": -135,
+     "books": 3,
+     "edge": 1,
+     "lean": "Over",
+     "classification": "research_lean"
+    }
+   },
    "lab": 66,
+   "official_eligible": false,
    "setup_components": {
     "base": 15,
     "data_confidence": 25,
@@ -1221,7 +1572,32 @@
    "over": -107,
    "under": -107,
    "books": 9,
+   "team_totals": {
+    "away": {
+     "team": "Atlanta Braves",
+     "projection": 4.8,
+     "line": 4.5,
+     "over": 100,
+     "under": -130,
+     "books": 2,
+     "edge": 0.3,
+     "lean": null,
+     "classification": "no_lean"
+    },
+    "home": {
+     "team": "Baltimore Orioles",
+     "projection": 5.7,
+     "line": 4.5,
+     "over": -110,
+     "under": -120,
+     "books": 2,
+     "edge": 1.2,
+     "lean": "Over",
+     "classification": "research_lean"
+    }
+   },
    "lab": 56,
+   "official_eligible": false,
    "setup_components": {
     "base": 15,
     "data_confidence": 12.5,
