@@ -21,6 +21,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const MatchupCopy = require("./lib/matchup-copy-core");
 
 const SITE = "https://lydiaslab.com";
 const AUTHOR_URL = `${SITE}/writers/lynold/`;
@@ -778,13 +779,26 @@ function buildInsights(game, pitcherGame) {
   const concerns = [];
 
   if (typeof game.edge === "number" && game.edge >= 0.03 && known(market.no_vig_probability)) {
-    caseFor.push({ title: `Market mispricing: ${signedPct(game.edge)}`, detail: `LyDia makes ${game.pick_team} ${pct(game.model_probability)} to win. The no-vig market says ${pct(market.no_vig_probability)}. That gap is the entire reason this game is on the board.` });
+    const mispricing = MatchupCopy.marketMispricingCase({
+      pickTeam: game.pick_team,
+      modelProb: game.model_probability,
+      marketProb: market.no_vig_probability,
+      edge: game.edge
+    });
+    if (mispricing) caseFor.push(mispricing);
   }
   if (pitcher.edge_team && pitcher.edge_team === game.pick_team && Number(pitcher.gap) >= 8) {
     caseFor.push({ title: `Starting pitcher edge: ${pitcher.gap} points`, detail: `${pitcher.edge_team} sends the clearly better starter by LyDia's pitcher score. Gaps this size are one of the model's strongest inputs.` });
   }
   if (pickRisk !== null && oppRisk !== null && oppRisk - pickRisk >= 15) {
-    caseFor.push({ title: `Late-inning bullpen advantage`, detail: `${game.pick_team}'s pen carries ${ (pickRisk/10).toFixed(1) }/10 risk against ${ (oppRisk/10).toFixed(1) }/10 for the other side. If this is close after six, the risk profile favors the pick.` });
+    const oppTeamName = game.pick_team === game.away_team ? game.home_team : game.away_team;
+    const penCase = MatchupCopy.bullpenCase({
+      pickTeam: game.pick_team,
+      oppTeam: oppTeamName,
+      pickPen: toPenStats(pens.pick),
+      oppPen: toPenStats(pens.opp)
+    });
+    if (penCase) caseFor.push(penCase);
   }
   if (off.pick && typeof off.pick.delta_ops === "number" && off.pick.delta_ops >= 0.03) {
     caseFor.push({ title: `Bats are hot: ${signedDecimal(off.pick.delta_ops, 3)} OPS`, detail: `${game.pick_team} is outhitting its own season form over the last 15 days. Recent form is context, not a model input, but it points the same way here.` });
@@ -1257,7 +1271,7 @@ function renderPitcherTable(game, pitcherGame) {
       ${rows.map(row => `<tr><th>${esc(row.label)}${dirTag(row.better)}</th>${cellPair(row)}</tr>`).join("\n      ")}
     </tbody>
   </table>
-  <p><strong>Pitcher edge:</strong> ${esc(p.edge_team || "No clear starting pitcher edge")}${p.gap ? ` by ${esc(p.gap)} points` : ""}.</p>
+  <p><strong>Pitcher edge:</strong> ${esc(pitcherEdgeCopy(p, away, home))}</p>
   ${p.bullpen_game ? '<p class="notice"><strong>Bullpen game:</strong> LyDia weights each opener only for his expected innings. Aggregate bullpen fatigue, efficiency, and risk data cover the remaining innings.</p>' : ""}
   <p class="small dim" style="text-align:center"><strong>How to read this:</strong> the scorecards show ERA, WHIP, K/9, and K-BB%. The table adds complementary traits without repeating them. Highlighted cells mark a gap big enough to matter. HR/9 is home runs allowed per nine innings. Ground-ball rate is neither good nor bad on its own: high ground-ball pitchers trade strikeouts for double plays and fewer home runs.</p>`;
 }
@@ -1344,7 +1358,7 @@ function renderOffenseTable(game, teamHitting) {
   const advHi = (mine, theirs) => typeof mine === "number" && typeof theirs === "number" && mine > theirs ? "adv" : "";
   const advLo = (mine, theirs) => typeof mine === "number" && typeof theirs === "number" && mine < theirs ? "adv" : "";
   const num = (v, fmt) => typeof v === "number" ? fmt(v) : "Not available";
-  return `<table class="matchup-table">
+  return `${recentFormCopy(game, sa, sh, away, home)}<table class="matchup-table">
     <thead><tr><th>Metric</th><th>${esc(shortTeam(game.away_team))}</th><th>${esc(shortTeam(game.home_team))}</th></tr></thead>
     <tbody>
       <tr><th>Record</th><td>${esc(game.away_record || "Not available")}</td><td>${esc(game.home_record || "Not available")}</td></tr>
@@ -1361,6 +1375,67 @@ function renderOffenseTable(game, teamHitting) {
       <tr><th>OPS vs opposing hand</th><td>${esc(typeof away.ops_vs_opp_hand === "number" ? away.ops_vs_opp_hand.toFixed(3) : "Not available")}</td><td>${esc(typeof home.ops_vs_opp_hand === "number" ? home.ops_vs_opp_hand.toFixed(3) : "Not available")}</td></tr>
     </tbody>
   </table>`;
+}
+
+// Bullpen records use era_3d / back_to_back_arms; the copy layer takes era3 / b2b_arms.
+function toPenStats(pen) {
+  if (!pen) return null;
+  return {
+    risk_index: pen.risk_index ?? pen.score ?? null,
+    era3: typeof pen.era_3d === "number" ? pen.era_3d : null,
+    b2b_arms: typeof pen.back_to_back_arms === "number" ? pen.back_to_back_arms : null,
+    efficiency_label: pen.efficiency_label || null
+  };
+}
+
+// kbbPct and gbPct are stored as fractions, so K-BB% is scaled to percentage
+// points before it reaches the copy layer.
+function toPitcherStats(x) {
+  if (!x) return null;
+  return {
+    era: typeof x.era === "number" ? x.era : null,
+    whip: typeof x.whip === "number" ? x.whip : null,
+    k9: typeof x.k9 === "number" ? x.k9 : null,
+    kbb_pct: typeof x.kbbPct === "number" ? x.kbbPct * 100 : null,
+    bb9: typeof x.bb9 === "number" ? x.bb9 : null,
+    hr9: typeof x.hr9 === "number" ? x.hr9 : null,
+    expected_innings: typeof x.expectedInnings === "number" ? x.expectedInnings : null
+  };
+}
+
+function pitcherEdgeCopy(p, away, home) {
+  if (!p || !p.edge_team) return "No clear starting pitcher edge.";
+  const gap = typeof p.gap === "number" ? p.gap : null;
+  if (typeof away.score !== "number" || typeof home.score !== "number") {
+    return `${p.edge_team} holds the starting pitcher edge${gap ? ` by ${gap} points` : ""}.`;
+  }
+  const awayBetter = away.score > home.score;
+  const better = awayBetter ? away : home;
+  const worse = awayBetter ? home : away;
+  return MatchupCopy.pitcherEdgeSentence({
+    edgeTeam: p.edge_team,
+    gap,
+    betterPitcher: better.name,
+    worsePitcher: worse.name,
+    betterStats: toPitcherStats(better),
+    worseStats: toPitcherStats(worse)
+  });
+}
+
+function recentFormCopy(game, sa, sh, away, home) {
+  const sentence = MatchupCopy.recentFormSentence({
+    awayTeam: shortTeam(game.away_team),
+    homeTeam: shortTeam(game.home_team),
+    awayL10: game.away_l10,
+    homeL10: game.home_l10,
+    awayRunDiff: typeof sa.run_diff_pg === "number" ? sa.run_diff_pg : null,
+    homeRunDiff: typeof sh.run_diff_pg === "number" ? sh.run_diff_pg : null,
+    awayRpg15: typeof away.rpg_15d === "number" ? away.rpg_15d : null,
+    homeRpg15: typeof home.rpg_15d === "number" ? home.rpg_15d : null,
+    awayDeltaOps: typeof away.delta_ops === "number" ? away.delta_ops : null,
+    homeDeltaOps: typeof home.delta_ops === "number" ? home.delta_ops : null
+  });
+  return sentence ? `<p class="form-headline">${esc(sentence)}</p>` : "";
 }
 
 function signedDecimal(value, digits) {
