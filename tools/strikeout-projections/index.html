@@ -12,15 +12,15 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pitcher Projections — LyDia's Lab</title>
+<title>Strikeout Projections — LyDia's Lab</title>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="LyDia">
-<meta property="og:title" content="Pitcher Projections — LyDia's Lab">
+<meta property="og:title" content="Strikeout Projections — LyDia's Lab">
 <meta property="og:description" content="Every starter on tonight's slate: projected strikeouts, outs, earned runs, hits, walks and home runs, with the math behind each number.">
 <meta property="og:url" content="https://lydiaslab.com/tools/strikeout-projections/">
 <meta property="og:image" content="https://lydiaslab.com/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Pitcher Projections — LyDia's Lab">
+<meta name="twitter:title" content="Strikeout Projections — LyDia's Lab">
 <meta name="twitter:description" content="Every starter on tonight's slate: projected strikeouts, outs, earned runs, hits, walks and home runs, with the math behind each number.">
 <meta name="twitter:image" content="https://lydiaslab.com/img/og-card.png">
 
@@ -32,33 +32,23 @@
 <meta name="apple-mobile-web-app-title" content="Strikeouts">
 <link rel="stylesheet" href="/css/style.css">
 <style>
-/* Lab console: this page runs a dark surface. Every shared component on the
-   site is already driven by these variables, so redefining them here re-themes
-   the nav, footer, cards, inputs and tables without touching the stylesheet. */
-:root{
-  --bg:#0b0d12; --bg-card:#12151d; --bg-elev:#171b25; --border:#262c3a;
-  --text:#e6e9f0; --text-dim:#939db3;
-  --accent:#ff6a3d; --accent2:#7c8cff; --accent3:#2dd4bf;
-  --good:#3ecf8e; --danger:#f2545b; --warn:#f5a623;
-  --shadow-sm:0 8px 24px rgba(0,0,0,.35); --shadow-md:0 18px 48px rgba(0,0,0,.5);
-}
-body{ background:var(--bg); }
-nav{ background:rgba(11,13,18,.86); border-bottom:1px solid var(--border); }
-footer{ background:transparent; }
+/* Inherits the site theme. Nine columns need more room than the standard
+   content width, which is the only layout liberty this page takes. */
 main{ max-width:1320px; }
-.card{ background:var(--bg-card); }
-input,select{ background:var(--bg-elev); color:var(--text); }
 .controls{ display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:14px; }
 .controls .field{ margin-bottom:0; }
 
 /* ---- slate table ---- */
 .pit-wrap{ border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; background:var(--bg-card); }
 table.pit{ width:100%; border-collapse:collapse; font-size:.9rem; background:transparent; }
+/* Not sticky. A sticky header on a table with expandable rows sat on top of the
+   first pitcher and hid him. A solid, clearly separated header reads better. */
 table.pit thead th{
-  position:sticky; top:60px; z-index:5; background:var(--bg-elev); color:var(--text-dim);
+  background:var(--bg-elev); color:var(--text-dim);
   font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; font-weight:800;
-  padding:9px 10px; border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none;
+  padding:10px; border-bottom:2px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none;
 }
+table.pit thead th:hover{ color:var(--text); }
 table.pit thead th:first-child{ text-align:left; cursor:default; }
 table.pit thead th:not(:first-child){ text-align:right; }
 table.pit thead th.on{ color:var(--accent); }
@@ -129,7 +119,7 @@ table.lu td:first-child,table.lu td:nth-child(2){ text-align:left; }
 <nav id="nav"></nav>
 <main>
   <p class="eyebrow">LyDia's Lab</p>
-  <h1>Pitcher Projections</h1>
+  <h1>Strikeout Projections</h1>
   <p class="subtitle">Every starter on the slate, projected across six markets. Click any pitcher for the arithmetic behind each number, the factors that moved it, and the lineup he has to get through.</p>
 
   <div class="controls">
