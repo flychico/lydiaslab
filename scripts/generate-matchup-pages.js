@@ -1337,7 +1337,7 @@ function renderStrikeoutProjections(game, pitcherGame, kprops) {
       : `No strikeout line posted when this page was generated`;
     return `<div class="metric"><div class="label">${mlbPitcherLink(entry.pitcher)} strikeouts</div><div class="value">${esc(oneDecimal(prop.projection))} <span class="dim small">LyDia projected Ks</span></div>${leanHtml}<div class="small dim">${marketLine}</div></div>`;
   }).join("");
-  return `<h3 style="margin:16px 0 4px">Strikeout projections <a class="tool-link" style="font-size:.78rem" href="/tools/strikeout-projections/">Full K board &rarr;</a></h3>
+  return `<h3 style="margin:16px 0 4px">Strikeout Projections <a class="tool-link" style="font-size:.78rem" href="/tools/strikeout-projections/">Full strikeout projections &rarr;</a></h3>
   <div class="metric-grid">${cells}</div>
   <p class="small dim">Projections are self-calibrated against graded results${kprops && kprops.learned_n ? ` (${esc(kprops.learned_n)} graded starts)` : ""}. Official K picks require a 0.7+ strikeout edge, a posted price from at least two books, and a confirmed non-opener workload of at least four expected innings.</p>`;
 }
