@@ -12,19 +12,19 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Strikeout Projections — LyDia's Lab</title>
+<title>Pitcher Projections — LyDia's Lab</title>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="LyDia">
-<meta property="og:title" content="Strikeout Projections — LyDia's Lab">
-<meta property="og:description" content="A projected strikeout total for every MLB starter today, built from whiff skill, expected innings, and the opposing lineup">
+<meta property="og:title" content="Pitcher Projections — LyDia's Lab">
+<meta property="og:description" content="Every starter on tonight's slate: projected strikeouts, outs, earned runs, hits, walks and home runs, with the math behind each number.">
 <meta property="og:url" content="https://lydiaslab.com/tools/strikeout-projections/">
 <meta property="og:image" content="https://lydiaslab.com/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Strikeout Projections — LyDia's Lab">
-<meta name="twitter:description" content="A projected strikeout total for every MLB starter today, built from whiff skill, expected innings, and the opposing lineup">
+<meta name="twitter:title" content="Pitcher Projections — LyDia's Lab">
+<meta name="twitter:description" content="Every starter on tonight's slate: projected strikeouts, outs, earned runs, hits, walks and home runs, with the math behind each number.">
 <meta name="twitter:image" content="https://lydiaslab.com/img/og-card.png">
 
-<meta name="description" content="A projected strikeout total for every MLB starter today, built from whiff skill, expected innings, and the opposing lineup's strikeout rate against his throwing hand.">
+<meta name="description" content="Every starter on tonight's slate: projected strikeouts, outs, earned runs, hits, walks and home runs, with the opposing lineup and the full derivation behind each projection.">
 <link rel="canonical" href="https://lydiaslab.com/tools/strikeout-projections/">
 <link rel="manifest" href="/img/manifest-strikeout.json">
 <link rel="apple-touch-icon" href="/img/app-strikeout-192.png">
@@ -32,46 +32,105 @@
 <meta name="apple-mobile-web-app-title" content="Strikeouts">
 <link rel="stylesheet" href="/css/style.css">
 <style>
-.controls { display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:16px; }
-.controls .field { margin-bottom:0; }
-.match-card { margin-bottom:14px; }
-.match-head { display:grid; grid-template-columns:1fr auto 1fr; gap:8px; align-items:baseline; margin-bottom:8px; }
-.match-head .matchup { font-weight:800; font-size:1.05rem; }
-.match-head .matchup { grid-column:2; text-align:center; }
-.match-head .small { grid-column:3; justify-self:end; }
-.k-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:8px; }
-.k-box { background:var(--bg-elev); border:1px solid var(--border); border-radius:var(--radius); padding:12px; }
-.k-proj { font-size:1.9rem; font-weight:800; color:var(--accent); }
-.k-row { display:flex; justify-content:space-between; gap:8px; font-size:.86rem; border-top:1px solid var(--border); padding-top:5px; margin-top:5px; }
-.line-input { display:flex; gap:8px; align-items:center; margin-top:9px; }
-.line-input input { width:88px; text-align:center; font-weight:700; }
-.lean { font-weight:800; }
-.tier { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:1px 7px; margin-left:6px; white-space:nowrap; }
-/* Derivation: show the arithmetic, then the named factors that moved it. */
-.kd { margin-top:10px; border-top:1px solid var(--border); padding-top:8px; }
-.kd summary { cursor:pointer; font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-dim); }
-.kd summary:hover { color:var(--text); }
-.kd-lab { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-dim); margin:9px 0 3px; }
-.kd-base { font-size:.9rem; font-weight:700; }
-.kd-note { font-size:.78rem; color:var(--text-dim); line-height:1.45; margin-top:3px; }
-.kd-row { display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:.83rem; padding:3px 0; }
-.kd-row .kd-name { border-left:3px solid var(--border); padding-left:7px; }
-.kd-row.up .kd-name { border-left-color:var(--good); }
-.kd-row.down .kd-name { border-left-color:var(--danger); }
-.kd-row .kd-ev { color:var(--text-dim); font-weight:400; }
-.kd-val { font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap; }
-.kd-net { display:flex; justify-content:space-between; font-size:.8rem; font-weight:800; border-top:1px solid var(--border); margin-top:6px; padding-top:5px; }
-.kd-total { display:flex; justify-content:space-between; font-size:.9rem; font-weight:800; margin-top:5px; }
-.prob-line { font-size:.84rem; margin-top:4px; }
-@media (max-width:720px){ .k-grid{ grid-template-columns:1fr; } }
+/* Lab console: this page runs a dark surface. Every shared component on the
+   site is already driven by these variables, so redefining them here re-themes
+   the nav, footer, cards, inputs and tables without touching the stylesheet. */
+:root{
+  --bg:#0b0d12; --bg-card:#12151d; --bg-elev:#171b25; --border:#262c3a;
+  --text:#e6e9f0; --text-dim:#939db3;
+  --accent:#ff6a3d; --accent2:#7c8cff; --accent3:#2dd4bf;
+  --good:#3ecf8e; --danger:#f2545b; --warn:#f5a623;
+  --shadow-sm:0 8px 24px rgba(0,0,0,.35); --shadow-md:0 18px 48px rgba(0,0,0,.5);
+}
+body{ background:var(--bg); }
+nav{ background:rgba(11,13,18,.86); border-bottom:1px solid var(--border); }
+footer{ background:transparent; }
+main{ max-width:1320px; }
+.card{ background:var(--bg-card); }
+input,select{ background:var(--bg-elev); color:var(--text); }
+.controls{ display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:14px; }
+.controls .field{ margin-bottom:0; }
+
+/* ---- slate table ---- */
+.pit-wrap{ border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; background:var(--bg-card); }
+table.pit{ width:100%; border-collapse:collapse; font-size:.9rem; background:transparent; }
+table.pit thead th{
+  position:sticky; top:60px; z-index:5; background:var(--bg-elev); color:var(--text-dim);
+  font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; font-weight:800;
+  padding:9px 10px; border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none;
+}
+table.pit thead th:first-child{ text-align:left; cursor:default; }
+table.pit thead th:not(:first-child){ text-align:right; }
+table.pit thead th.on{ color:var(--accent); }
+table.pit tbody td{ padding:10px; border-bottom:1px solid var(--border); vertical-align:middle; }
+table.pit tbody td:not(:first-child){ text-align:right; font-variant-numeric:tabular-nums; font-weight:700; }
+tr.prow{ cursor:pointer; }
+tr.prow:hover td{ background:var(--bg-elev); }
+tr.prow.open td{ background:var(--bg-elev); }
+.pname{ font-weight:800; }
+.pmeta{ color:var(--text-dim); font-size:.76rem; margin-top:1px; }
+.kcell{ color:var(--accent); font-size:1.02rem; }
+.chev{ display:inline-block; width:12px; color:var(--text-dim); }
+tr.detail>td{ padding:0 !important; background:var(--bg); }
+.detail-in{ padding:14px; border-bottom:2px solid var(--accent); }
+
+/* ---- market strip ---- */
+.mkt-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:10px; }
+.mkt{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:9px 11px; }
+.mkt .mk-lab{ font-size:.7rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); }
+.mkt .mk-model{ font-size:.78rem; color:var(--text-dim); }
+.mkt .mk-model b{ color:var(--text); font-size:.92rem; }
+.mkt input{ width:66px; padding:5px 6px; text-align:center; font-weight:700; font-size:.85rem; }
+.kedge{ margin-top:10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:var(--bg-card); border:1px solid var(--accent); border-radius:10px; padding:10px 12px; }
+.kedge .kv{ font-weight:800; }
+.badge-play{ font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; border-radius:8px; padding:3px 9px; }
+.badge-play.over{ background:rgba(62,207,142,.14); color:var(--good); }
+.badge-play.under{ background:rgba(242,84,91,.14); color:var(--danger); }
+.badge-play.none{ background:var(--bg-elev); color:var(--text-dim); }
+
+/* ---- breakdown cards ---- */
+.bd-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:12px; margin-top:12px; align-items:start; }
+.bd{ background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px; }
+.bd-head{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+.bd-title{ font-size:.72rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); }
+.bd-num{ font-size:1.5rem; font-weight:900; color:var(--accent); font-variant-numeric:tabular-nums; }
+.bd-lab{ font-size:.66rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); margin:10px 0 4px; }
+.bd-base{ font-size:.88rem; font-weight:700; }
+.bd-note{ font-size:.76rem; color:var(--text-dim); line-height:1.45; margin-top:4px; }
+.adj{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:.82rem; padding:3px 0; }
+.adj .nm{ border-left:3px solid var(--border); padding-left:7px; }
+.adj.up .nm{ border-left-color:var(--good); }
+.adj.down .nm{ border-left-color:var(--danger); }
+.adj .ev{ color:var(--text-dim); font-weight:400; }
+.adj .vl{ font-weight:800; font-variant-numeric:tabular-nums; }
+.adj-net{ display:flex; justify-content:space-between; font-size:.76rem; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); margin-bottom:2px; }
+.mini{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; text-align:center; margin-top:6px; }
+.mini .mv{ font-size:1.25rem; font-weight:900; color:var(--accent); }
+.mini .ml{ font-size:.68rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.04em; }
+
+/* ---- lineup ---- */
+table.lu{ width:100%; border-collapse:collapse; font-size:.8rem; background:transparent; }
+table.lu th{ font-size:.64rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); text-align:right; padding:4px 5px; border-bottom:1px solid var(--border); }
+table.lu th:first-child,table.lu th:nth-child(2){ text-align:left; }
+table.lu td{ padding:4px 5px; border-bottom:1px solid var(--border); text-align:right; font-variant-numeric:tabular-nums; }
+table.lu td:first-child,table.lu td:nth-child(2){ text-align:left; }
+.k-hi{ color:var(--accent); font-weight:800; }
+.k-lo{ color:var(--accent2); font-weight:800; }
+.lu-legend{ font-size:.72rem; color:var(--text-dim); margin-top:6px; }
+.pill{ font-size:.66rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; border-radius:8px; padding:2px 8px; background:rgba(62,207,142,.14); color:var(--good); }
+.pill.wait{ background:var(--bg-elev); color:var(--text-dim); }
+@media (max-width:860px){
+  table.pit thead th:nth-child(n+6){ display:none; }
+  table.pit tbody td:nth-child(n+6){ display:none; }
+}
 </style>
 </head>
 <body>
 <nav id="nav"></nav>
 <main>
   <p class="eyebrow">LyDia's Lab</p>
-  <h1>Strikeout Projections</h1>
-  <p class="subtitle">How many strikeouts should each starter get tonight? Built from three things: his whiff skill, how deep he pitches, and how much the opposing lineup swings and misses against his throwing hand.</p>
+  <h1>Pitcher Projections</h1>
+  <p class="subtitle">Every starter on the slate, projected across six markets. Click any pitcher for the arithmetic behind each number, the factors that moved it, and the lineup he has to get through.</p>
 
   <div class="controls">
     <div class="field">
@@ -87,11 +146,11 @@
   </div>
 
   <div class="notice">
-    <span id="kbias-note"></span><strong>How to read it:</strong> the projection is a median expectation, not a prediction. Open <b>Show the math</b> on any pitcher for the arithmetic behind it and every factor that moved it. Strikeouts are a count, so the spread is wide — the typical range beside each projection is where about two thirds of real outings land. Entering a line also shows LyDia's own chance of going over and the odds that chance is worth, which you can compare directly against your book's price. A <b>0.7+ strikeout</b> gap remains the working threshold for a lean. Live consensus lines load automatically each morning (the most common posted line across US books, with the best Over/Under price at it) — edit the line box if your book differs.
+    <span id="kbias-note"></span><strong>How to read it:</strong> strikeouts are the calibrated market — that projection is corrected against LyDia's own graded history and is the only one carrying a public record. Outs, earned runs, hits, walks and home runs are <b>rate baselines</b>: season rate × expected innings, shown for context and not yet graded. Every projection is a median, not a prediction; the typical range beside it is where about two thirds of real outings land. Enter a line to see LyDia's chance of going over and the odds that chance is worth, so it compares directly against your book's price.
   </div>
 
-  <div id="status"><div class="loading">Projecting strikeouts…</div></div>
-  <div id="games"></div>
+  <div id="status"><div class="loading">Projecting the slate…</div></div>
+  <div id="slate"></div>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/tools/"); renderFooter();</script>
 <script src="/js/pitcher-matchup-core.js"></script>
@@ -99,37 +158,91 @@
 const datePick = document.getElementById("date-pick");
 datePick.value = localISODate(new Date());
 datePick.addEventListener("change", load);
-let PROJ = {}; // pitcherId -> projection data
-let LINES = {}, LINES_AT = null, KBIAS = 0, KBIAS_N = 0; // live K prop lines by pitcher name (server-fetched daily)
+let ROWS = [];                 // one entry per starter
+let LINES = {}, KBIAS = 0, KBIAS_N = 0;
+let LEAGUE_K = 0.223;
+let SORT = { key: "k", dir: -1 };
+const LU_CACHE = {};
 load();
 
 function localISODate(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
 function shiftDay(n){ const d=new Date(); d.setDate(d.getDate()+n); datePick.value=localISODate(d); load(); }
-function filterGame(pk){ document.querySelectorAll(".match-card").forEach(c=>{ c.style.display = (!pk || c.id === "kg-"+pk) ? "" : "none"; }); }
-function ipToNum(ip){ if(!ip||ip==="-.--")return 0; const [w,f]=String(ip).split("."); return Number(w||0)+Number(f||0)/3; }
 function seasonYear(){ const d=new Date(datePick.value+"T12:00"); return d.getMonth()>=2?d.getFullYear():d.getFullYear()-1; }
 async function j(u){ const r=await fetch(u); if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); }
+function filterGame(pk){ ROWS.forEach(r=>{ const el=document.getElementById("row-"+r.uid); const dt=document.getElementById("det-"+r.uid);
+  const show = !pk || String(r.gamePk)===String(pk); if(el) el.style.display = show?"":"none"; if(dt && dt.style.display!=="none") dt.style.display = show?"":"none"; }); }
 
+/* ---------- distribution ---------- */
+function poissonCdf(kMax, lambda){ if(!(lambda>0)) return 1; let t=Math.exp(-lambda), s=t; for(let i=1;i<=kMax;i++){ t*=lambda/i; s+=t; } return Math.min(1,s); }
+function probOver(line, lambda){ if(!(lambda>0)||!isFinite(line)) return null; return 1 - poissonCdf(Math.floor(line), lambda); }
+function fairAmerican(p){ if(!(p>0&&p<1)) return null; return p>=0.5 ? Math.round(-100*p/(1-p)) : Math.round(100*(1-p)/p); }
+function fmtOdds(v){ return v===null||v===undefined ? "—" : (v>0?"+"+v:String(v)); }
+function impliedProb(am){ if(!isFinite(am)||am===0) return null; return am>0 ? 100/(am+100) : Math.abs(am)/(Math.abs(am)+100); }
+function rangeOf(k){ const sd=Math.sqrt(Math.max(k,0.0001)); return { lo:Math.max(0,k-sd), hi:k+sd }; }
+
+/* ---------- projections ----------
+   Strikeouts are the modelled market: expected batters faced × K rate, scaled by
+   the lineup's strikeout rate against his hand, then corrected by the learned
+   bias. The other five are season rate × expected innings — honest baselines,
+   deliberately not dressed up as calibrated models. */
+function buildRow(p, g, side, oppTeam, oppTeamId, kv){
+  if(!p || !p.ip || p.ip < 15 || !p.bf) return null;
+  const role = LyDiaPitcherCore.classifyPitcherRole(p);
+  const expIP = role.expectedInnings;
+  const kbf = p.so/p.bf;
+  const expBF = expIP * 4.28;
+  const baseK = expBF * kbf;
+  const oppK = p.hand && kv[p.hand] ? kv[p.hand][oppTeamId] : null;
+  const rawAdj = (oppK && LEAGUE_K) ? oppK/LEAGUE_K : 1;
+  const adj = (oppK && LEAGUE_K) ? Math.max(0.87, Math.min(1.13, rawAdj)) : 1;
+  const clamped = Boolean(oppK && LEAGUE_K && Math.abs(rawAdj-adj) > 0.0005);
+  const afterLineup = baseK * adj;
+  const k = Math.max(0, afterLineup + (KBIAS||0));
+
+  const ip = p.ip;
+  const k9  = ip ? p.so/ip*9 : null;
+  const bb9 = ip ? p.bb/ip*9 : null;
+  const hr9 = ip ? p.hr/ip*9 : null;
+  const h9  = ip ? p.h /ip*9 : null;
+  const era = Number.isFinite(p.era) ? p.era : null;
+
+  return {
+    uid: `${g.gamePk}-${side}`, gamePk: g.gamePk, side,
+    p, name: p.name, hand: p.hand, oppTeam,
+    matchup: `${g.teams.away.team.abbr||g.teams.away.team.name} vs ${g.teams.home.team.abbr||g.teams.home.team.name}`,
+    venue: (g.venue||{}).name || "",
+    role, expIP, kbf, expBF, baseK, oppK, adj, rawAdj, clamped, afterLineup,
+    k,
+    outs: expIP*3,
+    er:   era!==null ? expIP*era/9 : null,
+    hits: h9 !==null ? expIP*h9/9  : null,
+    bb:   bb9!==null ? expIP*bb9/9 : null,
+    hr:   hr9!==null ? expIP*hr9/9 : null,
+    era, whip: Number.isFinite(p.whip)?p.whip:null, k9, bb9, hr9, h9,
+    lowSample: p.ip < 40
+  };
+}
+
+/* ---------- load ---------- */
 async function load(){
-  const statusEl=document.getElementById("status"), gamesEl=document.getElementById("games");
-  statusEl.innerHTML='<div class="loading">Projecting strikeouts…</div>'; gamesEl.innerHTML="";
+  const statusEl=document.getElementById("status"), slateEl=document.getElementById("slate");
+  statusEl.innerHTML='<div class="loading">Projecting the slate…</div>'; slateEl.innerHTML="";
   try{
     const yr=seasonYear(), date=datePick.value;
     LINES={};
     if(date===localISODate(new Date())){
       try{ const kp=await fetch("/data/k-props/today.json?v="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null);
-        if(kp && kp.date===date && kp.pitchers){ LINES=kp.pitchers; LINES_AT=kp.generated_at; KBIAS=kp.learned_bias||0; KBIAS_N=kp.learned_n||0; } }catch(e){}
+        if(kp && kp.date===date && kp.pitchers){ LINES=kp.pitchers; KBIAS=kp.learned_bias||0; KBIAS_N=kp.learned_n||0; } }catch(e){}
     }
     const [sched, vl, vr] = await Promise.all([
-      j(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher`),
+      j(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher,venue`),
       j(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${yr}&stats=statSplits&sitCodes=vl`),
       j(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${yr}&stats=statSplits&sitCodes=vr`)
     ]);
-    // opponent K% vs each hand + league baseline
-    const kv={L:{},R:{}}; let soT=0, paT=0;
+    const kv={L:{},R:{}}; let soT=0,paT=0;
     for(const t of (vl.stats[0]||{}).splits||[]){ const so=+t.stat.strikeOuts||0, pa=+t.stat.plateAppearances||0; if(pa) kv.L[t.team.id]=so/pa; }
     for(const t of (vr.stats[0]||{}).splits||[]){ const so=+t.stat.strikeOuts||0, pa=+t.stat.plateAppearances||0; if(pa){ kv.R[t.team.id]=so/pa; soT+=so; paT+=pa; } }
-    const leagueK = paT ? soT/paT : 0.223;
+    LEAGUE_K = paT ? soT/paT : 0.223;
 
     const games=(((sched.dates||[])[0])||{}).games||[];
     if(!games.length){ statusEl.innerHTML=`<div class="notice">No MLB games scheduled for ${date}.</div>`; return; }
@@ -137,161 +250,208 @@ async function load(){
     const pids=[...new Set(games.flatMap(g=>["away","home"].map(s=>g.teams[s].probablePitcher&&g.teams[s].probablePitcher.id).filter(Boolean)))];
     const ps=pids.length ? await LyDiaPitcherCore.loadPitchersForDate(pids, date) : {};
 
-    PROJ={};
-    gamesEl.innerHTML = games.map(g=>renderGame(g, ps, kv, leagueK, games, date)).join("");
-    Object.keys(PROJ).forEach(pid => { const el = document.getElementById("ln-" + pid); if (el && el.value) lean(pid); });
-    document.getElementById("game-jump").innerHTML = '<option value="">All games…</option>'+
+    ROWS=[];
+    for(const g of games){
+      for(const side of ["away","home"]){
+        const pr=g.teams[side].probablePitcher; if(!pr) continue;
+        const opp = side==="away" ? g.teams.home.team : g.teams.away.team;
+        const row = buildRow(ps[pr.id], g, side, opp.name, opp.id, kv);
+        if(row) ROWS.push(row);
+      }
+    }
+    if(!ROWS.length){ statusEl.innerHTML=`<div class="notice">No starter has enough innings for a projection on ${date}.</div>`; return; }
+
+    render();
+    document.getElementById("game-jump").innerHTML='<option value="">All games…</option>'+
       games.map(g=>`<option value="${g.gamePk}">${escapeHtml(g.teams.away.team.name)} @ ${escapeHtml(g.teams.home.team.name)}</option>`).join("");
     statusEl.innerHTML="";
     const bn=document.getElementById("kbias-note");
-    if(bn) bn.innerHTML = KBIAS ? `<b>Self-calibrated:</b> projections include a ${KBIAS>0?"+":""}${KBIAS}-strikeout correction learned from ${KBIAS_N} graded starts. ` : "";
+    if(bn) bn.innerHTML = KBIAS ? `<b>Self-calibrated:</b> strikeout projections include a ${KBIAS>0?"+":""}${KBIAS} correction learned from ${KBIAS_N} graded starts. ` : "";
   }catch(e){ statusEl.innerHTML=`<div class="notice warn">Could not project (${escapeHtml(e.message)}).</div>`; }
 }
 
-/* Projection: expected batters faced × pitcher K rate, scaled by how much the
-   opposing lineup strikes out against his hand relative to league average.
+/* ---------- table ---------- */
+const COLS=[["k","K"],["outs","Outs"],["er","ER"],["hits","H"],["bb","BB"],["hr","HR"],["era","ERA"],["k9","K/9"]];
+function sortBy(key){ SORT = (SORT.key===key) ? {key, dir:-SORT.dir} : {key, dir:-1}; render(); }
+function render(){
+  const rows=[...ROWS].sort((a,b)=>{ const x=a[SORT.key], y=b[SORT.key];
+    if(x===null||x===undefined) return 1; if(y===null||y===undefined) return -1; return (x-y)*SORT.dir; });
+  document.getElementById("slate").innerHTML=`<div class="pit-wrap"><table class="pit">
+    <thead><tr><th>Pitcher</th>${COLS.map(c=>`<th class="${SORT.key===c[0]?"on":""}" onclick="sortBy('${c[0]}')">${c[1]}${SORT.key===c[0]?(SORT.dir<0?" ▼":" ▲"):""}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map(rowHtml).join("")}</tbody></table></div>`;
+}
+function n1(v){ return v===null||v===undefined ? "—" : Number(v).toFixed(1); }
+function n2(v){ return v===null||v===undefined ? "—" : Number(v).toFixed(2); }
+function rowHtml(r){
+  return `<tr class="prow" id="row-${r.uid}" onclick="toggle('${r.uid}')">
+    <td><span class="chev" id="chev-${r.uid}">▸</span> <span class="pname">${escapeHtml(r.name)}</span> <span class="dim small">(${r.hand==="L"?"LHP":"RHP"})</span>
+      <div class="pmeta">${escapeHtml(r.matchup)}${r.venue?" · "+escapeHtml(r.venue):""} · vs ${escapeHtml(r.oppTeam)}</div></td>
+    <td class="kcell">${n1(r.k)}</td><td>${n1(r.outs)}</td><td>${n2(r.er)}</td><td>${n2(r.hits)}</td>
+    <td>${n2(r.bb)}</td><td>${n2(r.hr)}</td><td>${n2(r.era)}</td><td>${n2(r.k9)}</td>
+  </tr>
+  <tr class="detail" id="det-${r.uid}" style="display:none"><td colspan="9"><div class="detail-in" id="din-${r.uid}"></div></td></tr>`;
+}
+function toggle(uid){
+  const r=ROWS.find(x=>x.uid===uid); if(!r) return;
+  const det=document.getElementById("det-"+uid), chev=document.getElementById("chev-"+uid), row=document.getElementById("row-"+uid);
+  const open = det.style.display==="none";
+  det.style.display = open ? "" : "none";
+  chev.textContent = open ? "▾" : "▸";
+  row.classList.toggle("open", open);
+  if(open && !det.dataset.built){ document.getElementById("din-"+uid).innerHTML = detailHtml(r); det.dataset.built="1"; syncK(uid); loadLineup(r); }
+}
 
-   Every intermediate value is returned, not just the answer, so the card can
-   show the same arithmetic the model ran instead of asking to be trusted. */
-function project(p, oppTeamId, kv){
-  if(!p || !p.ip || p.ip < 15 || !p.bf) return null;
-  const role = LyDiaPitcherCore.classifyPitcherRole(p);
-  const expIP = role.expectedInnings;
-  const kbf = p.so/p.bf;                     // pitcher whiff skill per batter
-  const expBF = expIP * 4.28;                // ~4.28 batters per inning
-  const baseK = expBF * kbf;                 // before any matchup adjustment
-  const oppK = p.hand && kv[p.hand] ? kv[p.hand][oppTeamId] : null;
-  const rawAdj = (oppK && LEAGUE_K) ? oppK/LEAGUE_K : 1;
-  // clamp the lineup adjustment — season splits are noisy enough that full strength overfits
-  const adj = (oppK && LEAGUE_K) ? Math.max(0.87, Math.min(1.13, rawAdj)) : 1;
-  const clamped = Boolean(oppK && LEAGUE_K && Math.abs(rawAdj - adj) > 0.0005);
-  const afterLineup = baseK * adj;
-  // learned correction included so page and graded numbers agree. A projection
-  // can never be negative, however large the correction.
-  const k = Math.max(0, afterLineup + (KBIAS || 0));
-  return { k, expIP, kbf, expBF, baseK, oppK, adj, rawAdj, clamped, afterLineup, lowSample: p.ip < 40, role };
+/* ---------- detail ---------- */
+function mktBox(label, model, uid, key, dp){
+  return `<div class="mkt"><span class="mk-lab">${label}</span>
+    <span class="mk-model">model <b>${model===null?"—":Number(model).toFixed(dp)}</b></span>
+    <input type="number" step="0.5" placeholder="line" id="ln-${key}-${uid}" oninput="syncMkt('${uid}','${key}',${dp})">
+    <input type="number" step="1" placeholder="odds" id="od-${key}-${uid}" oninput="syncMkt('${uid}','${key}',${dp})">
+    <span id="out-${key}-${uid}" class="mk-model"></span></div>`;
 }
-let LEAGUE_K = 0.223;
-
-/* ---- distribution helpers -------------------------------------------------
-   Strikeouts are a count, so the honest object is a distribution, not a point.
-   Poisson is the standard first approximation and keeps the spread tied to the
-   projection itself rather than a fixed claim that only holds at one value. */
-function poissonCdf(kMax, lambda){
-  if(!(lambda > 0)) return 1;
-  let term = Math.exp(-lambda), sum = term;
-  for(let i=1; i<=kMax; i++){ term *= lambda/i; sum += term; }
-  return Math.min(1, sum);
+function adjRow(name, ev, pct){
+  return `<div class="adj ${pct>=0?"up":"down"}"><span class="nm">${escapeHtml(name)}${ev?` <span class="ev">(${escapeHtml(ev)})</span>`:""}</span>
+    <span class="vl ${pct>=0?"pos-text":"neg-text"}">${pct>=0?"+":""}${pct.toFixed(1)}%</span></div>`;
 }
-function probOver(line, lambda){
-  if(!(lambda > 0) || !isFinite(line)) return null;
-  return 1 - poissonCdf(Math.floor(line), lambda);   // 7.5 -> P(K >= 8)
-}
-function fairAmerican(p){
-  if(!(p > 0 && p < 1)) return null;
-  return p >= 0.5 ? Math.round(-100*p/(1-p)) : Math.round(100*(1-p)/p);
-}
-function fmtOdds(v){ return v === null ? "—" : (v > 0 ? "+"+v : String(v)); }
-function kRange(k){ const sd = Math.sqrt(Math.max(k, 0.0001)); return { lo: Math.max(0, k-sd), hi: k+sd }; }
-
-/* ---- derivation ---------------------------------------------------------- */
-function pctRow(name, evidence, pct){
-  return `<div class="kd-row ${pct >= 0 ? "up" : "down"}">`
-    + `<span class="kd-name">${escapeHtml(name)}${evidence ? ` <span class="kd-ev">(${escapeHtml(evidence)})</span>` : ""}</span>`
-    + `<span class="kd-val ${pct >= 0 ? "pos-text" : "neg-text"}">${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%</span></div>`;
-}
-function derivation(pr, oppTeam, hand){
-  const handLabel = hand === "L" ? "LHP" : "RHP";
-  const rows = [], neutral = [];
-
-  if(pr.oppK !== null){
-    const lineupPct = (pr.adj - 1) * 100;
-    const ev = `${(pr.oppK*100).toFixed(1)}% vs ${(LEAGUE_K*100).toFixed(1)}% lg`;
-    (Math.abs(lineupPct) < 0.5 ? neutral : rows).push(pctRow(`${oppTeam} K% vs ${handLabel}`, ev, lineupPct));
+function detailHtml(r){
+  const L = LINES[String(r.name).toLowerCase()] || {};
+  const rows=[], neutral=[];
+  if(r.oppK!==null){
+    const pct=(r.adj-1)*100;
+    (Math.abs(pct)<0.5?neutral:rows).push(adjRow(`${r.oppTeam} K% vs ${r.hand==="L"?"LHP":"RHP"}`,`${(r.oppK*100).toFixed(1)}% vs ${(LEAGUE_K*100).toFixed(1)}% lg`,pct));
   }
-  // The learned correction is a flat strikeout figure; shown as a share of the
-  // adjusted projection so it sits on the same scale as the other rows.
   if(KBIAS){
-    const biasPct = pr.afterLineup > 0 ? (KBIAS / pr.afterLineup) * 100 : 0;
-    (Math.abs(biasPct) < 0.5 ? neutral : rows).push(
-      pctRow("Self-calibration", `${KBIAS > 0 ? "+" : ""}${KBIAS} K over ${KBIAS_N} graded starts`, biasPct));
+    const pct = r.afterLineup>0 ? (KBIAS/r.afterLineup)*100 : 0;
+    (Math.abs(pct)<0.5?neutral:rows).push(adjRow("Self-calibration",`${KBIAS>0?"+":""}${KBIAS} K over ${KBIAS_N} graded starts`,pct));
   }
+  const net = r.baseK>0 ? ((r.k/r.baseK)-1)*100 : 0;
+  const rg = rangeOf(r.k);
+  return `
+  <div class="mkt-grid">
+    ${mktBox("Outs", r.outs, r.uid, "outs", 1)}
+    ${mktBox("ER", r.er, r.uid, "er", 2)}
+    ${mktBox("Hits", r.hits, r.uid, "hits", 2)}
+    ${mktBox("Walks", r.bb, r.uid, "bb", 2)}
+  </div>
 
-  const netPct = pr.baseK > 0 ? ((pr.k / pr.baseK) - 1) * 100 : 0;
-  const r = kRange(pr.k);
+  <div class="kedge">
+    <span class="mk-lab">K prop edge</span>
+    <span class="mk-model">Line</span><input type="number" step="0.5" id="kl-${r.uid}" value="${L.line ?? ""}" oninput="syncK('${r.uid}')">
+    <span class="mk-model">Over odds</span><input type="number" step="1" id="ko-${r.uid}" value="${L.over ?? ""}" oninput="syncK('${r.uid}')">
+    <span id="kout-${r.uid}" class="mk-model"></span>
+    ${L.books?`<span class="dim small">consensus of ${L.books} book${L.books===1?"":"s"}</span>`:""}
+  </div>
 
-  return `<details class="kd">
-    <summary>Show the math</summary>
-    <div class="kd-lab">Baseline</div>
-    <div class="kd-base">${pr.expIP.toFixed(1)} IP × 4.28 batters/IP = ${pr.expBF.toFixed(1)} batters faced</div>
-    <div class="kd-base">${pr.expBF.toFixed(1)} × ${(pr.kbf*100).toFixed(1)}% K rate → ${pr.baseK.toFixed(2)} base Ks</div>
-    <div class="kd-note">Expected innings come from his role (${escapeHtml(String(pr.role.label).toLowerCase())}). K rate is season strikeouts per batter faced.</div>
-    ${rows.length ? `<div class="kd-lab">Matchup adjustments</div>${rows.join("")}` : ""}
-    ${neutral.length ? `<div class="kd-note">${neutral.length} near-neutral factor${neutral.length === 1 ? "" : "s"} not shown (within ±0.5%).</div>` : ""}
-    ${pr.clamped ? `<div class="kd-note">Lineup adjustment capped at ${pr.adj > 1 ? "+13" : "−13"}%. The raw split said ${((pr.rawAdj-1)*100).toFixed(1)}%, which is more confidence than a season split earns.</div>` : ""}
-    <div class="kd-net"><span>Net</span><span class="${netPct >= 0 ? "pos-text" : "neg-text"}">${netPct >= 0 ? "+" : ""}${netPct.toFixed(1)}%</span></div>
-    <div class="kd-total"><span>Projection</span><span>${pr.k.toFixed(2)} Ks</span></div>
-    <div class="kd-note">Typical range ${r.lo.toFixed(1)}–${r.hi.toFixed(1)}. Strikeouts are a count, so the spread widens with the projection.</div>
-  </details>`;
-}
-
-function kBox(pitcher, oppTeam, oppTeamId, kv, pid){
-  const p=pitcher;
-  if(!p) return `<div class="k-box"><b>TBD starter</b><div class="dim small">No projection until the probable posts.</div></div>`;
-  const pitcherName = `<a href="https://www.mlb.com/player/${String(p.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-${p.id || pid}" target="_blank" rel="noopener">${escapeHtml(p.name)}</a>`;
-  const pr=project(p, oppTeamId, kv);
-  if(!pr) return `<div class="k-box"><b>${pitcherName}</b><div class="dim small">Not enough innings this season for a reliable projection.</div></div>`;
-  PROJ[pid]=pr;
-  const r = kRange(pr.k);
-  const oppTier = pr.oppK===null ? "" : pr.oppK>=0.245 ? ' <span class="tier pos-text">strikes out a lot — helps the over</span>' : pr.oppK>=0.225 ? ' <span class="tier pos-text">above average strikeouts</span>' : pr.oppK<=0.195 ? ' <span class="tier neg-text">hard to strike out — hurts the over</span>' : ' <span class="tier">average strikeouts</span>';
-  return `<div class="k-box">
-    <div style="display:flex;justify-content:space-between;align-items:baseline"><b>${pitcherName}</b><span class="dim small">${p.hand==="L"?"LHP":"RHP"}</span></div>
-    <div><span class="k-proj">${pr.k.toFixed(1)}</span> <span class="dim small">projected Ks · typical range ${r.lo.toFixed(1)}–${r.hi.toFixed(1)}${pr.lowSample ? ' · <b class="gold">small sample</b>' : ""}</span></div>
-    <div class="k-row"><span>Pitching plan</span><b>${escapeHtml(pr.role.label)}</b></div>
-    <div class="k-row"><span>K per batter (season)</span><b>${(pr.kbf*100).toFixed(1)}%</b></div>
-    <div class="k-row"><span>Expected innings</span><b>${pr.expIP.toFixed(1)}</b></div>
-    ${pr.role.bullpenGame ? '<div class="small dim">Strikeout projection covers the opener only. Remaining innings belong to the bullpen.</div>' : ""}
-    <div class="k-row"><span title="How often this lineup strikes out against pitchers of his hand — higher means more strikeouts available">${escapeHtml(oppTeam)} strikeout rate vs ${p.hand==="L"?"lefties":"righties"}</span><span><b>${pr.oppK!==null?(pr.oppK*100).toFixed(1)+"%":"—"}</b>${oppTier}</span></div>
-    ${(() => { const L = LINES[p.name.toLowerCase()]; if (!L) return ""; return `<div class="k-row"><span>Market line (${L.books} book${L.books === 1 ? "" : "s"})</span><span><b>${L.line}</b> <span class="dim small">O ${L.over > 0 ? "+" : ""}${L.over ?? "—"} / U ${L.under > 0 ? "+" : ""}${L.under ?? "—"}</span></span></div>`; })()}
-    ${derivation(pr, oppTeam, p.hand)}
-    <div class="line-input">
-      <label class="dim small" for="ln-${pid}">Line</label>
-      <input type="number" step="0.5" id="ln-${pid}" placeholder="e.g. 6.5" value="${(LINES[p.name.toLowerCase()] || {}).line ?? ""}" oninput="lean(${pid})">
-      <span id="lean-${pid}" class="lean"></span>
+  <div class="bd-grid">
+    <div class="bd">
+      <div class="bd-head"><span class="bd-title">Strikeouts</span><span class="bd-num">${r.k.toFixed(2)}</span></div>
+      <div class="bd-lab">Baseline</div>
+      <div class="bd-base">${r.expIP.toFixed(1)} IP × 4.28 batters/IP = ${r.expBF.toFixed(1)} batters faced</div>
+      <div class="bd-base">${r.expBF.toFixed(1)} × ${(r.kbf*100).toFixed(1)}% K rate → ${r.baseK.toFixed(2)} base Ks</div>
+      <div class="bd-note">Expected innings come from his role (${escapeHtml(String(r.role.label).toLowerCase())}). K rate is season strikeouts per batter faced.</div>
+      ${rows.length?`<div class="bd-lab">Matchup adjustments</div><div class="adj-net"><span>net</span><span class="${net>=0?"pos-text":"neg-text"}">${net>=0?"+":""}${net.toFixed(1)}%</span></div>${rows.join("")}`:""}
+      ${neutral.length?`<div class="bd-note">${neutral.length} near-neutral factor${neutral.length===1?"":"s"} not shown (within ±0.5%).</div>`:""}
+      ${r.clamped?`<div class="bd-note">Lineup adjustment capped at ${r.adj>1?"+13":"−13"}%. The raw split said ${((r.rawAdj-1)*100).toFixed(1)}%, more confidence than a season split earns.</div>`:""}
+      <div class="bd-note">Typical range ${rg.lo.toFixed(1)}–${rg.hi.toFixed(1)}.${r.lowSample?" <b>Small sample</b> — under 40 innings this season.":""}</div>
     </div>
-    <div id="prob-${pid}" class="prob-line dim"></div>
+
+    <div class="bd">
+      <div class="bd-head"><span class="bd-title">Earned runs</span><span class="bd-num">${n2(r.er)}</span></div>
+      <div class="bd-lab">Baseline</div>
+      <div class="bd-base">${r.expIP.toFixed(1)} IP × ${n2(r.era)} ERA ÷ 9 → ${n2(r.er)} ER</div>
+      <div class="bd-note">A rate baseline, not a calibrated model. It carries no park, lineup or bullpen adjustment and no graded record.</div>
+      <div class="bd-lab">Home runs allowed</div>
+      <div class="bd-base">${r.expIP.toFixed(1)} IP × ${n2(r.hr9)} HR/9 ÷ 9 → ${n2(r.hr)} HR</div>
+      <div class="bd-note">Season WHIP ${n2(r.whip)}. Hits and walks below use the same season-rate method.</div>
+      <div class="mini">
+        <div><div class="mv">${n2(r.hits)}</div><div class="ml">Hits</div></div>
+        <div><div class="mv">${n2(r.bb)}</div><div class="ml">Walks</div></div>
+        <div><div class="mv">${n1(r.outs)}</div><div class="ml">Outs</div></div>
+      </div>
+    </div>
+
+    <div class="bd" id="lu-${r.uid}">
+      <div class="bd-head"><span class="bd-title">Opposing lineup</span><span class="pill wait" id="lupill-${r.uid}">loading</span></div>
+      <div class="bd-note">Checking whether ${escapeHtml(r.oppTeam)} have posted a lineup…</div>
+    </div>
+  </div>
+
+  <div class="bd" style="margin-top:12px">
+    <div class="bd-title">Swing-and-miss alignment</div>
+    <div class="bd-note">Pitch-by-pitch leverage — his whiff rate on each pitch against this lineup's whiff rate on that same pitch — is not wired up yet. It needs Statcast pitch-type data on both the pitcher and the hitters. The arsenal side is available today; the lineup side still needs building, and the per-batter, per-pitch samples are thin enough to require shrinking before they can be trusted.</div>
   </div>`;
 }
-function lean(pid){
-  const pr=PROJ[pid]; const el=document.getElementById("lean-"+pid); const probEl=document.getElementById("prob-"+pid);
-  const line=Number(document.getElementById("ln-"+pid).value);
-  if(!pr||!isFinite(line)||line<=0){ el.textContent=""; if(probEl) probEl.innerHTML=""; return; }
-  const d=pr.k-line;
-  if(d>=0.7) el.innerHTML=`<span class="pos-text">OVER lean (+${d.toFixed(1)})</span>`;
-  else if(d<=-0.7) el.innerHTML=`<span class="neg-text">UNDER lean (${d.toFixed(1)})</span>`;
-  else el.innerHTML=`<span class="dim">no edge (${d>=0?"+":""}${d.toFixed(1)})</span>`;
 
-  // Price framing: LyDia's own chance of going over and what odds that chance is
-  // worth, in the same units the book quotes.
-  if(probEl){
-    const pOver = probOver(line, pr.k);
-    if(pOver === null){ probEl.innerHTML=""; return; }
-    probEl.innerHTML = `Model over <b>${(pOver*100).toFixed(1)}%</b> (fair ${fmtOdds(fairAmerican(pOver))}) · under <b>${((1-pOver)*100).toFixed(1)}%</b> (fair ${fmtOdds(fairAmerican(1-pOver))})`;
-  }
+/* ---------- market sync ---------- */
+function syncK(uid){
+  const r=ROWS.find(x=>x.uid===uid); const out=document.getElementById("kout-"+uid); if(!r||!out) return;
+  const line=Number((document.getElementById("kl-"+uid)||{}).value);
+  const odds=Number((document.getElementById("ko-"+uid)||{}).value);
+  if(!isFinite(line)||line<=0){ out.innerHTML=""; return; }
+  const p=probOver(line, r.k); if(p===null){ out.innerHTML=""; return; }
+  const d=r.k-line;
+  const play = d>=0.7 ? `<span class="badge-play over">Over lean +${d.toFixed(1)}</span>`
+             : d<=-0.7 ? `<span class="badge-play under">Under lean ${d.toFixed(1)}</span>`
+             : `<span class="badge-play none">No play ${d>=0?"+":""}${d.toFixed(1)}</span>`;
+  let edge="";
+  const imp = isFinite(odds)&&odds!==0 ? impliedProb(odds) : null;
+  if(imp!==null) edge = ` · book implies ${(imp*100).toFixed(1)}% → <b class="${p>imp?"pos-text":"neg-text"}">${p>imp?"+":""}${((p-imp)*100).toFixed(1)}%</b>`;
+  out.innerHTML = `${play} <span class="kv">Model over ${(p*100).toFixed(1)}%</span> (fair ${fmtOdds(fairAmerican(p))})${edge}`;
 }
-function renderGame(g, ps, kv, leagueK, allGames, date){
-  LEAGUE_K=leagueK;
-  const a=g.teams.away, h=g.teams.home;
-  const pa=a.probablePitcher?ps[a.probablePitcher.id]:null;
-  const ph=h.probablePitcher?ps[h.probablePitcher.id]:null;
-  const time=new Date(g.gameDate).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
-  return `<div class="card match-card" id="kg-${g.gamePk}">
-    <div class="match-head matchup-title-center"><a class="matchup" href="${permanentMatchupUrl(g,allGames,date)}">${escapeHtml(a.team.name)} @ ${escapeHtml(h.team.name)}</a><span class="dim small">${time}</span></div>
-    <div class="k-grid">
-      ${kBox(pa, h.team.name, h.team.id, kv, a.probablePitcher?a.probablePitcher.id:0)}
-      ${kBox(ph, a.team.name, a.team.id, kv, h.probablePitcher?h.probablePitcher.id:0)}
-    </div>
-  </div>`;
+function syncMkt(uid,key,dp){
+  const r=ROWS.find(x=>x.uid===uid); const out=document.getElementById(`out-${key}-${uid}`); if(!r||!out) return;
+  const model=r[key]; const line=Number((document.getElementById(`ln-${key}-${uid}`)||{}).value);
+  const odds=Number((document.getElementById(`od-${key}-${uid}`)||{}).value);
+  if(model===null||!isFinite(line)||line<=0){ out.innerHTML=""; return; }
+  const p=probOver(line, model);
+  const imp = isFinite(odds)&&odds!==0 ? impliedProb(odds) : null;
+  out.innerHTML = `over <b>${(p*100).toFixed(0)}%</b> (fair ${fmtOdds(fairAmerican(p))})`
+    + (imp!==null?` · <b class="${p>imp?"pos-text":"neg-text"}">${p>imp?"+":""}${((p-imp)*100).toFixed(1)}%</b>`:"");
+}
+
+/* ---------- opposing lineup ----------
+   Posted batting order from the schedule feed, then one batched call for the
+   nine hitters' season lines. K% and ISO come straight from those totals. */
+async function loadLineup(r){
+  const box=document.getElementById("lu-"+r.uid), pill=document.getElementById("lupill-"+r.uid);
+  const oppSide = r.side==="away" ? "homePlayers" : "awayPlayers";
+  try{
+    let players = LU_CACHE[r.gamePk+oppSide];
+    if(!players){
+      const sc=await j(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&gamePk=${r.gamePk}&hydrate=lineups`);
+      const g=((((sc.dates||[])[0])||{}).games||[])[0]||{};
+      players=((g.lineups||{})[oppSide])||[];
+      LU_CACHE[r.gamePk+oppSide]=players;
+    }
+    if(!players.length){
+      pill.className="pill wait"; pill.textContent="not posted";
+      box.querySelector(".bd-note").textContent = `${r.oppTeam} have not posted a lineup yet. The projection uses the team's season strikeout rate against ${r.hand==="L"?"lefties":"righties"} instead.`;
+      return;
+    }
+    const ids=players.map(p=>p.id).join(",");
+    const data=await j(`https://statsapi.mlb.com/api/v1/people?personIds=${ids}&hydrate=stats(group=[hitting],type=[season],season=${seasonYear()})`);
+    const byId={}; for(const per of data.people||[]){
+      const st=((((per.stats||[])[0]||{}).splits||[])[0]||{}).stat||{};
+      const pa=Number(st.plateAppearances)||0, so=Number(st.strikeOuts)||0;
+      const avg=parseFloat(st.avg), slg=parseFloat(st.slg);
+      byId[per.id]={ k: pa?so/pa:null, iso: (isFinite(avg)&&isFinite(slg))?slg-avg:null, hr:Number(st.homeRuns)||0, pa };
+    }
+    const rowsHtml=players.map((pl,i)=>{
+      const s=byId[pl.id]||{};
+      const kc = s.k===null||s.k===undefined ? "" : s.k>=0.25 ? "k-hi" : s.k<=0.18 ? "k-lo" : "";
+      return `<tr><td>${i+1}.</td><td>${escapeHtml(pl.useName?pl.useName+" "+pl.lastName:pl.fullName)}</td>
+        <td class="${kc}">${s.k!==null&&s.k!==undefined?(s.k*100).toFixed(1)+"%":"—"}</td>
+        <td>${s.iso!==null&&s.iso!==undefined?s.iso.toFixed(3):"—"}</td>
+        <td>${s.hr??"—"}</td></tr>`;
+    }).join("");
+    pill.className="pill"; pill.textContent="posted";
+    box.innerHTML=`<div class="bd-head"><span class="bd-title">Opposing lineup</span><span class="pill">posted</span></div>
+      <table class="lu"><thead><tr><th>#</th><th>Batter</th><th>K%</th><th>ISO</th><th>HR</th></tr></thead><tbody>${rowsHtml}</tbody></table>
+      <div class="lu-legend"><span class="k-hi">Orange K%</span> = strikes out a lot, good for the over. <span class="k-lo">Blue K%</span> = contact bat, bad for the over. Barrel rate needs Statcast and is not wired up yet.</div>`;
+  }catch(e){
+    pill.className="pill wait"; pill.textContent="unavailable";
+    box.querySelector(".bd-note").textContent = `Lineup could not be loaded (${e.message}). The projection falls back to the team's season strikeout rate.`;
+  }
 }
 </script>
 </body>
