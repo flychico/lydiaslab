@@ -8,6 +8,7 @@
 const fs = require("fs");
 const path = require("path");
 const { buildBullpenSource } = require("./lib/bullpen-fatigue-core");
+const { calcLabRating, labRatingSentence, LAB_RATING_VERSION } = require("./lib/lab-rating-core");
 const PitcherCore = require("../js/pitcher-matchup-core.js");
 
 const ROOT = path.join(__dirname, "..");
@@ -147,11 +148,12 @@ async function main() {
     source_of_truth: "LyDia Daily Engine",
     current_official_model: "multi_market_v1",
     model_version: "moneyline-v2-plus-runs-v1",
+    lab_rating_version: LAB_RATING_VERSION,
     official_pick_rules: {
       minimum_model_probability: OFFICIAL_MODEL_PROB,
       minimum_lab_score: OFFICIAL_LAB_SCORE,
       minimum_market_edge: VALUE_EDGE,
-      note: "Lab Rating is setup quality. It is not win probability. Official picks require both strong win probability and strong setup quality."
+      note: "Lab Rating grades LyDia's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
     },
     summary: summarize(rows, Boolean(ODDS_API_KEY)),
     games: rows
@@ -614,7 +616,29 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
   const bullpenRead = bullpenLabel(pickBullpen, oppBullpen);
   const majorBullpenCaution = bullpenRead === "Adds caution" && pickBullpen && (pickBullpen.risk_index ?? pickBullpen.score) >= 60;
 
-  const lab = calcLabScore({ edge, pitchGap, pitchEdgeSupports: pitchEdgeTeam === pickTeam, pickBullpen, oppBullpen, hasMarket: !!m });
+  // Offense context is needed BY the rating, so it is computed before the call.
+  const pickOffCtx = offenseFormFor(pickHome ? hT.id : aT.id, null, offense);
+  const oppOffCtx = offenseFormFor(pickHome ? aT.id : hT.id, null, offense);
+
+  // Lab Rating v2 grades LyDia's analysis only. No market value is passed in:
+  // the sportsbook keeps veto power through the official-pick gate below, but
+  // it can no longer strengthen or weaken the analysis itself.
+  const lab = calcLabRating({
+    modelProb,
+    strengthProbPick: pickHome ? legacyPHome : 1 - legacyPHome,
+    runProbPick: Number.isFinite(runPHome) ? (pickHome ? runPHome : 1 - runPHome) : null,
+    pitchGap,
+    pitchEdgeSupports: pitchEdgeTeam === pickTeam,
+    pickPlan: pitchingPlan ? (pickHome ? pitchingPlan.home : pitchingPlan.away) : null,
+    oppPlan: pitchingPlan ? (pickHome ? pitchingPlan.away : pitchingPlan.home) : null,
+    pickBullpenRisk: pickBullpen ? (pickBullpen.risk_index ?? pickBullpen.score) : null,
+    oppBullpenRisk: oppBullpen ? (oppBullpen.risk_index ?? oppBullpen.score) : null,
+    pickDeltaOps: pickOffCtx && Number.isFinite(pickOffCtx.delta_ops) ? pickOffCtx.delta_ops : null,
+    oppDeltaOps: oppOffCtx && Number.isFinite(oppOffCtx.delta_ops) ? oppOffCtx.delta_ops : null,
+    hasTeamStrength: Boolean(sA && sH),
+    hasBothPitchers: Boolean(awayStats && homeStats),
+    hasRunProjection: Boolean(runProjection)
+  });
   const officialEligible = edge !== null
     && edge >= VALUE_EDGE
     && modelProb >= OFFICIAL_MODEL_PROB
@@ -630,8 +654,6 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
     ? passReasonFor({ edge, modelProb, pitchEdgeTeam, pickTeam, pitcherConflict, labScore: lab.score, market: m, majorBullpenCaution })
     : null;
 
-  const pickOffCtx = offenseFormFor(pickHome ? hT.id : aT.id, null, offense);
-  const oppOffCtx = offenseFormFor(pickHome ? aT.id : hT.id, null, offense);
   const preBullpenModelProb = Number.isFinite(runPHome)
     ? modelProb
     : (pickHome ? preBullpenHomeProb : 1 - preBullpenHomeProb);
@@ -761,30 +783,6 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
   };
 }
 
-function calcLabScore({ edge, pitchGap, pitchEdgeSupports, pickBullpen, oppBullpen, hasMarket }) {
-  const modelPts = edge === null ? 0 : clamp(edge / 0.08, 0, 1) * 35;
-  const pitcherPts = pitchEdgeSupports ? clamp(pitchGap / 20, 0, 1) * 25 : Math.max(0, 8 - clamp(pitchGap / 20, 0, 1) * 8);
-  let bullpenPts = 7;
-  if (pickBullpen && oppBullpen) {
-    const pickRisk = pickBullpen.risk_index ?? pickBullpen.score;
-    const oppRisk = oppBullpen.risk_index ?? oppBullpen.score;
-    bullpenPts = 8 + clamp((oppRisk - pickRisk) / 45, -1, 1) * 7;
-    if (pickRisk >= 78) bullpenPts -= 2;
-    if (pickRisk >= 78 && oppRisk >= 78) bullpenPts -= 1;
-  }
-  const marketPts = !hasMarket ? 0 : edge >= VALUE_EDGE ? 15 : edge >= 0 ? 10 : edge > -VALUE_EDGE ? 5 : 1;
-  const basePts = 5;
-  const score = Math.round(clamp(modelPts + pitcherPts + bullpenPts + marketPts + basePts, 0, 100));
-  return {
-    score,
-    model_edge_points: round(modelPts, 2),
-    pitcher_points: round(pitcherPts, 2),
-    bullpen_points: round(bullpenPts, 2),
-    market_points: round(marketPts, 2),
-    base_points: basePts,
-    note: "Lab Rating grades setup quality. It is not win probability."
-  };
-}
 
 // Both label functions read the combined risk index (fatigue blended with
 // efficiency), not raw fatigue — a tired-but-dominant pen shouldn't read as
@@ -859,7 +857,7 @@ function buildRead(ctx) {
     else if (diff >= 0.06) tail = " Recent form supports this side and is included in the unified run projection.";
     return ` Lineup check: ${w(ctx.pickTeam, p.delta_ops)}; ${w(ctx.oppTeam || "the opponent", o.delta_ops)}.${tail}`;
   })();
-  const labLine = `Lab Rating ${(ctx.lab.score/10).toFixed(1)}/10: model edge ${ctx.lab.model_edge_points}, pitcher ${ctx.lab.pitcher_points}, bullpen ${ctx.lab.bullpen_points}, market ${ctx.lab.market_points}, base ${ctx.lab.base_points}.`;
+  const labLine = labRatingSentence(ctx.lab);
   const pitchingPlanLine = (() => {
     if (!ctx.pitchingPlan) return "";
     const plans = [ctx.pitchingPlan.away, ctx.pitchingPlan.home].filter(Boolean);
