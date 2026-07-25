@@ -1310,18 +1310,18 @@ function renderStrikeoutProjections(game, pitcherGame, kprops) {
   const cells = rows.map(entry => {
     const prop = entry.prop;
     const hasLine = typeof prop.line === "number";
-    const lean = hasLine && typeof prop.projection === "number" ? prop.projection - prop.line : null;
-    const official = lean !== null && Math.abs(lean) >= 0.7 && prop.bullpen_game !== true && Number(prop.expected_innings) >= 4 && Number(prop.books) >= 2 && Number.isFinite(lean > 0 ? prop.over : prop.under);
+    const variance = hasLine && typeof prop.projection === "number" ? prop.projection - prop.line : null;
+    const official = variance !== null && Math.abs(variance) >= 0.7 && prop.bullpen_game !== true && Number(prop.expected_innings) >= 4 && Number(prop.books) >= 2 && Number.isFinite(variance > 0 ? prop.over : prop.under);
     let leanHtml = "";
-    if (lean !== null && Math.abs(lean) >= 0.7) {
-      leanHtml = `<div class="k-lean ${lean > 0 ? "over" : "under"}">${official ? "Official pick" : "LyDia leans"} ${lean > 0 ? "OVER" : "UNDER"} ${esc(oneDecimal(prop.line))}K by ${Math.abs(lean).toFixed(1)}</div>`;
-    } else if (lean !== null) {
-      leanHtml = `<div class="k-lean flat">Model and market agree</div>`;
+    if (variance !== null && Math.abs(variance) >= 0.7) {
+      leanHtml = `<div class="k-lean ${variance > 0 ? "over" : "under"}">${official ? "Official pick" : "Qualifying projection"}: ${variance > 0 ? "OVER" : "UNDER"} ${esc(oneDecimal(prop.line))}K &middot; ${esc(variance > 0 ? "+" : "")}${esc(variance.toFixed(1))}K difference</div>`;
+    } else if (variance !== null) {
+      leanHtml = `<div class="k-lean flat">No K play &middot; ${esc(variance > 0 ? "+" : "")}${esc(variance.toFixed(1))}K difference is below LyDia's 0.7K threshold</div>`;
     }
     const marketLine = hasLine
       ? `Market ${esc(oneDecimal(prop.line))}K &middot; O ${esc(odds(prop.over))} / U ${esc(odds(prop.under))} &middot; ${esc(prop.books)} book${prop.books === 1 ? "" : "s"}`
       : `No strikeout line posted when this page was generated`;
-    return `<div class="metric"><div class="label">${mlbPitcherLink(entry.pitcher)} strikeouts</div><div class="value">${esc(oneDecimal(prop.projection))} <span class="dim small">projected</span></div>${leanHtml}<div class="small dim">${marketLine}</div></div>`;
+    return `<div class="metric"><div class="label">${mlbPitcherLink(entry.pitcher)} strikeouts</div><div class="value">${esc(oneDecimal(prop.projection))} <span class="dim small">LyDia projected Ks</span></div>${leanHtml}<div class="small dim">${marketLine}</div></div>`;
   }).join("");
   return `<h3 style="margin:16px 0 4px">Strikeout projections <a class="tool-link" style="font-size:.78rem" href="/tools/strikeout-projections/">Full K board &rarr;</a></h3>
   <div class="metric-grid">${cells}</div>

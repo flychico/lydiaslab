@@ -167,7 +167,11 @@ async function main() {
             if (!pit || !pit.ip || pit.ip < 15 || !pit.bf) continue;
             const oppId = g.teams[sd === "away" ? "home" : "away"].team.id;
             const inferredRole = PitcherCore.classifyPitcherRole(pit);
-            const expIP = Number.isFinite(Number(candidate.expected_innings))
+            const hasAssignedInnings = candidate.expected_innings !== null
+              && candidate.expected_innings !== undefined
+              && candidate.expected_innings !== ""
+              && Number.isFinite(Number(candidate.expected_innings));
+            const expIP = hasAssignedInnings
               ? Number(candidate.expected_innings)
               : inferredRole.expectedInnings;
             const roleStats = candidate.role === "bulk" ? bulkRoleStats[Number(candidate.pitcher_id)] || null : null;
