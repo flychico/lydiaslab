@@ -5800,11 +5800,11 @@
     },
     "2026-07-26": {
       "date": "2026-07-26",
-      "wins": 0,
+      "wins": 2,
       "losses": 0,
-      "ungraded": 9,
+      "ungraded": 8,
       "voided": 0,
-      "units": null,
+      "units": 1.46,
       "source": "published-picks",
       "current_official_model": "multi_market_v1",
       "model_version": "multi-market-v1",
@@ -5824,11 +5824,11 @@
           "units": 0
         },
         "pitcher_strikeouts": {
-          "wins": 0,
+          "wins": 2,
           "losses": 0,
           "pushes": 0,
           "voids": 0,
-          "units": 0
+          "units": 1.46
         }
       },
       "picks": [
@@ -6629,7 +6629,43 @@
               "valueTag": "OFFICIAL PICK"
             }
           ],
-          "result": "NG",
+          "mlResult": "NG",
+          "totResult": "NG",
+          "kResults": [
+            {
+              "pitcher": "Parker Messick",
+              "pick": "Over",
+              "line": 4.5,
+              "bestAm": -123,
+              "projection": 5.44,
+              "edge": 0.94,
+              "books": 6,
+              "expectedInnings": 5.9,
+              "pitcherRole": "traditional_starter",
+              "modelVersion": "pitcher-strikeouts-self-calibrated-v1",
+              "valueTag": "OFFICIAL PICK",
+              "actual": 6,
+              "result": "W"
+            },
+            {
+              "pitcher": "Drew Rasmussen",
+              "pick": "Over",
+              "line": 4.5,
+              "bestAm": -155,
+              "projection": 5.82,
+              "edge": 1.32,
+              "books": 6,
+              "expectedInnings": 5.5,
+              "pitcherRole": "traditional_starter",
+              "modelVersion": "pitcher-strikeouts-self-calibrated-v1",
+              "valueTag": "OFFICIAL PICK",
+              "actual": 9,
+              "result": "W"
+            }
+          ],
+          "rlResult": "NG",
+          "finalAway": 0,
+          "finalHome": 1,
           "learning": {
             "model_version": "multi-market-v1",
             "official_model": "moneyline_only",
