@@ -206,7 +206,14 @@ function renderBrief(data) {
 
   const games = data.games || [];
   window.LYDIA_BRIEF_GAMES = games;
-  const official = games.filter(g => g.status === "official_pick");
+  // Official picks are counted from the published card, not from the moneyline
+  // status. A slate can carry an official total and several strikeout props
+  // while no moneyline qualifies — that is what showed "0" against a card of 5.
+  const officialCard = Array.isArray(data.official_card) ? data.official_card : null;
+  const officialPlays = officialCard ? flattenOfficialCard(officialCard) : [];
+  const official = officialCard
+    ? officialPlays
+    : games.filter(g => g.status === "official_pick");
   const valueWatch = games.filter(g => g.status === "value_watch");
   const watch = games.filter(g => (g.status === "watchlist" || g.lab_score >= 65) && g.status !== "official_pick" && g.status !== "value_watch");
   const passes = games.filter(g => g.status === "pass");
@@ -224,11 +231,60 @@ function renderBrief(data) {
     ${updated ? `<br><span class="small dim">Updated ${escapeHtml(updated)}</span>` : ""}
   </div>`;
 
-  officialEl.innerHTML = section("Official Picks", official, "No official picks cleared the stricter model-probability and Lab Rating gates for this slate.");
+  officialEl.innerHTML = officialCard
+    ? sectionOfficial(officialPlays)
+    : section("Official Picks", official, "No official pick cleared its market gate on this slate.");
   watchEl.innerHTML = section("Value Watch / Research Setups", valueWatch.concat(watch), "No extra games reached the research range.");
   passesEl.innerHTML = section("Pass / No Clear Setup", passes.slice(0, 12), "No pass notes available.");
 }
 
+/* One entry per official play, so a game with a total and two K props counts
+   as three picks rather than one game. */
+function flattenOfficialCard(card) {
+  const out = [];
+  for (const g of card) {
+    if (g.moneyline && g.moneyline.pick) out.push({ market: "Moneyline", g, ml: g.moneyline });
+    if (g.total && g.total.pick) out.push({ market: "Game total", g, total: g.total });
+    for (const k of g.strikeouts || []) out.push({ market: "Pitcher strikeouts", g, k });
+  }
+  return out;
+}
+function officialPlayCard(p) {
+  const g = p.g;
+  const box = (label, value) => `<div class="metric-box"><div class="label">${escapeHtml(label)}</div><div class="value">${escapeHtml(String(value))}</div></div>`;
+  let headline = "", boxes = "";
+  if (p.ml) {
+    headline = `${escapeHtml(p.ml.pick)} Money Line`;
+    boxes = box("Model probability", pct(p.ml.prob)) + box("Market probability", pct(p.ml.mkt_prob)) + box("Price", odds(p.ml.best_price));
+  } else if (p.total) {
+    headline = `${escapeHtml(p.total.pick)} ${escapeHtml(String(p.total.line))}`;
+    boxes = box("LyDia projection", p.total.projection) + box("Edge", (p.total.edge > 0 ? "+" : "") + p.total.edge + " runs") + box("Price", odds(p.total.best_price));
+  } else if (p.k) {
+    headline = `${escapeHtml(p.k.pitcher)} ${escapeHtml(p.k.pick)} ${escapeHtml(String(p.k.line))}K`;
+    boxes = box("LyDia projection", p.k.projection + "K") + box("Edge", (p.k.edge > 0 ? "+" : "") + p.k.edge + "K") + box("Price", odds(p.k.best_price));
+  }
+  return `<div class="card brief-card">
+    <div class="brief-head">
+      <span class="matchup">${escapeHtml(g.game || "")}</span>
+      <span class="dim small">${escapeHtml(friendlyTime(g.time) || "")}</span>
+    </div>
+    <div class="brief-line">
+      <span class="badge pos">${escapeHtml(p.market)}</span>
+      <strong>${headline}</strong>
+    </div>
+    <div class="metric-grid">${boxes}</div>
+  </div>`;
+}
+function sectionOfficial(plays) {
+  const head = `<h2 class="section-note">Official Picks</h2>`;
+  if (!plays.length) return head + `<div class="notice">No official pick cleared its market gate on this slate — moneyline, game total or pitcher strikeouts.</div>`;
+  const byMarket = {};
+  for (const p of plays) (byMarket[p.market] = byMarket[p.market] || []).push(p);
+  return head + Object.entries(byMarket).map(([market, items]) =>
+    `<p class="small dim" style="margin:10px 0 6px"><strong>${escapeHtml(market)}</strong> · ${items.length} official</p>`
+    + items.map(officialPlayCard).join("")
+  ).join("");
+}
 function section(title, items, empty) {
   return `<h2 class="section-note">${escapeHtml(title)}</h2>` +
     (items.length ? items.map(renderCard).join("") : `<div class="notice">${escapeHtml(empty)}</div>`);
