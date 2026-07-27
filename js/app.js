@@ -167,6 +167,56 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, function (c) { return map[c]; });
 }
 
+// ---------- Permanent matchup URLs ----------
+// Every Lab tool links its game headings to the permanent matchup page. The
+// function lived nowhere, so `permanentMatchupUrl is not defined` was thrown by
+// the Offense Matchup tool (caught, and the raw message shown to users) and by
+// the Pitcher Matchup tool (uncaught, leaving it stuck on "Loading…" forever).
+//
+// The slug must match scripts/generate-matchup-pages.js exactly:
+//   {away-short}-vs-{home-short}-prediction-odds-{date}
+// with split doubleheaders ordered by first pitch and game 2+ suffixed.
+function matchupShortTeam(name) {
+  const twoWord = ["Red Sox", "White Sox", "Blue Jays"];
+  const s = String(name || "").trim();
+  for (const t of twoWord) if (s.endsWith(t)) return t;
+  return s.split(" ").pop();
+}
+function matchupSlugify(v) {
+  return String(v).toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+function permanentMatchupUrl(game, allGames, date) {
+  // Never throw: a broken link is a nuisance, an exception takes the page down.
+  try {
+    const away = game.teams.away.team.name;
+    const home = game.teams.home.team.name;
+    const day = date || game.officialDate || String(game.gameDate || "").slice(0, 10);
+    if (!away || !home || !day) return "/mlb/matchups/";
+    const base = matchupSlugify(matchupShortTeam(away)) + "-vs-"
+      + matchupSlugify(matchupShortTeam(home)) + "-prediction-odds-" + day;
+
+    // Split doubleheaders share a slug, so schedule order decides the suffix.
+    let gameNumber = null;
+    if (Array.isArray(allGames) && allGames.length > 1) {
+      const key = g => matchupShortTeam(g.teams.away.team.name) + "|" + matchupShortTeam(g.teams.home.team.name);
+      const mine = key(game);
+      const sameMatchup = allGames.filter(function (g) {
+        return g && g.teams && g.teams.away && g.teams.home && key(g) === mine;
+      });
+      if (sameMatchup.length > 1) {
+        sameMatchup.sort(function (a, b) {
+          return String(a.gameDate || "").localeCompare(String(b.gameDate || ""));
+        });
+        const index = sameMatchup.findIndex(function (g) { return g.gamePk === game.gamePk; });
+        if (index >= 0) gameNumber = index + 1;
+      }
+    }
+    return "/mlb/" + base + (gameNumber && gameNumber > 1 ? "-game-" + gameNumber : "") + "/";
+  } catch (e) {
+    return "/mlb/matchups/";
+  }
+}
+
 // Fetch the public results record for trust badges on the homepage / membership page.
 // Returns null on any failure so callers can render a graceful fallback.
 async function fetchRecord() {
