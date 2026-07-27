@@ -39,6 +39,9 @@
 .feat-card:hover { border-color:rgba(109,93,252,.28); text-decoration:none; transform:translateY(-1px); }
 .feat-card .teams { font-weight:800; margin:6px 0 4px; }
 .feat-card .meta { color:var(--text-dim); font-size:.86rem; }
+.mkt-head { display:flex; align-items:baseline; gap:8px; margin:18px 0 8px; }
+.mkt-head h3 { margin:0; font-size:1rem; }
+.mkt-head .count { color:var(--text-dim); font-size:.82rem; }
 .lab-card { display:block; }
 .lab-card h3 { margin:0 0 4px; }
 .member-band { background:linear-gradient(135deg,rgba(109,93,252,.10),rgba(217,70,143,.08)); border:1px solid var(--border); border-radius:var(--radius); padding:26px; margin-top:16px; }
@@ -80,10 +83,10 @@
   </section>
 
   <div class="section-head">
-    <h2>Today's best picks</h2>
+    <h2>Today's official picks</h2>
     <a class="dim small" href="/previews/">Full card &rarr;</a>
   </div>
-  <div id="featured" class="feat-grid">
+  <div id="featured">
     <div class="dim small">Loading today's card…</div>
   </div>
 
@@ -142,24 +145,38 @@
   <p class="small dim" style="margin-top:26px">For entertainment and informational purposes. No outcome is guaranteed. 21+. If you or someone you know has a gambling problem, call 1-800-GAMBLER.</p>
 
 </main>
-<footer id="footer"></footer><script src="/js/app.js"></script>
+<footer id="footer"></footer>
+<script src="/js/app.js"></script>
 <script>
 renderNav("/"); renderFooter();
 
 function slugify(v){ return String(v).toLowerCase().replace(/&/g,"and").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,""); }
 function shortName(n){ const two=["Red Sox","White Sox","Blue Jays"]; for(const t of two) if(String(n).endsWith(t)) return t; return String(n).split(" ").pop(); }
 function isoToday(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+function fmtAm(v){ return v===null||v===undefined ? "" : (v>0?"+"+v:String(v)); }
 
 async function loadJson(u){ try{ const r=await fetch(`${u}?v=${Date.now()}`,{cache:"no-store"}); return r.ok?await r.json():null; }catch(e){ return null; } }
 
+/* Public record.
+
+   Counts every day the engine considers official, across every official market,
+   exactly the way the Results page does. Restricting this to `moneyline_only`
+   days is what made the homepage badge disagree with /results/: it silently
+   dropped every day graded under the multi-market model, so it showed only a
+   slice of the moneyline record and none of the totals or strikeout props. */
+const OFFICIAL_MODELS = ["moneyline_only", "multi_market_v1"];
 (async function record(){
   const res = await loadJson("/data/results.json");
   if(!res || !res.days) return;
-  let w=0,l=0,u=0;
+  let w=0,l=0,u=0,hasUnits=false;
   for(const d of Object.values(res.days)){
-    if(d.current_official_model!=="moneyline_only") continue;
-    for(const p of (d.picks||[])){ if(p.mlResult==="W")w++; else if(p.mlResult==="L")l++; }
-    if(typeof d.units==="number") u+=d.units;
+    if(!OFFICIAL_MODELS.includes(d.current_official_model)) continue;
+    if(d.market_records){
+      for(const r of Object.values(d.market_records)){ w += Number(r.wins)||0; l += Number(r.losses)||0; }
+    } else {
+      for(const p of (d.picks||[])){ if(p.mlResult==="W")w++; else if(p.mlResult==="L")l++; }
+    }
+    if(typeof d.units==="number"){ u+=d.units; hasUnits=true; }
   }
   const graded=w+l;
   const row=document.getElementById("trust-row");
@@ -168,31 +185,69 @@ async function loadJson(u){ try{ const r=await fetch(`${u}?v=${Date.now()}`,{cac
     row.innerHTML =
       `<span class="trust-badge"><strong>${w}-${l}</strong>&nbsp;official record</span>`+
       `<span class="trust-badge">${pct}% across ${graded} graded picks</span>`+
-      `<span class="trust-badge ${u>=0?"pos-text":"neg-text"}">${u>=0?"+":""}${u.toFixed(2)}u</span>`+
-      `<span class="trust-badge">Every pick graded in public</span>`;
+      (hasUnits?`<span class="trust-badge ${u>=0?"pos-text":"neg-text"}">${u>=0?"+":""}${u.toFixed(2)}u</span>`:"")+
+      `<span class="trust-badge">Moneyline, totals and strikeout props</span>`;
   }
 })();
 
+/* Today's official picks.
+
+   Reads the locked published-picks file, which is the same source the Results
+   page grades from, so the homepage cannot show a different card than the one
+   on the record. Every official market is surfaced — a day can easily have no
+   moneyline at all and still carry a total and several strikeout props. */
 (async function featured(){
   const el=document.getElementById("featured");
   const date=isoToday();
-  let data = await loadJson(`/data/member-brief/${date}.json`);
-  if(!data || !Array.isArray(data.games) || !data.games.length) data = await loadJson(`/data/member-brief/today.json`);
-  if(!data || !Array.isArray(data.games) || !data.games.length){ el.innerHTML=`<div class="dim small">No card published yet today. <a href="/previews/">See the latest card &rarr;</a></div>`; return; }
-  const rank={official_pick:0,value_watch:1,watchlist:2,pass:3};
-  const label={official_pick:"Official Pick",value_watch:"Value Watch",watchlist:"Watchlist",pass:"Pass"};
-  const cls={official_pick:"pos",value_watch:"neutral",watchlist:"neutral",pass:"neutral"};
-  const picks=[...data.games].sort((a,b)=>(rank[a.status]??9)-(rank[b.status]??9)).slice(0,6);
-  const d=data.date||date;
-  el.innerHTML = picks.map(g=>{
-    const url = "/mlb/"+slugify(shortName(g.away_team))+"-vs-"+slugify(shortName(g.home_team))+"-prediction-odds-"+d+"/";
-    const prob = typeof g.model_probability==="number" ? (g.model_probability*100).toFixed(0)+"% "+shortName(g.pick_team||"") : "";
-    return `<a class="feat-card" href="${url}">
-      <span class="badge ${cls[g.status]||"neutral"}">${label[g.status]||"Pass"}</span>
-      <div class="teams">${shortName(g.away_team)} @ ${shortName(g.home_team)}</div>
-      <div class="meta">${prob||"Model read inside"}</div>
-    </a>`;
-  }).join("");
+  const data = await loadJson(`/data/published-picks/${date}.json`);
+  const picks = data && Array.isArray(data.picks) ? data.picks : null;
+  if(!picks || !picks.length){
+    el.innerHTML=`<div class="dim small">No card published yet today. <a href="/previews/">See the latest card &rarr;</a></div>`;
+    return;
+  }
+
+  const url = g => "/mlb/"+slugify(shortName(g.away))+"-vs-"+slugify(shortName(g.home))+"-prediction-odds-"+(data.date||date)+"/";
+  const ml=[], tot=[], ks=[];
+  for(const g of picks){
+    const matchup = `${shortName(g.away)} @ ${shortName(g.home)}`;
+    if(g.moneyline && g.moneyline.pick && !g.moneyline.isPass){
+      const prob = typeof g.moneyline.prob==="number" ? `${(g.moneyline.prob*100).toFixed(0)}% ` : "";
+      ml.push({ url:url(g), matchup, line:`${shortName(g.moneyline.pick)} ML`, meta:`${prob}${fmtAm(g.moneyline.bestAm)}` });
+    }
+    if(g.total && g.total.pick){
+      tot.push({ url:url(g), matchup, line:`${g.total.pick} ${g.total.line}`, meta:`${fmtAm(g.total.bestAm)}${typeof g.total.edge==="number"?` · ${g.total.edge>0?"+":""}${g.total.edge.toFixed(1)} run edge`:""}` });
+    }
+    for(const k of (g.strikeouts||[])){
+      ks.push({ url:url(g), matchup, line:`${k.pitcher} ${k.pick} ${k.line}K`, meta:`${fmtAm(k.bestAm)}${typeof k.edge==="number"?` · ${k.edge>0?"+":""}${k.edge.toFixed(1)}K edge`:""}` });
+    }
+  }
+
+  const total = ml.length+tot.length+ks.length;
+  if(!total){
+    el.innerHTML=`<div class="dim small">No official picks on today's card — LyDia passed the slate. <a href="/previews/">See the full card and the pass reasons &rarr;</a></div>`;
+    return;
+  }
+
+  const CAP=4;
+  const section=(title,arr,badge)=>{
+    if(!arr.length) return "";
+    const shown=arr.slice(0,CAP);
+    const more=arr.length-shown.length;
+    return `<div class="mkt-head"><h3>${title}</h3><span class="count">${arr.length} official</span></div>`
+      + `<div class="feat-grid">`
+      + shown.map(p=>`<a class="feat-card" href="${p.url}">
+          <span class="badge pos">${badge}</span>
+          <div class="teams">${p.line}</div>
+          <div class="meta">${p.matchup}${p.meta?" · "+p.meta:""}</div>
+        </a>`).join("")
+      + `</div>`
+      + (more?`<p class="small dim" style="margin-top:6px"><a href="/previews/">+${more} more ${title.toLowerCase()} on the full card &rarr;</a></p>`:"");
+  };
+
+  el.innerHTML = section("Moneyline", ml, "Official Pick")
+    + section("Totals", tot, "Official Total")
+    + section("Strikeout props", ks, "Official K Pick")
+    + `<p class="small dim" style="margin-top:14px">${total} official pick${total===1?"":"s"} on today's card across ${[ml.length&&"moneyline",tot.length&&"totals",ks.length&&"strikeout props"].filter(Boolean).join(", ")}. Every one is graded in public on the <a href="/results/">Results page</a>.</p>`;
 })();
 </script>
 </body>

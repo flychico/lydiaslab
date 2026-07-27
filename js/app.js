@@ -64,21 +64,34 @@ const ApiKey = {
 };
 
 // ---------- Nav ----------
+// Tab order is deliberate: Scoreboard, Picks, Pitchers, Lab, Stats, Results,
+// Recaps. There is no Home tab — the LyDia wordmark is the route home. Picks
+// points at /previews/, the unified picks product; /picks/ redirects there and
+// is still matched for the active state so older pages highlight correctly.
 function renderNav(active) {
   const links = [
-    ["/", "Home"],
     ["/dashboard/", "Scoreboard"],
     ["/previews/", "Picks"],
-    ["/results/", "Results"],
+    ["/tools/strikeout-projections/", "Pitchers"],
     ["/tools/", "Lab"],
     ["/stats/", "Stats"],
-    ["/recaps/", "Recap"],
-    ["/articles/", "Articles"]
+    ["/results/", "Results"],
+    ["/recaps/", "Recaps"]
   ];
+  // A page may report an old or more specific path than the tab it belongs to.
+  const ALIASES = {
+    "/picks/": "/previews/",
+    "/articles/": null,
+    "/": null
+  };
+  const current = Object.prototype.hasOwnProperty.call(ALIASES, active) ? ALIASES[active] : active;
+  const isActive = href => href === current
+    || (href === "/tools/strikeout-projections/" && current === "/tools/strikeout-projections/");
+
   const el = document.getElementById("nav");
   if (!el) return;
   el.innerHTML = '<div class="nav-inner">'
-    + '<a class="brand" href="/"><span class="brand-ly">Ly</span><span class="brand-dia">Dia</span></a>'
+    + '<a class="brand" href="/" aria-label="LyDia home"><span class="brand-ly">Ly</span><span class="brand-dia">Dia</span></a>'
     + links.map(function (l) {
         if (l[0] === "/tools/") {
           var tools = [
@@ -89,15 +102,15 @@ function renderNav(active) {
             ["/tools/strikeout-projections/", "Strikeout Projections"],
             ["/tools/totals-projections/", "Totals Projections"]
           ];
-          return '<span class="nav-drop' + (active === "/tools/" ? ' active-wrap' : '') + '">'
-            + '<a class="navlink nav-drop-toggle' + (active === "/tools/" ? ' active' : '') + '" href="/tools/">Lab ▾</a>'
+          return '<span class="nav-drop' + (current === "/tools/" ? ' active-wrap' : '') + '">'
+            + '<a class="navlink nav-drop-toggle' + (current === "/tools/" ? ' active' : '') + '" href="/tools/">Lab ▾</a>'
             + '<span class="nav-drop-menu">'
             + tools.map(function (t) { return '<a href="' + t[0] + '">' + t[1] + '</a>'; }).join("")
             + '</span></span>';
         }
-        return '<a class="navlink' + (l[0] === active ? ' active' : '') + '" href="' + l[0] + '">' + l[1] + '</a>';
+        return '<a class="navlink' + (isActive(l[0]) ? ' active' : '') + '" href="' + l[0] + '">' + l[1] + '</a>';
       }).join("")
-    + '<a class="navlink navlink-cta' + (active === "/membership/" ? ' active' : '') + '" href="/membership/">Join $30/mo</a>'
+    + '<a class="navlink navlink-cta' + (current === "/membership/" ? ' active' : '') + '" href="/membership/">Join $30/mo</a>'
     + '</div>';
 
   // Mobile/touch: first tap on "Lab ▾" opens the menu instead of navigating;
@@ -142,7 +155,7 @@ function renderFooter() {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({ "form-name": "free-preview", email: email }).toString()
       });
-      form.outerHTML = '<div class="small" style="color:#2f9e44;font-weight:600">You\u2019re on the list — first card arrives tomorrow morning. \u26be</div>';
+      form.outerHTML = '<div class="small" style="color:#2f9e44;font-weight:600">You’re on the list — first card arrives tomorrow morning. ⚾</div>';
     } catch (err) {
       form.outerHTML = '<div class="small dim">Signup hiccup — try the form on the homepage.</div>';
     }
@@ -237,34 +250,3 @@ async function gameWeather(homeTeam, gameIso) {
     };
   } catch (e) { return null; }
 }
-// Permanent matchup-page URL shared by every scoreboard and analysis tool.
-// Schedule order owns doubleheader numbering so Game 1 and Game 2 never share
-// or swap URLs.
-window.permanentMatchupUrl = function (game, allGames, date) {
-  const short = {
-    "Arizona Diamondbacks":"Diamondbacks","Athletics":"Athletics","Atlanta Braves":"Braves",
-    "Baltimore Orioles":"Orioles","Boston Red Sox":"Red Sox","Chicago Cubs":"Cubs",
-    "Chicago White Sox":"White Sox","Cincinnati Reds":"Reds","Cleveland Guardians":"Guardians",
-    "Colorado Rockies":"Rockies","Detroit Tigers":"Tigers","Houston Astros":"Astros",
-    "Kansas City Royals":"Royals","Los Angeles Angels":"Angels","Los Angeles Dodgers":"Dodgers",
-    "Miami Marlins":"Marlins","Milwaukee Brewers":"Brewers","Minnesota Twins":"Twins",
-    "New York Mets":"Mets","New York Yankees":"Yankees","Philadelphia Phillies":"Phillies",
-    "Pittsburgh Pirates":"Pirates","San Diego Padres":"Padres","San Francisco Giants":"Giants",
-    "Seattle Mariners":"Mariners","St. Louis Cardinals":"Cardinals","Tampa Bay Rays":"Rays",
-    "Texas Rangers":"Rangers","Toronto Blue Jays":"Blue Jays","Washington Nationals":"Nationals"
-  };
-  const team = (value, side) => value && value.teams && value.teams[side]
-    ? value.teams[side].team.name
-    : value && (value[side + "_team"] || value[side]);
-  const pk = value => String(value && (value.gamePk || value.game_pk || value.pk || value.id) || "");
-  const when = value => String(value && (value.gameDate || value.game_time_iso || value.commence_time || value.time) || "");
-  const slug = value => String(value || "").toLowerCase().replace(/&/g,"and").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
-  const away = team(game, "away");
-  const home = team(game, "home");
-  let url = `/mlb/${slug(short[away] || away)}-vs-${slug(short[home] || home)}-prediction-odds-${date}/`;
-  const same = (allGames || []).filter(candidate => team(candidate,"away") === away && team(candidate,"home") === home)
-    .sort((a,b) => when(a).localeCompare(when(b)));
-  const number = same.findIndex(candidate => pk(candidate) === pk(game)) + 1;
-  if (number > 1) url = url.slice(0,-1) + `-game-${number}/`;
-  return url;
-};

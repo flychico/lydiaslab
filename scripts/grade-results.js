@@ -289,28 +289,54 @@ async function gradeDay() {
   };
 }
 
+/*
+  Lifetime market totals.
+
+  Days graded before `market_records` existed carry per-pick moneyline results
+  and prices but no market summary. Those days must contribute BOTH the record
+  and the units. Counting only the record is what made the market cards
+  disagree with the official total: the moneyline card read -1.60u while the
+  three cards summed to -1.97u against an official total of +0.47u.
+*/
+function accumulateLifetimeMarkets(officialDays) {
+  const lifetime = {
+    moneyline: { wins: 0, losses: 0, pushes: 0, voids: 0, units: 0 },
+    game_total: { wins: 0, losses: 0, pushes: 0, voids: 0, units: 0 },
+    pitcher_strikeouts: { wins: 0, losses: 0, pushes: 0, voids: 0, units: 0 }
+  };
+
+  for (const d of officialDays) {
+    if (d.market_records) {
+      for (const key of Object.keys(lifetime)) {
+        const rec = d.market_records[key] || {};
+        for (const field of ["wins", "losses", "pushes", "voids", "units"]) {
+          lifetime[key][field] += Number(rec[field]) || 0;
+        }
+      }
+      continue;
+    }
+    // Legacy day: reconstruct the moneyline record AND its units from the picks.
+    for (const p of d.picks || []) {
+      const am = p.moneyline && Number.isFinite(p.moneyline.bestAm) ? p.moneyline.bestAm : null;
+      if (p.mlResult === "W") {
+        lifetime.moneyline.wins++;
+        if (am !== null) lifetime.moneyline.units += amToDec(am) - 1;
+      } else if (p.mlResult === "L") {
+        lifetime.moneyline.losses++;
+        if (am !== null) lifetime.moneyline.units -= 1;
+      }
+    }
+  }
+  return lifetime;
+}
+
 function rebuildResultsPage(results) {
   const days = Object.values(results.days).sort((a, b) => b.date.localeCompare(a.date));
   const officialDays = days.filter(d => ["moneyline_only", "multi_market_v1"].includes(d.current_official_model));
 
   let OW = 0, OL = 0, OU = 0, hasOfficialUnits = false;
-  const lifetimeMarkets = {
-    moneyline: { wins: 0, losses: 0, pushes: 0, voids: 0, units: 0 },
-    game_total: { wins: 0, losses: 0, pushes: 0, voids: 0, units: 0 },
-    pitcher_strikeouts: { wins: 0, losses: 0, pushes: 0, voids: 0, units: 0 }
-  };
+  const lifetimeMarkets = accumulateLifetimeMarkets(officialDays);
   for (const d of officialDays) {
-    if (d.market_records) {
-      for (const key of Object.keys(lifetimeMarkets)) {
-        const rec = d.market_records[key] || {};
-        for (const field of ["wins", "losses", "pushes", "voids", "units"]) lifetimeMarkets[key][field] += Number(rec[field]) || 0;
-      }
-    } else {
-      for (const p of d.picks || []) {
-        if (p.mlResult === "W") lifetimeMarkets.moneyline.wins++;
-        else if (p.mlResult === "L") lifetimeMarkets.moneyline.losses++;
-      }
-    }
     if (d.units !== null && Number.isFinite(d.units)) {
       OU += d.units;
       hasOfficialUnits = true;
@@ -319,6 +345,20 @@ function rebuildResultsPage(results) {
   for (const rec of Object.values(lifetimeMarkets)) { OW += rec.wins; OL += rec.losses; }
   const gradedOfficial = OW + OL;
   const oPct = gradedOfficial ? (OW / gradedOfficial * 100).toFixed(1) : "—";
+
+  // Guard: the three market cards must sum to the headline units figure. If they
+  // ever diverge again, fail loudly at build time rather than publish two
+  // numbers that contradict each other.
+  const marketUnitsTotal = Object.values(lifetimeMarkets).reduce((n, r) => n + r.units, 0);
+  if (hasOfficialUnits && Math.abs(marketUnitsTotal - OU) > 0.02) {
+    console.warn(
+      `UNITS RECONCILIATION FAILED: market cards sum to ${marketUnitsTotal.toFixed(2)}u ` +
+      `but official units is ${OU.toFixed(2)}u (gap ${(marketUnitsTotal - OU).toFixed(2)}u). ` +
+      `A market is being counted for its record but not its units, or a day's units disagree with its own picks.`
+    );
+  } else {
+    console.log(`Units reconcile: markets ${marketUnitsTotal.toFixed(2)}u = official ${OU.toFixed(2)}u`);
+  }
 
   const pickLine = p => {
     const lines = [];
@@ -375,7 +415,7 @@ function rebuildResultsPage(results) {
   <div class="card"><div class="dim small">DAYS TRACKED</div><div style="font-size:1.6rem;font-weight:700">${days.length}</div><div class="dim small">since public tracking began</div></div>
 </div>
 <div class="notice" style="margin-bottom:20px">
-  <strong>Public record scope:</strong> The combined record includes only dated, locked official picks. Market records remain separate so a strong K-prop run cannot hide weak totals, or vice versa.
+  <strong>Public record scope:</strong> The combined record includes only dated, locked official picks. Market records remain separate so a strong K-prop run cannot hide weak totals, or vice versa. The three market cards below add up to the official record and units above.
 </div>
 <div class="kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:24px">
   ${Object.entries(lifetimeMarkets).map(([key, r]) => `<div class="card"><div class="dim small">${esc(key.replace(/_/g, " ").toUpperCase())}</div><div style="font-size:1.35rem;font-weight:700">${r.wins}-${r.losses}</div><div class="dim small">${r.pushes} push · ${r.voids} void · ${(r.units > 0 ? "+" : "") + r.units.toFixed(2)}u</div></div>`).join("")}
@@ -423,4 +463,8 @@ async function main() {
   console.log("results/index.html rebuilt");
 }
 
-main().catch(e => { console.error(e); process.exit(1); });
+module.exports = { accumulateLifetimeMarkets, amToDec };
+
+if (require.main === module) {
+  main().catch(e => { console.error(e); process.exit(1); });
+}
