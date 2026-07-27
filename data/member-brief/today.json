@@ -1,6 +1,6 @@
 {
   "date": "2026-07-27",
-  "generated_at": "2026-07-27T17:43:03.663Z",
+  "generated_at": "2026-07-27T17:56:20.254Z",
   "snapshot_type": "posted",
   "source_of_truth": "LyDia Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -48,42 +48,44 @@
       "home_l10": "6-4",
       "pick_team": "Washington Nationals",
       "side": "home",
-      "model_probability": 0.8293,
+      "model_probability": 0.825,
       "model_source": "moneyline-v2-plus-runs-v1",
       "projected_runs": {
         "away": 3.1,
-        "home": 7.2,
+        "home": 7.1,
         "total": 10.1
       },
       "pitching_plan": {
         "away": {
-          "type": "starter_bullpen",
-          "confidence": "high",
-          "reported": false,
+          "team": "Toronto Blue Jays",
+          "type": "opener_bullpen",
+          "confidence": "manual",
+          "source_note": "Manual pitching update: Max Scherzer 3.1 IP, bullpen 5.9 IP.",
           "segments": [
             {
-              "role": "starter",
+              "role": "opener",
               "pitcher_id": 453286,
               "pitcher": "Max Scherzer",
-              "expected_innings": 3.6666666666666665,
+              "expected_innings": 3.1,
               "fip_lite": 5.44,
               "pitcher_score": 35,
               "role_stats": null
             },
             {
               "role": "bullpen",
-              "expected_innings": 5.333333333333334
+              "expected_innings": 5.9
             }
           ],
-          "expected_innings": 3.7,
-          "bullpen_innings": 5.3,
-          "effective_era": 5.13,
+          "reported": true,
+          "expected_innings": 3.1,
+          "bullpen_innings": 5.9,
+          "effective_era": 5.09,
           "pitcher_score": 35,
-          "description": "Max Scherzer 3.7 IP + remaining bullpen 5.3 IP",
+          "description": "Max Scherzer 3.1 IP + remaining bullpen 5.9 IP",
           "pitcher": "Max Scherzer",
           "role": "limited_starter",
           "label": "Limited starter",
-          "bullpen_game": false
+          "bullpen_game": true
         },
         "home": {
           "team": "Washington Nationals",
@@ -137,11 +139,11 @@
         }
       },
       "bullpen_game": true,
-      "legacy_strength_probability": 0.7215,
-      "run_model_probability": 0.901,
+      "legacy_strength_probability": 0.7199,
+      "run_model_probability": 0.8964,
       "run_model_weight": 0.5,
       "model_probability_pre_bullpen": null,
-      "edge": 0.2998,
+      "edge": 0.2955,
       "status": "watchlist",
       "value_tag": "WATCHLIST",
       "lab_score": 72,
@@ -156,7 +158,7 @@
         "completeness_points": 5,
         "pitcher_edge_points": 14,
         "plan_completeness_points": 6,
-        "model_agreement_gap": 0.1796,
+        "model_agreement_gap": 0.1765,
         "bullpen_innings_weight": 0.63,
         "assigned_bullpen_innings": 2.5,
         "offense_delta": 0.22,
@@ -176,7 +178,7 @@
         "edge_passed": true
       },
       "pass_reason": null,
-      "read": "Washington Nationals remains on the watchlist. Lab Rating 7.2/10: conviction 30, model agreement 0, pitching plan 20, bullpen 6.88, offense 10, data completeness 5. LyDia projects 82.9% against a 52.9% no-vig market number, a 30.0% model edge at -117. Washington Nationals owns the starting pitcher edge by 21 points. Bullpen read: Elevated volatility. Washington Nationals's pen efficiency: Average (4.9/10). Pitching plan: Max Scherzer 3.7 IP + remaining bullpen 5.3 IP; Eddy Yean 1.5 IP + Andrew Alvarez 5.0 IP + remaining bullpen 2.5 IP. Bullpen fatigue, efficiency, and combined risk grade only the innings assigned to the bullpen. Lineup check: Washington Nationals is swinging a hot bat (+0.156 OPS); Toronto Blue Jays is in a cold stretch (-0.064 OPS). Recent form supports this side and is included in the unified run projection.",
+      "read": "Washington Nationals remains on the watchlist. Lab Rating 7.2/10: conviction 30, model agreement 0, pitching plan 20, bullpen 6.88, offense 10, data completeness 5. LyDia projects 82.5% against a 52.9% no-vig market number, a 29.6% model edge at -117. Washington Nationals owns the starting pitcher edge by 21 points. Bullpen read: Elevated volatility. Washington Nationals's pen efficiency: Average (4.9/10). Pitching plan: Max Scherzer 3.1 IP + remaining bullpen 5.9 IP; Eddy Yean 1.5 IP + Andrew Alvarez 5.0 IP + remaining bullpen 2.5 IP. Bullpen fatigue, efficiency, and combined risk grade only the innings assigned to the bullpen. Lineup check: Washington Nationals is swinging a hot bat (+0.156 OPS); Toronto Blue Jays is in a cold stretch (-0.064 OPS). Recent form supports this side and is included in the unified run projection.",
       "pitcher_edge": {
         "team": "Washington Nationals",
         "gap": 21,
@@ -187,23 +189,11 @@
         "home_pitcher": "Eddy Yean",
         "away_pitcher_id": 453286,
         "home_pitcher_id": 678868,
-        "away_era": 10.23,
+        "away_era": null,
         "home_era": null,
-        "away_whip": 1.73,
+        "away_whip": null,
         "home_whip": null,
-        "away_advanced": {
-          "w": 1,
-          "l": 4,
-          "kbb_pct": 0.0294,
-          "gb_pct": 0.3265,
-          "babip": 0.2687,
-          "hr9": 3.68,
-          "ip_per_start": 3.7,
-          "role": "limited_starter",
-          "role_label": "Limited starter",
-          "expected_innings": 3.7,
-          "bullpen_innings": 5.3
-        },
+        "away_advanced": null,
         "home_advanced": null
       },
       "offense_form": {
@@ -232,7 +222,7 @@
         "off_adj": 0.1312,
         "bp_adj": -0.018,
         "version": "v3.1-bullpen",
-        "p_home_v2": 0.8293,
+        "p_home_v2": 0.825,
         "note": "shadow A/B — does not drive picks"
       },
       "bullpen": {

@@ -1,6 +1,6 @@
 {
   "date": "2026-07-27",
-  "generated_at": "2026-07-27T17:43:07.258Z",
+  "generated_at": "2026-07-27T17:56:25.047Z",
   "source_of_truth": "LyDia Pitcher Matchup Tool",
   "source_version": "pitcher-matchup-core-v2-role-aware",
   "method": "Role-aware pitcher model using starter-only game logs. Traditional starters, limited starters, openers, and unknown roles receive workload-appropriate innings; the remainder belongs to the bullpen.",
@@ -589,7 +589,7 @@
         "rawScore": 27,
         "score": 35,
         "grade": "Weak",
-        "note": "Starter-only usage is 3.7 innings per start; bullpen exposure is elevated.",
+        "note": "Max Scherzer is the reported opener; see the full pitching plan below.",
         "role": {
           "key": "limited_starter",
           "label": "Limited starter",
@@ -602,12 +602,12 @@
           "starterGames": 6,
           "reason": "Starter-only usage is 3.7 innings per start; bullpen exposure is elevated."
         },
-        "roleKey": "limited_starter",
-        "roleLabel": "Limited starter",
-        "expectedInnings": 3.6666666666666665,
-        "bullpenInnings": 5.333333333333334,
-        "roleConfidence": "high",
-        "bullpenGame": false,
+        "roleKey": "opener",
+        "roleLabel": "Reported opener",
+        "expectedInnings": 3.1,
+        "bullpenInnings": 5.9,
+        "roleConfidence": "manual",
+        "bullpenGame": true,
         "k9": 5.7272727272727275,
         "bb9": 4.5,
         "kbbPct": 0.029411764705882353,
@@ -671,6 +671,10 @@
       "bullpen_game": true,
       "pitching_plan_confidence": "manual",
       "schedule_probable": {
+        "away": {
+          "id": 453286,
+          "name": "Max Scherzer"
+        },
         "home": {
           "id": 678868,
           "name": "Eddy Yean"
@@ -679,6 +683,52 @@
       "away_plan_score": 35,
       "home_plan_score": 56,
       "pitching_plan": {
+        "away": {
+          "team": "Toronto Blue Jays",
+          "type": "opener_bullpen",
+          "confidence": "manual",
+          "source_note": "Manual pitching update: Max Scherzer 3.1 IP, bullpen 5.9 IP.",
+          "segments": [
+            {
+              "role": "opener",
+              "pitcher_id": 453286,
+              "pitcher": "Max Scherzer",
+              "expected_innings": 3.1,
+              "stats": {
+                "id": 453286,
+                "name": "Max Scherzer",
+                "hand": "R",
+                "era": 10.23,
+                "whip": 1.73,
+                "ip": 22,
+                "so": 14,
+                "bb": 11,
+                "hr": 9,
+                "gs": 6,
+                "gp": 6,
+                "w": 1,
+                "l": 4,
+                "bf": 102,
+                "go": 16,
+                "ao": 33,
+                "h": 27,
+                "ab": 89,
+                "sf": 1,
+                "starterIp": 22,
+                "starterGames": 6
+              },
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 5.9,
+              "stats": null,
+              "role_stats": null
+            }
+          ],
+          "reported": true,
+          "description": "Max Scherzer 3.1 IP + remaining bullpen 5.9 IP"
+        },
         "home": {
           "team": "Washington Nationals",
           "type": "opener_bulk",

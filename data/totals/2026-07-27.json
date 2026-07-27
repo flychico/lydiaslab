@@ -1,6 +1,6 @@
 {
  "date": "2026-07-27",
- "generated_at": "2026-07-27T17:43:03.437Z",
+ "generated_at": "2026-07-27T17:56:19.998Z",
  "model_version": "totals-runs-v3-pitching-plan",
  "policy": {
   "version": "totals-policy-v3-official",
@@ -63,7 +63,7 @@
    "home": "Jack Perkins"
   }
  },
- "pitching_plan_signature": "{\"822705\":{\"game\":\"Toronto Blue Jays @ Washington Nationals\",\"home\":{\"team\":\"Washington Nationals\",\"type\":\"opener_bulk\",\"confidence\":\"manual\",\"source_note\":\"Manual pitching update: Eddy Yean 1.5 IP, Andrew Alvarez 5 IP, bullpen 2.5 IP.\",\"segments\":[{\"role\":\"opener\",\"pitcher_id\":678868,\"pitcher\":\"Eddy Yean\",\"expected_innings\":1.5},{\"role\":\"bulk\",\"pitcher_id\":674841,\"pitcher\":\"Andrew Alvarez\",\"expected_innings\":5},{\"role\":\"bullpen\",\"expected_innings\":2.5}]}}}",
+ "pitching_plan_signature": "{\"822705\":{\"game\":\"Toronto Blue Jays @ Washington Nationals\",\"home\":{\"team\":\"Washington Nationals\",\"type\":\"opener_bulk\",\"confidence\":\"manual\",\"source_note\":\"Manual pitching update: Eddy Yean 1.5 IP, Andrew Alvarez 5 IP, bullpen 2.5 IP.\",\"segments\":[{\"role\":\"opener\",\"pitcher_id\":678868,\"pitcher\":\"Eddy Yean\",\"expected_innings\":1.5},{\"role\":\"bulk\",\"pitcher_id\":674841,\"pitcher\":\"Andrew Alvarez\",\"expected_innings\":5},{\"role\":\"bullpen\",\"expected_innings\":2.5}]},\"away\":{\"team\":\"Toronto Blue Jays\",\"type\":\"opener_bullpen\",\"confidence\":\"manual\",\"source_note\":\"Manual pitching update: Max Scherzer 3.1 IP, bullpen 5.9 IP.\",\"segments\":[{\"role\":\"opener\",\"pitcher_id\":453286,\"pitcher\":\"Max Scherzer\",\"expected_innings\":3.1},{\"role\":\"bullpen\",\"expected_innings\":5.9}]}}}",
  "games": {
   "822705": {
    "game": "Toronto Blue Jays @ Washington Nationals",
@@ -71,7 +71,7 @@
    "projection": 10.1,
    "projection_raw": 10.3,
    "proj_away": 3.1,
-   "proj_home": 7.2,
+   "proj_home": 7.1,
    "away": {
     "team": "Toronto Blue Jays",
     "rpg": 3.43,
@@ -156,39 +156,41 @@
     "off_factor": 1.327,
     "opp_sp": "Max Scherzer",
     "opp_sp_fip": 5.44,
-    "opp_sp_ip": 3.7,
+    "opp_sp_ip": 3.1,
     "opp_pitcher_role": "limited_starter",
     "opp_pitcher_role_label": "Limited starter",
-    "opp_pitcher_role_confidence": "high",
-    "opp_bullpen_game": false,
-    "opp_bullpen_ip": 5.3,
+    "opp_pitcher_role_confidence": "manual",
+    "opp_bullpen_game": true,
+    "opp_bullpen_ip": 5.9,
     "opp_pitcher_role_reason": "Starter-only usage is 3.7 innings per start; bullpen exposure is elevated.",
     "pitching_plan": {
-     "type": "starter_bullpen",
-     "confidence": "high",
-     "reported": false,
+     "team": "Toronto Blue Jays",
+     "type": "opener_bullpen",
+     "confidence": "manual",
+     "source_note": "Manual pitching update: Max Scherzer 3.1 IP, bullpen 5.9 IP.",
      "segments": [
       {
-       "role": "starter",
+       "role": "opener",
        "pitcher_id": 453286,
        "pitcher": "Max Scherzer",
-       "expected_innings": 3.6666666666666665,
+       "expected_innings": 3.1,
        "fip_lite": 5.44,
        "pitcher_score": 35,
        "role_stats": null
       },
       {
        "role": "bullpen",
-       "expected_innings": 5.333333333333334
+       "expected_innings": 5.9
       }
      ],
-     "expected_innings": 3.7,
-     "bullpen_innings": 5.3,
-     "effective_era": 5.13,
+     "reported": true,
+     "expected_innings": 3.1,
+     "bullpen_innings": 5.9,
+     "effective_era": 5.09,
      "pitcher_score": 35,
-     "description": "Max Scherzer 3.7 IP + remaining bullpen 5.3 IP"
+     "description": "Max Scherzer 3.1 IP + remaining bullpen 5.9 IP"
     },
-    "pitch_factor": 1.221,
+    "pitch_factor": 1.213,
     "opp_pen_risk": 67,
     "opp_pen_fatigue": 44,
     "opp_pen_efficiency": 5,
@@ -202,33 +204,35 @@
    "home_sp": "Eddy Yean",
    "pitching_plan": {
     "away": {
-     "type": "starter_bullpen",
-     "confidence": "high",
-     "reported": false,
+     "team": "Toronto Blue Jays",
+     "type": "opener_bullpen",
+     "confidence": "manual",
+     "source_note": "Manual pitching update: Max Scherzer 3.1 IP, bullpen 5.9 IP.",
      "segments": [
       {
-       "role": "starter",
+       "role": "opener",
        "pitcher_id": 453286,
        "pitcher": "Max Scherzer",
-       "expected_innings": 3.6666666666666665,
+       "expected_innings": 3.1,
        "fip_lite": 5.44,
        "pitcher_score": 35,
        "role_stats": null
       },
       {
        "role": "bullpen",
-       "expected_innings": 5.333333333333334
+       "expected_innings": 5.9
       }
      ],
-     "expected_innings": 3.7,
-     "bullpen_innings": 5.3,
-     "effective_era": 5.13,
+     "reported": true,
+     "expected_innings": 3.1,
+     "bullpen_innings": 5.9,
+     "effective_era": 5.09,
      "pitcher_score": 35,
-     "description": "Max Scherzer 3.7 IP + remaining bullpen 5.3 IP",
+     "description": "Max Scherzer 3.1 IP + remaining bullpen 5.9 IP",
      "pitcher": "Max Scherzer",
      "role": "limited_starter",
      "label": "Limited starter",
-     "bullpen_game": false
+     "bullpen_game": true
     },
     "home": {
      "team": "Washington Nationals",
@@ -300,12 +304,12 @@
     },
     "home": {
      "team": "Washington Nationals",
-     "projection": 7.2,
+     "projection": 7.1,
      "line": 4.5,
      "over": -128,
      "under": 110,
      "books": 6,
-     "edge": 2.7,
+     "edge": 2.6,
      "lean": "Over",
      "classification": "research_lean"
     }
