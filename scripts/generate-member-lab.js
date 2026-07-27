@@ -161,6 +161,28 @@ async function main() {
       note: "Lab Rating grades LyDia's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
     },
     summary: summarize(rows, Boolean(ODDS_API_KEY), officialCard),
+    // The official card, market by market. The brief page renders from this so
+    // it stops inferring "official" from the moneyline status alone.
+    official_card: (officialCard.picks || []).map(g => ({
+      game_pk: g.gamePk,
+      game: `${g.away} @ ${g.home}`,
+      away: g.away,
+      home: g.home,
+      time: g.time,
+      lab_score: g.labScore,
+      moneyline: g.moneyline ? {
+        pick: g.moneyline.pick, prob: g.moneyline.prob,
+        mkt_prob: g.moneyline.mktProb, best_price: g.moneyline.bestAm
+      } : null,
+      total: g.total ? {
+        pick: g.total.pick, line: g.total.line, best_price: g.total.bestAm,
+        projection: g.total.projection, edge: g.total.edge, lab_score: g.total.labScore
+      } : null,
+      strikeouts: (g.strikeouts || []).map(k => ({
+        pitcher: k.pitcher, pick: k.pick, line: k.line,
+        best_price: k.bestAm, projection: k.projection, edge: k.edge
+      }))
+    })),
     games: rows
   };
   writeJson(`data/member-brief/${DATE}.json`, brief);
@@ -173,7 +195,7 @@ async function main() {
     // renders this inline data immediately, then still fetches in the
     // background to catch any later-in-the-day changes. Public-safe subset
     // only (renderBrief() only ever reads date/generated_at/summary/games).
-    injectBriefInline({ date: brief.date, generated_at: brief.generated_at, summary: brief.summary, games: brief.games });
+    injectBriefInline({ date: brief.date, generated_at: brief.generated_at, summary: brief.summary, official_card: brief.official_card, games: brief.games });
     // The old /picks/ hub is now a redirect to the unified /previews/ Picks
     // experience. Do not inject data into that retired duplicate page.
   }
