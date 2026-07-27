@@ -197,14 +197,23 @@ function buildRow(p, g, side, oppTeam, oppTeamId, kv){
   const override = Number(IP_OVERRIDES[ovKey]);
   const expIP = Number.isFinite(override) && override > 0 ? override : modelIP;
   const kbf = p.so/p.bf;
-  const expBF = expIP * 4.28;
+  const bfPerIp = Math.max(3.6, Math.min(4.8, p.bf/p.ip));   // pitcher-specific, not a flat 4.28
+  const expBF = expIP * bfPerIp;
   const baseK = expBF * kbf;
   const oppK = p.hand && kv[p.hand] ? kv[p.hand][oppTeamId] : null;
   const rawAdj = (oppK && LEAGUE_K) ? oppK/LEAGUE_K : 1;
   const adj = (oppK && LEAGUE_K) ? Math.max(0.87, Math.min(1.13, rawAdj)) : 1;
   const clamped = Boolean(oppK && LEAGUE_K && Math.abs(rawAdj-adj) > 0.0005);
   const afterLineup = baseK * adj;
-  const k = Math.max(0, afterLineup + (KBIAS||0));
+  // Swing-and-miss / arsenal leverage: computed nightly (Baseball Savant, pitch-type
+  // resolved) and carried in data/k-props/today.json. Reused here so the tool and the
+  // graded model agree and the browser makes no Savant call. 1.0 when absent.
+  const Lw = LINES[String(p.name).toLowerCase()] || {};
+  const whiffFactor = Number.isFinite(Lw.whiff_leverage) ? Lw.whiff_leverage : 1;
+  const whiffSource = whiffFactor!==1 ? (Lw.whiff_lineup_source||null) : null;
+  const whiffDetail = Array.isArray(Lw.whiff_detail) ? Lw.whiff_detail : null;
+  const afterWhiff = afterLineup * whiffFactor;
+  const k = Math.max(0, afterWhiff + (KBIAS||0));
 
   const ip = p.ip;
   const k9  = ip ? p.so/ip*9 : null;
@@ -219,6 +228,7 @@ function buildRow(p, g, side, oppTeam, oppTeamId, kv){
     matchup: `${g.teams.away.team.abbr||g.teams.away.team.name} vs ${g.teams.home.team.abbr||g.teams.home.team.name}`,
     venue: (g.venue||{}).name || "",
     role, expIP, modelIP, ipEdited: expIP !== modelIP, kbf, expBF, baseK, oppK, adj, rawAdj, clamped, afterLineup,
+    bfPerIp, whiffFactor, whiffSource, whiffDetail, afterWhiff,
     k,
     outs: expIP*3,
     er:   era!==null ? expIP*era/9 : null,
@@ -325,7 +335,7 @@ function setIP(uid, raw){
   const expIP = Number.isFinite(v) && v > 0 ? v : r.modelIP;
   r.expIP = expIP;
   r.ipEdited = expIP !== r.modelIP;
-  r.expBF = expIP * 4.28;
+  r.expBF = expIP * (r.bfPerIp || 4.28);
   r.baseK = r.expBF * r.kbf;
   r.afterLineup = r.baseK * r.adj;
   r.k = Math.max(0, r.afterLineup + (KBIAS || 0));
@@ -365,8 +375,13 @@ function detailHtml(r){
     const pct=(r.adj-1)*100;
     (Math.abs(pct)<0.5?neutral:rows).push(adjRow(`${r.oppTeam} K% vs ${r.hand==="L"?"LHP":"RHP"}`,`${(r.oppK*100).toFixed(1)}% vs ${(LEAGUE_K*100).toFixed(1)}% lg`,pct));
   }
+  if(r.whiffFactor && r.whiffFactor!==1){
+    const pct=(r.whiffFactor-1)*100;
+    const src = r.whiffSource==="projected_regulars" ? "projected lineup" : r.whiffSource==="posted" ? "posted lineup" : "lineup";
+    (Math.abs(pct)<0.5?neutral:rows).push(adjRow("Arsenal whiff leverage",`${src}, pitch-type resolved`,pct));
+  }
   if(KBIAS){
-    const pct = r.afterLineup>0 ? (KBIAS/r.afterLineup)*100 : 0;
+    const pct = r.afterWhiff>0 ? (KBIAS/r.afterWhiff)*100 : 0;
     (Math.abs(pct)<0.5?neutral:rows).push(adjRow("Self-calibration",`${KBIAS>0?"+":""}${KBIAS} K over ${KBIAS_N} graded starts`,pct));
   }
   const net = r.baseK>0 ? ((r.k/r.baseK)-1)*100 : 0;
@@ -397,7 +412,7 @@ function detailHtml(r){
                  oninput="setIP('${r.uid}', this.value)">
           ${r.ipEdited ? `<span class="rst" onclick="resetIP('${r.uid}')">reset to ${r.modelIP.toFixed(1)}</span>` : ""}
         </span>
-        × 4.28 batters/IP = ${r.expBF.toFixed(1)} batters faced
+        × ${r.bfPerIp.toFixed(2)} batters/IP = ${r.expBF.toFixed(1)} batters faced
       </div>
       ${r.ipEdited ? `<div class="ip-note">Edited from the model's ${r.modelIP.toFixed(1)} IP. Saved on this device for ${escapeHtml(datePick.value)} only — nothing is published and no graded pick changes.</div>` : ""}
       <div class="bd-base">${r.expBF.toFixed(1)} × ${(r.kbf*100).toFixed(1)}% K rate → ${r.baseK.toFixed(2)} base Ks</div>
@@ -431,8 +446,22 @@ function detailHtml(r){
 
   <div class="bd" style="margin-top:12px">
     <div class="bd-title">Swing-and-miss alignment</div>
-    <div class="bd-note">Pitch-by-pitch leverage — his whiff rate on each pitch against this lineup's whiff rate on that same pitch — is not wired up yet. It needs Statcast pitch-type data on both the pitcher and the hitters. The arsenal side is available today; the lineup side still needs building, and the per-batter, per-pitch samples are thin enough to require shrinking before they can be trusted.</div>
+    ${swingMissHtml(r)}
   </div>`;
+}
+function swingMissHtml(r){
+  if(!r.whiffDetail || !r.whiffDetail.length || r.whiffFactor===1){
+    return `<div class="bd-note">Pitch-type whiff leverage is computed nightly from Baseball Savant and shown for today's slate once it runs. It isn't available for this pitcher/date, so the projection carries no arsenal adjustment (factor 1.00).</div>`;
+  }
+  const pct=(r.whiffFactor-1)*100;
+  const src = r.whiffSource==="projected_regulars" ? "projected regulars (lineup not yet posted)" : "posted lineup";
+  const chips = r.whiffDetail.slice().sort((a,b)=>b.usage-a.usage).map(d=>{
+    const up=d.ratio>=1;
+    return `<span style="display:inline-block;margin:2px 6px 2px 0;padding:2px 8px;border-radius:10px;font-size:12px;background:${up?'rgba(80,200,120,.15)':'rgba(220,90,90,.15)'};color:${up?'#3aa76d':'#d05a5a'}">${escapeHtml(d.pt)} ${d.usage.toFixed(0)}% · ${d.ratio.toFixed(2)}×</span>`;
+  }).join("");
+  return `<div class="bd-note">How much this lineup misses <b>his</b> specific pitch mix versus a league-average lineup — resolved per pitch type, capped at ±12%. Source: ${src}. Net <b class="${pct>=0?"pos-text":"neg-text"}">${pct>=0?"+":""}${pct.toFixed(1)}%</b> on the strikeout projection.</div>
+  <div style="margin:6px 0">${chips}</div>
+  <div class="bd-note">Each chip is a pitch type: usage share, then how whiffy this lineup is against it relative to league (above 1.00× = they miss it more than average).</div>`;
 }
 
 /* ---------- market sync ---------- */
