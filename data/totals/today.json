@@ -1,6 +1,6 @@
 {
  "date": "2026-07-27",
- "generated_at": "2026-07-27T21:59:15.365Z",
+ "generated_at": "2026-07-27T22:02:34.889Z",
  "model_version": "totals-runs-v3-pitching-plan",
  "policy": {
   "version": "totals-policy-v3-official",
@@ -59,7 +59,7 @@
    "home": "Jack Perkins"
   }
  },
- "pitching_plan_signature": "{\"822705\":{\"game\":\"Toronto Blue Jays @ Washington Nationals\",\"home\":{\"team\":\"Washington Nationals\",\"type\":\"opener_bulk\",\"confidence\":\"manual\",\"source_note\":\"Manual pitching update: Eddy Yean 1.5 IP, Andrew Alvarez 5 IP, bullpen 2.5 IP.\",\"segments\":[{\"role\":\"opener\",\"pitcher_id\":678868,\"pitcher\":\"Eddy Yean\",\"expected_innings\":1.5},{\"role\":\"bulk\",\"pitcher_id\":674841,\"pitcher\":\"Andrew Alvarez\",\"expected_innings\":5},{\"role\":\"bullpen\",\"expected_innings\":2.5}]},\"away\":{\"team\":\"Toronto Blue Jays\",\"type\":\"opener_bullpen\",\"confidence\":\"manual\",\"source_note\":\"Manual pitching update: Max Scherzer 3.1 IP, bullpen 5.9 IP.\",\"segments\":[{\"role\":\"opener\",\"pitcher_id\":453286,\"pitcher\":\"Max Scherzer\",\"expected_innings\":3.1},{\"role\":\"bullpen\",\"expected_innings\":5.9}]}}}",
+ "pitching_plan_signature": "{\"822705\":{\"game\":\"Toronto Blue Jays @ Washington Nationals\",\"home\":{\"team\":\"Washington Nationals\",\"type\":\"opener_bulk\",\"confidence\":\"manual\",\"source_note\":\"Manual pitching update: Eddy Yean 1.5 IP, Andrew Alvarez 5 IP, bullpen 2.5 IP.\",\"segments\":[{\"role\":\"opener\",\"pitcher_id\":678868,\"pitcher\":\"Eddy Yean\",\"expected_innings\":1.5},{\"role\":\"bulk\",\"pitcher_id\":674841,\"pitcher\":\"Andrew Alvarez\",\"expected_innings\":5},{\"role\":\"bullpen\",\"expected_innings\":2.5}]},\"away\":{\"team\":\"Toronto Blue Jays\",\"type\":\"opener_bullpen\",\"confidence\":\"manual\",\"source_note\":\"Manual pitching update: Max Scherzer 3.1 IP, bullpen 5.9 IP.\",\"segments\":[{\"role\":\"opener\",\"pitcher_id\":453286,\"pitcher\":\"Max Scherzer\",\"expected_innings\":3.1},{\"role\":\"bullpen\",\"expected_innings\":5.9}]}},\"824001\":{\"game\":\"Houston Astros @ Los Angeles Angels\",\"away\":{\"team\":\"Houston Astros\",\"type\":\"opener_bullpen\",\"confidence\":\"manual\",\"source_note\":\"Manual pitching update: Tatsuya Imai 5.5 IP, bullpen 3.5 IP.\",\"segments\":[{\"role\":\"opener\",\"pitcher_id\":837227,\"pitcher\":\"Tatsuya Imai\",\"expected_innings\":5.5},{\"role\":\"bullpen\",\"expected_innings\":3.5}]}}}",
  "games": {
   "822705": {
    "game": "Toronto Blue Jays @ Washington Nationals",
@@ -710,7 +710,7 @@
    "bullpen_game": false,
    "line": 9.5,
    "over": -105,
-   "under": -106,
+   "under": -108,
    "books": 9,
    "team_totals": {
     "away": {
@@ -718,7 +718,7 @@
      "projection": 5.9,
      "line": 4.5,
      "over": -125,
-     "under": 114,
+     "under": 112,
      "books": 5,
      "edge": 1.4,
      "lean": "Over",
@@ -1601,10 +1601,10 @@
   "824001": {
    "game": "Houston Astros @ Los Angeles Angels",
    "game_time_iso": "2026-07-28T01:38:00Z",
-   "projection": 9,
-   "projection_raw": 9.2,
+   "projection": 8.9,
+   "projection_raw": 9.1,
    "proj_away": 4.6,
-   "proj_home": 4.6,
+   "proj_home": 4.5,
    "away": {
     "team": "Houston Astros",
     "rpg": 4.72,
@@ -1668,39 +1668,41 @@
     "off_factor": 0.84,
     "opp_sp": "Tatsuya Imai",
     "opp_sp_fip": 4.48,
-    "opp_sp_ip": 4.1,
+    "opp_sp_ip": 5.5,
     "opp_pitcher_role": "limited_starter",
     "opp_pitcher_role_label": "Limited starter",
-    "opp_pitcher_role_confidence": "high",
-    "opp_bullpen_game": false,
-    "opp_bullpen_ip": 4.9,
+    "opp_pitcher_role_confidence": "manual",
+    "opp_bullpen_game": true,
+    "opp_bullpen_ip": 3.5,
     "opp_pitcher_role_reason": "Starter-only usage is 4.1 innings per start; bullpen exposure is elevated.",
     "pitching_plan": {
-     "type": "starter_bullpen",
-     "confidence": "high",
-     "reported": false,
+     "team": "Houston Astros",
+     "type": "opener_bullpen",
+     "confidence": "manual",
+     "source_note": "Manual pitching update: Tatsuya Imai 5.5 IP, bullpen 3.5 IP.",
      "segments": [
       {
-       "role": "starter",
+       "role": "opener",
        "pitcher_id": 837227,
        "pitcher": "Tatsuya Imai",
-       "expected_innings": 4.142857142857143,
+       "expected_innings": 5.5,
        "fip_lite": 4.48,
        "pitcher_score": 48,
        "role_stats": null
       },
       {
        "role": "bullpen",
-       "expected_innings": 4.857142857142857
+       "expected_innings": 3.5
       }
      ],
-     "expected_innings": 4.1,
-     "bullpen_innings": 4.9,
-     "effective_era": 5.12,
+     "reported": true,
+     "expected_innings": 5.5,
+     "bullpen_innings": 3.5,
+     "effective_era": 4.94,
      "pitcher_score": 48,
-     "description": "Tatsuya Imai 4.1 IP + remaining bullpen 4.9 IP"
+     "description": "Tatsuya Imai 5.5 IP + remaining bullpen 3.5 IP"
     },
-    "pitch_factor": 1.219,
+    "pitch_factor": 1.176,
     "opp_pen_risk": 85,
     "opp_pen_fatigue": 70,
     "opp_pen_efficiency": 20,
@@ -1714,33 +1716,35 @@
    "home_sp": "Walbert Ureña",
    "pitching_plan": {
     "away": {
-     "type": "starter_bullpen",
-     "confidence": "high",
-     "reported": false,
+     "team": "Houston Astros",
+     "type": "opener_bullpen",
+     "confidence": "manual",
+     "source_note": "Manual pitching update: Tatsuya Imai 5.5 IP, bullpen 3.5 IP.",
      "segments": [
       {
-       "role": "starter",
+       "role": "opener",
        "pitcher_id": 837227,
        "pitcher": "Tatsuya Imai",
-       "expected_innings": 4.142857142857143,
+       "expected_innings": 5.5,
        "fip_lite": 4.48,
        "pitcher_score": 48,
        "role_stats": null
       },
       {
        "role": "bullpen",
-       "expected_innings": 4.857142857142857
+       "expected_innings": 3.5
       }
      ],
-     "expected_innings": 4.1,
-     "bullpen_innings": 4.9,
-     "effective_era": 5.12,
+     "reported": true,
+     "expected_innings": 5.5,
+     "bullpen_innings": 3.5,
+     "effective_era": 4.94,
      "pitcher_score": 48,
-     "description": "Tatsuya Imai 4.1 IP + remaining bullpen 4.9 IP",
+     "description": "Tatsuya Imai 5.5 IP + remaining bullpen 3.5 IP",
      "pitcher": "Tatsuya Imai",
      "role": "limited_starter",
      "label": "Limited starter",
-     "bullpen_game": false
+     "bullpen_game": true
     },
     "home": {
      "type": "starter_bullpen",
@@ -1772,7 +1776,7 @@
      "bullpen_game": false
     }
    },
-   "bullpen_game": false,
+   "bullpen_game": true,
    "line": 8.5,
    "over": 107,
    "under": -110,
@@ -1791,22 +1795,22 @@
     },
     "home": {
      "team": "Los Angeles Angels",
-     "projection": 4.6,
+     "projection": 4.5,
      "line": 3.5,
      "over": -130,
      "under": 100,
      "books": 1,
-     "edge": 1.1,
+     "edge": 1,
      "lean": "Over",
      "classification": "research_lean"
     }
    },
-   "lab": 48,
+   "lab": 46,
    "official_eligible": false,
    "setup_components": {
     "base": 15,
     "data_confidence": 25,
-    "edge_points": 8,
+    "edge_points": 6.4,
     "alignment_threshold": 0.7
    },
    "classification": "no_lean"

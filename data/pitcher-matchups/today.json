@@ -1,6 +1,6 @@
 {
   "date": "2026-07-27",
-  "generated_at": "2026-07-27T21:59:19.709Z",
+  "generated_at": "2026-07-27T22:02:41.291Z",
   "source_of_truth": "LyDia Pitcher Matchup Tool",
   "source_version": "pitcher-matchup-core-v2-role-aware",
   "method": "Role-aware pitcher model using starter-only game logs. Traditional starters, limited starters, openers, and unknown roles receive workload-appropriate innings; the remainder belongs to the bullpen.",
@@ -1560,7 +1560,7 @@
         "rawScore": 47,
         "score": 48,
         "grade": "Below avg",
-        "note": "Starter-only usage is 4.1 innings per start; bullpen exposure is elevated.",
+        "note": "Tatsuya Imai is the reported opener; see the full pitching plan below.",
         "role": {
           "key": "limited_starter",
           "label": "Limited starter",
@@ -1573,12 +1573,12 @@
           "starterGames": 14,
           "reason": "Starter-only usage is 4.1 innings per start; bullpen exposure is elevated."
         },
-        "roleKey": "limited_starter",
-        "roleLabel": "Limited starter",
-        "expectedInnings": 4.142857142857143,
-        "bullpenInnings": 4.857142857142857,
-        "roleConfidence": "high",
-        "bullpenGame": false,
+        "roleKey": "opener",
+        "roleLabel": "Reported opener",
+        "expectedInnings": 5.5,
+        "bullpenInnings": 3.5,
+        "roleConfidence": "manual",
+        "bullpenGame": true,
         "k9": 11.017241379310343,
         "bb9": 5.586206896551724,
         "kbbPct": 0.13565891472868216,
@@ -1642,8 +1642,64 @@
       "gap": 20,
       "strength": "Strong",
       "edge_team": "Los Angeles Angels",
-      "bullpen_game": false,
-      "pitching_plan_confidence": "high"
+      "bullpen_game": true,
+      "pitching_plan_confidence": "manual",
+      "schedule_probable": {
+        "away": {
+          "id": 837227,
+          "name": "Tatsuya Imai"
+        }
+      },
+      "away_plan_score": 48,
+      "home_plan_score": 68,
+      "pitching_plan": {
+        "away": {
+          "team": "Houston Astros",
+          "type": "opener_bullpen",
+          "confidence": "manual",
+          "source_note": "Manual pitching update: Tatsuya Imai 5.5 IP, bullpen 3.5 IP.",
+          "segments": [
+            {
+              "role": "opener",
+              "pitcher_id": 837227,
+              "pitcher": "Tatsuya Imai",
+              "expected_innings": 5.5,
+              "stats": {
+                "id": 837227,
+                "name": "Tatsuya Imai",
+                "hand": "R",
+                "era": 5.59,
+                "whip": 1.47,
+                "ip": 58,
+                "so": 71,
+                "bb": 36,
+                "hr": 9,
+                "gs": 14,
+                "gp": 14,
+                "w": 6,
+                "l": 4,
+                "bf": 258,
+                "go": 50,
+                "ao": 48,
+                "h": 49,
+                "ab": 216,
+                "sf": 1,
+                "starterIp": 58,
+                "starterGames": 14
+              },
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.5,
+              "stats": null,
+              "role_stats": null
+            }
+          ],
+          "reported": true,
+          "description": "Tatsuya Imai 5.5 IP + remaining bullpen 3.5 IP"
+        }
+      }
     },
     "824245": {
       "game_pk": 824245,

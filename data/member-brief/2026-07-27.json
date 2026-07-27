@@ -1,6 +1,6 @@
 {
   "date": "2026-07-27",
-  "generated_at": "2026-07-27T21:59:15.598Z",
+  "generated_at": "2026-07-27T22:02:35.201Z",
   "snapshot_type": "posted",
   "source_of_truth": "LyDia Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -1963,7 +1963,7 @@
       "run_model_probability": 0.7708,
       "run_model_weight": 0.5,
       "model_probability_pre_bullpen": null,
-      "edge": 0.1772,
+      "edge": 0.1775,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 50,
@@ -2161,12 +2161,12 @@
         "absolute_risk": "Normal"
       },
       "market": {
-        "no_vig_probability": 0.5269,
+        "no_vig_probability": 0.5265,
         "best_price": -117,
         "away_price": -117,
         "home_price": 107,
-        "away_no_vig": 0.5269,
-        "home_no_vig": 0.4731,
+        "away_no_vig": 0.5265,
+        "home_no_vig": 0.4735,
         "books": 9
       }
     },
@@ -2184,42 +2184,44 @@
       "home_l10": "4-6",
       "pick_team": "Los Angeles Angels",
       "side": "home",
-      "model_probability": 0.5331,
+      "model_probability": 0.5222,
       "model_source": "moneyline-v2-plus-runs-v1",
       "projected_runs": {
         "away": 4.6,
-        "home": 4.6,
-        "total": 9
+        "home": 4.5,
+        "total": 8.9
       },
       "pitching_plan": {
         "away": {
-          "type": "starter_bullpen",
-          "confidence": "high",
-          "reported": false,
+          "team": "Houston Astros",
+          "type": "opener_bullpen",
+          "confidence": "manual",
+          "source_note": "Manual pitching update: Tatsuya Imai 5.5 IP, bullpen 3.5 IP.",
           "segments": [
             {
-              "role": "starter",
+              "role": "opener",
               "pitcher_id": 837227,
               "pitcher": "Tatsuya Imai",
-              "expected_innings": 4.142857142857143,
+              "expected_innings": 5.5,
               "fip_lite": 4.48,
               "pitcher_score": 48,
               "role_stats": null
             },
             {
               "role": "bullpen",
-              "expected_innings": 4.857142857142857
+              "expected_innings": 3.5
             }
           ],
-          "expected_innings": 4.1,
-          "bullpen_innings": 4.9,
-          "effective_era": 5.12,
+          "reported": true,
+          "expected_innings": 5.5,
+          "bullpen_innings": 3.5,
+          "effective_era": 4.94,
           "pitcher_score": 48,
-          "description": "Tatsuya Imai 4.1 IP + remaining bullpen 4.9 IP",
+          "description": "Tatsuya Imai 5.5 IP + remaining bullpen 3.5 IP",
           "pitcher": "Tatsuya Imai",
           "role": "limited_starter",
           "label": "Limited starter",
-          "bullpen_game": false
+          "bullpen_game": true
         },
         "home": {
           "type": "starter_bullpen",
@@ -2251,27 +2253,27 @@
           "bullpen_game": false
         }
       },
-      "bullpen_game": false,
-      "legacy_strength_probability": 0.566,
-      "run_model_probability": 0.5,
+      "bullpen_game": true,
+      "legacy_strength_probability": 0.5571,
+      "run_model_probability": 0.487,
       "run_model_weight": 0.5,
       "model_probability_pre_bullpen": null,
-      "edge": 0.0352,
+      "edge": 0.0242,
       "status": "pass",
       "value_tag": "PASS",
-      "lab_score": 50,
+      "lab_score": 49,
       "lab_score_breakdown": {
-        "score": 50,
+        "score": 49,
         "version": "lab-rating-v2-market-independent",
         "conviction_points": 0,
-        "agreement_points": 12.92,
+        "agreement_points": 12.28,
         "pitching_plan_points": 20,
         "bullpen_points": 10.54,
         "offense_points": 1.5,
         "completeness_points": 5,
         "pitcher_edge_points": 14,
         "plan_completeness_points": 6,
-        "model_agreement_gap": 0.066,
+        "model_agreement_gap": 0.0702,
         "bullpen_innings_weight": 0.91,
         "assigned_bullpen_innings": 3.6,
         "offense_delta": -0.042,
@@ -2288,10 +2290,10 @@
         "minimum_edge": 0.03,
         "model_probability_passed": false,
         "lab_score_passed": false,
-        "edge_passed": true
+        "edge_passed": false
       },
-      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
-      "read": "The combined Lab Rating did not clear the official threshold.",
+      "pass_reason": "Model and market are too close for a clear official pick.",
+      "read": "Model and market are too close for a clear official pick.",
       "pitcher_edge": {
         "team": "Los Angeles Angels",
         "gap": 20,
@@ -2302,23 +2304,11 @@
         "home_pitcher": "Walbert Ureña",
         "away_pitcher_id": 837227,
         "home_pitcher_id": 700712,
-        "away_era": 5.59,
+        "away_era": null,
         "home_era": 2.78,
-        "away_whip": 1.47,
+        "away_whip": null,
         "home_whip": 1.31,
-        "away_advanced": {
-          "w": 6,
-          "l": 4,
-          "kbb_pct": 0.1357,
-          "gb_pct": 0.5102,
-          "babip": 0.292,
-          "hr9": 1.4,
-          "ip_per_start": 4.1,
-          "role": "limited_starter",
-          "role_label": "Limited starter",
-          "expected_innings": 4.1,
-          "bullpen_innings": 4.9
-        },
+        "away_advanced": null,
         "home_advanced": {
           "w": 6,
           "l": 7,
@@ -2359,7 +2349,7 @@
         "off_adj": -0.0336,
         "bp_adj": 0.06,
         "version": "v3.1-bullpen",
-        "p_home_v2": 0.5331,
+        "p_home_v2": 0.5222,
         "note": "shadow A/B — does not drive picks"
       },
       "bullpen": {
