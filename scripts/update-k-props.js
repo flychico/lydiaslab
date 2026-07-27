@@ -13,6 +13,7 @@ const fs = require("fs");
 const path = require("path");
 const PitcherCore = require("../js/pitcher-matchup-core.js");
 const PitchingPlan = require("./lib/pitching-plan-core.js");
+const Arsenal = require("./lib/arsenal-leverage.js");
 
 const ROOT = path.join(__dirname, "..");
 const KEY = (process.env.ODDS_API_KEY || "").trim();
@@ -140,7 +141,7 @@ async function main() {
   // nightly grader can score projection vs line vs actual. Mirrors the tool math.
   try {
     const yr = Number(DATE.slice(0, 4));
-    const sched = await j(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${DATE}&hydrate=probablePitcher`);
+    const sched = await j(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${DATE}&hydrate=probablePitcher,lineups`);
     const games = (((sched.dates || [])[0]) || {}).games || [];
     const base = `https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${yr}&stats=statSplits&sitCodes=`;
     const [vl, vr] = await Promise.all([j(base + "vl"), j(base + "vr")]);
@@ -155,6 +156,9 @@ async function main() {
     if (pids.length) {
       const ps = await PitcherCore.fetchPitchers(pids, DATE, j);
       const bulkRoleStats = await PitchingPlan.fetchBulkRoleStats(reportedPlans, DATE, j);
+      // Swing-and-miss / arsenal leverage data (Baseball Savant, 2 calls, whole league).
+      const arsenalData = await Arsenal.fetchArsenalData(yr, j).catch(() => ({ ready: false }));
+      const teamCodes = arsenalData.ready ? await Arsenal.fetchTeamCodes(j) : {};
       for (const g of games) {
         for (const sd of ["away", "home"]) {
           const probable = g.teams[sd].probablePitcher || null;
@@ -179,6 +183,19 @@ async function main() {
             const skillBf = roleStats && roleStats.bf ? roleStats.bf : pit.bf;
             const oppK = pit.hand && kv[pit.hand] ? kv[pit.hand][oppId] : null;
             const adj = (oppK && leagueK) ? Math.max(0.87, Math.min(1.13, oppK / leagueK)) : 1;
+            // Swing-and-miss / arsenal leverage: how much THIS lineup misses THIS
+            // pitcher's specific pitch mix, relative to a league-average lineup.
+            // Posted lineup -> full confidence; projected regulars -> half.
+            const oppSide = sd === "away" ? "home" : "away";
+            const postedLu = ((g.lineups || {})[oppSide + "Players"] || []).map(p => p.id).filter(Boolean);
+            let luIds = postedLu, luConf = 1, luSource = "posted";
+            if (luIds.length < 5) {
+              const code = teamCodes[oppId];
+              luIds = ((arsenalData.byTeam && arsenalData.byTeam[code]) || []).slice(0, 9).map(x => x.id);
+              luConf = 0.5; luSource = luIds.length ? "projected_regulars" : "none";
+            }
+            const lev = Arsenal.leverage(Number(candidate.pitcher_id), luIds, arsenalData, { cap: 0.12, confidence: luConf });
+            const whiffFactor = lev.applied ? lev.factor : 1;
             // Batters faced per inning is pitcher-specific, not a league constant.
             // Efficient arms (low WHIP) face fewer hitters per inning; the old flat
             // 4.28 overstated their batters and inflated K projections (e.g. Wheeler,
@@ -188,13 +205,17 @@ async function main() {
             const paceBf = (roleStats && roleStats.bf && roleStats.ip) ? roleStats.bf : pit.bf;
             const paceIp = (roleStats && roleStats.bf && roleStats.ip) ? roleStats.ip : pit.ip;
             const bfPerIp = Math.max(3.6, Math.min(4.8, paceBf / paceIp));
-            const projRaw = Number((expIP * bfPerIp * (skillSo / skillBf) * adj).toFixed(2));
+            const projRaw = Number((expIP * bfPerIp * (skillSo / skillBf) * adj * whiffFactor).toFixed(2));
             const proj = Number((projRaw + learnedBias).toFixed(2));
             const key = pit.name.toLowerCase();
             const rec = pitchers[key] || (pitchers[key] = { name: pit.name, line: null, over: null, under: null, books: 0, game: `${g.teams.away.team.name} @ ${g.teams.home.team.name}` });
             rec.projection = proj;
             rec.projection_raw = projRaw;
             rec.bf_per_ip = Number(bfPerIp.toFixed(2));
+            rec.whiff_leverage = whiffFactor;
+            rec.whiff_leverage_applied = lev.applied;
+            rec.whiff_lineup_source = lev.applied ? luSource : (lev.note || "n/a");
+            rec.whiff_detail = lev.per_pitch || null;
             rec.game_pk = g.gamePk;
             rec.pitcher_role = candidate.role || inferredRole.key;
             rec.pitcher_role_label = candidate.role === "bulk" ? "Bulk pitcher" : candidate.role === "opener" ? "Opener" : inferredRole.label;
