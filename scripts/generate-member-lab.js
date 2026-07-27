@@ -141,6 +141,11 @@ async function main() {
     throw new Error(`Model guard: ${DATE} produced zero retained game rows. No official files were written.`);
   }
 
+  // The card is built first so the summary can describe what is actually on it.
+  // Counting only moneyline rows is what produced "No official picks cleared the
+  // stricter rules" on a day carrying an official total and six strikeout props.
+  const officialCard = buildPicksFile(rows, generatedAt);
+
   const brief = {
     date: DATE,
     generated_at: generatedAt,
@@ -155,10 +160,11 @@ async function main() {
       minimum_market_edge: VALUE_EDGE,
       note: "Lab Rating grades LyDia's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
     },
-    summary: summarize(rows, Boolean(ODDS_API_KEY)),
+    summary: summarize(rows, Boolean(ODDS_API_KEY), officialCard),
     games: rows
   };
   writeJson(`data/member-brief/${DATE}.json`, brief);
+
   if (DATE === etToday()) {
     writeJson("data/member-brief/today.json", brief);
     // Bake today's brief into the page itself so the initial HTML has real
@@ -175,7 +181,7 @@ async function main() {
   if (args["defer-publish"] === "true") {
     console.log(`Generated provisional LyDia source data for ${DATE}. Waiting for unified run projections before locking picks.`);
   } else {
-    const candidatePublished = buildPicksFile(rows, generatedAt);
+    const candidatePublished = officialCard;
     const published = writeOrReusePublishedPicks(candidatePublished, allGames.length);
     writeJson(`data/picks/${DATE}.json`, published);
     if (DATE === etToday()) writeJson("data/picks/today.json", published);
@@ -817,6 +823,7 @@ function passReasonFor({ edge, modelProb, pitchEdgeTeam, pickTeam, pitcherConfli
   if (pitchEdgeTeam !== "No clear SP edge" && pitchEdgeTeam !== pickTeam) return "Starting pitcher edge does not support the model side.";
   return "No clear setup.";
 }
+
 function buildRead(ctx) {
   const valueLine = ctx.marketProb === null
     ? "Market pricing was unavailable."
@@ -894,14 +901,45 @@ function buildRead(ctx) {
   }
   return ctx.passReason || "No clear setup.";
 }
-function summarize(rows, hasOdds) {
-  const official = rows.filter(r => r.status === "official_pick").length;
+/*
+  The brief summary must describe the whole official card.
+
+  It previously counted only rows with a moneyline status, so a slate with no
+  qualifying moneyline reported "No official picks cleared the stricter rules"
+  while the very same run published an official total and several strikeout
+  props. Counting is now done from the built card, which means the summary and
+  the published picks can never disagree — they are the same object.
+*/
+function officialMarketCounts(card) {
+  const groups = card && Array.isArray(card.picks) ? card.picks : [];
+  const moneyline = groups.filter(g => g.moneyline && g.moneyline.pick).length;
+  const totals = groups.filter(g => g.total && g.total.pick).length;
+  const strikeouts = groups.reduce((n, g) => n + ((g.strikeouts || []).length), 0);
+  return { moneyline, totals, strikeouts, total: moneyline + totals + strikeouts };
+}
+
+function summarize(rows, hasOdds, card) {
+  const counts = officialMarketCounts(card);
   const valueWatch = rows.filter(r => r.status === "value_watch").length;
   const watch = rows.filter(r => r.status === "watchlist").length;
   const high = rows.filter(r => r.lab_score >= VALUE_WATCH_LAB_SCORE).length;
   if (!hasOdds) return "Brief generated without live market pricing. Treat the card as research-only until pricing is checked.";
-  if (official) return `${official} official moneyline pick${official === 1 ? "" : "s"} cleared the stricter model-probability and Lab Rating gates. ${valueWatch} value-watch setup${valueWatch === 1 ? "" : "s"} had good price math but did not clear official-pick probability rules.`;
-  return `No official picks cleared the stricter rules. ${valueWatch} value-watch setup${valueWatch === 1 ? "" : "s"} and ${watch} watchlist game${watch === 1 ? "" : "s"} remain research-only. ${high} game${high === 1 ? "" : "s"} reached a Lab Rating of ${(VALUE_WATCH_LAB_SCORE/10).toFixed(1)}+/10 but did not clear every official gate.`;
+
+  if (counts.total) {
+    const parts = [];
+    if (counts.moneyline) parts.push(`${counts.moneyline} moneyline`);
+    if (counts.totals) parts.push(`${counts.totals} game total${counts.totals === 1 ? "" : "s"}`);
+    if (counts.strikeouts) parts.push(`${counts.strikeouts} pitcher strikeout prop${counts.strikeouts === 1 ? "" : "s"}`);
+    const breakdown = parts.length === 1
+      ? parts[0]
+      : parts.slice(0, -1).join(", ") + " and " + parts[parts.length - 1];
+    return `${counts.total} official pick${counts.total === 1 ? "" : "s"} cleared their market gates: ${breakdown}. `
+      + `${valueWatch} value-watch setup${valueWatch === 1 ? "" : "s"} had good price math but did not clear official-pick rules.`;
+  }
+
+  return `No official picks cleared the stricter rules in any market — moneyline, game totals or pitcher strikeouts. `
+    + `${valueWatch} value-watch setup${valueWatch === 1 ? "" : "s"} and ${watch} watchlist game${watch === 1 ? "" : "s"} remain research-only. `
+    + `${high} game${high === 1 ? "" : "s"} reached a Lab Rating of ${(VALUE_WATCH_LAB_SCORE/10).toFixed(1)}+/10 but did not clear every official gate.`;
 }
 function riskNote(r) {
   const notes = [];
@@ -1154,3 +1192,5 @@ function movement(posted, later) {
   if (Math.abs(postedDec - laterDec) < 0.015) return "stable";
   return laterDec < postedDec ? "toward_lydia" : "away_from_lydia";
 }
+
+module.exports = { summarize, officialMarketCounts };
