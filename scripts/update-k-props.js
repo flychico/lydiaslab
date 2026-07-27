@@ -179,12 +179,22 @@ async function main() {
             const skillBf = roleStats && roleStats.bf ? roleStats.bf : pit.bf;
             const oppK = pit.hand && kv[pit.hand] ? kv[pit.hand][oppId] : null;
             const adj = (oppK && leagueK) ? Math.max(0.87, Math.min(1.13, oppK / leagueK)) : 1;
-            const projRaw = Number((expIP * 4.28 * (skillSo / skillBf) * adj).toFixed(2));
+            // Batters faced per inning is pitcher-specific, not a league constant.
+            // Efficient arms (low WHIP) face fewer hitters per inning; the old flat
+            // 4.28 overstated their batters and inflated K projections (e.g. Wheeler,
+            // 3.80 BF/IP, was being run at 4.28 -> ~12% too high). Derive it from the
+            // same skill source as the K rate, fall back to season, clamp to a
+            // realistic band so a thin sample can't blow up the projection.
+            const paceBf = (roleStats && roleStats.bf && roleStats.ip) ? roleStats.bf : pit.bf;
+            const paceIp = (roleStats && roleStats.bf && roleStats.ip) ? roleStats.ip : pit.ip;
+            const bfPerIp = Math.max(3.6, Math.min(4.8, paceBf / paceIp));
+            const projRaw = Number((expIP * bfPerIp * (skillSo / skillBf) * adj).toFixed(2));
             const proj = Number((projRaw + learnedBias).toFixed(2));
             const key = pit.name.toLowerCase();
             const rec = pitchers[key] || (pitchers[key] = { name: pit.name, line: null, over: null, under: null, books: 0, game: `${g.teams.away.team.name} @ ${g.teams.home.team.name}` });
             rec.projection = proj;
             rec.projection_raw = projRaw;
+            rec.bf_per_ip = Number(bfPerIp.toFixed(2));
             rec.game_pk = g.gamePk;
             rec.pitcher_role = candidate.role || inferredRole.key;
             rec.pitcher_role_label = candidate.role === "bulk" ? "Bulk pitcher" : candidate.role === "opener" ? "Opener" : inferredRole.label;
