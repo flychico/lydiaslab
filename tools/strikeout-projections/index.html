@@ -65,6 +65,14 @@
 .ars-fill { height:100%; }
 .ars-ratio { text-align:right; font-weight:800; font-variant-numeric:tabular-nums; }
 .ars-note { font-size:.74rem; color:var(--text-dim); margin-top:6px; line-height:1.45; }
+/* Opposing lineup */
+table.lu { width:100%; border-collapse:collapse; font-size:.78rem; background:transparent; margin-top:4px; }
+table.lu th { font-size:.62rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); text-align:right; padding:3px 4px; border-bottom:1px solid var(--border); }
+table.lu th:first-child, table.lu th:nth-child(2) { text-align:left; }
+table.lu td { padding:3px 4px; border-bottom:1px solid var(--border); text-align:right; font-variant-numeric:tabular-nums; }
+table.lu td:first-child, table.lu td:nth-child(2) { text-align:left; }
+.k-hi { color:var(--accent); font-weight:800; }
+.k-lo { color:var(--accent2); font-weight:800; }
 @media (max-width:720px){ .k-grid{ grid-template-columns:1fr; } }
 </style>
 </head>
@@ -150,6 +158,8 @@ async function load(){
     const ps=pids.length ? await LyDiaPitcherCore.loadPitchersForDate(pids, date) : {};
 
     PROJ={};
+    // Every batter in every stored lineup, resolved in one pass before render.
+    await loadBatters(Object.values(LINES).flatMap(r => (r && Array.isArray(r.opp_lineup) ? r.opp_lineup : []).map(b => b.id)));
     gamesEl.innerHTML = games.map(g=>renderGame(g, ps, kv, leagueK, games, date)).join("");
     Object.keys(PROJ).forEach(pid => { const el = document.getElementById("ln-" + pid); if (el && el.value) lean(pid); });
     document.getElementById("game-jump").innerHTML = '<option value="">All games…</option>'+
@@ -200,6 +210,93 @@ function project(p, oppTeamId, kv){
 }
 let LEAGUE_K = 0.223;
 
+/* Batter K% for the posted lineups. One batched call for every hitter on the
+   slate, not one per pitcher. Cached for the session. */
+const BATTERS = {};
+async function loadBatters(ids){
+  const missing = [...new Set(ids)].filter(id => id && !(id in BATTERS));
+  if (!missing.length) return;
+  for (let i = 0; i < missing.length; i += 40) {
+    const chunk = missing.slice(i, i + 40);
+    try {
+      const d = await j(`https://statsapi.mlb.com/api/v1/people?personIds=${chunk.join(",")}&hydrate=stats(group=[hitting],type=[season],season=${seasonYear()})`);
+      for (const per of d.people || []) {
+        const st = ((((per.stats || [])[0] || {}).splits || [])[0] || {}).stat || {};
+        const pa = Number(st.plateAppearances) || 0, so = Number(st.strikeOuts) || 0;
+        BATTERS[per.id] = {
+          name: per.useName && per.lastName ? `${per.useName} ${per.lastName}` : per.fullName,
+          k: pa >= 30 ? so / pa : null, pa
+        };
+      }
+    } catch (e) {}
+    for (const id of chunk) if (!(id in BATTERS)) BATTERS[id] = null;
+  }
+}
+
+/* The nine hitters the projection was actually computed against. */
+function lineupBlock(pr, pid){
+  const s = pr.server;
+  const lu = s && Array.isArray(s.opp_lineup) ? s.opp_lineup : null;
+  if (!lu || !lu.length) return "";
+  const src = s.opp_lineup_source === "posted" ? "posted"
+            : s.opp_lineup_source === "projected_regulars" ? "projected regulars" : "unavailable";
+  const rows = lu.map(b => {
+    const info = BATTERS[b.id] || null;
+    const name = b.name || (info && info.name) || `#${b.id}`;
+    const k = info && info.k !== null && info.k !== undefined ? info.k : null;
+    const cls = k === null ? "" : k >= 0.25 ? "k-hi" : k <= 0.18 ? "k-lo" : "";
+    return `<tr><td>${b.order}.</td><td>${escapeHtml(name)}</td><td class="dim">${escapeHtml(b.pos || "")}</td>
+      <td class="${cls}">${k === null ? "&mdash;" : (k*100).toFixed(1) + "%"}</td></tr>`;
+  }).join("");
+  return `<details class="ars">
+    <summary>Opposing lineup &middot; ${escapeHtml(src)}</summary>
+    <table class="lu"><thead><tr><th>#</th><th>Batter</th><th></th><th>K%</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="ars-note"><span class="k-hi">Orange</span> strikes out a lot &mdash; helps the over. <span class="k-lo">Blue</span> is a contact bat. These are the hitters the arsenal leverage above was computed against.</div>
+  </details>`;
+}
+
+/* The math behind the number.
+
+   Mirrors scripts/update-k-props.js exactly:
+     projRaw = expIP x bfPerIp x (SO/BF) x lineupAdj x arsenalLeverage
+     proj    = projRaw + learnedBias
+
+   Every term is published in the k-props file except the lineup adjustment,
+   which is recovered by division rather than recomputed — that way the chain
+   always multiplies out to the number actually shown, even if the server's
+   clamp changes. */
+function derivation(pr, pid){
+  const s = pr.server;
+  if (!s || !pr.hasServer) {
+    return `<details class="ars"><summary>Show the math</summary>
+      <div class="ars-note">This pitcher has no published projection today, so the page fell back to its own estimate: ${pr.expIP.toFixed(1)} IP x ${pr.bfPerIp.toFixed(2)} batters/IP x ${(pr.kbf*100).toFixed(1)}% K rate, adjusted for the opposing lineup. Arsenal leverage is not available without the published record.</div>
+    </details>`;
+  }
+  const kbf = pr.kbf;
+  const lev = Number(s.whiff_leverage);
+  const raw = Number(s.projection_raw);
+  const bias = Number(s.projection) - raw;
+  const scale = pr.expIP / pr.modelIP;            // innings edits rescale the chain
+  const bf = pr.modelIP * pr.bfPerIp;
+  const baseK = bf * kbf;
+  // Recover the lineup adjustment from the published terms.
+  const denom = bf * kbf * (Number.isFinite(lev) ? lev : 1);
+  const adj = denom > 0 ? raw / denom : 1;
+  const row = (label, detail, value) =>
+    `<div class="ars-row" style="grid-template-columns:1fr auto"><span>${label}${detail?` <span class="dim small">${detail}</span>`:""}</span><span class="ars-ratio">${value}</span></div>`;
+  return `<details class="ars">
+    <summary>Show the math</summary>
+    <div class="ars-note" style="margin-bottom:6px"><b>${(pr.expIP).toFixed(1)} IP × ${pr.bfPerIp.toFixed(2)} batters/IP = ${(bf*scale).toFixed(1)} batters faced</b></div>
+    ${row("× K rate", `${(kbf*100).toFixed(1)}% per batter faced`, (baseK*scale).toFixed(2)+" K")}
+    ${row("× lineup K% vs hand", adj>=1?"helps":"hurts", (adj>=1?"+":"")+((adj-1)*100).toFixed(1)+"%")}
+    ${row("× arsenal leverage", Number.isFinite(lev)?(lev>=1?"pitch mix favours him":"pitch mix works against him"):"", Number.isFinite(lev)?((lev>=1?"+":"")+((lev-1)*100).toFixed(1)+"%"):"—")}
+    ${Math.abs(bias)>=0.01 ? row("+ self-calibration", `learned from graded starts`, (bias>0?"+":"")+bias.toFixed(2)+" K") : ""}
+    <div class="ars-row" style="grid-template-columns:1fr auto;border-top:1px solid var(--border);margin-top:5px;padding-top:5px">
+      <span><b>Projection</b></span><span class="ars-ratio"><b>${pr.k.toFixed(2)} K</b></span></div>
+    ${pr.ipEdited?`<div class="ars-note">Rescaled from the published ${Number(s.projection).toFixed(2)}K at ${pr.modelIP.toFixed(1)} IP. Every other term is unchanged.</div>`:""}
+  </details>`;
+}
+
 /* Swing-and-miss alignment: how often he throws each pitch, and how this
    lineup's whiff rate on that pitch compares with league. Above 1.00 means the
    matchup favours the pitcher on that offering. */
@@ -233,15 +330,23 @@ function arsenalBlock(pr, pid){
 function ipControl(pr, pid){
   return `<div class="k-row"><span>Expected innings</span>
     <span class="ip-edit">
-      <input type="number" step="0.1" min="0.1" max="9" id="ip-${pid}" value="${pr.expIP.toFixed(1)}" oninput="setIP(${pid}, this.value)">
+      <input type="number" step="0.1" min="0.1" max="9" id="ip-${pid}" value="${pr.expIP.toFixed(1)}"
+             onchange="setIP(${pid}, this.value)"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
       ${pr.ipEdited ? `<span class="rst" onclick="resetIP(${pid})">reset ${pr.modelIP.toFixed(1)}</span>` : ""}
     </span></div>`;
 }
 
-/* Rescale on an innings edit and repaint the card in place. */
+/* Rescale on an innings edit and repaint the card in place.
+
+   Fired on change, not input. Typing "5.3" over "4.2" passes through "5", "5."
+   and briefly an empty field; recalculating on every keystroke made the card
+   jump and reset itself mid-edit. This commits once, on Enter or on leaving the
+   field, so you can type freely. A blank field still means "use the model". */
 function setIP(pid, raw){
   const pr = PROJ[pid]; if(!pr) return;
-  const v = Number(raw);
+  const text = String(raw).trim();
+  const v = text === "" ? NaN : Number(text);
   const key = datePick.value + "|" + pid;
   if (Number.isFinite(v) && v > 0) IP_OVERRIDES[key] = v; else delete IP_OVERRIDES[key];
   saveIp(IP_OVERRIDES);
@@ -286,6 +391,8 @@ function kBox(pitcher, oppTeam, oppTeamId, kv, pid){
     ${pr.role.bullpenGame ? '<div class="small dim">Strikeout projection covers the opener only. Remaining innings belong to the bullpen.</div>' : ""}
     <div class="k-row"><span title="How often this lineup strikes out against pitchers of his hand — higher means more strikeouts available">${escapeHtml(oppTeam)} strikeout rate vs ${p.hand==="L"?"lefties":"righties"}</span><span><b>${pr.oppK!==null?(pr.oppK*100).toFixed(1)+"%":"—"}</b>${oppTier}</span></div>
     ${(() => { const L = LINES[p.name.toLowerCase()]; if (!L || L.line === null || L.line === undefined) return ""; return `<div class="k-row"><span>Market line (${L.books} book${L.books === 1 ? "" : "s"})</span><span><b>${L.line}</b> <span class="dim small">O ${L.over > 0 ? "+" : ""}${L.over ?? "—"} / U ${L.under > 0 ? "+" : ""}${L.under ?? "—"}</span></span></div>`; })()}
+    ${derivation(pr, pid)}
+    ${lineupBlock(pr, pid)}
     ${arsenalBlock(pr, pid)}
     <div class="line-input">
       <label class="dim small" for="ln-${pid}">Line</label>
