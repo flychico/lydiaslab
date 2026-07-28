@@ -99,6 +99,7 @@ table.lu td:first-child, table.lu td:nth-child(2) { text-align:left; }
   </div>
 
   <div class="notice">
+    <div id="league-note" style="margin-bottom:8px; font-weight:700; color:var(--accent);"></div>
     <span id="kbias-note"></span><strong>How to read it:</strong> the projection is a median expectation — a real outing lands within ±2 of it roughly two-thirds of the time, so treat small edges with respect and only lean when the gap to your book's line is <b>0.7+ strikeouts</b>. <b>Expected innings is editable</b> — change it and the projection recalculates in your browser. Nothing is published and no graded pick changes. Open <b>Swing-and-miss alignment</b> to see which pitches carry the matchup. In <b>Opposing lineup</b>, PA is the sample size, OBP is on-base rate, ISO (SLG − AVG) is power, K% is strikeout rate — all over the last 7 days, colored at the good/bad ends. The bottom row is the lineup's average K% — the number that actually drives the over/under case.
   </div>
 
@@ -175,8 +176,10 @@ async function load(){
     document.getElementById("game-jump").innerHTML = '<option value="">All games…</option>'+
       games.map(g=>`<option value="${g.gamePk}">${escapeHtml(g.teams.away.team.name)} @ ${escapeHtml(g.teams.home.team.name)}</option>`).join("");
     statusEl.innerHTML="";
+    const ln=document.getElementById("league-note");
+    if(ln) ln.textContent = `League K% vs RHP today: ${(LEAGUE_K*100).toFixed(2)}%`;
     const bn=document.getElementById("kbias-note");
-    if(bn) bn.innerHTML = `<b>League K% vs RHP today: ${(LEAGUE_K*100).toFixed(2)}%</b> — ${KBIAS ? `Self-calibrated: projections include a ${KBIAS>0?"+":""}${KBIAS}-strikeout correction learned from ${KBIAS_N} graded starts. ` : ""}`.trim();
+    if(bn) bn.innerHTML = KBIAS ? `<b>Self-calibrated:</b> projections include a ${KBIAS>0?"+":""}${KBIAS}-strikeout correction learned from ${KBIAS_N} graded starts. ` : "";
   }catch(e){ statusEl.innerHTML=`<div class="notice warn">Could not project (${escapeHtml(e.message)}).</div>`; }
 }
 
