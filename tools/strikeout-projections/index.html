@@ -34,6 +34,10 @@
 <style>
 .controls { display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:16px; }
 .controls .field { margin-bottom:0; }
+.window-pills { display:flex; gap:6px; }
+.wpill { border:1px solid var(--border); background:var(--bg-card); border-radius:20px; padding:6px 14px; font-size:.83rem; font-weight:700; cursor:pointer; color:var(--text-dim); }
+.wpill.on { background:var(--accent2); border-color:var(--accent2); color:#fff; }
+.lu-wrap { overflow-x:auto; }
 .match-card { margin-bottom:14px; }
 .match-head { display:grid; grid-template-columns:1fr auto 1fr; gap:8px; align-items:baseline; margin-bottom:8px; }
 .match-head .matchup { font-weight:800; font-size:1.05rem; }
@@ -91,13 +95,21 @@ table.lu td:first-child, table.lu td:nth-child(2) { text-align:left; }
     <button onclick="shiftDay(0)">Today</button>
     <button class="secondary" onclick="shiftDay(1)">Tomorrow</button>
     <div>
+      <label>Lineup stat window</label>
+      <div class="window-pills">
+        <span class="wpill" data-w="7" onclick="setWindow(7)">7d</span>
+        <span class="wpill on" data-w="15" onclick="setWindow(15)">15d</span>
+        <span class="wpill" data-w="30" onclick="setWindow(30)">30d</span>
+      </div>
+    </div>
+    <div>
       <label for="game-jump">Filter games</label>
       <select id="game-jump" onchange="filterGame(this.value)"><option value="">All games…</option></select>
     </div>
   </div>
 
   <div class="notice">
-    <span id="kbias-note"></span><strong>How to read it:</strong> the projection is a median expectation — a real outing lands within ±2 of it roughly two-thirds of the time, so treat small edges with respect and only lean when the gap to your book's line is <b>0.7+ strikeouts</b>. <b>Expected innings is editable</b> — change it and the projection recalculates in your browser. Nothing is published and no graded pick changes. Open <b>Swing-and-miss alignment</b> to see which pitches carry the matchup.
+    <span id="kbias-note"></span><strong>How to read it:</strong> the projection is a median expectation — a real outing lands within ±2 of it roughly two-thirds of the time, so treat small edges with respect and only lean when the gap to your book's line is <b>0.7+ strikeouts</b>. <b>Expected innings is editable</b> — change it and the projection recalculates in your browser. Nothing is published and no graded pick changes. Open <b>Swing-and-miss alignment</b> to see which pitches carry the matchup. In <b>Opposing lineup</b>, PA is the sample size, OBP is on-base rate, ISO (SLG − AVG) is power, K% is strikeout rate — all over the window selected above, colored at the good/bad ends.
   </div>
 
   <div id="status"><div class="loading">Projecting strikeouts…</div></div>
@@ -111,6 +123,9 @@ datePick.value = localISODate(new Date());
 datePick.addEventListener("change", load);
 let PROJ = {}; // pitcherId -> projection data
 let LINES = {}, LINES_AT = null, KBIAS = 0, KBIAS_N = 0; // live K prop lines by pitcher name (server-fetched daily)
+let WINDOW = 15; // stat window for the opposing-lineup table only; the K projection itself is unaffected
+const BATTERS = {};
+let battersCacheKey = null;
 
 /* Expected innings is the input the model is least sure about and the one a
    human most often knows better — a reported bulk role, a pitch-count limit, a
@@ -126,6 +141,8 @@ load();
 function localISODate(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
 function shiftDay(n){ const d=new Date(); d.setDate(d.getDate()+n); datePick.value=localISODate(d); load(); }
 function filterGame(pk){ document.querySelectorAll(".match-card").forEach(c=>{ c.style.display = (!pk || c.id === "kg-"+pk) ? "" : "none"; }); }
+function setWindow(w){ WINDOW = w; document.querySelectorAll(".wpill").forEach(p => p.classList.toggle("on", Number(p.dataset.w) === w)); load(); }
+function f3(v){ return Number.isFinite(v) ? v.toFixed(3).replace(/^0/, "") : "—"; }
 function ipToNum(ip){ if(!ip||ip==="-.--")return 0; const [w,f]=String(ip).split("."); return Number(w||0)+Number(f||0)/3; }
 function seasonYear(){ const d=new Date(datePick.value+"T12:00"); return d.getMonth()>=2?d.getFullYear():d.getFullYear()-1; }
 async function j(u){ const r=await fetch(u); if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); }
@@ -155,11 +172,14 @@ async function load(){
     if(!games.length){ statusEl.innerHTML=`<div class="notice">No MLB games scheduled for ${date}.</div>`; return; }
     games.sort((a,b)=>new Date(a.gameDate)-new Date(b.gameDate));
     const pids=[...new Set(games.flatMap(g=>["away","home"].map(s=>g.teams[s].probablePitcher&&g.teams[s].probablePitcher.id).filter(Boolean)))];
-    const ps=pids.length ? await LyDiaPitcherCore.loadPitchersForDate(pids, date) : {};
+    const wEnd = new Date(date + "T12:00");
+    const wStart = new Date(wEnd.getTime() - WINDOW * 86400000);
+    const [ps] = await Promise.all([
+      pids.length ? LyDiaPitcherCore.loadPitchersForDate(pids, date) : Promise.resolve({}),
+      loadWindowBatters(localISODate(wStart), localISODate(wEnd))
+    ]);
 
     PROJ={};
-    // Every batter in every stored lineup, resolved in one pass before render.
-    await loadBatters(Object.values(LINES).flatMap(r => (r && Array.isArray(r.opp_lineup) ? r.opp_lineup : []).map(b => b.id)));
     gamesEl.innerHTML = games.map(g=>renderGame(g, ps, kv, leagueK, games, date)).join("");
     Object.keys(PROJ).forEach(pid => { const el = document.getElementById("ln-" + pid); if (el && el.value) lean(pid); });
     document.getElementById("game-jump").innerHTML = '<option value="">All games…</option>'+
@@ -210,30 +230,44 @@ function project(p, oppTeamId, kv){
 }
 let LEAGUE_K = 0.223;
 
-/* Batter K% for the posted lineups. One batched call for every hitter on the
-   slate, not one per pitcher. Cached for the session. */
-const BATTERS = {};
-async function loadBatters(ids){
-  const missing = [...new Set(ids)].filter(id => id && !(id in BATTERS));
-  if (!missing.length) return;
-  for (let i = 0; i < missing.length; i += 40) {
-    const chunk = missing.slice(i, i + 40);
-    try {
-      const d = await j(`https://statsapi.mlb.com/api/v1/people?personIds=${chunk.join(",")}&hydrate=stats(group=[hitting],type=[season],season=${seasonYear()})`);
-      for (const per of d.people || []) {
-        const st = ((((per.stats || [])[0] || {}).splits || [])[0] || {}).stat || {};
-        const pa = Number(st.plateAppearances) || 0, so = Number(st.strikeOuts) || 0;
-        BATTERS[per.id] = {
-          name: per.useName && per.lastName ? `${per.useName} ${per.lastName}` : per.fullName,
-          k: pa >= 30 ? so / pa : null, pa
-        };
-      }
-    } catch (e) {}
-    for (const id of chunk) if (!(id in BATTERS)) BATTERS[id] = null;
-  }
+/* Opposing-lineup batter stats — one league-wide byDateRange call for the
+   selected window, same endpoint and same sortStat fix as the offense-matchups
+   tool. sortStat=plateAppearances (a counting stat) is required: without it
+   the API silently hides "non-qualified" low-PA hitters — anyone hurt,
+   rested, or recently recalled — the same behavior documented on mlb.com/stats.
+   Cached per exact date range so re-clicking the same window doesn't refetch. */
+async function loadWindowBatters(startISO, endISO){
+  const key = startISO + "|" + endISO;
+  if (battersCacheKey === key) return;
+  try {
+    const d = await j(`https://statsapi.mlb.com/api/v1/stats?stats=byDateRange&group=hitting&startDate=${startISO}&endDate=${endISO}&sportId=1&limit=1000&sortStat=plateAppearances`);
+    const splits = ((d.stats || [])[0] || {}).splits || [];
+    const fresh = {};
+    for (const s of splits) {
+      const st = s.stat || {};
+      const pa = Number(st.plateAppearances) || 0;
+      const avg = Number(st.avg), slg = Number(st.slg);
+      fresh[s.player.id] = {
+        name: s.player.fullName,
+        avg, obp: Number(st.obp), slg, ops: Number(st.ops),
+        iso: (Number.isFinite(avg) && Number.isFinite(slg)) ? slg - avg : null,
+        kPct: pa ? (Number(st.strikeOuts) || 0) / pa : null,
+        bbPct: pa ? (Number(st.baseOnBalls) || 0) / pa : null,
+        hr: Number(st.homeRuns) || 0, pa
+      };
+    }
+    Object.keys(BATTERS).forEach(k => delete BATTERS[k]);
+    Object.assign(BATTERS, fresh);
+    battersCacheKey = key;
+  } catch (e) {}
 }
 
-/* The nine hitters the projection was actually computed against. */
+/* The nine hitters the projection was actually computed against — same
+   opp_lineup the server used (posted or projected regulars), enriched with
+   the full stat line over the window selected above. This intentionally does
+   NOT fetch a separate live lineup: showing different batters here than the
+   ones the K number above was computed against would be a second, competing
+   answer to "who's in the lineup" instead of a display of the one the math used. */
 function lineupBlock(pr, pid){
   const s = pr.server;
   const lu = s && Array.isArray(s.opp_lineup) ? s.opp_lineup : null;
@@ -243,15 +277,23 @@ function lineupBlock(pr, pid){
   const rows = lu.map(b => {
     const info = BATTERS[b.id] || null;
     const name = b.name || (info && info.name) || `#${b.id}`;
-    const k = info && info.k !== null && info.k !== undefined ? info.k : null;
-    const cls = k === null ? "" : k >= 0.25 ? "k-hi" : k <= 0.18 ? "k-lo" : "";
+    const pa = info && Number.isFinite(info.pa) ? info.pa : "—";
+    const avg = info ? f3(info.avg) : "—";
+    const obp = info ? f3(info.obp) : "—";
+    const iso = info && Number.isFinite(info.iso) ? f3(info.iso) : "—";
+    const isoCls = info && Number.isFinite(info.iso) ? (info.iso >= 0.200 ? "k-hi" : info.iso < 0.120 ? "k-lo" : "") : "";
+    const k = info && info.kPct !== null && info.kPct !== undefined ? info.kPct : null;
+    const kCls = k === null ? "" : k >= 0.25 ? "k-hi" : k <= 0.18 ? "k-lo" : "";
+    const hr = info && Number.isFinite(info.hr) ? info.hr : "—";
+    const ops = info ? f3(info.ops) : "—";
     return `<tr><td>${b.order}.</td><td>${escapeHtml(name)}</td><td class="dim">${escapeHtml(b.pos || "")}</td>
-      <td class="${cls}">${k === null ? "&mdash;" : (k*100).toFixed(1) + "%"}</td></tr>`;
+      <td class="dim">${pa}</td><td>${avg}</td><td>${obp}</td><td class="${isoCls}">${iso}</td>
+      <td class="${kCls}">${k === null ? "&mdash;" : (k*100).toFixed(1) + "%"}</td><td>${hr}</td><td><b>${ops}</b></td></tr>`;
   }).join("");
   return `<details class="ars">
-    <summary>Opposing lineup &middot; ${escapeHtml(src)}</summary>
-    <table class="lu"><thead><tr><th>#</th><th>Batter</th><th></th><th>K%</th></tr></thead><tbody>${rows}</tbody></table>
-    <div class="ars-note"><span class="k-hi">Orange</span> strikes out a lot &mdash; helps the over. <span class="k-lo">Blue</span> is a contact bat. These are the hitters the arsenal leverage above was computed against.</div>
+    <summary>Opposing lineup (last ${WINDOW}d) &middot; ${escapeHtml(src)}</summary>
+    <div class="lu-wrap"><table class="lu"><thead><tr><th>#</th><th>Batter</th><th></th><th>PA</th><th>AVG</th><th>OBP</th><th>ISO</th><th>K%</th><th>HR</th><th>OPS</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="ars-note"><span class="k-hi">Orange</span> is the vulnerable end (strikes out a lot / hits for power) &mdash; helps the over. <span class="k-lo">Blue</span> is the tougher out (contact bat / little pop). These are the hitters the arsenal leverage above was computed against; small windows mean small samples on some rows.</div>
   </details>`;
 }
 
