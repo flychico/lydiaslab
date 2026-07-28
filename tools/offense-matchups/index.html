@@ -93,7 +93,7 @@ table.lu td:first-child, table.lu td:nth-child(2) { text-align:left; }
   </div>
 
   <div class="notice">
-    <strong>How to read it:</strong> <b>OPS (window)</b> is quality right now; <b>Δ vs season</b> is heat — a bad offense can be hot and an elite one can be cold. Tier labels translate the decimals: every ~25 OPS points is one class of offense (.700 below avg · .750 average · .800 good · .850 great · .900 elite). <b>HOW a team is hot matters</b>: contact-driven heat holds up; strikeout-heavy power binges collapse. The <b>vs-hand line</b> is each lineup's full-season OPS against tonight's opposing starter's throwing hand. <b>Starting lineup</b> shows the actual posted batting order with each hitter's season line once MLB posts it (usually ~2 hours before first pitch) — before that it falls back to a note, not a guess. In that table: <b>OBP</b> is how often he reaches base, <b>ISO</b> (SLG − AVG) is raw power, <b>K%</b> is how often he strikes out — colored green/red at the good/bad ends of each.
+    <strong>How to read it:</strong> <b>OPS (window)</b> is quality right now; <b>Δ vs season</b> is heat — a bad offense can be hot and an elite one can be cold. Tier labels translate the decimals: every ~25 OPS points is one class of offense (.700 below avg · .750 average · .800 good · .850 great · .900 elite). <b>HOW a team is hot matters</b>: contact-driven heat holds up; strikeout-heavy power binges collapse. The <b>vs-hand line</b> is each lineup's full-season OPS against tonight's opposing starter's throwing hand. <b>Starting lineup</b> shows the actual posted batting order once MLB posts it (usually ~2 hours before first pitch) — before that it falls back to a note, not a guess. Each hitter's line is over the <b>same window</b> selected above, not season totals: <b>PA</b> is the sample size, <b>OBP</b> is how often he reaches base, <b>ISO</b> (SLG − AVG) is raw power, <b>K%</b> is how often he strikes out — colored green/red at the good/bad ends of each. Short windows mean small samples; check PA before trusting a hot or cold number.
   </div>
 
   <div id="status"></div>
@@ -147,33 +147,39 @@ function shape(st) {
   };
 }
 
-/* Starting lineups — resolved player-by-player, batched. One call for every
-   hitter across the whole slate, not one per game. Season line only; a
-   window line for individual batters isn't published by this API in bulk. */
+/* Starting lineups — one league-wide byDateRange call, same endpoint and
+   same window as the team boxes above (7d/15d/30d). This is what mlb.com/stats
+   does when you filter a team by "Last 15 Days": it's a real, published split,
+   not something derived from season totals. Refetched whenever the window
+   or date changes; cached per exact date range so re-clicking the same
+   window pill doesn't re-fetch. */
 const BATTERS = {};
-async function loadLineupBatters(ids) {
-  const missing = [...new Set(ids)].filter(id => id && !(id in BATTERS));
-  if (!missing.length) return;
-  for (let i = 0; i < missing.length; i += 40) {
-    const chunk = missing.slice(i, i + 40);
-    try {
-      const d = await fetch(`https://statsapi.mlb.com/api/v1/people?personIds=${chunk.join(",")}&hydrate=stats(group=[hitting],type=[season],season=${seasonYear()})`).then(r => r.json());
-      for (const per of d.people || []) {
-        const st = ((((per.stats || [])[0] || {}).splits || [])[0] || {}).stat || {};
-        const pa = Number(st.plateAppearances) || 0;
-        const avg = Number(st.avg), slg = Number(st.slg);
-        BATTERS[per.id] = {
-          name: per.useName && per.lastName ? `${per.useName} ${per.lastName}` : per.fullName,
-          avg, obp: Number(st.obp), slg, ops: Number(st.ops),
-          iso: (Number.isFinite(avg) && Number.isFinite(slg)) ? slg - avg : null,
-          kPct: pa ? (Number(st.strikeOuts) || 0) / pa : null,
-          bbPct: pa ? (Number(st.baseOnBalls) || 0) / pa : null,
-          hr: Number(st.homeRuns) || 0, pa
-        };
-      }
-    } catch (e) {}
-    for (const id of chunk) if (!(id in BATTERS)) BATTERS[id] = null;
-  }
+let battersCacheKey = null;
+async function loadWindowBatters(startISO, endISO) {
+  const key = startISO + "|" + endISO;
+  if (battersCacheKey === key) return;
+  try {
+    const d = await fetch(`https://statsapi.mlb.com/api/v1/stats?stats=byDateRange&group=hitting&startDate=${startISO}&endDate=${endISO}&sportId=1&limit=1000`).then(r => r.json());
+    const splits = ((d.stats || [])[0] || {}).splits || [];
+    const fresh = {};
+    for (const s of splits) {
+      const st = s.stat || {};
+      const pa = Number(st.plateAppearances) || 0;
+      const avg = Number(st.avg), slg = Number(st.slg);
+      fresh[s.player.id] = {
+        name: s.player.fullName,
+        avg, obp: Number(st.obp), slg, ops: Number(st.ops),
+        iso: (Number.isFinite(avg) && Number.isFinite(slg)) ? slg - avg : null,
+        kPct: pa ? (Number(st.strikeOuts) || 0) / pa : null,
+        bbPct: pa ? (Number(st.baseOnBalls) || 0) / pa : null,
+        hr: Number(st.homeRuns) || 0, pa,
+        g: Number(st.gamesPlayed) || 0
+      };
+    }
+    Object.keys(BATTERS).forEach(k => delete BATTERS[k]);
+    Object.assign(BATTERS, fresh);
+    battersCacheKey = key;
+  } catch (e) {}
 }
 
 async function load() {
@@ -185,9 +191,11 @@ async function load() {
   try {
     const end = new Date(date + "T12:00");
     const start = new Date(end.getTime() - WINDOW * 86400000);
+    const startISO = localISODate(start), endISO = localISODate(end);
     const [schedRes, windowSplits] = await Promise.all([
       fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher,lineups`).then(r => r.json()),
-      teamStats(`stats=byDateRange&startDate=${localISODate(start)}&endDate=${localISODate(end)}`)
+      teamStats(`stats=byDateRange&startDate=${startISO}&endDate=${endISO}`),
+      loadWindowBatters(startISO, endISO)
     ]);
     if (!seasonBy) {
       const [seasonSplits, vl, vr] = await Promise.all([
@@ -215,13 +223,6 @@ async function load() {
         for (const p of pd.people || []) hands[p.id] = { id: p.id, hand: (p.pitchHand || {}).code || null, name: p.fullName };
       } catch(e) {}
     }
-
-    // posted starting lineups (empty object if not posted yet — that's normal)
-    const lineupIds = games.flatMap(g => [
-      ...(((g.lineups || {}).homePlayers) || []),
-      ...(((g.lineups || {}).awayPlayers) || [])
-    ].map(p => p.id));
-    if (lineupIds.length) { try { await loadLineupBatters(lineupIds); } catch (e) {} }
 
     statusEl.innerHTML = "";
     gamesEl.innerHTML = games.map(g => renderGame(g, windowBy, hands, games, date)).join("");
@@ -292,6 +293,7 @@ function lineupTable(lineup) {
   const rows = lineup.map((p, i) => {
     const b = BATTERS[p.id] || null;
     const pos = (p.primaryPosition && p.primaryPosition.abbreviation) || "";
+    const pa = b && Number.isFinite(b.pa) ? b.pa : "—";
     const avg = b ? f3(b.avg) : "—";
     const obp = b ? f3(b.obp) : "—";
     const iso = b && Number.isFinite(b.iso) ? f3(b.iso) : "—";
@@ -301,9 +303,10 @@ function lineupTable(lineup) {
     const ops = b ? f3(b.ops) : "—";
     const hr = b && Number.isFinite(b.hr) ? b.hr : "—";
     return `<tr><td>${i + 1}.</td><td>${escapeHtml(p.fullName || p.useName || "")}</td><td class="dim">${escapeHtml(pos)}</td>
-      <td>${avg}</td><td>${obp}</td><td class="${isoCls}">${iso}</td><td class="${kCls}">${kpct}</td><td>${hr}</td><td><b>${ops}</b></td></tr>`;
+      <td class="dim">${pa}</td><td>${avg}</td><td>${obp}</td><td class="${isoCls}">${iso}</td><td class="${kCls}">${kpct}</td><td>${hr}</td><td><b>${ops}</b></td></tr>`;
   }).join("");
-  return `<div class="lu-wrap"><table class="lu"><thead><tr><th>#</th><th>Batter</th><th></th><th>AVG</th><th>OBP</th><th>ISO</th><th>K%</th><th>HR</th><th>OPS</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  return `<div class="lu-wrap"><table class="lu"><thead><tr><th>#</th><th>Batter</th><th></th><th>PA</th><th>AVG</th><th>OBP</th><th>ISO</th><th>K%</th><th>HR</th><th>OPS</th></tr></thead><tbody>${rows}</tbody></table>
+  <div class="lu-note">Small samples over ${WINDOW} days — treat low-PA rows as noisy, not settled.</div></div>`;
 }
 
 function teamBox(teamName, id, win, season, oppStarter, lineup) {
@@ -335,7 +338,7 @@ function teamBox(teamName, id, win, season, oppStarter, lineup) {
     <div class="stat-row"><span>HR (window)</span><b>${w.hr ?? "—"}</b></div>
     ${handLine}
     <details class="ars"${lineup && lineup.length ? " open" : ""}>
-      <summary>Starting lineup${lineup && lineup.length ? "" : " · not posted"}</summary>
+      <summary>Starting lineup (last ${WINDOW}d)${lineup && lineup.length ? "" : " · not posted"}</summary>
       ${lineupTable(lineup)}
     </details>
   </div>`;
