@@ -144,7 +144,16 @@ async function main() {
   // The card is built first so the summary can describe what is actually on it.
   // Counting only moneyline rows is what produced "No official picks cleared the
   // stricter rules" on a day carrying an official total and six strikeout props.
-  const officialCard = buildPicksFile(rows, generatedAt);
+  const candidateCard = buildPicksFile(rows, generatedAt);
+  // The brief must describe the LOCKED card, not a fresh recomputation.
+  // Published picks are append-only and reused for the day; recomputing after a
+  // line moves produced a Member Brief that disagreed with the Results page on
+  // the SIDE of a pick (Wheeler Over 7.5 published, Under 7.5 in the brief).
+  // Publish first, then describe whatever actually got published.
+  const deferPublish = args["defer-publish"] === "true";
+  const officialCard = deferPublish
+    ? candidateCard
+    : writeOrReusePublishedPicks(candidateCard, allGames.length);
 
   const brief = {
     date: DATE,
@@ -203,8 +212,7 @@ async function main() {
   if (args["defer-publish"] === "true") {
     console.log(`Generated provisional LyDia source data for ${DATE}. Waiting for unified run projections before locking picks.`);
   } else {
-    const candidatePublished = officialCard;
-    const published = writeOrReusePublishedPicks(candidatePublished, allGames.length);
+    const published = officialCard;
     writeJson(`data/picks/${DATE}.json`, published);
     if (DATE === etToday()) writeJson("data/picks/today.json", published);
     mergeAndWriteMarket(buildMarketFile(rows, generatedAt));
@@ -1105,6 +1113,42 @@ function writeOrReusePublishedPicks(candidate, scheduledGameCount) {
       existing.note = candidate.note;
       writeJson(file, existing);
       console.log(`Promoted ${file} to the multi-market official schema without changing locked moneylines.`);
+    }
+
+    // LINE MOVES. A pick is a bet at a specific number. If the book no longer
+    // offers that number before first pitch, the old entry is superseded rather
+    // than rewritten: a K prop on 6.5 and one on 7.5 are different bets, and
+    // grading the retired number would grade a bet no member could place.
+    // Only pregame, only when the line actually changed, and the prior entry is
+    // kept under `superseded` so the history stays auditable.
+    {
+      const candByPk = new Map(candidate.picks.map(p => [String(p.gamePk), p]));
+      let moved = 0;
+      for (const prior of existing.picks) {
+        const firstPitch = Date.parse(prior.time);
+        if (!Number.isFinite(firstPitch) || Date.now() >= firstPitch) continue;
+        const next = candByPk.get(String(prior.gamePk));
+        if (!next) continue;
+
+        if (prior.total && next.total && Number(prior.total.line) !== Number(next.total.line)) {
+          (prior.superseded = prior.superseded || []).push({ market: "game_total", was: prior.total, at: new Date().toISOString() });
+          prior.total = next.total; moved++;
+        }
+        if (Array.isArray(prior.strikeouts) && Array.isArray(next.strikeouts)) {
+          const nextByPitcher = new Map(next.strikeouts.map(k => [k.pitcher, k]));
+          prior.strikeouts = prior.strikeouts.map(k => {
+            const n2 = nextByPitcher.get(k.pitcher);
+            if (!n2 || Number(n2.line) === Number(k.line)) return k;
+            (prior.superseded = prior.superseded || []).push({ market: "pitcher_strikeouts", was: k, at: new Date().toISOString() });
+            moved++;
+            return n2;
+          });
+        }
+      }
+      if (moved) {
+        writeJson(file, existing);
+        console.log(`Superseded ${moved} pick(s) whose posted line moved before first pitch.`);
+      }
     }
 
     // A zero-pick file is a provisional snapshot, not an immutable official-pick
