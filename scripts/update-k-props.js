@@ -187,7 +187,8 @@ async function main() {
             // pitcher's specific pitch mix, relative to a league-average lineup.
             // Posted lineup -> full confidence; projected regulars -> half.
             const oppSide = sd === "away" ? "home" : "away";
-            const postedLu = ((g.lineups || {})[oppSide + "Players"] || []).map(p => p.id).filter(Boolean);
+            const postedPlayers = ((g.lineups || {})[oppSide + "Players"] || []);
+            const postedLu = postedPlayers.map(p => p.id).filter(Boolean);
             let luIds = postedLu, luConf = 1, luSource = "posted";
             if (luIds.length < 5) {
               const code = teamCodes[oppId];
@@ -214,6 +215,21 @@ async function main() {
             rec.bf_per_ip = Number(bfPerIp.toFixed(2));
             rec.whiff_leverage = whiffFactor;
             rec.whiff_leverage_applied = lev.applied;
+            // Store the lineup the leverage was actually computed against. Without
+            // it the page can show a whiff factor but not the nine hitters behind
+            // it, and the learning loop cannot tell which lineup produced which
+            // projection. Names are kept when the lineup is posted; projected
+            // regulars carry ids only and the page resolves them.
+            rec.opp_team_id = oppId;
+            rec.opp_lineup_source = luSource;
+            rec.opp_lineup = luSource === "posted"
+              ? postedPlayers.map((p, i) => ({
+                  order: i + 1,
+                  id: p.id,
+                  name: p.useName && p.lastName ? `${p.useName} ${p.lastName}` : (p.fullName || null),
+                  pos: (p.primaryPosition || {}).abbreviation || null
+                }))
+              : luIds.map((id, i) => ({ order: i + 1, id, name: null, pos: null }));
             rec.whiff_lineup_source = lev.applied ? luSource : (lev.note || "n/a");
             rec.whiff_detail = lev.per_pitch || null;
             rec.game_pk = g.gamePk;
