@@ -55,6 +55,7 @@
 .ars summary { cursor:pointer; font-size:.74rem; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); }
 .ars summary:hover { color:var(--text); }
 .lu-note { font-size:.78rem; color:var(--text-dim); padding:4px 0; }
+.lu-wrap { overflow-x:auto; }
 table.lu { width:100%; border-collapse:collapse; font-size:.78rem; background:transparent; margin-top:4px; }
 table.lu th { font-size:.62rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); text-align:right; padding:3px 4px; border-bottom:1px solid var(--border); }
 table.lu th:first-child, table.lu th:nth-child(2) { text-align:left; }
@@ -92,7 +93,7 @@ table.lu td:first-child, table.lu td:nth-child(2) { text-align:left; }
   </div>
 
   <div class="notice">
-    <strong>How to read it:</strong> <b>OPS (window)</b> is quality right now; <b>Δ vs season</b> is heat — a bad offense can be hot and an elite one can be cold. Tier labels translate the decimals: every ~25 OPS points is one class of offense (.700 below avg · .750 average · .800 good · .850 great · .900 elite). <b>HOW a team is hot matters</b>: contact-driven heat holds up; strikeout-heavy power binges collapse. The <b>vs-hand line</b> is each lineup's full-season OPS against tonight's opposing starter's throwing hand. <b>Starting lineup</b> shows the actual posted batting order with each hitter's season line once MLB posts it (usually ~2 hours before first pitch) — before that it falls back to a note, not a guess.
+    <strong>How to read it:</strong> <b>OPS (window)</b> is quality right now; <b>Δ vs season</b> is heat — a bad offense can be hot and an elite one can be cold. Tier labels translate the decimals: every ~25 OPS points is one class of offense (.700 below avg · .750 average · .800 good · .850 great · .900 elite). <b>HOW a team is hot matters</b>: contact-driven heat holds up; strikeout-heavy power binges collapse. The <b>vs-hand line</b> is each lineup's full-season OPS against tonight's opposing starter's throwing hand. <b>Starting lineup</b> shows the actual posted batting order with each hitter's season line once MLB posts it (usually ~2 hours before first pitch) — before that it falls back to a note, not a guess. In that table: <b>OBP</b> is how often he reaches base, <b>ISO</b> (SLG − AVG) is raw power, <b>K%</b> is how often he strikes out — colored green/red at the good/bad ends of each.
   </div>
 
   <div id="status"></div>
@@ -159,10 +160,15 @@ async function loadLineupBatters(ids) {
       const d = await fetch(`https://statsapi.mlb.com/api/v1/people?personIds=${chunk.join(",")}&hydrate=stats(group=[hitting],type=[season],season=${seasonYear()})`).then(r => r.json());
       for (const per of d.people || []) {
         const st = ((((per.stats || [])[0] || {}).splits || [])[0] || {}).stat || {};
+        const pa = Number(st.plateAppearances) || 0;
+        const avg = Number(st.avg), slg = Number(st.slg);
         BATTERS[per.id] = {
           name: per.useName && per.lastName ? `${per.useName} ${per.lastName}` : per.fullName,
-          avg: Number(st.avg), obp: Number(st.obp), slg: Number(st.slg), ops: Number(st.ops),
-          hr: Number(st.homeRuns) || 0, pa: Number(st.plateAppearances) || 0
+          avg, obp: Number(st.obp), slg, ops: Number(st.ops),
+          iso: (Number.isFinite(avg) && Number.isFinite(slg)) ? slg - avg : null,
+          kPct: pa ? (Number(st.strikeOuts) || 0) / pa : null,
+          bbPct: pa ? (Number(st.baseOnBalls) || 0) / pa : null,
+          hr: Number(st.homeRuns) || 0, pa
         };
       }
     } catch (e) {}
@@ -287,13 +293,17 @@ function lineupTable(lineup) {
     const b = BATTERS[p.id] || null;
     const pos = (p.primaryPosition && p.primaryPosition.abbreviation) || "";
     const avg = b ? f3(b.avg) : "—";
+    const obp = b ? f3(b.obp) : "—";
+    const iso = b && Number.isFinite(b.iso) ? f3(b.iso) : "—";
+    const isoCls = b && Number.isFinite(b.iso) ? (b.iso >= 0.200 ? "pos-text" : b.iso < 0.120 ? "neg-text" : "") : "";
+    const kpct = b && Number.isFinite(b.kPct) ? (b.kPct * 100).toFixed(1) + "%" : "—";
+    const kCls = b && Number.isFinite(b.kPct) ? (b.kPct <= 0.18 ? "pos-text" : b.kPct >= 0.27 ? "neg-text" : "") : "";
     const ops = b ? f3(b.ops) : "—";
-    const tier = b ? opsTier(b.ops) : null;
     const hr = b && Number.isFinite(b.hr) ? b.hr : "—";
     return `<tr><td>${i + 1}.</td><td>${escapeHtml(p.fullName || p.useName || "")}</td><td class="dim">${escapeHtml(pos)}</td>
-      <td>${avg}</td><td>${hr}</td><td><b>${ops}</b>${tierChip(tier)}</td></tr>`;
+      <td>${avg}</td><td>${obp}</td><td class="${isoCls}">${iso}</td><td class="${kCls}">${kpct}</td><td>${hr}</td><td><b>${ops}</b></td></tr>`;
   }).join("");
-  return `<table class="lu"><thead><tr><th>#</th><th>Batter</th><th></th><th>AVG</th><th>HR</th><th>OPS</th></tr></thead><tbody>${rows}</tbody></table>`;
+  return `<div class="lu-wrap"><table class="lu"><thead><tr><th>#</th><th>Batter</th><th></th><th>AVG</th><th>OBP</th><th>ISO</th><th>K%</th><th>HR</th><th>OPS</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 function teamBox(teamName, id, win, season, oppStarter, lineup) {
