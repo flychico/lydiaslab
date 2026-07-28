@@ -9,324 +9,246 @@
   gtag('js', new Date());
   gtag('config', 'G-XVWTMDNBJK');
 </script>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Strikeout Projections — LyDia's Lab</title>
+<title>LyDia — Daily MLB Predictions from a Transparent Model</title>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="LyDia">
-<meta property="og:title" content="Strikeout Projections — LyDia's Lab">
-<meta property="og:description" content="A projected strikeout total for every MLB starter today, built from whiff skill, expected innings, and the opposing lineup">
-<meta property="og:url" content="https://lydiaslab.com/tools/strikeout-projections/">
+<meta property="og:title" content="LyDia — Daily MLB Predictions from a Transparent Model">
+<meta property="og:description" content="Daily MLB model predictions with win probability, market edge, and every pick graded in public. Free daily card, membership for delivery before first pitch.">
+<meta property="og:url" content="https://lydiaslab.com/">
 <meta property="og:image" content="https://lydiaslab.com/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Strikeout Projections — LyDia's Lab">
-<meta name="twitter:description" content="A projected strikeout total for every MLB starter today, built from whiff skill, expected innings, and the opposing lineup">
+<meta name="twitter:title" content="LyDia — Daily MLB Predictions from a Transparent Model">
+<meta name="twitter:description" content="Daily MLB model predictions with win probability and market edge. Every pick graded in public.">
 <meta name="twitter:image" content="https://lydiaslab.com/img/og-card.png">
-
-<meta name="description" content="A projected strikeout total for every MLB starter today, built from whiff skill, expected innings, and the opposing lineup's strikeout rate against his throwing hand.">
-<link rel="canonical" href="https://lydiaslab.com/tools/strikeout-projections/">
-<link rel="manifest" href="/img/manifest-strikeout.json">
-<link rel="apple-touch-icon" href="/img/app-strikeout-192.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Strikeouts">
+<meta name="description" content="LyDia gives daily MLB model predictions with win probability, market edge, pitcher and bullpen analysis, and every pick graded in public. Free daily card, membership for early delivery.">
+<link rel="canonical" href="https://lydiaslab.com/">
 <link rel="stylesheet" href="/css/style.css">
 <style>
-.controls { display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:16px; }
-.controls .field { margin-bottom:0; }
-.match-card { margin-bottom:14px; }
-.match-head { display:grid; grid-template-columns:1fr auto 1fr; gap:8px; align-items:baseline; margin-bottom:8px; }
-.match-head .matchup { font-weight:800; font-size:1.05rem; }
-.match-head .matchup { grid-column:2; text-align:center; }
-.match-head .small { grid-column:3; justify-self:end; }
-.k-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:8px; }
-.k-box { background:var(--bg-elev); border:1px solid var(--border); border-radius:var(--radius); padding:12px; }
-.k-proj { font-size:1.9rem; font-weight:800; color:var(--accent); }
-.k-row { display:flex; justify-content:space-between; gap:8px; font-size:.86rem; border-top:1px solid var(--border); padding-top:5px; margin-top:5px; }
-.line-input { display:flex; gap:8px; align-items:center; margin-top:9px; }
-.line-input input { width:88px; text-align:center; font-weight:700; }
-.lean { font-weight:800; }
-.tier { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:1px 7px; margin-left:6px; white-space:nowrap; }
-/* Editable expected innings */
-.ip-edit { display:inline-flex; align-items:center; gap:6px; }
-.ip-edit input { width:60px; padding:3px 5px; text-align:center; font-weight:800; }
-.ip-edit .rst { font-size:.72rem; color:var(--text-dim); cursor:pointer; text-decoration:underline; }
-.ip-edited { color:var(--accent); }
-.ip-note { font-size:.74rem; color:var(--text-dim); margin-top:4px; }
-/* Swing-and-miss alignment (arsenal leverage) */
-.ars { margin-top:10px; border-top:1px solid var(--border); padding-top:8px; }
-.ars summary { cursor:pointer; font-size:.74rem; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); }
-.ars summary:hover { color:var(--text); }
-.ars-head { display:flex; justify-content:space-between; align-items:baseline; font-size:.82rem; margin:8px 0 6px; }
-.ars-lev { font-weight:800; font-variant-numeric:tabular-nums; }
-.ars-row { display:grid; grid-template-columns:34px 1fr 52px; gap:8px; align-items:center; font-size:.78rem; padding:2px 0; }
-.ars-pt { font-weight:800; }
-.ars-track { background:var(--bg-card); border:1px solid var(--border); border-radius:6px; height:11px; overflow:hidden; position:relative; }
-.ars-fill { height:100%; }
-.ars-ratio { text-align:right; font-weight:800; font-variant-numeric:tabular-nums; }
-.ars-note { font-size:.74rem; color:var(--text-dim); margin-top:6px; line-height:1.45; }
-@media (max-width:720px){ .k-grid{ grid-template-columns:1fr; } }
+.home-hero { padding: 6px 0 4px; }
+.home-hero h1 { font-size: clamp(2.1rem,5vw,3.1rem); line-height:1.08; margin-bottom:12px; }
+.home-hero .lead { font-size: 1.12rem; color: var(--text-dim); max-width: 640px; line-height:1.55; }
+.trust-row { display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
+.section-head { display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; margin:36px 0 12px; }
+.section-head h2 { margin:0; }
+.cards-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+.cards-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+.feat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; }
+.feat-card { display:block; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:14px; box-shadow:var(--shadow-sm); }
+.feat-card:hover { border-color:rgba(109,93,252,.28); text-decoration:none; transform:translateY(-1px); }
+.feat-card .teams { font-weight:800; margin:6px 0 4px; }
+.feat-card .meta { color:var(--text-dim); font-size:.86rem; }
+.mkt-head { display:flex; align-items:baseline; gap:8px; margin:18px 0 8px; }
+.mkt-head h3 { margin:0; font-size:1rem; }
+.mkt-head .count { color:var(--text-dim); font-size:.82rem; }
+.lab-card { display:block; }
+.lab-card h3 { margin:0 0 4px; }
+.member-band { background:linear-gradient(135deg,rgba(109,93,252,.10),rgba(217,70,143,.08)); border:1px solid var(--border); border-radius:var(--radius); padding:26px; margin-top:16px; }
+.member-grid { display:grid; grid-template-columns:1.2fr 1fr; gap:24px; align-items:center; }
+.member-list { list-style:none; padding:0; margin:12px 0 0; display:grid; gap:8px; }
+.member-list li { display:flex; gap:8px; align-items:center; font-weight:600; }
+.member-list li::before { content:"✓"; color:var(--good); font-weight:900; }
+.price-tag { font-size:2.2rem; font-weight:900; }
+@media (max-width:720px){ .cards-3,.cards-4{grid-template-columns:1fr 1fr} .member-grid{grid-template-columns:1fr} }
+@media (max-width:480px){ .cards-3,.cards-4{grid-template-columns:1fr} }
 </style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": "https://lydiaslab.com/#website",
+  "name": "LyDia",
+  "url": "https://lydiaslab.com/",
+  "description": "Daily MLB model predictions with win probability, market edge, and public grading.",
+  "publisher": { "@type": "Organization", "@id": "https://lydiaslab.com/#organization", "name": "LyDia", "url": "https://lydiaslab.com/" }
+}
+</script>
 </head>
 <body>
 <nav id="nav"></nav>
 <main>
-  <p class="eyebrow">LyDia's Lab</p>
-  <h1>Strikeout Projections</h1>
-  <p class="subtitle">How many strikeouts should each starter get tonight? Built from three things: his whiff skill, how deep he pitches, and how much the opposing lineup swings and misses against his throwing hand — pitch by pitch.</p>
 
-  <div class="controls">
-    <div class="field">
-      <label for="date-pick">Date</label>
-      <input type="date" id="date-pick">
+  <section class="home-hero">
+    <p class="eyebrow">Daily MLB predictions</p>
+    <h1>Beat the market with a model that shows its work.</h1>
+    <p class="lead">LyDia prices every MLB game against the market, tells you where the value is, and grades every pick in public — wins and losses alike. No hype, no hidden record.</p>
+    <div class="hero-actions">
+      <a class="btn blue" href="/previews/">Today's picks</a>
+      <a class="btn secondary" href="/membership/">Become a member</a>
     </div>
-    <button onclick="shiftDay(0)">Today</button>
-    <button class="secondary" onclick="shiftDay(1)">Tomorrow</button>
-    <div>
-      <label for="game-jump">Filter games</label>
-      <select id="game-jump" onchange="filterGame(this.value)"><option value="">All games…</option></select>
+    <div class="trust-row" id="trust-row">
+      <span class="trust-badge">Every pick graded in public</span>
+    </div>
+  </section>
+
+  <div class="section-head">
+    <h2>Today's official picks</h2>
+    <a class="dim small" href="/previews/">Full card &rarr;</a>
+  </div>
+  <div id="featured">
+    <div class="dim small">Loading today's card…</div>
+  </div>
+
+  <div class="section-head"><h2>How LyDia gives you an edge</h2></div>
+  <div class="cards-3">
+    <div class="card">
+      <p class="eyebrow">Predict</p>
+      <h3>A win probability for every game</h3>
+      <p>Team strength, starting pitching, and bullpen condition go into one number: how often LyDia expects each side to win.</p>
+    </div>
+    <div class="card">
+      <p class="eyebrow">Compare</p>
+      <h3>Model versus the market</h3>
+      <p>LyDia lines its number up against a no-vig market probability from up to nine sportsbooks, so you see the gap, not just an opinion.</p>
+    </div>
+    <div class="card">
+      <p class="eyebrow">Beat the market</p>
+      <h3>Only bet real value</h3>
+      <p>A game becomes an official pick only when the edge, the setup quality, and the price all clear a fixed bar. Most games do not. Passing is a result.</p>
     </div>
   </div>
 
-  <div class="notice">
-    <span id="kbias-note"></span><strong>How to read it:</strong> the projection is a median expectation — a real outing lands within ±2 of it roughly two-thirds of the time, so treat small edges with respect and only lean when the gap to your book's line is <b>0.7+ strikeouts</b>. <b>Expected innings is editable</b> — change it and the projection recalculates in your browser. Nothing is published and no graded pick changes. Open <b>Swing-and-miss alignment</b> to see which pitches carry the matchup.
+  <div class="section-head">
+    <h2>The LyDia Lab</h2>
+    <a class="dim small" href="/tools/">All tools &rarr;</a>
+  </div>
+  <div class="cards-4">
+    <a class="card lab-card" href="/tools/pitcher-matchups/"><p class="eyebrow">Matchup engine</p><h3>Pitcher Matchup</h3><p>Every starter on the slate compared side by side.</p></a>
+    <a class="card lab-card" href="/tools/bullpen-fatigue/"><p class="eyebrow">Bullpen index</p><h3>Bullpen Fatigue</h3><p>Workload, efficiency, and combined late-game risk.</p></a>
+    <a class="card lab-card" href="/tools/totals-projections/"><p class="eyebrow">Market comparison</p><h3>Totals Projections</h3><p>Projected runs against the market over/under.</p></a>
+    <a class="card lab-card" href="/results/"><p class="eyebrow">Prediction history</p><h3>Public Results</h3><p>Every graded pick, wins and losses, dated.</p></a>
   </div>
 
-  <div id="status"><div class="loading">Projecting strikeouts…</div></div>
-  <div id="games"></div>
+  <div class="section-head"><h2>Membership</h2></div>
+  <div class="member-band">
+    <div class="member-grid">
+      <div>
+        <p class="eyebrow">Unlock every pick</p>
+        <h3 style="margin-top:0;font-size:1.5rem">Get the full card before first pitch</h3>
+        <ul class="member-list">
+          <li>Every official pick, value watch, and pass</li>
+          <li>Full model analysis and market-movement notes</li>
+          <li>Premium dashboard and the complete Lab</li>
+          <li>The same public record, delivered early</li>
+        </ul>
+      </div>
+      <div style="text-align:center">
+        <div class="price-tag">$30<span class="dim" style="font-size:1rem;font-weight:600">/mo</span></div>
+        <p class="dim small" style="margin:4px 0 14px">Founding rate. Cancel anytime.</p>
+        <p><a class="btn blue" href="/membership/">Join LyDia</a></p>
+        <p style="margin-top:8px"><a class="dim small" href="/membership/#free">or get the free daily card &rarr;</a></p>
+      </div>
+    </div>
+  </div>
+
+  <p class="small dim" style="margin-top:26px">For entertainment and informational purposes. No outcome is guaranteed. 21+. If you or someone you know has a gambling problem, call 1-800-GAMBLER.</p>
+
 </main>
-<footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/"); renderFooter();</script>
-<script src="/js/pitcher-matchup-core.js"></script>
+<footer id="footer"></footer>
+<script src="/js/app.js"></script>
 <script>
-const datePick = document.getElementById("date-pick");
-datePick.value = localISODate(new Date());
-datePick.addEventListener("change", load);
-let PROJ = {}; // pitcherId -> projection data
-let LINES = {}, LINES_AT = null, KBIAS = 0, KBIAS_N = 0; // live K prop lines by pitcher name (server-fetched daily)
+renderNav("/"); renderFooter();
 
-/* Expected innings is the input the model is least sure about and the one a
-   human most often knows better — a reported bulk role, a pitch-count limit, a
-   short leash. Editable here; overrides are kept per date + pitcher on this
-   device only. Nothing is published and no graded pick is touched. */
-const IP_KEY = "lydia_ip_overrides";
-function loadIp(){ try { return JSON.parse(localStorage.getItem(IP_KEY) || "{}"); } catch(e){ return {}; } }
-function saveIp(o){ try { localStorage.setItem(IP_KEY, JSON.stringify(o)); } catch(e){} }
-let IP_OVERRIDES = loadIp();
+function slugify(v){ return String(v).toLowerCase().replace(/&/g,"and").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,""); }
+function shortName(n){ const two=["Red Sox","White Sox","Blue Jays"]; for(const t of two) if(String(n).endsWith(t)) return t; return String(n).split(" ").pop(); }
+function isoToday(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+function fmtAm(v){ return v===null||v===undefined ? "" : (v>0?"+"+v:String(v)); }
 
-load();
+async function loadJson(u){ try{ const r=await fetch(`${u}?v=${Date.now()}`,{cache:"no-store"}); return r.ok?await r.json():null; }catch(e){ return null; } }
 
-function localISODate(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
-function shiftDay(n){ const d=new Date(); d.setDate(d.getDate()+n); datePick.value=localISODate(d); load(); }
-function filterGame(pk){ document.querySelectorAll(".match-card").forEach(c=>{ c.style.display = (!pk || c.id === "kg-"+pk) ? "" : "none"; }); }
-function ipToNum(ip){ if(!ip||ip==="-.--")return 0; const [w,f]=String(ip).split("."); return Number(w||0)+Number(f||0)/3; }
-function seasonYear(){ const d=new Date(datePick.value+"T12:00"); return d.getMonth()>=2?d.getFullYear():d.getFullYear()-1; }
-async function j(u){ const r=await fetch(u); if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); }
+/* Public record.
 
-async function load(){
-  const statusEl=document.getElementById("status"), gamesEl=document.getElementById("games");
-  statusEl.innerHTML='<div class="loading">Projecting strikeouts…</div>'; gamesEl.innerHTML="";
-  try{
-    const yr=seasonYear(), date=datePick.value;
-    LINES={};
-    if(date===localISODate(new Date())){
-      try{ const kp=await fetch("/data/k-props/today.json?v="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null);
-        if(kp && kp.date===date && kp.pitchers){ LINES=kp.pitchers; LINES_AT=kp.generated_at; KBIAS=kp.learned_bias||0; KBIAS_N=kp.learned_n||0; } }catch(e){}
+   Counts every day the engine considers official, across every official market,
+   exactly the way the Results page does. Restricting this to `moneyline_only`
+   days is what made the homepage badge disagree with /results/: it silently
+   dropped every day graded under the multi-market model, so it showed only a
+   slice of the moneyline record and none of the totals or strikeout props. */
+const OFFICIAL_MODELS = ["moneyline_only", "multi_market_v1"];
+(async function record(){
+  const res = await loadJson("/data/results.json");
+  if(!res || !res.days) return;
+  let w=0,l=0,u=0,hasUnits=false;
+  for(const d of Object.values(res.days)){
+    if(!OFFICIAL_MODELS.includes(d.current_official_model)) continue;
+    if(d.market_records){
+      for(const r of Object.values(d.market_records)){ w += Number(r.wins)||0; l += Number(r.losses)||0; }
+    } else {
+      for(const p of (d.picks||[])){ if(p.mlResult==="W")w++; else if(p.mlResult==="L")l++; }
     }
-    const [sched, vl, vr] = await Promise.all([
-      j(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher`),
-      j(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${yr}&stats=statSplits&sitCodes=vl`),
-      j(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${yr}&stats=statSplits&sitCodes=vr`)
-    ]);
-    // opponent K% vs each hand + league baseline
-    const kv={L:{},R:{}}; let soT=0, paT=0;
-    for(const t of (vl.stats[0]||{}).splits||[]){ const so=+t.stat.strikeOuts||0, pa=+t.stat.plateAppearances||0; if(pa) kv.L[t.team.id]=so/pa; }
-    for(const t of (vr.stats[0]||{}).splits||[]){ const so=+t.stat.strikeOuts||0, pa=+t.stat.plateAppearances||0; if(pa){ kv.R[t.team.id]=so/pa; soT+=so; paT+=pa; } }
-    const leagueK = paT ? soT/paT : 0.223;
+    if(typeof d.units==="number"){ u+=d.units; hasUnits=true; }
+  }
+  const graded=w+l;
+  const row=document.getElementById("trust-row");
+  if(graded && row){
+    const pct=((w/graded)*100).toFixed(0);
+    row.innerHTML =
+      `<span class="trust-badge"><strong>${w}-${l}</strong>&nbsp;official record</span>`+
+      `<span class="trust-badge">${pct}% across ${graded} graded picks</span>`+
+      (hasUnits?`<span class="trust-badge ${u>=0?"pos-text":"neg-text"}">${u>=0?"+":""}${u.toFixed(2)}u</span>`:"")+
+      `<span class="trust-badge">Moneyline, totals and strikeout props</span>`;
+  }
+})();
 
-    const games=(((sched.dates||[])[0])||{}).games||[];
-    if(!games.length){ statusEl.innerHTML=`<div class="notice">No MLB games scheduled for ${date}.</div>`; return; }
-    games.sort((a,b)=>new Date(a.gameDate)-new Date(b.gameDate));
-    const pids=[...new Set(games.flatMap(g=>["away","home"].map(s=>g.teams[s].probablePitcher&&g.teams[s].probablePitcher.id).filter(Boolean)))];
-    const ps=pids.length ? await LyDiaPitcherCore.loadPitchersForDate(pids, date) : {};
+/* Today's official picks.
 
-    PROJ={};
-    gamesEl.innerHTML = games.map(g=>renderGame(g, ps, kv, leagueK, games, date)).join("");
-    Object.keys(PROJ).forEach(pid => { const el = document.getElementById("ln-" + pid); if (el && el.value) lean(pid); });
-    document.getElementById("game-jump").innerHTML = '<option value="">All games…</option>'+
-      games.map(g=>`<option value="${g.gamePk}">${escapeHtml(g.teams.away.team.name)} @ ${escapeHtml(g.teams.home.team.name)}</option>`).join("");
-    statusEl.innerHTML="";
-    const bn=document.getElementById("kbias-note");
-    if(bn) bn.innerHTML = KBIAS ? `<b>Self-calibrated:</b> projections include a ${KBIAS>0?"+":""}${KBIAS}-strikeout correction learned from ${KBIAS_N} graded starts. ` : "";
-  }catch(e){ statusEl.innerHTML=`<div class="notice warn">Could not project (${escapeHtml(e.message)}).</div>`; }
-}
-
-/* Projection.
-
-   When the server has already published a projection for this pitcher we use
-   it, because that number carries the arsenal leverage the browser cannot
-   recompute: pitch-type usage against this lineup's whiff rate on each pitch.
-   Falling back to the local formula would silently drop that work.
-
-   The projection is linear in expected innings, so an edited innings figure
-   rescales it exactly: proj * (editedIP / serverIP). */
-function project(p, oppTeamId, kv){
-  if(!p || !p.ip || p.ip < 15 || !p.bf) return null;
-  const role = LyDiaPitcherCore.classifyPitcherRole(p);
-  const server = LINES[String(p.name||"").toLowerCase()] || null;
-  const hasServer = server && Number.isFinite(server.projection) && Number.isFinite(server.expected_innings) && server.expected_innings > 0;
-
-  const modelIP = hasServer ? Number(server.expected_innings) : role.expectedInnings;
-  const key = datePick.value + "|" + (p.id || p.name);
-  const ov = Number(IP_OVERRIDES[key]);
-  const expIP = Number.isFinite(ov) && ov > 0 ? ov : modelIP;
-
-  const kbf = p.so/p.bf;
-  const oppK = p.hand && kv[p.hand] ? kv[p.hand][oppTeamId] : null;
-  const adj = (oppK && LEAGUE_K) ? Math.max(0.87, Math.min(1.13, oppK/LEAGUE_K)) : 1;
-
-  let k;
-  if (hasServer) {
-    k = Math.max(0, Number(server.projection) * (expIP / modelIP));
-  } else {
-    const bfPerIp = Number.isFinite(server && server.bf_per_ip) ? server.bf_per_ip : 4.28;
-    k = Math.max(0, expIP * bfPerIp * kbf * adj + (KBIAS || 0));
+   Reads the locked published-picks file, which is the same source the Results
+   page grades from, so the homepage cannot show a different card than the one
+   on the record. Every official market is surfaced — a day can easily have no
+   moneyline at all and still carry a total and several strikeout props. */
+(async function featured(){
+  const el=document.getElementById("featured");
+  const date=isoToday();
+  const data = await loadJson(`/data/published-picks/${date}.json`);
+  const picks = data && Array.isArray(data.picks) ? data.picks : null;
+  if(!picks || !picks.length){
+    el.innerHTML=`<div class="dim small">No card published yet today. <a href="/previews/">See the latest card &rarr;</a></div>`;
+    return;
   }
 
-  return {
-    k, expIP, modelIP, ipEdited: expIP !== modelIP, kbf, oppK, adj,
-    lowSample: p.ip < 40, role, server, hasServer,
-    bfPerIp: Number.isFinite(server && server.bf_per_ip) ? server.bf_per_ip : 4.28
+  const url = g => "/mlb/"+slugify(shortName(g.away))+"-vs-"+slugify(shortName(g.home))+"-prediction-odds-"+(data.date||date)+"/";
+  const ml=[], tot=[], ks=[];
+  for(const g of picks){
+    const matchup = `${shortName(g.away)} @ ${shortName(g.home)}`;
+    if(g.moneyline && g.moneyline.pick && !g.moneyline.isPass){
+      const prob = typeof g.moneyline.prob==="number" ? `${(g.moneyline.prob*100).toFixed(0)}% ` : "";
+      ml.push({ url:url(g), matchup, line:`${shortName(g.moneyline.pick)} ML`, meta:`${prob}${fmtAm(g.moneyline.bestAm)}` });
+    }
+    if(g.total && g.total.pick){
+      tot.push({ url:url(g), matchup, line:`${g.total.pick} ${g.total.line}`, meta:`${fmtAm(g.total.bestAm)}${typeof g.total.edge==="number"?` · ${g.total.edge>0?"+":""}${g.total.edge.toFixed(1)} run edge`:""}` });
+    }
+    for(const k of (g.strikeouts||[])){
+      ks.push({ url:url(g), matchup, line:`${k.pitcher} ${k.pick} ${k.line}K`, meta:`${fmtAm(k.bestAm)}${typeof k.edge==="number"?` · ${k.edge>0?"+":""}${k.edge.toFixed(1)}K edge`:""}` });
+    }
+  }
+
+  const total = ml.length+tot.length+ks.length;
+  if(!total){
+    el.innerHTML=`<div class="dim small">No official picks on today's card — LyDia passed the slate. <a href="/previews/">See the full card and the pass reasons &rarr;</a></div>`;
+    return;
+  }
+
+  const CAP=4;
+  const section=(title,arr,badge)=>{
+    if(!arr.length) return "";
+    const shown=arr.slice(0,CAP);
+    const more=arr.length-shown.length;
+    return `<div class="mkt-head"><h3>${title}</h3><span class="count">${arr.length} official</span></div>`
+      + `<div class="feat-grid">`
+      + shown.map(p=>`<a class="feat-card" href="${p.url}">
+          <span class="badge pos">${badge}</span>
+          <div class="teams">${p.line}</div>
+          <div class="meta">${p.matchup}${p.meta?" · "+p.meta:""}</div>
+        </a>`).join("")
+      + `</div>`
+      + (more?`<p class="small dim" style="margin-top:6px"><a href="/previews/">+${more} more ${title.toLowerCase()} on the full card &rarr;</a></p>`:"");
   };
-}
-let LEAGUE_K = 0.223;
 
-/* Swing-and-miss alignment: how often he throws each pitch, and how this
-   lineup's whiff rate on that pitch compares with league. Above 1.00 means the
-   matchup favours the pitcher on that offering. */
-function arsenalBlock(pr, pid){
-  const s = pr.server;
-  if(!s || !Array.isArray(s.whiff_detail) || !s.whiff_detail.length) return "";
-  const lev = Number(s.whiff_leverage);
-  const src = s.whiff_lineup_source === "posted" ? "posted lineup"
-            : s.whiff_lineup_source === "projected_regulars" ? "projected regulars" : "team baseline";
-  const rows = [...s.whiff_detail].sort((a,b)=>Number(b.usage)-Number(a.usage)).map(d=>{
-    const ratio = Number(d.ratio), usage = Number(d.usage);
-    const good = ratio >= 1;
-    const pctWidth = Math.max(3, Math.min(100, usage));
-    return `<div class="ars-row">
-      <span class="ars-pt">${escapeHtml(d.pt)}</span>
-      <span class="ars-track"><span class="ars-fill" style="width:${pctWidth}%;background:${good?"var(--good)":"var(--accent)"}"></span></span>
-      <span class="ars-ratio ${good?"pos-text":"neg-text"}">${ratio.toFixed(2)}</span>
-    </div>`;
-  }).join("");
-  return `<details class="ars">
-    <summary>Swing-and-miss alignment</summary>
-    <div class="ars-head">
-      <span>Arsenal leverage <span class="dim small">(${escapeHtml(src)})</span></span>
-      <span class="ars-lev ${lev>=1?"pos-text":"neg-text"}">${Number.isFinite(lev)?lev.toFixed(3):"—"}</span>
-    </div>
-    ${rows}
-    <div class="ars-note">Bar length is how often he throws the pitch. The number is this lineup's whiff rate on it versus league — above 1.00 favours the pitcher. The blended figure above is already inside the projection.</div>
-  </details>`;
-}
-
-function ipControl(pr, pid){
-  return `<div class="k-row"><span>Expected innings</span>
-    <span class="ip-edit">
-      <input type="number" step="0.1" min="0.1" max="9" id="ip-${pid}" value="${pr.expIP.toFixed(1)}"
-             onchange="setIP(${pid}, this.value)"
-             onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
-      ${pr.ipEdited ? `<span class="rst" onclick="resetIP(${pid})">reset ${pr.modelIP.toFixed(1)}</span>` : ""}
-    </span></div>`;
-}
-
-/* Rescale on an innings edit and repaint the card in place.
-
-   Fired on change, not input. Typing "5.3" over "4.2" passes through "5", "5."
-   and briefly an empty field; recalculating on every keystroke made the card
-   jump and reset itself mid-edit. This commits once, on Enter or on leaving the
-   field, so you can type freely. A blank field still means "use the model". */
-function setIP(pid, raw){
-  const pr = PROJ[pid]; if(!pr) return;
-  const text = String(raw).trim();
-  const v = text === "" ? NaN : Number(text);
-  const key = datePick.value + "|" + pid;
-  if (Number.isFinite(v) && v > 0) IP_OVERRIDES[key] = v; else delete IP_OVERRIDES[key];
-  saveIp(IP_OVERRIDES);
-
-  const expIP = Number.isFinite(v) && v > 0 ? v : pr.modelIP;
-  pr.expIP = expIP;
-  pr.ipEdited = expIP !== pr.modelIP;
-  pr.k = pr.hasServer
-    ? Math.max(0, Number(pr.server.projection) * (expIP / pr.modelIP))
-    : Math.max(0, expIP * pr.bfPerIp * pr.kbf * pr.adj + (KBIAS || 0));
-
-  const kEl = document.getElementById("kproj-" + pid);
-  if (kEl) { kEl.textContent = pr.k.toFixed(1); kEl.classList.toggle("ip-edited", pr.ipEdited); }
-  const noteEl = document.getElementById("ipnote-" + pid);
-  if (noteEl) noteEl.innerHTML = pr.ipEdited
-    ? `Edited from the model's ${pr.modelIP.toFixed(1)} IP. Saved on this device only — nothing is published.`
-    : "";
-  lean(pid);
-}
-function resetIP(pid){
-  const el = document.getElementById("ip-" + pid);
-  const pr = PROJ[pid];
-  if (el && pr) el.value = pr.modelIP.toFixed(1);
-  setIP(pid, "");
-}
-
-function kBox(pitcher, oppTeam, oppTeamId, kv, pid){
-  const p=pitcher;
-  if(!p) return `<div class="k-box"><b>TBD starter</b><div class="dim small">No projection until the probable posts.</div></div>`;
-  const pitcherName = `<a href="https://www.mlb.com/player/${String(p.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-${p.id || pid}" target="_blank" rel="noopener">${escapeHtml(p.name)}</a>`;
-  const pr=project(p, oppTeamId, kv);
-  if(!pr) return `<div class="k-box"><b>${pitcherName}</b><div class="dim small">Not enough innings this season for a reliable projection.</div></div>`;
-  PROJ[pid]=pr;
-  const oppTier = pr.oppK===null ? "" : pr.oppK>=0.245 ? ' <span class="tier pos-text">strikes out a lot — helps the over</span>' : pr.oppK>=0.225 ? ' <span class="tier pos-text">above average strikeouts</span>' : pr.oppK<=0.195 ? ' <span class="tier neg-text">hard to strike out — hurts the over</span>' : ' <span class="tier">average strikeouts</span>';
-  return `<div class="k-box">
-    <div style="display:flex;justify-content:space-between;align-items:baseline"><b>${pitcherName}</b><span class="dim small">${p.hand==="L"?"LHP":"RHP"}</span></div>
-    <div><span class="k-proj ${pr.ipEdited?"ip-edited":""}" id="kproj-${pid}">${pr.k.toFixed(1)}</span> <span class="dim small">projected Ks${pr.lowSample ? ' · <b class="gold">small sample</b>' : ""}</span></div>
-    <div class="ip-note" id="ipnote-${pid}">${pr.ipEdited ? `Edited from the model's ${pr.modelIP.toFixed(1)} IP. Saved on this device only — nothing is published.` : ""}</div>
-    <div class="k-row"><span>Pitching plan</span><b>${escapeHtml(pr.role.label)}</b></div>
-    <div class="k-row"><span>K per batter (season)</span><b>${(pr.kbf*100).toFixed(1)}%</b></div>
-    ${ipControl(pr, pid)}
-    ${pr.role.bullpenGame ? '<div class="small dim">Strikeout projection covers the opener only. Remaining innings belong to the bullpen.</div>' : ""}
-    <div class="k-row"><span title="How often this lineup strikes out against pitchers of his hand — higher means more strikeouts available">${escapeHtml(oppTeam)} strikeout rate vs ${p.hand==="L"?"lefties":"righties"}</span><span><b>${pr.oppK!==null?(pr.oppK*100).toFixed(1)+"%":"—"}</b>${oppTier}</span></div>
-    ${(() => { const L = LINES[p.name.toLowerCase()]; if (!L || L.line === null || L.line === undefined) return ""; return `<div class="k-row"><span>Market line (${L.books} book${L.books === 1 ? "" : "s"})</span><span><b>${L.line}</b> <span class="dim small">O ${L.over > 0 ? "+" : ""}${L.over ?? "—"} / U ${L.under > 0 ? "+" : ""}${L.under ?? "—"}</span></span></div>`; })()}
-    ${arsenalBlock(pr, pid)}
-    <div class="line-input">
-      <label class="dim small" for="ln-${pid}">Line</label>
-      <input type="number" step="0.5" id="ln-${pid}" placeholder="e.g. 6.5" value="${(LINES[p.name.toLowerCase()] || {}).line ?? ""}" oninput="lean(${pid})">
-      <span id="lean-${pid}" class="lean"></span>
-    </div>
-  </div>`;
-}
-function lean(pid){
-  const pr=PROJ[pid]; const el=document.getElementById("lean-"+pid);
-  const input=document.getElementById("ln-"+pid);
-  if(!pr||!el||!input) return;
-  const line=Number(input.value);
-  if(!isFinite(line)||line<=0){ el.textContent=""; return; }
-  const d=pr.k-line;
-  if(d>=0.7) el.innerHTML=`<span class="pos-text">OVER lean (+${d.toFixed(1)})</span>`;
-  else if(d<=-0.7) el.innerHTML=`<span class="neg-text">UNDER lean (${d.toFixed(1)})</span>`;
-  else el.innerHTML=`<span class="dim">no edge (${d>=0?"+":""}${d.toFixed(1)})</span>`;
-}
-function renderGame(g, ps, kv, leagueK, allGames, date){
-  LEAGUE_K=leagueK;
-  const a=g.teams.away, h=g.teams.home;
-  const pa=a.probablePitcher?ps[a.probablePitcher.id]:null;
-  const ph=h.probablePitcher?ps[h.probablePitcher.id]:null;
-  const time=new Date(g.gameDate).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
-  return `<div class="card match-card" id="kg-${g.gamePk}">
-    <div class="match-head matchup-title-center"><a class="matchup" href="${permanentMatchupUrl(g,allGames,date)}">${escapeHtml(a.team.name)} @ ${escapeHtml(h.team.name)}</a><span class="dim small">${time}</span></div>
-    <div class="k-grid">
-      ${kBox(pa, h.team.name, h.team.id, kv, a.probablePitcher?a.probablePitcher.id:0)}
-      ${kBox(ph, a.team.name, a.team.id, kv, h.probablePitcher?h.probablePitcher.id:0)}
-    </div>
-  </div>`;
-}
+  el.innerHTML = section("Moneyline", ml, "Official Pick")
+    + section("Totals", tot, "Official Total")
+    + section("Strikeout props", ks, "Official K Pick")
+    + `<p class="small dim" style="margin-top:14px">${total} official pick${total===1?"":"s"} on today's card across ${[ml.length&&"moneyline",tot.length&&"totals",ks.length&&"strikeout props"].filter(Boolean).join(", ")}. Every one is graded in public on the <a href="/results/">Results page</a>.</p>`;
+})();
 </script>
 </body>
 </html>
