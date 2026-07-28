@@ -36,6 +36,14 @@
 .controls .field { margin-bottom:0; }
 .lu-wrap { overflow-x:auto; }
 .lu-total td { border-top:2px solid var(--border); font-weight:800; }
+/* Editable matchup rates */
+.k-edit { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:9px 10px; margin-top:8px; }
+.k-edit-row { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:.84rem; margin-bottom:5px; }
+.k-edit-row label { margin:0; font-size:.84rem; color:var(--text-dim); }
+.k-edit-row input { width:82px; padding:3px 5px; text-align:center; font-weight:800; }
+.k-edit .pctsign { font-size:.78rem; color:var(--text-dim); margin-left:-4px; }
+.k-edit-out { border-top:1px solid var(--border); padding-top:6px; margin-top:2px; font-size:.84rem; line-height:1.5; }
+.k-edit .rst { font-size:.72rem; color:var(--text-dim); cursor:pointer; text-decoration:underline; }
 .match-card { margin-bottom:14px; }
 .match-head { display:grid; grid-template-columns:1fr auto 1fr; gap:8px; align-items:baseline; margin-bottom:8px; }
 .match-head .matchup { font-weight:800; font-size:1.05rem; }
@@ -114,7 +122,12 @@ datePick.value = localISODate(new Date());
 datePick.addEventListener("change", load);
 let PROJ = {}; // pitcherId -> projection data
 let LINES = {}, LINES_AT = null, KBIAS = 0, KBIAS_N = 0; // live K prop lines by pitcher name (server-fetched daily)
-let LEAGUE_K = 0.223; // computed per date from that day's data; displayed so the user can see the daily league average
+/* League K% is NOT one number — hitters strike out at different rates against
+   lefties and righties. Kept as two figures and matched to the pitcher's hand.
+   Previously only the vs-RHP rate was computed, and every lefty's adjustment
+   was divided by it, overstating lefty matchups by roughly 2.5%. */
+let LEAGUE_K_L = 0.223, LEAGUE_K_R = 0.223;
+function leagueKFor(hand){ return hand === "L" ? LEAGUE_K_L : LEAGUE_K_R; }
 const WINDOW = 7; // stat window for the opposing-lineup table only; the K projection itself is unaffected. Fixed at 7d — no toggle.
 const BATTERS = {};
 let battersCacheKey = null;
@@ -127,6 +140,14 @@ const IP_KEY = "lydia_ip_overrides";
 function loadIp(){ try { return JSON.parse(localStorage.getItem(IP_KEY) || "{}"); } catch(e){ return {}; } }
 function saveIp(o){ try { localStorage.setItem(IP_KEY, JSON.stringify(o)); } catch(e){} }
 let IP_OVERRIDES = loadIp();
+
+/* The matchup rates behind the lineup adjustment: league K% vs this hand, and
+   the opposing lineup's K% vs this hand. Both editable, stored per date +
+   pitcher on this device only. Nothing is published and no graded pick moves. */
+const K_KEY = "lydia_k_overrides";
+function loadK(){ try { return JSON.parse(localStorage.getItem(K_KEY) || "{}"); } catch(e){ return {}; } }
+function saveK(o){ try { localStorage.setItem(K_KEY, JSON.stringify(o)); } catch(e){} }
+let K_OVERRIDES = loadK();
 
 load();
 
@@ -153,11 +174,12 @@ async function load(){
       j(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${yr}&stats=statSplits&sitCodes=vl`),
       j(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${yr}&stats=statSplits&sitCodes=vr`)
     ]);
-    // opponent K% vs each hand + league baseline
-    const kv={L:{},R:{}}; let soT=0, paT=0;
-    for(const t of (vl.stats[0]||{}).splits||[]){ const so=+t.stat.strikeOuts||0, pa=+t.stat.plateAppearances||0; if(pa) kv.L[t.team.id]=so/pa; }
-    for(const t of (vr.stats[0]||{}).splits||[]){ const so=+t.stat.strikeOuts||0, pa=+t.stat.plateAppearances||0; if(pa){ kv.R[t.team.id]=so/pa; soT+=so; paT+=pa; } }
-    LEAGUE_K = paT ? soT/paT : 0.223;
+    // opponent K% vs each hand + a league baseline for EACH hand
+    const kv={L:{},R:{}}; let soL=0, paL=0, soR=0, paR=0;
+    for(const t of (vl.stats[0]||{}).splits||[]){ const so=+t.stat.strikeOuts||0, pa=+t.stat.plateAppearances||0; if(pa){ kv.L[t.team.id]=so/pa; soL+=so; paL+=pa; } }
+    for(const t of (vr.stats[0]||{}).splits||[]){ const so=+t.stat.strikeOuts||0, pa=+t.stat.plateAppearances||0; if(pa){ kv.R[t.team.id]=so/pa; soR+=so; paR+=pa; } }
+    LEAGUE_K_L = paL ? soL/paL : 0.223;
+    LEAGUE_K_R = paR ? soR/paR : 0.223;
 
     const games=(((sched.dates||[])[0])||{}).games||[];
     if(!games.length){ statusEl.innerHTML=`<div class="notice">No MLB games scheduled for ${date}.</div>`; return; }
@@ -177,7 +199,7 @@ async function load(){
       games.map(g=>`<option value="${g.gamePk}">${escapeHtml(g.teams.away.team.name)} @ ${escapeHtml(g.teams.home.team.name)}</option>`).join("");
     statusEl.innerHTML="";
     const ln=document.getElementById("league-note");
-    if(ln) ln.textContent = `League K% vs RHP today: ${(LEAGUE_K*100).toFixed(2)}%`;
+    if(ln) ln.textContent = `League K% today — vs RHP: ${(LEAGUE_K_R*100).toFixed(2)}%  ·  vs LHP: ${(LEAGUE_K_L*100).toFixed(2)}%`;
     const bn=document.getElementById("kbias-note");
     if(bn) bn.innerHTML = KBIAS ? `<b>Self-calibrated:</b> projections include a ${KBIAS>0?"+":""}${KBIAS}-strikeout correction learned from ${KBIAS_N} graded starts. ` : "";
   }catch(e){ statusEl.innerHTML=`<div class="notice warn">Could not project (${escapeHtml(e.message)}).</div>`; }
@@ -204,22 +226,62 @@ function project(p, oppTeamId, kv){
   const expIP = Number.isFinite(ov) && ov > 0 ? ov : modelIP;
 
   const kbf = p.so/p.bf;
-  const oppK = p.hand && kv[p.hand] ? kv[p.hand][oppTeamId] : null;
-  const adj = (oppK && LEAGUE_K) ? Math.max(0.87, Math.min(1.13, oppK/LEAGUE_K)) : 1;
+  const bfPerIp = Number.isFinite(server && server.bf_per_ip) ? server.bf_per_ip : 4.28;
 
-  let k;
+  // The server's own implied lineup adjustment, recovered by division rather
+  // than recomputed, so the chain always multiplies back to the published number.
+  let serverAdj = null;
   if (hasServer) {
-    k = Math.max(0, Number(server.projection) * (expIP / modelIP));
-  } else {
-    const bfPerIp = Number.isFinite(server && server.bf_per_ip) ? server.bf_per_ip : 4.28;
-    k = Math.max(0, expIP * bfPerIp * kbf * adj + (KBIAS || 0));
+    const lev = Number(server.whiff_leverage);
+    const raw = Number(server.projection_raw);
+    const denom = (modelIP * bfPerIp) * kbf * (Number.isFinite(lev) ? lev : 1);
+    if (denom > 0 && Number.isFinite(raw)) serverAdj = raw / denom;
   }
 
-  return {
-    k, expIP, modelIP, ipEdited: expIP !== modelIP, kbf, oppK, adj,
-    lowSample: p.ip < 40, role, server, hasServer,
-    bfPerIp: Number.isFinite(server && server.bf_per_ip) ? server.bf_per_ip : 4.28
+  const pr = {
+    expIP, modelIP, ipEdited: expIP !== modelIP, kbf, bfPerIp,
+    leagueKModel: leagueKFor(p.hand),
+    oppKModel: (p.hand && kv[p.hand]) ? (kv[p.hand][oppTeamId] ?? null) : null,
+    hand: p.hand, serverAdj,
+    lowSample: p.ip < 40, role, server, hasServer, pid: (p.id || p.name)
   };
+  applyRates(pr, key);       // sets leagueK, oppK, adjTrue, adj, clamped, kEdited
+  pr.k = kFromParts(pr);
+  return pr;
+}
+
+/* One place decides how the matchup rates turn into an adjustment, and one
+   place decides how the parts turn into a projection. Every caller — first
+   render, an innings edit, a rate edit — goes through these two. */
+function applyRates(pr, key){
+  const kov = K_OVERRIDES[key] || {};
+  const lgOv = Number(kov.lg), oppOv = Number(kov.opp);
+  const lgEdited = Number.isFinite(lgOv) && lgOv > 0;
+  const oppEdited = Number.isFinite(oppOv) && oppOv > 0;
+  pr.leagueK = lgEdited ? lgOv : pr.leagueKModel;
+  pr.oppK = oppEdited ? oppOv : pr.oppKModel;
+  pr.kEdited = lgEdited || oppEdited;
+  pr.adjTrue = (pr.oppK && pr.leagueK) ? pr.oppK / pr.leagueK : 1;   // unclamped truth
+  pr.adj = Math.max(0.87, Math.min(1.13, pr.adjTrue));               // model guardrail
+  pr.clamped = Math.abs(pr.adj - pr.adjTrue) > 1e-9;
+}
+/* The lineup adjustment that is actually inside the projection being shown.
+   Untouched, that is the server's own — recovered from the published terms, not
+   recomputed — so the math panel always multiplies back to the published number. */
+function effAdj(pr){
+  return (!pr.kEdited && pr.hasServer && pr.serverAdj > 0) ? pr.serverAdj : pr.adj;
+}
+function kFromParts(pr){
+  if (pr.hasServer) {
+    const raw = Number(pr.server.projection_raw);
+    const proj = Number(pr.server.projection);
+    // Swap the server's lineup adjustment for the edited one. Unedited, the
+    // ratio is exactly 1 and this reproduces the published projection.
+    const ratio = (pr.kEdited && pr.serverAdj > 0 && Number.isFinite(raw)) ? (pr.adj / pr.serverAdj) : 1;
+    const base = Number.isFinite(raw) ? (raw * ratio + (proj - raw)) : proj;
+    return Math.max(0, base * (pr.expIP / pr.modelIP));
+  }
+  return Math.max(0, pr.expIP * pr.bfPerIp * pr.kbf * pr.adj + (KBIAS || 0));
 }
 
 /* Opposing-lineup batter stats — one league-wide byDateRange call for the
@@ -344,21 +406,23 @@ function derivation(pr, pid){
   const scale = pr.expIP / pr.modelIP;            // innings edits rescale the chain
   const bf = pr.modelIP * pr.bfPerIp;
   const baseK = bf * kbf;
-  // Recover the lineup adjustment from the published terms.
-  const denom = bf * kbf * (Number.isFinite(lev) ? lev : 1);
-  const adj = denom > 0 ? raw / denom : 1;
-  const row = (label, detail, value) =>
-    `<div class="ars-row" style="grid-template-columns:1fr auto"><span>${label}${detail?` <span class="dim small">${detail}</span>`:""}</span><span class="ars-ratio">${value}</span></div>`;
+  // The adjustment actually inside the number shown: the server's own recovered
+  // one when untouched (so the chain multiplies back to the published figure),
+  // or yours once you edit the rates.
+  const adj = effAdj(pr);
+  const row = (label, detail, value, id) =>
+    `<div class="ars-row" style="grid-template-columns:1fr auto"><span>${label}${detail?` <span class="dim small">${detail}</span>`:""}</span><span class="ars-ratio"${id?` id="${id}"`:""}>${value}</span></div>`;
   return `<details class="ars">
     <summary>Show the math</summary>
     <div class="ars-note" style="margin-bottom:6px"><b>${(pr.expIP).toFixed(1)} IP × ${pr.bfPerIp.toFixed(2)} batters/IP = ${(bf*scale).toFixed(1)} batters faced</b></div>
     ${row("× K rate", `${(kbf*100).toFixed(1)}% per batter faced`, (baseK*scale).toFixed(2)+" K")}
-    ${row("× lineup K% vs hand", adj>=1?"helps":"hurts", (adj>=1?"+":"")+((adj-1)*100).toFixed(1)+"%")}
+    ${row("× lineup K% vs hand", adj>=1?"helps":"hurts", (adj>=1?"+":"")+((adj-1)*100).toFixed(1)+"%", "deriv-adj-"+pid)}
     ${row("× arsenal leverage", Number.isFinite(lev)?(lev>=1?"pitch mix favours him":"pitch mix works against him"):"", Number.isFinite(lev)?((lev>=1?"+":"")+((lev-1)*100).toFixed(1)+"%"):"—")}
     ${Math.abs(bias)>=0.01 ? row("+ self-calibration", `learned from graded starts`, (bias>0?"+":"")+bias.toFixed(2)+" K") : ""}
     <div class="ars-row" style="grid-template-columns:1fr auto;border-top:1px solid var(--border);margin-top:5px;padding-top:5px">
-      <span><b>Projection</b></span><span class="ars-ratio"><b>${pr.k.toFixed(2)} K</b></span></div>
+      <span><b>Projection</b></span><span class="ars-ratio" id="deriv-proj-${pid}"><b>${pr.k.toFixed(2)} K</b></span></div>
     ${pr.ipEdited?`<div class="ars-note">Rescaled from the published ${Number(s.projection).toFixed(2)}K at ${pr.modelIP.toFixed(1)} IP. Every other term is unchanged.</div>`:""}
+    ${pr.kEdited?`<div class="ars-note">Lineup K% edited by you. The published projection used ${((pr.serverAdj-1)*100).toFixed(1)}%; this card uses ${((adj-1)*100).toFixed(1)}%. Nothing is published.</div>`:""}
   </details>`;
 }
 
@@ -392,6 +456,90 @@ function arsenalBlock(pr, pid){
   </details>`;
 }
 
+/* The two rates behind the lineup adjustment, both editable, with the true
+   (unclamped) result shown. The model still clamps to ±13% before it touches
+   the projection — when that binds, the readout says so rather than quietly
+   showing a number the projection didn't use. */
+function kControl(pr, pid){
+  const pct = v => Number.isFinite(v) ? (v*100).toFixed(2) : "";
+  const handLabel = pr.hand === "L" ? "LHP" : "RHP";
+  return `<div class="k-edit">
+    <div class="k-edit-row">
+      <label for="lg-${pid}">League K% vs ${handLabel}</label>
+      <input type="number" step="0.01" min="0" max="100" id="lg-${pid}" value="${pct(pr.leagueK)}"
+             onchange="setK(${pid},'lg',this.value)"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"><span class="pctsign">%</span>
+    </div>
+    <div class="k-edit-row">
+      <label for="opp-${pid}">Opposing lineup K%</label>
+      <input type="number" step="0.01" min="0" max="100" id="opp-${pid}" value="${pct(pr.oppK)}"
+             onchange="setK(${pid},'opp',this.value)"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"><span class="pctsign">%</span>
+    </div>
+    <div class="k-edit-out" id="kadj-${pid}">${adjReadout(pr)}</div>
+  </div>`;
+}
+function adjReadout(pr){
+  if (!Number.isFinite(pr.adjTrue)) return "";
+  const truePct = (pr.adjTrue - 1) * 100;
+  const cls = truePct >= 0 ? "pos-text" : "neg-text";
+  const lg = Number.isFinite(pr.leagueK) ? (pr.leagueK*100).toFixed(2) : "—";
+  const op = Number.isFinite(pr.oppK) ? (pr.oppK*100).toFixed(2) : "—";
+  return `<div><span class="dim small">${op}% ÷ ${lg}% =</span> <b>${pr.adjTrue.toFixed(4)}</b>
+      <span class="${cls}"><b>${truePct >= 0 ? "+" : ""}${truePct.toFixed(2)}%</b></span>
+      <span class="dim small">${truePct >= 0 ? "more" : "fewer"} strikeouts than league</span></div>
+    ${pr.clamped ? `<div class="dim small">Model caps this at ${((pr.adj-1)*100).toFixed(1)}% — the projection uses the cap, not the raw ${truePct.toFixed(2)}%.</div>` : ""}
+    ${pr.kEdited ? `<div class="small"><span class="rst" onclick="resetK(${pr.pid})">reset to model (${(pr.oppKModel*100).toFixed(2)}% ÷ ${(pr.leagueKModel*100).toFixed(2)}%)</span></div>` : ""}`;
+}
+function setK(pid, which, raw){
+  const pr = PROJ[pid]; if(!pr) return;
+  const key = datePick.value + "|" + pid;
+  const text = String(raw).trim();
+  const v = text === "" ? NaN : Number(text)/100;
+  const cur = Object.assign({}, K_OVERRIDES[key] || {});
+  if (Number.isFinite(v) && v > 0) cur[which] = v; else delete cur[which];
+  if (Object.keys(cur).length) K_OVERRIDES[key] = cur; else delete K_OVERRIDES[key];
+  saveK(K_OVERRIDES);
+  applyRates(pr, key);
+  pr.k = kFromParts(pr);
+  paintK(pid);
+}
+function resetK(pid){
+  const key = datePick.value + "|" + pid;
+  delete K_OVERRIDES[key];
+  saveK(K_OVERRIDES);
+  const pr = PROJ[pid]; if(!pr) return;
+  applyRates(pr, key);
+  pr.k = kFromParts(pr);
+  const lg = document.getElementById("lg-" + pid), op = document.getElementById("opp-" + pid);
+  if (lg) lg.value = Number.isFinite(pr.leagueK) ? (pr.leagueK*100).toFixed(2) : "";
+  if (op) op.value = Number.isFinite(pr.oppK) ? (pr.oppK*100).toFixed(2) : "";
+  paintK(pid);
+}
+/* Repaint every place the projection or the adjustment is shown, so the card,
+   the readout and the math panel can never disagree with each other. */
+function paintK(pid){
+  const pr = PROJ[pid]; if(!pr) return;
+  const kEl = document.getElementById("kproj-" + pid);
+  if (kEl) { kEl.textContent = pr.k.toFixed(1); kEl.classList.toggle("ip-edited", pr.ipEdited || pr.kEdited); }
+  const adjEl = document.getElementById("kadj-" + pid);
+  if (adjEl) adjEl.innerHTML = adjReadout(pr);
+  const dAdj = document.getElementById("deriv-adj-" + pid);
+  if (dAdj) { const a = effAdj(pr); dAdj.textContent = (a>=1?"+":"") + ((a-1)*100).toFixed(1) + "%"; }
+  const dProj = document.getElementById("deriv-proj-" + pid);
+  if (dProj) dProj.innerHTML = "<b>" + pr.k.toFixed(2) + " K</b>";
+  const tierEl = document.getElementById("opptier-" + pid);
+  if (tierEl) tierEl.innerHTML = oppTierChip(pr.oppK);
+  lean(pid);
+}
+function oppTierChip(oppK){
+  if (oppK === null || !Number.isFinite(oppK)) return "";
+  return oppK>=0.245 ? ' <span class="tier pos-text">strikes out a lot — helps the over</span>'
+       : oppK>=0.225 ? ' <span class="tier pos-text">above average strikeouts</span>'
+       : oppK<=0.195 ? ' <span class="tier neg-text">hard to strike out — hurts the over</span>'
+       : ' <span class="tier">average strikeouts</span>';
+}
+
 function ipControl(pr, pid){
   return `<div class="k-row"><span>Expected innings</span>
     <span class="ip-edit">
@@ -419,17 +567,13 @@ function setIP(pid, raw){
   const expIP = Number.isFinite(v) && v > 0 ? v : pr.modelIP;
   pr.expIP = expIP;
   pr.ipEdited = expIP !== pr.modelIP;
-  pr.k = pr.hasServer
-    ? Math.max(0, Number(pr.server.projection) * (expIP / pr.modelIP))
-    : Math.max(0, expIP * pr.bfPerIp * pr.kbf * pr.adj + (KBIAS || 0));
+  pr.k = kFromParts(pr);
 
-  const kEl = document.getElementById("kproj-" + pid);
-  if (kEl) { kEl.textContent = pr.k.toFixed(1); kEl.classList.toggle("ip-edited", pr.ipEdited); }
   const noteEl = document.getElementById("ipnote-" + pid);
   if (noteEl) noteEl.innerHTML = pr.ipEdited
     ? `Edited from the model's ${pr.modelIP.toFixed(1)} IP. Saved on this device only — nothing is published.`
     : "";
-  lean(pid);
+  paintK(pid);
 }
 function resetIP(pid){
   const el = document.getElementById("ip-" + pid);
@@ -445,16 +589,16 @@ function kBox(pitcher, oppTeam, oppTeamId, kv, pid){
   const pr=project(p, oppTeamId, kv);
   if(!pr) return `<div class="k-box"><b>${pitcherName}</b><div class="dim small">Not enough innings this season for a reliable projection.</div></div>`;
   PROJ[pid]=pr;
-  const oppTier = pr.oppK===null ? "" : pr.oppK>=0.245 ? ' <span class="tier pos-text">strikes out a lot — helps the over</span>' : pr.oppK>=0.225 ? ' <span class="tier pos-text">above average strikeouts</span>' : pr.oppK<=0.195 ? ' <span class="tier neg-text">hard to strike out — hurts the over</span>' : ' <span class="tier">average strikeouts</span>';
   return `<div class="k-box">
     <div style="display:flex;justify-content:space-between;align-items:baseline"><b>${pitcherName}</b><span class="dim small">${p.hand==="L"?"LHP":"RHP"}</span></div>
-    <div><span class="k-proj ${pr.ipEdited?"ip-edited":""}" id="kproj-${pid}">${pr.k.toFixed(1)}</span> <span class="dim small">projected Ks${pr.lowSample ? ' · <b class="gold">small sample</b>' : ""}</span></div>
+    <div><span class="k-proj ${pr.ipEdited||pr.kEdited?"ip-edited":""}" id="kproj-${pid}">${pr.k.toFixed(1)}</span> <span class="dim small">projected Ks${pr.lowSample ? ' · <b class="gold">small sample</b>' : ""}</span></div>
     <div class="ip-note" id="ipnote-${pid}">${pr.ipEdited ? `Edited from the model's ${pr.modelIP.toFixed(1)} IP. Saved on this device only — nothing is published.` : ""}</div>
     <div class="k-row"><span>Pitching plan</span><b>${escapeHtml(pr.role.label)}</b></div>
     <div class="k-row"><span>K per batter (season)</span><b>${(pr.kbf*100).toFixed(1)}%</b></div>
     ${ipControl(pr, pid)}
     ${pr.role.bullpenGame ? '<div class="small dim">Strikeout projection covers the opener only. Remaining innings belong to the bullpen.</div>' : ""}
-    <div class="k-row"><span title="How often this lineup strikes out against pitchers of his hand — higher means more strikeouts available">${escapeHtml(oppTeam)} strikeout rate vs ${p.hand==="L"?"lefties":"righties"}</span><span><b>${pr.oppK!==null?(pr.oppK*100).toFixed(1)+"%":"—"}</b>${oppTier}</span></div>
+    <div class="k-row"><span title="How often this lineup strikes out against pitchers of his hand — higher means more strikeouts available">${escapeHtml(oppTeam)} vs ${p.hand==="L"?"lefties":"righties"}</span><span id="opptier-${pid}">${oppTierChip(pr.oppK)}</span></div>
+    ${kControl(pr, pid)}
     ${(() => { const L = LINES[p.name.toLowerCase()]; if (!L || L.line === null || L.line === undefined) return ""; return `<div class="k-row"><span>Market line (${L.books} book${L.books === 1 ? "" : "s"})</span><span><b>${L.line}</b> <span class="dim small">O ${L.over > 0 ? "+" : ""}${L.over ?? "—"} / U ${L.under > 0 ? "+" : ""}${L.under ?? "—"}</span></span></div>`; })()}
     ${derivation(pr, pid)}
     ${lineupBlock(pr, pid, oppTeamId, window.__currentGame)}
