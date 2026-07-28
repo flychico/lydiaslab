@@ -113,6 +113,7 @@ datePick.value = localISODate(new Date());
 datePick.addEventListener("change", load);
 let PROJ = {}; // pitcherId -> projection data
 let LINES = {}, LINES_AT = null, KBIAS = 0, KBIAS_N = 0; // live K prop lines by pitcher name (server-fetched daily)
+let LEAGUE_K = 0.223; // computed per date from that day's data; displayed so the user can see the daily league average
 const WINDOW = 7; // stat window for the opposing-lineup table only; the K projection itself is unaffected. Fixed at 7d — no toggle.
 const BATTERS = {};
 let battersCacheKey = null;
@@ -155,7 +156,7 @@ async function load(){
     const kv={L:{},R:{}}; let soT=0, paT=0;
     for(const t of (vl.stats[0]||{}).splits||[]){ const so=+t.stat.strikeOuts||0, pa=+t.stat.plateAppearances||0; if(pa) kv.L[t.team.id]=so/pa; }
     for(const t of (vr.stats[0]||{}).splits||[]){ const so=+t.stat.strikeOuts||0, pa=+t.stat.plateAppearances||0; if(pa){ kv.R[t.team.id]=so/pa; soT+=so; paT+=pa; } }
-    const leagueK = paT ? soT/paT : 0.223;
+    LEAGUE_K = paT ? soT/paT : 0.223;
 
     const games=(((sched.dates||[])[0])||{}).games||[];
     if(!games.length){ statusEl.innerHTML=`<div class="notice">No MLB games scheduled for ${date}.</div>`; return; }
@@ -169,13 +170,13 @@ async function load(){
     ]);
 
     PROJ={};
-    gamesEl.innerHTML = games.map(g=>renderGame(g, ps, kv, leagueK, games, date)).join("");
+    gamesEl.innerHTML = games.map(g=>renderGame(g, ps, kv, games, date)).join("");
     Object.keys(PROJ).forEach(pid => { const el = document.getElementById("ln-" + pid); if (el && el.value) lean(pid); });
     document.getElementById("game-jump").innerHTML = '<option value="">All games…</option>'+
       games.map(g=>`<option value="${g.gamePk}">${escapeHtml(g.teams.away.team.name)} @ ${escapeHtml(g.teams.home.team.name)}</option>`).join("");
     statusEl.innerHTML="";
     const bn=document.getElementById("kbias-note");
-    if(bn) bn.innerHTML = KBIAS ? `<b>Self-calibrated:</b> projections include a ${KBIAS>0?"+":""}${KBIAS}-strikeout correction learned from ${KBIAS_N} graded starts. ` : "";
+    if(bn) bn.innerHTML = `<b>League K% vs RHP today: ${(LEAGUE_K*100).toFixed(2)}%</b> — ${KBIAS ? `Self-calibrated: projections include a ${KBIAS>0?"+":""}${KBIAS}-strikeout correction learned from ${KBIAS_N} graded starts. ` : ""}`.trim();
   }catch(e){ statusEl.innerHTML=`<div class="notice warn">Could not project (${escapeHtml(e.message)}).</div>`; }
 }
 
@@ -217,7 +218,6 @@ function project(p, oppTeamId, kv){
     bfPerIp: Number.isFinite(server && server.bf_per_ip) ? server.bf_per_ip : 4.28
   };
 }
-let LEAGUE_K = 0.223;
 
 /* Opposing-lineup batter stats — one league-wide byDateRange call for the
    selected window, same endpoint and same sortStat fix as the offense-matchups
@@ -450,8 +450,7 @@ function lean(pid){
   else if(d<=-0.7) el.innerHTML=`<span class="neg-text">UNDER lean (${d.toFixed(1)})</span>`;
   else el.innerHTML=`<span class="dim">no edge (${d>=0?"+":""}${d.toFixed(1)})</span>`;
 }
-function renderGame(g, ps, kv, leagueK, allGames, date){
-  LEAGUE_K=leagueK;
+function renderGame(g, ps, kv, allGames, date){
   const a=g.teams.away, h=g.teams.home;
   const pa=a.probablePitcher?ps[a.probablePitcher.id]:null;
   const ph=h.probablePitcher?ps[h.probablePitcher.id]:null;
