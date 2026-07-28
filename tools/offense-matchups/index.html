@@ -106,6 +106,8 @@ datePick.value = localISODate(new Date());
 datePick.addEventListener("change", load);
 let WINDOW = 15;
 let seasonBy = null, splitsBy = null; // cached across window changes
+const BATTERS = {};
+let battersCacheKey = null;
 load();
 
 function localISODate(d) {
@@ -153,8 +155,6 @@ function shape(st) {
    not something derived from season totals. Refetched whenever the window
    or date changes; cached per exact date range so re-clicking the same
    window pill doesn't re-fetch. */
-const BATTERS = {};
-let battersCacheKey = null;
 async function loadWindowBatters(startISO, endISO) {
   const key = startISO + "|" + endISO;
   if (battersCacheKey === key) return;
