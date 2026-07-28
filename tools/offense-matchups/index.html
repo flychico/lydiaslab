@@ -16,15 +16,15 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="LyDia">
 <meta property="og:title" content="Offense Matchup Tool — LyDia's Lab">
-<meta property="og:description" content="Compare both offenses in every MLB game: recent form vs season baseline, run scoring, strikeout rate, and how each lineup performs against tonight">
+<meta property="og:description" content="Compare both offenses in every MLB game: recent form vs season baseline, run scoring, strikeout rate, starting lineups, and how each lineup performs against tonight">
 <meta property="og:url" content="https://lydiaslab.com/tools/offense-matchups/">
 <meta property="og:image" content="https://lydiaslab.com/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Offense Matchup Tool — LyDia's Lab">
-<meta name="twitter:description" content="Compare both offenses in every MLB game: recent form vs season baseline, run scoring, strikeout rate, and how each lineup performs against tonight">
+<meta name="twitter:description" content="Compare both offenses in every MLB game: recent form vs season baseline, run scoring, strikeout rate, starting lineups, and how each lineup performs against tonight">
 <meta name="twitter:image" content="https://lydiaslab.com/img/og-card.png">
 
-<meta name="description" content="Compare both offenses in every MLB game: recent form vs season baseline, run scoring, strikeout rate, and how each lineup performs against tonight's starter handedness.">
+<meta name="description" content="Compare both offenses in every MLB game: recent form vs season baseline, run scoring, strikeout rate, starting lineups with player-level stats, and how each lineup performs against tonight's starter handedness.">
 <link rel="canonical" href="https://lydiaslab.com/tools/offense-matchups/">
 <link rel="manifest" href="/img/manifest-offense.json">
 <link rel="apple-touch-icon" href="/img/app-offense-192.png">
@@ -50,6 +50,16 @@
 .read { margin-top:10px; font-size:.88rem; color:var(--text-dim); }
 .hand-row { background:rgba(77,159,220,.08); border-radius:6px; padding:5px 8px; margin-top:8px; font-size:.85rem; }
 .tier { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:1px 7px; margin-left:6px; white-space:nowrap; }
+/* Starting lineup */
+.ars { margin-top:10px; border-top:1px solid var(--border); padding-top:8px; }
+.ars summary { cursor:pointer; font-size:.74rem; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); }
+.ars summary:hover { color:var(--text); }
+.lu-note { font-size:.78rem; color:var(--text-dim); padding:4px 0; }
+table.lu { width:100%; border-collapse:collapse; font-size:.78rem; background:transparent; margin-top:4px; }
+table.lu th { font-size:.62rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); text-align:right; padding:3px 4px; border-bottom:1px solid var(--border); }
+table.lu th:first-child, table.lu th:nth-child(2) { text-align:left; }
+table.lu td { padding:3px 4px; border-bottom:1px solid var(--border); text-align:right; font-variant-numeric:tabular-nums; }
+table.lu td:first-child, table.lu td:nth-child(2) { text-align:left; }
 @media (max-width:720px){ .team-grid{ grid-template-columns:1fr; } }
 </style>
 </head>
@@ -58,7 +68,7 @@
 <main>
   <p class="eyebrow">LyDia's Lab</p>
   <h1>Offense Matchup Tool</h1>
-  <p class="subtitle">Which lineup is hot, which is actually good, and how each hits the hand of tonight's opposing starter. Quality and heat are different things — this tool shows both.</p>
+  <p class="subtitle">Which lineup is hot, which is actually good, and how each hits the hand of tonight's opposing starter. Quality and heat are different things — this tool shows both, plus the actual starting lineup once it posts.</p>
 
   <div class="controls">
     <div class="field">
@@ -82,7 +92,7 @@
   </div>
 
   <div class="notice">
-    <strong>How to read it:</strong> <b>OPS (window)</b> is quality right now; <b>Δ vs season</b> is heat — a bad offense can be hot and an elite one can be cold. Tier labels translate the decimals: every ~25 OPS points is one class of offense (.700 below avg · .750 average · .800 good · .850 great · .900 elite). <b>HOW a team is hot matters</b>: contact-driven heat holds up; strikeout-heavy power binges collapse. The <b>vs-hand line</b> is each lineup's full-season OPS against tonight's opposing starter's throwing hand.
+    <strong>How to read it:</strong> <b>OPS (window)</b> is quality right now; <b>Δ vs season</b> is heat — a bad offense can be hot and an elite one can be cold. Tier labels translate the decimals: every ~25 OPS points is one class of offense (.700 below avg · .750 average · .800 good · .850 great · .900 elite). <b>HOW a team is hot matters</b>: contact-driven heat holds up; strikeout-heavy power binges collapse. The <b>vs-hand line</b> is each lineup's full-season OPS against tonight's opposing starter's throwing hand. <b>Starting lineup</b> shows the actual posted batting order with each hitter's season line once MLB posts it (usually ~2 hours before first pitch) — before that it falls back to a note, not a guess.
   </div>
 
   <div id="status"></div>
@@ -136,6 +146,30 @@ function shape(st) {
   };
 }
 
+/* Starting lineups — resolved player-by-player, batched. One call for every
+   hitter across the whole slate, not one per game. Season line only; a
+   window line for individual batters isn't published by this API in bulk. */
+const BATTERS = {};
+async function loadLineupBatters(ids) {
+  const missing = [...new Set(ids)].filter(id => id && !(id in BATTERS));
+  if (!missing.length) return;
+  for (let i = 0; i < missing.length; i += 40) {
+    const chunk = missing.slice(i, i + 40);
+    try {
+      const d = await fetch(`https://statsapi.mlb.com/api/v1/people?personIds=${chunk.join(",")}&hydrate=stats(group=[hitting],type=[season],season=${seasonYear()})`).then(r => r.json());
+      for (const per of d.people || []) {
+        const st = ((((per.stats || [])[0] || {}).splits || [])[0] || {}).stat || {};
+        BATTERS[per.id] = {
+          name: per.useName && per.lastName ? `${per.useName} ${per.lastName}` : per.fullName,
+          avg: Number(st.avg), obp: Number(st.obp), slg: Number(st.slg), ops: Number(st.ops),
+          hr: Number(st.homeRuns) || 0, pa: Number(st.plateAppearances) || 0
+        };
+      }
+    } catch (e) {}
+    for (const id of chunk) if (!(id in BATTERS)) BATTERS[id] = null;
+  }
+}
+
 async function load() {
   const statusEl = document.getElementById("status");
   const gamesEl = document.getElementById("games");
@@ -146,7 +180,7 @@ async function load() {
     const end = new Date(date + "T12:00");
     const start = new Date(end.getTime() - WINDOW * 86400000);
     const [schedRes, windowSplits] = await Promise.all([
-      fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher`).then(r => r.json()),
+      fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher,lineups`).then(r => r.json()),
       teamStats(`stats=byDateRange&startDate=${localISODate(start)}&endDate=${localISODate(end)}`)
     ]);
     if (!seasonBy) {
@@ -175,6 +209,13 @@ async function load() {
         for (const p of pd.people || []) hands[p.id] = { id: p.id, hand: (p.pitchHand || {}).code || null, name: p.fullName };
       } catch(e) {}
     }
+
+    // posted starting lineups (empty object if not posted yet — that's normal)
+    const lineupIds = games.flatMap(g => [
+      ...(((g.lineups || {}).homePlayers) || []),
+      ...(((g.lineups || {}).awayPlayers) || [])
+    ].map(p => p.id));
+    if (lineupIds.length) { try { await loadLineupBatters(lineupIds); } catch (e) {} }
 
     statusEl.innerHTML = "";
     gamesEl.innerHTML = games.map(g => renderGame(g, windowBy, hands, games, date)).join("");
@@ -235,7 +276,27 @@ function heatTag(d, w) {
   return { txt: "steady " + (d >= 0 ? "+" : "−") + f3(Math.abs(d)), cls: "dim", note };
 }
 
-function teamBox(teamName, id, win, season, oppStarter) {
+/* Starting lineup table — nine hitters in the actual posted batting order
+   (array order from the API = batting order), each with their season line.
+   Falls back to a plain note when MLB hasn't posted the lineup yet. */
+function lineupTable(lineup) {
+  if (!lineup || !lineup.length) {
+    return `<div class="lu-note">Lineup not posted yet — usually goes up ~2 hours before first pitch.</div>`;
+  }
+  const rows = lineup.map((p, i) => {
+    const b = BATTERS[p.id] || null;
+    const pos = (p.primaryPosition && p.primaryPosition.abbreviation) || "";
+    const avg = b ? f3(b.avg) : "—";
+    const ops = b ? f3(b.ops) : "—";
+    const tier = b ? opsTier(b.ops) : null;
+    const hr = b && Number.isFinite(b.hr) ? b.hr : "—";
+    return `<tr><td>${i + 1}.</td><td>${escapeHtml(p.fullName || p.useName || "")}</td><td class="dim">${escapeHtml(pos)}</td>
+      <td>${avg}</td><td>${hr}</td><td><b>${ops}</b>${tierChip(tier)}</td></tr>`;
+  }).join("");
+  return `<table class="lu"><thead><tr><th>#</th><th>Batter</th><th></th><th>AVG</th><th>HR</th><th>OPS</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function teamBox(teamName, id, win, season, oppStarter, lineup) {
   const w = win || {}, sn = season || {};
   const delta = (Number.isFinite(w.ops) && Number.isFinite(sn.ops)) ? w.ops - sn.ops : null;
   const heat = heatTag(delta, w);
@@ -263,6 +324,10 @@ function teamBox(teamName, id, win, season, oppStarter) {
     <div class="stat-row"><span>K% (window)</span><span><b>${Number.isFinite(w.kPct) ? (w.kPct * 100).toFixed(1) + "%" : "—"}</b>${tierChip(kTier(w.kPct))}</span></div>
     <div class="stat-row"><span>HR (window)</span><b>${w.hr ?? "—"}</b></div>
     ${handLine}
+    <details class="ars"${lineup && lineup.length ? " open" : ""}>
+      <summary>Starting lineup${lineup && lineup.length ? "" : " · not posted"}</summary>
+      ${lineupTable(lineup)}
+    </details>
   </div>`;
 }
 
@@ -342,6 +407,8 @@ function renderGame(g, windowBy, hands, allGames, date) {
   const aOpp = h.probablePitcher ? (hands[h.probablePitcher.id] || null) : null;
   const hOpp = a.probablePitcher ? (hands[a.probablePitcher.id] || null) : null;
   const time = new Date(g.gameDate).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const aLineup = ((g.lineups || {}).awayPlayers) || null;
+  const hLineup = ((g.lineups || {}).homePlayers) || null;
 
   const read = buildRead(a.team, h.team, aWin, hWin, aSn, hSn, aOpp, hOpp);
 
@@ -351,8 +418,8 @@ function renderGame(g, windowBy, hands, allGames, date) {
       <span class="dim small">${time}</span>
     </div>
     <div class="team-grid">
-      ${teamBox(a.team.name, a.team.id, aWin, aSn, aOpp)}
-      ${teamBox(h.team.name, h.team.id, hWin, hSn, hOpp)}
+      ${teamBox(a.team.name, a.team.id, aWin, aSn, aOpp, aLineup)}
+      ${teamBox(h.team.name, h.team.id, hWin, hSn, hOpp, hLineup)}
     </div>
     <div class="read">${escapeHtml(read)}</div>
   </div>`;
