@@ -9042,11 +9042,11 @@
     },
     "2026-07-28": {
       "date": "2026-07-28",
-      "wins": 0,
+      "wins": 1,
       "losses": 0,
-      "ungraded": 10,
+      "ungraded": 9,
       "voided": 0,
-      "units": null,
+      "units": 0.8,
       "source": "published-picks",
       "current_official_model": "multi_market_v1",
       "model_version": "multi-market-v1",
@@ -9066,11 +9066,11 @@
           "units": 0
         },
         "pitcher_strikeouts": {
-          "wins": 0,
+          "wins": 1,
           "losses": 0,
           "pushes": 0,
           "voids": 0,
-          "units": 0
+          "units": 0.8
         }
       },
       "picks": [
@@ -9239,16 +9239,33 @@
           "moneyline": null,
           "total": {
             "pick": "Over",
-            "line": 8,
-            "bestAm": -102,
+            "line": 7.5,
+            "bestAm": -104,
             "projection": 10.9,
-            "edge": 2.9,
+            "edge": 3.4,
             "labScore": 94,
-            "books": 9,
+            "books": 6,
             "modelVersion": "totals-runs-v3-pitching-plan",
             "valueTag": "OFFICIAL PICK"
           },
           "strikeouts": [],
+          "superseded": [
+            {
+              "market": "game_total",
+              "was": {
+                "pick": "Over",
+                "line": 8,
+                "bestAm": -102,
+                "projection": 10.9,
+                "edge": 2.9,
+                "labScore": 94,
+                "books": 9,
+                "modelVersion": "totals-runs-v3-pitching-plan",
+                "valueTag": "OFFICIAL PICK"
+              },
+              "at": "2026-07-28T20:44:50.863Z"
+            }
+          ],
           "result": "NG",
           "learning": {
             "model_version": "multi-market-v1",
@@ -9450,7 +9467,28 @@
               "valueTag": "OFFICIAL PICK"
             }
           ],
-          "result": "NG",
+          "mlResult": "NG",
+          "totResult": "NG",
+          "kResults": [
+            {
+              "pitcher": "Chase Burns",
+              "pick": "Under",
+              "line": 6.5,
+              "bestAm": -125,
+              "projection": 5.56,
+              "edge": -0.94,
+              "books": 6,
+              "expectedInnings": 5.7,
+              "pitcherRole": "traditional_starter",
+              "modelVersion": "pitcher-strikeouts-self-calibrated-v1",
+              "valueTag": "OFFICIAL PICK",
+              "actual": 4,
+              "result": "W"
+            }
+          ],
+          "rlResult": "NG",
+          "finalAway": 6,
+          "finalHome": 5,
           "learning": {
             "model_version": "multi-market-v1",
             "official_model": "moneyline_only",
