@@ -16,15 +16,15 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="LyDia">
 <meta property="og:title" content="Strikeout Projections — LyDia's Lab">
-<meta property="og:description" content="Every starter on tonight's slate: projected strikeouts, outs, earned runs, hits, walks and home runs, with the math behind each number.">
+<meta property="og:description" content="A projected strikeout total for every MLB starter today, built from whiff skill, expected innings, and the opposing lineup">
 <meta property="og:url" content="https://lydiaslab.com/tools/strikeout-projections/">
 <meta property="og:image" content="https://lydiaslab.com/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Strikeout Projections — LyDia's Lab">
-<meta name="twitter:description" content="Every starter on tonight's slate: projected strikeouts, outs, earned runs, hits, walks and home runs, with the math behind each number.">
+<meta name="twitter:description" content="A projected strikeout total for every MLB starter today, built from whiff skill, expected innings, and the opposing lineup">
 <meta name="twitter:image" content="https://lydiaslab.com/img/og-card.png">
 
-<meta name="description" content="Every starter on tonight's slate: projected strikeouts, outs, earned runs, hits, walks and home runs, with the opposing lineup and the full derivation behind each projection.">
+<meta name="description" content="A projected strikeout total for every MLB starter today, built from whiff skill, expected innings, and the opposing lineup's strikeout rate against his throwing hand.">
 <link rel="canonical" href="https://lydiaslab.com/tools/strikeout-projections/">
 <link rel="manifest" href="/img/manifest-strikeout.json">
 <link rel="apple-touch-icon" href="/img/app-strikeout-192.png">
@@ -32,92 +32,40 @@
 <meta name="apple-mobile-web-app-title" content="Strikeouts">
 <link rel="stylesheet" href="/css/style.css">
 <style>
-/* Inherits the site theme. Nine columns need more room than the standard
-   content width, which is the only layout liberty this page takes. */
-main{ max-width:1320px; }
-.controls{ display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:14px; }
-.controls .field{ margin-bottom:0; }
-
-/* ---- slate table ---- */
-.pit-wrap{ border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; background:var(--bg-card); }
-table.pit{ width:100%; border-collapse:collapse; font-size:.9rem; background:transparent; }
-/* Not sticky. A sticky header on a table with expandable rows sat on top of the
-   first pitcher and hid him. A solid, clearly separated header reads better. */
-table.pit thead th{
-  background:var(--bg-elev); color:var(--text-dim);
-  font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; font-weight:800;
-  padding:10px; border-bottom:2px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none;
-}
-table.pit thead th:hover{ color:var(--text); }
-table.pit thead th:first-child{ text-align:left; cursor:default; }
-table.pit thead th:not(:first-child){ text-align:right; }
-table.pit thead th.on{ color:var(--accent); }
-table.pit tbody td{ padding:10px; border-bottom:1px solid var(--border); vertical-align:middle; }
-table.pit tbody td:not(:first-child){ text-align:right; font-variant-numeric:tabular-nums; font-weight:700; }
-tr.prow{ cursor:pointer; }
-tr.prow:hover td{ background:var(--bg-elev); }
-tr.prow.open td{ background:var(--bg-elev); }
-.pname{ font-weight:800; }
-.pmeta{ color:var(--text-dim); font-size:.76rem; margin-top:1px; }
-.kcell{ color:var(--accent); font-size:1.02rem; }
-.ip-edit{ display:inline-flex; align-items:center; gap:6px; margin-left:6px; }
-.ip-edit input{ width:58px; padding:3px 5px; text-align:center; font-weight:800; font-size:.85rem; }
-.ip-edit .rst{ font-size:.72rem; color:var(--text-dim); cursor:pointer; text-decoration:underline; }
-.ip-edited{ color:var(--accent); font-weight:800; }
-.ip-note{ font-size:.74rem; color:var(--text-dim); margin-top:4px; }
-.chev{ display:inline-block; width:12px; color:var(--text-dim); }
-tr.detail>td{ padding:0 !important; background:var(--bg); }
-.detail-in{ padding:14px; border-bottom:2px solid var(--accent); }
-
-/* ---- market strip ---- */
-.mkt-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:10px; }
-.mkt{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:9px 11px; }
-.mkt .mk-lab{ font-size:.7rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); }
-.mkt .mk-model{ font-size:.78rem; color:var(--text-dim); }
-.mkt .mk-model b{ color:var(--text); font-size:.92rem; }
-.mkt input{ width:66px; padding:5px 6px; text-align:center; font-weight:700; font-size:.85rem; }
-.kedge{ margin-top:10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:var(--bg-card); border:1px solid var(--accent); border-radius:10px; padding:10px 12px; }
-.kedge .kv{ font-weight:800; }
-.badge-play{ font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; border-radius:8px; padding:3px 9px; }
-.badge-play.over{ background:rgba(62,207,142,.14); color:var(--good); }
-.badge-play.under{ background:rgba(242,84,91,.14); color:var(--danger); }
-.badge-play.none{ background:var(--bg-elev); color:var(--text-dim); }
-
-/* ---- breakdown cards ---- */
-.bd-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:12px; margin-top:12px; align-items:start; }
-.bd{ background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px; }
-.bd-head{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
-.bd-title{ font-size:.72rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); }
-.bd-num{ font-size:1.5rem; font-weight:900; color:var(--accent); font-variant-numeric:tabular-nums; }
-.bd-lab{ font-size:.66rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); margin:10px 0 4px; }
-.bd-base{ font-size:.88rem; font-weight:700; }
-.bd-note{ font-size:.76rem; color:var(--text-dim); line-height:1.45; margin-top:4px; }
-.adj{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:.82rem; padding:3px 0; }
-.adj .nm{ border-left:3px solid var(--border); padding-left:7px; }
-.adj.up .nm{ border-left-color:var(--good); }
-.adj.down .nm{ border-left-color:var(--danger); }
-.adj .ev{ color:var(--text-dim); font-weight:400; }
-.adj .vl{ font-weight:800; font-variant-numeric:tabular-nums; }
-.adj-net{ display:flex; justify-content:space-between; font-size:.76rem; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); margin-bottom:2px; }
-.mini{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; text-align:center; margin-top:6px; }
-.mini .mv{ font-size:1.25rem; font-weight:900; color:var(--accent); }
-.mini .ml{ font-size:.68rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.04em; }
-
-/* ---- lineup ---- */
-table.lu{ width:100%; border-collapse:collapse; font-size:.8rem; background:transparent; }
-table.lu th{ font-size:.64rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); text-align:right; padding:4px 5px; border-bottom:1px solid var(--border); }
-table.lu th:first-child,table.lu th:nth-child(2){ text-align:left; }
-table.lu td{ padding:4px 5px; border-bottom:1px solid var(--border); text-align:right; font-variant-numeric:tabular-nums; }
-table.lu td:first-child,table.lu td:nth-child(2){ text-align:left; }
-.k-hi{ color:var(--accent); font-weight:800; }
-.k-lo{ color:var(--accent2); font-weight:800; }
-.lu-legend{ font-size:.72rem; color:var(--text-dim); margin-top:6px; }
-.pill{ font-size:.66rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; border-radius:8px; padding:2px 8px; background:rgba(62,207,142,.14); color:var(--good); }
-.pill.wait{ background:var(--bg-elev); color:var(--text-dim); }
-@media (max-width:860px){
-  table.pit thead th:nth-child(n+6){ display:none; }
-  table.pit tbody td:nth-child(n+6){ display:none; }
-}
+.controls { display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:16px; }
+.controls .field { margin-bottom:0; }
+.match-card { margin-bottom:14px; }
+.match-head { display:grid; grid-template-columns:1fr auto 1fr; gap:8px; align-items:baseline; margin-bottom:8px; }
+.match-head .matchup { font-weight:800; font-size:1.05rem; }
+.match-head .matchup { grid-column:2; text-align:center; }
+.match-head .small { grid-column:3; justify-self:end; }
+.k-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:8px; }
+.k-box { background:var(--bg-elev); border:1px solid var(--border); border-radius:var(--radius); padding:12px; }
+.k-proj { font-size:1.9rem; font-weight:800; color:var(--accent); }
+.k-row { display:flex; justify-content:space-between; gap:8px; font-size:.86rem; border-top:1px solid var(--border); padding-top:5px; margin-top:5px; }
+.line-input { display:flex; gap:8px; align-items:center; margin-top:9px; }
+.line-input input { width:88px; text-align:center; font-weight:700; }
+.lean { font-weight:800; }
+.tier { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:1px 7px; margin-left:6px; white-space:nowrap; }
+/* Editable expected innings */
+.ip-edit { display:inline-flex; align-items:center; gap:6px; }
+.ip-edit input { width:60px; padding:3px 5px; text-align:center; font-weight:800; }
+.ip-edit .rst { font-size:.72rem; color:var(--text-dim); cursor:pointer; text-decoration:underline; }
+.ip-edited { color:var(--accent); }
+.ip-note { font-size:.74rem; color:var(--text-dim); margin-top:4px; }
+/* Swing-and-miss alignment (arsenal leverage) */
+.ars { margin-top:10px; border-top:1px solid var(--border); padding-top:8px; }
+.ars summary { cursor:pointer; font-size:.74rem; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); }
+.ars summary:hover { color:var(--text); }
+.ars-head { display:flex; justify-content:space-between; align-items:baseline; font-size:.82rem; margin:8px 0 6px; }
+.ars-lev { font-weight:800; font-variant-numeric:tabular-nums; }
+.ars-row { display:grid; grid-template-columns:34px 1fr 52px; gap:8px; align-items:center; font-size:.78rem; padding:2px 0; }
+.ars-pt { font-weight:800; }
+.ars-track { background:var(--bg-card); border:1px solid var(--border); border-radius:6px; height:11px; overflow:hidden; position:relative; }
+.ars-fill { height:100%; }
+.ars-ratio { text-align:right; font-weight:800; font-variant-numeric:tabular-nums; }
+.ars-note { font-size:.74rem; color:var(--text-dim); margin-top:6px; line-height:1.45; }
+@media (max-width:720px){ .k-grid{ grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
@@ -125,7 +73,7 @@ table.lu td:first-child,table.lu td:nth-child(2){ text-align:left; }
 <main>
   <p class="eyebrow">LyDia's Lab</p>
   <h1>Strikeout Projections</h1>
-  <p class="subtitle">Every starter on the slate, projected across six markets. Click any pitcher for the arithmetic behind each number, the factors that moved it, and the lineup he has to get through.</p>
+  <p class="subtitle">How many strikeouts should each starter get tonight? Built from three things: his whiff skill, how deep he pitches, and how much the opposing lineup swings and misses against his throwing hand — pitch by pitch.</p>
 
   <div class="controls">
     <div class="field">
@@ -141,11 +89,11 @@ table.lu td:first-child,table.lu td:nth-child(2){ text-align:left; }
   </div>
 
   <div class="notice">
-    <span id="kbias-note"></span><strong>How to read it:</strong> strikeouts are the calibrated market — that projection is corrected against LyDia's own graded history and is the only one carrying a public record. Outs, earned runs, hits, walks and home runs are <b>rate baselines</b>: season rate × expected innings, shown for context and not yet graded. Every projection is a median, not a prediction; the typical range beside it is where about two thirds of real outings land. Enter a line to see LyDia's chance of going over and the odds that chance is worth, so it compares directly against your book's price.
+    <span id="kbias-note"></span><strong>How to read it:</strong> the projection is a median expectation — a real outing lands within ±2 of it roughly two-thirds of the time, so treat small edges with respect and only lean when the gap to your book's line is <b>0.7+ strikeouts</b>. <b>Expected innings is editable</b> — change it and the projection recalculates in your browser. Nothing is published and no graded pick changes. Open <b>Swing-and-miss alignment</b> to see which pitches carry the matchup.
   </div>
 
-  <div id="status"><div class="loading">Projecting the slate…</div></div>
-  <div id="slate"></div>
+  <div id="status"><div class="loading">Projecting strikeouts…</div></div>
+  <div id="games"></div>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/tools/"); renderFooter();</script>
 <script src="/js/pitcher-matchup-core.js"></script>
@@ -153,113 +101,47 @@ table.lu td:first-child,table.lu td:nth-child(2){ text-align:left; }
 const datePick = document.getElementById("date-pick");
 datePick.value = localISODate(new Date());
 datePick.addEventListener("change", load);
-let ROWS = [];                 // one entry per starter
-let LINES = {}, KBIAS = 0, KBIAS_N = 0;
-let LEAGUE_K = 0.223;
-let SORT = { key: "k", dir: -1 };
+let PROJ = {}; // pitcherId -> projection data
+let LINES = {}, LINES_AT = null, KBIAS = 0, KBIAS_N = 0; // live K prop lines by pitcher name (server-fetched daily)
+
 /* Expected innings is the input the model is least sure about and the one a
    human most often knows better — a reported bulk role, a pitch-count limit, a
-   short leash. It is editable here and recalculates everything downstream in
-   the browser. Nothing is published; this never touches a graded pick. */
+   short leash. Editable here; overrides are kept per date + pitcher on this
+   device only. Nothing is published and no graded pick is touched. */
 const IP_KEY = "lydia_ip_overrides";
-function loadIpOverrides(){ try { return JSON.parse(localStorage.getItem(IP_KEY) || "{}"); } catch(e){ return {}; } }
-function saveIpOverrides(o){ try { localStorage.setItem(IP_KEY, JSON.stringify(o)); } catch(e){} }
-function ipKeyFor(r){ return datePick.value + "|" + (r.p && r.p.id ? r.p.id : r.name); }
-let IP_OVERRIDES = loadIpOverrides();
-const LU_CACHE = {};
+function loadIp(){ try { return JSON.parse(localStorage.getItem(IP_KEY) || "{}"); } catch(e){ return {}; } }
+function saveIp(o){ try { localStorage.setItem(IP_KEY, JSON.stringify(o)); } catch(e){} }
+let IP_OVERRIDES = loadIp();
+
 load();
 
 function localISODate(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
 function shiftDay(n){ const d=new Date(); d.setDate(d.getDate()+n); datePick.value=localISODate(d); load(); }
+function filterGame(pk){ document.querySelectorAll(".match-card").forEach(c=>{ c.style.display = (!pk || c.id === "kg-"+pk) ? "" : "none"; }); }
+function ipToNum(ip){ if(!ip||ip==="-.--")return 0; const [w,f]=String(ip).split("."); return Number(w||0)+Number(f||0)/3; }
 function seasonYear(){ const d=new Date(datePick.value+"T12:00"); return d.getMonth()>=2?d.getFullYear():d.getFullYear()-1; }
 async function j(u){ const r=await fetch(u); if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); }
-function filterGame(pk){ ROWS.forEach(r=>{ const el=document.getElementById("row-"+r.uid); const dt=document.getElementById("det-"+r.uid);
-  const show = !pk || String(r.gamePk)===String(pk); if(el) el.style.display = show?"":"none"; if(dt && dt.style.display!=="none") dt.style.display = show?"":"none"; }); }
 
-/* ---------- distribution ---------- */
-function poissonCdf(kMax, lambda){ if(!(lambda>0)) return 1; let t=Math.exp(-lambda), s=t; for(let i=1;i<=kMax;i++){ t*=lambda/i; s+=t; } return Math.min(1,s); }
-function probOver(line, lambda){ if(!(lambda>0)||!isFinite(line)) return null; return 1 - poissonCdf(Math.floor(line), lambda); }
-function fairAmerican(p){ if(!(p>0&&p<1)) return null; return p>=0.5 ? Math.round(-100*p/(1-p)) : Math.round(100*(1-p)/p); }
-function fmtOdds(v){ return v===null||v===undefined ? "—" : (v>0?"+"+v:String(v)); }
-function impliedProb(am){ if(!isFinite(am)||am===0) return null; return am>0 ? 100/(am+100) : Math.abs(am)/(Math.abs(am)+100); }
-function rangeOf(k){ const sd=Math.sqrt(Math.max(k,0.0001)); return { lo:Math.max(0,k-sd), hi:k+sd }; }
-
-/* ---------- projections ----------
-   Strikeouts are the modelled market: expected batters faced × K rate, scaled by
-   the lineup's strikeout rate against his hand, then corrected by the learned
-   bias. The other five are season rate × expected innings — honest baselines,
-   deliberately not dressed up as calibrated models. */
-function buildRow(p, g, side, oppTeam, oppTeamId, kv){
-  if(!p || !p.ip || p.ip < 15 || !p.bf) return null;
-  const role = LyDiaPitcherCore.classifyPitcherRole(p);
-  const modelIP = role.expectedInnings;
-  const ovKey = datePick.value + "|" + (p.id || p.name);
-  const override = Number(IP_OVERRIDES[ovKey]);
-  const expIP = Number.isFinite(override) && override > 0 ? override : modelIP;
-  const kbf = p.so/p.bf;
-  const bfPerIp = Math.max(3.6, Math.min(4.8, p.bf/p.ip));   // pitcher-specific, not a flat 4.28
-  const expBF = expIP * bfPerIp;
-  const baseK = expBF * kbf;
-  const oppK = p.hand && kv[p.hand] ? kv[p.hand][oppTeamId] : null;
-  const rawAdj = (oppK && LEAGUE_K) ? oppK/LEAGUE_K : 1;
-  const adj = (oppK && LEAGUE_K) ? Math.max(0.87, Math.min(1.13, rawAdj)) : 1;
-  const clamped = Boolean(oppK && LEAGUE_K && Math.abs(rawAdj-adj) > 0.0005);
-  const afterLineup = baseK * adj;
-  // Swing-and-miss / arsenal leverage: computed nightly (Baseball Savant, pitch-type
-  // resolved) and carried in data/k-props/today.json. Reused here so the tool and the
-  // graded model agree and the browser makes no Savant call. 1.0 when absent.
-  const Lw = LINES[String(p.name).toLowerCase()] || {};
-  const whiffFactor = Number.isFinite(Lw.whiff_leverage) ? Lw.whiff_leverage : 1;
-  const whiffSource = whiffFactor!==1 ? (Lw.whiff_lineup_source||null) : null;
-  const whiffDetail = Array.isArray(Lw.whiff_detail) ? Lw.whiff_detail : null;
-  const afterWhiff = afterLineup * whiffFactor;
-  const k = Math.max(0, afterWhiff + (KBIAS||0));
-
-  const ip = p.ip;
-  const k9  = ip ? p.so/ip*9 : null;
-  const bb9 = ip ? p.bb/ip*9 : null;
-  const hr9 = ip ? p.hr/ip*9 : null;
-  const h9  = ip ? p.h /ip*9 : null;
-  const era = Number.isFinite(p.era) ? p.era : null;
-
-  return {
-    uid: `${g.gamePk}-${side}`, gamePk: g.gamePk, side,
-    p, name: p.name, hand: p.hand, oppTeam,
-    matchup: `${g.teams.away.team.abbr||g.teams.away.team.name} vs ${g.teams.home.team.abbr||g.teams.home.team.name}`,
-    venue: (g.venue||{}).name || "",
-    role, expIP, modelIP, ipEdited: expIP !== modelIP, kbf, expBF, baseK, oppK, adj, rawAdj, clamped, afterLineup,
-    bfPerIp, whiffFactor, whiffSource, whiffDetail, afterWhiff,
-    k,
-    outs: expIP*3,
-    er:   era!==null ? expIP*era/9 : null,
-    hits: h9 !==null ? expIP*h9/9  : null,
-    bb:   bb9!==null ? expIP*bb9/9 : null,
-    hr:   hr9!==null ? expIP*hr9/9 : null,
-    era, whip: Number.isFinite(p.whip)?p.whip:null, k9, bb9, hr9, h9,
-    lowSample: p.ip < 40
-  };
-}
-
-/* ---------- load ---------- */
 async function load(){
-  const statusEl=document.getElementById("status"), slateEl=document.getElementById("slate");
-  statusEl.innerHTML='<div class="loading">Projecting the slate…</div>'; slateEl.innerHTML="";
+  const statusEl=document.getElementById("status"), gamesEl=document.getElementById("games");
+  statusEl.innerHTML='<div class="loading">Projecting strikeouts…</div>'; gamesEl.innerHTML="";
   try{
     const yr=seasonYear(), date=datePick.value;
     LINES={};
     if(date===localISODate(new Date())){
       try{ const kp=await fetch("/data/k-props/today.json?v="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null);
-        if(kp && kp.date===date && kp.pitchers){ LINES=kp.pitchers; KBIAS=kp.learned_bias||0; KBIAS_N=kp.learned_n||0; } }catch(e){}
+        if(kp && kp.date===date && kp.pitchers){ LINES=kp.pitchers; LINES_AT=kp.generated_at; KBIAS=kp.learned_bias||0; KBIAS_N=kp.learned_n||0; } }catch(e){}
     }
     const [sched, vl, vr] = await Promise.all([
-      j(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher,venue`),
+      j(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher`),
       j(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${yr}&stats=statSplits&sitCodes=vl`),
       j(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${yr}&stats=statSplits&sitCodes=vr`)
     ]);
-    const kv={L:{},R:{}}; let soT=0,paT=0;
+    // opponent K% vs each hand + league baseline
+    const kv={L:{},R:{}}; let soT=0, paT=0;
     for(const t of (vl.stats[0]||{}).splits||[]){ const so=+t.stat.strikeOuts||0, pa=+t.stat.plateAppearances||0; if(pa) kv.L[t.team.id]=so/pa; }
     for(const t of (vr.stats[0]||{}).splits||[]){ const so=+t.stat.strikeOuts||0, pa=+t.stat.plateAppearances||0; if(pa){ kv.R[t.team.id]=so/pa; soT+=so; paT+=pa; } }
-    LEAGUE_K = paT ? soT/paT : 0.223;
+    const leagueK = paT ? soT/paT : 0.223;
 
     const games=(((sched.dates||[])[0])||{}).games||[];
     if(!games.length){ statusEl.innerHTML=`<div class="notice">No MLB games scheduled for ${date}.</div>`; return; }
@@ -267,273 +149,175 @@ async function load(){
     const pids=[...new Set(games.flatMap(g=>["away","home"].map(s=>g.teams[s].probablePitcher&&g.teams[s].probablePitcher.id).filter(Boolean)))];
     const ps=pids.length ? await LyDiaPitcherCore.loadPitchersForDate(pids, date) : {};
 
-    ROWS=[];
-    for(const g of games){
-      for(const side of ["away","home"]){
-        const pr=g.teams[side].probablePitcher; if(!pr) continue;
-        const opp = side==="away" ? g.teams.home.team : g.teams.away.team;
-        const row = buildRow(ps[pr.id], g, side, opp.name, opp.id, kv);
-        if(row) ROWS.push(row);
-      }
-    }
-    if(!ROWS.length){ statusEl.innerHTML=`<div class="notice">No starter has enough innings for a projection on ${date}.</div>`; return; }
-
-    render();
-    document.getElementById("game-jump").innerHTML='<option value="">All games…</option>'+
+    PROJ={};
+    gamesEl.innerHTML = games.map(g=>renderGame(g, ps, kv, leagueK, games, date)).join("");
+    Object.keys(PROJ).forEach(pid => { const el = document.getElementById("ln-" + pid); if (el && el.value) lean(pid); });
+    document.getElementById("game-jump").innerHTML = '<option value="">All games…</option>'+
       games.map(g=>`<option value="${g.gamePk}">${escapeHtml(g.teams.away.team.name)} @ ${escapeHtml(g.teams.home.team.name)}</option>`).join("");
     statusEl.innerHTML="";
     const bn=document.getElementById("kbias-note");
-    if(bn) bn.innerHTML = KBIAS ? `<b>Self-calibrated:</b> strikeout projections include a ${KBIAS>0?"+":""}${KBIAS} correction learned from ${KBIAS_N} graded starts. ` : "";
+    if(bn) bn.innerHTML = KBIAS ? `<b>Self-calibrated:</b> projections include a ${KBIAS>0?"+":""}${KBIAS}-strikeout correction learned from ${KBIAS_N} graded starts. ` : "";
   }catch(e){ statusEl.innerHTML=`<div class="notice warn">Could not project (${escapeHtml(e.message)}).</div>`; }
 }
 
-/* ---------- table ---------- */
-const COLS=[["k","K"],["outs","Outs"],["er","ER"],["hits","H"],["bb","BB"],["hr","HR"],["era","ERA"],["k9","K/9"]];
-function sortBy(key){ SORT = (SORT.key===key) ? {key, dir:-SORT.dir} : {key, dir:-1}; render(); }
-function render(){
-  const rows=[...ROWS].sort((a,b)=>{ const x=a[SORT.key], y=b[SORT.key];
-    if(x===null||x===undefined) return 1; if(y===null||y===undefined) return -1; return (x-y)*SORT.dir; });
-  document.getElementById("slate").innerHTML=`<div class="pit-wrap"><table class="pit">
-    <thead><tr><th>Pitcher</th>${COLS.map(c=>`<th class="${SORT.key===c[0]?"on":""}" onclick="sortBy('${c[0]}')">${c[1]}${SORT.key===c[0]?(SORT.dir<0?" ▼":" ▲"):""}</th>`).join("")}</tr></thead>
-    <tbody>${rows.map(rowHtml).join("")}</tbody></table></div>`;
+/* Projection.
+
+   When the server has already published a projection for this pitcher we use
+   it, because that number carries the arsenal leverage the browser cannot
+   recompute: pitch-type usage against this lineup's whiff rate on each pitch.
+   Falling back to the local formula would silently drop that work.
+
+   The projection is linear in expected innings, so an edited innings figure
+   rescales it exactly: proj * (editedIP / serverIP). */
+function project(p, oppTeamId, kv){
+  if(!p || !p.ip || p.ip < 15 || !p.bf) return null;
+  const role = LyDiaPitcherCore.classifyPitcherRole(p);
+  const server = LINES[String(p.name||"").toLowerCase()] || null;
+  const hasServer = server && Number.isFinite(server.projection) && Number.isFinite(server.expected_innings) && server.expected_innings > 0;
+
+  const modelIP = hasServer ? Number(server.expected_innings) : role.expectedInnings;
+  const key = datePick.value + "|" + (p.id || p.name);
+  const ov = Number(IP_OVERRIDES[key]);
+  const expIP = Number.isFinite(ov) && ov > 0 ? ov : modelIP;
+
+  const kbf = p.so/p.bf;
+  const oppK = p.hand && kv[p.hand] ? kv[p.hand][oppTeamId] : null;
+  const adj = (oppK && LEAGUE_K) ? Math.max(0.87, Math.min(1.13, oppK/LEAGUE_K)) : 1;
+
+  let k;
+  if (hasServer) {
+    k = Math.max(0, Number(server.projection) * (expIP / modelIP));
+  } else {
+    const bfPerIp = Number.isFinite(server && server.bf_per_ip) ? server.bf_per_ip : 4.28;
+    k = Math.max(0, expIP * bfPerIp * kbf * adj + (KBIAS || 0));
+  }
+
+  return {
+    k, expIP, modelIP, ipEdited: expIP !== modelIP, kbf, oppK, adj,
+    lowSample: p.ip < 40, role, server, hasServer,
+    bfPerIp: Number.isFinite(server && server.bf_per_ip) ? server.bf_per_ip : 4.28
+  };
 }
-function n1(v){ return v===null||v===undefined ? "—" : Number(v).toFixed(1); }
-function n2(v){ return v===null||v===undefined ? "—" : Number(v).toFixed(2); }
-function rowHtml(r){
-  return `<tr class="prow" id="row-${r.uid}" onclick="toggle('${r.uid}')">
-    <td><span class="chev" id="chev-${r.uid}">▸</span> <span class="pname">${escapeHtml(r.name)}</span> <span class="dim small">(${r.hand==="L"?"LHP":"RHP"})</span>
-      <div class="pmeta">${escapeHtml(r.matchup)}${r.venue?" · "+escapeHtml(r.venue):""} · vs ${escapeHtml(r.oppTeam)}</div></td>
-    <td class="kcell ${r.ipEdited?"ip-edited":""}" id="c-${r.uid}-k">${n1(r.k)}</td>
-    <td id="c-${r.uid}-outs">${n1(r.outs)}</td><td id="c-${r.uid}-er">${n2(r.er)}</td>
-    <td id="c-${r.uid}-hits">${n2(r.hits)}</td><td id="c-${r.uid}-bb">${n2(r.bb)}</td>
-    <td id="c-${r.uid}-hr">${n2(r.hr)}</td><td>${n2(r.era)}</td><td>${n2(r.k9)}</td>
-  </tr>
-  <tr class="detail" id="det-${r.uid}" style="display:none"><td colspan="9"><div class="detail-in" id="din-${r.uid}"></div></td></tr>`;
-}
-function toggle(uid){
-  const r=ROWS.find(x=>x.uid===uid); if(!r) return;
-  const det=document.getElementById("det-"+uid), chev=document.getElementById("chev-"+uid), row=document.getElementById("row-"+uid);
-  const open = det.style.display==="none";
-  det.style.display = open ? "" : "none";
-  chev.textContent = open ? "▾" : "▸";
-  row.classList.toggle("open", open);
-  if(open && !det.dataset.built){ document.getElementById("din-"+uid).innerHTML = detailHtml(r); det.dataset.built="1"; syncK(uid); loadLineup(r); }
+let LEAGUE_K = 0.223;
+
+/* Swing-and-miss alignment: how often he throws each pitch, and how this
+   lineup's whiff rate on that pitch compares with league. Above 1.00 means the
+   matchup favours the pitcher on that offering. */
+function arsenalBlock(pr, pid){
+  const s = pr.server;
+  if(!s || !Array.isArray(s.whiff_detail) || !s.whiff_detail.length) return "";
+  const lev = Number(s.whiff_leverage);
+  const src = s.whiff_lineup_source === "posted" ? "posted lineup"
+            : s.whiff_lineup_source === "projected_regulars" ? "projected regulars" : "team baseline";
+  const rows = [...s.whiff_detail].sort((a,b)=>Number(b.usage)-Number(a.usage)).map(d=>{
+    const ratio = Number(d.ratio), usage = Number(d.usage);
+    const good = ratio >= 1;
+    const pctWidth = Math.max(3, Math.min(100, usage));
+    return `<div class="ars-row">
+      <span class="ars-pt">${escapeHtml(d.pt)}</span>
+      <span class="ars-track"><span class="ars-fill" style="width:${pctWidth}%;background:${good?"var(--good)":"var(--accent)"}"></span></span>
+      <span class="ars-ratio ${good?"pos-text":"neg-text"}">${ratio.toFixed(2)}</span>
+    </div>`;
+  }).join("");
+  return `<details class="ars">
+    <summary>Swing-and-miss alignment</summary>
+    <div class="ars-head">
+      <span>Arsenal leverage <span class="dim small">(${escapeHtml(src)})</span></span>
+      <span class="ars-lev ${lev>=1?"pos-text":"neg-text"}">${Number.isFinite(lev)?lev.toFixed(3):"—"}</span>
+    </div>
+    ${rows}
+    <div class="ars-note">Bar length is how often he throws the pitch. The number is this lineup's whiff rate on it versus league — above 1.00 favours the pitcher. The blended figure above is already inside the projection.</div>
+  </details>`;
 }
 
-/* Recompute every downstream number from a new expected-innings figure and
-   repaint in place. Same arithmetic as buildRow — strikeouts run through the
-   lineup adjustment and the learned correction, the rate baselines are simple
-   rate x innings. */
-function setIP(uid, raw){
-  const r = ROWS.find(x => x.uid === uid); if (!r) return;
+function ipControl(pr, pid){
+  return `<div class="k-row"><span>Expected innings</span>
+    <span class="ip-edit">
+      <input type="number" step="0.1" min="0.1" max="9" id="ip-${pid}" value="${pr.expIP.toFixed(1)}" oninput="setIP(${pid}, this.value)">
+      ${pr.ipEdited ? `<span class="rst" onclick="resetIP(${pid})">reset ${pr.modelIP.toFixed(1)}</span>` : ""}
+    </span></div>`;
+}
+
+/* Rescale on an innings edit and repaint the card in place. */
+function setIP(pid, raw){
+  const pr = PROJ[pid]; if(!pr) return;
   const v = Number(raw);
-  const key = ipKeyFor(r);
-  if (Number.isFinite(v) && v > 0) { IP_OVERRIDES[key] = v; }
-  else { delete IP_OVERRIDES[key]; }
-  saveIpOverrides(IP_OVERRIDES);
+  const key = datePick.value + "|" + pid;
+  if (Number.isFinite(v) && v > 0) IP_OVERRIDES[key] = v; else delete IP_OVERRIDES[key];
+  saveIp(IP_OVERRIDES);
 
-  const expIP = Number.isFinite(v) && v > 0 ? v : r.modelIP;
-  r.expIP = expIP;
-  r.ipEdited = expIP !== r.modelIP;
-  r.expBF = expIP * (r.bfPerIp || 4.28);
-  r.baseK = r.expBF * r.kbf;
-  r.afterLineup = r.baseK * r.adj;
-  r.k = Math.max(0, r.afterLineup + (KBIAS || 0));
-  r.outs = expIP * 3;
-  r.er = r.era !== null ? expIP * r.era / 9 : null;
-  r.hits = r.h9 !== null ? expIP * r.h9 / 9 : null;
-  r.bb = r.bb9 !== null ? expIP * r.bb9 / 9 : null;
-  r.hr = r.hr9 !== null ? expIP * r.hr9 / 9 : null;
+  const expIP = Number.isFinite(v) && v > 0 ? v : pr.modelIP;
+  pr.expIP = expIP;
+  pr.ipEdited = expIP !== pr.modelIP;
+  pr.k = pr.hasServer
+    ? Math.max(0, Number(pr.server.projection) * (expIP / pr.modelIP))
+    : Math.max(0, expIP * pr.bfPerIp * pr.kbf * pr.adj + (KBIAS || 0));
 
-  const set = (suffix, val) => { const el = document.getElementById("c-" + uid + "-" + suffix); if (el) el.textContent = val; };
-  set("k", n1(r.k)); set("outs", n1(r.outs)); set("er", n2(r.er));
-  set("hits", n2(r.hits)); set("bb", n2(r.bb)); set("hr", n2(r.hr));
-  const kc = document.getElementById("c-" + uid + "-k");
-  if (kc) kc.classList.toggle("ip-edited", r.ipEdited);
-
-  const din = document.getElementById("din-" + uid);
-  if (din) { din.innerHTML = detailHtml(r); syncK(uid); loadLineup(r); }
+  const kEl = document.getElementById("kproj-" + pid);
+  if (kEl) { kEl.textContent = pr.k.toFixed(1); kEl.classList.toggle("ip-edited", pr.ipEdited); }
+  const noteEl = document.getElementById("ipnote-" + pid);
+  if (noteEl) noteEl.innerHTML = pr.ipEdited
+    ? `Edited from the model's ${pr.modelIP.toFixed(1)} IP. Saved on this device only — nothing is published.`
+    : "";
+  lean(pid);
 }
-function resetIP(uid){ setIP(uid, ""); }
-
-/* ---------- detail ---------- */
-function mktBox(label, model, uid, key, dp){
-  return `<div class="mkt"><span class="mk-lab">${label}</span>
-    <span class="mk-model">model <b>${model===null?"—":Number(model).toFixed(dp)}</b></span>
-    <input type="number" step="0.5" placeholder="line" id="ln-${key}-${uid}" oninput="syncMkt('${uid}','${key}',${dp})">
-    <input type="number" step="1" placeholder="odds" id="od-${key}-${uid}" oninput="syncMkt('${uid}','${key}',${dp})">
-    <span id="out-${key}-${uid}" class="mk-model"></span></div>`;
+function resetIP(pid){
+  const el = document.getElementById("ip-" + pid);
+  const pr = PROJ[pid];
+  if (el && pr) el.value = pr.modelIP.toFixed(1);
+  setIP(pid, "");
 }
-function adjRow(name, ev, pct){
-  return `<div class="adj ${pct>=0?"up":"down"}"><span class="nm">${escapeHtml(name)}${ev?` <span class="ev">(${escapeHtml(ev)})</span>`:""}</span>
-    <span class="vl ${pct>=0?"pos-text":"neg-text"}">${pct>=0?"+":""}${pct.toFixed(1)}%</span></div>`;
-}
-function detailHtml(r){
-  const L = LINES[String(r.name).toLowerCase()] || {};
-  const rows=[], neutral=[];
-  if(r.oppK!==null){
-    const pct=(r.adj-1)*100;
-    (Math.abs(pct)<0.5?neutral:rows).push(adjRow(`${r.oppTeam} K% vs ${r.hand==="L"?"LHP":"RHP"}`,`${(r.oppK*100).toFixed(1)}% vs ${(LEAGUE_K*100).toFixed(1)}% lg`,pct));
-  }
-  if(r.whiffFactor && r.whiffFactor!==1){
-    const pct=(r.whiffFactor-1)*100;
-    const src = r.whiffSource==="projected_regulars" ? "projected lineup" : r.whiffSource==="posted" ? "posted lineup" : "lineup";
-    (Math.abs(pct)<0.5?neutral:rows).push(adjRow("Arsenal whiff leverage",`${src}, pitch-type resolved`,pct));
-  }
-  if(KBIAS){
-    const pct = r.afterWhiff>0 ? (KBIAS/r.afterWhiff)*100 : 0;
-    (Math.abs(pct)<0.5?neutral:rows).push(adjRow("Self-calibration",`${KBIAS>0?"+":""}${KBIAS} K over ${KBIAS_N} graded starts`,pct));
-  }
-  const net = r.baseK>0 ? ((r.k/r.baseK)-1)*100 : 0;
-  const rg = rangeOf(r.k);
-  return `
-  <div class="mkt-grid">
-    ${mktBox("Outs", r.outs, r.uid, "outs", 1)}
-    ${mktBox("ER", r.er, r.uid, "er", 2)}
-    ${mktBox("Hits", r.hits, r.uid, "hits", 2)}
-    ${mktBox("Walks", r.bb, r.uid, "bb", 2)}
-  </div>
 
-  <div class="kedge">
-    <span class="mk-lab">K prop edge</span>
-    <span class="mk-model">Line</span><input type="number" step="0.5" id="kl-${r.uid}" value="${L.line ?? ""}" oninput="syncK('${r.uid}')">
-    <span class="mk-model">Over odds</span><input type="number" step="1" id="ko-${r.uid}" value="${L.over ?? ""}" oninput="syncK('${r.uid}')">
-    <span id="kout-${r.uid}" class="mk-model"></span>
-    ${L.books?`<span class="dim small">consensus of ${L.books} book${L.books===1?"":"s"}</span>`:""}
-  </div>
-
-  <div class="bd-grid">
-    <div class="bd">
-      <div class="bd-head"><span class="bd-title">Strikeouts</span><span class="bd-num">${r.k.toFixed(2)}</span></div>
-      <div class="bd-lab">Baseline</div>
-      <div class="bd-base">
-        <span class="ip-edit">Expected IP
-          <input type="number" step="0.1" min="0.1" max="9" id="ip-${r.uid}" value="${r.expIP.toFixed(1)}"
-                 oninput="setIP('${r.uid}', this.value)">
-          ${r.ipEdited ? `<span class="rst" onclick="resetIP('${r.uid}')">reset to ${r.modelIP.toFixed(1)}</span>` : ""}
-        </span>
-        × ${r.bfPerIp.toFixed(2)} batters/IP = ${r.expBF.toFixed(1)} batters faced
-      </div>
-      ${r.ipEdited ? `<div class="ip-note">Edited from the model's ${r.modelIP.toFixed(1)} IP. Saved on this device for ${escapeHtml(datePick.value)} only — nothing is published and no graded pick changes.</div>` : ""}
-      <div class="bd-base">${r.expBF.toFixed(1)} × ${(r.kbf*100).toFixed(1)}% K rate → ${r.baseK.toFixed(2)} base Ks</div>
-      <div class="bd-note">Expected innings come from his role (${escapeHtml(String(r.role.label).toLowerCase())}). K rate is season strikeouts per batter faced.</div>
-      ${rows.length?`<div class="bd-lab">Matchup adjustments</div><div class="adj-net"><span>net</span><span class="${net>=0?"pos-text":"neg-text"}">${net>=0?"+":""}${net.toFixed(1)}%</span></div>${rows.join("")}`:""}
-      ${neutral.length?`<div class="bd-note">${neutral.length} near-neutral factor${neutral.length===1?"":"s"} not shown (within ±0.5%).</div>`:""}
-      ${r.clamped?`<div class="bd-note">Lineup adjustment capped at ${r.adj>1?"+13":"−13"}%. The raw split said ${((r.rawAdj-1)*100).toFixed(1)}%, more confidence than a season split earns.</div>`:""}
-      <div class="bd-note">Typical range ${rg.lo.toFixed(1)}–${rg.hi.toFixed(1)}.${r.lowSample?" <b>Small sample</b> — under 40 innings this season.":""}</div>
+function kBox(pitcher, oppTeam, oppTeamId, kv, pid){
+  const p=pitcher;
+  if(!p) return `<div class="k-box"><b>TBD starter</b><div class="dim small">No projection until the probable posts.</div></div>`;
+  const pitcherName = `<a href="https://www.mlb.com/player/${String(p.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-${p.id || pid}" target="_blank" rel="noopener">${escapeHtml(p.name)}</a>`;
+  const pr=project(p, oppTeamId, kv);
+  if(!pr) return `<div class="k-box"><b>${pitcherName}</b><div class="dim small">Not enough innings this season for a reliable projection.</div></div>`;
+  PROJ[pid]=pr;
+  const oppTier = pr.oppK===null ? "" : pr.oppK>=0.245 ? ' <span class="tier pos-text">strikes out a lot — helps the over</span>' : pr.oppK>=0.225 ? ' <span class="tier pos-text">above average strikeouts</span>' : pr.oppK<=0.195 ? ' <span class="tier neg-text">hard to strike out — hurts the over</span>' : ' <span class="tier">average strikeouts</span>';
+  return `<div class="k-box">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><b>${pitcherName}</b><span class="dim small">${p.hand==="L"?"LHP":"RHP"}</span></div>
+    <div><span class="k-proj ${pr.ipEdited?"ip-edited":""}" id="kproj-${pid}">${pr.k.toFixed(1)}</span> <span class="dim small">projected Ks${pr.lowSample ? ' · <b class="gold">small sample</b>' : ""}</span></div>
+    <div class="ip-note" id="ipnote-${pid}">${pr.ipEdited ? `Edited from the model's ${pr.modelIP.toFixed(1)} IP. Saved on this device only — nothing is published.` : ""}</div>
+    <div class="k-row"><span>Pitching plan</span><b>${escapeHtml(pr.role.label)}</b></div>
+    <div class="k-row"><span>K per batter (season)</span><b>${(pr.kbf*100).toFixed(1)}%</b></div>
+    ${ipControl(pr, pid)}
+    ${pr.role.bullpenGame ? '<div class="small dim">Strikeout projection covers the opener only. Remaining innings belong to the bullpen.</div>' : ""}
+    <div class="k-row"><span title="How often this lineup strikes out against pitchers of his hand — higher means more strikeouts available">${escapeHtml(oppTeam)} strikeout rate vs ${p.hand==="L"?"lefties":"righties"}</span><span><b>${pr.oppK!==null?(pr.oppK*100).toFixed(1)+"%":"—"}</b>${oppTier}</span></div>
+    ${(() => { const L = LINES[p.name.toLowerCase()]; if (!L || L.line === null || L.line === undefined) return ""; return `<div class="k-row"><span>Market line (${L.books} book${L.books === 1 ? "" : "s"})</span><span><b>${L.line}</b> <span class="dim small">O ${L.over > 0 ? "+" : ""}${L.over ?? "—"} / U ${L.under > 0 ? "+" : ""}${L.under ?? "—"}</span></span></div>`; })()}
+    ${arsenalBlock(pr, pid)}
+    <div class="line-input">
+      <label class="dim small" for="ln-${pid}">Line</label>
+      <input type="number" step="0.5" id="ln-${pid}" placeholder="e.g. 6.5" value="${(LINES[p.name.toLowerCase()] || {}).line ?? ""}" oninput="lean(${pid})">
+      <span id="lean-${pid}" class="lean"></span>
     </div>
-
-    <div class="bd">
-      <div class="bd-head"><span class="bd-title">Earned runs</span><span class="bd-num">${n2(r.er)}</span></div>
-      <div class="bd-lab">Baseline</div>
-      <div class="bd-base">${r.expIP.toFixed(1)} IP × ${n2(r.era)} ERA ÷ 9 → ${n2(r.er)} ER</div>
-      <div class="bd-note">A rate baseline, not a calibrated model. It carries no park, lineup or bullpen adjustment and no graded record.</div>
-      <div class="bd-lab">Home runs allowed</div>
-      <div class="bd-base">${r.expIP.toFixed(1)} IP × ${n2(r.hr9)} HR/9 ÷ 9 → ${n2(r.hr)} HR</div>
-      <div class="bd-note">Season WHIP ${n2(r.whip)}. Hits and walks below use the same season-rate method.</div>
-      <div class="mini">
-        <div><div class="mv">${n2(r.hits)}</div><div class="ml">Hits</div></div>
-        <div><div class="mv">${n2(r.bb)}</div><div class="ml">Walks</div></div>
-        <div><div class="mv">${n1(r.outs)}</div><div class="ml">Outs</div></div>
-      </div>
-    </div>
-
-    <div class="bd" id="lu-${r.uid}">
-      <div class="bd-head"><span class="bd-title">Opposing lineup</span><span class="pill wait" id="lupill-${r.uid}">loading</span></div>
-      <div class="bd-note">Checking whether ${escapeHtml(r.oppTeam)} have posted a lineup…</div>
-    </div>
-  </div>
-
-  <div class="bd" style="margin-top:12px">
-    <div class="bd-title">Swing-and-miss alignment</div>
-    ${swingMissHtml(r)}
   </div>`;
 }
-function swingMissHtml(r){
-  if(!r.whiffDetail || !r.whiffDetail.length || r.whiffFactor===1){
-    return `<div class="bd-note">Pitch-type whiff leverage is computed nightly from Baseball Savant and shown for today's slate once it runs. It isn't available for this pitcher/date, so the projection carries no arsenal adjustment (factor 1.00).</div>`;
-  }
-  const pct=(r.whiffFactor-1)*100;
-  const src = r.whiffSource==="projected_regulars" ? "projected regulars (lineup not yet posted)" : "posted lineup";
-  const chips = r.whiffDetail.slice().sort((a,b)=>b.usage-a.usage).map(d=>{
-    const up=d.ratio>=1;
-    return `<span style="display:inline-block;margin:2px 6px 2px 0;padding:2px 8px;border-radius:10px;font-size:12px;background:${up?'rgba(80,200,120,.15)':'rgba(220,90,90,.15)'};color:${up?'#3aa76d':'#d05a5a'}">${escapeHtml(d.pt)} ${d.usage.toFixed(0)}% · ${d.ratio.toFixed(2)}×</span>`;
-  }).join("");
-  return `<div class="bd-note">How much this lineup misses <b>his</b> specific pitch mix versus a league-average lineup — resolved per pitch type, capped at ±12%. Source: ${src}. Net <b class="${pct>=0?"pos-text":"neg-text"}">${pct>=0?"+":""}${pct.toFixed(1)}%</b> on the strikeout projection.</div>
-  <div style="margin:6px 0">${chips}</div>
-  <div class="bd-note">Each chip is a pitch type: usage share, then how whiffy this lineup is against it relative to league (above 1.00× = they miss it more than average).</div>`;
+function lean(pid){
+  const pr=PROJ[pid]; const el=document.getElementById("lean-"+pid);
+  const input=document.getElementById("ln-"+pid);
+  if(!pr||!el||!input) return;
+  const line=Number(input.value);
+  if(!isFinite(line)||line<=0){ el.textContent=""; return; }
+  const d=pr.k-line;
+  if(d>=0.7) el.innerHTML=`<span class="pos-text">OVER lean (+${d.toFixed(1)})</span>`;
+  else if(d<=-0.7) el.innerHTML=`<span class="neg-text">UNDER lean (${d.toFixed(1)})</span>`;
+  else el.innerHTML=`<span class="dim">no edge (${d>=0?"+":""}${d.toFixed(1)})</span>`;
 }
-
-/* ---------- market sync ---------- */
-function syncK(uid){
-  const r=ROWS.find(x=>x.uid===uid); const out=document.getElementById("kout-"+uid); if(!r||!out) return;
-  const line=Number((document.getElementById("kl-"+uid)||{}).value);
-  const odds=Number((document.getElementById("ko-"+uid)||{}).value);
-  if(!isFinite(line)||line<=0){ out.innerHTML=""; return; }
-  const p=probOver(line, r.k); if(p===null){ out.innerHTML=""; return; }
-  const d=r.k-line;
-  const play = d>=0.7 ? `<span class="badge-play over">Over lean +${d.toFixed(1)}</span>`
-             : d<=-0.7 ? `<span class="badge-play under">Under lean ${d.toFixed(1)}</span>`
-             : `<span class="badge-play none">No play ${d>=0?"+":""}${d.toFixed(1)}</span>`;
-  let edge="";
-  const imp = isFinite(odds)&&odds!==0 ? impliedProb(odds) : null;
-  if(imp!==null) edge = ` · book implies ${(imp*100).toFixed(1)}% → <b class="${p>imp?"pos-text":"neg-text"}">${p>imp?"+":""}${((p-imp)*100).toFixed(1)}%</b>`;
-  out.innerHTML = `${play} <span class="kv">Model over ${(p*100).toFixed(1)}%</span> (fair ${fmtOdds(fairAmerican(p))})${edge}`;
-}
-function syncMkt(uid,key,dp){
-  const r=ROWS.find(x=>x.uid===uid); const out=document.getElementById(`out-${key}-${uid}`); if(!r||!out) return;
-  const model=r[key]; const line=Number((document.getElementById(`ln-${key}-${uid}`)||{}).value);
-  const odds=Number((document.getElementById(`od-${key}-${uid}`)||{}).value);
-  if(model===null||!isFinite(line)||line<=0){ out.innerHTML=""; return; }
-  const p=probOver(line, model);
-  const imp = isFinite(odds)&&odds!==0 ? impliedProb(odds) : null;
-  out.innerHTML = `over <b>${(p*100).toFixed(0)}%</b> (fair ${fmtOdds(fairAmerican(p))})`
-    + (imp!==null?` · <b class="${p>imp?"pos-text":"neg-text"}">${p>imp?"+":""}${((p-imp)*100).toFixed(1)}%</b>`:"");
-}
-
-/* ---------- opposing lineup ----------
-   Posted batting order from the schedule feed, then one batched call for the
-   nine hitters' season lines. K% and ISO come straight from those totals. */
-async function loadLineup(r){
-  const box=document.getElementById("lu-"+r.uid), pill=document.getElementById("lupill-"+r.uid);
-  const oppSide = r.side==="away" ? "homePlayers" : "awayPlayers";
-  try{
-    let players = LU_CACHE[r.gamePk+oppSide];
-    if(!players){
-      const sc=await j(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&gamePk=${r.gamePk}&hydrate=lineups`);
-      const g=((((sc.dates||[])[0])||{}).games||[])[0]||{};
-      players=((g.lineups||{})[oppSide])||[];
-      LU_CACHE[r.gamePk+oppSide]=players;
-    }
-    if(!players.length){
-      pill.className="pill wait"; pill.textContent="not posted";
-      box.querySelector(".bd-note").textContent = `${r.oppTeam} have not posted a lineup yet. The projection uses the team's season strikeout rate against ${r.hand==="L"?"lefties":"righties"} instead.`;
-      return;
-    }
-    const ids=players.map(p=>p.id).join(",");
-    const data=await j(`https://statsapi.mlb.com/api/v1/people?personIds=${ids}&hydrate=stats(group=[hitting],type=[season],season=${seasonYear()})`);
-    const byId={}; for(const per of data.people||[]){
-      const st=((((per.stats||[])[0]||{}).splits||[])[0]||{}).stat||{};
-      const pa=Number(st.plateAppearances)||0, so=Number(st.strikeOuts)||0;
-      const avg=parseFloat(st.avg), slg=parseFloat(st.slg);
-      byId[per.id]={ k: pa?so/pa:null, iso: (isFinite(avg)&&isFinite(slg))?slg-avg:null, hr:Number(st.homeRuns)||0, pa };
-    }
-    const rowsHtml=players.map((pl,i)=>{
-      const s=byId[pl.id]||{};
-      const kc = s.k===null||s.k===undefined ? "" : s.k>=0.25 ? "k-hi" : s.k<=0.18 ? "k-lo" : "";
-      return `<tr><td>${i+1}.</td><td>${escapeHtml(pl.useName?pl.useName+" "+pl.lastName:pl.fullName)}</td>
-        <td class="${kc}">${s.k!==null&&s.k!==undefined?(s.k*100).toFixed(1)+"%":"—"}</td>
-        <td>${s.iso!==null&&s.iso!==undefined?s.iso.toFixed(3):"—"}</td>
-        <td>${s.hr??"—"}</td></tr>`;
-    }).join("");
-    pill.className="pill"; pill.textContent="posted";
-    box.innerHTML=`<div class="bd-head"><span class="bd-title">Opposing lineup</span><span class="pill">posted</span></div>
-      <table class="lu"><thead><tr><th>#</th><th>Batter</th><th>K%</th><th>ISO</th><th>HR</th></tr></thead><tbody>${rowsHtml}</tbody></table>
-      <div class="lu-legend"><span class="k-hi">Orange K%</span> = strikes out a lot, good for the over. <span class="k-lo">Blue K%</span> = contact bat, bad for the over. Barrel rate needs Statcast and is not wired up yet.</div>`;
-  }catch(e){
-    pill.className="pill wait"; pill.textContent="unavailable";
-    box.querySelector(".bd-note").textContent = `Lineup could not be loaded (${e.message}). The projection falls back to the team's season strikeout rate.`;
-  }
+function renderGame(g, ps, kv, leagueK, allGames, date){
+  LEAGUE_K=leagueK;
+  const a=g.teams.away, h=g.teams.home;
+  const pa=a.probablePitcher?ps[a.probablePitcher.id]:null;
+  const ph=h.probablePitcher?ps[h.probablePitcher.id]:null;
+  const time=new Date(g.gameDate).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+  return `<div class="card match-card" id="kg-${g.gamePk}">
+    <div class="match-head matchup-title-center"><a class="matchup" href="${permanentMatchupUrl(g,allGames,date)}">${escapeHtml(a.team.name)} @ ${escapeHtml(h.team.name)}</a><span class="dim small">${time}</span></div>
+    <div class="k-grid">
+      ${kBox(pa, h.team.name, h.team.id, kv, a.probablePitcher?a.probablePitcher.id:0)}
+      ${kBox(ph, a.team.name, a.team.id, kv, h.probablePitcher?h.probablePitcher.id:0)}
+    </div>
+  </div>`;
 }
 </script>
 </body>
