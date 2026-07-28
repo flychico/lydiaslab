@@ -159,7 +159,10 @@ async function loadWindowBatters(startISO, endISO) {
   const key = startISO + "|" + endISO;
   if (battersCacheKey === key) return;
   try {
-    const d = await fetch(`https://statsapi.mlb.com/api/v1/stats?stats=byDateRange&group=hitting&startDate=${startISO}&endDate=${endISO}&sportId=1&limit=1000`).then(r => r.json());
+    // sortStat=plateAppearances (a counting stat, not a rate stat) is required here —
+    // without it the API silently hides "non-qualified" low-PA hitters (same behavior
+    // documented on mlb.com/stats), which drops anyone hurt, rested, or recently recalled.
+    const d = await fetch(`https://statsapi.mlb.com/api/v1/stats?stats=byDateRange&group=hitting&startDate=${startISO}&endDate=${endISO}&sportId=1&limit=1000&sortStat=plateAppearances`).then(r => r.json());
     const splits = ((d.stats || [])[0] || {}).splits || [];
     const fresh = {};
     for (const s of splits) {
