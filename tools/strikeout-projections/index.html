@@ -279,6 +279,17 @@ function lineupBlock(pr, pid, oppTeamId, game){
         : s && s.opp_lineup_source === "projected_regulars" ? "projected regulars" : "unavailable";
   }
   if (!lu || !lu.length) return "";
+
+  /* The two sources use different field names — the live MLB lineup has
+     {fullName, primaryPosition.abbreviation} and no batting-order field (array
+     order IS the order), while the stored k-props lineup has {order, name, pos}.
+     Normalize to one shape here so the row rendering below only knows one. */
+  lu = lu.map((b, i) => ({
+    id: b.id,
+    order: b.order || (i + 1),
+    name: b.name || b.fullName || b.useName || null,
+    pos: b.pos || ((b.primaryPosition && b.primaryPosition.abbreviation) || "")
+  }));
   const rows = lu.map(b => {
     const info = BATTERS[b.id] || null;
     const name = b.name || (info && info.name) || `#${b.id}`;
