@@ -261,9 +261,9 @@ function applyRates(pr, key){
   pr.leagueK = lgEdited ? lgOv : pr.leagueKModel;
   pr.oppK = oppEdited ? oppOv : pr.oppKModel;
   pr.kEdited = lgEdited || oppEdited;
-  pr.adjTrue = (pr.oppK && pr.leagueK) ? pr.oppK / pr.leagueK : 1;   // unclamped truth
-  pr.adj = Math.max(0.87, Math.min(1.13, pr.adjTrue));               // model guardrail
-  pr.clamped = Math.abs(pr.adj - pr.adjTrue) > 1e-9;
+  pr.adjTrue = (pr.oppK && pr.leagueK) ? pr.oppK / pr.leagueK : 1;
+  pr.adj = pr.adjTrue;   // no cap — the adjustment is used as computed
+  pr.clamped = false;
 }
 /* The lineup adjustment that is actually inside the projection being shown.
    Untouched, that is the server's own — recovered from the published terms, not
