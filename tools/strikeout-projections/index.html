@@ -149,7 +149,7 @@ async function load(){
         if(kp && kp.date===date && kp.pitchers){ LINES=kp.pitchers; LINES_AT=kp.generated_at; KBIAS=kp.learned_bias||0; KBIAS_N=kp.learned_n||0; } }catch(e){}
     }
     const [sched, vl, vr] = await Promise.all([
-      j(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher`),
+      j(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher,lineups`),
       j(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${yr}&stats=statSplits&sitCodes=vl`),
       j(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${yr}&stats=statSplits&sitCodes=vr`)
     ]);
@@ -162,6 +162,16 @@ async function load(){
     const games=(((sched.dates||[])[0])||{}).games||[];
     if(!games.length){ statusEl.innerHTML=`<div class="notice">No MLB games scheduled for ${date}.</div>`; return; }
     games.sort((a,b)=>new Date(a.gameDate)-new Date(b.gameDate));
+    // Stash live lineups (posted, if available) keyed by game PK for lookup in lineupBlock()
+    const liveLineups = {};
+    for (const g of games) {
+      if (g.lineups) {
+        if (g.lineups.awayPlayers && g.lineups.awayPlayers.length) liveLineups[g.teams.away.team.id + "_away"] = g.lineups.awayPlayers;
+        if (g.lineups.homePlayers && g.lineups.homePlayers.length) liveLineups[g.teams.home.team.id + "_home"] = g.lineups.homePlayers;
+      }
+    }
+    // Make liveLineups available to lineupBlock()
+    window.__liveLineups = liveLineups;
     const pids=[...new Set(games.flatMap(g=>["away","home"].map(s=>g.teams[s].probablePitcher&&g.teams[s].probablePitcher.id).filter(Boolean)))];
     const wEnd = new Date(date + "T12:00");
     const wStart = new Date(wEnd.getTime() - WINDOW * 86400000);
@@ -254,18 +264,33 @@ async function loadWindowBatters(startISO, endISO){
   } catch (e) {}
 }
 
-/* The nine hitters the projection was actually computed against — same
-   opp_lineup the server used (posted or projected regulars), enriched with
-   the full stat line over the window selected above. This intentionally does
-   NOT fetch a separate live lineup: showing different batters here than the
-   ones the K number above was computed against would be a second, competing
-   answer to "who's in the lineup" instead of a display of the one the math used. */
-function lineupBlock(pr, pid){
+/* The nine hitters the projection was actually computed against. Prefers live
+   posted lineup if available; falls back to the stored opp_lineup (posted or
+   projected regulars) that the projection was computed against. Both are
+   enriched with the full stat line over the last 7 days. */
+function lineupBlock(pr, pid, oppTeamId){
   const s = pr.server;
-  const lu = s && Array.isArray(s.opp_lineup) ? s.opp_lineup : null;
+  let lu = null, src = "unavailable";
+
+  // Check for live posted lineup first (keyed by opp team ID)
+  if (oppTeamId && window.__liveLineups) {
+    const key = oppTeamId + "_away";
+    const keyHome = oppTeamId + "_home";
+    if (window.__liveLineups[key]) {
+      lu = window.__liveLineups[key];
+      src = "posted (live)";
+    } else if (window.__liveLineups[keyHome]) {
+      lu = window.__liveLineups[keyHome];
+      src = "posted (live)";
+    }
+  }
+  // Fall back to stored lineup
+  if (!lu || !lu.length) {
+    lu = s && Array.isArray(s.opp_lineup) ? s.opp_lineup : null;
+    src = s && s.opp_lineup_source === "posted" ? "posted (server)"
+        : s && s.opp_lineup_source === "projected_regulars" ? "projected regulars" : "unavailable";
+  }
   if (!lu || !lu.length) return "";
-  const src = s.opp_lineup_source === "posted" ? "posted"
-            : s.opp_lineup_source === "projected_regulars" ? "projected regulars" : "unavailable";
   const rows = lu.map(b => {
     const info = BATTERS[b.id] || null;
     const name = b.name || (info && info.name) || `#${b.id}`;
@@ -433,7 +458,7 @@ function kBox(pitcher, oppTeam, oppTeamId, kv, pid){
     <div class="k-row"><span title="How often this lineup strikes out against pitchers of his hand — higher means more strikeouts available">${escapeHtml(oppTeam)} strikeout rate vs ${p.hand==="L"?"lefties":"righties"}</span><span><b>${pr.oppK!==null?(pr.oppK*100).toFixed(1)+"%":"—"}</b>${oppTier}</span></div>
     ${(() => { const L = LINES[p.name.toLowerCase()]; if (!L || L.line === null || L.line === undefined) return ""; return `<div class="k-row"><span>Market line (${L.books} book${L.books === 1 ? "" : "s"})</span><span><b>${L.line}</b> <span class="dim small">O ${L.over > 0 ? "+" : ""}${L.over ?? "—"} / U ${L.under > 0 ? "+" : ""}${L.under ?? "—"}</span></span></div>`; })()}
     ${derivation(pr, pid)}
-    ${lineupBlock(pr, pid)}
+    ${lineupBlock(pr, pid, oppTeamId)}
     ${arsenalBlock(pr, pid)}
     <div class="line-input">
       <label class="dim small" for="ln-${pid}">Line</label>
