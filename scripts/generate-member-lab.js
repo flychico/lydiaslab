@@ -27,6 +27,13 @@ const VALUE_WATCH_LAB_SCORE = 75;
 const WATCHLIST_LAB_SCORE = 65;
 const MAX_ABS_PRICE = 1000;
 const RUN_MODEL_WEIGHT = 0.50;
+// Fallback totals gate, used only for older data/totals files written before
+// update-totals.js started publishing its own `policy` object (2026-07-29 and
+// earlier had no per-file policy; TOTALS_POLICY.strong_min_edge/strong_min_setup/
+// official_totals_enabled are read from that file when present and take
+// priority over these constants below). Keeping one hardcoded gate in sync
+// with another hardcoded gate in update-totals.js was exactly the drift this
+// removes: see EXP-20260727-01.
 const OFFICIAL_TOTAL_EDGE = 1.0;
 const OFFICIAL_TOTAL_LAB = 80;
 const OFFICIAL_K_EDGE = 0.7;
@@ -1024,13 +1031,27 @@ function buildPicksFile(rows, generatedAt) {
     };
   }
 
+  // The totals gate is read from the policy the totals engine itself wrote to
+  // data/totals/DATE.json (update-totals.js's TOTALS_POLICY). That keeps one
+  // gate in one place — this used to be a second, independently hardcoded
+  // copy of the edge/lab thresholds, which is exactly the kind of drift
+  // EXP-20260727-01 flagged elsewhere in the site. Older totals files written
+  // before the policy object existed fall back to the constants above.
+  const totalsPolicy = totals.policy || {};
+  const totalsOfficialEdge = Number.isFinite(totalsPolicy.strong_min_edge) ? totalsPolicy.strong_min_edge : OFFICIAL_TOTAL_EDGE;
+  const totalsOfficialLab = Number.isFinite(totalsPolicy.strong_min_setup) ? totalsPolicy.strong_min_setup : OFFICIAL_TOTAL_LAB;
+  // OFF 2026-07-29 pending the totals setup-rating rebuild (EXP-20260727-01).
+  // Defaults to true only for old files that predate this flag.
+  const totalsOfficialEnabled = totalsPolicy.official_totals_enabled !== false;
+
   for (const [pk, t] of Object.entries(totals.games || {})) {
+    if (!totalsOfficialEnabled) continue;
     const r = byPk.get(String(pk));
     if (!r || !Number.isFinite(t.projection) || !Number.isFinite(t.line) || !Number.isFinite(t.lab)) continue;
     const edge = Number((t.projection - t.line).toFixed(1));
     const pick = edge > 0 ? "Over" : "Under";
     const price = pick === "Over" ? t.over : t.under;
-    if (Math.abs(edge) < OFFICIAL_TOTAL_EDGE || t.lab < OFFICIAL_TOTAL_LAB || !Number.isFinite(price)) continue;
+    if (Math.abs(edge) < totalsOfficialEdge || t.lab < totalsOfficialLab || !Number.isFinite(price)) continue;
     ensureGroup(r).total = {
       pick,
       line: t.line,
@@ -1075,10 +1096,10 @@ function buildPicksFile(rows, generatedAt) {
     source_of_truth: "LyDia Daily Engine",
     current_official_model: "multi_market_v1",
     lock_policy: "Dated official pick files are append-only. Re-running the engine for the same date reuses the existing dated file instead of changing official picks.",
-    note: "Official records are separated by market. Moneylines use the 72% probability and 8.0/10 Lab gates; game totals use a 1.0-run edge and 8.0/10 totals setup; pitcher Ks use a 0.7-K edge, posted price, two-book coverage, and a confirmed non-opener workload.",
+    note: `Official records are separated by market. Moneylines use the ${(OFFICIAL_MODEL_PROB * 100).toFixed(0)}% probability and ${(OFFICIAL_LAB_SCORE / 10).toFixed(1)}/10 Lab gates; game totals ${totalsOfficialEnabled ? `use a ${totalsOfficialEdge}-run edge and ${(totalsOfficialLab / 10).toFixed(1)}/10 totals setup` : "are currently paused while the totals setup rating is rebuilt (see EXP-20260727-01)"}; pitcher Ks use a 0.7-K edge, posted price, two-book coverage, and a confirmed non-opener workload.`,
     rules: {
       moneyline: { minimum_probability: OFFICIAL_MODEL_PROB, minimum_lab: OFFICIAL_LAB_SCORE, minimum_edge: VALUE_EDGE },
-      game_total: { minimum_edge_runs: OFFICIAL_TOTAL_EDGE, minimum_lab: OFFICIAL_TOTAL_LAB },
+      game_total: { minimum_edge_runs: totalsOfficialEdge, minimum_lab: totalsOfficialLab, official_enabled: totalsOfficialEnabled },
       pitcher_strikeouts: { minimum_edge_k: OFFICIAL_K_EDGE, minimum_books: OFFICIAL_K_MIN_BOOKS, minimum_expected_innings: 4 },
       team_totals: { official_enabled: false, status: "research_only" }
     },

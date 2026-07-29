@@ -1485,7 +1485,13 @@ function renderTotals(total) {
     : Math.abs(difference) < 0.7
       ? "The model and market are close."
       : `The model projects ${Math.abs(difference).toFixed(1)} runs ${difference > 0 ? "above" : "below"} the market total. A research lean still requires a setup rating of at least 7.0/10.`;
-  const official = total.official_eligible === true || (difference !== null && Math.abs(difference) >= 1 && Number(total.lab) >= 80);
+  // Trust the published field only. This used to re-derive "official" from
+  // scratch (a fifth independent copy of the totals gate, alongside the ones
+  // already found in update-totals.js and generate-member-lab.js — see
+  // EXP-20260727-01) using a hardcoded 1-run/80 threshold that could never
+  // track a policy change like the current setup-rating rebuild. update-totals.js
+  // now writes official_eligible with the real, current policy already applied.
+  const official = total.official_eligible === true;
   const teamTotalCard = side => {
     const t = total.team_totals && total.team_totals[side];
     if (!t) return "";

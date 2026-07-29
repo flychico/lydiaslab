@@ -12,11 +12,20 @@
   - Captured once at publish, kept all day; --if-changed re-captures only when a
     listed starter changes (same policy as K props).
   - No key → projections still computed, lines null. Nothing blocks the run.
+
+  2026-07-29: official_totals_enabled is OFF while the setup rating is
+  rebuilt. At n=71 on this model, the LyDia projection lost to the market
+  line in every setup band that qualified for an official pick (worst at
+  the top: MAE 5.22 vs 2.83). Research-tier totals keep publishing; no total
+  becomes an official pick until this flag flips back on. See EXP-20260727-01
+  in the vault. Do not flip this back to true without Lynold's sign-off —
+  it is a market policy decision, not a code default.
 */
 const fs = require("fs");
 const path = require("path");
 const PitcherCore = require("../js/pitcher-matchup-core.js");
 const PitchingPlan = require("./lib/pitching-plan-core.js");
+const TotalsSetup = require("./lib/totals-setup-core.js");
 
 const ROOT = path.join(__dirname, "..");
 const KEY = (process.env.ODDS_API_KEY || "").trim();
@@ -28,12 +37,14 @@ const IF_CHANGED = process.argv.includes("--if-changed");
 const LEAGUE_ERA = 4.20;
 const TOTALS_MODEL_VERSION = "totals-runs-v3-pitching-plan";
 const TOTALS_POLICY = Object.freeze({
-  version: "totals-policy-v3-official",
+  version: "totals-policy-v4-setup-rebuild",
   research_min_edge: 0.7,
   research_min_setup: 70,
   strong_min_edge: 1.0,
-  strong_min_setup: 80,
-  official_totals_enabled: true,
+  strong_min_setup: 90,
+  // OFF 2026-07-29 pending the setup-rating rebuild (EXP-20260727-01).
+  // Research-tier totals are unaffected. Re-enabling is Lynold's call.
+  official_totals_enabled: false,
   team_totals_official_enabled: false
 });
 const PARKS = {"Colorado Rockies": 1.18, "Cincinnati Reds": 1.07, "Boston Red Sox": 1.06, "Philadelphia Phillies": 1.06, "Atlanta Braves": 1.05, "New York Yankees": 1.05, "Chicago White Sox": 1.04, "Toronto Blue Jays": 1.03, "Arizona Diamondbacks": 1.02, "Chicago Cubs": 1.02, "Texas Rangers": 1.0, "Baltimore Orioles": 1.0, "Milwaukee Brewers": 1.0, "Los Angeles Angels": 1.0, "Cleveland Guardians": 0.99, "Minnesota Twins": 0.99, "Houston Astros": 0.99, "Washington Nationals": 0.98, "Tampa Bay Rays": 0.98, "Pittsburgh Pirates": 0.97, "St. Louis Cardinals": 0.97, "Kansas City Royals": 0.96, "New York Mets": 0.96, "Detroit Tigers": 0.95, "Los Angeles Dodgers": 0.94, "Miami Marlins": 0.93, "San Diego Padres": 0.93, "Seattle Mariners": 0.92, "San Francisco Giants": 0.91};
@@ -90,6 +101,12 @@ async function main() {
     if (gp) { off[t.team.id] = t.runsScored / gp; rsT += t.runsScored; gT += gp; }
   }
   const lgRPG = gT ? rsT / gT : 4.5;
+  // Average team games played this season, at capture time. Used only by the
+  // Totals Setup Rating (league-data completeness) to tell an early-season
+  // guess from a deep, trustworthy standings sample. Not part of the run
+  // projection itself.
+  const teamCount = Object.keys(off).length;
+  const avgGamesPlayed = teamCount ? gT / teamCount : 0;
   // Recent form: last-15-day scoring, blended 70/30 with season — same philosophy
   // as the moneyline model's Pythagorean + last-10 blend. Form matters; it just
   // doesn't get to shout over a 90-game sample.
@@ -257,6 +274,7 @@ async function main() {
     if (!g.status || !["Preview", "Live"].includes(g.status.abstractGameState)) continue;
     const aT = g.teams.away.team, hT = g.teams.home.team;
     const park = PARKS[hT.name] ?? 1.0;
+    const parkKnown = Object.prototype.hasOwnProperty.call(PARKS, hT.name);
     const side = (batTeamId, oppStarter, oppPenName, pitchingSide) => {
       const seasonRpg = off[batTeamId] || lgRPG;
       // weights scale with each window's sample; unearned weight returns to season
@@ -379,37 +397,16 @@ async function main() {
     const proj = Number((projRaw + learnedBias).toFixed(1));
     const mkt = lines[`${aT.name} @ ${hT.name}`] || {};
     const line = Number.isFinite(mkt.line) ? mkt.line : null;
-    // Totals Lab Rating (0–100 internal, shown /10): setup quality, auditable.
-    // 40 edge pts (|proj − line| / 2.5 capped) + 25 data confidence (both starters
-    // listed with real samples) + 20 alignment (park + both offense factors point
-    // the same way as the lean) + 15 base. No line → edge/alignment unscored.
-    let tLab = 15;
+
+    // Totals Setup Rating v2 (0–100 internal, shown /10): how much real data
+    // backs this projection. No market/edge input — see lib/totals-setup-core.js.
+    const setup = TotalsSetup.calcTotalsSetup({ away: A, home: H, lgRPG, parkKnown, avgGamesPlayed });
+    const totalsLab = setup.score;
+
     const lean = line !== null ? proj - line : null;
-    if (lean !== null) tLab += Math.min(1, Math.abs(lean) / 2.5) * 40;
-    // Openers are not penalized simply for being openers. When the probable
-    // pitcher and bullpen risk data are available, the pitching plan has the
-    // same data-completeness credit as a traditional start. Performance and
-    // risk flow through the projection and bullpen model instead.
-    const sideConfidence = x => {
-      const hasPitcher = x.opp_sp !== "TBD" && x.opp_pitcher_role !== "unknown";
-      const hasBullpen = x.opp_pen_risk !== null;
-      if (hasPitcher && hasBullpen) return 12.5;
-      if (hasPitcher) return 8;
-      return 0;
-    };
-    const dataConf = sideConfidence(A) + sideConfidence(H);
-    tLab += dataConf;
-    if (lean !== null && Math.abs(lean) >= TOTALS_POLICY.research_min_edge) {
-      const dir = lean > 0 ? 1 : -1;
-      let align = 0;
-      if ((park - 1) * dir > 0.02) align += 7;
-      if ((A.off_factor - 1) * dir > 0.03) align += 6.5;
-      if ((H.off_factor - 1) * dir > 0.03) align += 6.5;
-      tLab += align;
-    }
-    const totalsLab = Math.round(Math.max(0, Math.min(100, tLab)));
     const absLean = lean === null ? null : Math.abs(lean);
-    const officialEligible = lean !== null
+    const officialEligible = TOTALS_POLICY.official_totals_enabled
+      && lean !== null
       && absLean >= TOTALS_POLICY.strong_min_edge
       && totalsLab >= TOTALS_POLICY.strong_min_setup
       && (lean > 0 ? Number.isFinite(mkt.over) : Number.isFinite(mkt.under));
@@ -458,12 +455,13 @@ async function main() {
         home: teamTotal(hT.name, Number(H.runs.toFixed(1)))
       },
       lab: totalsLab,
+      setup_version: TotalsSetup.TOTALS_SETUP_VERSION,
       official_eligible: officialEligible,
       setup_components: {
-        base: 15,
-        data_confidence: dataConf,
-        edge_points: lean === null ? 0 : Number((Math.min(1, Math.abs(lean) / 2.5) * 40).toFixed(2)),
-        alignment_threshold: TOTALS_POLICY.research_min_edge
+        form_points: setup.form_points,
+        pitching_points: setup.pitching_points,
+        bullpen_points: setup.bullpen_points,
+        completeness_points: setup.completeness_points
       },
       classification
     };
