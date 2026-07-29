@@ -128,7 +128,7 @@ let LINES = {}, LINES_AT = null, KBIAS = 0, KBIAS_N = 0; // live K prop lines by
    was divided by it, overstating lefty matchups by roughly 2.5%. */
 let LEAGUE_K_L = 0.223, LEAGUE_K_R = 0.223;
 function leagueKFor(hand){ return hand === "L" ? LEAGUE_K_L : LEAGUE_K_R; }
-const WINDOW = 7; // stat window for the opposing-lineup table only; the K projection itself is unaffected. Fixed at 7d — no toggle.
+const WINDOW = 30; // stat window for the opposing-lineup table only; the K projection itself is unaffected. Fixed at 30d — no toggle.
 const BATTERS = {};
 let battersCacheKey = null;
 
