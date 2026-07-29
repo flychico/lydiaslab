@@ -61,8 +61,14 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    env:
-      ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+    # No ODDS_API_KEY. This workflow spends nothing and can be re-run freely.
+    # All paid calls live in fetch-odds.yml; publish builds from what it commits.
+    # Each odds-touching script already degrades to the committed capture:
+    #   update-k-props.js:49     returns early, leaves the capture untouched
+    #   update-totals.js:127,166 skips both odds blocks, and the merge at :490
+    #                            explicitly preserves lines captured earlier
+    #                            while still refreshing projections
+    #   generate-member-lab.js:57 resolves to [] and reuses the locked card
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -110,14 +116,10 @@ jobs:
           SNAPSHOT_INPUT="${{ github.event.inputs.snapshot }}"
           node scripts/generate-member-lab.js --date "${{ steps.publish_date.outputs.date }}" --snapshot "${SNAPSHOT_INPUT:-posted}" --defer-publish true
 
-      - name: Update strikeout prop lines
-        env:
-          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
-        run: node scripts/update-k-props.js "${{ steps.publish_date.outputs.date }}"
-
-      - name: Update totals projections and lines
-        env:
-          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+      # Runs without a key: k-props exits immediately and keeps the committed
+      # capture; totals recomputes projections from the current pitching plan
+      # while preserving the lines fetch-odds.yml captured this morning.
+      - name: Refresh totals projections from committed lines
         run: node scripts/update-totals.js "${{ steps.publish_date.outputs.date }}"
 
       - name: Enhance moneyline probabilities with projected runs and lock picks

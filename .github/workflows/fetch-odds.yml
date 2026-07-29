@@ -1,0 +1,122 @@
+name: Fetch odds
+
+# The ONLY workflow that holds ODDS_API_KEY. Every paid call in the system
+# happens here and nowhere else. Publish reads what this commits.
+#
+# Cost per full run, on a 16-game slate:
+#   generate-member-lab.js --defer-publish   1   (bulk h2h)
+#   update-k-props.js                       17   (1 events + 1 per game)
+#   update-totals.js                        17   (1 full-game bulk + 1 per game team totals)
+#                                           --
+#                                           35
+#
+# Run it once in the morning. Re-run it by hand only when a probable actually
+# changes, and leave if_changed on "true" when you do — both scripts then check
+# the free MLB probables endpoint first and exit without spending anything if
+# nothing moved.
+
+on:
+  schedule:
+    # GitHub cron is UTC. 14:50 UTC = 10:50am ET, fifteen minutes ahead of the
+    # publish run at 15:05 so the committed odds are in place before it starts.
+    - cron: "50 14 * * *"
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "YYYY-MM-DD to fetch. Leave blank for today in America/New_York."
+        required: false
+        default: ""
+      if_changed:
+        description: "Only spend calls when a probable pitcher actually changed. Leave true for mid-day re-runs."
+        required: false
+        default: "true"
+        type: choice
+        options: ["true", "false"]
+
+concurrency:
+  group: fetch-odds
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    env:
+      ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Resolve fetch date
+        id: fetch_date
+        run: |
+          echo "UTC:"; date -u
+          echo "Eastern:"; TZ="America/New_York" date
+          DATE_INPUT="${{ github.event.inputs.date }}"
+          if [ -z "$DATE_INPUT" ]; then
+            DATE_INPUT=$(TZ="America/New_York" date +%F)
+          fi
+          echo "date=$DATE_INPUT" >> "$GITHUB_OUTPUT"
+          echo "Resolved fetch date: $DATE_INPUT"
+
+      - name: Resolve if-changed flag
+        id: guard
+        run: |
+          # Scheduled runs always capture: there is nothing to compare against yet.
+          # Manual runs default to guarded so a mid-day re-run is free when idle.
+          FLAG="${{ github.event.inputs.if_changed }}"
+          if [ "${{ github.event_name }}" = "schedule" ]; then FLAG="false"; fi
+          if [ "$FLAG" = "true" ]; then
+            echo "arg=--if-changed" >> "$GITHUB_OUTPUT"
+            echo "Guarded run: scripts exit without spending if probables are unchanged."
+          else
+            echo "arg=" >> "$GITHUB_OUTPUT"
+            echo "Full capture."
+          fi
+
+      # update-totals.js reads data/bullpen/DATE.json, which this step writes.
+      # It must run first or totals fall back to stale bullpen inputs.
+      # --defer-publish keeps it from touching the locked official card.
+      - name: Generate bullpen inputs required by totals
+        run: node scripts/generate-member-lab.js --date "${{ steps.fetch_date.outputs.date }}" --defer-publish true
+
+      - name: Capture strikeout prop lines
+        run: node scripts/update-k-props.js "${{ steps.fetch_date.outputs.date }}" ${{ steps.guard.outputs.arg }}
+
+      - name: Capture totals lines and projections
+        run: node scripts/update-totals.js "${{ steps.fetch_date.outputs.date }}" ${{ steps.guard.outputs.arg }}
+
+      - name: Commit captured odds
+        run: |
+          DATE_INPUT="${{ steps.fetch_date.outputs.date }}"
+          git config user.name "lydia-bot"
+          git config user.email "actions@users.noreply.github.com"
+
+          # This workflow owns data/ only. Snapshot before syncing with main so a
+          # concurrent publish or manual upload cannot turn a valid capture into
+          # a rebase conflict.
+          SNAPSHOT_DIR=$(mktemp -d)
+          mkdir -p "$SNAPSHOT_DIR"
+          cp -a data "$SNAPSHOT_DIR/data"
+
+          git fetch origin main
+          git reset --hard origin/main
+
+          rsync -a "$SNAPSHOT_DIR/data/" data/
+
+          git add data/
+          if git diff --cached --quiet; then
+            echo "No odds changes to commit."
+          else
+            git commit -m "Capture odds $DATE_INPUT"
+            git push
+          fi
