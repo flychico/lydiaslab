@@ -77,8 +77,9 @@
   </div>
 
   <div class="notice">
-    <strong>How to read it:</strong> every label answers one question: does this factor <b class="pos-text">add runs</b> (green) or <b class="neg-text">suppress runs</b> (red)? A full-game total becomes official at a <b>1.0+ run edge</b> with an <b>8.0+ setup rating</b> and a posted price. A 0.7+ edge with a 7.0+ setup remains a research lean. Team totals are displayed and tracked as research signals while their graded sample develops.
+    <strong>How to read it:</strong> every label answers one question: does this factor <b class="pos-text">add runs</b> (green) or <b class="neg-text">suppress runs</b> (red)? A full-game total becomes official at a <b>1.0+ run edge</b> with a <b>9.0+ setup rating</b> and a posted price. A 0.7+ edge with a 7.0+ setup remains a research lean. Team totals are displayed and tracked as research signals while their graded sample develops.
   </div>
+  <div id="official-status-notice"></div>
 
   <div id="status"><div class="loading">Loading projections…</div></div>
   <div id="games"></div>
@@ -89,7 +90,9 @@ const datePick = document.getElementById("date-pick");
 datePick.value = localISODate(new Date());
 datePick.addEventListener("change", load);
 let PROJ = {}; let GAMES = {};
-let POLICY = {research_min_edge:0.7,research_min_setup:70,strong_min_edge:1.0,strong_min_setup:80,official_totals_enabled:true,team_totals_official_enabled:false};
+// Defaults match totals-policy-v4-setup-rebuild in update-totals.js; the real
+// values always come from the fetched capture's own `policy` object below.
+let POLICY = {research_min_edge:0.7,research_min_setup:70,strong_min_edge:1.0,strong_min_setup:90,official_totals_enabled:false,team_totals_official_enabled:false};
 load();
 
 function localISODate(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
@@ -118,6 +121,9 @@ async function load(){
     }
     if(!d){ statusEl.innerHTML=`<div class="notice">No totals capture for ${date}${date>today?" yet — it arrives with that morning's update":date===today?" yet — it arrives with the morning update":""}.</div>`; return; }
     POLICY={...POLICY,...(d.policy||{})};
+    document.getElementById("official-status-notice").innerHTML = POLICY.official_totals_enabled
+      ? ""
+      : '<div class="notice warn">Official totals are paused while the setup rating is rebuilt (EXP-20260727-01). Research leans below continue as usual.</div>';
     const games=Object.entries(d.games).map(([pk,g])=>({pk,...g})).sort((a,b)=>new Date(a.game_time_iso)-new Date(b.game_time_iso));
     if(!games.length){ statusEl.innerHTML='<div class="notice">No games in this capture.</div>'; return; }
     let head = d.learned_bias ? `<div class="dim small" style="margin-bottom:6px">Self-calibrated: projections include a ${d.learned_bias>0?"+":""}${d.learned_bias}-run correction learned from ${d.learned_n} graded games.</div>` : "";
@@ -193,37 +199,22 @@ function gameRead(g){
   if(!parts.length) parts.push("No single factor dominates — the projection is a balanced read of lineups, starters, and park.");
   return parts.join(" ");
 }
-function liveLab(g, line){
-  // mirrors the engine: 40 edge + 25 data confidence + 20 alignment + 15 base
-  if(!g || !Number.isFinite(line)) return null;
-  const lean=g.projection-line;
-  let lab=15+Math.min(1,Math.abs(lean)/2.5)*40;
-  const conf=sd=>{
-    if(!sd)return 0;
-    const hasPitcher=sd.opp_sp!=="TBD"&&sd.opp_pitcher_role!=="unknown";
-    const hasBullpen=Number.isFinite(sd.opp_pen_risk);
-    return hasPitcher&&hasBullpen?12.5:hasPitcher?8:0;
-  };
-  const dataConfidence=g.setup_components&&Number.isFinite(g.setup_components.data_confidence)
-    ? g.setup_components.data_confidence
-    : conf(g.away)+conf(g.home);
-  lab+=dataConfidence;
-  if(Math.abs(lean)>=POLICY.research_min_edge&&g.away&&g.home){
-    const dir=lean>0?1:-1; 
-    if((g.park_factor-1)*dir>0.02)lab+=7;
-    if((g.away.off_factor-1)*dir>0.03)lab+=6.5;
-    if((g.home.off_factor-1)*dir>0.03)lab+=6.5;
-  }
-  return Math.round(Math.max(0,Math.min(100,lab)));
+function liveLab(g){
+  // Totals Setup Rating v2 (lib/totals-setup-core.js) contains no market or
+  // edge term, so it does not change as you type a different line — it is
+  // whatever the engine already computed for this game. Previously this
+  // function recomputed the old market-based formula client-side on every
+  // keystroke; that formula no longer exists. See EXP-20260727-01.
+  return g && Number.isFinite(g.lab) ? g.lab : null;
 }
 function lean(pk){
   const proj=PROJ[pk]; const el=document.getElementById("lean-"+pk);
   const line=Number(document.getElementById("tl-"+pk).value);
   const labEl=document.getElementById("lab-"+pk);
   if(!Number.isFinite(proj)||!isFinite(line)||line<=0){ el.textContent=""; if(labEl)labEl.textContent="Setup pending line"; return; }
-  if(labEl){ const L=liveLab(GAMES[pk],line); if(L!==null)labEl.textContent=`Setup ${(L/10).toFixed(1)}/10`; }
+  if(labEl){ const L=liveLab(GAMES[pk]); if(L!==null)labEl.textContent=`Setup ${(L/10).toFixed(1)}/10`; }
   const d=proj-line;
-  const L=liveLab(GAMES[pk],line);
+  const L=liveLab(GAMES[pk]);
   const abs=Math.abs(d);
   if(abs<POLICY.research_min_edge) el.innerHTML=`<span class="dim">no lean (${d>=0?"+":""}${d.toFixed(1)} runs)</span>`;
   else if(L<POLICY.research_min_setup) el.innerHTML=`<span class="dim">no lean — setup ${(L/10).toFixed(1)}/10</span>`;
