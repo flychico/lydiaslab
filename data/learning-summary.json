@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-28T21:45:45.569Z",
+  "generated_at": "2026-07-29T13:14:59.512Z",
   "status": "ready",
   "latest_date": "2026-07-28",
   "days_reviewed": 20,
@@ -12,9 +12,9 @@
   "day": {
     "date": "2026-07-28",
     "source": "published-picks",
-    "record_all_markets": "1-0",
-    "units_all_markets": 0.8,
-    "ungraded": 9,
+    "record_all_markets": "4-3",
+    "units_all_markets": 0.26,
+    "ungraded": 0,
     "moneyline_record": "0-0",
     "moneyline_win_rate": null,
     "official_moneyline_picks": 0,
@@ -46,23 +46,23 @@
   "calibration": {
     "status": "ready",
     "model_version": "moneyline-v2-plus-runs-v1",
-    "games_graded": 76,
-    "brier_score": 0.2682,
+    "games_graded": 91,
+    "brier_score": 0.2652,
     "shadow_model": {
       "status": "ready",
-      "games": 77,
+      "games": 93,
       "official_model_version": "moneyline-v2-plus-runs-v1",
       "shadow_model_version": "v3.1-bullpen",
-      "brier_official": 0.2701,
-      "brier_shadow": 0.2741,
+      "brier_official": 0.2662,
+      "brier_shadow": 0.2699,
       "leader": "official",
-      "disagreements": 9,
+      "disagreements": 10,
       "shadow_wins_disagreements": 6,
       "note": "Only rows from the latest matching official/shadow model-version pair are compared. Promote nothing from a mixed-version sample."
     },
     "attribution": {
       "status": "collecting",
-      "games": 76,
+      "games": 91,
       "needed": 150
     },
     "kprops": {
@@ -82,31 +82,31 @@
     "buckets": [
       {
         "range": "50-55%",
-        "games": 21,
-        "wins": 7,
-        "expected_win_rate": 0.524,
-        "actual_win_rate": 0.333
+        "games": 28,
+        "wins": 14,
+        "expected_win_rate": 0.525,
+        "actual_win_rate": 0.5
       },
       {
         "range": "55-60%",
-        "games": 24,
-        "wins": 11,
-        "expected_win_rate": 0.575,
-        "actual_win_rate": 0.458
+        "games": 25,
+        "wins": 12,
+        "expected_win_rate": 0.576,
+        "actual_win_rate": 0.48
       },
       {
         "range": "60-65%",
-        "games": 9,
-        "wins": 4,
-        "expected_win_rate": 0.615,
-        "actual_win_rate": 0.444
+        "games": 13,
+        "wins": 6,
+        "expected_win_rate": 0.62,
+        "actual_win_rate": 0.462
       },
       {
         "range": "65-70%",
-        "games": 13,
+        "games": 15,
         "wins": 6,
-        "expected_win_rate": 0.671,
-        "actual_win_rate": 0.462
+        "expected_win_rate": 0.673,
+        "actual_win_rate": 0.4
       },
       {
         "range": "70-75%",
@@ -117,10 +117,10 @@
       },
       {
         "range": "75-100%",
-        "games": 4,
-        "wins": 1,
-        "expected_win_rate": 0.79,
-        "actual_win_rate": 0.25
+        "games": 5,
+        "wins": 2,
+        "expected_win_rate": 0.787,
+        "actual_win_rate": 0.4
       }
     ],
     "shadow_by_status": {
@@ -135,14 +135,14 @@
         "units": -1.26
       },
       "watchlist": {
-        "games": 8,
-        "wins": 3,
-        "units": -3.16
+        "games": 11,
+        "wins": 4,
+        "units": -4.45
       },
       "pass": {
-        "games": 60,
-        "wins": 28,
-        "units": -10
+        "games": 72,
+        "wins": 38,
+        "units": -2.75
       }
     }
   },
@@ -745,5 +745,17 @@
     "Watch whether official picks with model probability >= 72% beat low-probability value watches over a larger sample.",
     "Track closing price movement once market snapshots have enough data.",
     "Keep value watch separate from official picks."
-  ]
+  ],
+  "coach": {
+    "status": "collecting",
+    "title": "Collecting a trustworthy current-model sample",
+    "summary": "LyDia has 9 of 7 required current-model days and 12 of 20 required current-model official picks. Recommendations remain paused until both minimums are reached.",
+    "current_model_days": 9,
+    "current_model_picks": 12,
+    "minimum_days": 7,
+    "minimum_picks": 20,
+    "bullpen_model_owner": "bullpen-fatigue-v3-runs-aware",
+    "recommendations": [],
+    "hard_stop": "Coach findings are review prompts only. No automatic threshold, weight, formula, publishing, or betting change is permitted."
+  }
 }
