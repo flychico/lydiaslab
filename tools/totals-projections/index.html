@@ -109,18 +109,51 @@ const BATTERS = {};
 let battersCacheKey = null;
 const LINEUP_WINDOW = 30; // stat window for the lineup table only; the run projection itself is unaffected.
 async function j(u){ const r=await fetch(u); if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); }
-/* One league-wide byDateRange call for the selected window, same endpoint and
-   sortStat fix as the offense-matchups and strikeout-projections tools.
-   sortStat=plateAppearances (a counting stat) is required: without it the API
-   silently hides "non-qualified" low-PA hitters — anyone hurt, rested, or
-   recently recalled. Cached per exact date range so re-loading the same day
-   doesn't refetch. Display only — does not feed the run projection. */
-async function loadWindowBatters(startISO, endISO){
+// Standard published linear weights (Tango/FanGraphs-style) for wOBA. Not
+// tuned to this exact season's official "guts" constants — those are
+// FanGraphs' own annual recalculation and aren't published via any free API,
+// so this is a fixed, well-established approximation, same spirit as the
+// FIP-lite constant already used sitewide. Good enough to rank hitters
+// within one lineup table; not precise enough to feed a model coefficient.
+const WOBA_WEIGHTS = { bb: 0.69, hbp: 0.72, "1b": 0.89, "2b": 1.27, "3b": 1.62, hr: 2.10 };
+function computeWoba(st){
+  const ab = Number(st.atBats) || 0;
+  const bb = Number(st.baseOnBalls) || 0;
+  const ibb = Number(st.intentionalWalks) || 0;
+  const hbp = Number(st.hitByPitch) || 0;
+  const sf = Number(st.sacFlies) || 0;
+  const d2 = Number(st.doubles) || 0;
+  const d3 = Number(st.triples) || 0;
+  const hr = Number(st.homeRuns) || 0;
+  const singles = (Number(st.hits) || 0) - d2 - d3 - hr;
+  const ubb = bb - ibb;
+  const den = ab + bb - ibb + sf + hbp;
+  if (den <= 0) return null;
+  const num = WOBA_WEIGHTS.bb*ubb + WOBA_WEIGHTS.hbp*hbp + WOBA_WEIGHTS["1b"]*singles
+    + WOBA_WEIGHTS["2b"]*d2 + WOBA_WEIGHTS["3b"]*d3 + WOBA_WEIGHTS.hr*hr;
+  return num / den;
+}
+/* Two league-wide calls: a byDateRange window (real rolling stats, same
+   endpoint and sortStat fix as offense-matchups and strikeout-projections —
+   sortStat=plateAppearances is required or the API silently hides
+   "non-qualified" low-PA hitters) for PA/OPS/ISO/wOBA, plus MLB's own
+   sabermetrics endpoint for wRC+. wRC+ is checked against a narrow date
+   range and does not change — the API does not support a rolling window for
+   it, only season-to-date — so it is season-to-date here and labeled as
+   such, not blended into the "last Nd" window the rest of the row uses.
+   Cached per exact date range so re-loading the same day doesn't refetch.
+   Display only — none of this feeds the run projection. */
+async function loadWindowBatters(startISO, endISO, year){
   const key = startISO + "|" + endISO;
   if (battersCacheKey === key) return;
   try {
-    const d = await j(`https://statsapi.mlb.com/api/v1/stats?stats=byDateRange&group=hitting&startDate=${startISO}&endDate=${endISO}&sportId=1&limit=1000&sortStat=plateAppearances`);
+    const [d, wrc] = await Promise.all([
+      j(`https://statsapi.mlb.com/api/v1/stats?stats=byDateRange&group=hitting&startDate=${startISO}&endDate=${endISO}&sportId=1&limit=1000&sortStat=plateAppearances`),
+      j(`https://statsapi.mlb.com/api/v1/stats?stats=sabermetrics&group=hitting&season=${year}&sportId=1&limit=1000`).catch(() => null)
+    ]);
     const splits = ((d.stats || [])[0] || {}).splits || [];
+    const wrcMap = {};
+    if (wrc) for (const s of ((wrc.stats || [])[0] || {}).splits || []) wrcMap[s.player.id] = Number(s.stat.wRcPlus);
     const fresh = {};
     for (const s of splits) {
       const st = s.stat || {};
@@ -128,10 +161,11 @@ async function loadWindowBatters(startISO, endISO){
       const avg = Number(st.avg), slg = Number(st.slg);
       fresh[s.player.id] = {
         name: s.player.fullName,
-        avg, obp: Number(st.obp), slg, ops: Number(st.ops),
+        pa, ops: Number(st.ops),
         iso: (Number.isFinite(avg) && Number.isFinite(slg)) ? slg - avg : null,
-        kPct: pa ? (Number(st.strikeOuts) || 0) / pa : null,
-        hr: Number(st.homeRuns) || 0, pa
+        hr: Number(st.homeRuns) || 0,
+        woba: computeWoba(st),
+        wrcPlus: Number.isFinite(wrcMap[s.player.id]) ? wrcMap[s.player.id] : null
       };
     }
     Object.keys(BATTERS).forEach(k => delete BATTERS[k]);
@@ -166,29 +200,32 @@ function lineupBlock(sideName, scheduleGame, teamId){
     const info = BATTERS[b.id] || null;
     const name = b.name || (info && info.name) || `#${b.id}`;
     const pa = info && Number.isFinite(info.pa) ? info.pa : "—";
-    const avg = info ? f3(info.avg) : "—";
-    const obp = info ? f3(info.obp) : "—";
-    const iso = info && Number.isFinite(info.iso) ? f3(info.iso) : "—";
-    const isoCls = info && Number.isFinite(info.iso) ? (info.iso >= 0.200 ? "k-hi" : info.iso < 0.120 ? "k-lo" : "") : "";
-    const k = info && info.kPct !== null && info.kPct !== undefined ? info.kPct : null;
-    const kCls = k === null ? "" : k >= 0.25 ? "k-lo" : k <= 0.18 ? "k-hi" : "";
-    const hr = info && Number.isFinite(info.hr) ? info.hr : "—";
+    const woba = info && Number.isFinite(info.woba) ? f3(info.woba) : "—";
+    const wobaCls = info && Number.isFinite(info.woba) ? (info.woba >= 0.340 ? "k-hi" : info.woba < 0.300 ? "k-lo" : "") : "";
+    const wrc = info && Number.isFinite(info.wrcPlus) ? Math.round(info.wrcPlus) : "—";
+    const wrcCls = info && Number.isFinite(info.wrcPlus) ? (info.wrcPlus >= 115 ? "k-hi" : info.wrcPlus < 85 ? "k-lo" : "") : "";
     const ops = info && Number.isFinite(info.ops) ? f3(info.ops) : "—";
     const opsCls = info && Number.isFinite(info.ops) ? (info.ops >= 0.800 ? "k-hi" : info.ops < 0.650 ? "k-lo" : "") : "";
+    const iso = info && Number.isFinite(info.iso) ? f3(info.iso) : "—";
+    const isoCls = info && Number.isFinite(info.iso) ? (info.iso >= 0.200 ? "k-hi" : info.iso < 0.120 ? "k-lo" : "") : "";
+    const hr = info && Number.isFinite(info.hr) ? info.hr : "—";
     return `<tr><td>${b.order}.</td><td>${escapeHtml(name)}</td><td class="dim">${escapeHtml(b.pos)}</td>
-      <td class="dim">${pa}</td><td>${avg}</td><td>${obp}</td><td class="${isoCls}">${iso}</td>
-      <td class="${kCls}">${k === null ? "&mdash;" : (k*100).toFixed(1) + "%"}</td><td>${hr}</td><td class="${opsCls}"><b>${ops}</b></td></tr>`;
+      <td class="dim">${pa}</td><td class="${wobaCls}"><b>${woba}</b></td><td class="${wrcCls}">${wrc}</td>
+      <td class="${opsCls}">${ops}</td><td class="${isoCls}">${iso}</td><td>${hr}</td></tr>`;
   }).join("");
-  // Lineup average OPS — the stat that actually matters for run scoring.
-  const opsVals = lu.map(b => { const info = BATTERS[b.id] || null; return info && Number.isFinite(info.ops) ? info.ops : null; }).filter(v => v !== null);
-  const avgOps = opsVals.length ? opsVals.reduce((a, v) => a + v, 0) / opsVals.length : null;
-  const avgOpsCls = avgOps === null ? "" : avgOps >= 0.800 ? "k-hi" : avgOps < 0.650 ? "k-lo" : "";
-  const totalRow = `<tr class="lu-total"><td colspan="9">Lineup avg OPS${opsVals.length < lu.length ? ` <span class="dim small" style="font-weight:400">(${opsVals.length}/${lu.length} resolved)</span>` : ""}</td>
-    <td class="${avgOpsCls}">${avgOps === null ? "&mdash;" : f3(avgOps)}</td></tr>`;
+  // PA-weighted lineup wOBA — the number EXP-20260727-02 is testing as a
+  // run-projection input. Weighted, not a plain mean, so a bench bat with 4
+  // PA this window doesn't count the same as a regular with 100.
+  const wobaRows = lu.map(b => { const info = BATTERS[b.id] || null; return (info && Number.isFinite(info.woba) && Number.isFinite(info.pa)) ? info : null; }).filter(v => v !== null);
+  const totalPa = wobaRows.reduce((a, v) => a + v.pa, 0);
+  const avgWoba = totalPa ? wobaRows.reduce((a, v) => a + v.woba * v.pa, 0) / totalPa : null;
+  const avgWobaCls = avgWoba === null ? "" : avgWoba >= 0.340 ? "k-hi" : avgWoba < 0.300 ? "k-lo" : "";
+  const totalRow = `<tr class="lu-total"><td colspan="4">Lineup PA-weighted wOBA${wobaRows.length < lu.length ? ` <span class="dim small" style="font-weight:400">(${wobaRows.length}/${lu.length} resolved)</span>` : ""}</td>
+    <td class="${avgWobaCls}"><b>${avgWoba === null ? "&mdash;" : f3(avgWoba)}</b></td><td colspan="4"></td></tr>`;
   return `<details class="ars">
-    <summary>Starting lineup (last ${LINEUP_WINDOW}d) &middot; posted</summary>
-    <div class="lu-wrap"><table class="lu"><thead><tr><th>#</th><th>Batter</th><th></th><th>PA</th><th>AVG</th><th>OBP</th><th>ISO</th><th>K%</th><th>HR</th><th>OPS</th></tr></thead><tbody>${rows}${totalRow}</tbody></table></div>
-    <div class="ars-note"><span class="k-hi">Orange</span> favors the offense (power / gets on base); <span class="k-lo">blue</span> favors the pitcher (weak contact / strikeout-prone). Lineups post roughly 2 hours before first pitch, so this table is often empty well before then — it does not change the run projection above.</div>
+    <summary>Starting lineup &middot; posted</summary>
+    <div class="lu-wrap"><table class="lu"><thead><tr><th>#</th><th>Batter</th><th></th><th>PA</th><th>wOBA</th><th>wRC+</th><th>OPS</th><th>ISO</th><th>HR</th></tr></thead><tbody>${rows}${totalRow}</tbody></table></div>
+    <div class="ars-note">PA/wOBA/OPS/ISO/HR are last ${LINEUP_WINDOW} days; <b>wRC+ is season-to-date</b> — MLB's sabermetrics endpoint doesn't support a rolling window for it. wOBA uses standard published linear weights, not this exact season's official constants. <span class="k-hi">Orange</span> favors the offense; <span class="k-lo">blue</span> favors the pitcher. Lineups post roughly 2 hours before first pitch, so this table is often empty well before then — it does not change the run projection above.</div>
   </details>`;
 }
 // Defaults match totals-policy-v4-setup-rebuild in update-totals.js; the real
@@ -240,7 +277,7 @@ async function load(){
       for (const sg of (((sched.dates||[])[0])||{}).games || []) SCHEDULE_BY_PK[sg.gamePk] = sg;
       const wEnd = new Date(date + "T12:00");
       const wStart = new Date(wEnd.getTime() - LINEUP_WINDOW * 86400000);
-      await loadWindowBatters(localISODate(wStart), localISODate(wEnd));
+      await loadWindowBatters(localISODate(wStart), localISODate(wEnd), date.slice(0, 4));
     } catch (e) {}
 
     PROJ={};
