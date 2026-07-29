@@ -53,6 +53,20 @@
 .s-runs { font-size:1.5rem; font-weight:800; color:var(--accent); }
 .s-row { display:flex; justify-content:space-between; gap:8px; font-size:.85rem; border-top:1px solid var(--border); padding-top:5px; margin-top:5px; }
 .read { margin-top:10px; font-size:.88rem; color:var(--text-dim); }
+/* Starting lineup (mirrors tools/strikeout-projections) */
+.ars { margin-top:10px; border-top:1px solid var(--border); padding-top:8px; }
+.ars summary { cursor:pointer; font-size:.74rem; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); }
+.ars summary:hover { color:var(--text); }
+.ars-note { font-size:.74rem; color:var(--text-dim); margin-top:6px; line-height:1.45; }
+.lu-wrap { overflow-x:auto; }
+table.lu { width:100%; border-collapse:collapse; font-size:.78rem; background:transparent; margin-top:4px; }
+table.lu th { font-size:.62rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); text-align:right; padding:3px 4px; border-bottom:1px solid var(--border); }
+table.lu th:first-child, table.lu th:nth-child(2) { text-align:left; }
+table.lu td { padding:3px 4px; border-bottom:1px solid var(--border); text-align:right; font-variant-numeric:tabular-nums; }
+table.lu td:first-child, table.lu td:nth-child(2) { text-align:left; }
+.lu-total td { border-top:2px solid var(--border); font-weight:800; }
+.k-hi { color:var(--accent); font-weight:800; }
+.k-lo { color:var(--accent2); font-weight:800; }
 @media (max-width:720px){ .side-grid{ grid-template-columns:1fr; } }
 </style>
 </head>
@@ -90,6 +104,93 @@ const datePick = document.getElementById("date-pick");
 datePick.value = localISODate(new Date());
 datePick.addEventListener("change", load);
 let PROJ = {}; let GAMES = {};
+let SCHEDULE_BY_PK = {};
+const BATTERS = {};
+let battersCacheKey = null;
+const LINEUP_WINDOW = 30; // stat window for the lineup table only; the run projection itself is unaffected.
+async function j(u){ const r=await fetch(u); if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); }
+/* One league-wide byDateRange call for the selected window, same endpoint and
+   sortStat fix as the offense-matchups and strikeout-projections tools.
+   sortStat=plateAppearances (a counting stat) is required: without it the API
+   silently hides "non-qualified" low-PA hitters — anyone hurt, rested, or
+   recently recalled. Cached per exact date range so re-loading the same day
+   doesn't refetch. Display only — does not feed the run projection. */
+async function loadWindowBatters(startISO, endISO){
+  const key = startISO + "|" + endISO;
+  if (battersCacheKey === key) return;
+  try {
+    const d = await j(`https://statsapi.mlb.com/api/v1/stats?stats=byDateRange&group=hitting&startDate=${startISO}&endDate=${endISO}&sportId=1&limit=1000&sortStat=plateAppearances`);
+    const splits = ((d.stats || [])[0] || {}).splits || [];
+    const fresh = {};
+    for (const s of splits) {
+      const st = s.stat || {};
+      const pa = Number(st.plateAppearances) || 0;
+      const avg = Number(st.avg), slg = Number(st.slg);
+      fresh[s.player.id] = {
+        name: s.player.fullName,
+        avg, obp: Number(st.obp), slg, ops: Number(st.ops),
+        iso: (Number.isFinite(avg) && Number.isFinite(slg)) ? slg - avg : null,
+        kPct: pa ? (Number(st.strikeOuts) || 0) / pa : null,
+        hr: Number(st.homeRuns) || 0, pa
+      };
+    }
+    Object.keys(BATTERS).forEach(k => delete BATTERS[k]);
+    Object.assign(BATTERS, fresh);
+    battersCacheKey = key;
+  } catch (e) {}
+}
+function f3(v){ return Number.isFinite(v) ? v.toFixed(3).replace(/^0\./,".") : "—"; }
+/* The nine hitters the projection is built from for this side — the posted
+   lineup if MLB has one live yet, otherwise nothing (totals has no stored
+   projected-lineup fallback the way k-props does, so this block is simply
+   omitted until a real lineup posts, same as it would show "unavailable").
+   Display only: this table does not change proj_away/proj_home. Whether and
+   how a lineup read feeds the run number is the open question in
+   EXP-20260727-02, not decided here. */
+function lineupBlock(sideName, scheduleGame, teamId){
+  if (!scheduleGame || !scheduleGame.lineups || !teamId) return "";
+  const isAway = scheduleGame.teams && scheduleGame.teams.away && scheduleGame.teams.away.team.id === teamId;
+  const isHome = scheduleGame.teams && scheduleGame.teams.home && scheduleGame.teams.home.team.id === teamId;
+  let players = null;
+  if (isAway && scheduleGame.lineups.awayPlayers && scheduleGame.lineups.awayPlayers.length) players = scheduleGame.lineups.awayPlayers;
+  else if (isHome && scheduleGame.lineups.homePlayers && scheduleGame.lineups.homePlayers.length) players = scheduleGame.lineups.homePlayers;
+  if (!players || !players.length) return "";
+
+  const lu = players.map((b, i) => ({
+    id: b.id,
+    order: i + 1,
+    name: b.fullName || b.useName || null,
+    pos: (b.primaryPosition && b.primaryPosition.abbreviation) || ""
+  }));
+  const rows = lu.map(b => {
+    const info = BATTERS[b.id] || null;
+    const name = b.name || (info && info.name) || `#${b.id}`;
+    const pa = info && Number.isFinite(info.pa) ? info.pa : "—";
+    const avg = info ? f3(info.avg) : "—";
+    const obp = info ? f3(info.obp) : "—";
+    const iso = info && Number.isFinite(info.iso) ? f3(info.iso) : "—";
+    const isoCls = info && Number.isFinite(info.iso) ? (info.iso >= 0.200 ? "k-hi" : info.iso < 0.120 ? "k-lo" : "") : "";
+    const k = info && info.kPct !== null && info.kPct !== undefined ? info.kPct : null;
+    const kCls = k === null ? "" : k >= 0.25 ? "k-lo" : k <= 0.18 ? "k-hi" : "";
+    const hr = info && Number.isFinite(info.hr) ? info.hr : "—";
+    const ops = info && Number.isFinite(info.ops) ? f3(info.ops) : "—";
+    const opsCls = info && Number.isFinite(info.ops) ? (info.ops >= 0.800 ? "k-hi" : info.ops < 0.650 ? "k-lo" : "") : "";
+    return `<tr><td>${b.order}.</td><td>${escapeHtml(name)}</td><td class="dim">${escapeHtml(b.pos)}</td>
+      <td class="dim">${pa}</td><td>${avg}</td><td>${obp}</td><td class="${isoCls}">${iso}</td>
+      <td class="${kCls}">${k === null ? "&mdash;" : (k*100).toFixed(1) + "%"}</td><td>${hr}</td><td class="${opsCls}"><b>${ops}</b></td></tr>`;
+  }).join("");
+  // Lineup average OPS — the stat that actually matters for run scoring.
+  const opsVals = lu.map(b => { const info = BATTERS[b.id] || null; return info && Number.isFinite(info.ops) ? info.ops : null; }).filter(v => v !== null);
+  const avgOps = opsVals.length ? opsVals.reduce((a, v) => a + v, 0) / opsVals.length : null;
+  const avgOpsCls = avgOps === null ? "" : avgOps >= 0.800 ? "k-hi" : avgOps < 0.650 ? "k-lo" : "";
+  const totalRow = `<tr class="lu-total"><td colspan="9">Lineup avg OPS${opsVals.length < lu.length ? ` <span class="dim small" style="font-weight:400">(${opsVals.length}/${lu.length} resolved)</span>` : ""}</td>
+    <td class="${avgOpsCls}">${avgOps === null ? "&mdash;" : f3(avgOps)}</td></tr>`;
+  return `<details class="ars">
+    <summary>Starting lineup (last ${LINEUP_WINDOW}d) &middot; posted</summary>
+    <div class="lu-wrap"><table class="lu"><thead><tr><th>#</th><th>Batter</th><th></th><th>PA</th><th>AVG</th><th>OBP</th><th>ISO</th><th>K%</th><th>HR</th><th>OPS</th></tr></thead><tbody>${rows}${totalRow}</tbody></table></div>
+    <div class="ars-note"><span class="k-hi">Orange</span> favors the offense (power / gets on base); <span class="k-lo">blue</span> favors the pitcher (weak contact / strikeout-prone). Lineups post roughly 2 hours before first pitch, so this table is often empty well before then — it does not change the run projection above.</div>
+  </details>`;
+}
 // Defaults match totals-policy-v4-setup-rebuild in update-totals.js; the real
 // values always come from the fetched capture's own `policy` object below.
 let POLICY = {research_min_edge:0.7,research_min_setup:70,strong_min_edge:1.0,strong_min_setup:90,official_totals_enabled:false,team_totals_official_enabled:false};
@@ -129,6 +230,19 @@ async function load(){
     let head = d.learned_bias ? `<div class="dim small" style="margin-bottom:6px">Self-calibrated: projections include a ${d.learned_bias>0?"+":""}${d.learned_bias}-run correction learned from ${d.learned_n} graded games.</div>` : "";
     if(d.date!==today && date===today) head += `<div class="notice warn">Showing the last capture (${escapeHtml(d.date)}).</div>`;
     statusEl.innerHTML=head;
+
+    // Live posted lineups (display only — see lineupBlock). Same source and
+    // hydrate as tools/strikeout-projections; failure here must never block
+    // the run projections above from rendering.
+    SCHEDULE_BY_PK = {};
+    try {
+      const sched = await j(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher,lineups`);
+      for (const sg of (((sched.dates||[])[0])||{}).games || []) SCHEDULE_BY_PK[sg.gamePk] = sg;
+      const wEnd = new Date(date + "T12:00");
+      const wStart = new Date(wEnd.getTime() - LINEUP_WINDOW * 86400000);
+      await loadWindowBatters(localISODate(wStart), localISODate(wEnd));
+    } catch (e) {}
+
     PROJ={};
     gamesEl.innerHTML=games.map(g=>{
       PROJ[g.pk]=g.projection; GAMES[g.pk]=g;
@@ -146,7 +260,7 @@ async function load(){
             </div></div>
           <div><span id="lean-${g.pk}" class="lean"></span></div>
         </div>
-        ${sideBoxes(g)}
+        ${sideBoxes(g, SCHEDULE_BY_PK[g.pk])}
         <div class="t-meta">Park factor ${g.park_factor}${parkTag} — shared by both sides.</div>
         <div class="read">${escapeHtml(gameRead(g))}</div>
       </div>`;
@@ -163,11 +277,12 @@ function planSummary(sd){
   if(!plan||!plan.reported||!Array.isArray(plan.segments)) return null;
   return plan.segments.map(s=>`${s.role==="bullpen"?"bullpen":s.pitcher} ${Number(s.expected_innings).toFixed(1)} IP`).join(" + ");
 }
-function sideBoxes(g){
+function sideBoxes(g, scheduleGame){
   if(!g.away || !g.home) return "";
   const box=(sideName, sd, runs)=>{
     const tt=g.team_totals&&g.team_totals[sideName];
     const ttRead=tt&&tt.lean?`${tt.lean} research lean (${tt.edge>=0?"+":""}${Number(tt.edge).toFixed(1)})`:tt&&Number.isFinite(tt.line)?"No team-total lean":"Team-total line pending";
+    const teamId = scheduleGame && scheduleGame.teams && scheduleGame.teams[sideName] && scheduleGame.teams[sideName].team.id;
     return `<div class="side-box">
       <h3>${escapeHtml(sd.team)} <span class="dim small">projected</span> <span class="s-runs">${runs.toFixed(1)}</span></h3>
       <div class="s-row"><span>Team total</span><span>${tt&&Number.isFinite(tt.line)?`<b>${tt.line}</b> · O ${tt.over>0?"+":""}${tt.over??"—"} / U ${tt.under>0?"+":""}${tt.under??"—"}`:"<span class=\"dim\">line pending</span>"}</span></div>
@@ -179,6 +294,7 @@ function sideBoxes(g){
         : `<div class="s-row"><span>Facing starter</span><span><b>${escapeHtml(sd.opp_sp)}</b> <span class="dim small">${Number.isFinite(sd.opp_sp_fip)?"FIP-in "+sd.opp_sp_fip.toFixed(2):""}${sd.opp_sp_ip?" · ~"+sd.opp_sp_ip+" IP":""}</span>${fipTier(sd.opp_sp_fip)}</span></div>`}
       <div class="s-row"><span>Facing bullpen</span><span>${Number.isFinite(sd.opp_pen_risk)?`<b>${(sd.opp_pen_risk/10).toFixed(1)}/10 risk</b>${sd.pen_factor>1?` <span class=\"tier pos-text\">elevated risk — adds runs</span>`:""}`:'<span class="dim">—</span>'}</span></div>
       ${Number.isFinite(sd.opp_pen_fatigue)||Number.isFinite(sd.opp_pen_efficiency)?`<div class="s-row"><span class="dim small">= fatigue ${Number.isFinite(sd.opp_pen_fatigue)?(sd.opp_pen_fatigue/10).toFixed(1):"—"}/10 blended with efficiency ${Number.isFinite(sd.opp_pen_efficiency)?(sd.opp_pen_efficiency/10).toFixed(1):"—"}/10${sd.opp_pen_efficiency_label?` (${escapeHtml(sd.opp_pen_efficiency_label)})`:""}</span></div>`:""}
+      ${lineupBlock(sideName, scheduleGame, teamId)}
     </div>`;
   };
   return `<div class="side-grid">${box("away", g.away, g.proj_away)}${box("home", g.home, g.proj_home)}</div>`;
