@@ -2,8 +2,17 @@ name: Publish picks (after LyDia analysis)
 
 on:
   schedule:
-    # GitHub cron is UTC. 15:05 UTC = 11:05am ET in season, after morning odds post and before first pitch.
-    - cron: "5 15 * * *"
+    # GitHub cron is UTC (EDT = UTC-4 for the MLB season). Five runs, one per
+    # traditional first-pitch wave (12:00, 1:30, 3:30/4:15, 6:35/7:10, 10:00 ET),
+    # each timed after that wave's lineups typically post (~2h before first
+    # pitch) and after the 10:50am ET odds fetch, with a deliberate off-round
+    # minute to avoid GitHub's top-of-hour scheduling backlog.
+    # Concurrency below serializes these so they never overlap.
+    - cron: "5 15 * * *"    # 11:05am ET — after odds fetch; covers the 12:00pm wave; early-delivery lock
+    - cron: "20 16 * * *"   # 12:20pm ET — covers the 1:30pm wave
+    - cron: "35 18 * * *"   # 2:35pm ET  — covers the 3:30pm / 4:15pm wave
+    - cron: "30 21 * * *"   # 5:30pm ET  — covers the 6:35pm / 7:10pm wave (bulk of the slate)
+    - cron: "25 0 * * *"    # 8:25pm ET  — covers the 10:00pm wave (West Coast night games)
   workflow_dispatch:
     inputs:
       date:
@@ -215,10 +224,28 @@ jobs:
             git push
           fi
 
+      - name: Check if today's member emails already went out
+        # publish-picks now runs multiple times a day to catch each first-pitch
+        # wave's posted lineups. Only the first scheduled run of the day should
+        # email; later runs update data and official picks silently. The marker
+        # is committed to data/email-log/ so this check survives across runs.
+        id: email_gate
+        run: |
+          DATE_INPUT="${{ steps.publish_date.outputs.date }}"
+          MARKER="data/email-log/$DATE_INPUT.json"
+          if [ -f "$MARKER" ]; then
+            echo "already_sent=true" >> "$GITHUB_OUTPUT"
+            echo "Emails already went out today per $MARKER — this run updates picks only, no email."
+          else
+            echo "already_sent=false" >> "$GITHUB_OUTPUT"
+            echo "No email marker for $DATE_INPUT yet — this run is eligible to send."
+          fi
+
       - name: Email picks to paid members
-        # Scheduled runs deliver automatically; manual runs still require send_email=true.
-        # The script exits cleanly if the email secrets are not configured yet.
-        if: ${{ github.event_name == 'schedule' || github.event.inputs.send_email == 'true' }}
+        # Scheduled runs deliver automatically, but only the first one of the
+        # day per the email_gate check above. Manual runs still require
+        # send_email=true. The script exits cleanly if secrets aren't set yet.
+        if: ${{ (github.event_name == 'schedule' && steps.email_gate.outputs.already_sent != 'true') || github.event.inputs.send_email == 'true' }}
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
@@ -228,7 +255,7 @@ jobs:
         run: node scripts/send-member-emails.js "${{ steps.publish_date.outputs.date }}"
 
       - name: Email free daily preview to the free list
-        if: ${{ github.event_name == 'schedule' || github.event.inputs.send_email == 'true' }}
+        if: ${{ (github.event_name == 'schedule' && steps.email_gate.outputs.already_sent != 'true') || github.event.inputs.send_email == 'true' }}
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
@@ -236,3 +263,21 @@ jobs:
           NETLIFY_API_TOKEN: ${{ secrets.NETLIFY_API_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         run: node scripts/send-free-preview-emails.js "${{ steps.publish_date.outputs.date }}"
+
+      - name: Record that today's emails went out
+        if: ${{ (github.event_name == 'schedule' && steps.email_gate.outputs.already_sent != 'true') || github.event.inputs.send_email == 'true' }}
+        run: |
+          DATE_INPUT="${{ steps.publish_date.outputs.date }}"
+          mkdir -p data/email-log
+          cat > "data/email-log/$DATE_INPUT.json" <<JSON
+          {"date": "$DATE_INPUT", "sent_at_utc": "$(date -u +%FT%TZ)", "trigger": "${{ github.event_name }}", "run_id": "${{ github.run_id }}"}
+          JSON
+          git config user.name "lydia-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add "data/email-log/$DATE_INPUT.json"
+          if git diff --cached --quiet; then
+            echo "No email-log change to commit."
+          else
+            git commit -m "Record daily email sent for $DATE_INPUT"
+            git push
+          fi
