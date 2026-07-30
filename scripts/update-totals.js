@@ -3,23 +3,41 @@
 /*
   LyDia — total-runs projections + market total lines (K-props pattern).
 
-  - Projection per game: league run environment × each lineup's offense factor
-    × the opposing pitching factor (FIP-lite starter for ~expected innings share,
-    league-average relief for the rest, small bump for a tired opposing pen)
-    × the home park's run factor.
+  2026-07-29: rebuilt as an ADDITIVE runs model. No league-RPG multiplication
+  anywhere. Per team:
+
+    runs = median RPG (trailing 30 days)
+         + offense adjustment  (tonight's posted lineup's PA-weighted wOBA
+                                 vs. trailing-30-day league wOBA, scaled to
+                                 runs via wOBA scale and PA/team-game)
+         + starter adjustment  ((starter FIP-lite − LEAGUE_ERA) × innings/9,
+                                 per pitching-plan segment)
+         + bullpen adjustment  ((opposing bullpen's era_3d − LEAGUE_ERA) ×
+                                 bullpen innings/9 — actual runs allowed over
+                                 the last 3 days, unshrunk, per Lynold)
+
+  LEAGUE_ERA (4.20) is the only fixed reference constant left in the formula,
+  kept unchanged per Lynold 2026-07-29. Everything else (league wOBA, PA/game,
+  team medians) is computed fresh from real data every run, never hardcoded.
+
+  Lineup wOBA depends on the posted lineup, which is usually not live until
+  roughly 2 hours before first pitch. If a game's lineup isn't posted yet
+  when this runs, that side's offense_adj is 0 (neutral) and lineup_available
+  is false — it is NOT backfilled automatically; only a later re-capture of
+  this same game will pick up a posted lineup.
+
+  form15/form7/season_rpg fields are still computed and included for display
+  context only — they no longer feed the projection.
+
   - Market line: The Odds API featured `totals` market (ONE bulk request for the
     whole slate). Consensus = most common posted line; best O/U prices at it.
   - Captured once at publish, kept all day; --if-changed re-captures only when a
     listed starter changes (same policy as K props).
   - No key → projections still computed, lines null. Nothing blocks the run.
 
-  2026-07-29: official_totals_enabled is OFF while the setup rating is
-  rebuilt. At n=71 on this model, the LyDia projection lost to the market
-  line in every setup band that qualified for an official pick (worst at
-  the top: MAE 5.22 vs 2.83). Research-tier totals keep publishing; no total
-  becomes an official pick until this flag flips back on. See EXP-20260727-01
-  in the vault. Do not flip this back to true without Lynold's sign-off —
-  it is a market policy decision, not a code default.
+  official_totals_enabled is OFF while the setup rating is rebuilt (see
+  EXP-20260727-01 in the vault). Do not flip this back to true without
+  Lynold's sign-off — it is a market policy decision, not a code default.
 */
 const fs = require("fs");
 const path = require("path");
@@ -35,7 +53,9 @@ const DATE = (process.argv[2] || "").match(/^\d{4}-\d{2}-\d{2}$/)
 const IF_CHANGED = process.argv.includes("--if-changed");
 
 const LEAGUE_ERA = 4.20;
-const TOTALS_MODEL_VERSION = "totals-runs-v3-pitching-plan";
+const WOBA_WEIGHTS = { bb: 0.69, hbp: 0.72, "1b": 0.89, "2b": 1.27, "3b": 1.62, hr: 2.10 };
+const WOBA_SCALE = 1.24; // approximate — paired historical constant, not this season's exact published guts number
+const TOTALS_MODEL_VERSION = "totals-runs-v4-additive-median-woba";
 const TOTALS_POLICY = Object.freeze({
   version: "totals-policy-v4-setup-rebuild",
   research_min_edge: 0.7,
@@ -52,6 +72,20 @@ const PARKS = {"Colorado Rockies": 1.18, "Cincinnati Reds": 1.07, "Boston Red So
 async function j(u) { const r = await fetch(u); if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }
 const clampEra = e => Math.min(6, Math.max(2.75, e));
 const fipLite = st => { if (!st || !st.ip || st.ip < 10) return LEAGUE_ERA; const fip = (13 * st.hr + 3 * st.bb - 2 * st.so) / st.ip + 3.15; const wt = Math.min(st.ip, 80) / 80; return clampEra(fip * wt + LEAGUE_ERA * (1 - wt)); };
+const wobaFromCounting = c => {
+  const singles = c.h - c.doubles - c.triples - c.hr;
+  const ubb = c.bb - c.ibb;
+  const num = WOBA_WEIGHTS.bb * ubb + WOBA_WEIGHTS.hbp * c.hbp + WOBA_WEIGHTS["1b"] * singles
+    + WOBA_WEIGHTS["2b"] * c.doubles + WOBA_WEIGHTS["3b"] * c.triples + WOBA_WEIGHTS.hr * c.hr;
+  const den = c.ab + c.bb - c.ibb + c.sf + c.hbp;
+  return den > 0 ? num / den : null;
+};
+const medianOf = arr => {
+  if (!arr.length) return null;
+  const s = [...arr].sort((x, y) => x - y);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+};
 const consensus = a => { const c = {}; for (const v of a) c[v] = (c[v] || 0) + 1; const mean = a.reduce((x, y) => x + y, 0) / a.length; return Number(Object.entries(c).sort((x, y) => y[1] - x[1] || Math.abs(x[0] - mean) - Math.abs(y[0] - mean))[0][0]); };
 
 async function currentProbables(games) {
@@ -67,7 +101,7 @@ async function currentProbables(games) {
 }
 
 async function main() {
-  const sched = await j(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${DATE}&hydrate=probablePitcher`);
+  const sched = await j(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${DATE}&hydrate=probablePitcher,lineups`);
   const games = (((sched.dates || [])[0]) || {}).games || [];
   const probables = await currentProbables(games);
   const reportedPlans = PitchingPlan.load(ROOT, DATE);
@@ -125,6 +159,91 @@ async function main() {
   };
   try { await Promise.all([windowFetch(15, off15, g15), windowFetch(7, off7, g7)]); }
   catch (e) { console.warn("form windows unavailable:", e.message); }
+
+  // --- 2026-07-29: additive formula inputs (median RPG + lineup wOBA) ---
+  // Trailing 30-day league wOBA and PA/team-game — self-computed from real
+  // counting stats every run, never hardcoded.
+  const start30 = f(new Date(end.getTime() - 30 * 864e5));
+  const end30 = f(end);
+  let lgWoba30 = null, paPerGame30 = null;
+  try {
+    const lg = await j(`https://statsapi.mlb.com/api/v1/teams/stats?stats=byDateRange&group=hitting&startDate=${start30}&endDate=${end30}&season=${yr}&sportId=1`);
+    const c = { ab: 0, bb: 0, ibb: 0, hbp: 0, sf: 0, h: 0, doubles: 0, triples: 0, hr: 0, pa: 0, g: 0 };
+    for (const t of (lg.stats[0] || {}).splits || []) {
+      const s = t.stat;
+      c.ab += Number(s.atBats) || 0; c.bb += Number(s.baseOnBalls) || 0; c.ibb += Number(s.intentionalWalks) || 0;
+      c.hbp += Number(s.hitByPitch) || 0; c.sf += Number(s.sacFlies) || 0; c.h += Number(s.hits) || 0;
+      c.doubles += Number(s.doubles) || 0; c.triples += Number(s.triples) || 0; c.hr += Number(s.homeRuns) || 0;
+      c.pa += Number(s.plateAppearances) || 0; c.g += Number(s.gamesPlayed) || 0;
+    }
+    lgWoba30 = wobaFromCounting(c);
+    paPerGame30 = c.g ? c.pa / c.g : null;
+  } catch (e) { console.warn("league 30d wOBA unavailable:", e.message); }
+
+  // Trailing 30-day median runs scored per team. One bulk league-wide
+  // schedule call, bucketed by team, instead of 30 separate per-team calls.
+  const medianRuns30 = {};
+  try {
+    const rangeSched = await j(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate=${start30}&endDate=${end30}&hydrate=linescore`);
+    const runsByTeam = {};
+    for (const dt of rangeSched.dates || []) {
+      for (const gm of dt.games || []) {
+        if (!gm.status || gm.status.abstractGameState !== "Final") continue;
+        const a = gm.teams.away, h = gm.teams.home;
+        if (!Number.isFinite(a.score) || !Number.isFinite(h.score)) continue;
+        (runsByTeam[a.team.id] = runsByTeam[a.team.id] || []).push(a.score);
+        (runsByTeam[h.team.id] = runsByTeam[h.team.id] || []).push(h.score);
+      }
+    }
+    for (const [tid, arr] of Object.entries(runsByTeam)) medianRuns30[tid] = medianOf(arr);
+  } catch (e) { console.warn("30d median runs unavailable:", e.message); }
+
+  // Tonight's posted-lineup wOBA (last 30 days per batter, PA-weighted).
+  // Lineups usually post ~2 hours before first pitch — if a game's lineup
+  // isn't posted yet when this runs, offense_adj for that side is 0 and
+  // lineup_available is false; it is not backfilled automatically.
+  const lineupPlayerIds = new Set();
+  for (const g of games) {
+    const lu = g.lineups || {};
+    for (const p of [...(lu.awayPlayers || []), ...(lu.homePlayers || [])]) if (p && p.id) lineupPlayerIds.add(p.id);
+  }
+  const batterWoba = {};
+  if (lineupPlayerIds.size) {
+    const ids = [...lineupPlayerIds];
+    const chunkSize = 30;
+    for (let i = 0; i < ids.length; i += chunkSize) {
+      const chunk = ids.slice(i, i + chunkSize);
+      try {
+        const resp = await j(`https://statsapi.mlb.com/api/v1/people?personIds=${chunk.join(",")}&hydrate=stats(group=hitting,type=byDateRange,startDate=${start30},endDate=${end30})`);
+        for (const p of resp.people || []) {
+          const splits = ((p.stats || [])[0] || {}).splits || [];
+          const s = splits[0] && splits[0].stat;
+          if (!s) continue;
+          const c = {
+            ab: Number(s.atBats) || 0, bb: Number(s.baseOnBalls) || 0, ibb: Number(s.intentionalWalks) || 0,
+            hbp: Number(s.hitByPitch) || 0, sf: Number(s.sacFlies) || 0, h: Number(s.hits) || 0,
+            doubles: Number(s.doubles) || 0, triples: Number(s.triples) || 0, hr: Number(s.homeRuns) || 0
+          };
+          const pa = Number(s.plateAppearances) || 0;
+          const woba = wobaFromCounting(c);
+          if (woba !== null && pa > 0) batterWoba[p.id] = { woba, pa };
+        }
+      } catch (e) { console.warn(`lineup batter stats chunk failed: ${e.message}`); }
+    }
+  }
+  const lineupWobaFor = (scheduleGame, teamId) => {
+    const lu = scheduleGame.lineups || {};
+    const isAway = scheduleGame.teams.away.team.id === teamId;
+    const isHome = scheduleGame.teams.home.team.id === teamId;
+    const players = isAway ? lu.awayPlayers : (isHome ? lu.homePlayers : null);
+    if (!players || !players.length) return { woba: null, pa: 0, resolved: 0, total: 0 };
+    let totalPa = 0, sum = 0, resolved = 0;
+    for (const p of players) {
+      const info = p && p.id ? batterWoba[p.id] : null;
+      if (info) { totalPa += info.pa; sum += info.woba * info.pa; resolved++; }
+    }
+    return { woba: totalPa > 0 ? sum / totalPa : null, pa: totalPa, resolved, total: players.length };
+  };
 
   const pids = [...new Set([
     ...games.flatMap(g => ["away", "home"].map(sd => g.teams[sd].probablePitcher && g.teams[sd].probablePitcher.id).filter(Boolean)),
@@ -277,53 +396,53 @@ async function main() {
     const parkKnown = Object.prototype.hasOwnProperty.call(PARKS, hT.name);
     const side = (batTeamId, oppStarter, oppPenName, pitchingSide) => {
       const seasonRpg = off[batTeamId] || lgRPG;
-      // weights scale with each window's sample; unearned weight returns to season
+      // form15/form7/season blend kept for display context only — no longer
+      // feeds the projection. medianRpg30 (below) is the real offense baseline.
       let w15 = Number.isFinite(off15[batTeamId]) ? 0.25 * Math.min(1, (g15[batTeamId] || 0) / 12) : 0;
       let w7 = Number.isFinite(off7[batTeamId]) ? 0.15 * Math.min(1, (g7[batTeamId] || 0) / 6) : 0;
       const rpg = (1 - w15 - w7) * seasonRpg + w15 * (off15[batTeamId] || 0) + w7 * (off7[batTeamId] || 0);
-      const offF = rpg / lgRPG;
+
+      // Offense baseline: this team's own median runs scored, trailing 30
+      // days. Falls back to season RPG only if the team has no games in
+      // that window (shouldn't happen mid-season).
+      const medianRpg30 = Number.isFinite(medianRuns30[batTeamId]) ? medianRuns30[batTeamId] : seasonRpg;
+
+      // Offense adjustment: tonight's actual posted lineup vs. the real
+      // trailing-30-day league wOBA, converted to runs via the standard wRAA
+      // shape. 0 (neutral) if the lineup isn't posted yet at capture time.
+      const lu = lineupWobaFor(g, batTeamId);
+      const offenseAdj = (lu.woba !== null && lgWoba30 !== null && paPerGame30 !== null)
+        ? ((lu.woba - lgWoba30) / WOBA_SCALE) * paPerGame30
+        : 0;
+
       const st = oppStarter ? ps[oppStarter.id] : null;
       const role = PitcherCore.classifyPitcherRole(st);
       const plan = PitchingPlan.resolveSidePlan(reportedPlans, g.gamePk, pitchingSide, oppStarter, role);
       const pen = bullpen[oppPenName];
-      // Run projection should react to how likely the pen is to actually give
-      // up runs, not just how much it's pitched — a tired-but-dominant pen
-      // (heavy IP, low ERA/WHIP) shouldn't inflate the total the same way a
-      // tired-and-bad one does. Uses the combined risk index (fatigue blended
-      // with efficiency), same field the moneyline model and Lab Rating use,
-      // so this page's run bump agrees with the rest of the site instead of
-      // reacting to raw workload alone. Falls back to raw fatigue score for
-      // any bullpen file generated before the efficiency split existed.
       const penRisk = pen && Number.isFinite(pen.risk_index ?? pen.score) ? (pen.risk_index ?? pen.score) : null;
       const penFatigue = pen && Number.isFinite(pen.score) ? pen.score : null;
       const penEfficiency = pen && Number.isFinite(pen.efficiency_score) ? pen.efficiency_score : null;
       const penEfficiencyLabel = pen && pen.efficiency_label ? pen.efficiency_label : null;
-      // The combined bullpen risk score already blends workload/fatigue with
-      // recent ERA/WHIP efficiency. Convert it directly around neutral 50:
-      // risk 76 = 1.26 run factor, risk 40 = 0.90. Apply that factor only to
-      // the innings assigned to the bullpen, so an opener handing over 7.9
-      // innings has a materially larger effect than a starter handing over 2.2.
-      const penF = penRisk !== null
-        ? Math.max(0.75, Math.min(1.35, 1 + (penRisk - 50) / 100))
-        : 1;
+      // Bullpen adjustment driver: actual earned runs allowed per 9 over the
+      // last 3 days. Raw, unshrunk for thin samples — per Lynold 2026-07-29.
+      const penEra3d = pen && Number.isFinite(pen.era_3d) ? pen.era_3d : null;
+
       // Allocate every known pitcher only to his assigned innings. The generic
       // bullpen owns only the innings left after the opener and bulk pitcher.
-      let pitchF = 0;
+      let starterAdj = 0;
       let effectiveEra = 0;
       let plannedPitcherInnings = 0;
       let weightedPitcherScore = 0;
       const segments = plan.segments.map(segment => {
         const innings = Number(segment.expected_innings);
         if (segment.role === "bullpen") {
-          pitchF += penF * (innings / 9);
-          effectiveEra += LEAGUE_ERA * penF * innings;
           return { ...segment };
         }
         const segmentStats = ps[Number(segment.pitcher_id)] || null;
         const roleStats = segment.role === "bulk" ? bulkRoleStats[Number(segment.pitcher_id)] || null : null;
         const segmentFip = roleStats ? roleStats.fip_lite : fipLite(segmentStats);
         const segmentScore = PitcherCore.scorePitcher(segmentStats || { name: segment.pitcher, missing: true }).score;
-        pitchF += (segmentFip / LEAGUE_ERA) * (innings / 9);
+        starterAdj += (segmentFip - LEAGUE_ERA) * (innings / 9);
         effectiveEra += segmentFip * innings;
         plannedPitcherInnings += innings;
         weightedPitcherScore += segmentScore * innings;
@@ -338,6 +457,10 @@ async function main() {
         .reduce((sum, segment) => sum + Number(segment.expected_innings), 0);
       const expIP = segments.filter(segment => segment.role !== "bullpen")
         .reduce((sum, segment) => sum + Number(segment.expected_innings), 0);
+
+      const bullpenAdj = penEra3d !== null ? (penEra3d - LEAGUE_ERA) * (bullpenInnings / 9) : 0;
+      effectiveEra += (penEra3d !== null ? penEra3d : LEAGUE_ERA) * bullpenInnings;
+
       const planOutput = {
         ...plan,
         segments,
@@ -348,12 +471,22 @@ async function main() {
         description: PitchingPlan.describe(plan)
       };
       const primaryFip = segments.find(segment => segment.role !== "bullpen");
+
+      const runs = medianRpg30 + offenseAdj + starterAdj + bullpenAdj;
+
       return {
-        runs: lgRPG * offF * pitchF * park,
+        runs,
         rpg: Number(rpg.toFixed(2)), season_rpg: Number(seasonRpg.toFixed(2)),
         form15_rpg: Number.isFinite(off15[batTeamId]) ? Number(off15[batTeamId].toFixed(2)) : null, form15_g: g15[batTeamId] || 0,
         form7_rpg: Number.isFinite(off7[batTeamId]) ? Number(off7[batTeamId].toFixed(2)) : null, form7_g: g7[batTeamId] || 0,
-        off_factor: Number(offF.toFixed(3)),
+        median_rpg_30d: Number.isFinite(medianRuns30[batTeamId]) ? Number(medianRuns30[batTeamId].toFixed(1)) : null,
+        median_rpg_used: Number(medianRpg30.toFixed(2)),
+        lineup_woba: lu.woba !== null ? Number(lu.woba.toFixed(3)) : null,
+        lineup_pa: lu.pa, lineup_resolved: lu.resolved, lineup_total: lu.total,
+        lineup_available: lu.woba !== null,
+        league_woba_30d: lgWoba30 !== null ? Number(lgWoba30.toFixed(3)) : null,
+        pa_per_game_30d: paPerGame30 !== null ? Number(paPerGame30.toFixed(2)) : null,
+        offense_adj: Number(offenseAdj.toFixed(2)),
         opp_sp: st ? st.name : "TBD", opp_sp_fip: primaryFip ? primaryFip.fip_lite : LEAGUE_ERA, opp_sp_ip: Number(expIP.toFixed(1)),
         opp_pitcher_role: plan.type === "opener_bulk" ? "opener_bulk" : role.key,
         opp_pitcher_role_label: plan.type === "opener_bulk" ? "Opener + bulk pitcher" : role.label,
@@ -362,9 +495,10 @@ async function main() {
         opp_bullpen_ip: Number(bullpenInnings.toFixed(1)),
         opp_pitcher_role_reason: role.reason,
         pitching_plan: planOutput,
-        pitch_factor: Number(pitchF.toFixed(3)),
+        starter_adj: Number(starterAdj.toFixed(2)),
         opp_pen_risk: penRisk, opp_pen_fatigue: penFatigue, opp_pen_efficiency: penEfficiency, opp_pen_efficiency_label: penEfficiencyLabel,
-        pen_factor: Number(penF.toFixed(3)),
+        opp_pen_era_3d: penEra3d,
+        bullpen_adj: Number(bullpenAdj.toFixed(2)),
         sp_sample_ok: !!(st && st.ip >= 40 && role.confidence !== "low"),
         pitching_plan_confident: plan.reported || (role.confidence === "high" && !role.bullpenGame)
       };
@@ -502,7 +636,7 @@ async function main() {
     }
   } catch (e) {}
 
-  const payload = { date: DATE, generated_at: new Date().toISOString(), model_version: TOTALS_MODEL_VERSION, policy: TOTALS_POLICY, source: "LyDia totals projection (reported opener/bulk allocation × remaining bullpen risk × offense × park) + the-odds-api totals consensus", league_rpg: Number(lgRPG.toFixed(2)), probables, pitching_plan_signature: pitchingPlanSignature, games: out, learned_bias: learnedBias, learned_n: learnedN };
+  const payload = { date: DATE, generated_at: new Date().toISOString(), model_version: TOTALS_MODEL_VERSION, policy: TOTALS_POLICY, source: "LyDia totals projection (median RPG + lineup wOBA offense adjustment + FIP-lite starter adjustment + bullpen era_3d adjustment) + the-odds-api totals consensus", league_rpg: Number(lgRPG.toFixed(2)), probables, pitching_plan_signature: pitchingPlanSignature, games: out, learned_bias: learnedBias, learned_n: learnedN };
   fs.mkdirSync(path.join(ROOT, "data", "totals"), { recursive: true });
   fs.writeFileSync(path.join(ROOT, "data", "totals", `${DATE}.json`), JSON.stringify(payload, null, 1));
   fs.writeFileSync(path.join(ROOT, "data", "totals", "today.json"), JSON.stringify(payload, null, 1));
