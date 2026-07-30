@@ -35,7 +35,19 @@ if (!preview.includes("Lynold Mercado") || !preview.includes("/writers/lynold/")
   throw new Error("Unified Picks cards are missing author attribution.");
 }
 
-for (const game of Object.values(canonical.games || {})) {
+// The canonical Pitcher Matchup Tool data covers every scheduled game
+// regardless of status. The Member Brief can legitimately have fewer games
+// than that on a day whose first capture ran after a game's first pitch —
+// generate-member-lab.js's retention guard skips an already-started game
+// with no posted pregame analysis rather than failing the whole run (see
+// HANDOFF, 2026-07-30). A game that was skipped for that reason has no card
+// in the Unified Picks preview at all, so it cannot be checked for bullpen-
+// game text within a card that doesn't exist. Only check games the brief
+// actually published.
+const briefPks = new Set((brief.games || []).map(game => String(game.game_pk)));
+
+for (const [gamePk, game] of Object.entries(canonical.games || {})) {
+  if (!briefPks.has(String(gamePk))) continue;
   for (const side of ["away", "home"]) {
     const pitcher = game[side] || {};
     const isBullpenGame = Boolean(pitcher.bullpenGame || (pitcher.role && pitcher.role.bullpenGame));
@@ -46,8 +58,6 @@ for (const game of Object.values(canonical.games || {})) {
     }
   }
 }
-
-const briefPks = new Set((brief.games || []).map(game => String(game.game_pk)));
 const bullpenPks = new Set((bullpen.teams || []).map(team => String(team.game_pk)));
 const missingBullpenGames = [...briefPks].filter(gamePk => !bullpenPks.has(gamePk));
 if (missingBullpenGames.length) {
