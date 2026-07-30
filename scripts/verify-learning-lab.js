@@ -48,23 +48,23 @@ if (summary.status === "ready") {
 const totals = json("data/totals/today.json");
 const requireCurrentTotals = process.argv.includes("--require-current-totals");
 if (totals.model_version || requireCurrentTotals) {
-  if (totals.model_version !== "totals-runs-v3-pitching-plan") fail("Totals capture uses the wrong model version.");
+  if (totals.model_version !== "totals-runs-v4-additive-median-woba") fail("Totals capture uses the wrong model version.");
   if (!totals.policy || totals.policy.research_min_edge !== 0.7 || totals.policy.research_min_setup !== 70) {
     fail("Totals research-lean policy is not synchronized.");
   }
-  if (totals.policy.official_totals_enabled !== true) fail("Official totals must be enabled.");
+  if (totals.policy.official_totals_enabled !== false) fail("Official totals must stay disabled — research-only, permanently, per Lynold.");
   if (totals.policy.team_totals_official_enabled !== false) fail("Team totals must remain research-only.");
 }
 
 const totalsSource = read("scripts/update-totals.js");
-if (!totalsSource.includes('const TOTALS_MODEL_VERSION = "totals-runs-v3-pitching-plan"')) {
+if (!totalsSource.includes('const TOTALS_MODEL_VERSION = "totals-runs-v4-additive-median-woba"')) {
   fail("Totals generator does not declare the synchronized model version.");
 }
 if (!totalsSource.includes("research_min_edge: 0.7") || !totalsSource.includes("research_min_setup: 70")) {
   fail("Totals generator thresholds disagree with the synchronized policy.");
 }
-if (!totalsSource.includes("official_totals_enabled: true")) {
-  fail("Totals generator must enable official full-game totals.");
+if (!totalsSource.includes("official_totals_enabled: false")) {
+  fail("Totals generator must keep official full-game totals disabled.");
 }
 if (!totalsSource.includes("team_totals_official_enabled: false")) {
   fail("Totals generator must keep team totals research-only.");

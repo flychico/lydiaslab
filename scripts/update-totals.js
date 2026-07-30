@@ -35,9 +35,12 @@
     listed starter changes (same policy as K props).
   - No key → projections still computed, lines null. Nothing blocks the run.
 
-  official_totals_enabled is OFF while the setup rating is rebuilt (see
-  EXP-20260727-01 in the vault). Do not flip this back to true without
-  Lynold's sign-off — it is a market policy decision, not a code default.
+  official_totals_enabled is permanently OFF, per Lynold 2026-07-29: totals
+  will not be published as official picks — research-lean totals only, full
+  stop. This is a permanent product decision, not a rebuild-in-progress
+  placeholder. See EXP-20260727-01 in the vault for the accuracy history
+  that originally prompted it. Do not flip this to true without Lynold's
+  explicit sign-off.
 */
 const fs = require("fs");
 const path = require("path");

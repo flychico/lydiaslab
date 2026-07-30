@@ -13,7 +13,7 @@ const fail = msg => { throw new Error(msg); };
 
 const totals = json(`data/totals/${DATE}.json`);
 if (totals.model_version !== "totals-runs-v4-additive-median-woba") fail("Wrong totals model version.");
-if (!totals.policy || totals.policy.official_totals_enabled !== true) fail("Official game totals are not enabled.");
+if (!totals.policy || totals.policy.official_totals_enabled !== false) fail("Official game totals must stay disabled — totals are research-only, permanently, per Lynold.");
 if (totals.policy.team_totals_official_enabled !== false) fail("Team totals must remain research-only.");
 for (const [pk, game] of Object.entries(totals.games || {})) {
   if (!game.team_totals || !game.team_totals.away || !game.team_totals.home) fail(`Game ${pk} is missing team-total records.`);
