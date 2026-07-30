@@ -1,6 +1,6 @@
 {
   "date": "2026-07-30",
-  "generated_at": "2026-07-30T21:46:45.073Z",
+  "generated_at": "2026-07-30T22:23:01.331Z",
   "source_of_truth": "LyDia Pitcher Matchup Tool",
   "source_version": "pitcher-matchup-core-v2-role-aware",
   "method": "Role-aware pitcher model using starter-only game logs. Traditional starters, limited starters, openers, and unknown roles receive workload-appropriate innings; the remainder belongs to the bullpen.",
@@ -1142,7 +1142,7 @@
         "rawScore": 63,
         "score": 61,
         "grade": "Average",
-        "note": "Starter-only innings are unavailable.",
+        "note": "Yohan Ramírez is the reported opener; see the full pitching plan below.",
         "role": {
           "key": "unknown",
           "label": "Role unknown",
@@ -1152,11 +1152,11 @@
           "bullpenGame": true,
           "reason": "Starter-only innings are unavailable."
         },
-        "roleKey": "unknown",
-        "roleLabel": "Role unknown",
-        "expectedInnings": 4.5,
-        "bullpenInnings": 4.5,
-        "roleConfidence": "low",
+        "roleKey": "opener",
+        "roleLabel": "Reported opener",
+        "expectedInnings": 2.1,
+        "bullpenInnings": 6.9,
+        "roleConfidence": "manual",
         "bullpenGame": true,
         "k9": 9.964285714285715,
         "bb9": 5.303571428571429,
@@ -1222,7 +1222,63 @@
       "strength": "Strong",
       "edge_team": "Pittsburgh Pirates",
       "bullpen_game": true,
-      "pitching_plan_confidence": "low"
+      "pitching_plan_confidence": "manual",
+      "schedule_probable": {
+        "away": {
+          "id": 670990,
+          "name": "Yohan Ramírez"
+        }
+      },
+      "away_plan_score": 61,
+      "home_plan_score": 45,
+      "pitching_plan": {
+        "away": {
+          "team": "Pittsburgh Pirates",
+          "type": "opener_bullpen",
+          "confidence": "manual",
+          "source_note": "Manual pitching update: Yohan Ramírez 2.1 IP, bullpen 6.9 IP.",
+          "segments": [
+            {
+              "role": "opener",
+              "pitcher_id": 670990,
+              "pitcher": "Yohan Ramírez",
+              "expected_innings": 2.1,
+              "stats": {
+                "id": 670990,
+                "name": "Yohan Ramírez",
+                "hand": "R",
+                "era": 3.21,
+                "whip": 1.38,
+                "ip": 56,
+                "so": 62,
+                "bb": 33,
+                "hr": 4,
+                "gs": 0,
+                "gp": 44,
+                "w": 6,
+                "l": 3,
+                "bf": 248,
+                "go": 58,
+                "ao": 41,
+                "h": 44,
+                "ab": 205,
+                "sf": 0,
+                "starterIp": null,
+                "starterGames": null
+              },
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 6.9,
+              "stats": null,
+              "role_stats": null
+            }
+          ],
+          "reported": true,
+          "description": "Yohan Ramírez 2.1 IP + remaining bullpen 6.9 IP"
+        }
+      }
     },
     "824568": {
       "game_pk": 824568,
