@@ -138,10 +138,31 @@ async function main() {
   const retainedPks = new Set(rows.map(row => String(row.game_pk)));
   const missingGames = allGames.filter(game => !retainedPks.has(String(game.gamePk)));
   if (missingGames.length) {
-    throw new Error(
-      `Daily brief retention guard: refusing to overwrite ${DATE}; missing posted analysis for game(s) ` +
-      missingGames.map(game => game.gamePk).join(",")
-    );
+    // A game already underway (Live/Final) with no posted pregame row on
+    // record is not a data bug — it means the day's first capture happened
+    // after that game's first pitch (a late manual run, or an unusually
+    // early start time). There is nothing to retroactively post for a game
+    // already in progress, so skip it rather than failing the whole day.
+    // A missing PREVIEW game is still a real problem — that is upcoming
+    // analysis that should have modeled cleanly — so that case still fails
+    // loudly. 2026-07-30: Rangers @ Rays (822946) hit exactly this on the
+    // day's first capture, after first pitch, with no prior row to fall
+    // back to.
+    const missingUpcoming = missingGames.filter(game => game.status && game.status.abstractGameState === "Preview");
+    const missingStarted = missingGames.filter(game => !(game.status && game.status.abstractGameState === "Preview"));
+    if (missingStarted.length) {
+      console.warn(
+        `Daily brief retention guard: skipping already-started game(s) with no posted pregame analysis on record: ` +
+        missingStarted.map(game => `${game.gamePk} (${(game.status && game.status.detailedState) || "unknown"})`).join(", ") +
+        ". This is expected when the day's first capture runs after first pitch; nothing to retroactively post."
+      );
+    }
+    if (missingUpcoming.length) {
+      throw new Error(
+        `Daily brief retention guard: refusing to overwrite ${DATE}; missing posted analysis for game(s) ` +
+        missingUpcoming.map(game => game.gamePk).join(",")
+      );
+    }
   }
 
   if (!rows.length) {
