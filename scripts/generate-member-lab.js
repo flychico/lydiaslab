@@ -1093,7 +1093,14 @@ function buildPicksFile(rows, generatedAt) {
     const pick = edge > 0 ? "Over" : "Under";
     const price = pick === "Over" ? rec.over : rec.under;
     const roleEligible = rec.bullpen_game !== true && Number(rec.expected_innings) >= 4;
-    if (Math.abs(edge) < OFFICIAL_K_EDGE || !roleEligible || Number(rec.books) < OFFICIAL_K_MIN_BOOKS || !Number.isFinite(price)) continue;
+    // 2026-07-30, Lynold: a strikeout prop may not go official on a lineup
+    // that isn't posted yet. update-k-props.js's whiff/arsenal-leverage term
+    // is computed at half confidence against "projected regulars" when the
+    // real lineup isn't up, and the projection can move materially once the
+    // real nine posts — several official picks moved after publish for
+    // exactly this reason on 2026-07-29. Require the real posted lineup.
+    const lineupConfirmed = rec.opp_lineup_source === "posted";
+    if (Math.abs(edge) < OFFICIAL_K_EDGE || !roleEligible || !lineupConfirmed || Number(rec.books) < OFFICIAL_K_MIN_BOOKS || !Number.isFinite(price)) continue;
     ensureGroup(r).strikeouts.push({
       pitcher: rec.name,
       pick,
@@ -1104,6 +1111,7 @@ function buildPicksFile(rows, generatedAt) {
       books: rec.books,
       expectedInnings: rec.expected_innings,
       pitcherRole: rec.pitcher_role,
+      lineupSource: rec.opp_lineup_source,
       modelVersion: "pitcher-strikeouts-self-calibrated-v1",
       valueTag: "OFFICIAL PICK"
     });
@@ -1117,11 +1125,11 @@ function buildPicksFile(rows, generatedAt) {
     source_of_truth: "LyDia Daily Engine",
     current_official_model: "multi_market_v1",
     lock_policy: "Dated official pick files are append-only. Re-running the engine for the same date reuses the existing dated file instead of changing official picks.",
-    note: `Official records are separated by market. Moneylines use the ${(OFFICIAL_MODEL_PROB * 100).toFixed(0)}% probability and ${(OFFICIAL_LAB_SCORE / 10).toFixed(1)}/10 Lab gates; game totals ${totalsOfficialEnabled ? `use a ${totalsOfficialEdge}-run edge and ${(totalsOfficialLab / 10).toFixed(1)}/10 totals setup` : "are currently paused while the totals setup rating is rebuilt (see EXP-20260727-01)"}; pitcher Ks use a 0.7-K edge, posted price, two-book coverage, and a confirmed non-opener workload.`,
+    note: `Official records are separated by market. Moneylines use the ${(OFFICIAL_MODEL_PROB * 100).toFixed(0)}% probability and ${(OFFICIAL_LAB_SCORE / 10).toFixed(1)}/10 Lab gates; game totals ${totalsOfficialEnabled ? `use a ${totalsOfficialEdge}-run edge and ${(totalsOfficialLab / 10).toFixed(1)}/10 totals setup` : "are currently paused while the totals setup rating is rebuilt (see EXP-20260727-01)"}; pitcher Ks use a 0.7-K edge, posted price, two-book coverage, a confirmed non-opener workload, and the real posted starting lineup (not a projected one).`,
     rules: {
       moneyline: { minimum_probability: OFFICIAL_MODEL_PROB, minimum_lab: OFFICIAL_LAB_SCORE, minimum_edge: VALUE_EDGE },
       game_total: { minimum_edge_runs: totalsOfficialEdge, minimum_lab: totalsOfficialLab, official_enabled: totalsOfficialEnabled },
-      pitcher_strikeouts: { minimum_edge_k: OFFICIAL_K_EDGE, minimum_books: OFFICIAL_K_MIN_BOOKS, minimum_expected_innings: 4 },
+      pitcher_strikeouts: { minimum_edge_k: OFFICIAL_K_EDGE, minimum_books: OFFICIAL_K_MIN_BOOKS, minimum_expected_innings: 4, requires_posted_lineup: true },
       team_totals: { official_enabled: false, status: "research_only" }
     },
     picks: [...groups.values()]
