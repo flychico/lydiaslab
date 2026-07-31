@@ -304,5 +304,11 @@ module.exports = {
   PLAN_COMPLETE_MAX,
   BULLPEN_MAX,
   OFFENSE_MAX,
-  COMPLETENESS_MAX
+  COMPLETENESS_MAX,
+  // Exported so consumers (matchup-copy-core.js) can define "a real lean"
+  // identically to how the rating itself defines conviction, instead of
+  // carrying a second, independently-tuned threshold that can drift out of
+  // sync with this one.
+  CONVICTION_FLOOR,
+  CONVICTION_CEIL
 };

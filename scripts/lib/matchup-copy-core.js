@@ -15,8 +15,18 @@
 
 "use strict";
 
+const {
+  CONVICTION_FLOOR, CONVICTION_MAX, AGREEMENT_MAX, PITCHER_MAX,
+  BULLPEN_MAX, OFFENSE_MAX, COMPLETENESS_MAX
+} = require("./lab-rating-core");
+
 // Below this, LyDia has no directional lean worth describing as conviction.
-const LEAN_MIN = 0.52;
+// Single source of truth: this is the same floor Lab Rating's own conviction
+// component uses (scripts/lib/lab-rating-core.js). A market-mispricing case
+// used to fire down to 52% while the rating itself credited zero conviction
+// below 55% — two systems disagreeing about where a real lean starts. Aligned
+// here so the copy never claims more conviction than the rating would credit.
+const LEAN_MIN = CONVICTION_FLOOR;
 // A team-quality gap in runs per game worth calling out.
 const RUNDIFF_NOTABLE = 0.35;
 // Recent-vs-season OPS swing that counts as genuinely hot or cold.
@@ -57,7 +67,7 @@ function marketMispricingCase({ pickTeam, modelProb, marketProb, edge, minEdge =
   return {
     title: `Market mispricing: ${signedPct(edge)}`,
     detail: `LyDia makes ${pickTeam} ${pct(modelProb)} to win while the no-vig market says ${pct(marketProb)}. `
-      + `LyDia rates this side ${signedPct(edge)} better than the price implies, and that gap is why the game is on the board.`
+      + `LyDia rates this side ${signedPct(edge)} better than the price implies.`
   };
 }
 
@@ -202,11 +212,106 @@ function recentFormSentence({ awayTeam, homeTeam, awayL10, homeL10, awayRunDiff,
   return `${lead}${[a, h].filter(Boolean).join("; ")}.${tail}`;
 }
 
+/* ---------------------------------------------------------------------------
+   5. Lab Rating, explained component by component
+
+   Lab Rating v2 (scripts/lib/lab-rating-core.js) already computes exactly why
+   a game scored what it scored — conviction, model agreement, pitching plan,
+   bullpen, offense, data completeness — and stores every sub-value in
+   lab_score_breakdown. Nothing here recomputes the rating; this only reads
+   the breakdown that already exists and turns each component below its own
+   "this is a real strength" threshold into a plain sentence. A component that
+   already earned most of its points is not a story and is left out, so the
+   page reads as a list of actual gaps, not a recap of everything that went
+   fine.
+--------------------------------------------------------------------------- */
+const LAB_MAX = {
+  conviction: CONVICTION_MAX,
+  agreement: AGREEMENT_MAX,
+  pitching_plan: PITCHER_MAX + 6, // pitcher-edge (PITCHER_MAX) + plan completeness (6, not separately exported)
+  bullpen: BULLPEN_MAX,
+  offense: OFFENSE_MAX,
+  completeness: COMPLETENESS_MAX
+};
+// A component earning less than this fraction of its max is treated as a real
+// gap worth explaining. At or above, it is a strength and stays out of the list.
+const LAB_WEAK_FRACTION = 0.5;
+
+function labRatingReasons({
+  breakdown, pickTeam, oppTeam, modelProb,
+  strengthProbPick, runProbPick,
+  pitcherEdgeTeam, pitcherGap, betterPitcher, worsePitcher,
+  bullpenPickLabel, bullpenOppLabel
+}) {
+  if (!breakdown) return [];
+  const reasons = [];
+
+  if ((breakdown.conviction_points / LAB_MAX.conviction) < LAB_WEAK_FRACTION) {
+    reasons.push({
+      title: `Conviction: ${breakdown.conviction_points}/${LAB_MAX.conviction}`,
+      detail: isNum(modelProb) && modelProb < CONVICTION_FLOOR
+        ? `LyDia's own win probability for ${pickTeam} (${pct(modelProb)}) is close enough to a coin flip that the rating credits no conviction at all — credit only starts above ${pct(CONVICTION_FLOOR, 0)}.`
+        : `LyDia leans toward ${pickTeam}, but not strongly enough to earn full conviction credit.`
+    });
+  }
+
+  if ((breakdown.agreement_points / LAB_MAX.agreement) < LAB_WEAK_FRACTION && isNum(strengthProbPick) && isNum(runProbPick)) {
+    const gapPts = Math.abs(strengthProbPick - runProbPick) * 100;
+    reasons.push({
+      title: `Model agreement: ${breakdown.agreement_points}/${LAB_MAX.agreement}`,
+      detail: `LyDia runs two independent reads on this game. The team-strength model gives ${pickTeam} a ${pct(strengthProbPick)} chance; `
+        + `the run-projection model gives ${pct(runProbPick)}. They disagree by ${gapPts.toFixed(1)} points, so the published number is a blend `
+        + `between two methods that do not agree, not a shared read.`
+    });
+  }
+
+  if ((breakdown.pitching_plan_points / LAB_MAX.pitching_plan) < LAB_WEAK_FRACTION) {
+    if (pitcherEdgeTeam && pitcherEdgeTeam === pickTeam && isNum(pitcherGap)) {
+      reasons.push({
+        title: `Pitching plan: ${breakdown.pitching_plan_points}/${LAB_MAX.pitching_plan}`,
+        detail: `${betterPitcher || pitcherEdgeTeam} rates ${pitcherGap} points better than ${worsePitcher || "the opposing starter"} on LyDia's pitcher score — `
+          + `a real edge, but well short of the gap that earns full credit here.`
+      });
+    } else {
+      reasons.push({
+        title: `Pitching plan: ${breakdown.pitching_plan_points}/${LAB_MAX.pitching_plan}`,
+        detail: `No meaningful starting-pitcher edge favors ${pickTeam} in this matchup.`
+      });
+    }
+  }
+
+  if ((breakdown.bullpen_points / LAB_MAX.bullpen) < LAB_WEAK_FRACTION) {
+    reasons.push({
+      title: `Bullpen: ${breakdown.bullpen_points}/${LAB_MAX.bullpen}`,
+      detail: bullpenPickLabel && bullpenOppLabel && bullpenPickLabel === bullpenOppLabel
+        ? `Both bullpens are rated ${String(bullpenPickLabel).toLowerCase()} — this is close to a wash, not an advantage either way.`
+        : `LyDia does not see a meaningful bullpen edge for ${pickTeam} once assigned innings are weighted.`
+    });
+  }
+
+  if ((breakdown.offense_points / LAB_MAX.offense) < LAB_WEAK_FRACTION) {
+    reasons.push({
+      title: `Offense: ${breakdown.offense_points}/${LAB_MAX.offense}`,
+      detail: `${pickTeam}'s recent form does not clearly outpace ${oppTeam || "the opponent"}'s.`
+    });
+  }
+
+  if (breakdown.completeness_points < LAB_MAX.completeness) {
+    reasons.push({
+      title: `Data completeness: ${breakdown.completeness_points}/${LAB_MAX.completeness}`,
+      detail: `${breakdown.completeness_checks_passed} of ${breakdown.completeness_checks_total} required inputs were available when this was rated.`
+    });
+  }
+
+  return reasons;
+}
+
 module.exports = {
   marketMispricingCase,
   bullpenCase,
   pitcherEdgeSentence,
   rankPitcherDrivers,
   recentFormSentence,
+  labRatingReasons,
   LEAN_MIN
 };

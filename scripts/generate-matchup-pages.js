@@ -22,6 +22,7 @@
 const fs = require("fs");
 const path = require("path");
 const MatchupCopy = require("./lib/matchup-copy-core");
+const RecapReview = require("./lib/recap-review-core");
 
 const SITE = "https://lydiaslab.com";
 const AUTHOR_URL = `${SITE}/writers/lynold/`;
@@ -42,6 +43,8 @@ const PITCHER_PATH = path.join(ROOT, "data", "pitcher-matchups", `${DATE}.json`)
 const RESULTS_PATH = path.join(ROOT, "data", "results.json");
 const MANIFEST_DIR = path.join(ROOT, "data", "matchup-pages");
 const MANIFEST_PATH = path.join(MANIFEST_DIR, `${DATE}.json`);
+const RECAP_DIR = path.join(ROOT, "data", "recap-reviews");
+const RECAP_PATH = path.join(RECAP_DIR, `${DATE}.json`);
 const MATCHUP_ROOT = path.join(ROOT, "mlb");
 const ARCHIVE_DIR = path.join(MATCHUP_ROOT, "matchups");
 const PREVIEW_PATH = path.join(ROOT, "previews", `${DATE}.html`);
@@ -160,6 +163,7 @@ async function main() {
   fs.mkdirSync(MATCHUP_ROOT, { recursive: true });
   fs.mkdirSync(ARCHIVE_DIR, { recursive: true });
   fs.mkdirSync(MANIFEST_DIR, { recursive: true });
+  fs.mkdirSync(RECAP_DIR, { recursive: true });
 
   // Doubleheaders: two games, same teams, same date, collide on one slug and
   // the second page silently overwrites the first. The 2026-07-22 Orioles at
@@ -208,6 +212,7 @@ async function main() {
   });
 
   const pages = [];
+  const recapByPk = new Map();
   for (const game of brief.games) {
     const gameNumber = dhNumber.get(String(game.game_pk)) || null;
     const slug = resolvedSlug(game);
@@ -217,6 +222,8 @@ async function main() {
     const rawPitcherGame = (pitcherSource.games && pitcherSource.games[String(game.game_pk)]) || null;
     const pitcherGame = rawPitcherGame ? { ...rawPitcherGame, source_version: pitcherSource.source_version || null } : null;
     const resultGame = findResult(results, DATE, game);
+    const recapReview = args.offline ? null : await buildRecapForGame(game, scheduleGame, pitcherGame);
+    if (recapReview) recapByPk.set(String(game.game_pk), { game_pk: game.game_pk, game: game.game, ...recapReview.data, paragraphs: recapReview.paragraphs });
     const previous = previousBySlug.get(slug) || null;
     const weather = args.skipWeather
       ? (previous && previous.weather) || null
@@ -234,6 +241,7 @@ async function main() {
       totalsGame,
       pitcherGame,
       resultGame,
+      recapReview,
       weather,
       venue,
       quality,
@@ -332,6 +340,20 @@ async function main() {
   };
 
   fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2) + "\n", "utf8");
+
+  // Recap reviews: keep whatever a prior run already wrote for games not
+  // touched this run (schedule enrichment or boxscore fetch can be
+  // unavailable transiently), and never let a day regress from having a
+  // review to not having one.
+  const previousRecap = readJsonSafe(RECAP_PATH);
+  const recapGames = { ...(previousRecap && previousRecap.games) || {} };
+  for (const [pk, entry] of recapByPk) recapGames[pk] = entry;
+  fs.writeFileSync(RECAP_PATH, JSON.stringify({
+    date: DATE,
+    generated_at: new Date().toISOString(),
+    games: recapGames
+  }, null, 2) + "\n", "utf8");
+
   buildArchive();
   updateSitemap(manifest);
   linkDailyPreview(manifest);
@@ -594,6 +616,132 @@ async function fetchSchedule(date) {
   }
 }
 
+/*
+  Boxscore fetch for the recap review. Only ever called for games the
+  schedule reports as Final. Failure degrades to "no recap review" for that
+  game, exactly like every other enrichment fetch in this file — it never
+  blocks page generation or the indexing quality gate.
+*/
+async function fetchBoxscore(gamePk) {
+  const url = `https://statsapi.mlb.com/api/v1/game/${gamePk}/boxscore`;
+  try {
+    const response = await fetch(url, { headers: { "user-agent": "LyDia matchup generator" } });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.warn(`Boxscore unavailable for game ${gamePk}: ${error.message}`);
+    return null;
+  }
+}
+
+/* MLB reports innings pitched as X.0 / X.1 / X.2 (whole innings plus zero,
+   one, or two outs) — not a decimal. Converts to a true decimal for ERA math;
+   recap-review-core converts back to the X.1/X.2 display form itself. */
+function parseIpToDecimal(value) {
+  const raw = Number(value);
+  if (!Number.isFinite(raw)) return null;
+  const whole = Math.trunc(raw);
+  const outs = Math.round((raw - whole) * 10); // the digit after the decimal point IS the out count
+  return whole + Math.min(outs, 2) / 3;
+}
+
+/*
+  Pulls the actual per-team pitching line out of a boxscore: the starter
+  (matched against the pregame pitching plan's starter pitcher_id, not by
+  list position — order in the boxscore is not a documented guarantee) and
+  every other pitcher used, aggregated as the bullpen's actual relief line.
+  Also carries the team's whole-staff runs/earned-runs so an unearned decisive
+  run can be flagged rather than misread as a bullpen or starter failure.
+*/
+function extractPitchingActuals(boxscore, game) {
+  if (!boxscore || !boxscore.teams) return null;
+  const sideOf = (mlbSide, memberBriefSide) => {
+    const team = boxscore.teams[mlbSide];
+    if (!team || !team.players || !Array.isArray(team.pitchers)) return null;
+    const plan = (game.pitching_plan && game.pitching_plan[memberBriefSide]) || null;
+    const starterSegment = plan && Array.isArray(plan.segments)
+      ? plan.segments.find(s => s.role !== "bullpen" && s.pitcher_id)
+      : null;
+    const starterPid = starterSegment ? String(starterSegment.pitcher_id) : String(team.pitchers[0] || "");
+
+    let starter = null;
+    const bullpenAgg = { ip: 0, er: 0, h: 0, bb: 0, k: 0 };
+    let bullpenUsed = false;
+    for (const pid of team.pitchers) {
+      const entry = team.players[`ID${pid}`];
+      const stats = entry && entry.stats && entry.stats.pitching;
+      if (!stats) continue;
+      const ip = parseIpToDecimal(stats.inningsPitched);
+      const line = { ip, er: Number(stats.earnedRuns), h: Number(stats.hits), bb: Number(stats.baseOnBalls), k: Number(stats.strikeOuts) };
+      if (String(pid) === starterPid) {
+        starter = { name: entry.person && entry.person.fullName, ...line };
+      } else if (ip !== null) {
+        bullpenUsed = true;
+        bullpenAgg.ip += ip; bullpenAgg.er += line.er; bullpenAgg.h += line.h; bullpenAgg.bb += line.bb; bullpenAgg.k += line.k;
+      }
+    }
+    const teamPitching = team.teamStats && team.teamStats.pitching;
+    return {
+      starter,
+      bullpen: bullpenUsed ? bullpenAgg : null,
+      teamRunsAllowed: teamPitching ? Number(teamPitching.runs) : null,
+      teamEarnedRunsAllowed: teamPitching ? Number(teamPitching.earnedRuns) : null
+    };
+  };
+  const away = sideOf("away", "away");
+  const home = sideOf("home", "home");
+  if (!away && !home) return null;
+  return { away, home };
+}
+
+/*
+  Builds the recap review for one game: pregame reasoning (already sitting in
+  the member-brief record and the canonical pitcher source) against the
+  actual boxscore. Runs for every game that reached Final, independent of
+  official-pick status — a pass or a watchlist game gets the same review as
+  an official pick, because the point is checking the reasoning, not grading
+  a bet.
+*/
+async function buildRecapForGame(game, scheduleGame, pitcherGame) {
+  if (!scheduleGame || !scheduleGame.status || scheduleGame.status.abstractGameState !== "Final") return null;
+  const boxscore = await fetchBoxscore(game.game_pk);
+  const actuals = extractPitchingActuals(boxscore, game);
+  if (!actuals) return null;
+
+  const finalAwayScore = known(scheduleGame.teams && scheduleGame.teams.away && scheduleGame.teams.away.score)
+    ? scheduleGame.teams.away.score : null;
+  const finalHomeScore = known(scheduleGame.teams && scheduleGame.teams.home && scheduleGame.teams.home.score)
+    ? scheduleGame.teams.home.score : null;
+  const actualInnings = scheduleGame.linescore && Number.isFinite(Number(scheduleGame.linescore.currentInning))
+    ? Number(scheduleGame.linescore.currentInning) : null;
+
+  const bp = mapBullpen(game);
+  const pitcher = pitcherGame || {};
+  const projected = game.projected_runs || {};
+  const offense = game.offense_form || {};
+
+  const review = RecapReview.buildRecapReview({
+    pickTeam: game.pick_team, awayTeam: game.away_team, homeTeam: game.home_team,
+    finalAwayScore, finalHomeScore, actualInnings,
+    strengthProbabilityPick: game.legacy_strength_probability,
+    runModelProbabilityPick: game.run_model_probability,
+    pitcherEdgeTeam: pitcher.edge_team, pitcherGap: pitcher.gap,
+    awayPitcherName: pitcher.away && pitcher.away.name, homePitcherName: pitcher.home && pitcher.home.name,
+    awayStarterActual: actuals.away && actuals.away.starter, homeStarterActual: actuals.home && actuals.home.starter,
+    awayBullpenLabel: bp.away && bp.away.risk_label, homeBullpenLabel: bp.home && bp.home.risk_label,
+    awayBullpenScore: bp.away && (bp.away.risk_index ?? bp.away.score), homeBullpenScore: bp.home && (bp.home.risk_index ?? bp.home.score),
+    awayBullpenActual: actuals.away && actuals.away.bullpen, homeBullpenActual: actuals.home && actuals.home.bullpen,
+    awayRunsAllowedByOpposingOffense: finalHomeScore, awayEarnedRunsAllowedByOpposingOffense: actuals.away && actuals.away.teamEarnedRunsAllowed,
+    homeRunsAllowedByOpposingOffense: finalAwayScore, homeEarnedRunsAllowedByOpposingOffense: actuals.home && actuals.home.teamEarnedRunsAllowed,
+    projectedAwayRuns: known(projected.away) ? Number(projected.away) : null,
+    projectedHomeRuns: known(projected.home) ? Number(projected.home) : null,
+    awayDeltaOps: offense.away && Number.isFinite(offense.away.delta_ops) ? offense.away.delta_ops : null,
+    homeDeltaOps: offense.home && Number.isFinite(offense.home.delta_ops) ? offense.home.delta_ops : null
+  });
+  if (!review.paragraphs.length) return null;
+  return review;
+}
+
 function venueForGame(game, scheduleGame) {
   const fromSchedule = scheduleGame && scheduleGame.venue && scheduleGame.venue.name;
   const park = PARKS[game.home_team] || null;
@@ -808,7 +956,22 @@ function buildInsights(game, pitcherGame) {
     concerns.push({ title: `Below the ${pct(gate.minimum_model_probability)} official gate`, detail: `Win probability is ${pct(game.model_probability)}. LyDia does not make a game official below ${pct(gate.minimum_model_probability)}, no matter how good the price is. This is a value spot, not a high-confidence winner.` });
   }
   if (gate.lab_score_passed === false) {
-    concerns.push({ title: `Setup quality below the bar`, detail: `Lab Rating is ${rating(game.lab_score)}, under the ${rating(gate.minimum_lab_score)} required for an official pick.` });
+    const oppTeamName = game.pick_team === game.away_team ? game.home_team : game.pick_team === game.home_team ? game.away_team : null;
+    const betterPitcher = pitcher.edge_team === game.away_team ? (pitcher.away && pitcher.away.name) : pitcher.edge_team === game.home_team ? (pitcher.home && pitcher.home.name) : null;
+    const worsePitcher = pitcher.edge_team === game.away_team ? (pitcher.home && pitcher.home.name) : pitcher.edge_team === game.home_team ? (pitcher.away && pitcher.away.name) : null;
+    const reasons = MatchupCopy.labRatingReasons({
+      breakdown: game.lab_score_breakdown,
+      pickTeam: game.pick_team, oppTeam: oppTeamName,
+      modelProb: game.model_probability,
+      strengthProbPick: game.legacy_strength_probability, runProbPick: game.run_model_probability,
+      pitcherEdgeTeam: pitcher.edge_team, pitcherGap: pitcher.gap, betterPitcher, worsePitcher,
+      bullpenPickLabel: pens.pick && pens.pick.risk_label, bullpenOppLabel: pens.opp && pens.opp.risk_label
+    });
+    if (reasons.length) {
+      concerns.push(...reasons.map(r => ({ title: `Setup quality: ${r.title}`, detail: r.detail })));
+    } else {
+      concerns.push({ title: `Setup quality below the bar`, detail: `Lab Rating is ${rating(game.lab_score)}, under the ${rating(gate.minimum_lab_score)} required for an official pick.` });
+    }
   }
   if (gate.edge_passed === false) {
     concerns.push({ title: `Not enough market edge`, detail: `The model and the market are too close for the price to matter.` });
@@ -1010,7 +1173,7 @@ function renderTeamMap(brief, game, teamHitting) {
 }
 
 function renderMatchupPage(context) {
-  const { brief, game, scheduleGame, totalsGame, pitcherGame, resultGame, weather, venue, quality, slug, urlPath, kprops, teamHitting, gameNumber, dayLinks } = context;
+  const { brief, game, scheduleGame, totalsGame, pitcherGame, resultGame, recapReview, weather, venue, quality, slug, urlPath, kprops, teamHitting, gameNumber, dayLinks } = context;
   const dhSuffix = gameNumber ? ` (Game ${gameNumber})` : "";
   const awayShort = shortTeam(game.away_team);
   const homeShort = shortTeam(game.home_team);
@@ -1081,7 +1244,7 @@ function renderMatchupPage(context) {
 <meta name="twitter:image" content="${SITE}/img/og-card.png">
 <link rel="stylesheet" href="/css/style.css">
 <style>
-.matchup-head{margin-bottom:18px}.matchup-head h1{margin-bottom:6px}.byline{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.byline img{width:42px;height:42px;border-radius:50%;object-fit:cover;border:1px solid var(--border)}.status-badge{display:inline-block;color:#fff;font-size:.76rem;font-weight:800;padding:4px 10px;border-radius:20px;background:var(--accent2)}.status-badge.official{background:var(--good)}.status-badge.pass{background:var(--text-dim)}.status-badge.watch{background:var(--accent2)}.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:14px 0}.metric{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.metric .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}.metric .value{font-size:1.15rem;font-weight:800;margin-top:2px}.matchup-table{width:100%;border-collapse:collapse;font-size:.88rem}.matchup-table th,.matchup-table td{padding:8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}.matchup-table th:not(:first-child),.matchup-table td:not(:first-child){text-align:right}.section-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}.decision-card{border-color:var(--accent2)}.decision-card.official{border-color:var(--good)}.quality-list{columns:2;column-gap:24px}.quality-list li{break-inside:avoid;margin-bottom:5px}.result-win{border-color:var(--good)}.result-loss{border-color:var(--bad)}.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}.sec-head h2{margin-bottom:6px}.tool-link{font-size:.82rem;font-weight:700;white-space:nowrap}.co-head{margin:16px 0 8px;font-size:.95rem}.co-head.for{color:var(--good)}.co-head.against{color:#e08726}.callout-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}.callout{border:1px solid var(--border);border-left:4px solid var(--border);border-radius:var(--radius);padding:12px;background:var(--bg-elev)}.callout.for{border-left-color:var(--good)}.callout.against{border-left-color:#e08726}.co-title{font-weight:800;margin-bottom:4px}.co-detail{font-size:.86rem;color:var(--text);line-height:1.5}.verdict{margin-top:14px;padding:14px;border:1px solid var(--accent2);border-radius:var(--radius);background:var(--bg-elev);font-size:.95rem;line-height:1.55}.verdict .v-label{display:inline-block;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--accent2);margin-right:8px}.full-read summary{cursor:pointer;font-weight:700;color:var(--text-dim);font-size:.85rem;margin-top:12px}.full-read p{font-size:.86rem;color:var(--text-dim);line-height:1.55}.edgebar{margin:12px 0 4px}.eb-row{display:flex;align-items:center;gap:10px;margin:6px 0}.eb-name{width:92px;font-size:.78rem;color:var(--text-dim);text-align:right}.eb-track{flex:1;height:14px;background:var(--bg-elev);border:1px solid var(--border);border-radius:7px;overflow:hidden}.eb-fill{height:100%;border-radius:7px}.eb-fill.model{background:var(--accent2)}.eb-fill.mkt{background:var(--text-dim)}.eb-val{width:56px;font-size:.82rem;font-weight:800;font-variant-numeric:tabular-nums}.gauge-row{display:flex;align-items:center;gap:10px;margin:6px 0}.g-label{width:120px;font-size:.78rem;color:var(--text-dim);text-align:right}.g-track{flex:1;height:11px;background:var(--bg-elev);border:1px solid var(--border);border-radius:6px;overflow:hidden}.g-fill{height:100%;border-radius:6px}.g-val{width:110px;font-size:.8rem;font-weight:700;font-variant-numeric:tabular-nums}.pen-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:10px}.pen-side{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.pen-side b{display:block;margin-bottom:6px}.adv{color:var(--good);font-weight:800}.pcard-grid{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin:6px 0 12px}.pcard{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.pcard-top{display:flex;flex-direction:column;margin-bottom:8px}.pcard-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}.pc-num{display:block;font-size:1.15rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}.pc-lab{display:block;font-size:.62rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}.pcard-vs{font-weight:800;color:var(--text-dim);font-size:.85rem}.related-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}.related-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-elev);font-size:.9rem;font-weight:600}@media(max-width:640px){.pcard-grid{grid-template-columns:1fr;gap:6px}.pcard-vs{display:none}}.k-lean{font-size:.98rem;font-weight:800;margin:6px 0 4px;padding:5px 10px;border-radius:6px;display:inline-block}.k-lean.over{background:rgba(30,142,62,.12);color:var(--good)}.k-lean.under{background:rgba(207,34,46,.10);color:var(--bad)}.k-lean.flat{background:var(--bg-card);color:var(--text-dim);font-weight:700}@media(max-width:640px){.quality-list{columns:1}.matchup-table{font-size:.8rem}.matchup-table th,.matchup-table td{padding:6px 4px}}
+.matchup-head{margin-bottom:18px}.matchup-head h1{margin-bottom:6px}.byline{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.byline img{width:42px;height:42px;border-radius:50%;object-fit:cover;border:1px solid var(--border)}.status-badge{display:inline-block;color:#fff;font-size:.76rem;font-weight:800;padding:4px 10px;border-radius:20px;background:var(--accent2)}.status-badge.official{background:var(--good)}.status-badge.pass{background:var(--text-dim)}.status-badge.watch{background:var(--accent2)}.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:14px 0}.metric{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.metric .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}.metric .value{font-size:1.15rem;font-weight:800;margin-top:2px}.matchup-table{width:100%;border-collapse:collapse;font-size:.88rem}.matchup-table th,.matchup-table td{padding:8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}.matchup-table th:not(:first-child),.matchup-table td:not(:first-child){text-align:right}.section-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}.decision-card{border-color:var(--accent2)}.decision-card.official{border-color:var(--good)}.quality-list{columns:2;column-gap:24px}.quality-list li{break-inside:avoid;margin-bottom:5px}.result-win{border-color:var(--good)}.result-loss{border-color:var(--bad)}.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}.sec-head h2{margin-bottom:6px}.tool-link{font-size:.82rem;font-weight:700;white-space:nowrap}.co-head{margin:16px 0 8px;font-size:.95rem}.co-head.for{color:var(--good)}.co-head.against{color:#e08726}.callout-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}.callout{border:1px solid var(--border);border-left:4px solid var(--border);border-radius:var(--radius);padding:12px;background:var(--bg-elev)}.callout.for{border-left-color:var(--good)}.callout.against{border-left-color:#e08726}.co-title{font-weight:800;margin-bottom:4px}.co-detail{font-size:.86rem;color:var(--text);line-height:1.5}.verdict{margin-top:14px;padding:14px;border:1px solid var(--accent2);border-radius:var(--radius);background:var(--bg-elev);font-size:.95rem;line-height:1.55}.verdict .v-label{display:inline-block;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--accent2);margin-right:8px}.full-read summary{cursor:pointer;font-weight:700;color:var(--text-dim);font-size:.85rem;margin-top:12px}.full-read p{font-size:.86rem;color:var(--text-dim);line-height:1.55}.recap-review{margin-top:14px;padding:14px;border:1px solid var(--border);border-left:4px solid var(--accent2);border-radius:var(--radius);background:var(--bg-elev)}.recap-review h3{font-size:.9rem;margin-bottom:8px}.recap-review p{font-size:.88rem;line-height:1.55;margin-bottom:8px}.edgebar{margin:12px 0 4px}.eb-row{display:flex;align-items:center;gap:10px;margin:6px 0}.eb-name{width:92px;font-size:.78rem;color:var(--text-dim);text-align:right}.eb-track{flex:1;height:14px;background:var(--bg-elev);border:1px solid var(--border);border-radius:7px;overflow:hidden}.eb-fill{height:100%;border-radius:7px}.eb-fill.model{background:var(--accent2)}.eb-fill.mkt{background:var(--text-dim)}.eb-val{width:56px;font-size:.82rem;font-weight:800;font-variant-numeric:tabular-nums}.gauge-row{display:flex;align-items:center;gap:10px;margin:6px 0}.g-label{width:120px;font-size:.78rem;color:var(--text-dim);text-align:right}.g-track{flex:1;height:11px;background:var(--bg-elev);border:1px solid var(--border);border-radius:6px;overflow:hidden}.g-fill{height:100%;border-radius:6px}.g-val{width:110px;font-size:.8rem;font-weight:700;font-variant-numeric:tabular-nums}.pen-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:10px}.pen-side{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.pen-side b{display:block;margin-bottom:6px}.adv{color:var(--good);font-weight:800}.pcard-grid{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin:6px 0 12px}.pcard{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.pcard-top{display:flex;flex-direction:column;margin-bottom:8px}.pcard-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}.pc-num{display:block;font-size:1.15rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}.pc-lab{display:block;font-size:.62rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}.pcard-vs{font-weight:800;color:var(--text-dim);font-size:.85rem}.related-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}.related-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-elev);font-size:.9rem;font-weight:600}@media(max-width:640px){.pcard-grid{grid-template-columns:1fr;gap:6px}.pcard-vs{display:none}}.k-lean{font-size:.98rem;font-weight:800;margin:6px 0 4px;padding:5px 10px;border-radius:6px;display:inline-block}.k-lean.over{background:rgba(30,142,62,.12);color:var(--good)}.k-lean.under{background:rgba(207,34,46,.10);color:var(--bad)}.k-lean.flat{background:var(--bg-card);color:var(--text-dim);font-weight:700}@media(max-width:640px){.quality-list{columns:1}.matchup-table{font-size:.8rem}.matchup-table th,.matchup-table td{padding:6px 4px}}
 /* LyDia layout cleanup: center the analysis presentation without sacrificing the table structure. */
 .matchup-head{text-align:center}.byline{justify-content:center}.sec-head{justify-content:center;align-items:center;text-align:center}
 section.card{text-align:center}.metric,.pcard,.pcard-top,.pen-side,.callout{text-align:center}.pcard-top{align-items:center}
@@ -1122,7 +1285,7 @@ section.card>h2{text-align:center}
     <details class="full-read"><summary>Read the full model output</summary><p>${esc(decisionExplanation(game))}</p></details>
   </section>
 
-  ${renderFinal(final, game)}
+  ${renderFinal(final, game, recapReview)}
 
   <section class="card">
     <h2>Game information</h2>
@@ -1514,7 +1677,17 @@ function renderTotals(total) {
   </section>`;
 }
 
-function renderFinal(final, game) {
+function renderRecapReview(recapReview) {
+  if (!recapReview || !Array.isArray(recapReview.paragraphs) || !recapReview.paragraphs.length) return "";
+  const items = recapReview.paragraphs.map(p => `<p>${esc(p)}</p>`).join("");
+  return `<div class="recap-review">
+    <h3>How the analysis held up</h3>
+    ${items}
+    <p class="small dim">This checks LyDia's pregame reasoning against what actually happened on the field — independent of whether this game was an official pick. It never changes the pick, the rating, or the probability shown above.</p>
+  </div>`;
+}
+
+function renderFinal(final, game, recapReview) {
   if (!final) return "";
   const scoreKnown = known(final.away_score) && known(final.home_score);
   const result = final.moneyline_result || "NG";
@@ -1527,6 +1700,7 @@ function renderFinal(final, game) {
       <div class="metric"><div class="label">Official moneyline grade</div><div class="value">${esc(resultText)}</div></div>
     </div>
     ${final.void_reason ? `<p><strong>Void reason:</strong> ${esc(final.void_reason)}</p>` : ""}
+    ${renderRecapReview(recapReview)}
     <p class="small dim">The pregame analysis remains on this URL. Postgame information is added without rewriting the original decision.</p>
   </section>`;
 }
