@@ -98,8 +98,6 @@ async function main() {
         const opener = plan.segments.find(segment => segment.role === "opener");
         if (opener && opener.stats) {
           const scored = PitcherCore.scorePitcher(opener.stats);
-          const totalsGameRecord = totalsPitchingPlan[String(game.gamePk)];
-          const totalsSideForNote = totalsGameRecord && totalsGameRecord.pitching_plan && totalsGameRecord.pitching_plan[side];
           row[side] = {
             ...scored,
             roleKey: "opener",
@@ -108,52 +106,52 @@ async function main() {
             bullpenInnings: Number((9 - Number(opener.expected_innings)).toFixed(1)),
             roleConfidence: plan.confidence || "manual",
             bullpenGame: true,
-            // Innings-weighted, bullpen-inclusive ERA for this side's whole
-            // pitching plan -- the same figure the edge score itself is now
-            // based on for bullpen games, so page copy can cite the number
-            // that is actually driving the edge instead of the opener's own
-            // short-sample line.
-            effectiveEra: totalsSideForNote && Number.isFinite(totalsSideForNote.effective_era) ? totalsSideForNote.effective_era : null,
             note: `${opener.pitcher} is the reported opener; see the full pitching plan below.`
           };
         }
       }
-      const totalsSideFor = side => {
-        const rec = totalsPitchingPlan[String(game.gamePk)];
-        return rec && rec.pitching_plan && rec.pitching_plan[side];
-      };
-      // Attach effective_era to both sides (not just a reported opener) so
-      // the two sides are always described on the same basis in copy, even
-      // when only one side has a manually reported plan.
-      for (const side of ["away", "home"]) {
-        if (!row[side]) continue;
-        const totalsSide = totalsSideFor(side);
-        if (typeof row[side].effectiveEra === "undefined") {
-          row[side].effectiveEra = totalsSide && Number.isFinite(totalsSide.effective_era) ? totalsSide.effective_era : null;
-        }
+      row.pitching_plan = plans;
+      row.bullpen_game = true;
+      row.pitching_plan_confidence = Object.values(plans).some(plan => plan.confidence === "manual") ? "manual" : "reported";
+    }
+
+    // Score every game -- reported opener/bulk plans AND ordinary two-starter
+    // games alike -- on the same innings-weighted effective ERA the
+    // win-probability model itself uses (starter/opener FIP blended with the
+    // bullpen's actual recent ERA for the remaining innings), not just
+    // reported plans. A ordinary starter still only throws ~5 of 9 innings;
+    // scoring him alone on his own individual line and ignoring the other
+    // ~4 has the same blind spot the opener case had, just smaller -- and
+    // leaving ordinary games on the old method while reported-plan games
+    // use the new one meant Lab Rating (which reads update-totals.js's
+    // pitcher_score, fixed for every game) and this page's own pitcher
+    // table/edge copy (which read this file) could show two different,
+    // disagreeing "pitcher edge" numbers for the same game. update-totals.js
+    // runs for every game unconditionally, so totals data is available here
+    // regardless of whether a plan was manually reported.
+    const totalsGameRecord = totalsPitchingPlan[String(game.gamePk)];
+    const totalsSideFor = side => totalsGameRecord && totalsGameRecord.pitching_plan && totalsGameRecord.pitching_plan[side];
+    for (const side of ["away", "home"]) {
+      if (!row[side]) continue;
+      const totalsSide = totalsSideFor(side);
+      if (typeof row[side].effectiveEra === "undefined") {
+        row[side].effectiveEra = totalsSide && Number.isFinite(totalsSide.effective_era) ? totalsSide.effective_era : null;
       }
-      const planScore = (side, fallback) => {
-        const plan = plans[side];
-        // Score every side -- opener/bulk plans and traditional starters
-        // alike -- on the same innings-weighted effective ERA the
-        // win-probability model itself uses (opener/starter FIP blended with
-        // the bullpen's actual recent ERA for the remaining innings). A
-        // traditional starter still only throws ~5 of 9 innings; scoring him
-        // alone and ignoring the other ~4 has the same blind spot as the
-        // opener case, just smaller. Using effective_era for both sides
-        // keeps the comparison on one consistent basis instead of scoring
-        // one side on its whole staff and the other on one man.
-        const totalsSide = totalsSideFor(side);
-        const effScore = totalsSide && eraToScore(totalsSide.effective_era);
-        if (effScore !== null && effScore !== undefined) return effScore;
-        const arms = ((plan && plan.segments) || []).filter(segment => segment.role !== "bullpen" && segment.stats);
-        const innings = arms.reduce((sum, segment) => sum + Number(segment.expected_innings), 0);
-        return innings > 0
-          ? Math.round(arms.reduce((sum, segment) =>
-              sum + PitcherCore.scorePitcher(segment.stats).score * Number(segment.expected_innings), 0
-            ) / innings)
-          : fallback;
-      };
+    }
+    const planScore = (side, fallback) => {
+      const plan = plans[side];
+      const totalsSide = totalsSideFor(side);
+      const effScore = totalsSide && eraToScore(totalsSide.effective_era);
+      if (effScore !== null && effScore !== undefined) return effScore;
+      const arms = ((plan && plan.segments) || []).filter(segment => segment.role !== "bullpen" && segment.stats);
+      const innings = arms.reduce((sum, segment) => sum + Number(segment.expected_innings), 0);
+      return innings > 0
+        ? Math.round(arms.reduce((sum, segment) =>
+            sum + PitcherCore.scorePitcher(segment.stats).score * Number(segment.expected_innings), 0
+          ) / innings)
+        : fallback;
+    };
+    if (row.away && row.home) {
       row.away_plan_score = planScore("away", row.away.score);
       row.home_plan_score = planScore("home", row.home.score);
       row.gap = Math.abs(row.home_plan_score - row.away_plan_score);
@@ -161,9 +159,6 @@ async function main() {
       row.edge_team = row.gap < 4
         ? "No clear pitching-plan edge"
         : row.home_plan_score > row.away_plan_score ? row.home_team : row.away_team;
-      row.pitching_plan = plans;
-      row.bullpen_game = true;
-      row.pitching_plan_confidence = Object.values(plans).some(plan => plan.confidence === "manual") ? "manual" : "reported";
     }
   }
   source.pitching_plan_version = PitchingPlan.VERSION;
