@@ -1,6 +1,6 @@
 {
   "date": "2026-07-30",
-  "generated_at": "2026-07-30T22:28:49.687Z",
+  "generated_at": "2026-07-31T03:56:52.755Z",
   "source_of_truth": "scripts/lib/bullpen-fatigue-core.js",
   "version": "bullpen-fatigue-v5-recency-weighted",
   "method": "Generated single source of truth. Website pages display this JSON and do not calculate separate bullpen scores in the browser.",
@@ -245,9 +245,9 @@
       "workload_read": "Heavy recent workload. Late-game pitching condition could materially affect the read.",
       "score_reason": "High risk (8.8/10): 14 recent relief innings, recency-weighted — 5 in the last game (pitched yesterday), 5 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
       "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
-      "efficiency_score": 53,
+      "efficiency_score": 52,
       "efficiency_label": "Average",
-      "efficiency_reason": "Average (5.3/10): 3.86 ERA and 1.21 WHIP over 14 relief innings (6 ER, 12 H, 5 BB) in the last three days.",
+      "efficiency_reason": "Average (5.2/10): 3.86 ERA and 1.29 WHIP over 14 relief innings (6 ER, 13 H, 5 BB) in the last three days.",
       "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
       "risk_index": 87,
       "risk_label": "High risk",
@@ -257,10 +257,10 @@
       "last3_bp_ip": 14,
       "last3_bp_runs": 9,
       "last3_bp_er": 6,
-      "last3_bp_hits": 12,
+      "last3_bp_hits": 13,
       "last3_bp_bb": 5,
       "era_3d": 3.86,
-      "whip_3d": 1.21,
+      "whip_3d": 1.29,
       "last_game_relievers": 5,
       "last3_relievers": 15,
       "back_to_back_arms": 5,
@@ -281,9 +281,9 @@
       "efficiency_component_scores": {
         "baseline": 50,
         "era_term": 2.1,
-        "whip_term": 1.3,
+        "whip_term": 0.2,
         "confidence": 1,
-        "raw_score": 53.3
+        "raw_score": 52.3
       }
     },
     {
@@ -1295,19 +1295,19 @@
         "no_recent_games_credit": 0,
         "raw_score": 88
       },
-      "efficiency_score": 53,
+      "efficiency_score": 52,
       "efficiency_label": "Average",
-      "efficiency_reason": "Average (5.3/10): 3.86 ERA and 1.21 WHIP over 14 relief innings (6 ER, 12 H, 5 BB) in the last three days.",
+      "efficiency_reason": "Average (5.2/10): 3.86 ERA and 1.29 WHIP over 14 relief innings (6 ER, 13 H, 5 BB) in the last three days.",
       "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
       "efficiency_component_scores": {
         "baseline": 50,
         "era_term": 2.1,
-        "whip_term": 1.3,
+        "whip_term": 0.2,
         "confidence": 1,
-        "raw_score": 53.3
+        "raw_score": 52.3
       },
       "era_3d": 3.86,
-      "whip_3d": 1.21,
+      "whip_3d": 1.29,
       "risk_index": 87,
       "risk_label": "High risk",
       "days_rest": 1,
