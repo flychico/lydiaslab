@@ -1332,8 +1332,14 @@ section.card>h2{text-align:center}
 
   <section class="card">
     <div class="sec-head"><h2>Recent form</h2><a class="tool-link" href="/stats/">Full Stats page &rarr;</a></div>
-    ${renderOffenseTable(game, teamHitting)}
-    <p class="small dim">Run differential and run environment come from the season standings; offense splits for all 30 teams live on the <a href="/stats/">Stats page</a>, including hot and cold streaks and the run environment table.</p>
+    ${renderRecentFormTable(game, teamHitting)}
+    <p class="small dim">Last 15 days only. Hot and cold streaks for all 30 teams live on the <a href="/stats/">Stats page</a>.</p>
+  </section>
+
+  <section class="card">
+    <div class="sec-head"><h2>Season profile</h2><a class="tool-link" href="/stats/">Full Stats page &rarr;</a></div>
+    ${renderSeasonProfileTable(game, teamHitting)}
+    <p class="small dim">Season-long team quality, not recent form. Run differential and run environment come from the season standings; splits for all 30 teams live on the <a href="/stats/">Stats page</a>, including the run environment table.</p>
   </section>
 
   ${renderTeamMap(brief, game, teamHitting)}
@@ -1525,7 +1531,18 @@ function renderStrikeoutProjections(game, pitcherGame, kprops) {
   <p class="small dim">Projections are self-calibrated against graded results${kprops && kprops.learned_n ? ` (${esc(kprops.learned_n)} graded starts)` : ""}. Official K picks require a 0.7+ strikeout edge, a posted price from at least two books, and a confirmed non-opener workload of at least four expected innings.</p>`;
 }
 
-function renderOffenseTable(game, teamHitting) {
+// Split into two tables, each holding only stats on one timeframe. They
+// used to share one table under a single "Recent form" header with season
+// numbers (Record, Run differential, Season RS/RA, Season OPS, K% season,
+// OPS vs. hand) mixed in alongside actually-recent ones (Last 10, OPS/RPG/K%
+// over the last 15 days) -- similarly worded row labels sitting side by side
+// (e.g. "Runs scored / game (offense)" [season] next to "Runs per game,
+// last 15 days" [recent]) made the two easy to mistake for one another, and
+// a header promising "recent form" that was mostly season-long stats was
+// misleading on its own. "OPS change" (season OPS minus 15-day OPS) is
+// dropped entirely -- it's a plain subtraction of the two OPS rows already
+// shown, not a new signal.
+function offenseTableContext(game, teamHitting) {
   const offense = game.offense_form || {};
   const away = offense.away || {};
   const home = offense.home || {};
@@ -1537,25 +1554,39 @@ function renderOffenseTable(game, teamHitting) {
   const sh = st[homeCanonical] || st[shortTeam(homeCanonical)] || {};
   const awayKSeason = hit.season[awayCanonical], homeKSeason = hit.season[homeCanonical];
   const awayKRecent = hit.recent[awayCanonical], homeKRecent = hit.recent[homeCanonical];
+  return { away, home, sa, sh, awayKSeason, homeKSeason, awayKRecent, homeKRecent };
+}
+
+function renderRecentFormTable(game, teamHitting) {
+  const { away, home, sa, sh, awayKRecent, homeKRecent } = offenseTableContext(game, teamHitting);
+  const kCell = (mine, theirs) => typeof mine === "number" && typeof theirs === "number" && mine < theirs ? "adv" : "";
+  return `${recentFormCopy(game, sa, sh, away, home)}<table class="matchup-table">
+    <thead><tr><th>Metric</th><th>${esc(shortTeam(game.away_team))}</th><th>${esc(shortTeam(game.home_team))}</th></tr></thead>
+    <tbody>
+      <tr><th>Last 10</th><td>${esc(game.away_l10 || "Not available")}</td><td>${esc(game.home_l10 || "Not available")}</td></tr>
+      <tr><th>OPS, last 15 days</th><td class="${typeof away.ops_15d === "number" && typeof home.ops_15d === "number" && away.ops_15d > home.ops_15d ? "adv" : ""}">${esc(typeof away.ops_15d === "number" ? away.ops_15d.toFixed(3) : "Not available")}</td><td class="${typeof away.ops_15d === "number" && typeof home.ops_15d === "number" && home.ops_15d > away.ops_15d ? "adv" : ""}">${esc(typeof home.ops_15d === "number" ? home.ops_15d.toFixed(3) : "Not available")}</td></tr>
+      <tr><th>Runs per game, last 15 days</th><td>${esc(oneDecimal(away.rpg_15d))}</td><td>${esc(oneDecimal(home.rpg_15d))}</td></tr>
+      <tr><th>K% last 15 days <span class="dim" style="font-weight:400">(lower is better)</span></th><td class="${kCell(awayKRecent, homeKRecent)}">${esc(pct(awayKRecent))}</td><td class="${kCell(homeKRecent, awayKRecent)}">${esc(pct(homeKRecent))}</td></tr>
+    </tbody>
+  </table>`;
+}
+
+function renderSeasonProfileTable(game, teamHitting) {
+  const { away, home, sa, sh, awayKSeason, homeKSeason } = offenseTableContext(game, teamHitting);
   const kCell = (mine, theirs) => typeof mine === "number" && typeof theirs === "number" && mine < theirs ? "adv" : "";
   const advHi = (mine, theirs) => typeof mine === "number" && typeof theirs === "number" && mine > theirs ? "adv" : "";
   const advLo = (mine, theirs) => typeof mine === "number" && typeof theirs === "number" && mine < theirs ? "adv" : "";
   const num = (v, fmt) => typeof v === "number" ? fmt(v) : "Not available";
-  return `${recentFormCopy(game, sa, sh, away, home)}<table class="matchup-table">
+  return `<table class="matchup-table">
     <thead><tr><th>Metric</th><th>${esc(shortTeam(game.away_team))}</th><th>${esc(shortTeam(game.home_team))}</th></tr></thead>
     <tbody>
       <tr><th>Record</th><td>${esc(game.away_record || "Not available")}</td><td>${esc(game.home_record || "Not available")}</td></tr>
-      <tr><th>Last 10</th><td>${esc(game.away_l10 || "Not available")}</td><td>${esc(game.home_l10 || "Not available")}</td></tr>
       <tr><th>Run differential / game <span class="dim" style="font-weight:400">(team quality)</span></th><td class="${advHi(sa.run_diff_pg, sh.run_diff_pg)}">${esc(num(sa.run_diff_pg, v => (v>=0?"+":"")+v.toFixed(2)))}</td><td class="${advHi(sh.run_diff_pg, sa.run_diff_pg)}">${esc(num(sh.run_diff_pg, v => (v>=0?"+":"")+v.toFixed(2)))}</td></tr>
-      <tr><th>Runs scored / game <span class="dim" style="font-weight:400">(offense)</span></th><td class="${advHi(sa.rs_pg, sh.rs_pg)}">${esc(num(sa.rs_pg, v => v.toFixed(2)))}</td><td class="${advHi(sh.rs_pg, sa.rs_pg)}">${esc(num(sh.rs_pg, v => v.toFixed(2)))}</td></tr>
-      <tr><th>Runs allowed / game <span class="dim" style="font-weight:400">(defense, lower better)</span></th><td class="${advLo(sa.ra_pg, sh.ra_pg)}">${esc(num(sa.ra_pg, v => v.toFixed(2)))}</td><td class="${advLo(sh.ra_pg, sa.ra_pg)}">${esc(num(sh.ra_pg, v => v.toFixed(2)))}</td></tr>
-      <tr><th>OPS, last 15 days</th><td class="${typeof away.ops_15d === "number" && typeof home.ops_15d === "number" && away.ops_15d > home.ops_15d ? "adv" : ""}">${esc(typeof away.ops_15d === "number" ? away.ops_15d.toFixed(3) : "Not available")}</td><td class="${typeof away.ops_15d === "number" && typeof home.ops_15d === "number" && home.ops_15d > away.ops_15d ? "adv" : ""}">${esc(typeof home.ops_15d === "number" ? home.ops_15d.toFixed(3) : "Not available")}</td></tr>
+      <tr><th>Runs scored / game <span class="dim" style="font-weight:400">(offense, season)</span></th><td class="${advHi(sa.rs_pg, sh.rs_pg)}">${esc(num(sa.rs_pg, v => v.toFixed(2)))}</td><td class="${advHi(sh.rs_pg, sa.rs_pg)}">${esc(num(sh.rs_pg, v => v.toFixed(2)))}</td></tr>
+      <tr><th>Runs allowed / game <span class="dim" style="font-weight:400">(defense, season, lower better)</span></th><td class="${advLo(sa.ra_pg, sh.ra_pg)}">${esc(num(sa.ra_pg, v => v.toFixed(2)))}</td><td class="${advLo(sh.ra_pg, sa.ra_pg)}">${esc(num(sh.ra_pg, v => v.toFixed(2)))}</td></tr>
       <tr><th>Season OPS</th><td>${esc(typeof away.season_ops === "number" ? away.season_ops.toFixed(3) : "Not available")}</td><td>${esc(typeof home.season_ops === "number" ? home.season_ops.toFixed(3) : "Not available")}</td></tr>
-      <tr><th>OPS change</th><td>${esc(typeof away.delta_ops === "number" ? signedDecimal(away.delta_ops, 3) : "Not available")}</td><td>${esc(typeof home.delta_ops === "number" ? signedDecimal(home.delta_ops, 3) : "Not available")}</td></tr>
-      <tr><th>Runs per game, last 15 days</th><td>${esc(oneDecimal(away.rpg_15d))}</td><td>${esc(oneDecimal(home.rpg_15d))}</td></tr>
       <tr><th>K% season <span class="dim" style="font-weight:400">(lower is better)</span></th><td class="${kCell(awayKSeason, homeKSeason)}">${esc(pct(awayKSeason))}</td><td class="${kCell(homeKSeason, awayKSeason)}">${esc(pct(homeKSeason))}</td></tr>
-      <tr><th>K% last 15 days</th><td class="${kCell(awayKRecent, homeKRecent)}">${esc(pct(awayKRecent))}</td><td class="${kCell(homeKRecent, awayKRecent)}">${esc(pct(homeKRecent))}</td></tr>
-      <tr><th>OPS vs opposing hand</th><td>${esc(typeof away.ops_vs_opp_hand === "number" ? away.ops_vs_opp_hand.toFixed(3) : "Not available")}</td><td>${esc(typeof home.ops_vs_opp_hand === "number" ? home.ops_vs_opp_hand.toFixed(3) : "Not available")}</td></tr>
+      <tr><th>OPS vs opposing hand <span class="dim" style="font-weight:400">(season)</span></th><td>${esc(typeof away.ops_vs_opp_hand === "number" ? away.ops_vs_opp_hand.toFixed(3) : "Not available")}</td><td>${esc(typeof home.ops_vs_opp_hand === "number" ? home.ops_vs_opp_hand.toFixed(3) : "Not available")}</td></tr>
     </tbody>
   </table>`;
 }
