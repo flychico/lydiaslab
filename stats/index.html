@@ -66,7 +66,6 @@ td.team-cell { font-weight: 600; white-space: nowrap; }
         <span class="fpill mapwin" data-w="7" onclick="setMapWin(7)">Last 7</span>
       </div></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <span class="fpill" onclick="preset('dOps','ops')">Heat vs Quality</span>
         <span class="fpill" onclick="preset('rsg','rag')">Offense vs Defense</span>
         <span class="fpill" onclick="preset('luck','pyth')">Luck Map</span>
         <span class="fpill" onclick="preset('kPct','slg')">Whiffs vs Power</span>
@@ -79,11 +78,9 @@ td.team-cell { font-weight: 600; white-space: nowrap; }
 
   <h2 style="margin-top:18px">Offense — hot & cold (last 15 days vs season)</h2>
   <div class="notice legend">
-    <b>How to read this table:</b> the batting line is each team's offense over the <b>last 15 days</b>, compared
-    against its full-season baseline. <b>ΔOPS</b> is the difference — <span class="pos-text">green</span> means the
-    lineup is hitting well above its season self (hot), <span class="neg-text">red</span> means well below (cold).
-    <b>K%</b> and <b>BB%</b> are strikeout and walk rates over the window. Click any column header to sort.
-    Recent form is signal, not destiny — 15 days is roughly 13 games.
+    <b>How to read this table:</b> the batting line is each team's offense over the <b>last 15 days</b>, alongside
+    its full-season OPS for reference. <b>K%</b> and <b>BB%</b> are strikeout and walk rates over the window.
+    Click any column header to sort. Recent form is signal, not destiny — 15 days is roughly 13 games.
   </div>
   <div id="off-filter" style="margin-bottom:8px"></div>
   <div id="off-status" class="loading">Loading offense trends…</div>
@@ -112,7 +109,7 @@ const season = new Date().getMonth() >= 2 ? new Date().getFullYear() : new Date(
 // ---------- Offense trends (last 15 days vs season) ----------
 const OFF_DAYS = 15;
 function f3(v){ return isFinite(v) ? v.toFixed(3).replace(/^0/, "") : "—"; }
-let offRows = [], offSort = { key: "dOps", dir: -1 };
+let offRows = [], offSort = { key: "ops", dir: -1 };
 let offFilter = new Set(); // team names; empty = show all
 let offFetchedAt = null;
 
@@ -182,7 +179,6 @@ async function loadOffense() {
         g: Number(r.gamesPlayed) || 0,
         avg: Number(r.avg), obp: Number(r.obp), slg: Number(r.slg), ops: Number(r.ops),
         seasonOps: Number(sn.ops),
-        dOps: Number(r.ops) - Number(sn.ops),
         hr: Number(r.homeRuns) || 0,
         rpg: r.gamesPlayed ? (Number(r.runs) || 0) / Number(r.gamesPlayed) : 0,
         kPct: pa ? (Number(r.strikeOuts) || 0) / pa : 0,
@@ -191,9 +187,6 @@ async function loadOffense() {
     }).filter(r => r.g > 0 && isFinite(r.ops) && isFinite(r.seasonOps));
 
     if (status.parentNode) status.remove();
-    // rank every team's delta so the table can say "#1 hottest in MLB"
-    const ranked = [...offRows].sort((a, b) => b.dOps - a.dOps);
-    ranked.forEach((r, i) => { r.heatRank = i + 1; });
     offFetchedAt = Date.now();
     try { localStorage.setItem(OFF_CACHE_KEY, JSON.stringify({ t: offFetchedAt, rows: offRows })); } catch (e) {}
     renderOffFilter();
@@ -231,7 +224,6 @@ function renderOffense() {
   const el = document.getElementById("offense");
   const pool = offFilter.size ? offRows.filter(r => offFilter.has(r.team)) : offRows;
   const rows = [...pool].sort((a, b) => (a[offSort.key] < b[offSort.key] ? 1 : -1) * offSort.dir * -1);
-  const dCut = 0.040; // ±40 OPS points = meaningfully hot/cold
   const cols = [
     ["team", "Team", "Team name"],
     ["g", "G", "Games in the last " + OFF_DAYS + " days"],
@@ -240,7 +232,6 @@ function renderOffense() {
     ["slg", "SLG", "Slugging, last " + OFF_DAYS + " days"],
     ["ops", "OPS", "OPS, last " + OFF_DAYS + " days"],
     ["seasonOps", "Season OPS", "Full-season OPS baseline"],
-    ["dOps", "ΔOPS", "Last-" + OFF_DAYS + "-day OPS minus season OPS — green hot, red cold"],
     ["rpg", "R/G", "Runs per game over the window"],
     ["hr", "HR", "Home runs over the window"],
     ["kPct", "K%", "Strikeout rate over the window (lower is better)"],
@@ -248,7 +239,6 @@ function renderOffense() {
   ];
 
   const body = rows.map(r => {
-    const dCls = r.dOps >= dCut ? "pos-text" : r.dOps <= -dCut ? "neg-text" : "dim";
     return `<tr>
       <td class="team-cell" onclick="teamPanel('${r.team.replace(/'/g, "\\'")}')">${escapeHtml(r.team)}</td>
       <td class="num">${r.g}</td>
@@ -257,7 +247,6 @@ function renderOffense() {
       <td class="num"><b>${f3(r.slg)}</b>${tierChip(slgTier(r.slg))}</td>
       <td class="num"><b>${f3(r.ops)}</b>${tierChip(opsTier(r.ops))}</td>
       <td class="num dim">${f3(r.seasonOps)}</td>
-      <td class="num ${dCls}"><b>${r.dOps > 0 ? "+" : ""}${f3(r.dOps)}</b>${r.heatRank === 1 ? '<div class="small" style="color:var(--good);font-weight:700">hottest in MLB</div>' : r.heatRank === 30 ? '<div class="small neg-text" style="font-weight:700">coldest in MLB</div>' : r.heatRank <= 3 ? `<div class="small dim">#${r.heatRank} hottest</div>` : r.heatRank >= 28 ? `<div class="small dim">#${31 - r.heatRank} coldest</div>` : ""}</td>
       <td class="num">${r.rpg.toFixed(1)}${tierChip(rpgTier(r.rpg))}</td>
       <td class="num">${r.hr}</td>
       <td class="num">${(r.kPct * 100).toFixed(1)}%${tierChip(kTier(r.kPct))}</td>
@@ -292,15 +281,6 @@ function buildStoriesInner() {
   if (bestL && bestL.sk.n >= 4) stories.push(`<b class="neg-text">${escapeHtml(bestL.name)}</b> have dropped <b>${bestL.sk.n} in a row</b>${bestL.l10 ? ` (${bestL.l10} L10)` : ""} — everything they touch is priced with that in mind now.`);
   const awful = st.filter(t => t.l10w !== null && t.l10w <= 1)[0];
   if (awful && (!bestL || awful.name !== bestL.name)) stories.push(`<b class="neg-text">${escapeHtml(awful.name)}</b> are ${awful.l10} over their last ten.`);
-
-  // offense extremes with context for how unusual the delta is
-  const hot = [...offRows].sort((a, b) => b.dOps - a.dOps)[0];
-  const cold = [...offRows].sort((a, b) => a.dOps - b.dOps)[0];
-  const insanity = d => Math.abs(d) >= 0.150 ? "that isn't a hot streak, that's a different team" :
-                        Math.abs(d) >= 0.100 ? "a two-tier jump over their own baseline" :
-                        "a full class above their season self";
-  if (hot && hot.dOps >= 0.060) stories.push(`🔥 <b>${escapeHtml(hot.team)}</b> are the hottest lineup in baseball: <b>+${f3(hot.dOps)}</b> OPS over 15 days — ${insanity(hot.dOps)}.`);
-  if (cold && cold.dOps <= -0.060) stories.push(`❄️ <b>${escapeHtml(cold.team)}</b> are the coldest: <b>−${f3(-cold.dOps)}</b> below their season baseline${Math.abs(cold.dOps) >= 0.120 ? " — slumps this deep snap back, they just don't say when" : ""}.`);
 
   // luck — biggest gap between record and run differential
   const lucky = [...st].filter(t => t.luck !== null).sort((a, b) => b.luck - a.luck)[0];
@@ -556,7 +536,6 @@ async function comparePanel() {
     const fPct = v => Number.isFinite(v) ? (v * 100).toFixed(1) + "%" : "—";
     const verdicts = [];
     if (Number.isFinite(A.off.ops) && Number.isFinite(B.off.ops) && Math.abs(A.off.ops - B.off.ops) >= 0.03) verdicts.push(`${A.off.ops > B.off.ops ? A.name : B.name} is the better offense over the last 15 days.`);
-    if (Number.isFinite(A.off.dOps) && Number.isFinite(B.off.dOps) && Math.abs(A.off.dOps - B.off.dOps) >= 0.04) verdicts.push(`${A.off.dOps > B.off.dOps ? A.name : B.name} is trending up harder.`);
     if (Number.isFinite(A.st.luck) && Number.isFinite(B.st.luck) && Math.abs(A.st.luck - B.st.luck) >= 4) verdicts.push(`${A.st.luck < B.st.luck ? A.name : B.name}'s record understates them the most.`);
     openModal(`
       <div style="display:flex;justify-content:space-between;align-items:baseline"><h2 style="margin:0">${escapeHtml(A.name)} vs ${escapeHtml(B.name)}</h2><span class="dim" style="cursor:pointer;font-size:1.3rem" onclick="closePanel()">✕</span></div>
@@ -564,7 +543,6 @@ async function comparePanel() {
         ${metric("Record", A.st.w + "-" + A.st.l, B.st.w + "-" + B.st.l, v => v ?? "—", true).replace(/win-cell/g, "")}
         ${metric("OPS (last 15d)", A.off.ops, B.off.ops)}
         ${metric("Season OPS", A.off.seasonOps, B.off.seasonOps)}
-        ${metric("ΔOPS (heat)", A.off.dOps, B.off.dOps, v => Number.isFinite(v) ? (v >= 0 ? "+" : "") + v.toFixed(3).replace("0.", ".") : "—")}
         ${metric("R/G (window)", A.off.rpg, B.off.rpg, fInt)}
         ${metric("K% (lower better)", A.off.kPct, B.off.kPct, fPct, false)}
         ${metric("RS/G season", A.st.rsg, B.st.rsg, fInt)}
@@ -584,7 +562,6 @@ async function comparePanel() {
 const METRIC_MEANING = {
   ops:   { what: "Overall offensive production over the last 15 days — on-base plus power.", high: "producing at the plate right now", low: "struggling to produce offense" },
   seasonOps: { what: "Full-season offensive production — the stable baseline.", high: "a genuinely good offense over the long run", low: "a weak offense over the long run" },
-  dOps:  { what: "Heat: how far the last 15 days sit above or below the team's own season level.", high: "running hot — playing above their own baseline", low: "in a cold stretch — playing below their own baseline" },
   rpg:   { what: "Actual runs scored per game over the last 15 days.", high: "putting real runs on the board", low: "starving for runs" },
   kPct:  { what: "How often the lineup strikes out (last 15 days). Lower is better.", high: "swinging and missing a lot — boom-or-bust offense", low: "putting the ball in play — steadier offense" },
   slg:   { what: "Power output over the last 15 days.", high: "hitting for real power", low: "producing little damage on contact" },
@@ -596,7 +573,6 @@ const METRIC_MEANING = {
 };
 const MAP_METRICS = {
   ops:   { label: "OPS", get: r => r.ops, fmt: v => v.toFixed(3).replace(/^0/, "") },
-  dOps:  { label: "Heat (OPS vs own season)", get: r => r.dOps, fmt: v => (v >= 0 ? "+" : "") + v.toFixed(3).replace("0.", ".") },
   avg:   { label: "Batting average", get: r => r.avg, fmt: v => v.toFixed(3).replace(/^0/, "") },
   slg:   { label: "Slugging", get: r => r.slg, fmt: v => v.toFixed(3).replace(/^0/, "") },
   rpg:   { label: "Runs/game (batting)", get: r => r.rpg, fmt: v => v.toFixed(1) },
@@ -653,7 +629,7 @@ async function mapRows() {
       const season = _winCache[0] && _winCache[0][_nameToId[o.team]];
       return { team: o.team,
         ops: season ? season.ops : o.seasonOps, avg: season ? season.avg : null, slg: season ? season.slg : null,
-        kPct: season ? season.kPct : null, rpg: season ? season.rpg : null, dOps: o.dOps,
+        kPct: season ? season.kPct : null, rpg: season ? season.rpg : null,
         rsg: sr.rsg, rag: sr.rag, pyth: sr.pyth, luck: sr.luck,
         winPct: (sr.w + sr.l) ? sr.w / (sr.w + sr.l) : null };
     });
@@ -665,7 +641,6 @@ async function mapRows() {
     const season = _winCache[0] && _winCache[0][id];
     return { team: o.team,
       ops: h.ops, avg: h.avg, slg: h.slg, kPct: h.kPct, rpg: h.rpg,
-      dOps: (Number.isFinite(h.ops) && season && Number.isFinite(season.ops)) ? h.ops - season.ops : null,
       rsg: r.rsg, rag: r.rag, pyth: r.pyth, luck: r.luck, winPct: r.winPct };
   });
 }
@@ -674,7 +649,7 @@ function initMapControls() {
   const x = document.getElementById("ax-x"), y = document.getElementById("ax-y");
   if (!x || x.options.length) return;
   x.innerHTML = opts; y.innerHTML = opts;
-  x.value = "dOps"; y.value = "ops";
+  x.value = "rpg"; y.value = "ops";
   drawMap();
 }
 function preset(xk, yk) { const x = document.getElementById("ax-x"), y = document.getElementById("ax-y"); x.value = xk; y.value = yk; drawMap(); }
