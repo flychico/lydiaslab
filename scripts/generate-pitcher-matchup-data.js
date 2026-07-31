@@ -19,7 +19,33 @@ main().catch(error => {
   process.exit(1);
 });
 
+function loadTotalsPitchingPlan(date) {
+  // update-totals.js runs before this script in the publish pipeline and
+  // already computes an innings-weighted "effective_era" per side that
+  // folds in the actual bullpen's recent ERA for whatever innings are not
+  // covered by a named starter/opener. Reused here so that a reported
+  // opener/bulk-bullpen plan's pitching score is not just the opener's own
+  // line for the ~2 innings he throws, silently ignoring the ~7 innings the
+  // bullpen throws behind him.
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "totals", `${date}.json`), "utf8"));
+    return (raw && raw.games) || {};
+  } catch (_) {
+    return {};
+  }
+}
+
+// Same era->score curve PitcherCore.scorePitcher() uses (40% weight on ERA
+// in that formula), so an effective-era-derived score sits on the same 20-92
+// scale as a directly-scored individual pitcher and the two remain
+// comparable.
+function eraToScore(era) {
+  if (!Number.isFinite(era)) return null;
+  return Math.round(Math.max(20, Math.min(92, 100 - (era - 2.0) * 16)));
+}
+
 async function main() {
+  const totalsPitchingPlan = loadTotalsPitchingPlan(DATE);
   const schedule = await getJson(
     `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${DATE}&hydrate=probablePitcher`
   );
@@ -72,6 +98,8 @@ async function main() {
         const opener = plan.segments.find(segment => segment.role === "opener");
         if (opener && opener.stats) {
           const scored = PitcherCore.scorePitcher(opener.stats);
+          const totalsGameRecord = totalsPitchingPlan[String(game.gamePk)];
+          const totalsSideForNote = totalsGameRecord && totalsGameRecord.pitching_plan && totalsGameRecord.pitching_plan[side];
           row[side] = {
             ...scored,
             roleKey: "opener",
@@ -80,12 +108,44 @@ async function main() {
             bullpenInnings: Number((9 - Number(opener.expected_innings)).toFixed(1)),
             roleConfidence: plan.confidence || "manual",
             bullpenGame: true,
+            // Innings-weighted, bullpen-inclusive ERA for this side's whole
+            // pitching plan -- the same figure the edge score itself is now
+            // based on for bullpen games, so page copy can cite the number
+            // that is actually driving the edge instead of the opener's own
+            // short-sample line.
+            effectiveEra: totalsSideForNote && Number.isFinite(totalsSideForNote.effective_era) ? totalsSideForNote.effective_era : null,
             note: `${opener.pitcher} is the reported opener; see the full pitching plan below.`
           };
         }
       }
+      const totalsSideFor = side => {
+        const rec = totalsPitchingPlan[String(game.gamePk)];
+        return rec && rec.pitching_plan && rec.pitching_plan[side];
+      };
+      // Attach effective_era to both sides (not just a reported opener) so
+      // the two sides are always described on the same basis in copy, even
+      // when only one side has a manually reported plan.
+      for (const side of ["away", "home"]) {
+        if (!row[side]) continue;
+        const totalsSide = totalsSideFor(side);
+        if (typeof row[side].effectiveEra === "undefined") {
+          row[side].effectiveEra = totalsSide && Number.isFinite(totalsSide.effective_era) ? totalsSide.effective_era : null;
+        }
+      }
       const planScore = (side, fallback) => {
         const plan = plans[side];
+        // Score every side -- opener/bulk plans and traditional starters
+        // alike -- on the same innings-weighted effective ERA the
+        // win-probability model itself uses (opener/starter FIP blended with
+        // the bullpen's actual recent ERA for the remaining innings). A
+        // traditional starter still only throws ~5 of 9 innings; scoring him
+        // alone and ignoring the other ~4 has the same blind spot as the
+        // opener case, just smaller. Using effective_era for both sides
+        // keeps the comparison on one consistent basis instead of scoring
+        // one side on its whole staff and the other on one man.
+        const totalsSide = totalsSideFor(side);
+        const effScore = totalsSide && eraToScore(totalsSide.effective_era);
+        if (effScore !== null && effScore !== undefined) return effScore;
         const arms = ((plan && plan.segments) || []).filter(segment => segment.role !== "bullpen" && segment.stats);
         const innings = arms.reduce((sum, segment) => sum + Number(segment.expected_innings), 0);
         return innings > 0

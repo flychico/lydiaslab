@@ -939,7 +939,8 @@ function buildInsights(game, pitcherGame) {
     // Same stat-driven sentence already used in the pitcher comparison table
     // (pitcherEdgeCopy, further down this page) instead of a second, vaguer
     // copy of "the model likes this starter" with no stats behind it.
-    caseFor.push({ title: `Starting pitcher edge: ${pitcher.gap} points`, detail: pitcherEdgeCopy(pitcher, pitcher.away, pitcher.home) });
+    const pitcherEdgeIsBullpenPlan = Boolean((pitcher.away && pitcher.away.bullpenGame) || (pitcher.home && pitcher.home.bullpenGame));
+    caseFor.push({ title: `${pitcherEdgeIsBullpenPlan ? "Pitching plan" : "Starting pitcher"} edge: ${pitcher.gap} points`, detail: pitcherEdgeCopy(pitcher, pitcher.away, pitcher.home, game.away_team, game.home_team) });
   }
   if (pickRisk !== null && oppRisk !== null && oppRisk - pickRisk >= 15) {
     const oppTeamName = game.pick_team === game.away_team ? game.home_team : game.away_team;
@@ -969,8 +970,17 @@ function buildInsights(game, pitcherGame) {
     // getting silently dropped by the slice(0, 3) below.
     concerns.push({ title: `Setup quality below the bar`, detail: `Lab Rating is ${rating(game.lab_score)}, under the ${rating(gate.minimum_lab_score)} required for an official pick.` });
     const oppTeamName = game.pick_team === game.away_team ? game.home_team : game.pick_team === game.home_team ? game.away_team : null;
-    const betterPitcher = pitcher.edge_team === game.away_team ? (pitcher.away && pitcher.away.name) : pitcher.edge_team === game.home_team ? (pitcher.home && pitcher.home.name) : null;
-    const worsePitcher = pitcher.edge_team === game.away_team ? (pitcher.home && pitcher.home.name) : pitcher.edge_team === game.home_team ? (pitcher.away && pitcher.away.name) : null;
+    // Name the team, not the individual pitcher, on whichever side is a
+    // reported opener/bulk plan -- that side's score (and this gap) comes
+    // from the whole pitching plan's effective ERA, not from the named
+    // pitcher's own innings, so crediting him personally with "rating N
+    // points better" overstates his individual role in the number.
+    const betterPitcher = pitcher.edge_team === game.away_team
+      ? (pitcher.away && (pitcher.away.bullpenGame ? game.away_team : pitcher.away.name))
+      : pitcher.edge_team === game.home_team ? (pitcher.home && (pitcher.home.bullpenGame ? game.home_team : pitcher.home.name)) : null;
+    const worsePitcher = pitcher.edge_team === game.away_team
+      ? (pitcher.home && (pitcher.home.bullpenGame ? game.home_team : pitcher.home.name))
+      : pitcher.edge_team === game.home_team ? (pitcher.away && (pitcher.away.bullpenGame ? game.away_team : pitcher.away.name)) : null;
     setupReasons = MatchupCopy.labRatingReasons({
       breakdown: game.lab_score_breakdown,
       pickTeam: game.pick_team, oppTeam: oppTeamName,
@@ -984,7 +994,8 @@ function buildInsights(game, pitcherGame) {
     concerns.push({ title: `Not enough market edge`, detail: `The model and the market are too close for the price to matter.` });
   }
   if (pitcher.edge_team && pitcher.edge_team !== game.pick_team && pitcher.edge_team !== "No clear SP edge" && Number(pitcher.gap) >= 8) {
-    concerns.push({ title: `Pitcher edge points the other way`, detail: `${pitcherEdgeCopy(pitcher, pitcher.away, pitcher.home)} That is not the side the model likes here — when the model and the mound disagree, tread carefully.` });
+    const concernIsBullpenPlan = Boolean((pitcher.away && pitcher.away.bullpenGame) || (pitcher.home && pitcher.home.bullpenGame));
+    concerns.push({ title: concernIsBullpenPlan ? `Pitching plan edge points the other way` : `Pitcher edge points the other way`, detail: `${pitcherEdgeCopy(pitcher, pitcher.away, pitcher.home, game.away_team, game.home_team)} That is not the side the model likes here — when the model and the mound disagree, tread carefully.` });
   }
   if (pickRisk !== null && pickRisk >= 60) {
     concerns.push({ title: `Own bullpen carries risk: ${(pickRisk/10).toFixed(1)}/10`, detail: `The ${game.pick_team} bullpen comes in ${pens.pick && pens.pick.risk_label ? String(pens.pick.risk_label).toLowerCase() : "elevated"}. A lead after six innings is less safe than usual.` });
@@ -1443,8 +1454,8 @@ function renderPitcherTable(game, pitcherGame) {
       ${rows.map(row => `<tr><th>${esc(row.label)}${dirTag(row.better)}</th>${cellPair(row)}</tr>`).join("\n      ")}
     </tbody>
   </table>
-  <p><strong>Pitcher edge:</strong> ${esc(pitcherEdgeCopy(p, away, home))}</p>
-  ${p.bullpen_game ? '<p class="notice"><strong>Bullpen game:</strong> LyDia weights each opener only for his expected innings. Aggregate bullpen fatigue, efficiency, and risk data cover the remaining innings.</p>' : ""}
+  <p><strong>${(away.bullpenGame || home.bullpenGame) ? "Pitching plan edge" : "Pitcher edge"}:</strong> ${esc(pitcherEdgeCopy(p, away, home, game.away_team, game.home_team))}</p>
+  ${p.bullpen_game ? '<p class="notice"><strong>Bullpen game:</strong> When a side is a reported opener/bulk plan, LyDia scores that side\'s pitching-plan edge off its whole-game effective ERA (opener plus the bullpen behind him, weighted by expected innings) rather than crediting the opener alone for innings he is not projected to throw.</p>' : ""}
   <p class="small dim" style="text-align:center"><strong>How to read this:</strong> the scorecards show ERA, WHIP, K/9, and K-BB%. The table adds complementary traits without repeating them. Highlighted cells mark a gap big enough to matter. HR/9 is home runs allowed per nine innings. Ground-ball rate is neither good nor bad on its own: high ground-ball pitchers trade strikeouts for double plays and fewer home runs.</p>`;
 }
 
@@ -1575,7 +1586,7 @@ function toPitcherStats(x) {
   };
 }
 
-function pitcherEdgeCopy(p, away, home) {
+function pitcherEdgeCopy(p, away, home, awayTeam, homeTeam) {
   if (!p || !p.edge_team) return "No clear starting pitcher edge.";
   const gap = typeof p.gap === "number" ? p.gap : null;
   if (typeof away.score !== "number" || typeof home.score !== "number") {
@@ -1584,6 +1595,22 @@ function pitcherEdgeCopy(p, away, home) {
   const awayBetter = away.score > home.score;
   const better = awayBetter ? away : home;
   const worse = awayBetter ? home : away;
+  // When either side is a reported opener/bulk plan, the edge score is built
+  // from that side's whole-plan effective ERA (opener + bullpen, weighted by
+  // innings), not from the named pitcher's own line -- he may throw as
+  // little as a fifth of the game. Naming him as the one holding "the edge"
+  // and then citing his own ERA/WHIP as the driver mismatches the number
+  // actually being compared. Cite the team and the plan-level ERA instead.
+  if (away.bullpenGame || home.bullpenGame) {
+    const betterTeam = awayBetter ? (awayTeam || better.name) : (homeTeam || better.name);
+    const worseTeam = awayBetter ? (homeTeam || worse.name) : (awayTeam || worse.name);
+    const betterEra = typeof better.effectiveEra === "number" ? better.effectiveEra : null;
+    const worseEra = typeof worse.effectiveEra === "number" ? worse.effectiveEra : null;
+    const eraClause = betterEra !== null && worseEra !== null
+      ? `, driven by the pitching plan's whole-game ERA (${betterEra.toFixed(2)} vs ${worseEra.toFixed(2)}, including the bullpen)`
+      : "";
+    return `LyDia gives the ${betterTeam} pitching plan the edge over ${worseTeam}${gap ? ` (${gap} points on LyDia's pitcher score)` : ""}${eraClause}.`;
+  }
   return MatchupCopy.pitcherEdgeSentence({
     edgeTeam: p.edge_team,
     gap,

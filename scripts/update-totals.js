@@ -56,6 +56,17 @@ const DATE = (process.argv[2] || "").match(/^\d{4}-\d{2}-\d{2}$/)
 const IF_CHANGED = process.argv.includes("--if-changed");
 
 const LEAGUE_ERA = 4.20;
+
+// Same era->score curve PitcherCore.scorePitcher() applies internally (its
+// ERA term, weighted 40% into that function's own score). Used to convert
+// a side's innings-weighted effective_era into a score on the same 20-92
+// scale a directly-scored individual pitcher uses, so a bullpen-game side's
+// "pitcher_score" can be built from effective_era instead of only the named
+// arm(s), matching the same fix applied in generate-pitcher-matchup-data.js.
+function eraToScore(era) {
+  if (!Number.isFinite(era)) return null;
+  return Math.round(Math.max(20, Math.min(92, 100 - (era - 2.0) * 16)));
+}
 const WOBA_WEIGHTS = { bb: 0.69, hbp: 0.72, "1b": 0.89, "2b": 1.27, "3b": 1.62, hr: 2.10 };
 const WOBA_SCALE = 1.24; // approximate — paired historical constant, not this season's exact published guts number
 const TOTALS_MODEL_VERSION = "totals-runs-v4-additive-median-woba";
@@ -463,14 +474,36 @@ async function main() {
 
       const bullpenAdj = penEra3d !== null ? (penEra3d - LEAGUE_ERA) * (bullpenInnings / 9) : 0;
       effectiveEra += (penEra3d !== null ? penEra3d : LEAGUE_ERA) * bullpenInnings;
+      const effectiveEraFinal = Number((effectiveEra / 9).toFixed(2));
+
+      // A reported opener/bulk plan hands most of the innings to an
+      // anonymous bullpen with no named pitcher, so it can never earn a
+      // score in the weightedPitcherScore accumulator above -- that average
+      // is silently taken over the opener's own 2-ish innings only, crediting
+      // him with the "pitching plan score" for a game where the bullpen
+      // throws most of it. Score those plans off effective_era instead,
+      // which already correctly folds the bullpen's actual recent ERA in by
+      // its share of the innings. Traditional starter plans, where the named
+      // arm covers most of the game, keep the direct named-arm average.
+      const namedArmScore = plannedPitcherInnings > 0 ? Math.round(weightedPitcherScore / plannedPitcherInnings) : null;
+      const effectiveEraScore = eraToScore(effectiveEraFinal);
+      // Score every plan -- opener/bulk and traditional starter alike -- off
+      // effective_era when it is available, not just reported opener plans.
+      // A traditional starter still only covers ~5 of 9 innings; scoring him
+      // alone and treating the other side's whole-staff effective_era as
+      // comparable produces a mismatched, inflated gap (verified against the
+      // 2026-07-30 Pirates @ Reds game: scoring only the opener side this
+      // way produced a 45-point gap between an 92 (whole-staff) and a 47
+      // (one man); scoring both sides the same way gives the honest ~8).
+      const planPitcherScore = effectiveEraScore !== null ? effectiveEraScore : namedArmScore;
 
       const planOutput = {
         ...plan,
         segments,
         expected_innings: Number(expIP.toFixed(1)),
         bullpen_innings: Number(bullpenInnings.toFixed(1)),
-        effective_era: Number((effectiveEra / 9).toFixed(2)),
-        pitcher_score: plannedPitcherInnings > 0 ? Math.round(weightedPitcherScore / plannedPitcherInnings) : null,
+        effective_era: effectiveEraFinal,
+        pitcher_score: planPitcherScore,
         description: PitchingPlan.describe(plan)
       };
       const primaryFip = segments.find(segment => segment.role !== "bullpen");
