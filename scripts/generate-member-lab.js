@@ -1203,30 +1203,42 @@ function writeOrReusePublishedPicks(candidate, scheduledGameCount) {
 
     // A zero-pick file is a provisional snapshot, not an immutable official-pick
     // lock. Morning runs can happen before the market and all model inputs are
-    // ready. If a later PREVIEW-only run produces official picks, promote that
-    // candidate before first pitch. Once any game starts, only a manual,
-    // evidence-backed repair may change the dated file.
+    // ready. If a later run produces official picks, promote whichever of them
+    // are still pregame before first pitch. A pick whose game has already
+    // started is dropped rather than promoted -- publishing it now would be a
+    // retroactive lock, exactly what this file exists to prevent -- but one
+    // early game must not veto every other still-pregame pick found in the
+    // same run (this is the same per-pick pregame filter used above for line
+    // moves and schema promotion, applied here too after ERR-20260801-01: the
+    // old all-or-nothing check threw and hard-failed the whole publish step
+    // for the rest of the day whenever any single candidate game had started,
+    // silently withholding otherwise-valid picks on games hours from first
+    // pitch). Once a pick is promoted, only a manual, evidence-backed repair
+    // may change the dated file.
     if (existing.picks.length === 0 && candidate.picks.length > 0) {
       const now = Date.now();
-      const allCandidatesPregame = candidate.picks.every(p => {
+      const pregamePicks = candidate.picks.filter(p => {
         const firstPitch = Date.parse(p.time);
         return Number.isFinite(firstPitch) && now < firstPitch;
       });
-      if (!allCandidatesPregame) {
-        throw new Error(
-          `${file} is an empty provisional snapshot, but a later run found ${candidate.picks.length} official pick(s) after first pitch. ` +
-          "Refusing a retroactive lock. Restore the documented posted pick manually."
-        );
+      const droppedCount = candidate.picks.length - pregamePicks.length;
+      if (droppedCount > 0) {
+        console.log(`${droppedCount} candidate pick(s) from the provisional zero-pick snapshot for ${DATE} are past first pitch; not promoted (would be a retroactive lock).`);
       }
-      writeJson(file, candidate);
-      console.log(`Promoted ${candidate.picks.length} official pick(s) from the provisional zero-pick snapshot for ${DATE}.`);
-      if (DATE === etToday()) {
-        writeJson("data/published-picks/today.json", candidate);
-        injectInlineData("results/index.html", "results-inline-picks",
-          { date: candidate.date, picks: candidate.picks },
-          '<div class="loading">Loading live pick results...</div>');
+      if (pregamePicks.length > 0) {
+        const promoted = { ...candidate, picks: pregamePicks };
+        writeJson(file, promoted);
+        console.log(`Promoted ${pregamePicks.length} official pick(s) from the provisional zero-pick snapshot for ${DATE}${droppedCount ? ` (${droppedCount} dropped as already started)` : ""}.`);
+        if (DATE === etToday()) {
+          writeJson("data/published-picks/today.json", promoted);
+          injectInlineData("results/index.html", "results-inline-picks",
+            { date: promoted.date, picks: promoted.picks },
+            '<div class="loading">Loading live pick results...</div>');
+        }
+        return promoted;
       }
-      return candidate;
+      // Every candidate found this run is already past first pitch -- falls
+      // through to the provisional-snapshot logging below instead of crashing.
     }
 
     if (existing.picks.length === 0 && scheduledGameCount > 0) {
