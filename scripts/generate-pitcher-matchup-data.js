@@ -138,11 +138,20 @@ async function main() {
         row[side].effectiveEra = totalsSide && Number.isFinite(totalsSide.effective_era) ? totalsSide.effective_era : null;
       }
     }
+    // REVERTED 2026-07-31: this briefly scored every plan off effective_era
+    // (starter FIP blended with the bullpen's actual ERA over the last 3
+    // days) to stop an opener being credited alone for innings his bullpen
+    // actually throws. That fix introduced a worse bug for ordinary
+    // two-starter games: a 3-day bullpen sample is volatile enough (a
+    // single bad outing can spike it past 15.00) to flip which pitcher
+    // this page credits with "the edge" -- confirmed live for both
+    // Brewers @ Angels and Marlins @ Mets on 2026-07-31, in both cases
+    // crediting the clearly worse starter. Back to scoring only the named
+    // arm(s), weighted by their own expected innings -- this reopens the
+    // original opener-blind-spot problem as a known, deliberate tradeoff
+    // pending a fix that does not run through a 3-day bullpen-ERA sample.
     const planScore = (side, fallback) => {
       const plan = plans[side];
-      const totalsSide = totalsSideFor(side);
-      const effScore = totalsSide && eraToScore(totalsSide.effective_era);
-      if (effScore !== null && effScore !== undefined) return effScore;
       const arms = ((plan && plan.segments) || []).filter(segment => segment.role !== "bullpen" && segment.stats);
       const innings = arms.reduce((sum, segment) => sum + Number(segment.expected_innings), 0);
       return innings > 0

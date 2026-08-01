@@ -486,16 +486,26 @@ async function main() {
       // its share of the innings. Traditional starter plans, where the named
       // arm covers most of the game, keep the direct named-arm average.
       const namedArmScore = plannedPitcherInnings > 0 ? Math.round(weightedPitcherScore / plannedPitcherInnings) : null;
-      const effectiveEraScore = eraToScore(effectiveEraFinal);
-      // Score every plan -- opener/bulk and traditional starter alike -- off
-      // effective_era when it is available, not just reported opener plans.
-      // A traditional starter still only covers ~5 of 9 innings; scoring him
-      // alone and treating the other side's whole-staff effective_era as
-      // comparable produces a mismatched, inflated gap (verified against the
-      // 2026-07-30 Pirates @ Reds game: scoring only the opener side this
-      // way produced a 45-point gap between an 92 (whole-staff) and a 47
-      // (one man); scoring both sides the same way gives the honest ~8).
-      const planPitcherScore = effectiveEraScore !== null ? effectiveEraScore : namedArmScore;
+      // REVERTED 2026-07-31: this briefly used effective_era (starter FIP
+      // blended with the bullpen's actual ERA over the last 3 days) for
+      // every plan, to stop crediting a reported opener alone for innings
+      // his bullpen actually throws. That fix introduced a worse bug: a
+      // 3-day bullpen ERA sample is extremely volatile (a single bad
+      // outing can spike it past 15.00) and, for an ordinary two-starter
+      // game, can swing hard enough to flip which pitcher gets credited
+      // with "the edge" -- confirmed live on 2026-07-31 for both Brewers @
+      // Angels (Drohan, a clearly better starter at 3.48 ERA, lost the edge
+      // to Johnson at 7.63 ERA because Milwaukee's pen ran a 15.12 ERA over
+      // the prior 3 days) and Marlins @ Mets (Senga, a clearly worse
+      // starter, gained the edge over Junk the same way). "Pitcher edge" is
+      // read by users as a claim about the two men on the mound; a number
+      // that can invert on 3-day bullpen noise doesn't support that claim.
+      // Back to scoring only the named arm(s), weighted by their own
+      // expected innings. This reopens the original opener-blind-spot
+      // problem (an opener projected for ~2 innings is scored on that
+      // alone) as a known, deliberate tradeoff pending a better fix that
+      // doesn't run through a 3-day bullpen-ERA sample.
+      const planPitcherScore = namedArmScore;
 
       const planOutput = {
         ...plan,
