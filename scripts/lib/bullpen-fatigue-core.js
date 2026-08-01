@@ -27,7 +27,8 @@
 
 const VERSION = "bullpen-fatigue-v5-recency-weighted";
 const SOURCE_OF_TRUTH = "scripts/lib/bullpen-fatigue-core.js";
-const LOOKBACK_DAYS = 5;        // scan 5 days so a rest/rainout day does not drop all games
+const LOOKBACK_DAYS = 17;        // scan 17 days: covers the 15-day window (below) with the
+                                 // same +2 rest/rainout buffer the original 3-day window used (5 for 3)
 const RECENCY_HALF_LIFE = 2;   // a game's fatigue weight halves every 2 days
 const FATIGUE_IP_K = 4.2;      // points per weighted relief inning above the per-game baseline
 const FATIGUE_B2B_K = 8;       // points per recency-weighted back-to-back arm
@@ -237,6 +238,22 @@ function scoreTeam(team, targetDate) {
   const last3Relievers = recent3.reduce((s, g) => s + g.relievers, 0);
   const gamesTracked = recent3.length;
 
+  // A SEPARATE, steadier 15-day window for consumers that need a bullpen
+  // quality read but can't tolerate the 3-day number's small-sample swings
+  // (a single bad or dominant outing can move era_3d past 15.00 or to
+  // 0.00 -- confirmed live 2026-07-31 flipping which pitcher an ordinary
+  // pitching-plan comparison credited). Same fields, wider window, no
+  // separate fatigue/workload score -- this is a quality read only.
+  const recent15 = ref ? games.filter(g => daysAgoBetween(ref, g.date) <= 15) : games;
+  const last15BP = recent15.reduce((s, g) => s + g.bpIP, 0);
+  const last15Runs = recent15.reduce((s, g) => s + (g.bpRuns || 0), 0);
+  const last15ER = recent15.reduce((s, g) => s + (g.bpER || 0), 0);
+  const last15H = recent15.reduce((s, g) => s + (g.bpH || 0), 0);
+  const last15BB = recent15.reduce((s, g) => s + (g.bpBB || 0), 0);
+  const games15Tracked = recent15.length;
+  const era15d = last15BP > 0 ? (last15ER / last15BP) * 9 : null;
+  const whip15d = last15BP > 0 ? (last15H + last15BB) / last15BP : null;
+
   // RECENCY-WEIGHTED FATIGUE. Each game's relief innings are weighted by how
   // many days before the target game it was pitched, decaying by half every
   // RECENCY_HALF_LIFE days. A rest day (including a rainout) pushes every game
@@ -343,6 +360,14 @@ function scoreTeam(team, targetDate) {
     last3_bp_bb: last3BB,
     era_3d: era3d === null ? null : round(era3d, 2),
     whip_3d: whip3d === null ? null : round(whip3d, 2),
+    last15_bp_ip: round(last15BP, 1),
+    last15_bp_runs: last15Runs,
+    last15_bp_er: last15ER,
+    last15_bp_hits: last15H,
+    last15_bp_bb: last15BB,
+    era_15d: era15d === null ? null : round(era15d, 2),
+    whip_15d: whip15d === null ? null : round(whip15d, 2),
+    recent15_games_tracked: games15Tracked,
     last_game_relievers: last.relievers || 0,
     last3_relievers: last3Relievers,
     back_to_back_arms: b2b,
@@ -415,6 +440,11 @@ function buildTeamsByName(rows) {
       efficiency_component_scores: row.efficiency_component_scores,
       era_3d: row.era_3d,
       whip_3d: row.whip_3d,
+      last15_bp_ip: row.last15_bp_ip,
+      last15_bp_runs: row.last15_bp_runs,
+      era_15d: row.era_15d,
+      whip_15d: row.whip_15d,
+      recent15_games_tracked: row.recent15_games_tracked,
       risk_index: row.risk_index,
       risk_label: row.risk_label,
       days_rest: row.days_rest,

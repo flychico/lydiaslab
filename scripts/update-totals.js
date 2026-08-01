@@ -440,6 +440,18 @@ async function main() {
       // Bullpen adjustment driver: actual earned runs allowed per 9 over the
       // last 3 days. Raw, unshrunk for thin samples — per Lynold 2026-07-29.
       const penEra3d = pen && Number.isFinite(pen.era_3d) ? pen.era_3d : null;
+      // Blended pitching-plan-edge reads use a steadier 15-day bullpen ERA
+      // instead -- the win-probability model's own bullpenAdj term below
+      // deliberately stays on the 3-day number per Lynold 2026-07-29 (it is
+      // meant to react fast), but a 3-day sample was too volatile for what
+      // is displayed to users as a plan-quality comparison: a single bad or
+      // dominant outing can push era_3d past 15.00 or to 0.00, which
+      // flipped which pitcher an ordinary pitching-plan edge credited
+      // (confirmed live 2026-07-31, Brewers @ Angels and Marlins @ Mets).
+      // Falls back to era_3d, then league average, if the 15-day figure
+      // isn't available (e.g. early season).
+      const penEra15d = pen && Number.isFinite(pen.era_15d) ? pen.era_15d
+        : (penEra3d !== null ? penEra3d : null);
 
       // Allocate every known pitcher only to his assigned innings. The generic
       // bullpen owns only the innings left after the opener and bulk pitcher.
@@ -473,7 +485,7 @@ async function main() {
         .reduce((sum, segment) => sum + Number(segment.expected_innings), 0);
 
       const bullpenAdj = penEra3d !== null ? (penEra3d - LEAGUE_ERA) * (bullpenInnings / 9) : 0;
-      effectiveEra += (penEra3d !== null ? penEra3d : LEAGUE_ERA) * bullpenInnings;
+      effectiveEra += (penEra15d !== null ? penEra15d : LEAGUE_ERA) * bullpenInnings;
       const effectiveEraFinal = Number((effectiveEra / 9).toFixed(2));
 
       // A reported opener/bulk plan hands most of the innings to an
@@ -486,31 +498,20 @@ async function main() {
       // its share of the innings. Traditional starter plans, where the named
       // arm covers most of the game, keep the direct named-arm average.
       const namedArmScore = plannedPitcherInnings > 0 ? Math.round(weightedPitcherScore / plannedPitcherInnings) : null;
-      // 2026-07-31, second pass: the first fix here used effective_era for
-      // EVERY plan (any starter's FIP blended with his bullpen's 3-day ERA).
-      // That was wrong for ordinary two-starter games -- a 3-day bullpen
-      // sample is volatile enough (one bad outing can spike it past 15.00)
-      // to flip which pitcher gets "the edge," confirmed live for both
-      // Brewers @ Angels and Marlins @ Mets on 2026-07-31. Reverting to
-      // named-arm-only for every plan was also wrong in the other direction
-      // -- it silently re-broke the original Pirates-opener case (crediting
-      // a 2-inning opener alone) and, per Lynold, doesn't distinguish "two
-      // pitchers each going 5-6" from "a pitcher going 5-6 vs one going 2."
-      // Those are not the same comparison and should not be scored the same
-      // way. The actual dividing line is whether the named arm covers the
-      // bulk of the game for that side: if his own bullpen is projected to
-      // throw MORE innings than he is, his own line does not represent "the
-      // pitching" for that side, and the blended (bullpen-inclusive)
-      // effective-era score is the honest one to use. If he covers the
-      // majority of the game himself, his own line already is the
-      // representative one, and blending in a noisy 3-day bullpen number
-      // only adds risk without adding truth. This still relies on the same
-      // 3-day bullpen ERA for whichever side gets blended -- there is no
-      // more stable (longer-window) bullpen-quality signal wired into this
-      // pipeline yet -- so a blended-edge game can still move on a hot/cold
-      // bullpen stretch. Scoped correctly now, that is an inherent,
-      // disclosed limit of the blended read, not a bug in an ordinary
-      // starter-vs-starter comparison.
+      // The dividing line is whether the named arm covers the bulk of the
+      // game for that side: if his own bullpen is projected to throw MORE
+      // innings than he is, his own line does not represent "the pitching"
+      // for that side, and the blended (bullpen-inclusive) effective-era
+      // score is the honest one to use. If he covers the majority of the
+      // game himself, his own line already is the representative one, and
+      // blending in a bullpen number there only adds noise without adding
+      // truth (confirmed live 2026-07-31: doing this for every plan flipped
+      // the credited pitcher in both Brewers @ Angels and Marlins @ Mets;
+      // never doing it re-broke the original Pirates-opener case). The
+      // blended score itself now runs on a 15-day bullpen ERA rather than
+      // 3-day (see penEra15d above) specifically because the 3-day number
+      // was volatile enough on its own to cause that flip.
+      const effectiveEraScore = eraToScore(effectiveEraFinal);
       const bullpenCarriesGame = bullpenInnings > expIP;
       const planPitcherScore = bullpenCarriesGame && effectiveEraScore !== null ? effectiveEraScore : namedArmScore;
 
