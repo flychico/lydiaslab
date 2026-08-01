@@ -88,8 +88,17 @@ async function main() {
   // later odds request was rate-limited or temporarily empty. Current odds
   // win when present; otherwise reuse the already captured member-brief or
   // locked market snapshot for that game.
+  // capturedOdds: written by scripts/update-moneyline-odds.js, the only
+  // place h2h odds get fetched with a real ODDS_API_KEY present (from
+  // refresh-lines.yml, run manually or on its own schedule). This script
+  // itself never has that key when it runs inside publish-picks.yml, so
+  // without this fallback oddsEvents below is always [] there and every
+  // matchup page shows "Market probability: Not available" regardless of
+  // the game -- there was no path from a real odds fetch to this script's
+  // output at all. ERR-20260801-02.
   const oddsMap = {
     ...buildLockedMarketOddsMap(readJsonSafe(`data/market/${DATE}.json`)),
+    ...buildCapturedMoneylineMap(readJsonSafe(`data/moneyline-odds/${DATE}.json`)),
     ...buildPreviousOddsMap(previousRows),
     ...buildOddsMap(oddsEvents)
   };
@@ -458,6 +467,21 @@ function buildOddsMap(events) {
   return map;
 }
 
+function buildCapturedMoneylineMap(snapshot) {
+  const map = {};
+  for (const [key, g] of Object.entries((snapshot && snapshot.games) || {})) {
+    if (!g || !Number.isFinite(g.pAway) || !Number.isFinite(g.pHome)) continue;
+    map[key] = {
+      pAway: g.pAway,
+      pHome: g.pHome,
+      bestAway: Number.isFinite(g.bestAway) ? g.bestAway : null,
+      bestHome: Number.isFinite(g.bestHome) ? g.bestHome : null,
+      books: Number(g.books) || 0,
+      fallback_source: "captured_moneyline_odds"
+    };
+  }
+  return map;
+}
 function buildPreviousOddsMap(rows) {
   const map = {};
   for (const row of rows || []) {
