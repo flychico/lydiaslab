@@ -13322,10 +13322,10 @@
     "2026-07-31": {
       "date": "2026-07-31",
       "wins": 0,
-      "losses": 0,
-      "ungraded": 3,
+      "losses": 1,
+      "ungraded": 2,
       "voided": 0,
-      "units": null,
+      "units": -1,
       "source": "published-picks",
       "current_official_model": "multi_market_v1",
       "model_version": "multi-market-v1",
@@ -13346,10 +13346,10 @@
         },
         "pitcher_strikeouts": {
           "wins": 0,
-          "losses": 0,
+          "losses": 1,
           "pushes": 0,
           "voids": 0,
-          "units": 0
+          "units": -1
         }
       },
       "picks": [
@@ -13533,7 +13533,29 @@
               "valueTag": "OFFICIAL PICK"
             }
           ],
-          "result": "NG",
+          "mlResult": "NG",
+          "totResult": "NG",
+          "kResults": [
+            {
+              "pitcher": "Paul Skenes",
+              "pick": "Over",
+              "line": 7.5,
+              "bestAm": -138,
+              "projection": 8.46,
+              "edge": 0.96,
+              "books": 6,
+              "expectedInnings": 5.5,
+              "pitcherRole": "traditional_starter",
+              "lineupSource": "posted",
+              "modelVersion": "pitcher-strikeouts-self-calibrated-v1",
+              "valueTag": "OFFICIAL PICK",
+              "actual": 7,
+              "result": "L"
+            }
+          ],
+          "rlResult": "NG",
+          "finalAway": 7,
+          "finalHome": 8,
           "learning": {
             "model_version": "multi-market-v1",
             "official_model": "moneyline_only",
