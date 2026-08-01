@@ -115,43 +115,44 @@ async function main() {
       row.pitching_plan_confidence = Object.values(plans).some(plan => plan.confidence === "manual") ? "manual" : "reported";
     }
 
-    // Score every game -- reported opener/bulk plans AND ordinary two-starter
-    // games alike -- on the same innings-weighted effective ERA the
-    // win-probability model itself uses (starter/opener FIP blended with the
-    // bullpen's actual recent ERA for the remaining innings), not just
-    // reported plans. A ordinary starter still only throws ~5 of 9 innings;
-    // scoring him alone on his own individual line and ignoring the other
-    // ~4 has the same blind spot the opener case had, just smaller -- and
-    // leaving ordinary games on the old method while reported-plan games
-    // use the new one meant Lab Rating (which reads update-totals.js's
-    // pitcher_score, fixed for every game) and this page's own pitcher
-    // table/edge copy (which read this file) could show two different,
-    // disagreeing "pitcher edge" numbers for the same game. update-totals.js
-    // runs for every game unconditionally, so totals data is available here
-    // regardless of whether a plan was manually reported.
+    // Every side is scored on the SAME basis Lab Rating uses
+    // (update-totals.js's pitcher_score, computed for every game
+    // unconditionally) so this page's pitcher table/edge copy never
+    // disagrees with the rating that reads it. Per side: if that side's own
+    // bullpen is projected to throw MORE innings than its named starter, the
+    // starter's own line does not represent "the pitching" for that side --
+    // score it on effective_era (starter FIP blended with the bullpen's
+    // recent ERA) instead. If the starter covers the majority of the game
+    // himself, his own line already is the representative one; blending in
+    // a noisy 3-day bullpen number there only adds risk without adding
+    // truth (confirmed live 2026-07-31: doing this unconditionally flipped
+    // the credited pitcher in both Brewers @ Angels and Marlins @ Mets).
+    // A blended side still runs on the same 3-day bullpen sample as the
+    // rest of the pipeline, so it can still move on a hot/cold bullpen
+    // stretch -- an inherent, disclosed limit of the blended read, not a
+    // bug in an ordinary starter-vs-starter comparison.
     const totalsGameRecord = totalsPitchingPlan[String(game.gamePk)];
     const totalsSideFor = side => totalsGameRecord && totalsGameRecord.pitching_plan && totalsGameRecord.pitching_plan[side];
+    const bullpenCarries = side => {
+      const totalsSide = totalsSideFor(side);
+      return Boolean(totalsSide && Number.isFinite(totalsSide.bullpen_innings) && Number.isFinite(totalsSide.expected_innings)
+        && totalsSide.bullpen_innings > totalsSide.expected_innings);
+    };
     for (const side of ["away", "home"]) {
       if (!row[side]) continue;
       const totalsSide = totalsSideFor(side);
       if (typeof row[side].effectiveEra === "undefined") {
         row[side].effectiveEra = totalsSide && Number.isFinite(totalsSide.effective_era) ? totalsSide.effective_era : null;
       }
+      row[side].carriedByBullpen = bullpenCarries(side);
     }
-    // REVERTED 2026-07-31: this briefly scored every plan off effective_era
-    // (starter FIP blended with the bullpen's actual ERA over the last 3
-    // days) to stop an opener being credited alone for innings his bullpen
-    // actually throws. That fix introduced a worse bug for ordinary
-    // two-starter games: a 3-day bullpen sample is volatile enough (a
-    // single bad outing can spike it past 15.00) to flip which pitcher
-    // this page credits with "the edge" -- confirmed live for both
-    // Brewers @ Angels and Marlins @ Mets on 2026-07-31, in both cases
-    // crediting the clearly worse starter. Back to scoring only the named
-    // arm(s), weighted by their own expected innings -- this reopens the
-    // original opener-blind-spot problem as a known, deliberate tradeoff
-    // pending a fix that does not run through a 3-day bullpen-ERA sample.
     const planScore = (side, fallback) => {
       const plan = plans[side];
+      const totalsSide = totalsSideFor(side);
+      if (bullpenCarries(side)) {
+        const effScore = totalsSide && eraToScore(totalsSide.effective_era);
+        if (effScore !== null && effScore !== undefined) return effScore;
+      }
       const arms = ((plan && plan.segments) || []).filter(segment => segment.role !== "bullpen" && segment.stats);
       const innings = arms.reduce((sum, segment) => sum + Number(segment.expected_innings), 0);
       return innings > 0

@@ -486,26 +486,33 @@ async function main() {
       // its share of the innings. Traditional starter plans, where the named
       // arm covers most of the game, keep the direct named-arm average.
       const namedArmScore = plannedPitcherInnings > 0 ? Math.round(weightedPitcherScore / plannedPitcherInnings) : null;
-      // REVERTED 2026-07-31: this briefly used effective_era (starter FIP
-      // blended with the bullpen's actual ERA over the last 3 days) for
-      // every plan, to stop crediting a reported opener alone for innings
-      // his bullpen actually throws. That fix introduced a worse bug: a
-      // 3-day bullpen ERA sample is extremely volatile (a single bad
-      // outing can spike it past 15.00) and, for an ordinary two-starter
-      // game, can swing hard enough to flip which pitcher gets credited
-      // with "the edge" -- confirmed live on 2026-07-31 for both Brewers @
-      // Angels (Drohan, a clearly better starter at 3.48 ERA, lost the edge
-      // to Johnson at 7.63 ERA because Milwaukee's pen ran a 15.12 ERA over
-      // the prior 3 days) and Marlins @ Mets (Senga, a clearly worse
-      // starter, gained the edge over Junk the same way). "Pitcher edge" is
-      // read by users as a claim about the two men on the mound; a number
-      // that can invert on 3-day bullpen noise doesn't support that claim.
-      // Back to scoring only the named arm(s), weighted by their own
-      // expected innings. This reopens the original opener-blind-spot
-      // problem (an opener projected for ~2 innings is scored on that
-      // alone) as a known, deliberate tradeoff pending a better fix that
-      // doesn't run through a 3-day bullpen-ERA sample.
-      const planPitcherScore = namedArmScore;
+      // 2026-07-31, second pass: the first fix here used effective_era for
+      // EVERY plan (any starter's FIP blended with his bullpen's 3-day ERA).
+      // That was wrong for ordinary two-starter games -- a 3-day bullpen
+      // sample is volatile enough (one bad outing can spike it past 15.00)
+      // to flip which pitcher gets "the edge," confirmed live for both
+      // Brewers @ Angels and Marlins @ Mets on 2026-07-31. Reverting to
+      // named-arm-only for every plan was also wrong in the other direction
+      // -- it silently re-broke the original Pirates-opener case (crediting
+      // a 2-inning opener alone) and, per Lynold, doesn't distinguish "two
+      // pitchers each going 5-6" from "a pitcher going 5-6 vs one going 2."
+      // Those are not the same comparison and should not be scored the same
+      // way. The actual dividing line is whether the named arm covers the
+      // bulk of the game for that side: if his own bullpen is projected to
+      // throw MORE innings than he is, his own line does not represent "the
+      // pitching" for that side, and the blended (bullpen-inclusive)
+      // effective-era score is the honest one to use. If he covers the
+      // majority of the game himself, his own line already is the
+      // representative one, and blending in a noisy 3-day bullpen number
+      // only adds risk without adding truth. This still relies on the same
+      // 3-day bullpen ERA for whichever side gets blended -- there is no
+      // more stable (longer-window) bullpen-quality signal wired into this
+      // pipeline yet -- so a blended-edge game can still move on a hot/cold
+      // bullpen stretch. Scoped correctly now, that is an inherent,
+      // disclosed limit of the blended read, not a bug in an ordinary
+      // starter-vs-starter comparison.
+      const bullpenCarriesGame = bullpenInnings > expIP;
+      const planPitcherScore = bullpenCarriesGame && effectiveEraScore !== null ? effectiveEraScore : namedArmScore;
 
       const planOutput = {
         ...plan,
@@ -514,6 +521,12 @@ async function main() {
         bullpen_innings: Number(bullpenInnings.toFixed(1)),
         effective_era: effectiveEraFinal,
         pitcher_score: planPitcherScore,
+        // True when this side's own bullpen is projected to throw more of
+        // the game than its named starter -- the trigger for scoring this
+        // side on its blended effective_era instead of the starter's own
+        // line, and for the page to label the comparison as a blended
+        // pitching-plan edge rather than a pure pitcher-vs-pitcher one.
+        bullpen_carries_game: bullpenCarriesGame,
         description: PitchingPlan.describe(plan)
       };
       const primaryFip = segments.find(segment => segment.role !== "bullpen");
