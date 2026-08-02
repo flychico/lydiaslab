@@ -623,6 +623,13 @@ function autoProgress(dayIdx, trained){
   return msgs;
 }
 
+/* ============ Apple Health bridge ============
+   Web apps can't touch HealthKit directly, so we hand off to an Apple Shortcut
+   the user creates once ("Log Gym Workout"), passing the session length. */
+function healthWorkoutURL(min){
+  return "shortcuts://run-shortcut?name=Log%20Gym%20Workout&input=text&text=" + encodeURIComponent(String(min || 0));
+}
+
 /* ============ Views ============ */
 const V = document.getElementById("view");
 let tab = "today";
@@ -707,7 +714,7 @@ function renderToday(){
   V.innerHTML = `
   <h1>Today</h1>
   <p class="dim small">${new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})} · ${streakText()}</p>
-  ${doneToday ? `<div class="card"><b class="green">✓ Workout logged today.</b><div class="dim small">Muscles grow between sessions — rest is part of the program.</div></div>` : ""}
+  ${doneToday ? `<div class="card"><b class="green">✓ Workout logged today.</b><div class="dim small">Muscles grow between sessions — rest is part of the program.</div>${S.health ? `<a class="btn ghost small-btn" style="margin-top:10px;display:inline-block;text-decoration:none" href="${healthWorkoutURL(doneToday.min)}">❤️ Log to Apple Health</a>` : ""}</div>` : ""}
   ${S.tune && S.tune.msgs && S.tune.msgs.length ? `<div class="card" style="border-color:var(--blue)"><b class="blue">🗿 Plan auto-tuned after your last session</b><div class="dim small" style="margin-top:5px;line-height:1.6">${S.tune.msgs.map(esc).join("<br>")}</div><button class="btn ghost small-btn" style="margin-top:10px" onclick="S.tune=null;save();render()">Got it</button></div>` : ""}
   ${(() => { const stalled = [...new Set(S.plan.days.flatMap(d => d.exercises.map(e => e.ex)))].filter(id => EXBY[id] && EXBY[id].inc > 0 && plateaued(id)); return stalled.length >= 3 ? `<div class="card" style="border-color:var(--gold)"><b class="gold">Deload week suggested</b><div class="dim small">${stalled.length} lifts have stalled for 3 straight sessions (${stalled.slice(0, 3).map(id => EXBY[id].n).join(", ")}${stalled.length > 3 ? "…" : ""}). Take a week at ~80% weight — planned recovery is how plateaus break. Each stalled exercise already shows its deload weight.</div></div>` : ""; })()}
   <div class="card">
@@ -1102,7 +1109,7 @@ function renderProgress(){
   </div>
   <div id="chartmodal"></div>
   <div class="card"><h3>History</h3>
-    ${logs.length ? [...logs].reverse().slice(0, 20).map(l => `<div class="exline"><span>${l.date} · <b>${esc(l.dayName || "Workout")}</b></span><span class="dim">${l.entries.reduce((a, en) => a + en.sets.length, 0)} sets · ${l.min}m</span></div>`).join("") : '<p class="dim small">No workouts yet.</p>'}
+    ${logs.length ? [...logs].reverse().slice(0, 20).map(l => `<div class="exline"><span>${l.date} · <b>${esc(l.dayName || "Workout")}</b></span><span class="dim">${l.entries.reduce((a, en) => a + en.sets.length, 0)} sets · ${l.min}m${S.health ? ` · <a href="${healthWorkoutURL(l.min)}" style="color:var(--blue);text-decoration:none">❤️</a>` : ""}</span></div>`).join("") : '<p class="dim small">No workouts yet.</p>'}
   </div>`;
   drawBars("volchart", weeks.map(w => w.vol), weeks.map(w => w.label));
   if (S.weights.length) drawBwTrend("bwchart");
@@ -1220,6 +1227,25 @@ function renderSettings(){
     <div class="exline"><span>Progression</span><span class="dim">Add weight when all sets hit the rep-range top</span></div>
     <p class="dim small" style="margin-top:8px">Glute-focus plans front-load hip thrusts and hinges — the highest glute-activation movements in EMG studies — and train lower body up to 2× more often than upper.</p>
   </div>
+  <div class="card"><h3>Apple Health <span class="dim small">· iPhone + Watch</span></h3>
+    <p class="dim small" style="margin-bottom:8px">Apple blocks web apps from reading or writing Health directly. You can still bridge it two ways below.</p>
+    <div class="qopt"><span class="pill ${S.health ? "on" : ""}" onclick="S.health=!S.health;save();render()">${S.health ? "✓ Workout logging on" : "Enable workout logging"}</span></div>
+    <p class="dim small" style="margin-top:6px">When on, a “❤️ Log to Apple Health” button appears on finished workouts. It hands the session to a Shortcut you make once, which writes it to the Fitness app (counts toward your Move ring).</p>
+    <details style="margin-top:8px"><summary class="small blue" style="cursor:pointer;font-weight:600">Set up the Shortcut (one time, ~2 min)</summary>
+      <ol class="dim small" style="margin:8px 0 0 18px;line-height:1.7">
+        <li>Open the <b>Shortcuts</b> app → tap <b>＋</b> (new shortcut).</li>
+        <li>Rename it exactly: <b>Log Gym Workout</b>.</li>
+        <li>Add action <b>Log Workout</b> (search for it).</li>
+        <li>Set the type to <b>Traditional Strength Training</b>.</li>
+        <li>Tap the duration field → choose <b>Shortcut Input</b> (the minutes this app sends).</li>
+        <li>Save. Now tap ❤️ here after a workout and approve the first run.</li>
+      </ol>
+      <p class="dim small" style="margin-top:6px">Live heart rate & calories still come from starting a workout on the Apple Watch itself — this logs the summary.</p>
+    </details>
+    <label style="margin-top:14px">Import weigh-ins from Apple Health</label>
+    <p class="dim small" style="margin-bottom:6px">In <b>Health</b> → tap your photo → <b>Export All Health Data</b>. Unzip it, then choose <b>export.xml</b> to pull your body-weight history into the trend chart.</p>
+    <input type="file" accept=".xml" onchange="importHealthWeights(this)">
+  </div>
   <div class="card"><h3>Backup</h3>
     <p class="dim small" style="margin-bottom:10px">Your data lives only on this phone. Export a backup now and then — clearing the browser wipes it.</p>
     <button class="btn full blue-btn" onclick="exportData()">Export backup file</button>
@@ -1259,6 +1285,41 @@ function importData(inp){
   r.onload = () => {
     try { const d = JSON.parse(r.result); if (d.v !== 1) throw 0; S = d; save(); render(); toast("Backup restored"); }
     catch(e) { toast("Not a valid backup"); }
+  };
+  r.readAsText(f);
+}
+// Parse an Apple Health export.xml and pull body-weight (BodyMass) records in
+function importHealthWeights(inp){
+  const f = inp.files[0]; if (!f) return;
+  toast("Reading export…");
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const text = String(r.result);
+      const re = /<Record\b([^>]*?)\/?>/g;
+      const attr = (s, k) => { const mm = s.match(new RegExp(k + '="([^"]*)"')); return mm ? mm[1] : null; };
+      const byDate = {};
+      let m;
+      while ((m = re.exec(text))) {
+        const a = m[1];
+        if (a.indexOf("HKQuantityTypeIdentifierBodyMass") === -1) continue;
+        const sd = attr(a, "startDate"), val = attr(a, "value"), unit = attr(a, "unit");
+        if (!sd || !val) continue;
+        let lbs = Number(val);
+        if (!isFinite(lbs)) continue;
+        if (unit && /kg/i.test(unit)) lbs = lbs * 2.2046226;
+        lbs = Math.round(lbs * 10) / 10;
+        if (lbs < 50 || lbs > 700) continue;
+        byDate[sd.slice(0, 10)] = lbs; // records are chronological, last of a day wins
+      }
+      const have = new Set(S.weights.map(w => w.date));
+      let added = 0;
+      for (const date in byDate) { if (!have.has(date)) { S.weights.push({ date, lbs: byDate[date] }); added++; } }
+      S.weights.sort((a, b) => a.date.localeCompare(b.date));
+      if (S.profile && S.weights.length) S.profile.weightLb = S.weights[S.weights.length - 1].lbs;
+      save(); render();
+      toast(added ? "Imported " + added + " weigh-ins" : "No new weigh-ins found");
+    } catch (e) { toast("Couldn't read that file"); }
   };
   r.readAsText(f);
 }
