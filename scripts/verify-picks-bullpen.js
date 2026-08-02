@@ -90,11 +90,41 @@ if (!verifiedPitcherLinks) {
   throw new Error("Unified Picks verification could not validate any displayed pitcher links.");
 }
 
+/*
+  Every matchup page that HAS a Picks card must be linked from it.
+
+  This used to demand a link for every page in the manifest, which contradicted
+  the policy stated at the top of this file: the Member Brief can legitimately
+  carry fewer games than the canonical set. The manifest is built from the
+  canonical Pitcher Matchup Tool data (every scheduled game); the Picks page
+  renders one card per BRIEF game. A page in the first set but not the second
+  has no card, therefore no <h2> heading, therefore nothing for
+  generate-matchup-pages.js linkDailyPreview() to attach a link to — it finds
+  no match and moves on without error, and this check then failed three steps
+  later blaming the Picks page for a link it was never able to write.
+
+  That is what broke the 2026-08-02 publish run on
+  /mlb/phillies-vs-orioles-prediction-odds-2026-08-02/ with all 15 pages
+  indexable and the quality gate clean.
+
+  The requirement is now scoped to pages whose game actually has a card. Pages
+  without one are reported, not fatal — if that count is ever unexpectedly
+  large the log says so, which is the signal worth having. A card that exists
+  and is NOT linked is still a hard failure, because that is a real regression
+  in internal linking rather than a set difference.
+*/
+const unlinkedPages = [];
+const cardlessPages = [];
 for (const page of matchupManifest.pages || []) {
   const pathname = new URL(page.url).pathname;
-  if (!preview.includes(pathname) || !previewHub.includes(pathname)) {
-    throw new Error(`Unified Picks page is missing matchup link ${pathname}.`);
-  }
+  if (!briefPks.has(String(page.game_pk))) { cardlessPages.push(pathname); continue; }
+  if (!preview.includes(pathname) || !previewHub.includes(pathname)) unlinkedPages.push(pathname);
+}
+if (unlinkedPages.length) {
+  throw new Error(`Unified Picks page is missing matchup link(s) for game(s) it renders a card for: ${unlinkedPages.join(", ")}.`);
+}
+if (cardlessPages.length) {
+  console.log(`${cardlessPages.length} matchup page(s) have no Picks card and were not required to be linked: ${cardlessPages.join(", ")}.`);
 }
 
 console.log(`Picks/Bullpen verification passed for ${DATE}: ${briefPks.size} games retained.`);
