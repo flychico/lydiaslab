@@ -1202,7 +1202,7 @@ function buildPicksFile(rows, generatedAt) {
     locked_at: generatedAt,
     source_of_truth: "LyDia Daily Engine",
     current_official_model: "multi_market_v1",
-    lock_policy: "Dated official pick files are append-only. Re-running the engine for the same date reuses the existing dated file instead of changing official picks.",
+    lock_policy: "Dated official pick files are append-only. A published pick is never changed or removed once it is on the card, and no pick is ever added to a game that has already started. New picks CAN be appended during the day as they qualify — pitcher strikeout picks require the real posted starting lineup, which for a late game does not exist until the early evening, so the card is expected to grow as the slate progresses.",
     note: `Official records are separated by market. Moneylines use the ${(OFFICIAL_MODEL_PROB * 100).toFixed(0)}% probability and ${(OFFICIAL_LAB_SCORE / 10).toFixed(1)}/10 Lab gates; game totals ${totalsOfficialEnabled ? `use a ${totalsOfficialEdge}-run edge and ${(totalsOfficialLab / 10).toFixed(1)}/10 totals setup` : "are currently paused while the totals setup rating is rebuilt (see EXP-20260727-01)"}; pitcher Ks use a 0.7-K edge, posted price, two-book coverage, a confirmed non-opener workload, and the real posted starting lineup (not a projected one).`,
     rules: {
       moneyline: { minimum_probability: OFFICIAL_MODEL_PROB, minimum_lab: OFFICIAL_LAB_SCORE, minimum_edge: VALUE_EDGE },
@@ -1293,30 +1293,93 @@ function writeOrReusePublishedPicks(candidate, scheduledGameCount) {
     // silently withholding otherwise-valid picks on games hours from first
     // pitch). Once a pick is promoted, only a manual, evidence-backed repair
     // may change the dated file.
-    if (existing.picks.length === 0 && candidate.picks.length > 0) {
+    /*
+      APPEND-ONLY MEANS APPEND. (2026-08-02)
+
+      This block used to fire only when `existing.picks.length === 0`, so a card
+      with any pick already on it was frozen against every later addition — even
+      a different market, on a game hours from first pitch.
+
+      That is not a corner case, it is most days. Official K props REQUIRE a
+      posted starting lineup (line ~1126, added 2026-07-29), and lineups post
+      roughly two hours before each game. A 10pm first pitch does not have a
+      postable lineup until 7:30-8pm. Meanwhile moneylines qualify as soon as
+      the market and model inputs are ready, often by late morning. Whichever
+      market got there first locked the card and silently discarded the other
+      for the rest of the day.
+
+      It happened live on 2026-08-02: five K-prop groups locked the card at
+      16:03, and the Milwaukee (84) and Detroit (82) official moneylines found
+      at 18:10 — first pitches 19:15 and 20:05, both hours away — were dropped
+      on the floor. Same family as ERR-20260801-01: an all-or-nothing check
+      withholding valid pregame picks.
+
+      The hard rule is unchanged and is enforced per pick, not per card:
+        - a pick whose game has started is never added (retroactive lock)
+        - a market already published on the card is never overwritten or removed
+      Only genuinely new, still-pregame entries are appended. Merging happens at
+      the MARKET level, not the game level, because a game already on the card
+      for strikeouts can legitimately qualify for a moneyline later.
+    */
+    if (candidate.picks.length > 0) {
       const now = Date.now();
-      const pregamePicks = candidate.picks.filter(p => {
+      const isPregame = p => {
         const firstPitch = Date.parse(p.time);
         return Number.isFinite(firstPitch) && now < firstPitch;
-      });
-      const droppedCount = candidate.picks.length - pregamePicks.length;
-      if (droppedCount > 0) {
-        console.log(`${droppedCount} candidate pick(s) from the provisional zero-pick snapshot for ${DATE} are past first pitch; not promoted (would be a retroactive lock).`);
+      };
+      const byPk = new Map(existing.picks.map(p => [String(p.gamePk), p]));
+      let addedGroups = 0, addedMarkets = 0, startedSkipped = 0;
+
+      for (const cand of candidate.picks) {
+        if (!isPregame(cand)) { startedSkipped++; continue; }
+        const prior = byPk.get(String(cand.gamePk));
+        if (!prior) {
+          existing.picks.push(cand);
+          byPk.set(String(cand.gamePk), cand);
+          addedGroups++;
+          const markets = ["moneyline", "total"].filter(m => cand[m]).concat((cand.strikeouts || []).length ? ["strikeouts"] : []);
+          console.log(`Appended official pick group for ${cand.away} @ ${cand.home} (${markets.join(", ") || "no market"}), first pitch ${cand.time}.`);
+          continue;
+        }
+        // Game already on the card: fill only the markets it does not have.
+        for (const m of ["moneyline", "total"]) {
+          if (!prior[m] && cand[m]) {
+            prior[m] = cand[m];
+            addedMarkets++;
+            console.log(`Appended ${m} to the existing ${cand.away} @ ${cand.home} group.`);
+          }
+        }
+        if ((cand.strikeouts || []).length) {
+          prior.strikeouts = prior.strikeouts || [];
+          const have = new Set(prior.strikeouts.map(k => k.pitcher));
+          for (const k of cand.strikeouts) {
+            if (have.has(k.pitcher)) continue;   // never restate a published K pick
+            prior.strikeouts.push(k);
+            have.add(k.pitcher);
+            addedMarkets++;
+            console.log(`Appended strikeout pick for ${k.pitcher} to the existing ${cand.away} @ ${cand.home} group.`);
+          }
+        }
+        // Any market already present is left exactly as published.
       }
-      if (pregamePicks.length > 0) {
-        const promoted = { ...candidate, picks: pregamePicks };
-        writeJson(file, promoted);
-        console.log(`Promoted ${pregamePicks.length} official pick(s) from the provisional zero-pick snapshot for ${DATE}${droppedCount ? ` (${droppedCount} dropped as already started)` : ""}.`);
+
+      if (startedSkipped > 0) {
+        console.log(`${startedSkipped} candidate pick group(s) for ${DATE} are past first pitch; not appended (would be a retroactive lock).`);
+      }
+
+      if (addedGroups || addedMarkets) {
+        existing.picks.sort((a, b) => String(a.time).localeCompare(String(b.time)));
+        existing.last_appended_at = new Date().toISOString();
+        writeJson(file, existing);
+        console.log(`Card grew for ${DATE}: ${addedGroups} new game group(s), ${addedMarkets} new market(s) on existing groups. Total groups: ${existing.picks.length}.`);
         if (DATE === etToday()) {
-          writeJson("data/published-picks/today.json", promoted);
+          writeJson("data/published-picks/today.json", existing);
           injectInlineData("results/index.html", "results-inline-picks",
-            { date: promoted.date, picks: promoted.picks },
+            { date: existing.date, picks: existing.picks },
             '<div class="loading">Loading live pick results...</div>');
         }
-        return promoted;
+        return existing;
       }
-      // Every candidate found this run is already past first pitch -- falls
-      // through to the provisional-snapshot logging below instead of crashing.
     }
 
     if (existing.picks.length === 0 && scheduledGameCount > 0) {
