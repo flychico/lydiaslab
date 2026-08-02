@@ -236,6 +236,70 @@ async function main() {
     for (const t of (vl.stats[0] || {}).splits || []) { const so = +t.stat.strikeOuts || 0, pa = +t.stat.plateAppearances || 0; if (pa) { kv.L[t.team.id] = so / pa; soL += so; paL += pa; } }
     for (const t of (vr.stats[0] || {}).splits || []) { const so = +t.stat.strikeOuts || 0, pa = +t.stat.plateAppearances || 0; if (pa) { kv.R[t.team.id] = so / pa; soR += so; paR += pa; } }
     const leagueKByHand = { L: paL ? soL / paL : 0.223, R: paR ? soR / paR : 0.223 };
+
+    /*
+      LINEUP K% — the opponent adjustment now reads the actual nine hitters.
+
+      Previously oppK was the opposing TEAM's season K% against the pitcher's
+      hand. That is a whole-roster figure and it barely moves: the posted
+      lineup and the team season rate agreed to within 0.001 on a same-day
+      check. It could not tell a whiff-heavy nine from a contact nine.
+
+      This uses the mean of the nine posted hitters' individual 30-day K rates,
+      UNWEIGHTED — Lynold's call, and it is the same construction the strikeout
+      tool displays as "Lineup avg K%", so the page and the graded model now
+      agree instead of showing two different numbers for the same idea.
+
+      THE BASELINE MUST MATCH THE NUMERATOR. adj is a ratio, so if the top is a
+      mean-of-nine-rates the bottom has to be a mean-of-nine-rates too. It is
+      computed fresh each run as the average lineup mean across the whole slate
+      (0.2164 on 2026-08-02), NOT the league PA-weighted rate (0.2224). Reusing
+      the PA-weighted figure would have silently rescaled every projection,
+      because an unweighted mean of nine rates and a PA-weighted population rate
+      are different statistics that happen to look alike.
+
+      KNOWN PROPERTY, STATED PLAINLY: an unweighted mean lets a low-PA hitter
+      count as much as a 400-PA regular, so it spreads teams much further than a
+      PA-weighted rate does — 0.142 to 0.302 across the 2026-08-02 slate, a 2.1x
+      range feeding an adjustment that no longer has a clamp. That is the
+      intended behaviour here, but it means a thin-sample bench bat can move a
+      projection, and the >=7K band is already the band that over-projects
+      (-3.27). Both numbers are stored per pitcher (opp_lineup_k and
+      opp_lineup_k_weighted) so grade-confidence.js can settle which one
+      actually predicts rather than either of us arguing it.
+    */
+    const LINEUP_WINDOW_DAYS = 30;
+    const winEnd = new Date(DATE + "T00:00:00Z");
+    winEnd.setUTCDate(winEnd.getUTCDate() - 1);
+    const winStart = new Date(winEnd);
+    winStart.setUTCDate(winStart.getUTCDate() - LINEUP_WINDOW_DAYS);
+    const iso = d => d.toISOString().slice(0, 10);
+    const batterK = {};
+    try {
+      const bd = await j(`https://statsapi.mlb.com/api/v1/stats?stats=byDateRange&group=hitting`
+        + `&startDate=${iso(winStart)}&endDate=${iso(winEnd)}&sportId=1&limit=2000&sortStat=plateAppearances`);
+      for (const s of ((bd.stats || [])[0] || {}).splits || []) {
+        const pa = Number((s.stat || {}).plateAppearances) || 0;
+        if (!pa) continue;
+        batterK[s.player.id] = { k: (Number(s.stat.strikeOuts) || 0) / pa, pa };
+      }
+    } catch (e) { console.warn("lineup K% window fetch skipped:", e.message); }
+
+    // Unweighted mean of a lineup's individual K rates. Needs most of the nine
+    // resolved or it is not a lineup rate, it is a rumour.
+    const MIN_RESOLVED = 7;
+    const lineupMean = ids => {
+      const ks = (ids || []).map(id => batterK[Number(id)]).filter(Boolean).map(b => b.k);
+      if (ks.length < MIN_RESOLVED) return null;
+      return { mean: ks.reduce((a, v) => a + v, 0) / ks.length, resolved: ks.length };
+    };
+    const lineupMeanWeighted = ids => {
+      const bs = (ids || []).map(id => batterK[Number(id)]).filter(Boolean);
+      if (bs.length < MIN_RESOLVED) return null;
+      const pa = bs.reduce((a, b) => a + b.pa, 0);
+      return pa ? bs.reduce((a, b) => a + b.k * b.pa, 0) / pa : null;
+    };
+
     const pids = [...new Set([
       ...games.flatMap(g => ["away", "home"].map(sd => g.teams[sd].probablePitcher && g.teams[sd].probablePitcher.id).filter(Boolean)),
       ...PitchingPlan.participantIds(reportedPlans)
@@ -246,6 +310,40 @@ async function main() {
       // Swing-and-miss / arsenal leverage data (Baseball Savant, 2 calls, whole league).
       const arsenalData = await Arsenal.fetchArsenalData(yr, j).catch(() => ({ ready: false }));
       const teamCodes = arsenalData.ready ? await Arsenal.fetchTeamCodes(j) : {};
+
+      /*
+        Resolve every lineup on the slate FIRST, so the league baseline is the
+        average of the same statistic we are about to divide by. Doing this
+        inside the per-pitcher loop would mean each pitcher was compared against
+        a baseline built from a different subset of games.
+      */
+      const resolveLineup = (g, forSide) => {
+        const oppSide = forSide === "away" ? "home" : "away";
+        const posted = ((g.lineups || {})[oppSide + "Players"] || []).map(p => p.id).filter(Boolean);
+        if (posted.length >= 9) return { ids: posted, source: "posted", conf: 1 };
+        const code = teamCodes[g.teams[oppSide].team.id];
+        const proj = ((arsenalData.byTeam && arsenalData.byTeam[code]) || []).slice(0, 9).map(x => x.id);
+        return { ids: proj, source: proj.length ? "projected_regulars" : "none", conf: 0.5 };
+      };
+      const lineupCache = new Map();
+      const slateMeans = [];
+      for (const g of games) {
+        for (const sd of ["away", "home"]) {
+          const lu = resolveLineup(g, sd);
+          const m = lineupMean(lu.ids);
+          lineupCache.set(`${g.gamePk}|${sd}`, { ...lu, stat: m, weighted: lineupMeanWeighted(lu.ids) });
+          if (m) slateMeans.push(m.mean);
+        }
+      }
+      // Fall back to the season league rate only if the slate is unusable; a
+      // half-built baseline is worse than the old behaviour, not better.
+      const leagueLineupK = slateMeans.length >= 10
+        ? slateMeans.reduce((a, v) => a + v, 0) / slateMeans.length
+        : null;
+      console.log(leagueLineupK
+        ? `Lineup K% baseline: ${leagueLineupK.toFixed(4)} (unweighted mean across ${slateMeans.length} lineup(s); league PA-weighted for reference ${leagueKByHand.R.toFixed(4)}).`
+        : `Lineup K% baseline unavailable (${slateMeans.length} lineup(s) resolved) — falling back to team season K% vs hand.`);
+
       for (const g of games) {
         for (const sd of ["away", "home"]) {
           const probable = g.teams[sd].probablePitcher || null;
@@ -268,9 +366,26 @@ async function main() {
             const roleStats = candidate.role === "bulk" ? bulkRoleStats[Number(candidate.pitcher_id)] || null : null;
             const skillSo = roleStats && roleStats.bf ? roleStats.so : pit.so;
             const skillBf = roleStats && roleStats.bf ? roleStats.bf : pit.bf;
-            const oppK = pit.hand && kv[pit.hand] ? kv[pit.hand][oppId] : null;
-            const leagueK = leagueKByHand[pit.hand] || leagueKByHand.R;
-            const adj = (oppK && leagueK) ? (oppK / leagueK) : 1;
+            /*
+              Opponent adjustment. Preferred source is the posted lineup's
+              unweighted mean K% over the trailing 30 days, divided by the
+              slate-wide average of that same statistic. Falls back to the
+              previous team-season-vs-hand ratio when the lineup cannot be
+              resolved (fewer than 7 of 9 hitters with a window sample) or when
+              too few lineups exist to build a baseline — early-morning runs
+              before any lineup is posted take this path.
+            */
+            const luStat = lineupCache.get(`${g.gamePk}|${sd}`) || null;
+            const teamOppK = pit.hand && kv[pit.hand] ? kv[pit.hand][oppId] : null;
+            const teamLeagueK = leagueKByHand[pit.hand] || leagueKByHand.R;
+            let adj = 1, adjSource = "none";
+            if (luStat && luStat.stat && leagueLineupK) {
+              adj = luStat.stat.mean / leagueLineupK;
+              adjSource = `lineup_unweighted_30d_${luStat.source}`;
+            } else if (teamOppK && teamLeagueK) {
+              adj = teamOppK / teamLeagueK;
+              adjSource = "team_season_vs_hand";
+            }
             // Swing-and-miss / arsenal leverage: how much THIS lineup misses THIS
             // pitcher's specific pitch mix, relative to a league-average lineup.
             // Posted lineup -> full confidence; projected regulars -> half.
@@ -306,6 +421,16 @@ async function main() {
             rec.projection_raw = projRaw;
             rec.calibration_band = projBand;
             rec.calibration_bias = projBias;
+            // Both constructions are recorded every run so grade-confidence.js
+            // can measure which one actually predicts, rather than the question
+            // being settled by argument.
+            rec.opp_k_adjustment = Number(adj.toFixed(4));
+            rec.opp_k_source = adjSource;
+            rec.opp_lineup_k = luStat && luStat.stat ? Number(luStat.stat.mean.toFixed(4)) : null;
+            rec.opp_lineup_k_weighted = luStat && Number.isFinite(luStat.weighted) ? Number(luStat.weighted.toFixed(4)) : null;
+            rec.opp_lineup_k_resolved = luStat && luStat.stat ? luStat.stat.resolved : 0;
+            rec.opp_team_season_k = Number.isFinite(teamOppK) ? Number(teamOppK.toFixed(4)) : null;
+            rec.league_lineup_k = leagueLineupK ? Number(leagueLineupK.toFixed(4)) : null;
             rec.bf_per_ip = Number(bfPerIp.toFixed(2));
             rec.whiff_leverage = whiffFactor;
             rec.whiff_leverage_applied = lev.applied;
