@@ -28,6 +28,31 @@ const WATCHLIST_LAB_SCORE = 65;
 const MAX_ABS_PRICE = 1000;
 
 /*
+  Hard price floor for ANY official pick (2026-08-02, Lynold's call).
+
+  A price of -185 needs a 64.9% strike rate just to break even, and -250 needs
+  71.4%. Our own calibration says we do not hit those numbers: over 261 graded
+  games the 75-85% band came in at 52.4% actual and the 85%+ band at 57.1%. A
+  favourite that heavy is a market we are paying a premium to be right about,
+  and the record does not support paying it.
+
+  This is a price gate, not a rating gate. It sits alongside the market veto in
+  the official-pick condition and never touches the Lab Rating — the analysis
+  can still be excellent, it just is not a bet at that number. A rejected pick
+  keeps its status and read; only official publication is withheld, and every
+  rejection is logged so the count is visible rather than silent.
+
+  Applied to all three official markets — moneyline, game total, pitcher Ks —
+  because the break-even arithmetic is identical regardless of market. Change
+  this one constant to retune, or scope it per market if that ever diverges.
+*/
+const MIN_OFFICIAL_PRICE = -185;
+// American odds: -185 and anything more negative is rejected. Positive prices
+// and shorter favourites pass. Missing prices are handled by existing checks.
+const priceAllowsOfficial = price =>
+  !Number.isFinite(price) ? false : price > MIN_OFFICIAL_PRICE;
+
+/*
   Weight of the totals run-projection inside the moneyline probability.
 
   Set to 0 on 2026-08-02. It was 0.50 — half of every moneyline log-odds came
@@ -781,11 +806,18 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
     hasBothPitchers: Boolean(awayStats && homeStats),
     hasRunProjection: Boolean(runProjection)
   });
+  const priceTooShort = Number.isFinite(bestPrice) && !priceAllowsOfficial(bestPrice);
+  if (priceTooShort && edge !== null && edge >= VALUE_EDGE
+    && modelProb >= OFFICIAL_MODEL_PROB && lab.score >= OFFICIAL_LAB_SCORE && !pitcherConflict) {
+    console.log(`Price gate: ${pickTeam} cleared every official moneyline gate but the best price is ${bestPrice} `
+      + `(floor ${MIN_OFFICIAL_PRICE}). Not published as official.`);
+  }
   const officialEligible = edge !== null
     && edge >= VALUE_EDGE
     && modelProb >= OFFICIAL_MODEL_PROB
     && lab.score >= OFFICIAL_LAB_SCORE
-    && !pitcherConflict;
+    && !pitcherConflict
+    && !priceTooShort;
 
   let status = "pass";
   if (officialEligible) status = "official_pick";
@@ -1151,6 +1183,10 @@ function buildPicksFile(rows, generatedAt) {
     const pick = edge > 0 ? "Over" : "Under";
     const price = pick === "Over" ? t.over : t.under;
     if (Math.abs(edge) < totalsOfficialEdge || t.lab < totalsOfficialLab || !Number.isFinite(price)) continue;
+    if (!priceAllowsOfficial(price)) {
+      console.log(`Price gate: ${r.game} total ${pick} ${t.line} cleared its gates but the best price is ${price} (floor ${MIN_OFFICIAL_PRICE}). Not published as official.`);
+      continue;
+    }
     ensureGroup(r).total = {
       pick,
       line: t.line,
@@ -1179,6 +1215,10 @@ function buildPicksFile(rows, generatedAt) {
     // exactly this reason on 2026-07-29. Require the real posted lineup.
     const lineupConfirmed = rec.opp_lineup_source === "posted";
     if (Math.abs(edge) < OFFICIAL_K_EDGE || !roleEligible || !lineupConfirmed || Number(rec.books) < OFFICIAL_K_MIN_BOOKS || !Number.isFinite(price)) continue;
+    if (!priceAllowsOfficial(price)) {
+      console.log(`Price gate: ${rec.name} K ${pick} ${rec.line} cleared its gates but the best price is ${price} (floor ${MIN_OFFICIAL_PRICE}). Not published as official.`);
+      continue;
+    }
     ensureGroup(r).strikeouts.push({
       pitcher: rec.name,
       pick,
@@ -1203,11 +1243,14 @@ function buildPicksFile(rows, generatedAt) {
     source_of_truth: "LyDia Daily Engine",
     current_official_model: "multi_market_v1",
     lock_policy: "Dated official pick files are append-only. A published pick is never changed or removed once it is on the card, and no pick is ever added to a game that has already started. New picks CAN be appended during the day as they qualify — pitcher strikeout picks require the real posted starting lineup, which for a late game does not exist until the early evening, so the card is expected to grow as the slate progresses.",
-    note: `Official records are separated by market. Moneylines use the ${(OFFICIAL_MODEL_PROB * 100).toFixed(0)}% probability and ${(OFFICIAL_LAB_SCORE / 10).toFixed(1)}/10 Lab gates; game totals ${totalsOfficialEnabled ? `use a ${totalsOfficialEdge}-run edge and ${(totalsOfficialLab / 10).toFixed(1)}/10 totals setup` : "are currently paused while the totals setup rating is rebuilt (see EXP-20260727-01)"}; pitcher Ks use a 0.7-K edge, posted price, two-book coverage, a confirmed non-opener workload, and the real posted starting lineup (not a projected one).`,
+    note: `Official records are separated by market. Moneylines use the ${(OFFICIAL_MODEL_PROB * 100).toFixed(0)}% probability and ${(OFFICIAL_LAB_SCORE / 10).toFixed(1)}/10 Lab gates; game totals ${totalsOfficialEnabled ? `use a ${totalsOfficialEdge}-run edge and ${(totalsOfficialLab / 10).toFixed(1)}/10 totals setup` : "are currently paused while the totals setup rating is rebuilt (see EXP-20260727-01)"}; pitcher Ks use a 0.7-K edge, posted price, two-book coverage, a confirmed non-opener workload, and the real posted starting lineup (not a projected one). No market publishes an official pick at a price of ${MIN_OFFICIAL_PRICE} or shorter — a favourite that heavy has to win ${(100 * (185 / 285)).toFixed(1)}% of the time just to break even, and LyDia's graded record does not support paying that.`,
     rules: {
-      moneyline: { minimum_probability: OFFICIAL_MODEL_PROB, minimum_lab: OFFICIAL_LAB_SCORE, minimum_edge: VALUE_EDGE },
-      game_total: { minimum_edge_runs: totalsOfficialEdge, minimum_lab: totalsOfficialLab, official_enabled: totalsOfficialEnabled },
-      pitcher_strikeouts: { minimum_edge_k: OFFICIAL_K_EDGE, minimum_books: OFFICIAL_K_MIN_BOOKS, minimum_expected_innings: 4, requires_posted_lineup: true },
+      // Applies to every market. -185 needs a 64.9% strike rate to break even
+      // and the graded record does not support paying that.
+      maximum_price_all_markets: MIN_OFFICIAL_PRICE,
+      moneyline: { minimum_probability: OFFICIAL_MODEL_PROB, minimum_lab: OFFICIAL_LAB_SCORE, minimum_edge: VALUE_EDGE, maximum_price: MIN_OFFICIAL_PRICE },
+      game_total: { minimum_edge_runs: totalsOfficialEdge, minimum_lab: totalsOfficialLab, official_enabled: totalsOfficialEnabled, maximum_price: MIN_OFFICIAL_PRICE },
+      pitcher_strikeouts: { minimum_edge_k: OFFICIAL_K_EDGE, minimum_books: OFFICIAL_K_MIN_BOOKS, minimum_expected_innings: 4, requires_posted_lineup: true, maximum_price: MIN_OFFICIAL_PRICE },
       team_totals: { official_enabled: false, status: "research_only" }
     },
     picks: [...groups.values()]
