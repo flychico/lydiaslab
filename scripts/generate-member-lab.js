@@ -26,7 +26,44 @@ const OFFICIAL_MODEL_PROB = 0.72;
 const VALUE_WATCH_LAB_SCORE = 75;
 const WATCHLIST_LAB_SCORE = 65;
 const MAX_ABS_PRICE = 1000;
-const RUN_MODEL_WEIGHT = 0.50;
+
+/*
+  Weight of the totals run-projection inside the moneyline probability.
+
+  Set to 0 on 2026-08-02. It was 0.50 — half of every moneyline log-odds came
+  from the run model — and the evidence says that signal has never been shown to
+  be worth anything:
+
+    - Totals projection vs its own market: beta = +0.066, 95% CI [-0.46, +0.59].
+      beta = 0 cannot be rejected. It carries no information the line lacks.
+    - Moneyline calibration over 261 graded games: Brier 0.2572, worse than a
+      coin flip (0.2500) and worse than always betting the base rate (0.2477).
+      The 75-85% band went 52.4% actual against 78.7% predicted.
+    - On 2026-07-29 the totals model was replaced with v4-additive-median-woba,
+      which emitted per-side projections like 0.6 runs for St. Louis and 9.0 for
+      Seattle. Poisson-converted and blended at 0.50 those produced moneyline
+      probabilities up to 0.9858 — a number no baseball matchup supports. The
+      maximum before that day was 0.8084.
+
+  This is staged, not a deletion. The run model stays wired up and its
+  contribution is still recorded per game (run_model_probability), so the
+  accountability ledger can measure whether it earns weight back. Raise this
+  above 0 only on that evidence.
+*/
+const RUN_MODEL_WEIGHT = 0;
+
+/*
+  Plausibility bounds on a per-side run projection.
+
+  Even at weight 0 this matters, because run_model_probability is still stored,
+  displayed, and fed to the Lab Rating's model-agreement term. A projection
+  outside these bounds is not a bold opinion, it is a broken input: no MLB team
+  has ever averaged under 3 runs a game over a season, and 8.5 is already an
+  extreme single-game total for one side. Outside the range the run model is
+  treated as unavailable for that game rather than blended in.
+*/
+const RUN_PROJ_MIN = 2.0;
+const RUN_PROJ_MAX = 8.5;
 // Fallback totals gate, used only for older data/totals files written before
 // update-totals.js started publishing its own `policy` object (2026-07-29 and
 // earlier had no per-file policy; TOTALS_POLICY.strong_min_edge/strong_min_setup/
@@ -664,13 +701,30 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
   const modelOdds = preBullpenOdds * Math.exp(bullpenAdj);
   const legacyPHome = modelOdds / (1 + modelOdds);
   const bullpenGame = Boolean(runProjection && runProjection.bullpen_game);
-  const runPHome = runProjection
-    ? winProbabilityFromRuns(Number(runProjection.proj_home), Number(runProjection.proj_away))
+  // Plausibility gate on the run projection before it is converted to a win
+  // probability. winProbabilityFromRuns saturates violently — a 5.5-run
+  // projected differential already returns 0.9997 — so one broken per-side
+  // number does not degrade the blend gracefully, it dominates it. Reject the
+  // input rather than trying to temper the output.
+  const projHomeRuns = runProjection ? Number(runProjection.proj_home) : NaN;
+  const projAwayRuns = runProjection ? Number(runProjection.proj_away) : NaN;
+  const runProjPlausible = [projHomeRuns, projAwayRuns].every(
+    v => Number.isFinite(v) && v >= RUN_PROJ_MIN && v <= RUN_PROJ_MAX);
+  if (runProjection && !runProjPlausible) {
+    console.warn(`Run projection out of bounds for ${aT.name} @ ${hT.name}: `
+      + `home ${projHomeRuns}, away ${projAwayRuns} (allowed ${RUN_PROJ_MIN}-${RUN_PROJ_MAX}). `
+      + `Treating the run model as unavailable for this game.`);
+  }
+  const runPHome = runProjPlausible
+    ? winProbabilityFromRuns(projHomeRuns, projAwayRuns)
     : null;
-  // Preserve the established moneyline model and enhance it with the run
-  // projection as a second signal. Blend on the log-odds scale so neither
-  // component is discarded and both remain auditable.
-  const pHome = Number.isFinite(runPHome)
+  // The established moneyline model is the probability. The run projection is
+  // blended in on the log-odds scale at RUN_MODEL_WEIGHT, which is currently 0
+  // — see the constant for the evidence. Keeping the call site intact (rather
+  // than deleting the blend) means the weight is a single reversible number and
+  // run_model_probability is still recorded for every game, which is what lets
+  // the accountability ledger decide whether the run model earns weight back.
+  const pHome = Number.isFinite(runPHome) && RUN_MODEL_WEIGHT > 0
     ? blendProbabilities(legacyPHome, runPHome, RUN_MODEL_WEIGHT)
     : legacyPHome;
 

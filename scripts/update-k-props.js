@@ -117,25 +117,108 @@ async function main() {
 
   const probables = await currentProbables().catch(() => ({}));
 
-  // SELF-CALIBRATION: read our own graded history and correct systematic bias.
-  // Rolling mean error (actual − projection) over the last 100 graded pitchers;
-  // applied only with n ≥ 30 and |bias| ≥ 0.15 K, capped at ±0.6 so learning
-  // nudges, never lurches. The corrected number is what gets graded next —
-  // the loop measures its own medicine.
-  let learnedBias = 0, learnedN = 0;
+  /*
+    SELF-CALIBRATION — banded, not global.
+
+    This previously computed ONE rolling bias over the last 100 graded pitchers
+    and added it to every projection. That is only correct if the error is the
+    same everywhere, and it is not. Measured over 142 graded starts joined back
+    to their true PRE-correction projection:
+
+        raw projection <6.0   n=109   bias -0.48
+        raw projection 6.0-7  n= 16   bias -0.73
+        raw projection >=7.0  n= 17   bias -3.27
+
+    The error is a gradient, not an offset. No single number fits a -0.48 to
+    -3.27 spread: centring the low band leaves the high band nearly 3 strikeouts
+    long, and centring the high band would wreck everything below it.
+
+    A replay over those 142 starts:
+
+        no correction          MAE 2.158   RMSE 2.788
+        global -0.54 (live)    MAE 2.111   RMSE 2.675
+        banded                 MAE 2.046   RMSE 2.596
+
+    The live global correction was also thrashing. Because it is a hard
+    threshold (|bias| >= 0.15) over a rolling window with a hard cap, small
+    changes flipped it between no correction and the cap: across 07-20..08-02 it
+    read 0, -0.6, -0.42, -0.44, 0, 0, -0.21, -0.21, 0, -0.6, -0.6, -0.54. Which
+    correction a pitcher received depended on which day he happened to start.
+    Banding plus sample-size shrinkage removes most of that: a band only moves
+    in proportion to n/(n+SHRINK_K), so it drifts rather than snapping.
+
+    Bias is measured on projection_raw where the ledger has it (column 11,
+    written from this version forward and backfilled from data/k-props/*.json).
+    Older rows fall back to the corrected projection, which biases their band
+    assignment slightly; that self-heals as the window rolls over.
+
+    The >=7 band is where the real problem lives and a bias correction is a
+    patch on it, not a diagnosis. The leading hypothesis is short outings
+    (expected innings not being realised), which is a modelling question, not a
+    calibration one. This keeps the number honest until that is answered.
+  */
+  const K_BANDS = [
+    { key: "<6",   min: -Infinity, max: 6.0 },
+    { key: "6-7",  min: 6.0,       max: 7.0 },
+    { key: ">=7",  min: 7.0,       max: Infinity }
+  ];
+  const K_MIN_N = 15;        // below this a band has nothing trustworthy to say
+  const K_MIN_BIAS = 0.15;   // ignore noise-level corrections
+  const K_SHRINK = 25;       // pulls thin bands toward no correction
+  const K_CAP = 1.5;         // a single band may not move a projection more than this
+  const K_WINDOW = 150;      // graded starts considered
+
+  const bandFor = proj => (K_BANDS.find(b => proj >= b.min && proj < b.max) || K_BANDS[0]).key;
+  const learnedByBand = {};
+  let learnedN = 0;
   try {
     const klog = path.join(ROOT, "data", "calibration", "kprops_log.csv");
     if (fs.existsSync(klog)) {
       const rows = fs.readFileSync(klog, "utf8").trim().split("\n").slice(1).map(l => l.split(","))
-        .filter(r => r.length >= 7 && r[5] !== "" && r[6] !== "" && isFinite(Number(r[5])) && isFinite(Number(r[6]))).slice(-100);
+        .filter(r => r.length >= 7 && r[5] !== "" && r[6] !== "" && isFinite(Number(r[5])) && isFinite(Number(r[6])))
+        .slice(-K_WINDOW);
       learnedN = rows.length;
-      if (learnedN >= 30) {
-        const b = rows.reduce((a, r) => a + (Number(r[6]) - Number(r[5])), 0) / learnedN;
-        if (Math.abs(b) >= 0.15) learnedBias = Math.max(-0.6, Math.min(0.6, Number(b.toFixed(2))));
+      const byBand = {};
+      for (const r of rows) {
+        const proj = Number(r[5]), actual = Number(r[6]);
+        // Band on the pre-correction projection when the row carries it
+        // (column 10). Banding on the corrected number measures the residual
+        // after last week's correction rather than the model's own error, which
+        // is how the <6 band looked unbiased at -0.09 when its true error was
+        // -0.48. Fall back to the corrected value for legacy rows.
+        const rawLogged = r.length > 10 && r[10] !== "" && isFinite(Number(r[10])) ? Number(r[10]) : null;
+        const bandOn = rawLogged !== null ? rawLogged : proj;
+        const b = bandFor(bandOn);
+        // The error is always actual minus what was actually projected and
+        // graded, regardless of which value chose the band.
+        (byBand[b] = byBand[b] || []).push(actual - (rawLogged !== null ? rawLogged : proj));
+      }
+      for (const band of K_BANDS) {
+        const errs = byBand[band.key] || [];
+        if (errs.length < K_MIN_N) continue;
+        const raw = errs.reduce((a, e) => a + e, 0) / errs.length;
+        const shrunk = raw * (errs.length / (errs.length + K_SHRINK));
+        if (Math.abs(shrunk) < K_MIN_BIAS) continue;
+        learnedByBand[band.key] = {
+          bias: Number(Math.max(-K_CAP, Math.min(K_CAP, shrunk)).toFixed(2)),
+          n: errs.length,
+          raw: Number(raw.toFixed(2))
+        };
       }
     }
-  } catch (e) {}
-  if (learnedBias) console.log(`K self-calibration: applying ${learnedBias > 0 ? "+" : ""}${learnedBias} K learned correction (n=${learnedN}).`);
+  } catch (e) { console.warn("K self-calibration skipped:", e.message); }
+
+  const biasFor = projRaw => (learnedByBand[bandFor(projRaw)] || {}).bias || 0;
+
+  if (Object.keys(learnedByBand).length) {
+    const parts = K_BANDS.filter(b => learnedByBand[b.key]).map(b => {
+      const v = learnedByBand[b.key];
+      return `${b.key}: ${v.bias > 0 ? "+" : ""}${v.bias} (raw ${v.raw > 0 ? "+" : ""}${v.raw}, n=${v.n})`;
+    });
+    console.log(`K self-calibration by band — ${parts.join("; ")}. Window ${learnedN} graded starts.`);
+  } else {
+    console.log(`K self-calibration: no band met the n>=${K_MIN_N} / |bias|>=${K_MIN_BIAS} threshold (window ${learnedN}).`);
+  }
 
   // Our projection per pitcher, captured alongside the market line so the
   // nightly grader can score projection vs line vs actual. Mirrors the tool math.
@@ -212,11 +295,17 @@ async function main() {
             const paceIp = (roleStats && roleStats.bf && roleStats.ip) ? roleStats.ip : pit.ip;
             const bfPerIp = Math.max(3.6, Math.min(4.8, paceBf / paceIp));
             const projRaw = Number((expIP * bfPerIp * (skillSo / skillBf) * adj * whiffFactor).toFixed(2));
-            const proj = Number((projRaw + learnedBias).toFixed(2));
+            // Band is chosen on the RAW projection so the correction cannot move
+            // a pitcher into a different band and then be re-derived from it.
+            const projBand = bandFor(projRaw);
+            const projBias = biasFor(projRaw);
+            const proj = Number((projRaw + projBias).toFixed(2));
             const key = pit.name.toLowerCase();
             const rec = pitchers[key] || (pitchers[key] = { name: pit.name, line: null, over: null, under: null, books: 0, game: `${g.teams.away.team.name} @ ${g.teams.home.team.name}` });
             rec.projection = proj;
             rec.projection_raw = projRaw;
+            rec.calibration_band = projBand;
+            rec.calibration_bias = projBias;
             rec.bf_per_ip = Number(bfPerIp.toFixed(2));
             rec.whiff_leverage = whiffFactor;
             rec.whiff_leverage_applied = lev.applied;
@@ -259,7 +348,14 @@ async function main() {
       }
     }
   } catch (e) {}
-  const out = { date: DATE, generated_at: new Date().toISOString(), source: "the-odds-api pitcher_strikeouts (us region; consensus = most common posted line, best price at it)", events_fetched: fetched, probables, pitching_plan_signature: pitchingPlanSignature, pitchers, learned_bias: learnedBias, learned_n: learnedN };
+  const out = { date: DATE, generated_at: new Date().toISOString(), source: "the-odds-api pitcher_strikeouts (us region; consensus = most common posted line, best price at it)", events_fetched: fetched, probables, pitching_plan_signature: pitchingPlanSignature, pitchers,
+    // learned_bias is kept as a single number for any older consumer that reads
+    // it, but it is now only meaningful alongside learned_by_band. It reports
+    // the correction for the band most projections fall in, not one global
+    // adjustment applied to everyone — that behaviour is what this replaced.
+    learned_bias: (learnedByBand["<6"] || {}).bias || 0,
+    learned_by_band: learnedByBand,
+    learned_n: learnedN };
   fs.mkdirSync(path.join(ROOT, "data", "k-props"), { recursive: true });
   fs.writeFileSync(path.join(ROOT, "data", "k-props", `${DATE}.json`), JSON.stringify(out, null, 1));
   fs.writeFileSync(path.join(ROOT, "data", "k-props", "today.json"), JSON.stringify(out, null, 1));
