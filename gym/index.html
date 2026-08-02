@@ -169,7 +169,57 @@ const EX = [
   {id:"row-erg",n:"Rowing Machine",p:"cardio",e:"gym",m:"Cardio (full body)",inc:0,u:"time"},
   {id:"stair-climber",n:"Stair Climber",p:"cardio",e:"gym",m:"Cardio (glutes/legs)",inc:0,u:"time"},
   {id:"jump-rope",n:"Jump Rope",p:"cardio",e:"bw",m:"Cardio",inc:0,u:"time"},
-  {id:"outdoor-run",n:"Running (outdoor)",p:"cardio",e:"bw",m:"Cardio",inc:0,u:"time"}
+  {id:"outdoor-run",n:"Running (outdoor)",p:"cardio",e:"bw",m:"Cardio",inc:0,u:"time"},
+  /* --- extended library --- */
+  {id:"front-squat",n:"Front Squat",p:"squat",e:"gym",m:"Quads",inc:10},
+  {id:"smith-squat",n:"Smith Machine Squat",p:"squat",e:"gym",m:"Quads/Glutes",inc:10},
+  {id:"trap-bar-dl",n:"Trap Bar Deadlift",p:"hinge",e:"gym",m:"Posterior chain",inc:10},
+  {id:"good-morning",n:"Good Morning",p:"hinge",e:"gym",m:"Hamstrings/Lower back",inc:5},
+  {id:"seated-leg-curl",n:"Seated Leg Curl",p:"hinge",e:"gym",m:"Hamstrings",inc:5},
+  {id:"cable-pullthrough",n:"Cable Pull-Through",p:"hinge",e:"gym",m:"Glutes/Hamstrings",inc:5},
+  {id:"nordic-curl",n:"Nordic Hamstring Curl",p:"hinge",e:"bw",m:"Hamstrings",inc:0},
+  {id:"single-leg-hip-thrust",n:"Single-Leg Hip Thrust",p:"glute",e:"bw",m:"Glutes",inc:0},
+  {id:"reverse-hyper",n:"Reverse Hyperextension",p:"glute",e:"gym",m:"Glutes/Lower back",inc:5},
+  {id:"adductor-machine",n:"Hip Adduction Machine",p:"glute",e:"gym",m:"Adductors",inc:10},
+  {id:"reverse-lunge",n:"Reverse Lunge",p:"lunge",e:"db",m:"Quads/Glutes",inc:5},
+  {id:"incline-bb-bench",n:"Incline Barbell Bench Press",p:"pushH",e:"gym",m:"Upper chest",inc:5},
+  {id:"decline-bench",n:"Decline Bench Press",p:"pushH",e:"gym",m:"Lower chest",inc:5},
+  {id:"close-grip-bench",n:"Close-Grip Bench Press",p:"pushH",e:"gym",m:"Triceps/Chest",inc:5},
+  {id:"pec-deck",n:"Pec Deck (Machine Fly)",p:"pushH",e:"gym",m:"Chest",inc:10},
+  {id:"cable-crossover",n:"Cable Crossover",p:"pushH",e:"gym",m:"Chest",inc:5},
+  {id:"incline-machine",n:"Incline Chest Press Machine",p:"pushH",e:"gym",m:"Upper chest",inc:10},
+  {id:"smith-bench",n:"Smith Machine Bench Press",p:"pushH",e:"gym",m:"Chest/Triceps",inc:5},
+  {id:"arnold-press",n:"Arnold Press",p:"pushV",e:"db",m:"Shoulders",inc:5},
+  {id:"machine-shoulder-press",n:"Machine Shoulder Press",p:"pushV",e:"gym",m:"Shoulders/Triceps",inc:10},
+  {id:"landmine-press",n:"Landmine Press",p:"pushV",e:"db",m:"Shoulders/Upper chest",inc:5},
+  {id:"pendlay-row",n:"Pendlay Row",p:"pullH",e:"gym",m:"Back/Biceps",inc:5},
+  {id:"tbar-row",n:"T-Bar Row",p:"pullH",e:"gym",m:"Back",inc:10},
+  {id:"chest-supported-row",n:"Chest-Supported Row",p:"pullH",e:"db",m:"Back/Biceps",inc:5},
+  {id:"meadows-row",n:"Meadows Row",p:"pullH",e:"db",m:"Back/Lats",inc:5},
+  {id:"chinup",n:"Chin-Up",p:"pullV",e:"bw",m:"Lats/Biceps",inc:0},
+  {id:"neutral-pulldown",n:"Neutral-Grip Lat Pulldown",p:"pullV",e:"gym",m:"Lats/Biceps",inc:5},
+  {id:"db-shrug",n:"Dumbbell Shrug",p:"shoulders",e:"db",m:"Traps",inc:5},
+  {id:"bb-shrug",n:"Barbell Shrug",p:"shoulders",e:"gym",m:"Traps",inc:10},
+  {id:"reverse-pec-deck",n:"Reverse Pec Deck",p:"shoulders",e:"gym",m:"Rear delts",inc:10},
+  {id:"upright-row",n:"Upright Row",p:"shoulders",e:"db",m:"Side delts/Traps",inc:5},
+  {id:"front-raise",n:"Front Raise",p:"shoulders",e:"db",m:"Front delts",inc:2.5},
+  {id:"preacher-curl",n:"Preacher Curl",p:"arms",e:"gym",m:"Biceps",inc:5},
+  {id:"concentration-curl",n:"Concentration Curl",p:"arms",e:"db",m:"Biceps",inc:2.5},
+  {id:"cable-curl",n:"Cable Curl",p:"arms",e:"gym",m:"Biceps",inc:5},
+  {id:"ez-curl",n:"EZ-Bar Curl",p:"arms",e:"gym",m:"Biceps",inc:5},
+  {id:"incline-curl",n:"Incline Dumbbell Curl",p:"arms",e:"db",m:"Biceps",inc:2.5},
+  {id:"rope-pushdown",n:"Rope Triceps Pushdown",p:"arms",e:"gym",m:"Triceps",inc:5},
+  {id:"tri-kickback",n:"Triceps Kickback",p:"arms",e:"db",m:"Triceps",inc:2.5},
+  {id:"close-grip-pushup",n:"Close-Grip Push-Up",p:"arms",e:"bw",m:"Triceps",inc:0},
+  {id:"reverse-crunch",n:"Reverse Crunch",p:"core",e:"bw",m:"Lower abs",inc:0},
+  {id:"decline-situp",n:"Decline Sit-Up",p:"core",e:"bw",m:"Abs",inc:0},
+  {id:"woodchop",n:"Cable Woodchop",p:"core",e:"gym",m:"Obliques",inc:5},
+  {id:"pallof",n:"Pallof Press",p:"core",e:"gym",m:"Core (anti-rotation)",inc:5},
+  {id:"leg-raise",n:"Lying Leg Raise",p:"core",e:"bw",m:"Lower abs",inc:0},
+  {id:"dead-bug",n:"Dead Bug",p:"core",e:"bw",m:"Core",inc:0},
+  {id:"bicycle-crunch",n:"Bicycle Crunch",p:"core",e:"bw",m:"Abs/Obliques",inc:0},
+  {id:"seated-calf",n:"Seated Calf Raise",p:"calves",e:"gym",m:"Calves (soleus)",inc:10},
+  {id:"leg-press-calf",n:"Leg Press Calf Raise",p:"calves",e:"gym",m:"Calves",inc:10}
 ];
 const EXBY = {}; EX.forEach(e => EXBY[e.id] = e);
 /* Short form cues — shown on every exercise card */
@@ -233,10 +283,59 @@ const CUES = {
 "ab-wheel":"Ribs down, go only as far as you can control.",
 "russian-twist":"Rotate from the torso, feet down is fine.",
 "calf-raise":"Full stretch at bottom, 2s pause at top.",
-"db-calf":"Same — pause at the top or it's bouncing, not training."
+"db-calf":"Same — pause at the top or it's bouncing, not training.",
+"front-squat":"Elbows high, bar on the shelf of your delts, stay upright — quads take over.",
+"smith-squat":"Fixed path lets you place feet slightly forward and sit deep.",
+"trap-bar-dl":"Neutral handles, push the floor away — easier on the lower back than a straight bar.",
+"good-morning":"Light. Soft knees, hips back, flat back — hamstring stretch, not a squat.",
+"seated-leg-curl":"Push hips into the pad, curl hard, slow negative.",
+"cable-pullthrough":"Hinge back to the stack, snap hips through, squeeze glutes at the top.",
+"nordic-curl":"Lower as slow as you can control, catch with your hands — brutal, start assisted.",
+"single-leg-hip-thrust":"Drive through one heel, ribs down, full lockout — even both sides.",
+"reverse-hyper":"Squeeze glutes to lift, don't swing with momentum.",
+"adductor-machine":"Control the open, squeeze the inner thighs closed, pause.",
+"reverse-lunge":"Step back, drop straight down, drive through the front heel — knee-friendly.",
+"incline-bb-bench":"30–45° bench, bar to upper chest, elbows tucked ~45°.",
+"decline-bench":"Bar to lower chest, short arc — hits the lower pecs.",
+"close-grip-bench":"Hands shoulder-width, elbows tight to the body — triceps first.",
+"pec-deck":"Slight elbow bend, squeeze the handles together, control back.",
+"cable-crossover":"Slight forward lean, hug the barrel, cross the hands at the bottom.",
+"incline-machine":"Drive up and slightly back, squeeze the upper chest.",
+"smith-bench":"Fixed bar path — great for pushing close to failure solo.",
+"arnold-press":"Start palms-in, rotate out as you press — full delt sweep.",
+"machine-shoulder-press":"Back flat on the pad, press to lockout, no bouncing the stack.",
+"landmine-press":"Press up and slightly across, brace the core — shoulder-friendly angle.",
+"pendlay-row":"Every rep from a dead stop on the floor, explosive pull to the lower chest.",
+"tbar-row":"Chest proud, pull to the belly, squeeze the mid-back.",
+"chest-supported-row":"Chest on the pad kills momentum — pure back work, elbows to hips.",
+"meadows-row":"Stagger stance, pull the landmine handle to your hip, big lat stretch.",
+"chinup":"Underhand grip, full hang to chin over bar — extra biceps vs pull-ups.",
+"neutral-pulldown":"Palms facing, drive elbows down to your ribs, lean back slightly.",
+"db-shrug":"Straight up to your ears, pause, no rolling — traps only.",
+"bb-shrug":"Shrug tall, hold a beat at the top, control down.",
+"reverse-pec-deck":"Slight bend, sweep wide, thumbs down — rear delts, not traps.",
+"upright-row":"Pull to lower chest, elbows lead and stay below shoulder height.",
+"front-raise":"Raise to eye level, no swing, light and strict.",
+"preacher-curl":"Arms flat on the pad, don't fully lock out at the bottom — constant tension.",
+"concentration-curl":"Elbow on the inner thigh, curl to the shoulder, squeeze hard.",
+"cable-curl":"Elbows pinned, constant tension top to bottom, slow return.",
+"ez-curl":"Angled grip saves the wrists — elbows still, no swing.",
+"incline-curl":"Arms hang back behind the body — deep biceps stretch, strict.",
+"rope-pushdown":"Spread the rope at the bottom, elbows glued to ribs, full lockout.",
+"tri-kickback":"Upper arm parallel to the floor and still — extend to straight, squeeze.",
+"close-grip-pushup":"Hands under shoulders, elbows tight to the body, full lockout.",
+"reverse-crunch":"Curl the pelvis up toward the ribs — no swinging the legs.",
+"decline-situp":"Control the way down, don't yank the neck.",
+"woodchop":"Rotate from the trunk, arms just follow — pivot the back foot.",
+"pallof":"Press straight out and resist the twist — brace, don't rotate.",
+"leg-raise":"Lower slowly, keep the low back flat on the floor.",
+"dead-bug":"Opposite arm and leg, ribs down, move slow — anti-extension core.",
+"bicycle-crunch":"Slow and controlled, elbow toward the opposite knee, full extension.",
+"seated-calf":"Deep stretch at the bottom, pause at the top — hits the soleus.",
+"leg-press-calf":"Full range on the sled, big stretch, controlled press."
 };
 /* Barbell exercises get a plate calculator (45 lb bar) */
-const BARBELL = new Set(["bb-squat","bb-deadlift","rdl","sumo-dl","hip-thrust","kas-bridge","bb-bench","ohp","bb-row","bb-curl","skullcrusher"]);
+const BARBELL = new Set(["bb-squat","bb-deadlift","rdl","sumo-dl","hip-thrust","kas-bridge","bb-bench","ohp","bb-row","bb-curl","skullcrusher","front-squat","incline-bb-bench","decline-bench","close-grip-bench","pendlay-row","good-morning","bb-shrug"]);
 function platesFor(w) {
   w = Number(w);
   if (!isFinite(w) || w < 45) return null;
@@ -435,6 +534,95 @@ function bmi(){
   if (!p || !p.heightIn || !p.weightLb) return null;
   return (703 * p.weightLb / (p.heightIn * p.heightIn)).toFixed(1);
 }
+/* ============ Coaching / analytics ============ */
+// Map an exercise to the muscle groups it trains (primary = 1 set, secondary = 0.5)
+function musclesFor(exId){
+  const ex = EXBY[exId]; if (!ex) return [];
+  const m = ex.m || "", out = [];
+  switch (ex.p) {
+    case "squat": case "lunge": out.push(["Quads",1],["Glutes",0.5]); break;
+    case "hinge": out.push(["Hamstrings",1],["Glutes",0.5]); break;
+    case "glute": out.push(["Glutes",1]); break;
+    case "pushH": out.push(["Chest",1],["Triceps",0.5]); break;
+    case "pushV": out.push(["Shoulders",1],["Triceps",0.5]); break;
+    case "pullH": case "pullV": out.push(["Back",1],["Biceps",0.5]); break;
+    case "shoulders": out.push([/Trap/i.test(m) ? "Back" : "Shoulders", 1]); break;
+    case "arms": out.push([/Tri/i.test(m) ? "Triceps" : "Biceps", 1]); break;
+    case "core": out.push(["Core",1]); break;
+    case "calves": out.push(["Calves",1]); break;
+    default: break; // cardio / custom → no counted volume
+  }
+  return out;
+}
+const MUSCLE_ORDER = ["Chest","Back","Shoulders","Biceps","Triceps","Quads","Hamstrings","Glutes","Calves","Core"];
+function weekStart(){ const d = new Date(); const mon = new Date(d); mon.setDate(d.getDate() - ((d.getDay() + 6) % 7)); mon.setHours(0,0,0,0); return mon; }
+function weeklySetsByMuscle(){
+  const start = weekStart(), acc = {};
+  for (const l of S.logs) {
+    if (new Date(l.date + "T12:00") < start) continue;
+    for (const en of l.entries) {
+      const ex = EXBY[en.ex]; if (!ex || ex.u === "time") continue;
+      const n = en.sets.length;
+      for (const [mus, w] of musclesFor(en.ex)) acc[mus] = (acc[mus] || 0) + n * w;
+    }
+  }
+  return acc;
+}
+// e1RM momentum over the last few sessions: up / flat / down
+function momentum(exId){
+  const ses = lastSessions(exId, 3); // newest first
+  if (ses.length < 2) return null;
+  const newest = ses[0].best, oldest = ses[ses.length - 1].best;
+  if (newest > oldest * 1.02) return "up";
+  if (newest < oldest * 0.98) return "down";
+  return "flat";
+}
+// Body-weight trend via least-squares regression over the recent window
+function bwTrend(){
+  const ws = S.weights.slice().sort((a,b) => a.date.localeCompare(b.date));
+  if (ws.length < 2) return null;
+  const t0 = new Date(ws[0].date + "T12:00").getTime();
+  const pts = ws.map(w => [(new Date(w.date + "T12:00").getTime() - t0) / 864e5, w.lbs]);
+  const lastDay = pts[pts.length - 1][0];
+  const win = pts.filter(p => p[0] >= lastDay - 42);
+  const use = win.length >= 2 ? win : pts;
+  const n = use.length; let sx=0, sy=0, sxx=0, sxy=0;
+  for (const [x,y] of use) { sx+=x; sy+=y; sxx+=x*x; sxy+=x*y; }
+  const slope = (n*sxy - sx*sy) / ((n*sxx - sx*sx) || 1);
+  const intercept = (sy - slope*sx) / n;
+  const trendNow = slope*lastDay + intercept;
+  const perWeek = slope*7;
+  const pct = trendNow ? (perWeek / trendNow * 100) : 0;
+  return { trendNow, perWeek, pct, spanDays: lastDay - use[0][0] };
+}
+// Did the last n sessions of an exercise all reach the top of the rep range?
+function hitTop(exId, hi, n){
+  let cnt = 0;
+  for (let i = S.logs.length - 1; i >= 0 && cnt < n; i--) {
+    const en = S.logs[i].entries.find(x => x.ex === exId && x.sets.length);
+    if (!en) continue;
+    cnt++;
+    if (!en.sets.every(s => (s.r || 0) >= hi)) return false;
+  }
+  return cnt >= n;
+}
+// After a session: grow volume on lifts you're crushing, trim it on lifts that stalled
+function autoProgress(dayIdx, trained){
+  const day = S.plan && S.plan.days[dayIdx]; if (!day) return [];
+  const goal = S.profile.goal, msgs = [];
+  for (const slot of day.exercises) {
+    const ex = EXBY[slot.ex]; if (!ex || ex.u === "time") continue;
+    if (trained && !trained.has(slot.ex)) continue;
+    const cap = goal === "strength" ? 4 : 5, floor = 2;
+    if (hitTop(slot.ex, slot.hi, 2) && slot.sets < cap) {
+      slot.sets++; msgs.push("↑ " + ex.n + " → " + slot.sets + " sets (you're crushing the top of the range)");
+    } else if (plateaued(slot.ex) && slot.sets > floor) {
+      slot.sets--; msgs.push("↓ " + ex.n + " → " + slot.sets + " sets (stalled — trimming volume to recover)");
+    }
+  }
+  return msgs;
+}
+
 /* ============ Views ============ */
 const V = document.getElementById("view");
 let tab = "today";
@@ -520,6 +708,7 @@ function renderToday(){
   <h1>Today</h1>
   <p class="dim small">${new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})} · ${streakText()}</p>
   ${doneToday ? `<div class="card"><b class="green">✓ Workout logged today.</b><div class="dim small">Muscles grow between sessions — rest is part of the program.</div></div>` : ""}
+  ${S.tune && S.tune.msgs && S.tune.msgs.length ? `<div class="card" style="border-color:var(--blue)"><b class="blue">🗿 Plan auto-tuned after your last session</b><div class="dim small" style="margin-top:5px;line-height:1.6">${S.tune.msgs.map(esc).join("<br>")}</div><button class="btn ghost small-btn" style="margin-top:10px" onclick="S.tune=null;save();render()">Got it</button></div>` : ""}
   ${(() => { const stalled = [...new Set(S.plan.days.flatMap(d => d.exercises.map(e => e.ex)))].filter(id => EXBY[id] && EXBY[id].inc > 0 && plateaued(id)); return stalled.length >= 3 ? `<div class="card" style="border-color:var(--gold)"><b class="gold">Deload week suggested</b><div class="dim small">${stalled.length} lifts have stalled for 3 straight sessions (${stalled.slice(0, 3).map(id => EXBY[id].n).join(", ")}${stalled.length > 3 ? "…" : ""}). Take a week at ~80% weight — planned recovery is how plateaus break. Each stalled exercise already shows its deload weight.</div></div>` : ""; })()}
   <div class="card">
     <div class="exhead"><h3>${esc(day.name)}</h3><span class="dim small">${day.exercises.length} exercises</span></div>
@@ -602,10 +791,11 @@ function renderWorkout(){
         <input type="number" inputmode="numeric" placeholder="reps" value="${st.r}" onchange="setVal(${ei},${si},'r',this.value)">
         <button class="chk ${st.done ? "done" : ""}" onclick="toggleSet(${ei},${si})">✓</button>
       </div>`).join("")}
-      <div style="display:flex;gap:8px;margin-top:4px">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
         <button class="btn ghost small-btn" onclick="addSet(${ei})">+ set</button>
-        <button class="btn ghost small-btn" onclick="openSwap(${ei})">swap</button>
         <button class="btn ghost small-btn" onclick="dropSet(${ei})">− set</button>
+        <button class="btn ghost small-btn" onclick="openSwap(${ei})">swap</button>
+        <button class="btn ghost small-btn" onclick="activeRemoveEx(${ei})">remove</button>
       </div>
     </div>`;
   };
@@ -623,7 +813,8 @@ function renderWorkout(){
     <b>${esc(ex.n)}</b> <span class="dim small">· ${en.sets.length}×${en.lo}–${en.hi}${en.ss ? " · superset pair" : ""}</span>
     <span style="float:right;color:var(--blue);font-weight:700">do now →</span></div>`; }).join("")}
   ${doneList.length ? `<h2 class="dim">Completed</h2>` + doneList.map(({ en }) => { const ex = EXBY[en.ex]; return `<div class="exline"><span>✓ ${esc(ex.n)}</span><span class="dim small">${en.sets.filter(s => s.done).map(s => (s.w || "bw") + "×" + s.r).join(" · ")}</span></div>`; }).join("") : ""}
-  <button class="btn full" style="margin-top:14px" onclick="finishWorkout()">Finish workout ✓</button>
+  <button class="btn full ghost" style="margin-top:14px" onclick="activeAddOpen()">＋ Add exercise to this workout</button>
+  <button class="btn full" style="margin-top:8px" onclick="finishWorkout()">Finish workout ✓</button>
   <button class="btn full danger" style="margin-top:8px" onclick="cancelWorkout()">Discard</button>
   <div id="swapmodal"></div>`;
 }
@@ -677,11 +868,78 @@ function finishWorkout(){
   const logged = a.entries.filter(en => en.sets.some(s => s.done));
   if (!logged.length) return toast("Check off at least one set");
   S.logs.push({ date: a.date, dayIdx: a.dayIdx, dayName: S.plan.days[a.dayIdx].name, min: Math.max(1, Math.round((Date.now() - a.start) / 60000)), entries: a.entries.map(en => ({ ex: en.ex, sets: en.sets.filter(s => s.done).map(s => ({ w: Number(s.w) || 0, r: Number(s.r) || 0, done: true })) })).filter(en => en.sets.length) });
+  const trained = new Set(S.logs[S.logs.length - 1].entries.map(e => e.ex));
+  const tune = autoProgress(a.dayIdx, trained);
+  if (tune.length) S.tune = { date: today(), msgs: tune };
   if (a.dayIdx === S.plan.nextDay % S.plan.days.length) S.plan.nextDay++;
   S.active = null; save(); stopRest();
-  toast("Logged 🗿"); render();
+  toast(tune.length ? "Logged 🗿 · plan auto-tuned" : "Logged 🗿"); render();
 }
 function cancelWorkout(){ if (confirm("Discard this workout?")) { S.active = null; save(); stopRest(); render(); } }
+/* Add / remove exercises mid-workout without resetting the session */
+function activeAddOpen(){
+  const groups = [
+    ["Cardio", EX.filter(e => e.p === "cardio")],
+    ["My custom", EX.filter(e => e.p === "custom")],
+    ["Legs & glutes", EX.filter(e => ["squat","hinge","glute","lunge","calves"].includes(e.p))],
+    ["Push (chest/shoulders/tris)", EX.filter(e => ["pushH","pushV","shoulders"].includes(e.p) || (e.p === "arms" && /Tri/i.test(e.m)))],
+    ["Pull (back/biceps)", EX.filter(e => ["pullH","pullV"].includes(e.p) || (e.p === "arms" && /Bicep/i.test(e.m)))],
+    ["Core", EX.filter(e => e.p === "core")]
+  ];
+  document.getElementById("swapmodal").innerHTML = `<div class="modal" onclick="if(event.target===this)this.parentNode.innerHTML=''">
+    <div class="inner"><h3 style="margin-bottom:4px">Add an exercise</h3>
+    <p class="dim small" style="margin-bottom:8px">Drops straight into today's session — nothing you've already logged is touched.</p>
+    <div class="qopt" style="margin-bottom:10px">
+      <span class="pill on" id="aa-plan" onclick="this.classList.toggle('on')">✓ also add to my plan for next time</span>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <label style="margin-top:0">Or create your own (anything — "Sled Push", "Boxing", "Yoga"...)</label>
+      <div style="display:flex;gap:8px;margin-top:4px"><input id="custom-name" placeholder="Exercise name"></div>
+      <div class="qopt" style="margin-top:8px">
+        <span class="pill on" id="cu-load" onclick="this.classList.add('on');document.getElementById('cu-time').classList.remove('on')">weight × reps</span>
+        <span class="pill" id="cu-time" onclick="this.classList.add('on');document.getElementById('cu-load').classList.remove('on')">minutes (cardio)</span>
+      </div>
+      <button class="btn small-btn" style="margin-top:6px" onclick="activeCreateCustom()">Create & add</button>
+    </div>
+    <div class="swaplist">${groups.map(([label, list]) => list.length ? `<div class="dim small" style="margin:8px 0 4px;font-weight:700">${label}</div>` +
+      list.map(o => `<div class="card" onclick="activeAdd('${o.id}')"><b>${esc(o.n)}</b><div class="dim small">${esc(o.m)}</div></div>`).join("") : "").join("")}</div></div></div>`;
+}
+function activeCreateCustom(){
+  const name = document.getElementById("custom-name").value.trim();
+  if (!name) return toast("Give it a name");
+  const unit = document.getElementById("cu-time").classList.contains("on") ? "time" : "load";
+  const c = addCustomExercise(name, unit);
+  activeAdd(c.id);
+}
+function activeAdd(id){
+  const a = S.active; if (!a) return;
+  const alsoPlan = document.getElementById("aa-plan") && document.getElementById("aa-plan").classList.contains("on");
+  const ex = EXBY[id];
+  const g = GOALS[S.profile.goal] || GOALS.general;
+  const isTime = ex && ex.u === "time";
+  const lo = isTime ? 10 : g.accessory[1], hi = isTime ? 30 : g.accessory[2];
+  const setsN = isTime ? 1 : g.accessory[0], rest = isTime ? 0 : REST.accessory;
+  const sug = suggestFor(id, lo, hi);
+  const le = lastEntry(id);
+  const w = sug && sug.w ? sug.w : (le ? Math.max(...le.sets.map(x => x.w || 0)) : "");
+  a.entries.push({ ex: id, lo, hi, rest, ss: null, sets: Array.from({length: setsN}, () => ({ w: w === "" ? "" : w, r: "", done: false })) });
+  if (alsoPlan && S.plan.days[a.dayIdx]) {
+    S.plan.days[a.dayIdx].exercises.push(isTime ? { ex: id, sets: 1, lo, hi, rest: 0 } : { ex: id, sets: setsN, lo, hi, rest });
+  }
+  a.cur = a.entries.length - 1;
+  save(); render(); toast(alsoPlan ? "Added to today + plan" : "Added to today");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+function activeRemoveEx(ei){
+  const a = S.active; if (!a) return;
+  if (a.entries.length <= 1) return toast("Keep at least one exercise");
+  const ex = EXBY[a.entries[ei].ex];
+  if (!confirm("Remove " + (ex ? ex.n : "this exercise") + " from today's workout?")) return;
+  a.entries.splice(ei, 1);
+  if (a.cur >= a.entries.length) a.cur = a.entries.length - 1;
+  const n = nextIncomplete(a); if (n >= 0) a.cur = n;
+  save(); render();
+}
 
 /* ---- Rest timer ---- */
 let restIv = null, restEnd = 0;
@@ -791,6 +1049,9 @@ function renderProgress(){
   const prRows = Object.entries(prs).filter(([, p]) => p.w > 0).sort((a, b) => b[1].v - a[1].v).slice(0, 12);
   const weeks = weeklyVolume(logs);
   const b = bmi();
+  const musc = weeklySetsByMuscle();
+  const muscTotal = Object.values(musc).reduce((a, v) => a + v, 0);
+  const tr = bwTrend();
   V.innerHTML = `
   <h1>Progress</h1>
   <div class="statgrid">
@@ -799,20 +1060,77 @@ function renderProgress(){
   </div>
   <div class="card"><h3>Weekly volume (lb lifted)</h3><canvas id="volchart" width="520" height="150"></canvas>
   ${weeks.length ? "" : '<p class="dim small">Log workouts to see volume trends.</p>'}</div>
+  <div class="card"><h3>Weekly sets per muscle <span class="dim small">· target 10–20</span></h3>
+    <p class="dim small" style="margin-bottom:10px">Hard sets logged since Monday. The research sweet spot for growth is 10–20 per muscle each week — under that, add volume; over it is usually junk.</p>
+    ${muscTotal > 0 ? MUSCLE_ORDER.map(mus => {
+      const v = Math.round((musc[mus] || 0) * 10) / 10;
+      const inRange = v >= 10 && v <= 20;
+      const col = inRange ? "var(--green)" : "var(--gold)";
+      const note = v === 0 ? "not trained" : v < 10 ? "add volume" : v > 20 ? "very high" : "on target";
+      return `<div style="margin-bottom:9px">
+        <div style="display:flex;justify-content:space-between;font-size:.85rem"><span>${mus}</span><span><b style="color:${col}">${v}</b> <span class="dim small">· ${note}</span></span></div>
+        <div style="height:6px;background:var(--bg2);border-radius:4px;overflow:hidden;margin-top:3px"><div style="height:100%;width:${Math.min(100, v / 20 * 100)}%;background:${col}"></div></div>
+      </div>`;
+    }).join("") : '<p class="dim small">No sets logged yet this week.</p>'}
+  </div>
   <div class="card"><h3>Personal records <span class="dim small">(best est. 1RM)</span></h3>
-    ${prRows.length ? `<p class="dim small" style="margin-bottom:6px">Tap any lift to see its strength curve.</p><table><thead><tr><th>Exercise</th><th class="num">Best set</th><th class="num">e1RM</th></tr></thead><tbody>
-    ${prRows.map(([id, p]) => `<tr style="cursor:pointer" onclick="exChart('${id}')"><td style="color:var(--blue);font-weight:600">${esc(EXBY[id] ? EXBY[id].n : id)}</td><td class="num">${p.w}×${p.r}</td><td class="num gold"><b>${Math.round(p.v)}</b></td></tr>`).join("")}</tbody></table>` : '<p class="dim small">PRs appear after your first logged workout.</p>'}
+    ${prRows.length ? `<p class="dim small" style="margin-bottom:6px">Tap any lift to see its strength curve. <span class="green">▲</span> gaining · <span class="dim">▬</span> flat · <span class="red">▼</span> slipping (last 3 sessions).</p><table><thead><tr><th>Exercise</th><th class="num">Best set</th><th class="num">e1RM</th></tr></thead><tbody>
+    ${prRows.map(([id, p]) => { const mo = momentum(id); const tag = mo === "up" ? ' <span class="green">▲</span>' : mo === "down" ? ' <span class="red">▼</span>' : mo === "flat" ? ' <span class="dim">▬</span>' : ""; return `<tr style="cursor:pointer" onclick="exChart('${id}')"><td style="color:var(--blue);font-weight:600">${esc(EXBY[id] ? EXBY[id].n : id)}${tag}</td><td class="num">${p.w}×${p.r}</td><td class="num gold"><b>${Math.round(p.v)}</b></td></tr>`; }).join("")}</tbody></table>` : '<p class="dim small">PRs appear after your first logged workout.</p>'}
   </div>
   <div class="card"><h3>Body weight ${b ? `<span class="dim small">· BMI ${b}</span>` : ""}</h3>
     <div style="display:flex;gap:8px;margin:8px 0"><input type="number" inputmode="decimal" id="bw-in" placeholder="lbs today"><button class="btn small-btn" onclick="logBw()">Log</button></div>
-    ${S.weights.length ? `<canvas id="bwchart" width="520" height="150"></canvas><div class="dim small">${S.weights.length} entries · latest ${S.weights[S.weights.length-1].lbs} lb (${S.weights[S.weights.length-1].date})</div>` : '<p class="dim small">Track weekly for the trend line.</p>'}
+    ${S.weights.length ? `<canvas id="bwchart" width="520" height="150"></canvas><div class="dim small">${S.weights.length} entries · latest ${S.weights[S.weights.length-1].lbs} lb (${S.weights[S.weights.length-1].date}) · <span class="pink">━</span> trend</div>` : '<p class="dim small">Log your weight (weekly is plenty) to unlock the trend line and fat-loss coaching.</p>'}
+    ${tr ? (() => {
+      const dir = tr.perWeek < -0.05 ? "losing" : tr.perWeek > 0.05 ? "gaining" : "holding";
+      const rate = Math.abs(tr.perWeek).toFixed(1), pctwk = Math.abs(tr.pct).toFixed(1);
+      const fatLoss = S.profile.goal === "recomp";
+      let msg, cls;
+      if (fatLoss) {
+        if (dir === "losing" && tr.pct <= -0.5 && tr.pct >= -1.5) { msg = "On track — that's a solid fat-loss pace. Keep protein high (~0.8 g per lb of bodyweight) and keep lifting heavy so the weight you lose is fat, not muscle."; cls = "green"; }
+        else if (dir === "losing" && tr.pct < -1.5) { msg = "Dropping fast (>1.5%/wk) — at this rate you risk losing muscle. Eat a bit more and make sure you're still hitting your top lifts."; cls = "gold"; }
+        else { msg = "Barely moving. Fat loss comes from a calorie deficit — tighten intake by ~250 kcal/day. Your training is already doing its job protecting muscle."; cls = "gold"; }
+      } else if (S.profile.goal === "strength" || S.profile.goal === "muscle") {
+        if (dir === "losing" && tr.pct < -0.3) { msg = "You're losing weight while training for size/strength — if growth is the goal, eat more."; cls = "gold"; }
+        else { msg = "Weight is steady to climbing — a good backdrop for building strength and muscle."; cls = "green"; }
+      } else { msg = dir === "holding" ? "Weight is stable." : "Trending " + dir + " about " + rate + " lb/week."; cls = "dim"; }
+      return `<div class="statgrid" style="margin:12px 0 8px">
+        <div class="card"><div class="dim small">TREND WEIGHT</div><div class="big">${tr.trendNow.toFixed(1)}</div><div class="dim small">smoothed, lb</div></div>
+        <div class="card"><div class="dim small">RATE</div><div class="big">${tr.perWeek > 0 ? "+" : ""}${tr.perWeek.toFixed(1)}</div><div class="dim small">lb/wk · ${pctwk}%/wk</div></div>
+      </div>
+      <div class="small" style="color:var(--${cls});line-height:1.5">${esc(msg)}</div>`;
+    })() : ""}
   </div>
   <div id="chartmodal"></div>
   <div class="card"><h3>History</h3>
     ${logs.length ? [...logs].reverse().slice(0, 20).map(l => `<div class="exline"><span>${l.date} · <b>${esc(l.dayName || "Workout")}</b></span><span class="dim">${l.entries.reduce((a, en) => a + en.sets.length, 0)} sets · ${l.min}m</span></div>`).join("") : '<p class="dim small">No workouts yet.</p>'}
   </div>`;
   drawBars("volchart", weeks.map(w => w.vol), weeks.map(w => w.label));
-  if (S.weights.length) drawLine("bwchart", S.weights.map(w => w.lbs));
+  if (S.weights.length) drawBwTrend("bwchart");
+}
+// Raw body-weight points (faint) with a least-squares trend line on top
+function drawBwTrend(id){
+  const c = document.getElementById(id); if (!c) return;
+  const ws = S.weights.slice().sort((a,b) => a.date.localeCompare(b.date));
+  const vals = ws.map(w => w.lbs);
+  if (vals.length < 2) { if (vals.length === 1) { const x = c.getContext("2d"); x.clearRect(0,0,c.width,c.height); x.fillStyle = chartColors().label; x.font = "12px sans-serif"; x.fillText(vals[0] + " lb — log again for a trend", 14, 24); } return; }
+  const col = chartColors(), x = c.getContext("2d"), W = c.width, H = c.height;
+  const min = Math.min(...vals), max = Math.max(...vals), rng = (max - min) || 1;
+  const px = i => 14 + (i / (vals.length - 1)) * (W - 28);
+  const py = v => 14 + (1 - (v - min) / rng) * (H - 40);
+  x.clearRect(0, 0, W, H);
+  x.strokeStyle = col.label; x.globalAlpha = 0.35; x.lineWidth = 1.5; x.beginPath();
+  vals.forEach((v, i) => i ? x.lineTo(px(i), py(v)) : x.moveTo(px(i), py(v))); x.stroke();
+  x.fillStyle = col.label; vals.forEach((v, i) => { x.beginPath(); x.arc(px(i), py(v), 2.2, 0, 7); x.fill(); });
+  x.globalAlpha = 1;
+  const t0 = new Date(ws[0].date + "T12:00").getTime();
+  const X = ws.map(w => (new Date(w.date + "T12:00").getTime() - t0) / 864e5);
+  const n = X.length; let sx=0, sy=0, sxx=0, sxy=0;
+  for (let i = 0; i < n; i++) { sx+=X[i]; sy+=vals[i]; sxx+=X[i]*X[i]; sxy+=X[i]*vals[i]; }
+  const slope = (n*sxy - sx*sy) / ((n*sxx - sx*sx) || 1), b = (sy - slope*sx) / n;
+  x.strokeStyle = col.line; x.lineWidth = 2.5; x.beginPath();
+  X.forEach((xx, i) => { const v = slope*xx + b; i ? x.lineTo(px(i), py(v)) : x.moveTo(px(i), py(v)); }); x.stroke();
+  x.fillStyle = col.label; x.font = "11px sans-serif"; x.textAlign = "left";
+  x.fillText(max + " lb", 14, 12); x.fillText(min + " lb", 14, H - 6);
 }
 function exChart(exId){
   const ses = lastSessions(exId, 30).reverse(); // oldest → newest
