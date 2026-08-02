@@ -1059,6 +1059,11 @@ function renderProgress(){
   const musc = weeklySetsByMuscle();
   const muscTotal = Object.values(musc).reduce((a, v) => a + v, 0);
   const tr = bwTrend();
+  const act = S.activity || [];
+  const todayAct = act.find(a => a.date === today());
+  const wkAct = act.filter(a => (Date.now() - new Date(a.date + "T12:00")) / 864e5 < 7);
+  const wkMove = wkAct.reduce((s, a) => s + (a.move || 0), 0);
+  const wkEx = wkAct.reduce((s, a) => s + (a.ex || 0), 0);
   V.innerHTML = `
   <h1>Progress</h1>
   <div class="statgrid">
@@ -1106,6 +1111,16 @@ function renderProgress(){
       </div>
       <div class="small" style="color:var(--${cls});line-height:1.5">${esc(msg)}</div>`;
     })() : ""}
+  </div>
+  <div class="card"><h3>Apple Watch rings <span class="dim small">· type from your wrist</span></h3>
+    <p class="dim small" style="margin-bottom:8px">Glance at your watch and enter today's numbers.${todayAct ? " <span class=\"green\">Logged today ✓</span>" : ""}</p>
+    <div class="row3">
+      <div><label style="margin-top:0">Move (kcal)</label><input type="number" inputmode="numeric" id="act-move" placeholder="kcal" value="${todayAct ? todayAct.move || "" : ""}"></div>
+      <div><label style="margin-top:0">Exercise (min)</label><input type="number" inputmode="numeric" id="act-ex" placeholder="min" value="${todayAct ? todayAct.ex || "" : ""}"></div>
+      <div><label style="margin-top:0">Stand (hrs)</label><input type="number" inputmode="numeric" id="act-stand" placeholder="hrs" value="${todayAct ? todayAct.stand || "" : ""}"></div>
+    </div>
+    <button class="btn small-btn" style="margin-top:10px" onclick="logActivity()">${todayAct ? "Update today" : "Log today"}</button>
+    ${act.length ? `<div class="dim small" style="margin-top:10px">Last 7 days: <b>${wkMove}</b> kcal moved · <b>${wkEx}</b> exercise min · ${wkAct.length} day${wkAct.length === 1 ? "" : "s"} logged</div>` : ""}
   </div>
   <div id="chartmodal"></div>
   <div class="card"><h3>History</h3>
@@ -1194,6 +1209,16 @@ function drawLine(id, vals){
   x.stroke();
   x.fillStyle = col.label; x.font = "11px sans-serif"; x.textAlign = "left";
   x.fillText(max + " lb", 14, 12); x.fillText(min + " lb", 14, H - 6);
+}
+function logActivity(){
+  const move = Number(document.getElementById("act-move").value) || 0;
+  const ex = Number(document.getElementById("act-ex").value) || 0;
+  const stand = Number(document.getElementById("act-stand").value) || 0;
+  if (!move && !ex && !stand) return toast("Enter at least one ring");
+  S.activity = (S.activity || []).filter(a => a.date !== today());
+  S.activity.push({ date: today(), move, ex, stand });
+  S.activity.sort((a, b) => a.date.localeCompare(b.date));
+  save(); render(); toast("Activity logged");
 }
 function logBw(){
   const v = Number(document.getElementById("bw-in").value);
