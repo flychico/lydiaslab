@@ -1,5 +1,5 @@
 /*
-  LyDia — Lab Rating core (v2, market-independent)
+  LyDia — Lab Rating core (v3, measured-components)
 
   Lab Rating answers one question only: how strong is LyDia's baseball
   analysis of this game? It is NOT win probability and it is NOT a price
@@ -9,45 +9,103 @@
   gate, not in the rating. A strong team at a garbage price is still a strong
   analysis — it just is not a bet.
 
+  ---------------------------------------------------------------------------
+  VERSION HISTORY
+
   v1 (retired) put 50 of its 100 points into market-derived terms
   (model-vs-market edge 35, market quality 15), which meant the rating rose
   and fell with the sportsbook and could not be read as analysis quality.
-  v2 redistributes all 100 points across internal model inputs.
 
-  Ratings produced by v1 and v2 are NOT comparable. v2 opens a new calibration
-  series at the cutover date; v1 ratings stay frozen in the closed series.
+  v2 (retired 2026-08-02) redistributed all 100 points across internal model
+  inputs. It was never checked against outcomes. When it finally was —
+  scripts/grade-confidence.js over 107 graded games — the rating turned out to
+  carry no outcome information at all: corr(lab_score, win) = -0.029, and the
+  85-100 band won 44.4% while predicting 69.9%.
+
+  Two components were the reason, and both are removed in v3:
+
+    agreement (20 pts) — awarded when the team-strength model and the run
+    model agreed. Games where they agreed LOST more often: 49.1% vs 57.4%,
+    a lift of -8.3 points, the strongest single effect in the study and
+    pointing the wrong way. The cause is now understood: the run model comes
+    from the totals projection, which regresses against its own market at
+    beta = +0.066 (95% CI [-0.46, +0.59]) — it is noise. Agreeing with noise
+    is not evidence, so a fifth of the rating was actively anti-predictive.
+
+    completeness (5 pts) — awarded for having all inputs present. Every game
+    had them: the mean was 4.99 out of 5. It added five points to every score
+    without separating any game from any other, which quietly lowered the
+    real height of the 80-point official gate for everyone.
+
+  The 25 points move to the components that measured non-negative:
+
+                        v2      v3     measured lift (n=107)
+      conviction        30      35      +2.9%
+      pitching plan     20      20      -0.4%
+      bullpen           15      20      +2.9%
+      offense           10      25      +6.6%
+      agreement         20       0      -8.3%   removed
+      completeness       5       0      constant, removed
+
+  Offense takes the largest share because it was the only component with a
+  clearly positive relationship to winning, and it was the smallest real
+  component in v2. Pitching plan is held flat rather than raised: it showed no
+  signal, and paying it more for that would repeat the mistake this version
+  exists to correct.
+
+  HONEST CAVEAT ON THOSE WEIGHTS: n=107. The gap between +2.9% and +6.6% is
+  well inside sampling noise at that size. This redistribution leans toward
+  the evidence; it is not claimed to be the optimal weighting, and it should
+  be revisited once grade-confidence.js has a few hundred more games. What IS
+  solid at this n is the sign on agreement and the constancy of completeness —
+  those are the two changes actually justified by data.
+
+  Ratings produced by v2 and v3 are NOT comparable. v3 opens a new calibration
+  series at the cutover date. grade-confidence.js does not need to be told
+  this: it only analyses breakdowns whose components sum to their own score,
+  so it segregates versions automatically.
+
+  ---------------------------------------------------------------------------
+  DIAGNOSTICS THAT NO LONGER SCORE
+
+  The model-agreement gap and the data-completeness checks are still computed
+  and still stored in the breakdown — they are genuinely useful for explaining
+  a game and for spotting a broken input. They are simply worth zero points.
+  Removing the measurement along with the score would have thrown away the
+  only signal that told us the run model had gone wrong on 2026-07-29, when
+  agreement collapsed to 0 while conviction sat maxed at 30.
 
   100 points:
-     30  model conviction
-     20  agreement between the strength model and the projected-runs model
+     35  model conviction
      20  pitching-plan support (14 pitcher edge + 6 plan completeness)
-     15  bullpen support, weighted by assigned bullpen innings only
-     10  offensive matchup support
-      5  data completeness and synchronization
+     20  bullpen support, weighted by assigned bullpen innings only
+     25  offensive matchup support
 */
 
 "use strict";
 
-const LAB_RATING_VERSION = "lab-rating-v2-market-independent";
+const LAB_RATING_VERSION = "lab-rating-v3-measured-components";
 
 // Conviction: a coin flip earns nothing. Credit starts at 55% and maxes at 80%.
 const CONVICTION_FLOOR = 0.55;
 const CONVICTION_CEIL = 0.80;
-const CONVICTION_MAX = 30;
+const CONVICTION_MAX = 35;
 
-// Agreement: the two models are allowed to disagree by 2 points for free;
-// credit decays to zero by a 15-point disagreement.
+// Retained at 0 so any consumer reading these still gets a number rather than
+// undefined, and so the arithmetic below stays readable. See the version note.
+const AGREEMENT_MAX = 0;
+const COMPLETENESS_MAX = 0;
+
+// Thresholds still used to DESCRIBE agreement, now that it does not score.
 const AGREEMENT_FREE = 0.02;
 const AGREEMENT_ZERO = 0.15;
-const AGREEMENT_MAX = 20;
 
 const PITCHER_MAX = 14;
 const PITCHER_FULL_GAP = 20; // pitcher-score gap that earns full credit
 const PLAN_COMPLETE_MAX = 6;
-const BULLPEN_MAX = 15;
-const OFFENSE_MAX = 10;
+const BULLPEN_MAX = 20;
+const OFFENSE_MAX = 25;
 const OFFENSE_SPAN = 0.06; // delta-OPS differential for full / zero credit
-const COMPLETENESS_MAX = 5;
 
 // A plan must allocate the full nine innings to count as complete.
 const FULL_GAME_INNINGS = 9;
@@ -78,21 +136,25 @@ function convictionPoints(modelProb) {
 }
 
 /*
-  Agreement between the established team-strength model and the projected-runs
-  model, measured on the pick side. Two independent methods landing on the same
-  answer is real evidence; a split is a reason for less confidence.
+  Agreement between the team-strength model and the run model — DIAGNOSTIC ONLY
+  as of v3, worth zero points.
 
-  When the run model is unavailable we cannot confirm agreement, so this scores
-  zero rather than assuming the best. Data completeness records the same gap.
+  Kept because the gap itself is informative: on 2026-07-29 it was the one
+  number that noticed the run model had broken, collapsing to zero while
+  conviction sat at its maximum. It is reported so a reader (and the copy
+  layer) can still see when the two models disagree; it no longer moves the
+  score, because when it did, it moved it the wrong way.
 */
-function agreementPoints(strengthProbPick, runProbPick) {
+function agreementDiagnostic(strengthProbPick, runProbPick) {
   if (!isNum(strengthProbPick) || !isNum(runProbPick)) {
-    return { points: 0, gap: null, available: false };
+    return { points: 0, gap: null, available: false, credit: null };
   }
   const gap = Math.abs(strengthProbPick - runProbPick);
   const span = AGREEMENT_ZERO - AGREEMENT_FREE;
   const credit = clamp(1 - (gap - AGREEMENT_FREE) / span, 0, 1);
-  return { points: credit * AGREEMENT_MAX, gap, available: true };
+  // credit is the 0-1 figure v2 would have scored on; exposed for explanation
+  // and for anyone auditing what the old weighting would have produced.
+  return { points: 0, gap, available: true, credit: round(credit, 3) };
 }
 
 /*
@@ -140,6 +202,9 @@ function bullpenPoints({ pickRisk, oppRisk, pickBullpenInnings }) {
   Offensive matchup support from recent form, as a differential. Neutral form on
   both sides sits at half credit rather than zero, because "no offensive signal"
   is not the same as "the offence argues against this pick".
+
+  Now the largest non-conviction component: it was the only part of v2 that
+  measured a clearly positive relationship with winning (+6.6% lift).
 */
 function offensePoints(pickDeltaOps, oppDeltaOps) {
   if (!isNum(pickDeltaOps) || !isNum(oppDeltaOps)) {
@@ -151,11 +216,14 @@ function offensePoints(pickDeltaOps, oppDeltaOps) {
 }
 
 /*
-  Data completeness and synchronization. Every input the rest of the rating
-  leans on, present and agreeing. Missing inputs must lower confidence rather
-  than silently scoring as neutral.
+  Data completeness — DIAGNOSTIC ONLY as of v3, worth zero points.
+
+  Every graded game passed every check (mean 4.99 of 5), so this separated
+  nothing while raising every score by five. Still computed: a run where these
+  start failing is a broken pipeline, and that is worth seeing even though it
+  is not worth points.
 */
-function completenessPoints(flags) {
+function completenessDiagnostic(flags) {
   const checks = [
     Boolean(flags.hasTeamStrength),
     Boolean(flags.hasBothPitchers),
@@ -164,11 +232,7 @@ function completenessPoints(flags) {
     Boolean(flags.planInningsBalanced)
   ];
   const passed = checks.filter(Boolean).length;
-  return {
-    points: (passed / checks.length) * COMPLETENESS_MAX,
-    passed,
-    total: checks.length
-  };
+  return { points: 0, passed, total: checks.length, complete: passed === checks.length };
 }
 
 /*
@@ -200,7 +264,7 @@ function assignedBullpenInnings(plan) {
 }
 
 /*
-  Lab Rating v2. Every argument is internal to LyDia's model. There is
+  Lab Rating v3. Every argument is internal to LyDia's model. There is
   deliberately no market parameter — adding one is a regression.
 */
 function calcLabRating(input) {
@@ -222,7 +286,7 @@ function calcLabRating(input) {
   } = input || {};
 
   const conviction = convictionPoints(modelProb);
-  const agreement = agreementPoints(strengthProbPick, runProbPick);
+  const agreement = agreementDiagnostic(strengthProbPick, runProbPick);
 
   const pickPlanComplete = planAllocatesFullGame(pickPlan);
   const oppPlanComplete = planAllocatesFullGame(oppPlan);
@@ -242,7 +306,7 @@ function calcLabRating(input) {
 
   const offense = offensePoints(pickDeltaOps, oppDeltaOps);
 
-  const completeness = completenessPoints({
+  const completeness = completenessDiagnostic({
     hasTeamStrength,
     hasBothPitchers,
     hasBothBullpens: bullpen.available,
@@ -250,6 +314,9 @@ function calcLabRating(input) {
     planInningsBalanced: pickPlanComplete && oppPlanComplete
   });
 
+  // agreement and completeness contribute 0 by construction; they are included
+  // in the sum so that adding a component back later is a one-line change and
+  // so the arithmetic matches the breakdown a reader sees.
   const total = conviction + agreement.points + plan.points
     + bullpen.points + offense.points + completeness.points;
   const score = Math.round(clamp(total, 0, 100));
@@ -259,20 +326,22 @@ function calcLabRating(input) {
     version: LAB_RATING_VERSION,
 
     conviction_points: round(conviction),
-    agreement_points: round(agreement.points),
+    agreement_points: round(agreement.points),          // always 0 in v3
     pitching_plan_points: round(plan.points),
     bullpen_points: round(bullpen.points),
     offense_points: round(offense.points),
-    completeness_points: round(completeness.points),
+    completeness_points: round(completeness.points),    // always 0 in v3
 
     pitcher_edge_points: plan.pitcher_edge_points,
     plan_completeness_points: plan.plan_completeness_points,
     model_agreement_gap: agreement.gap === null ? null : round(agreement.gap, 4),
+    model_agreement_credit: agreement.credit,           // what v2 would have scored on
     bullpen_innings_weight: bullpen.weight,
     assigned_bullpen_innings: penInnings === null ? null : round(penInnings, 1),
     offense_delta: offense.diff,
     completeness_checks_passed: completeness.passed,
     completeness_checks_total: completeness.total,
+    data_complete: completeness.complete,
 
     // v1 compatibility: any consumer still reading these sees an honest zero.
     // The market contributes nothing to the rating by design.
@@ -287,9 +356,8 @@ function calcLabRating(input) {
 /* One-line public breakdown. Never mentions the market. */
 function labRatingSentence(lab) {
   return `Lab Rating ${(lab.score / 10).toFixed(1)}/10: conviction ${lab.conviction_points}, `
-    + `model agreement ${lab.agreement_points}, pitching plan ${lab.pitching_plan_points}, `
-    + `bullpen ${lab.bullpen_points}, offense ${lab.offense_points}, `
-    + `data completeness ${lab.completeness_points}.`;
+    + `pitching plan ${lab.pitching_plan_points}, bullpen ${lab.bullpen_points}, `
+    + `offense ${lab.offense_points}.`;
 }
 
 module.exports = {

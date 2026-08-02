@@ -15,9 +15,14 @@
 
 "use strict";
 
+// AGREEMENT_MAX and COMPLETENESS_MAX are deliberately not imported: Lab Rating
+// v3 sets both to 0, and this file divides component points by their max to
+// decide whether to explain them. Dividing by zero would have produced NaN or
+// Infinity in a comparison and either silently dropped every explanation or
+// emitted one on every game. Their explanation blocks are removed below.
 const {
-  CONVICTION_FLOOR, CONVICTION_MAX, AGREEMENT_MAX, PITCHER_MAX,
-  BULLPEN_MAX, OFFENSE_MAX, COMPLETENESS_MAX
+  CONVICTION_FLOOR, CONVICTION_MAX, PITCHER_MAX,
+  BULLPEN_MAX, OFFENSE_MAX
 } = require("./lab-rating-core");
 
 // Below this, LyDia has no directional lean worth describing as conviction.
@@ -227,11 +232,9 @@ function recentFormSentence({ awayTeam, homeTeam, awayL10, homeL10, awayRunDiff,
 --------------------------------------------------------------------------- */
 const LAB_MAX = {
   conviction: CONVICTION_MAX,
-  agreement: AGREEMENT_MAX,
   pitching_plan: PITCHER_MAX + 6, // pitcher-edge (PITCHER_MAX) + plan completeness (6, not separately exported)
   bullpen: BULLPEN_MAX,
-  offense: OFFENSE_MAX,
-  completeness: COMPLETENESS_MAX
+  offense: OFFENSE_MAX
 };
 // A component earning less than this fraction of its max is treated as a real
 // gap worth explaining. At or above, it is a strength and stays out of the list.
@@ -255,15 +258,18 @@ function labRatingReasons({
     });
   }
 
-  if ((breakdown.agreement_points / LAB_MAX.agreement) < LAB_WEAK_FRACTION && isNum(strengthProbPick) && isNum(runProbPick)) {
-    const gapPts = Math.abs(strengthProbPick - runProbPick) * 100;
-    reasons.push({
-      title: `Model agreement: ${breakdown.agreement_points}/${LAB_MAX.agreement}`,
-      detail: `LyDia runs two independent reads on this game. The team-strength model gives ${pickTeam} a ${pct(strengthProbPick)} chance; `
-        + `the run-projection model gives ${pct(runProbPick)}. They disagree by ${gapPts.toFixed(1)} points, so the published number is a blend `
-        + `between two methods that do not agree, not a shared read.`
-    });
-  }
+  /*
+    The model-agreement explanation is gone with the component that produced
+    it. It is not simply that the points moved: the sentence it wrote was
+    wrong. It told readers the published number was "a blend between two
+    methods that do not agree" — but the run model's weight is now 0, so there
+    is no blend, and the run model was found to carry no predictive information
+    anyway (beta = +0.066 against its own market). Describing a disagreement
+    with a noise source as a weakness in the analysis misleads.
+
+    breakdown.model_agreement_gap is still recorded for diagnostics, and is the
+    right place to look if the two reads ever need comparing again.
+  */
 
   if ((breakdown.pitching_plan_points / LAB_MAX.pitching_plan) < LAB_WEAK_FRACTION) {
     if (pitcherEdgeTeam && pitcherEdgeTeam === pickTeam && isNum(pitcherGap)) {
@@ -296,10 +302,20 @@ function labRatingReasons({
     });
   }
 
-  if (breakdown.completeness_points < LAB_MAX.completeness) {
+  /*
+    Data completeness no longer scores, but a genuinely incomplete rating is
+    still worth disclosing — that is information about how much to trust the
+    read, independent of how many points it is worth. Driven off the recorded
+    check counts rather than a points total, and it only fires when something
+    is actually missing, which in practice is almost never.
+  */
+  if (isNum(breakdown.completeness_checks_passed)
+    && isNum(breakdown.completeness_checks_total)
+    && breakdown.completeness_checks_passed < breakdown.completeness_checks_total) {
     reasons.push({
-      title: `Data completeness: ${breakdown.completeness_points}/${LAB_MAX.completeness}`,
-      detail: `${breakdown.completeness_checks_passed} of ${breakdown.completeness_checks_total} required inputs were available when this was rated.`
+      title: "Incomplete inputs",
+      detail: `${breakdown.completeness_checks_passed} of ${breakdown.completeness_checks_total} required inputs were available when this was rated, `
+        + `so this read rests on less than the full picture.`
     });
   }
 
