@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-02T22:28:40.205Z",
+  "generated_at": "2026-08-02T23:21:00.382Z",
   "status": "ready",
   "latest_date": "2026-08-02",
   "days_reviewed": 25,
@@ -8,16 +8,16 @@
     "clv": "data/clv/clv_log.csv"
   },
   "current_official_model": "multi-market-v1",
-  "headline": "Learning summary for 2026-08-02: no graded official moneyline picks yet.",
+  "headline": "Learning summary for 2026-08-02: moneyline record 1-0 (100.0%).",
   "day": {
     "date": "2026-08-02",
     "source": "published-picks",
-    "record_all_markets": "6-2",
-    "units_all_markets": 4.33,
-    "ungraded": 2,
-    "moneyline_record": "0-0",
-    "moneyline_win_rate": null,
-    "official_moneyline_picks": 0,
+    "record_all_markets": "8-2",
+    "units_all_markets": 5.98,
+    "ungraded": 0,
+    "moneyline_record": "1-0",
+    "moneyline_win_rate": 1,
+    "official_moneyline_picks": 1,
     "legacy_market_entries": 0
   },
   "gates": {
@@ -27,20 +27,36 @@
     "note": "Official picks require high model probability and strong setup quality. A high Lab Rating alone is not enough."
   },
   "process_metrics": {
-    "average_model_probability": null,
-    "average_lab_score": null,
-    "average_raw_edge": null,
-    "clv_counts": {},
-    "lesson_counts": {},
-    "strong_official_count": 14,
+    "average_model_probability": 0.7358,
+    "average_lab_score": 82,
+    "average_raw_edge": 0.2248,
+    "clv_counts": {
+      "not_tracked": 1
+    },
+    "lesson_counts": {
+      "win_needs_more_sample": 1
+    },
+    "strong_official_count": 15,
     "protected_by_probability_gate_count": 11,
     "high_bullpen_risk_count": 7,
     "pitcher_conflict_count": 0
   },
   "findings": [
     {
-      "title": "No official moneyline picks graded yet",
-      "read": "Learning will become useful after a finished slate is graded under the current model."
+      "title": "Official-pick discipline",
+      "read": "1 moneyline pick was graded. Record: 1-0 (100.0%)."
+    },
+    {
+      "title": "Probability gate",
+      "read": "Across all reviewed days, 11 graded setups had strong Lab Rating but model probability below 72%. Those should remain value watch, not official picks."
+    },
+    {
+      "title": "Bullpen learning",
+      "read": "Across all reviewed days, 7 graded moneyline picks carried a meaningful bullpen caution. Review these before adjusting thresholds."
+    },
+    {
+      "title": "Pitcher learning",
+      "read": "No major starting-pitcher conflicts showed up in the graded moneyline set."
     }
   ],
   "calibration": {
@@ -399,6 +415,24 @@
         "bullpen_label": "Supports LyDia side",
         "pick_side_bullpen_score": 58,
         "opponent_bullpen_score": 76
+      },
+      {
+        "date": "2026-08-02",
+        "status": "official_pick",
+        "model_version": "multi-market-v1",
+        "game": "Detroit Tigers @ Athletics",
+        "pick": "Detroit Tigers",
+        "result": "W",
+        "model_probability": 0.7358,
+        "lab_score": 82,
+        "raw_edge": 0.2248,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Detroit Tigers",
+        "pitcher_gap": 15,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 66,
+        "opponent_bullpen_score": 70
       }
     ],
     "protected_by_probability_gate": [
@@ -730,13 +764,32 @@
       }
     ],
     "pitcher_conflicts": [],
-    "all_moneyline": []
+    "all_moneyline": [
+      {
+        "date": null,
+        "status": "official_pick",
+        "model_version": "multi-market-v1",
+        "game": "Detroit Tigers @ Athletics",
+        "pick": "Detroit Tigers",
+        "result": "W",
+        "model_probability": 0.7358,
+        "lab_score": 82,
+        "raw_edge": 0.2248,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Detroit Tigers",
+        "pitcher_gap": 15,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 66,
+        "opponent_bullpen_score": 70
+      }
+    ]
   },
   "multi_day": {
-    "moneyline_record": "22-11",
-    "moneyline_win_rate": 0.6667,
-    "official_moneyline_entries": 33,
-    "strict_gate_candidates": 14,
+    "moneyline_record": "23-11",
+    "moneyline_win_rate": 0.6765,
+    "official_moneyline_entries": 34,
+    "strict_gate_candidates": 15,
     "high_lab_low_probability_entries": 11,
     "note": "Multi-day view includes whatever historical data exists. Older days may include legacy model behavior."
   },
@@ -745,5 +798,17 @@
     "Watch whether official picks with model probability >= 72% beat low-probability value watches over a larger sample.",
     "Track closing price movement once market snapshots have enough data.",
     "Keep value watch separate from official picks."
-  ]
+  ],
+  "coach": {
+    "status": "collecting",
+    "title": "Collecting a trustworthy current-model sample",
+    "summary": "LyDia has 10 of 7 required current-model days and 13 of 20 required current-model official picks. Recommendations remain paused until both minimums are reached.",
+    "current_model_days": 10,
+    "current_model_picks": 13,
+    "minimum_days": 7,
+    "minimum_picks": 20,
+    "bullpen_model_owner": "bullpen-fatigue-v3-runs-aware",
+    "recommendations": [],
+    "hard_stop": "Coach findings are review prompts only. No automatic threshold, weight, formula, publishing, or betting change is permitted."
+  }
 }
