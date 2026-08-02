@@ -453,20 +453,86 @@ function slug(s) {
   return String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
+/*
+  HOME / ROAD SPLITS (2026-08-02)
+
+  The standings call already returns splitRecords containing `home`, `away` and
+  `lastTen`. Only lastTen was ever read; the other two were fetched and thrown
+  away. So team strength was venue-blind: the same number was used whether a
+  club was playing in its own park or finishing a long road trip.
+
+  It showed up on 2026-08-02 — Atlanta 0.643 at home, Washington 0.571 on the
+  road, and the model took Washington. Atlanta won. Siding purely with the
+  better venue record went 11-3 across that slate against the model's 5-9.
+  One night, n=14, nowhere near proof — but the mechanism is real and the data
+  is free.
+
+  DOUBLE-COUNTING IS THE TRAP HERE. log5Home() already multiplies by a flat
+  HFA of 54/46, which is the league-wide home edge. Feeding raw home and road
+  win rates in on top of that would apply the same advantage twice, and every
+  home side would drift up for no reason.
+
+  So this extracts only the TEAM-SPECIFIC part: how far a club's venue record
+  sits from its own overall record, minus how far an average club's does. A
+  team that is exactly league-average at home contributes zero and HFA alone
+  handles it. Only clubs unusually strong or weak at a venue move the number.
+
+  Shrunk by sample (n/(n+40)) because a half-season split is ~55 games, and
+  capped so one hot home stretch cannot dominate a season of evidence.
+*/
+const VENUE_WEIGHT = 0.5;      // how much of the isolated venue edge to apply
+const VENUE_SHRINK = 40;       // games of regression toward no venue effect
+const VENUE_CAP = 0.06;        // hard ceiling on the win-rate shift, either way
+
+function splitPct(rec) {
+  if (!rec) return null;
+  const n = (rec.wins || 0) + (rec.losses || 0);
+  return n ? { pct: rec.wins / n, n } : null;
+}
+
 function buildStrength(standings) {
   const strength = {};
+  const homeDeltas = [], awayDeltas = [];
   for (const rec of standings.records || []) {
     for (const t of rec.teamRecords || []) {
-      const l10 = (((t.records || {}).splitRecords) || []).find(r => r.type === "lastTen");
+      const splits = ((t.records || {}).splitRecords) || [];
+      const find = type => splits.find(r => r.type === type);
+      const l10 = find("lastTen");
+      const home = splitPct(find("home"));
+      const away = splitPct(find("away"));
+      const overallN = (t.wins || 0) + (t.losses || 0);
+      const overall = overallN ? t.wins / overallN : null;
+      if (overall !== null && home) homeDeltas.push(home.pct - overall);
+      if (overall !== null && away) awayDeltas.push(away.pct - overall);
       strength[t.team.id] = {
         pyth: pythag(t.runsScored, t.runsAllowed),
         form: l10 ? l10.wins / Math.max(1, l10.wins + l10.losses) : null,
         l10: l10 ? `${l10.wins}-${l10.losses}` : "-",
+        overall,
+        home,
+        away,
+        home_record: home ? `${find("home").wins}-${find("home").losses}` : "-",
+        away_record: away ? `${find("away").wins}-${find("away").losses}` : "-",
         wins: t.wins,
         losses: t.losses
       };
     }
   }
+  // League-average venue effect, subtracted out so HFA is not applied twice.
+  const mean = a => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
+  const leagueHomeDelta = mean(homeDeltas);
+  const leagueAwayDelta = mean(awayDeltas);
+  for (const id of Object.keys(strength)) {
+    const s = strength[id];
+    for (const [key, leagueDelta] of [["home", leagueHomeDelta], ["away", leagueAwayDelta]]) {
+      const split = s[key];
+      if (!split || s.overall === null) { s[`${key}_edge`] = 0; continue; }
+      const raw = (split.pct - s.overall) - leagueDelta;
+      const shrunk = raw * (split.n / (split.n + VENUE_SHRINK));
+      s[`${key}_edge`] = Math.max(-VENUE_CAP, Math.min(VENUE_CAP, shrunk));
+    }
+  }
+  strength.__league_venue = { home_delta: leagueHomeDelta, away_delta: leagueAwayDelta };
   return strength;
 }
 async function fetchPitchers(games) {
@@ -701,8 +767,16 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
   const sH = strength[hT.id];
   if (!sA || !sH) return null;
 
-  const blendA = sA.form === null ? sA.pyth : (1 - FORM_WEIGHT) * sA.pyth + FORM_WEIGHT * sA.form;
-  const blendH = sH.form === null ? sH.pyth : (1 - FORM_WEIGHT) * sH.pyth + FORM_WEIGHT * sH.form;
+  const formA = sA.form === null ? sA.pyth : (1 - FORM_WEIGHT) * sA.pyth + FORM_WEIGHT * sA.form;
+  const formH = sH.form === null ? sH.pyth : (1 - FORM_WEIGHT) * sH.pyth + FORM_WEIGHT * sH.form;
+  // Venue edge: the away side is judged on how it travels, the home side on
+  // how it holds its own park — each already stripped of the league-wide home
+  // advantage that log5Home applies separately. See buildStrength().
+  const venueA = VENUE_WEIGHT * (Number.isFinite(sA.away_edge) ? sA.away_edge : 0);
+  const venueH = VENUE_WEIGHT * (Number.isFinite(sH.home_edge) ? sH.home_edge : 0);
+  const clampStrength = v => Math.max(0.05, Math.min(0.95, v));
+  const blendA = clampStrength(formA + venueA);
+  const blendH = clampStrength(formH + venueH);
   const pBase = log5Home(blendH, blendA);
   const runProjection = runProjections && runProjections[String(g.gamePk)];
   const pitchingPlan = runProjection && runProjection.pitching_plan ? runProjection.pitching_plan : null;
@@ -879,6 +953,19 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
     pitching_plan: pitchingPlan,
     bullpen_game: bullpenGame,
     legacy_strength_probability: round(pickHome ? legacyPHome : 1 - legacyPHome, 4),
+    // Venue split, recorded per game so grade-confidence.js can measure whether
+    // it earns its weight instead of it being assumed. away_record is how the
+    // road team travels, home_record how the host holds its park; the _edge
+    // values are those records with the league-wide home advantage removed.
+    venue_split: {
+      away_record: sA.away_record || "-",
+      home_record: sH.home_record || "-",
+      away_edge: round(Number.isFinite(sA.away_edge) ? sA.away_edge : 0, 4),
+      home_edge: round(Number.isFinite(sH.home_edge) ? sH.home_edge : 0, 4),
+      applied_away: round(venueA, 4),
+      applied_home: round(venueH, 4),
+      weight: VENUE_WEIGHT
+    },
     run_model_probability: Number.isFinite(runPHome)
       ? round(pickHome ? runPHome : 1 - runPHome, 4)
       : null,
