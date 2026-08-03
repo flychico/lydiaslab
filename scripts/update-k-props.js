@@ -268,6 +268,68 @@ async function main() {
       opp_lineup_k_weighted) so grade-confidence.js can settle which one
       actually predicts rather than either of us arguing it.
     */
+    /*
+      PITCHER RECENT FORM — last 5 starts, blended not substituted.
+
+      The K rate driving every projection was season-long K/BF. A pitcher who
+      has lost a tick of velocity, changed a grip, or is pitching hurt looks
+      identical to his April self until the season number slowly catches up.
+
+      Five starts is roughly 110 batters faced. That is a real signal and a
+      thin one at the same time, so it is BLENDED toward the season rate by its
+      own sample size rather than replacing it:
+
+          weight = recentBf / (recentBf + FORM_SHRINK)
+          rate   = seasonRate + weight * (recentRate - seasonRate)
+
+      At FORM_SHRINK = 200 a full five starts earns about 35% weight, and a
+      pitcher with two starts back from the IL earns about 18%. The resulting
+      rate is also capped to +/-15% of the season rate, because the failure
+      mode this session kept finding is a short window given enough authority
+      to run away with a projection — the totals model's last-7 weighting, the
+      thrashing global K bias, the unweighted lineup mean. This one is
+      deliberately built so it cannot do that.
+
+      Uses the season game log and counts only games the pitcher STARTED, so a
+      long relief outing does not masquerade as recent starting form. Any
+      failure falls back to the season rate and the run continues.
+    */
+    const FORM_STARTS = 5;
+    const FORM_SHRINK = 200;
+    const FORM_CAP = 0.15;
+    const recentForm = {};
+    async function loadRecentForm(pitcherIds) {
+      await Promise.all(pitcherIds.map(async id => {
+        try {
+          const d = await j(`https://statsapi.mlb.com/api/v1/people/${id}/stats?stats=gameLog&group=pitching&season=${yr}`);
+          const splits = (((d.stats || [])[0] || {}).splits || [])
+            .filter(s => s && s.stat && Number(s.stat.gamesStarted) > 0 && s.date)
+            .sort((a, b) => String(b.date).localeCompare(String(a.date)))
+            .slice(0, FORM_STARTS);
+          let so = 0, bf = 0, ip = 0;
+          for (const s of splits) {
+            so += Number(s.stat.strikeOuts) || 0;
+            bf += Number(s.stat.battersFaced) || 0;
+            ip += (() => { const v = String(s.stat.inningsPitched || "0"); const [w, o] = v.split("."); return (Number(w) || 0) + (Number(o) || 0) / 3; })();
+          }
+          if (bf > 0) recentForm[Number(id)] = { so, bf, ip: Number(ip.toFixed(1)), starts: splits.length, rate: so / bf };
+        } catch (e) { /* season rate is the fallback */ }
+      }));
+    }
+
+    // Season rate adjusted toward recent form, sample-weighted and capped.
+    function formAdjustedRate(pitcherId, seasonSo, seasonBf) {
+      const season = seasonBf > 0 ? seasonSo / seasonBf : null;
+      const rf = recentForm[Number(pitcherId)];
+      if (season === null || !rf || !rf.bf) return { rate: season, applied: false, weight: 0, recent: null };
+      const w = rf.bf / (rf.bf + FORM_SHRINK);
+      let rate = season + w * (rf.rate - season);
+      const lo = season * (1 - FORM_CAP), hi = season * (1 + FORM_CAP);
+      const capped = rate < lo || rate > hi;
+      rate = Math.max(lo, Math.min(hi, rate));
+      return { rate, applied: true, weight: Number(w.toFixed(3)), recent: rf.rate, capped, starts: rf.starts, recent_bf: rf.bf };
+    }
+
     const LINEUP_WINDOW_DAYS = 30;
     const winEnd = new Date(DATE + "T00:00:00Z");
     winEnd.setUTCDate(winEnd.getUTCDate() - 1);
@@ -306,6 +368,8 @@ async function main() {
     ])];
     if (pids.length) {
       const ps = await PitcherCore.fetchPitchers(pids, DATE, j);
+      await loadRecentForm(pids);
+      console.log(`Pitcher recent form: last-${FORM_STARTS}-start K/BF loaded for ${Object.keys(recentForm).length} of ${pids.length} pitcher(s).`);
       const bulkRoleStats = await PitchingPlan.fetchBulkRoleStats(reportedPlans, DATE, j);
       // Swing-and-miss / arsenal leverage data (Baseball Savant, 2 calls, whole league).
       const arsenalData = await Arsenal.fetchArsenalData(yr, j).catch(() => ({ ready: false }));
@@ -409,7 +473,12 @@ async function main() {
             const paceBf = (roleStats && roleStats.bf && roleStats.ip) ? roleStats.bf : pit.bf;
             const paceIp = (roleStats && roleStats.bf && roleStats.ip) ? roleStats.ip : pit.ip;
             const bfPerIp = Math.max(3.6, Math.min(4.8, paceBf / paceIp));
-            const projRaw = Number((expIP * bfPerIp * (skillSo / skillBf) * adj * whiffFactor).toFixed(2));
+            // Season K/BF nudged toward the last five starts, sample-weighted
+            // and capped at +/-15%. Bulk-role pitchers keep their role-specific
+            // rate as the base; recent form still applies on top of it.
+            const form = formAdjustedRate(candidate.pitcher_id, skillSo, skillBf);
+            const kRate = form.rate !== null && Number.isFinite(form.rate) ? form.rate : (skillSo / skillBf);
+            const projRaw = Number((expIP * bfPerIp * kRate * adj * whiffFactor).toFixed(2));
             // Band is chosen on the RAW projection so the correction cannot move
             // a pitcher into a different band and then be re-derived from it.
             const projBand = bandFor(projRaw);
@@ -424,6 +493,13 @@ async function main() {
             // Both constructions are recorded every run so grade-confidence.js
             // can measure which one actually predicts, rather than the question
             // being settled by argument.
+            rec.k_rate_season = skillBf > 0 ? Number((skillSo / skillBf).toFixed(4)) : null;
+            rec.k_rate_used = Number(kRate.toFixed(4));
+            rec.recent_form = form.applied ? {
+              starts: form.starts, batters_faced: form.recent_bf,
+              recent_k_rate: Number(form.recent.toFixed(4)),
+              weight: form.weight, capped: Boolean(form.capped)
+            } : null;
             rec.opp_k_adjustment = Number(adj.toFixed(4));
             rec.opp_k_source = adjSource;
             rec.opp_lineup_k = luStat && luStat.stat ? Number(luStat.stat.mean.toFixed(4)) : null;
