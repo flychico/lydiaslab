@@ -1,0 +1,136 @@
+name: Pitching plan (manual override)
+
+# Sets or clears a manual opener / bulk-pitcher plan for one side of one game,
+# and commits it. Nothing else. Publishing is a separate, later step.
+#
+# This used to be an input block on publish-picks.yml, which meant changing a
+# pitching plan required running the entire publish pipeline — regenerating the
+# card, the previews, every matchup page, and potentially sending email — to
+# write one small JSON file. Splitting it out is step 2 of the pipeline rebuild
+# (see 00 Dashboard/PIPELINE REBUILD PLAN in the vault).
+#
+# WORKFLOW
+#   1. Run this to set the plan.
+#   2. Run "Prepare slate" so the models pick it up.
+#   3. Run "Publish picks" last.
+#
+# The game can be identified by:
+#   - the numeric MLB game ID          824891
+#   - the stored matchup name          Philadelphia Phillies @ Baltimore Orioles
+#   - the displayed matchup name       Philadelphia Phillies at Baltimore Orioles
+#   - short names                      Phillies at Orioles
+#   - a pasted matchup page URL        https://lydiaslab.com/mlb/phillies-vs-orioles-...
+# Use the numeric ID for doubleheaders — names are ambiguous there by design.
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "YYYY-MM-DD. Blank = today in America/New_York."
+        required: false
+        type: string
+      action:
+        description: "set or clear"
+        required: true
+        default: "set"
+        type: choice
+        options: [set, clear]
+      game:
+        description: "MLB game ID, matchup name, or matchup page URL"
+        required: true
+        type: string
+      side:
+        description: "Which team's pitching is being overridden"
+        required: true
+        default: "away"
+        type: choice
+        options: [away, home]
+      opener:
+        description: "Opener full name, e.g. Beck Way. Ignored when action=clear."
+        required: false
+        type: string
+      opener_innings:
+        description: "Expected opener innings, e.g. 2"
+        required: false
+        type: string
+      bulk:
+        description: "Bulk pitcher full name. Blank if none."
+        required: false
+        type: string
+      bulk_innings:
+        description: "Expected bulk innings. Blank if none."
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+# Serialized against itself so two edits cannot race on the same file.
+concurrency:
+  group: pitching-plan
+  cancel-in-progress: false
+
+jobs:
+  set-plan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Resolve date
+        id: plan_date
+        run: |
+          echo "UTC:"; date -u
+          echo "Eastern:"; TZ="America/New_York" date
+          DATE_INPUT="${{ github.event.inputs.date }}"
+          if [ -z "$DATE_INPUT" ]; then
+            DATE_INPUT=$(TZ="America/New_York" date +%F)
+          fi
+          echo "date=$DATE_INPUT" >> "$GITHUB_OUTPUT"
+          echo "Resolved date: $DATE_INPUT"
+
+      - name: Show the plan file before
+        run: |
+          F="data/pitching-plans/${{ steps.plan_date.outputs.date }}.json"
+          if [ -f "$F" ]; then echo "--- $F ---"; cat "$F"; else echo "No plan file yet for this date."; fi
+
+      - name: Apply
+        run: |
+          node scripts/set-pitching-plan.js \
+            --date "${{ steps.plan_date.outputs.date }}" \
+            --action "${{ github.event.inputs.action }}" \
+            --game-pk "${{ github.event.inputs.game }}" \
+            --side "${{ github.event.inputs.side }}" \
+            --opener "${{ github.event.inputs.opener }}" \
+            --opener-innings "${{ github.event.inputs.opener_innings }}" \
+            --bulk "${{ github.event.inputs.bulk }}" \
+            --bulk-innings "${{ github.event.inputs.bulk_innings }}"
+
+      - name: Show the plan file after
+        run: |
+          F="data/pitching-plans/${{ steps.plan_date.outputs.date }}.json"
+          echo "--- $F ---"; cat "$F"
+
+      - name: Commit
+        run: |
+          set -euo pipefail
+          git config user.name "lydia-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A data/pitching-plans
+          if git diff --cached --quiet; then
+            echo "No change to commit — the plan already matched what was requested."
+            exit 0
+          fi
+          git commit -m "Pitching plan ${{ github.event.inputs.action }}: ${{ github.event.inputs.game }} (${{ github.event.inputs.side }}) ${{ steps.plan_date.outputs.date }}"
+          git pull --rebase
+          git push
+
+      - name: Next steps
+        run: |
+          echo "Plan written. Nothing downstream has been regenerated yet."
+          echo "Run 'Prepare slate' next so the models read this plan, then 'Publish picks' last."
