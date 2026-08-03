@@ -41,8 +41,8 @@
     // client-side comparison bands need to match, not just raw workload.
     const pickRisk = Math.round(typeof pick.risk_index === "number" ? pick.risk_index : pick.score);
     const oppRisk = Math.round(typeof opp.risk_index === "number" ? opp.risk_index : opp.score);
-    const pickIp = typeof pick.last3_bp_ip === "number" ? pick.last3_bp_ip.toFixed(1) : null;
-    const oppIp = typeof opp.last3_bp_ip === "number" ? opp.last3_bp_ip.toFixed(1) : null;
+    const pickIp = typeof pick.last7_bp_ip === "number" ? pick.last7_bp_ip.toFixed(1) : null;
+    const oppIp = typeof opp.last7_bp_ip === "number" ? opp.last7_bp_ip.toFixed(1) : null;
     const pickB2b = Number(pick.back_to_back_arms || 0);
     const oppB2b = Number(opp.back_to_back_arms || 0);
     const effNote = t => (t && t.efficiency_label) ? `${t === pick ? team : opponent}'s pen has been ${t.efficiency_label.toLowerCase()} lately (${(t.efficiency_score/10).toFixed(1)}/10 efficiency).` : "";
@@ -53,14 +53,14 @@
 
     if (pickRisk + 15 < oppRisk) {
       const facts = [];
-      if (oppIp !== null) facts.push(`${oppIp} relief innings over the last three days`);
+      if (oppIp !== null) facts.push(`${oppIp} relief innings over the last 7 days`);
       if (oppB2b) facts.push(`${oppB2b} back-to-back arm${oppB2b === 1 ? "" : "s"}`);
       return `${team} has the lower-risk bullpen, ${(pickRisk/10).toFixed(1)}/10 versus ${(oppRisk/10).toFixed(1)}/10. ${opponent}${facts.length ? " has " + facts.join(", ") + "." : " carries the heavier recent workload."} ${effNote(opp)}`.trim();
     }
 
     if (pickRisk > oppRisk + 15) {
       const facts = [];
-      if (pickIp !== null) facts.push(`${pickIp} relief innings over the last three days`);
+      if (pickIp !== null) facts.push(`${pickIp} relief innings over the last 7 days`);
       if (pickB2b) facts.push(`${pickB2b} back-to-back arm${pickB2b === 1 ? "" : "s"}`);
       return `${team} carries the higher-risk bullpen, ${(pickRisk/10).toFixed(1)}/10 versus ${(oppRisk/10).toFixed(1)}/10.${facts.length ? " Recent context: " + facts.join(", ") + "." : ""} ${effNote(pick)}`.trim();
     }

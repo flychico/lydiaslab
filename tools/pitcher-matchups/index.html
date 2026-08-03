@@ -486,7 +486,7 @@ function bullpenStrip(awayTeam, homeTeam) {
     const cls = b.score >= 82 ? "neg-text" : b.score >= 62 ? "neg-text" : b.score < 35 ? "pos-text" : "";
     return `<div style="flex:1;min-width:150px"><b>${escapeHtml(team)}</b> pen:
       <b class="${cls}">${(b.score/10).toFixed(1)}/10 ${escapeHtml(b.label)}</b>
-      <span class="dim small">· ${b.last3_bp_ip ?? "—"} IP${Number.isFinite(b.last3_bp_runs) ? ", " + b.last3_bp_runs + " runs allowed" : ""} last 3d</span></div>`;
+      <span class="dim small">· ${b.last7_bp_ip ?? "—"} IP${Number.isFinite(b.last7_bp_runs) ? ", " + b.last7_bp_runs + " runs allowed" : ""} last 7d</span></div>`;
   };
   const gap = Math.abs(a.score - h.score);
   const fresher = a.score < h.score ? awayTeam : homeTeam;

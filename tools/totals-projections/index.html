@@ -333,8 +333,8 @@ function mathBlock(sd){
   const stLine = (!plan && Number.isFinite(sd.opp_sp_fip) && Number.isFinite(sd.opp_sp_ip))
     ? `(${sd.opp_sp_fip.toFixed(2)} FIP-in &minus; ${LEAGUE_ERA} LEAGUE_ERA) &times; ${sd.opp_sp_ip}/9 expected IP`
     : `net of the full reported pitching plan (${escapeHtml(plan || (sd.opp_sp + " " + sd.opp_sp_ip + " IP"))})`;
-  const bpLine = Number.isFinite(sd.opp_pen_era_3d)
-    ? `(${sd.opp_pen_era_3d.toFixed(2)} bullpen ERA, last 3 days &minus; ${LEAGUE_ERA} LEAGUE_ERA) &times; ${sd.opp_bullpen_ip}/9 expected bullpen IP`
+  const bpLine = Number.isFinite(sd.opp_pen_era_7d)
+    ? `(${sd.opp_pen_era_7d.toFixed(2)} bullpen ERA, last 7 days &minus; ${LEAGUE_ERA} LEAGUE_ERA) &times; ${sd.opp_bullpen_ip}/9 expected bullpen IP`
     : `no recent bullpen read &rarr; neutral`;
   return `<details class="ars">
     <summary>Show the math</summary>
@@ -368,7 +368,7 @@ function sideBoxes(g, scheduleGame){
       ${planSummary(sd)
         ? `<div class="s-row"><span>Facing pitching plan</span><span><b>${escapeHtml(planSummary(sd))}</b></span></div>`
         : `<div class="s-row"><span>Facing starter</span><span><b>${escapeHtml(sd.opp_sp)}</b> <span class="dim small">${Number.isFinite(sd.opp_sp_fip)?"FIP-in "+sd.opp_sp_fip.toFixed(2):""}${sd.opp_sp_ip?" · ~"+sd.opp_sp_ip+" IP":""}</span>${fipTier(sd.opp_sp_fip)}</span></div>`}
-      <div class="s-row"><span>Bullpen, last 3 days</span><span>${Number.isFinite(sd.opp_pen_era_3d)?`<b>${sd.opp_pen_era_3d.toFixed(2)}</b> ERA${adjTier(sd.bullpen_adj,1.5)}`:'<span class="dim">—</span>'}</span></div>
+      <div class="s-row"><span>Bullpen, last 7 days</span><span>${Number.isFinite(sd.opp_pen_era_7d)?`<b>${sd.opp_pen_era_7d.toFixed(2)}</b> ERA${adjTier(sd.bullpen_adj,1.5)}`:'<span class="dim">—</span>'}</span></div>
       ${sd.opp_pen_efficiency_label?`<div class="s-row"><span class="dim small">${escapeHtml(sd.opp_pen_efficiency_label)} recently (efficiency ${Number.isFinite(sd.opp_pen_efficiency)?(sd.opp_pen_efficiency/10).toFixed(1):"—"}/10)</span></div>`:""}
       ${mathBlock(sd)}
       ${lineupBlock(sideName, scheduleGame, teamId)}
