@@ -89,14 +89,14 @@ function bullpenCase({ pickTeam, oppTeam, pickPen, oppPen, minRiskGap = 15 }) {
   if (!isNum(pickRisk) || !isNum(oppRisk)) return null;
   if (oppRisk - pickRisk < minRiskGap) return null;
 
-  const pickEra = pickPen && isNum(pickPen.era3) ? pickPen.era3 : null;
-  const oppEra = oppPen && isNum(oppPen.era3) ? oppPen.era3 : null;
+  const pickEra = pickPen && isNum(pickPen.era7) ? pickPen.era7 : null;
+  const oppEra = oppPen && isNum(oppPen.era7) ? oppPen.era7 : null;
 
   // Team names are plural and often already end in "s", so the copy is written
   // to avoid possessives entirely rather than emit "the Giants's".
   let evidence;
   if (isNum(pickEra) && isNum(oppEra)) {
-    evidence = `${oppTeam} relievers have a ${two(oppEra)} ERA over the last three days; ${pickTeam} relievers have a ${two(pickEra)}.`;
+    evidence = `${oppTeam} relievers have a ${two(oppEra)} ERA over the last 7 days; ${pickTeam} relievers have a ${two(pickEra)}.`;
   } else if (pickPen && oppPen && pickPen.efficiency_label && oppPen.efficiency_label) {
     evidence = `LyDia currently grades the ${pickTeam} bullpen ${String(pickPen.efficiency_label).toLowerCase()} and the ${oppTeam} bullpen ${String(oppPen.efficiency_label).toLowerCase()}.`;
   } else {

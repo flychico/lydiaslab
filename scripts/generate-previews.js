@@ -64,18 +64,18 @@ function bullpenAnalysis(g) {
   const opponent = opponentName(g);
   const pickScore = Math.round(pick.score);
   const oppScore = Math.round(opp.score);
-  const pickIp = typeof pick.last3_bp_ip === "number" ? pick.last3_bp_ip.toFixed(1) : null;
-  const oppIp = typeof opp.last3_bp_ip === "number" ? opp.last3_bp_ip.toFixed(1) : null;
+  const pickIp = typeof pick.last7_bp_ip === "number" ? pick.last7_bp_ip.toFixed(1) : null;
+  const oppIp = typeof opp.last7_bp_ip === "number" ? opp.last7_bp_ip.toFixed(1) : null;
   const pickB2b = Number(pick.back_to_back_arms || 0);
   const oppB2b = Number(opp.back_to_back_arms || 0);
 
   if (pickScore >= 78 && oppScore >= 78) return `Both bullpens are heavily taxed. ${team} is ${(pickScore/10).toFixed(1)}/10 and ${opponent} is ${(oppScore/10).toFixed(1)}/10, so late-game volatility is elevated on both sides.`;
   if (pickScore + 15 < oppScore) {
-    const detail = oppIp !== null ? `${opponent} has used ${oppIp} bullpen innings over the last three days${oppB2b ? ` with ${oppB2b} back-to-back arm${oppB2b === 1 ? "" : "s"}` : ""}.` : "";
+    const detail = oppIp !== null ? `${opponent} has used ${oppIp} bullpen innings over the last 7 days${oppB2b ? ` with ${oppB2b} back-to-back arm${oppB2b === 1 ? "" : "s"}` : ""}.` : "";
     return `${team} has the fresher bullpen, ${(pickScore/10).toFixed(1)}/10 versus ${(oppScore/10).toFixed(1)}/10. ${detail}`.trim();
   }
   if (pickScore > oppScore + 15) {
-    const detail = pickIp !== null ? `${team} has used ${pickIp} bullpen innings over the last three days${pickB2b ? ` with ${pickB2b} back-to-back arm${pickB2b === 1 ? "" : "s"}` : ""}.` : "";
+    const detail = pickIp !== null ? `${team} has used ${pickIp} bullpen innings over the last 7 days${pickB2b ? ` with ${pickB2b} back-to-back arm${pickB2b === 1 ? "" : "s"}` : ""}.` : "";
     return `${team} carries the heavier bullpen workload, ${(pickScore/10).toFixed(1)}/10 versus ${(oppScore/10).toFixed(1)}/10, which adds late-game risk. ${detail}`.trim();
   }
   if (pickScore >= 60 || oppScore >= 60) return `Bullpen workload is elevated but not decisive. ${team} is ${(pickScore/10).toFixed(1)}/10 and ${opponent} is ${(oppScore/10).toFixed(1)}/10.`;

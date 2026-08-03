@@ -1786,12 +1786,12 @@ function renderSeasonProfileTable(game, teamHitting) {
   </table>`;
 }
 
-// Bullpen records use era_3d / back_to_back_arms; the copy layer takes era3 / b2b_arms.
+// Bullpen records use era_7d / back_to_back_arms; the copy layer takes era7 / b2b_arms.
 function toPenStats(pen) {
   if (!pen) return null;
   return {
     risk_index: pen.risk_index ?? pen.score ?? null,
-    era3: typeof pen.era_3d === "number" ? pen.era_3d : null,
+    era7: typeof pen.era_7d === "number" ? pen.era_7d : null,
     b2b_arms: typeof pen.back_to_back_arms === "number" ? pen.back_to_back_arms : null,
     efficiency_label: pen.efficiency_label || null
   };
@@ -1910,10 +1910,10 @@ function renderBullpenTable(game, bullpen) {
       <tr><th>Fatigue</th><td>${esc(scoreAndLabel(away.score, away.label))}</td><td>${esc(scoreAndLabel(home.score, home.label))}</td></tr>
       <tr><th>Efficiency</th><td>${esc(scoreAndLabel(away.efficiency_score, away.efficiency_label))}</td><td>${esc(scoreAndLabel(home.efficiency_score, home.efficiency_label))}</td></tr>
       <tr><th>Combined risk</th><td class="${typeof away.risk_index === "number" && typeof home.risk_index === "number" && away.risk_index < home.risk_index ? "adv" : ""}">${esc(scoreAndLabel(away.risk_index, away.risk_label))}</td><td class="${typeof away.risk_index === "number" && typeof home.risk_index === "number" && home.risk_index < away.risk_index ? "adv" : ""}">${esc(scoreAndLabel(home.risk_index, home.risk_label))}</td></tr>
-      <tr><th>Relief innings, last 3 days</th><td>${esc(oneDecimal(away.last3_bp_ip))}</td><td>${esc(oneDecimal(home.last3_bp_ip))}</td></tr>
+      <tr><th>Relief innings, last 7 days</th><td>${esc(oneDecimal(away.last7_bp_ip))}</td><td>${esc(oneDecimal(home.last7_bp_ip))}</td></tr>
       <tr><th>Back-to-back arms</th><td>${esc(known(away.back_to_back_arms) ? away.back_to_back_arms : "Not available")}</td><td>${esc(known(home.back_to_back_arms) ? home.back_to_back_arms : "Not available")}</td></tr>
-      <tr><th>3-day ERA</th><td>${esc(typeof away.era_3d === "number" ? away.era_3d.toFixed(2) : "Not available")}</td><td>${esc(typeof home.era_3d === "number" ? home.era_3d.toFixed(2) : "Not available")}</td></tr>
-      <tr><th>3-day WHIP</th><td>${esc(typeof away.whip_3d === "number" ? away.whip_3d.toFixed(2) : "Not available")}</td><td>${esc(typeof home.whip_3d === "number" ? home.whip_3d.toFixed(2) : "Not available")}</td></tr>
+      <tr><th>7-day ERA</th><td>${esc(typeof away.era_7d === "number" ? away.era_7d.toFixed(2) : "Not available")}</td><td>${esc(typeof home.era_7d === "number" ? home.era_7d.toFixed(2) : "Not available")}</td></tr>
+      <tr><th>7-day WHIP</th><td>${esc(typeof away.whip_7d === "number" ? away.whip_7d.toFixed(2) : "Not available")}</td><td>${esc(typeof home.whip_7d === "number" ? home.whip_7d.toFixed(2) : "Not available")}</td></tr>
     </tbody>
   </table>`;
 }

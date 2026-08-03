@@ -226,21 +226,21 @@ function scoreTeam(team, targetDate) {
 
   // The SCORE uses the full 5-day window with recency decay so a rest day
   // lowers fatigue. But every DISPLAYED stat and the efficiency calc use only
-  // the true last-3-days games, so "last 3 days: 15.3 IP" stays honest and
+  // the true last-7-days games, so "last 7 days: 15.3 IP" stays honest and
   // matches what the score reason and the tool page show. A game 4-5 days out
-  // still nudges the decayed score but never inflates the displayed 3-day sum.
-  const recent3 = ref ? games.filter(g => daysAgoBetween(ref, g.date) <= 3) : games;
-  const last3BP = recent3.reduce((s, g) => s + g.bpIP, 0);
-  const last3Runs = recent3.reduce((s, g) => s + (g.bpRuns || 0), 0);
-  const last3ER = recent3.reduce((s, g) => s + (g.bpER || 0), 0);
-  const last3H = recent3.reduce((s, g) => s + (g.bpH || 0), 0);
-  const last3BB = recent3.reduce((s, g) => s + (g.bpBB || 0), 0);
-  const last3Relievers = recent3.reduce((s, g) => s + g.relievers, 0);
-  const gamesTracked = recent3.length;
+  // still nudges the decayed score but never inflates the displayed 7-day sum.
+  const recent7 = ref ? games.filter(g => daysAgoBetween(ref, g.date) <= 7) : games;
+  const last7BP = recent7.reduce((s, g) => s + g.bpIP, 0);
+  const last7Runs = recent7.reduce((s, g) => s + (g.bpRuns || 0), 0);
+  const last7ER = recent7.reduce((s, g) => s + (g.bpER || 0), 0);
+  const last7H = recent7.reduce((s, g) => s + (g.bpH || 0), 0);
+  const last7BB = recent7.reduce((s, g) => s + (g.bpBB || 0), 0);
+  const last7Relievers = recent7.reduce((s, g) => s + g.relievers, 0);
+  const gamesTracked = recent7.length;
 
   // A SEPARATE, steadier 15-day window for consumers that need a bullpen
-  // quality read but can't tolerate the 3-day number's small-sample swings
-  // (a single bad or dominant outing can move era_3d past 15.00 or to
+  // quality read but can't tolerate the 7-day number's small-sample swings
+  // (a single bad or dominant outing can move era_7d past 15.00 or to
   // 0.00 -- confirmed live 2026-07-31 flipping which pitcher an ordinary
   // pitching-plan comparison credited). Same fields, wider window, no
   // separate fatigue/workload score -- this is a quality read only.
@@ -296,12 +296,12 @@ function scoreTeam(team, targetDate) {
   // both terms toward the 50 baseline when the sample is thin (a few relief
   // innings can produce an extreme rate stat by pure small-sample noise) and
   // reaches full weight at 6+ bullpen innings.
-  const era3d = last3BP > 0 ? (last3ER / last3BP) * 9 : null;
-  const whip3d = last3BP > 0 ? (last3H + last3BB) / last3BP : null;
-  const confidence = clamp(last3BP / 6, 0.35, 1);
-  const eraTerm = era3d === null ? 0 : clamp(-(era3d - 4.20) * 6, -25, 25) * confidence;
-  const whipTerm = whip3d === null ? 0 : clamp(-(whip3d - 1.30) * 15, -20, 20) * confidence;
-  const efficiencyRaw = gamesTracked && last3BP > 0 ? 50 + eraTerm + whipTerm : null;
+  const era7d = last7BP > 0 ? (last7ER / last7BP) * 9 : null;
+  const whip7d = last7BP > 0 ? (last7H + last7BB) / last7BP : null;
+  const confidence = clamp(last7BP / 6, 0.35, 1);
+  const eraTerm = era7d === null ? 0 : clamp(-(era7d - 4.20) * 6, -25, 25) * confidence;
+  const whipTerm = whip7d === null ? 0 : clamp(-(whip7d - 1.30) * 15, -20, 20) * confidence;
+  const efficiencyRaw = gamesTracked && last7BP > 0 ? 50 + eraTerm + whipTerm : null;
   const efficiencyScore = efficiencyRaw === null ? null : Math.round(clamp(efficiencyRaw, 0, 100));
 
   // 50 is the league-average neutral point (see baseline above), so bands
@@ -342,24 +342,24 @@ function scoreTeam(team, targetDate) {
     score,
     label,
     workload_read: workloadRead(label),
-    score_reason: scoreReason({ label, score, last, last3BP, last3Relievers, b2b, gamesTracked, daysRest }),
+    score_reason: scoreReason({ label, score, last, last7BP, last7Relievers, b2b, gamesTracked, daysRest }),
     formula: "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
     efficiency_score: efficiencyScore,
     efficiency_label: efficiencyLabel,
-    efficiency_reason: efficiencyReason({ efficiencyLabel, efficiencyScore, era3d, whip3d, last3ER, last3H, last3BB, last3BP, gamesTracked }),
+    efficiency_reason: efficiencyReason({ efficiencyLabel, efficiencyScore, era7d, whip7d, last7ER, last7H, last7BB, last7BP, gamesTracked }),
     efficiency_formula: "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
     risk_index: riskIndex,
     risk_label: riskLabel,
     days_rest: daysRest,
     last_game_date: last.date,
     last_game_bp_ip: round(last.bpIP, 1),
-    last3_bp_ip: round(last3BP, 1),
-    last3_bp_runs: last3Runs,
-    last3_bp_er: last3ER,
-    last3_bp_hits: last3H,
-    last3_bp_bb: last3BB,
-    era_3d: era3d === null ? null : round(era3d, 2),
-    whip_3d: whip3d === null ? null : round(whip3d, 2),
+    last7_bp_ip: round(last7BP, 1),
+    last7_bp_runs: last7Runs,
+    last7_bp_er: last7ER,
+    last7_bp_hits: last7H,
+    last7_bp_bb: last7BB,
+    era_7d: era7d === null ? null : round(era7d, 2),
+    whip_7d: whip7d === null ? null : round(whip7d, 2),
     last15_bp_ip: round(last15BP, 1),
     last15_bp_runs: last15Runs,
     last15_bp_er: last15ER,
@@ -369,12 +369,12 @@ function scoreTeam(team, targetDate) {
     whip_15d: whip15d === null ? null : round(whip15d, 2),
     recent15_games_tracked: games15Tracked,
     last_game_relievers: last.relievers || 0,
-    last3_relievers: last3Relievers,
+    last7_relievers: last7Relievers,
     back_to_back_arms: b2b,
     recent_games_tracked: gamesTracked,
     context_only: {
       last_game_relievers: last.relievers || 0,
-      last3_relievers: last3Relievers,
+      last7_relievers: last7Relievers,
       note: "Reliever counts are displayed for context only and do not add score points."
     },
     component_scores: {
@@ -395,23 +395,23 @@ function scoreTeam(team, targetDate) {
   };
 }
 
-function efficiencyReason({ efficiencyLabel, efficiencyScore, era3d, whip3d, last3ER, last3H, last3BB, last3BP, gamesTracked }) {
-  if (!gamesTracked || era3d === null) return "No completed bullpen innings in the last three days to grade.";
-  return `${efficiencyLabel} (${(efficiencyScore / 10).toFixed(1)}/10): ${round(era3d, 2)} ERA and ${round(whip3d, 2)} WHIP over ${round(last3BP, 1)} relief innings (${last3ER} ER, ${last3H} H, ${last3BB} BB) in the last three days.`;
+function efficiencyReason({ efficiencyLabel, efficiencyScore, era7d, whip7d, last7ER, last7H, last7BB, last7BP, gamesTracked }) {
+  if (!gamesTracked || era7d === null) return "No completed bullpen innings in the last 7 days to grade.";
+  return `${efficiencyLabel} (${(efficiencyScore / 10).toFixed(1)}/10): ${round(era7d, 2)} ERA and ${round(whip7d, 2)} WHIP over ${round(last7BP, 1)} relief innings (${last7ER} ER, ${last7H} H, ${last7BB} BB) in the last 7 days.`;
 }
 
 function workloadRead(label) {
-  if (label === "Fresh") return "Low recent workload. No major bullpen fatigue flag from the last three days.";
+  if (label === "Fresh") return "Low recent workload. No major bullpen fatigue flag from the last 7 days.";
   if (label === "Tired") return "Elevated recent workload. Full-game angles deserve extra late-inning caution.";
   if (label === "High risk") return "Heavy recent workload. Late-game pitching condition could materially affect the read.";
   return "Manageable recent workload. Bullpen should still be part of the full-game read.";
 }
 
-function scoreReason({ label, score, last, last3BP, last3Relievers, b2b, gamesTracked, daysRest }) {
+function scoreReason({ label, score, last, last7BP, last7Relievers, b2b, gamesTracked, daysRest }) {
   if (!gamesTracked) return `${label} (${(score/10).toFixed(1)}/10). No completed games in the recent window — the pen comes in rested.`;
   const restText = daysRest === 1 ? "pitched yesterday" : daysRest ? `${daysRest} days since last game` : "";
   const bits = [];
-  bits.push(`${round(last3BP, 1)} recent relief innings, recency-weighted` + (last.bpIP >= 4 ? ` — ${round(last.bpIP, 1)} in the last game (${restText})` : restText ? ` (${restText})` : ""));
+  bits.push(`${round(last7BP, 1)} recent relief innings, recency-weighted` + (last.bpIP >= 4 ? ` — ${round(last.bpIP, 1)} in the last game (${restText})` : restText ? ` (${restText})` : ""));
   if (b2b > 0) bits.push(`${b2b} arm${b2b === 1 ? "" : "s"} worked back-to-back days`);
   return `${label} (${(score/10).toFixed(1)}/10): ` + bits.join(", ") + `. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.`;
 }
@@ -423,10 +423,10 @@ function buildTeamsByName(rows) {
       score: row.score,
       label: row.label,
       last_game_bp_ip: row.last_game_bp_ip,
-      last3_bp_ip: row.last3_bp_ip,
-      last3_bp_runs: row.last3_bp_runs,
+      last7_bp_ip: row.last7_bp_ip,
+      last7_bp_runs: row.last7_bp_runs,
       last_game_relievers: row.last_game_relievers,
-      last3_relievers: row.last3_relievers,
+      last7_relievers: row.last7_relievers,
       back_to_back_arms: row.back_to_back_arms,
       workload_read: row.workload_read,
       score_reason: row.score_reason,
@@ -438,8 +438,8 @@ function buildTeamsByName(rows) {
       efficiency_reason: row.efficiency_reason,
       efficiency_formula: row.efficiency_formula,
       efficiency_component_scores: row.efficiency_component_scores,
-      era_3d: row.era_3d,
-      whip_3d: row.whip_3d,
+      era_7d: row.era_7d,
+      whip_7d: row.whip_7d,
       last15_bp_ip: row.last15_bp_ip,
       last15_bp_runs: row.last15_bp_runs,
       era_15d: row.era_15d,
@@ -464,7 +464,7 @@ async function buildBullpenSource({ date, todayGames, fetchJson, generatedAt }) 
   // A postponed/suspended game's ORIGINAL listing can still report
   // abstractGameState "Final" even though detailedState says it never
   // played that day (MLB schedule API quirk). If a doubleheader makeup
-  // lands inside the same 3-day window, the same gamePk then appears
+  // lands inside the same 7-day window, the same gamePk then appears
   // under two different dates and would otherwise get boxscore-processed
   // twice — double-counting one game's entire relief line. Dedupe by
   // gamePk across the whole window, and explicitly skip listings that

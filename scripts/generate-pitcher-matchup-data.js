@@ -124,10 +124,10 @@ async function main() {
     // score it on effective_era (starter FIP blended with the bullpen's
     // recent ERA) instead. If the starter covers the majority of the game
     // himself, his own line already is the representative one; blending in
-    // a noisy 3-day bullpen number there only adds risk without adding
+    // a noisy 7-day bullpen number there only adds risk without adding
     // truth (confirmed live 2026-07-31: doing this unconditionally flipped
     // the credited pitcher in both Brewers @ Angels and Marlins @ Mets).
-    // A blended side still runs on the same 3-day bullpen sample as the
+    // A blended side still runs on the same 7-day bullpen sample as the
     // rest of the pipeline, so it can still move on a hot/cold bullpen
     // stretch -- an inherent, disclosed limit of the blended read, not a
     // bug in an ordinary starter-vs-starter comparison.
