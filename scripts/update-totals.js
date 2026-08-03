@@ -12,9 +12,9 @@
                                  runs via wOBA scale and PA/team-game)
          + starter adjustment  ((starter FIP-lite − LEAGUE_ERA) × innings/9,
                                  per pitching-plan segment)
-         + bullpen adjustment  ((opposing bullpen's era_3d − LEAGUE_ERA) ×
+         + bullpen adjustment  ((opposing bullpen's era_7d − LEAGUE_ERA) ×
                                  bullpen innings/9 — actual runs allowed over
-                                 the last 3 days, unshrunk, per Lynold)
+                                 the last 7 days, unshrunk, per Lynold)
 
   LEAGUE_ERA (4.20) is the only fixed reference constant left in the formula,
   kept unchanged per Lynold 2026-07-29. Everything else (league wOBA, PA/game,
@@ -438,20 +438,20 @@ async function main() {
       const penEfficiency = pen && Number.isFinite(pen.efficiency_score) ? pen.efficiency_score : null;
       const penEfficiencyLabel = pen && pen.efficiency_label ? pen.efficiency_label : null;
       // Bullpen adjustment driver: actual earned runs allowed per 9 over the
-      // last 3 days. Raw, unshrunk for thin samples — per Lynold 2026-07-29.
-      const penEra3d = pen && Number.isFinite(pen.era_3d) ? pen.era_3d : null;
+      // last 7 days. Raw, unshrunk for thin samples — per Lynold 2026-07-29.
+      const penEra7d = pen && Number.isFinite(pen.era_7d) ? pen.era_7d : null;
       // Blended pitching-plan-edge reads use a steadier 15-day bullpen ERA
       // instead -- the win-probability model's own bullpenAdj term below
-      // deliberately stays on the 3-day number per Lynold 2026-07-29 (it is
-      // meant to react fast), but a 3-day sample was too volatile for what
+      // deliberately stays on the 7-day number per Lynold 2026-07-29 (it is
+      // meant to react fast), but a 7-day sample was too volatile for what
       // is displayed to users as a plan-quality comparison: a single bad or
-      // dominant outing can push era_3d past 15.00 or to 0.00, which
+      // dominant outing can push era_7d past 15.00 or to 0.00, which
       // flipped which pitcher an ordinary pitching-plan edge credited
       // (confirmed live 2026-07-31, Brewers @ Angels and Marlins @ Mets).
-      // Falls back to era_3d, then league average, if the 15-day figure
+      // Falls back to era_7d, then league average, if the 15-day figure
       // isn't available (e.g. early season).
       const penEra15d = pen && Number.isFinite(pen.era_15d) ? pen.era_15d
-        : (penEra3d !== null ? penEra3d : null);
+        : (penEra7d !== null ? penEra7d : null);
 
       // Allocate every known pitcher only to his assigned innings. The generic
       // bullpen owns only the innings left after the opener and bulk pitcher.
@@ -484,7 +484,7 @@ async function main() {
       const expIP = segments.filter(segment => segment.role !== "bullpen")
         .reduce((sum, segment) => sum + Number(segment.expected_innings), 0);
 
-      const bullpenAdj = penEra3d !== null ? (penEra3d - LEAGUE_ERA) * (bullpenInnings / 9) : 0;
+      const bullpenAdj = penEra7d !== null ? (penEra7d - LEAGUE_ERA) * (bullpenInnings / 9) : 0;
       effectiveEra += (penEra15d !== null ? penEra15d : LEAGUE_ERA) * bullpenInnings;
       const effectiveEraFinal = Number((effectiveEra / 9).toFixed(2));
 
@@ -509,7 +509,7 @@ async function main() {
       // the credited pitcher in both Brewers @ Angels and Marlins @ Mets;
       // never doing it re-broke the original Pirates-opener case). The
       // blended score itself now runs on a 15-day bullpen ERA rather than
-      // 3-day (see penEra15d above) specifically because the 3-day number
+      // 7-day (see penEra15d above) specifically because the 7-day number
       // was volatile enough on its own to cause that flip.
       const effectiveEraScore = eraToScore(effectiveEraFinal);
       const bullpenCarriesGame = bullpenInnings > expIP;
@@ -557,7 +557,7 @@ async function main() {
         pitching_plan: planOutput,
         starter_adj: Number(starterAdj.toFixed(2)),
         opp_pen_risk: penRisk, opp_pen_fatigue: penFatigue, opp_pen_efficiency: penEfficiency, opp_pen_efficiency_label: penEfficiencyLabel,
-        opp_pen_era_3d: penEra3d,
+        opp_pen_era_7d: penEra7d,
         bullpen_adj: Number(bullpenAdj.toFixed(2)),
         sp_sample_ok: !!(st && st.ip >= 40 && role.confidence !== "low"),
         pitching_plan_confident: plan.reported || (role.confidence === "high" && !role.bullpenGame)
@@ -696,7 +696,7 @@ async function main() {
     }
   } catch (e) {}
 
-  const payload = { date: DATE, generated_at: new Date().toISOString(), model_version: TOTALS_MODEL_VERSION, policy: TOTALS_POLICY, source: "LyDia totals projection (median RPG + lineup wOBA offense adjustment + FIP-lite starter adjustment + bullpen era_3d adjustment) + the-odds-api totals consensus", league_rpg: Number(lgRPG.toFixed(2)), probables, pitching_plan_signature: pitchingPlanSignature, games: out, learned_bias: learnedBias, learned_n: learnedN };
+  const payload = { date: DATE, generated_at: new Date().toISOString(), model_version: TOTALS_MODEL_VERSION, policy: TOTALS_POLICY, source: "LyDia totals projection (median RPG + lineup wOBA offense adjustment + FIP-lite starter adjustment + bullpen era_7d adjustment) + the-odds-api totals consensus", league_rpg: Number(lgRPG.toFixed(2)), probables, pitching_plan_signature: pitchingPlanSignature, games: out, learned_bias: learnedBias, learned_n: learnedN };
   fs.mkdirSync(path.join(ROOT, "data", "totals"), { recursive: true });
   fs.writeFileSync(path.join(ROOT, "data", "totals", `${DATE}.json`), JSON.stringify(payload, null, 1));
   fs.writeFileSync(path.join(ROOT, "data", "totals", "today.json"), JSON.stringify(payload, null, 1));
