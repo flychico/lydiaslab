@@ -1,22 +1,47 @@
-name: Publish picks (after LyDia analysis)
+name: Publish picks
+
+# Publishing only. Runs LAST.
+#
+# Rebuilt 2026-08-03. Everything that gathers data moved to prepare-slate.yml;
+# the manual pitching-plan editor moved to pitching-plan.yml; the Research Desk
+# was dropped. What is left is what the name says: run the moneyline model over
+# data that has already been gathered and committed, lock the card, render the
+# pages, email.
+#
+# REMOVED IN THE REBUILD, and why
+#   - Apply manual pitching plan     -> pitching-plan.yml. Changing one opener
+#                                       should not require regenerating every
+#                                       matchup page and risking an email.
+#   - Refresh totals projections     -> prepare-slate.yml, where it runs AFTER
+#                                       the bullpen file exists. It ran before
+#                                       it here, so totals were built with no
+#                                       bullpen input at all. ERR-20260803-01.
+#   - Provisional source data pass   -> prepare-slate.yml. This was the first of
+#                                       two full model passes; the second one
+#                                       below is now the only one. The round
+#                                       trip existed so totals could sit between
+#                                       them, and totals no longer lives here.
+#   - Refresh LyDia Research Desk    -> dropped entirely. A content scraper with
+#                                       no relationship to picks, running five
+#                                       times a day because publish did.
+#
+# DAILY ORDER
+#   Prepare slate  ->  (optional Pitching plan, then Prepare slate again)  ->  Publish picks
 
 on:
   schedule:
-    # GitHub cron is UTC (EDT = UTC-4 for the MLB season). Five runs, one per
-    # traditional first-pitch wave (12:00, 1:30, 3:30/4:15, 6:35/7:10, 10:00 ET),
-    # each timed after that wave's lineups typically post (~2h before first
-    # pitch) and after the 10:50am ET odds fetch, with a deliberate off-round
-    # minute to avoid GitHub's top-of-hour scheduling backlog.
-    # Concurrency below serializes these so they never overlap.
-    - cron: "5 15 * * *"    # 11:05am ET — after odds fetch; covers the 12:00pm wave; early-delivery lock
+    # GitHub cron is UTC (EDT = UTC-4 in season). One run per first-pitch wave,
+    # each ~15 minutes after that wave's prepare-slate run. Concurrency below
+    # serializes them.
+    - cron: "5 15 * * *"    # 11:05am ET — covers the 12:00pm wave
     - cron: "20 16 * * *"   # 12:20pm ET — covers the 1:30pm wave
-    - cron: "35 18 * * *"   # 2:35pm ET  — covers the 3:30pm / 4:15pm wave
-    - cron: "30 21 * * *"   # 5:30pm ET  — covers the 6:35pm / 7:10pm wave (bulk of the slate)
-    - cron: "25 0 * * *"    # 8:25pm ET  — covers the 10:00pm wave (West Coast night games)
+    - cron: "35 18 * * *"   # 2:35pm ET  — covers the 3:30/4:15pm wave
+    - cron: "30 21 * * *"   # 5:30pm ET  — covers the 6:35/7:10pm wave
+    - cron: "25 0 * * *"    # 8:25pm ET  — covers the 10:00pm West Coast wave
   workflow_dispatch:
     inputs:
       date:
-        description: "YYYY-MM-DD to generate. Leave blank for today in America/New_York."
+        description: "YYYY-MM-DD to publish. Blank for today in America/New_York."
         required: false
         default: ""
       snapshot:
@@ -27,38 +52,6 @@ on:
         description: "Email picks to paid members? Only set true after approval."
         required: false
         default: "false"
-      pitching_plan_action:
-        description: "Manual pitching plan: none, set, or clear"
-        required: false
-        default: "none"
-        type: choice
-        options: [none, set, clear]
-      pitching_plan_game_pk:
-        description: "Game ID or matchup, for example Royals @ Tigers. Use ID for doubleheaders."
-        required: false
-        default: ""
-      pitching_plan_side:
-        description: "Team receiving the override"
-        required: false
-        default: "away"
-        type: choice
-        options: [away, home]
-      pitching_plan_opener:
-        description: "Opener full name, for example Beck Way"
-        required: false
-        default: ""
-      pitching_plan_opener_innings:
-        description: "Expected opener innings, for example 2"
-        required: false
-        default: ""
-      pitching_plan_bulk:
-        description: "Bulk pitcher full name; leave blank if none"
-        required: false
-        default: ""
-      pitching_plan_bulk_innings:
-        description: "Expected bulk innings; leave blank if none"
-        required: false
-        default: ""
 
 permissions:
   contents: write
@@ -70,14 +63,9 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    # No ODDS_API_KEY. This workflow spends nothing and can be re-run freely.
-    # All paid calls live in fetch-odds.yml; publish builds from what it commits.
-    # Each odds-touching script already degrades to the committed capture:
-    #   update-k-props.js:49     returns early, leaves the capture untouched
-    #   update-totals.js:127,166 skips both odds blocks, and the merge at :490
-    #                            explicitly preserves lines captured earlier
-    #                            while still refreshing projections
-    #   generate-member-lab.js:57 resolves to [] and reuses the locked card
+    # No ODDS_API_KEY, deliberately. This workflow spends nothing and can be
+    # re-run freely. Every paid call happens in prepare-slate.yml and is
+    # committed before this runs.
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -87,7 +75,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: "20"
 
       - name: Resolve publish date
         id: publish_date
@@ -101,43 +89,39 @@ jobs:
           echo "date=$DATE_INPUT" >> "$GITHUB_OUTPUT"
           echo "Resolved publish date: $DATE_INPUT"
 
+      # Publish now depends on prepare-slate having run. Say so plainly rather
+      # than letting the model silently build on a missing or stale capture.
+      - name: Confirm the slate was prepared
+        run: |
+          DATE="${{ steps.publish_date.outputs.date }}"
+          MISSING=""
+          for f in "data/bullpen/$DATE.json" "data/totals/$DATE.json"; do
+            [ -f "$f" ] || MISSING="$MISSING $f"
+          done
+          if [ -n "$MISSING" ]; then
+            echo "::error::Slate not prepared for $DATE. Missing:$MISSING"
+            echo "Run 'Prepare slate (gather data)' first, then re-run this workflow."
+            exit 1
+          fi
+          echo "Slate present for $DATE:"
+          for f in data/bullpen data/k-props data/totals data/moneyline-odds; do
+            [ -f "$f/$DATE.json" ] && printf "  %-28s %s bytes\n" "$f/$DATE.json" "$(wc -c < "$f/$DATE.json")" || printf "  %-28s absent\n" "$f/$DATE.json"
+          done
+
       - name: Clean invalid generated artifacts
         run: node scripts/site-health-cleanup.js --fix
-
-      - name: Apply manual pitching plan
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pitching_plan_action != 'none' }}
-        run: |
-          node scripts/set-pitching-plan.js \
-            --date "${{ steps.publish_date.outputs.date }}" \
-            --action "${{ github.event.inputs.pitching_plan_action }}" \
-            --game-pk "${{ github.event.inputs.pitching_plan_game_pk }}" \
-            --side "${{ github.event.inputs.pitching_plan_side }}" \
-            --opener "${{ github.event.inputs.pitching_plan_opener }}" \
-            --opener-innings "${{ github.event.inputs.pitching_plan_opener_innings }}" \
-            --bulk "${{ github.event.inputs.pitching_plan_bulk }}" \
-            --bulk-innings "${{ github.event.inputs.pitching_plan_bulk_innings }}"
 
       - name: Normalize Pitcher Matchup Tool source
         run: node scripts/normalize-pitcher-tool-source.js
 
-      - name: Generate provisional source data and bullpen inputs
+      # The only model pass. Reads the committed slate, runs the moneyline
+      # model, appends to the day's card and writes the member brief.
+      - name: Run the moneyline model and lock picks
         run: |
           SNAPSHOT_INPUT="${{ github.event.inputs.snapshot }}"
-          node scripts/generate-member-lab.js --date "${{ steps.publish_date.outputs.date }}" --snapshot "${SNAPSHOT_INPUT:-posted}" --defer-publish true
-
-      # Runs without a key: k-props exits immediately and keeps the committed
-      # capture; totals recomputes projections from the current pitching plan
-      # while preserving the lines fetch-odds.yml captured this morning.
-      - name: Refresh totals projections from committed lines
-        run: node scripts/update-totals.js "${{ steps.publish_date.outputs.date }}"
-
-      - name: Enhance moneyline probabilities with projected runs and lock picks
-        run: |
-          SNAPSHOT_INPUT="${{ github.event.inputs.snapshot }}"
-          node scripts/generate-member-lab.js --date "${{ steps.publish_date.outputs.date }}" --snapshot "${SNAPSHOT_INPUT:-posted}"
-
-      - name: Refresh LyDia Research Desk
-        run: node scripts/generate-research-desk.js
+          node scripts/generate-member-lab.js \
+            --date "${{ steps.publish_date.outputs.date }}" \
+            --snapshot "${SNAPSHOT_INPUT:-posted}"
 
       - name: Generate canonical Pitcher Matchup Tool data
         run: node scripts/generate-pitcher-matchup-data.js "${{ steps.publish_date.outputs.date }}"
@@ -178,13 +162,12 @@ jobs:
           test -f "data/member-brief/$DATE_INPUT.json" || { echo "ERROR: member brief missing"; exit 1; }
           test -f "data/published-picks/$DATE_INPUT.json" || { echo "ERROR: official pick file missing"; exit 1; }
           test -f "previews/$DATE_INPUT.html" || { echo "ERROR: preview page missing"; exit 1; }
-          test -f "articles/index.html" || { echo "ERROR: Research Desk page missing"; exit 1; }
           test -f "data/pitcher-matchups/$DATE_INPUT.json" || { echo "ERROR: canonical pitcher data missing"; exit 1; }
           test -f "data/matchup-pages/$DATE_INPUT.json" || { echo "ERROR: matchup manifest missing"; exit 1; }
           test -f "mlb/matchups/index.html" || { echo "ERROR: matchup archive missing"; exit 1; }
-          node -e "const fs=require('fs'); const b=JSON.parse(fs.readFileSync('data/member-brief/$DATE_INPUT.json','utf8')); const p=JSON.parse(fs.readFileSync('data/published-picks/$DATE_INPUT.json','utf8')); const s=JSON.parse(fs.readFileSync('data/pitcher-matchups/$DATE_INPUT.json','utf8')); const m=JSON.parse(fs.readFileSync('data/matchup-pages/$DATE_INPUT.json','utf8')); if(!Array.isArray(b.games)||b.games.length===0) throw new Error('member brief has zero games'); if(!Array.isArray(p.picks)) throw new Error('official pick file has no picks array'); const pitcherGames=s.games||{}; const missingPitcherRows=b.games.filter(g=>!pitcherGames[String(g.game_pk)]); if(missingPitcherRows.length) throw new Error('missing pitcher data for member-brief games: '+missingPitcherRows.map(g=>g.game_pk).join(',')); if(!Array.isArray(m.pages)||m.total_pages!==m.pages.length) throw new Error('matchup manifest page count is invalid'); const manifestPks=new Set(m.pages.map(x=>String(x.game_pk))); const missingBriefPages=b.games.filter(g=>!manifestPks.has(String(g.game_pk))); if(missingBriefPages.length) throw new Error('member-brief games missing matchup pages: '+missingBriefPages.map(g=>g.game_pk).join(',')); const outputs=m.pages.map(x=>x.output); if(new Set(outputs).size!==outputs.length) throw new Error('duplicate matchup output paths detected'); if(m.pages.some(x=>!fs.existsSync(x.output))) throw new Error('one or more matchup pages are missing'); console.log('Active games:', b.games.length, 'Official picks:', p.picks.length, 'Pitcher rows available:', Object.keys(pitcherGames).length, 'Matchup pages retained:', m.total_pages, 'Frozen pregame pages:', m.pages.filter(x=>x.preserved).length, 'Indexable:', m.indexable_pages);"
+          node -e "const fs=require('fs'); const b=JSON.parse(fs.readFileSync('data/member-brief/$DATE_INPUT.json','utf8')); const p=JSON.parse(fs.readFileSync('data/published-picks/$DATE_INPUT.json','utf8')); const s=JSON.parse(fs.readFileSync('data/pitcher-matchups/$DATE_INPUT.json','utf8')); const m=JSON.parse(fs.readFileSync('data/matchup-pages/$DATE_INPUT.json','utf8')); if(!Array.isArray(b.games)||b.games.length===0) throw new Error('member brief has zero games'); if(!Array.isArray(p.picks)) throw new Error('official pick file has no picks array'); const pitcherGames=s.games||{}; const missingPitcherRows=b.games.filter(g=>!pitcherGames[String(g.game_pk)]); if(missingPitcherRows.length) throw new Error('missing pitcher data for member-brief games: '+missingPitcherRows.map(g=>g.game_pk).join(',')); if(!Array.isArray(m.pages)||m.total_pages!==m.pages.length) throw new Error('matchup manifest page count is invalid'); const manifestPks=new Set(m.pages.map(x=>String(x.game_pk))); const missingBriefPages=b.games.filter(g=>!manifestPks.has(String(g.game_pk))); if(missingBriefPages.length) throw new Error('member-brief games missing matchup pages: '+missingBriefPages.map(g=>g.game_pk).join(',')); const outputs=m.pages.map(x=>x.output); if(new Set(outputs).size!==outputs.length) throw new Error('duplicate matchup output paths detected'); if(m.pages.some(x=>!fs.existsSync(x.output))) throw new Error('one or more matchup pages are missing'); console.log('Active games:', b.games.length, 'Official picks:', p.picks.length, 'Pitcher rows available:', Object.keys(pitcherGames).length, 'Matchup pages retained:', m.total_pages, 'Indexable:', m.indexable_pages);"
           node scripts/assert-public-clean.js
-          echo "Source data, previews, matchup pages and Research Desk verified."
+          echo "Source data, previews and matchup pages verified."
 
       - name: Commit and push if changed
         run: |
@@ -195,7 +178,8 @@ jobs:
           # Generated outputs are authoritative for these paths. Snapshot them
           # before synchronizing with main so a concurrent manual upload cannot
           # cause a rebase conflict at the end of an otherwise valid publish.
-          GENERATED_PATHS=(previews picks articles data sitemap.xml member-brief results tools mlb)
+          # "articles" is gone with the Research Desk.
+          GENERATED_PATHS=(previews picks data sitemap.xml member-brief results tools mlb)
           SNAPSHOT_DIR=$(mktemp -d)
           for path in "${GENERATED_PATHS[@]}"; do
             if [ -e "$path" ]; then
@@ -216,7 +200,10 @@ jobs:
             fi
           done
 
-          git add previews/ picks/ articles/ data/ sitemap.xml member-brief/ results/ tools/ mlb/
+          # -A, not a path list. A hardcoded add list goes stale the moment a
+          # generator writes somewhere new, and the failure surfaces as an
+          # unrelated git error. ERR-20260720, and again ERR-20260803-02.
+          git add -A
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
@@ -225,26 +212,22 @@ jobs:
           fi
 
       - name: Check if today's member emails already went out
-        # publish-picks now runs multiple times a day to catch each first-pitch
-        # wave's posted lineups. Only the first scheduled run of the day should
-        # email; later runs update data and official picks silently. The marker
-        # is committed to data/email-log/ so this check survives across runs.
+        # Publish runs several times a day to catch each wave's posted lineups.
+        # Only the first scheduled run of the day emails; later runs update the
+        # card and pages silently. The marker is committed so this survives runs.
         id: email_gate
         run: |
           DATE_INPUT="${{ steps.publish_date.outputs.date }}"
           MARKER="data/email-log/$DATE_INPUT.json"
           if [ -f "$MARKER" ]; then
             echo "already_sent=true" >> "$GITHUB_OUTPUT"
-            echo "Emails already went out today per $MARKER — this run updates picks only, no email."
+            echo "Emails already went out today per $MARKER — this run updates picks only."
           else
             echo "already_sent=false" >> "$GITHUB_OUTPUT"
             echo "No email marker for $DATE_INPUT yet — this run is eligible to send."
           fi
 
       - name: Email picks to paid members
-        # Scheduled runs deliver automatically, but only the first one of the
-        # day per the email_gate check above. Manual runs still require
-        # send_email=true. The script exits cleanly if secrets aren't set yet.
         if: ${{ (github.event_name == 'schedule' && steps.email_gate.outputs.already_sent != 'true') || github.event.inputs.send_email == 'true' }}
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
@@ -274,10 +257,11 @@ jobs:
           JSON
           git config user.name "lydia-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add "data/email-log/$DATE_INPUT.json"
+          git add -A data/email-log
           if git diff --cached --quiet; then
-            echo "No email-log change to commit."
+            echo "Email marker unchanged."
           else
-            git commit -m "Record daily email sent for $DATE_INPUT"
+            git commit -m "Record email delivery $DATE_INPUT"
+            git pull --rebase
             git push
           fi
