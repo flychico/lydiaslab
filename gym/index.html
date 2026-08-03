@@ -1064,6 +1064,9 @@ function renderProgress(){
   const wkAct = act.filter(a => (Date.now() - new Date(a.date + "T12:00")) / 864e5 < 7);
   const wkMove = wkAct.reduce((s, a) => s + (a.move || 0), 0);
   const wkEx = wkAct.reduce((s, a) => s + (a.ex || 0), 0);
+  const loggedEx = {};
+  for (const l of logs) for (const en of l.entries) loggedEx[en.ex] = (loggedEx[en.ex] || 0) + 1;
+  const exList = Object.keys(loggedEx).sort((a, b) => (EXBY[a] ? EXBY[a].n : a).localeCompare(EXBY[b] ? EXBY[b].n : b));
   V.innerHTML = `
   <h1>Progress</h1>
   <div class="statgrid">
@@ -1088,6 +1091,9 @@ function renderProgress(){
   <div class="card"><h3>Personal records <span class="dim small">(best est. 1RM)</span></h3>
     ${prRows.length ? `<p class="dim small" style="margin-bottom:6px">Tap any lift to see its strength curve. <span class="green">▲</span> gaining · <span class="dim">▬</span> flat · <span class="red">▼</span> slipping (last 3 sessions).</p><table><thead><tr><th>Exercise</th><th class="num">Best set</th><th class="num">e1RM</th></tr></thead><tbody>
     ${prRows.map(([id, p]) => { const mo = momentum(id); const tag = mo === "up" ? ' <span class="green">▲</span>' : mo === "down" ? ' <span class="red">▼</span>' : mo === "flat" ? ' <span class="dim">▬</span>' : ""; return `<tr style="cursor:pointer" onclick="exChart('${id}')"><td style="color:var(--blue);font-weight:600">${esc(EXBY[id] ? EXBY[id].n : id)}${tag}</td><td class="num">${p.w}×${p.r}</td><td class="num gold"><b>${Math.round(p.v)}</b></td></tr>`; }).join("")}</tbody></table>` : '<p class="dim small">PRs appear after your first logged workout.</p>'}
+  </div>
+  <div class="card"><h3>Progress by exercise</h3>
+    ${exList.length ? `<p class="dim small" style="margin-bottom:6px">Tap any lift for its full history, charts, best set, and next-session target.</p>${exList.map(id => { const ex = EXBY[id]; const mo = momentum(id); const tag = mo === "up" ? ' <span class="green">▲</span>' : mo === "down" ? ' <span class="red">▼</span>' : mo === "flat" ? ' <span class="dim">▬</span>' : ""; return `<div class="exline" style="cursor:pointer" onclick="exChart('${id}')"><span style="color:var(--blue);font-weight:600">${esc(ex ? ex.n : id)}${tag}</span><span class="dim small">${loggedEx[id]} session${loggedEx[id] === 1 ? "" : "s"} ›</span></div>`; }).join("")}` : '<p class="dim small">Log a workout to start tracking each lift individually.</p>'}
   </div>
   <div class="card"><h3>Body weight ${b ? `<span class="dim small">· BMI ${b}</span>` : ""}</h3>
     <div style="display:flex;gap:8px;margin:8px 0"><input type="number" inputmode="decimal" id="bw-in" placeholder="lbs today"><button class="btn small-btn" onclick="logBw()">Log</button></div>
@@ -1154,17 +1160,69 @@ function drawBwTrend(id){
   x.fillStyle = col.label; x.font = "11px sans-serif"; x.textAlign = "left";
   x.fillText(max + " lb", 14, 12); x.fillText(min + " lb", 14, H - 6);
 }
+// Every logged session of one exercise, chronological
+function exerciseHistory(exId){
+  const out = [];
+  for (const l of S.logs) {
+    const en = l.entries.find(x => x.ex === exId && x.sets.length);
+    if (!en) continue;
+    const sets = en.sets;
+    out.push({
+      date: l.date,
+      sets,
+      e1rm: Math.max(...sets.map(s => e1rm(s.w, s.r))),
+      vol: sets.reduce((a, s) => a + (s.w || 0) * (s.r || 0), 0),
+      topMin: Math.max(...sets.map(s => s.r || 0))
+    });
+  }
+  return out;
+}
 function exChart(exId){
-  const ses = lastSessions(exId, 30).reverse(); // oldest → newest
-  const ex = EXBY[exId];
+  const ex = EXBY[exId] || { n: exId, m: "", u: null, p: "" };
+  const isTime = ex.u === "time";
+  const hist = exerciseHistory(exId);
+  // rep range from the plan if this lift is in it, else goal default
+  let lo, hi;
+  if (S.plan) for (const d of S.plan.days) { const s = d.exercises.find(e => e.ex === exId); if (s) { lo = s.lo; hi = s.hi; break; } }
+  if (lo === undefined) { const g = GOALS[S.profile.goal] || GOALS.general; lo = g.accessory[1]; hi = g.accessory[2]; }
+  const series = hist.map(h => isTime ? h.topMin : Math.round(h.e1rm));
+  const vols = hist.map(h => isTime ? h.topMin : Math.round(h.vol));
+  const labels = hist.map(h => h.date.slice(5));
+  const sessions = hist.length;
+  const totalSets = hist.reduce((a, h) => a + h.sets.length, 0);
+  let prIdx = -1, prVal = -1;
+  hist.forEach((h, i) => { const v = isTime ? h.topMin : h.e1rm; if (v > prVal) { prVal = v; prIdx = i; } });
+  const pr = prIdx >= 0 ? hist[prIdx] : null;
+  const prSet = pr ? (isTime ? (pr.topMin + " min") : (() => { let bs = pr.sets[0]; pr.sets.forEach(s => { if (e1rm(s.w, s.r) > e1rm(bs.w, bs.r)) bs = s; }); return (bs.w || "bw") + "×" + bs.r; })()) : "—";
+  const cur = series.length ? series[series.length - 1] : 0;
+  const mo = momentum(exId);
+  const moTxt = mo === "up" ? '<span class="green">▲ gaining</span>' : mo === "down" ? '<span class="red">▼ slipping</span>' : mo === "flat" ? '<span class="dim">▬ holding</span>' : '';
+  const sug = !isTime && suggestFor(exId, lo, hi);
   document.getElementById("chartmodal").innerHTML = `<div class="modal" onclick="if(event.target===this)this.parentNode.innerHTML=''">
-    <div class="inner"><h3 style="margin-bottom:2px">${esc(ex ? ex.n : exId)}</h3>
-    <p class="dim small" style="margin-bottom:10px">Estimated 1RM per session — the line that should climb (with planned dips for deloads).</p>
-    <canvas id="exchart" width="520" height="170"></canvas>
-    <div class="small dim" style="margin-top:8px">${ses.length} sessions · best <b class="gold">${Math.round(Math.max(...ses.map(x => x.best)))}</b> · latest ${Math.round(ses[ses.length - 1].best)} (${ses[ses.length - 1].date})</div>
-    ${plateaued(exId) ? '<div class="small" style="color:var(--red);margin-top:4px">Currently plateaued — deload suggested on your next session.</div>' : ""}
+    <div class="inner">
+      <div class="exhead"><h3 style="margin-bottom:0">${esc(ex.n)}</h3><span class="dim small">tap outside to close</span></div>
+      <div class="dim small" style="margin-bottom:10px">${esc(ex.m || "")}${moTxt ? " · " + moTxt : ""}</div>
+      ${sessions ? `
+      <div class="statgrid" style="margin-bottom:10px">
+        <div class="card"><div class="dim small">${isTime ? "BEST (MIN)" : "BEST e1RM"}</div><div class="big gold">${Math.round(prVal)}</div><div class="dim small">${pr ? pr.date.slice(5) : ""}</div></div>
+        <div class="card"><div class="dim small">${isTime ? "LATEST (MIN)" : "CURRENT e1RM"}</div><div class="big">${Math.round(cur)}</div><div class="dim small">${hist[hist.length - 1].date.slice(5)}</div></div>
+        <div class="card"><div class="dim small">SESSIONS</div><div class="big">${sessions}</div><div class="dim small">${totalSets} sets total</div></div>
+        <div class="card"><div class="dim small">${isTime ? "BEST TIME" : "BEST SET"}</div><div class="big" style="font-size:1.25rem">${prSet}</div><div class="dim small">${pr ? pr.date.slice(5) : ""}</div></div>
+      </div>
+      ${sug ? `<div class="suggest" ${sug.deload ? 'style="color:var(--red)"' : ""}>▲ Next session: ${esc(sug.text)}</div>` : ""}
+      ${plateaued(exId) ? '<div class="small" style="color:var(--red);margin-bottom:6px">Plateaued — a deload is suggested next session.</div>' : ""}
+      <h3 style="margin:12px 0 4px;font-size:.95rem">${isTime ? "Minutes per session" : "Estimated 1RM per session"}</h3>
+      ${series.length > 1 ? '<canvas id="exchart" width="520" height="160"></canvas>' : '<p class="dim small">One session so far — the trend line appears after your next.</p>'}
+      <h3 style="margin:14px 0 4px;font-size:.95rem">${isTime ? "Minutes" : "Volume"} per session <span class="dim small">${isTime ? "" : "(lb lifted)"}</span></h3>
+      <canvas id="exvol" width="520" height="150"></canvas>
+      <h3 style="margin:14px 0 6px;font-size:.95rem">Every session</h3>
+      <table><thead><tr><th>Date</th><th>${isTime ? "Minutes" : "Sets (wt×reps)"}</th><th class="num">${isTime ? "min" : "e1RM"}</th></tr></thead><tbody>
+      ${[...hist].reverse().map(h => `<tr><td>${h.date.slice(5)}</td><td class="small">${h.sets.map(s => isTime ? (s.r + "m") : ((s.w || "bw") + "×" + s.r)).join(" · ")}</td><td class="num gold">${isTime ? h.topMin : Math.round(h.e1rm)}</td></tr>`).join("")}
+      </tbody></table>`
+      : '<p class="dim small">No sessions logged for this lift yet. Do it once and its progress page fills in.</p>'}
     </div></div>`;
-  drawLine("exchart", ses.map(x => Math.round(x.best)));
+  if (series.length > 1) drawLine("exchart", series);
+  if (vols.length) drawBars("exvol", vols, labels);
 }
 function weeklyVolume(logs){
   const byWeek = {};
