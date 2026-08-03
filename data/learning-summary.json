@@ -1,23 +1,23 @@
 {
-  "generated_at": "2026-08-03T17:11:28.815Z",
+  "generated_at": "2026-08-03T18:05:33.972Z",
   "status": "ready",
-  "latest_date": "2026-08-03",
+  "latest_date": "2026-08-02",
   "days_reviewed": 26,
   "source_files": {
     "results": "data/results.json",
     "clv": "data/clv/clv_log.csv"
   },
-  "current_official_model": "unknown",
-  "headline": "Learning summary for 2026-08-03: no graded official moneyline picks yet.",
+  "current_official_model": "multi-market-v1",
+  "headline": "Learning summary for 2026-08-02: moneyline record 1-0 (100.0%).",
   "day": {
-    "date": "2026-08-03",
+    "date": "2026-08-02",
     "source": "published-picks",
-    "record_all_markets": "0-0",
-    "units_all_markets": null,
+    "record_all_markets": "8-2",
+    "units_all_markets": 5.98,
     "ungraded": 0,
-    "moneyline_record": "0-0",
-    "moneyline_win_rate": null,
-    "official_moneyline_picks": 0,
+    "moneyline_record": "1-0",
+    "moneyline_win_rate": 1,
+    "official_moneyline_picks": 1,
     "legacy_market_entries": 0
   },
   "gates": {
@@ -27,11 +27,15 @@
     "note": "Official picks require high model probability and strong setup quality. A high Lab Rating alone is not enough."
   },
   "process_metrics": {
-    "average_model_probability": null,
-    "average_lab_score": null,
-    "average_raw_edge": null,
-    "clv_counts": {},
-    "lesson_counts": {},
+    "average_model_probability": 0.7358,
+    "average_lab_score": 82,
+    "average_raw_edge": 0.2248,
+    "clv_counts": {
+      "not_tracked": 1
+    },
+    "lesson_counts": {
+      "win_needs_more_sample": 1
+    },
     "strong_official_count": 15,
     "protected_by_probability_gate_count": 11,
     "high_bullpen_risk_count": 7,
@@ -39,8 +43,20 @@
   },
   "findings": [
     {
-      "title": "No official moneyline picks graded yet",
-      "read": "Learning will become useful after a finished slate is graded under the current model."
+      "title": "Official-pick discipline",
+      "read": "1 moneyline pick was graded. Record: 1-0 (100.0%)."
+    },
+    {
+      "title": "Probability gate",
+      "read": "Across all reviewed days, 11 graded setups had strong Lab Rating but model probability below 72%. Those should remain value watch, not official picks."
+    },
+    {
+      "title": "Bullpen learning",
+      "read": "Across all reviewed days, 7 graded moneyline picks carried a meaningful bullpen caution. Review these before adjusting thresholds."
+    },
+    {
+      "title": "Pitcher learning",
+      "read": "No major starting-pitcher conflicts showed up in the graded moneyline set."
     }
   ],
   "calibration": {
@@ -748,7 +764,26 @@
       }
     ],
     "pitcher_conflicts": [],
-    "all_moneyline": []
+    "all_moneyline": [
+      {
+        "date": null,
+        "status": "official_pick",
+        "model_version": "multi-market-v1",
+        "game": "Detroit Tigers @ Athletics",
+        "pick": "Detroit Tigers",
+        "result": "W",
+        "model_probability": 0.7358,
+        "lab_score": 82,
+        "raw_edge": 0.2248,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Detroit Tigers",
+        "pitcher_gap": 15,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 66,
+        "opponent_bullpen_score": 70
+      }
+    ]
   },
   "multi_day": {
     "moneyline_record": "23-11",
@@ -763,5 +798,17 @@
     "Watch whether official picks with model probability >= 72% beat low-probability value watches over a larger sample.",
     "Track closing price movement once market snapshots have enough data.",
     "Keep value watch separate from official picks."
-  ]
+  ],
+  "coach": {
+    "status": "collecting",
+    "title": "Collecting a trustworthy current-model sample",
+    "summary": "LyDia has 10 of 7 required current-model days and 13 of 20 required current-model official picks. Recommendations remain paused until both minimums are reached.",
+    "current_model_days": 10,
+    "current_model_picks": 13,
+    "minimum_days": 7,
+    "minimum_picks": 20,
+    "bullpen_model_owner": "bullpen-fatigue-v3-runs-aware",
+    "recommendations": [],
+    "hard_stop": "Coach findings are review prompts only. No automatic threshold, weight, formula, publishing, or betting change is permitted."
+  }
 }
