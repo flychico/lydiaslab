@@ -40,12 +40,52 @@
 const fs = require("fs");
 const path = require("path");
 
+/*
+  This script measures; it must never block publishing.
+
+  It runs inside daily-recap.yml well before the commit step. A throw here fails
+  the job and the commit never runs, so every ledger row grade-calibration.js
+  DID write that night is discarded — losing real evidence because a report
+  about that evidence could not be generated. That is the wrong trade, and it
+  happened on the first live run: a single-date invocation produced one graded
+  game, the correlation was undefined, and .toFixed() on null took the whole
+  workflow down with it.
+
+  So: loud on the console, zero to the shell. Same reasoning as the deliberate
+  exit(0) in grade-calibration.js — see the comment at the bottom of that file.
+*/
+process.on("uncaughtException", err => {
+  console.error("\n!! CONFIDENCE REPORT FAILED — no report written for this run.");
+  console.error(`   ${err && err.stack ? err.stack : err}`);
+  console.error("   Exiting 0 on purpose so the workflow still commits the graded ledgers.\n");
+  process.exit(0);
+});
+
 const ROOT = path.join(__dirname, "..");
 const BRIEF_DIR = path.join(ROOT, "data", "member-brief");
 const CAL_DIR = path.join(ROOT, "data", "calibration");
 const LOG = path.join(CAL_DIR, "confidence_log.csv");
 const REPORT = path.join(CAL_DIR, "confidence_report.json");
-const ONLY_DATE = (process.argv[2] || "").match(/^\d{4}-\d{2}-\d{2}$/) ? process.argv[2] : null;
+/*
+  THE DATE ARGUMENT DOES NOT FILTER THE ANALYSIS. It highlights.
+
+  This report is derived data — every row is rebuilt from data/member-brief/*
+  and the graded ledger, both of which are append-only. So it is written
+  wholesale each run rather than appended, which is safe only because it always
+  reads the FULL history.
+
+  An earlier version filtered collection by the date argument while still
+  writing the log wholesale. Run nightly as `grade-confidence.js <yesterday>`,
+  that would have rewritten confidence_log.csv down to a single day and thrown
+  the rest away, every night, silently. It never fired only because the first
+  live run happened to find zero gradeable games and exited early.
+
+  So: the analysis is always over everything. A date passed on the command line
+  adds a focus section for that day on top of the full report — which is what a
+  nightly run actually wants, "here is what last night added, and here is where
+  the record now stands."
+*/
+const FOCUS_DATE = (process.argv[2] || "").match(/^\d{4}-\d{2}-\d{2}$/) ? process.argv[2] : null;
 
 // The six Lab Rating v2 components, with the maximum each can contribute.
 // Sourced from lib/lab-rating-core.js; if that file is retuned these need to
@@ -96,12 +136,12 @@ function collect(outcomes) {
   const files = fs.readdirSync(BRIEF_DIR).filter(f => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort();
   for (const f of files) {
     const date = f.replace(".json", "");
-    if (ONLY_DATE && date !== ONLY_DATE) continue;
     let brief;
     try { brief = JSON.parse(fs.readFileSync(path.join(BRIEF_DIR, f), "utf8")); } catch (e) { continue; }
     for (const g of brief.games || []) {
       const key = `${date}|${g.game_pk}`;
       if (!outcomes.has(key)) continue;              // not graded (or voided)
+      // NOTE: no date filter here, deliberately. See the FOCUS_DATE comment.
       const b = g.lab_score_breakdown;
       if (!b) continue;                              // pre-v2 brief, no breakdown
       const row = {
@@ -141,6 +181,8 @@ function collect(outcomes) {
 
 /* ---------- statistics ---------- */
 const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
+// Any statistic that can legitimately be undefined must survive being undefined.
+const round4 = v => (typeof v === "number" && Number.isFinite(v)) ? Number(v.toFixed(4)) : null;
 function pointBiserial(xs, ys) {
   const n = xs.length;
   if (n < 3) return null;
@@ -220,7 +262,7 @@ const outcomes = loadOutcomes();
 const rows = collect(outcomes);
 
 if (!rows.length) {
-  console.log(`No graded games with a Lab Rating breakdown${ONLY_DATE ? ` for ${ONLY_DATE}` : ""}.`);
+  console.log("No graded games with a Lab Rating breakdown anywhere in data/member-brief/.");
   process.exit(0);
 }
 
@@ -253,18 +295,40 @@ const report = {
     mean_lab: Number(mean(rows.map(r => r.lab)).toFixed(2)),
     mean_model_prob: Number(mean(rows.map(r => r.prob)).toFixed(4)),
     actual_win_rate: Number(mean(rows.map(r => r.won)).toFixed(4)),
-    corr_lab_win: Number(pointBiserial(rows.map(r => r.lab), rows.map(r => r.won)).toFixed(4))
+    // pointBiserial returns null on fewer than 3 rows, or when either series
+    // has zero variance — a single graded game, or a day where every pick won.
+    // A nightly run scoped to one date hits this routinely, so it must produce
+    // null rather than throwing. round4() is used everywhere a correlation is
+    // written for the same reason.
+    corr_lab_win: round4(pointBiserial(rows.map(r => r.lab), rows.map(r => r.won)))
   },
   by_lab_version: Object.fromEntries(Object.entries(byVersion).map(([v, rs]) => [v, {
     n: rs.length,
-    corr_lab_win: rs.length >= 3 ? Number(pointBiserial(rs.map(r => r.lab), rs.map(r => r.won)).toFixed(4)) : null
+    corr_lab_win: rs.length >= 3 ? round4(pointBiserial(rs.map(r => r.lab), rs.map(r => r.won))) : null
   }])),
   rating_bands: bandAnalysis(rows),
   components: usable.length >= 20 ? componentAnalysis(usable) : [],
   components_note: usable.length >= 20
     ? `computed on ${usable.length} game(s) whose breakdown reconciles with its score`
     : `too few reconciling breakdowns (${usable.length}) to analyse components`,
-  worst_misses: worstMisses(usable.length ? usable : rows)
+  worst_misses: worstMisses(usable.length ? usable : rows),
+  // What the run being reported on actually added, if a date was given.
+  focus: (() => {
+    if (!FOCUS_DATE) return null;
+    const day = rows.filter(r => r.date === FOCUS_DATE);
+    if (!day.length) return { date: FOCUS_DATE, n: 0, note: "no graded games with a breakdown on this date" };
+    return {
+      date: FOCUS_DATE,
+      n: day.length,
+      mean_lab: Number(mean(day.map(r => r.lab)).toFixed(2)),
+      mean_model_prob: round4(mean(day.map(r => r.prob))),
+      actual_win_rate: round4(mean(day.map(r => r.won))),
+      games: day.sort((a, b) => b.lab - a.lab).map(r => ({
+        game: r.game, pick: r.pick, status: r.status,
+        lab_score: r.lab, model_prob: round4(r.prob), result: r.won ? "W" : "L"
+      }))
+    };
+  })()
 };
 fs.writeFileSync(REPORT, JSON.stringify(report, null, 1));
 
@@ -273,8 +337,10 @@ const pct = v => v === null ? "  n/a" : (v * 100).toFixed(1).padStart(5) + "%";
 console.log(`\nCONFIDENCE ACCOUNTABILITY — ${rows.length} graded games, ${report.coverage.from} .. ${report.coverage.to}\n`);
 
 console.log("Does the rating predict the outcome?");
-console.log(`  corr(lab_score, win) = ${report.overall.corr_lab_win >= 0 ? "+" : ""}${report.overall.corr_lab_win}`
-  + `   (0.00 = the rating carries no outcome information)\n`);
+console.log(report.overall.corr_lab_win === null
+  ? `  corr(lab_score, win) = n/a  (needs 3+ graded games with variance in both the rating and the result; this run had ${rows.length})\n`
+  : `  corr(lab_score, win) = ${report.overall.corr_lab_win >= 0 ? "+" : ""}${report.overall.corr_lab_win}`
+    + `   (0.00 = the rating carries no outcome information)\n`);
 
 console.log("Rating band          n   predicted    actual      gap");
 for (const b of report.rating_bands) {
@@ -297,5 +363,12 @@ for (const m of report.worst_misses.slice(0, 6)) {
   const parts = Object.entries(m.points_from).filter(([, v]) => v > 0).map(([k, v]) => `${k} ${v}`).join(", ");
   console.log(`  ${m.date}  ${String(m.lab_score).padStart(3)}  ${(m.pick || m.game).slice(0, 34).padEnd(34)} prob ${(m.model_prob * 100).toFixed(1)}%`);
   console.log(`        ${parts}`);
+}
+if (report.focus) {
+  console.log(`\n${report.focus.date} added ${report.focus.n} graded game(s)`
+    + (report.focus.n ? `  — predicted ${(report.focus.mean_model_prob * 100).toFixed(1)}%, actual ${(report.focus.actual_win_rate * 100).toFixed(1)}%` : ""));
+  for (const g of report.focus.games || []) {
+    console.log(`  ${String(g.lab_score).padStart(3)}  ${(g.pick || g.game).slice(0, 30).padEnd(31)}${(g.model_prob * 100).toFixed(1).padStart(6)}%  ${g.result}`);
+  }
 }
 console.log(`\nWrote ${path.relative(ROOT, LOG)} and ${path.relative(ROOT, REPORT)}\n`);
