@@ -606,6 +606,42 @@ function starterEff(g, side, pitchers) {
   const workloadShare = role.expectedInnings / 5.5;
   return clampEra(LEAGUE_ERA + (st.era - LEAGUE_ERA) * workloadShare);
 }
+
+// The named starter a totals pitching-plan side was built for (its first
+// non-bullpen segment), used to detect a stale capture.
+function planStarterIdentity(sidePlan) {
+  if (!sidePlan) return { id: null, name: null };
+  const seg = Array.isArray(sidePlan.segments)
+    ? sidePlan.segments.find(segment => segment.role !== "bullpen")
+    : null;
+  const id = seg && seg.pitcher_id != null ? String(seg.pitcher_id) : null;
+  const name = (seg && seg.pitcher) || sidePlan.pitcher || null;
+  return { id, name };
+}
+
+// Effective ERA for the moneyline's starter term. Prefer the totals capture's
+// whole-game effective_era, but ONLY when the plan it was built from names the
+// same starter the schedule now confirms. If the capture is stale relative to
+// the confirmed probable (still "TBD" after the pitcher posted, or a different
+// arm than the schedule now lists) the moneyline would price the wrong pitcher,
+// so recompute from the fresh probable instead. The fallback is logged, never
+// silent (same discipline as the bullpen-read fix, ERR-20260803-01).
+function effectiveEraFor(g, side, pitchingPlan, pitchers) {
+  const sidePlan = pitchingPlan && pitchingPlan[side];
+  const cached = sidePlan && Number.isFinite(sidePlan.effective_era) ? sidePlan.effective_era : null;
+  if (cached === null) return starterEff(g, side, pitchers);
+  const probable = g.teams[side].probablePitcher || null;
+  if (!probable) return cached; // nothing fresher to check the capture against
+  const plan = planStarterIdentity(sidePlan);
+  const matches = (plan.id && String(probable.id) === plan.id)
+    || (plan.name && probable.fullName
+        && plan.name.trim().toLowerCase() === probable.fullName.trim().toLowerCase());
+  if (matches) return cached;
+  console.warn(`Stale totals starter for ${g.teams[side].team.name}: plan has `
+    + `"${plan.name || "TBD"}", schedule confirms "${probable.fullName}". `
+    + `Recomputing the moneyline effective ERA from the confirmed probable.`);
+  return starterEff(g, side, pitchers);
+}
 function buildOddsMap(events) {
   const map = {};
   for (const ev of events || []) {
@@ -819,12 +855,12 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
   const pBase = log5Home(blendH, blendA);
   const runProjection = runProjections && runProjections[String(g.gamePk)];
   const pitchingPlan = runProjection && runProjection.pitching_plan ? runProjection.pitching_plan : null;
-  const spA = pitchingPlan && Number.isFinite(pitchingPlan.away && pitchingPlan.away.effective_era)
-    ? pitchingPlan.away.effective_era
-    : starterEff(g, "away", pitchers);
-  const spH = pitchingPlan && Number.isFinite(pitchingPlan.home && pitchingPlan.home.effective_era)
-    ? pitchingPlan.home.effective_era
-    : starterEff(g, "home", pitchers);
+  // Prefer the totals capture's effective ERA, but fall back to the confirmed
+  // probable when that capture is stale (see effectiveEraFor). A TBD or
+  // mismatched totals plan would otherwise freeze the moneyline on the wrong
+  // pitcher even though the page already shows the real one.
+  const spA = effectiveEraFor(g, "away", pitchingPlan, pitchers);
+  const spH = effectiveEraFor(g, "home", pitchingPlan, pitchers);
   // Bullpen risk adjusts the probability itself, not just Lab Rating and the
   // official-pick gate — a starter only covers part of the game. Uses the
   // combined risk index (fatigue blended with efficiency), not raw fatigue,
