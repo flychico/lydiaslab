@@ -108,6 +108,9 @@ jobs:
             [ -f "$f/$DATE.json" ] && printf "  %-28s %s bytes\n" "$f/$DATE.json" "$(wc -c < "$f/$DATE.json")" || printf "  %-28s absent\n" "$f/$DATE.json"
           done
 
+      - name: Verify totals capture matches confirmed probables
+        run: node scripts/verify-totals-freshness.js "${{ steps.publish_date.outputs.date }}"
+        
       - name: Clean invalid generated artifacts
         run: node scripts/site-health-cleanup.js --fix
 
