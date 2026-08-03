@@ -1,0 +1,153 @@
+name: Prepare slate (gather data)
+
+# Everything that reads a live API happens here, and is committed. Publish
+# reads what this leaves behind. Step 1 of the pipeline rebuild — see
+# 00 Dashboard/PIPELINE REBUILD PLAN in the vault.
+#
+# REPLACES refresh-lines.yml. Do not run both: this does everything that one
+# did, in an order that actually works.
+#
+# THE ORDERING BUG THIS FIXES
+# refresh-lines.yml ran update-totals.js at 10:50am ET, but nothing had written
+# data/bullpen/<date>.json for that day yet — publish-picks.yml wrote it at
+# 11:05am, fifteen minutes later. So update-totals' bullpen read
+# (update-totals.js line ~272) silently fell back to {} and every totals
+# projection was built with no bullpen input at all, every single day. The
+# generator that produces the bullpen file has to run FIRST.
+#
+# ORDER, and why each step is where it is:
+#   1. bullpen + provisional source data   (generate-member-lab --defer-publish)
+#      Writes data/bullpen/<date>.json and the provisional brief. Deferred so it
+#      does NOT lock a card — publishing is a separate workflow.
+#   2. strikeout props   needs ODDS_API_KEY
+#   3. totals            needs ODDS_API_KEY *and* step 1's bullpen file
+#   4. moneyline odds    needs ODDS_API_KEY
+#
+# DAILY RHYTHM
+#   Prepare slate  ->  (optional: Pitching plan, then Prepare slate again)  ->  Publish picks
+#
+# Scheduled ~15 minutes before each publish wave so publish always reads fresh
+# committed data rather than fetching it itself.
+
+on:
+  schedule:
+    - cron: "50 14 * * *"   # 10:50am ET — before the 11:05 publish
+    - cron: "5 16 * * *"    # 12:05pm ET — before the 12:20 publish
+    - cron: "20 18 * * *"   # 2:20pm ET  — before the 2:35 publish
+    - cron: "15 21 * * *"   # 5:15pm ET  — before the 5:30 publish
+    - cron: "10 0 * * *"    # 8:10pm ET  — before the 8:25 publish
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "YYYY-MM-DD to gather. Blank = today in America/New_York."
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+# Never let two gathers overlap — they write the same files.
+concurrency:
+  group: prepare-slate
+  cancel-in-progress: false
+
+jobs:
+  gather:
+    runs-on: ubuntu-latest
+    env:
+      ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Resolve slate date
+        id: slate_date
+        run: |
+          echo "UTC:"; date -u
+          echo "Eastern:"; TZ="America/New_York" date
+          DATE_INPUT="${{ github.event.inputs.date }}"
+          if [ -z "$DATE_INPUT" ]; then
+            DATE_INPUT=$(TZ="America/New_York" date +%F)
+          fi
+          echo "date=$DATE_INPUT" >> "$GITHUB_OUTPUT"
+          echo "Resolved slate date: $DATE_INPUT"
+
+      - name: Confirm the odds key is present
+        run: |
+          if [ -z "${ODDS_API_KEY}" ]; then
+            echo "::error::ODDS_API_KEY is not set. k-props, totals and moneyline odds all exit quietly without it, which looks like a clean run and produces no data."
+            exit 1
+          fi
+          echo "ODDS_API_KEY present."
+
+      # Writes data/bullpen/<date>.json, which update-totals reads in step 3.
+      # --defer-publish true means no official card is locked here.
+      - name: Gather bullpen and provisional source data
+        run: |
+          node scripts/generate-member-lab.js \
+            --date "${{ steps.slate_date.outputs.date }}" \
+            --snapshot posted \
+            --defer-publish true
+
+      - name: Capture strikeout prop lines and projections
+        run: node scripts/update-k-props.js "${{ steps.slate_date.outputs.date }}"
+
+      - name: Capture totals lines and projections
+        run: node scripts/update-totals.js "${{ steps.slate_date.outputs.date }}"
+
+      # NOTE the flag. update-k-props.js and update-totals.js take a positional
+      # date; update-moneyline-odds.js parses --date. Passing this one
+      # positionally is silently ignored and it falls back to "today", which is
+      # correct on a schedule but wrong on a manual backfill.
+      - name: Capture moneyline odds
+        run: node scripts/update-moneyline-odds.js --date "${{ steps.slate_date.outputs.date }}"
+
+      # Report, do not gate. A thin slate is worth seeing in the log; failing
+      # here would leave the day with no committed data at all, which is worse
+      # than partial data. Publish has its own checks.
+      - name: What was gathered
+        run: |
+          DATE="${{ steps.slate_date.outputs.date }}"
+          for f in "data/bullpen/$DATE.json" "data/k-props/$DATE.json" "data/totals/$DATE.json" "data/moneyline-odds/$DATE.json"; do
+            if [ -f "$f" ]; then
+              printf "  %-40s %s bytes\n" "$f" "$(wc -c < "$f")"
+            else
+              printf "  %-40s MISSING\n" "$f"
+            fi
+          done
+          node -e "
+            const fs=require('fs');
+            const d='${{ steps.slate_date.outputs.date }}';
+            const read=p=>{try{return JSON.parse(fs.readFileSync(p,'utf8'))}catch(e){return null}};
+            const k=read('data/k-props/'+d+'.json');
+            const t=read('data/totals/'+d+'.json');
+            const m=read('data/moneyline-odds/'+d+'.json');
+            const b=read('data/bullpen/'+d+'.json');
+            console.log('  bullpen teams   :', b&&b.teams?Object.keys(b.teams).length:(b&&b.teams_by_name?Object.keys(b.teams_by_name).length:0));
+            console.log('  k-props pitchers:', k&&k.pitchers?Object.keys(k.pitchers).length:0, ' events:', k?k.events_fetched:0);
+            console.log('  totals games    :', t&&t.games?Object.keys(t.games).length:0, ' version:', t?t.model_version:'-');
+            console.log('  moneyline games :', m&&m.games?Object.keys(m.games).length:(Array.isArray(m&&m.events)?m.events.length:0));
+          "
+
+      - name: Commit and push if changed
+        run: |
+          set -euo pipefail
+          git config user.name "lydia-bot"
+          git config user.email "actions@users.noreply.github.com"
+          mkdir -p data/k-props data/totals data/moneyline-odds data/bullpen data/member-brief
+          git add -A data/k-props data/totals data/moneyline-odds data/bullpen data/member-brief data/pitcher-matchups
+          if git diff --cached --quiet; then
+            echo "No change to commit."
+            exit 0
+          fi
+          git commit -m "Prepare slate ${{ steps.slate_date.outputs.date }}"
+          git pull --rebase
+          git push
+
+      - name: Next step
+        run: echo "Slate gathered and committed. Run 'Publish picks' when ready — it reads these files."
