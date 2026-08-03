@@ -192,10 +192,49 @@ async function main() {
   // The Member Brief is the permanent full-day record. Recalculate games that
   // have not started, but retain the posted pregame row for every live or final
   // game. Never replace the daily file with a shrinking Preview-only subset.
-  const rows = allGames
-    .map(game => freshByPk.get(String(game.gamePk)) || previousByPk.get(String(game.gamePk)) || null)
+  /*
+    THE DAY'S RECORD ONLY EVER GROWS. (2026-08-03)
+
+    This used to build the day's rows by walking `allGames` — the schedule
+    response — and taking the fresh row, else the previous row. Two ways that
+    loses analysis, and both fired on 2026-08-02, when the brief went from 15
+    games to 1 and ten games ended up graded nowhere:
+
+      1. If the schedule fetch returns a short slate, every game missing from
+         `allGames` is never even considered. No guard notices, because every
+         guard also iterates `allGames`.
+      2. A started game absent from the previous brief was dropped with a
+         console warning. That warning exists for a real case — the day's first
+         capture running after an early first pitch, where there genuinely is
+         nothing to post — but it cannot tell that apart from "we analysed this
+         six hours ago and just lost it."
+
+    Both are fixed by keying off the union of what we know rather than off the
+    schedule alone: every previously recorded row is carried forward
+    unconditionally, and fresh rows are layered on top. A row that exists can
+    never be dropped by a later run, whatever the schedule says.
+
+    Fresh always wins over previous for the same game — that is how a Preview
+    game gets its updated read — and `freshRows` only ever contains Preview
+    games, so a started game can never be recomputed from post-result standings.
+  */
+  const merged = new Map();
+  for (const [pk, row] of previousByPk) merged.set(pk, row);   // never lose a recorded row
+  for (const [pk, row] of freshByPk) merged.set(pk, row);      // fresh read wins for unstarted games
+
+  const rows = [...merged.values()]
     .filter(Boolean)
     .sort((a, b) => (b.lab_score || 0) - (a.lab_score || 0));
+
+  // A shrinking day is always a bug now. Nothing legitimately removes a game
+  // from a day's record once it has been analysed — not a short schedule
+  // response, not a late run, not a rate-limited odds fetch.
+  if (previousRows.length && rows.length < previousRows.length) {
+    throw new Error(
+      `Daily record shrink guard: ${DATE} previously had ${previousRows.length} analysed game(s) and this run produced ${rows.length}. ` +
+      "Refusing to write. The day's record only ever grows — see ERR-20260802-05 and the 2026-08-02 collapse from 15 games to 1."
+    );
+  }
 
   const previousMarketCoverage = previousRows.filter(row => row.market && Number(row.market.books) > 0).length;
   const currentMarketCoverage = rows.filter(row => row.market && Number(row.market.books) > 0).length;
