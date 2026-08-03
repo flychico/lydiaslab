@@ -1,0 +1,104 @@
+name: Consolidate calibration ledgers (one-off)
+
+# WHY THIS EXISTS
+# Four learning ledgers live as old/new pairs, because each versioned ledger
+# started a fresh file instead of migrating the rows already recorded:
+#
+#   calibration_log.csv      ->  calibration_model_log.csv
+#   totals_log.csv           ->  totals_model_log.csv
+#   attribution_log.csv      ->  attribution_model_log.csv
+#   shadow_v3_log.csv        ->  shadow_model_log.csv
+#
+# Anything reading the old name analyses a truncated history; anything reading
+# the new name discards the first two weeks. Both are silent. That split is why
+# a calibration review ran against 134 games when 261 were available.
+#
+# This runs the migration against LIVE data inside Actions rather than against a
+# snapshot, so no rows written between preparing it and running it are lost.
+#
+# HOW TO USE
+#   1. Run with mode "dry-run" first. Read the summary in the log. Nothing changes.
+#   2. Run with mode "write" once the row counts look right. Commits the merged
+#      files and leaves the old ones in place.
+#   3. Run with mode "write-and-delete" to also remove the retired files.
+#
+# Safe to re-run: the merge is idempotent and refuses to write if any key present
+# in an input file would be missing from the output.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry-run, write, or write-and-delete"
+        required: true
+        default: "dry-run"
+        type: choice
+        options:
+          - dry-run
+          - write
+          - write-and-delete
+
+permissions:
+  contents: write
+
+concurrency:
+  group: consolidate-ledgers
+  cancel-in-progress: false
+
+jobs:
+  consolidate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Show ledger state before
+        run: |
+          echo "Rows per ledger before consolidation:"
+          for f in data/calibration/*.csv; do
+            [ -f "$f" ] || continue
+            printf "  %-32s %5s rows  last=%s\n" "$(basename "$f")" \
+              "$(( $(wc -l < "$f") - 1 ))" "$(tail -1 "$f" | cut -d, -f1)"
+          done
+
+      - name: Consolidate
+        run: |
+          case "${{ github.event.inputs.mode }}" in
+            dry-run)          node scripts/consolidate-ledgers.js ;;
+            write)            node scripts/consolidate-ledgers.js --write ;;
+            write-and-delete) node scripts/consolidate-ledgers.js --write --delete-old ;;
+            *) echo "Unknown mode"; exit 1 ;;
+          esac
+
+      - name: Show ledger state after
+        if: ${{ github.event.inputs.mode != 'dry-run' }}
+        run: |
+          echo "Rows per ledger after consolidation:"
+          for f in data/calibration/*.csv; do
+            [ -f "$f" ] || continue
+            printf "  %-32s %5s rows  last=%s\n" "$(basename "$f")" \
+              "$(( $(wc -l < "$f") - 1 ))" "$(tail -1 "$f" | cut -d, -f1)"
+          done
+
+      # The script writes a .backup beside each destination before overwriting.
+      # Those are committed deliberately: if a merge ever goes wrong, the prior
+      # state is recoverable from the repo rather than only from git history.
+      - name: Commit if changed
+        if: ${{ github.event.inputs.mode != 'dry-run' }}
+        run: |
+          set -euo pipefail
+          git config user.name "lydia-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A data/calibration
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Consolidate calibration ledgers (${{ github.event.inputs.mode }})"
+          git pull --rebase
+          git push
