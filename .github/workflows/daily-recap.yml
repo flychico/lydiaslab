@@ -75,6 +75,9 @@ jobs:
       - name: Grade full-slate calibration ledger
         run: node scripts/grade-calibration.js "${{ steps.recap_date.outputs.date }}"
 
+      - name: Grade confidence — does the rating predict the outcome?
+        run: node scripts/grade-confidence.js "${{ steps.recap_date.outputs.date }}"
+        
       - name: Generate learning summary
         run: node scripts/generate-learning-summary.js --date "${{ steps.recap_date.outputs.date }}"
 
