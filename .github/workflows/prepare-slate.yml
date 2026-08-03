@@ -140,7 +140,19 @@ jobs:
           git config user.name "lydia-bot"
           git config user.email "actions@users.noreply.github.com"
           mkdir -p data/k-props data/totals data/moneyline-odds data/bullpen data/member-brief
-          git add -A data/k-props data/totals data/moneyline-odds data/bullpen data/member-brief data/pitcher-matchups
+
+          # Stage EVERYTHING, not a path list.
+          #
+          # generate-member-lab.js does not only write data/. It also injects
+          # inline data into previews/, member-brief/index.html,
+          # results/index.html and tools/bullpen-fatigue/index.html. A path-scoped
+          # git add leaves those unstaged, and `git pull --rebase` then refuses to
+          # run at all — "cannot pull with rebase: You have unstaged changes" —
+          # so the commit is created but never pushed. That is ERR-20260720
+          # exactly: a hardcoded add list going stale the moment a generator
+          # starts writing somewhere new. The checkout is fresh, so anything
+          # modified here was written by this run and belongs in the commit.
+          git add -A
           if git diff --cached --quiet; then
             echo "No change to commit."
             exit 0
