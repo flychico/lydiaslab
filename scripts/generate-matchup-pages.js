@@ -83,6 +83,87 @@ const TEAM_SHORT = {
   "Washington Nationals": "Nationals"
 };
 
+// MLB StatsAPI team IDs, keyed by the same canonical names used above. Stable
+// ids; used to pull each team's game log for the venue-specific last-10.
+const TEAM_ID = {
+  "Arizona Diamondbacks": 109, "Athletics": 133, "Atlanta Braves": 144,
+  "Baltimore Orioles": 110, "Boston Red Sox": 111, "Chicago Cubs": 112,
+  "Chicago White Sox": 145, "Cincinnati Reds": 113, "Cleveland Guardians": 114,
+  "Colorado Rockies": 115, "Detroit Tigers": 116, "Houston Astros": 117,
+  "Kansas City Royals": 118, "Los Angeles Angels": 108, "Los Angeles Dodgers": 119,
+  "Miami Marlins": 146, "Milwaukee Brewers": 158, "Minnesota Twins": 142,
+  "New York Mets": 121, "New York Yankees": 147, "Philadelphia Phillies": 143,
+  "Pittsburgh Pirates": 134, "San Diego Padres": 135, "San Francisco Giants": 137,
+  "Seattle Mariners": 136, "St. Louis Cardinals": 138, "Tampa Bay Rays": 139,
+  "Texas Rangers": 140, "Toronto Blue Jays": 141, "Washington Nationals": 120
+};
+
+async function teamSeasonGames(teamId, season, endDate) {
+  const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=${teamId}&startDate=${season}-01-01&endDate=${encodeURIComponent(endDate)}&gameType=R`;
+  const response = await fetch(url, { headers: { "user-agent": "LyDia matchup generator" } });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const data = await response.json();
+  const games = [];
+  for (const day of data.dates || []) for (const g of day.games || []) games.push(g);
+  return games;
+}
+
+// Last 10 completed games at one venue for one team, oldest-to-newest then the
+// tail. Only final regular-season games with both scores count.
+function venueLastTen(games, teamId, venue) {
+  const rows = [];
+  for (const g of games || []) {
+    if (!(g.status && g.status.abstractGameState === "Final")) continue;
+    if (g.gameType !== "R") continue;
+    const side = g.teams.home.team.id === teamId ? "home" : (g.teams.away.team.id === teamId ? "away" : null);
+    if (side !== venue) continue;
+    const me = g.teams[side], opp = g.teams[side === "home" ? "away" : "home"];
+    if (typeof me.score !== "number" || typeof opp.score !== "number") continue;
+    rows.push({ date: g.officialDate || g.gameDate, win: me.score > opp.score });
+  }
+  rows.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const last = rows.slice(-10);
+  if (!last.length) return null;
+  const wins = last.filter(r => r.win).length;
+  return { record: `${wins}-${last.length - wins}`, games: last.length };
+}
+
+// Venue-specific last-10: the away team's last 10 ROAD games and the home
+// team's last 10 HOME games -- what Lynold asked for, and distinct from the
+// standings' venue-blind overall last-10 (away_l10/home_l10) and from the
+// full-season home/road split. Display only; the strength model is unchanged.
+// Fail-soft: a team whose game log cannot be fetched renders "Not available",
+// and the fallback is logged, never silent (per ERR-20260803-01).
+async function fetchVenueForm(games, date) {
+  const season = Number(String(date).slice(0, 4));
+  const teamIds = new Set();
+  for (const g of games || []) {
+    const a = TEAM_ID[g.away_team], h = TEAM_ID[g.home_team];
+    if (a) teamIds.add(a);
+    if (h) teamIds.add(h);
+  }
+  const logByTeam = new Map();
+  await Promise.all([...teamIds].map(async id => {
+    try {
+      logByTeam.set(id, await teamSeasonGames(id, season, date));
+    } catch (error) {
+      console.warn(`Venue form unavailable for team ${id} on ${date}: ${error.message}`);
+      logByTeam.set(id, null);
+    }
+  }));
+  const byPk = new Map();
+  for (const g of games || []) {
+    const aId = TEAM_ID[g.away_team], hId = TEAM_ID[g.home_team];
+    const aLog = aId ? logByTeam.get(aId) : null;
+    const hLog = hId ? logByTeam.get(hId) : null;
+    byPk.set(String(g.game_pk), {
+      away: aLog ? venueLastTen(aLog, aId, "away") : null,
+      home: hLog ? venueLastTen(hLog, hId, "home") : null
+    });
+  }
+  return byPk;
+}
+
 const TEAM_CANONICAL_ALIASES = {
   arizonadiamondbacks: "Arizona Diamondbacks",
   diamondbacks: "Arizona Diamondbacks",
@@ -141,11 +222,23 @@ async function main() {
   }
   const results = readJsonSafe(RESULTS_PATH) || { days: {} };
   const kprops = readJsonSafe(path.join(ROOT, "data", "k-props", `${DATE}.json`));
+  // Official picks come from the locked published card, never a gate recomputed
+  // at render time. Re-deriving it here invented phantom "Official pick" labels
+  // (Aaron Nola 2026-08-03, Chase Burns 2026-07-28) for plays never on the card.
+  // Anything not on the card is at most a "qualifying projection".
+  const publishedCard = readJsonSafe(path.join(ROOT, "data", "published-picks", `${DATE}.json`));
+  const officialKIndex = buildOfficialKIndex(publishedCard);
   const teamHitting = args.offline ? { season: {}, recent: {} } : await fetchTeamHitting(DATE);
+  const venueForm = args.offline ? new Map() : await fetchVenueForm(brief.games, DATE);
   if (!args.offline) verifyStandingsCoverage(brief.games, teamHitting);
   const previousManifest = readJsonSafe(MANIFEST_PATH) || { pages: [] };
   const previousBySlug = new Map((previousManifest.pages || []).map(page => [page.slug, page]));
   const previousByPk = new Map((previousManifest.pages || []).map(page => [String(page.game_pk), page]));
+  // A game that has ever been seen final keeps its final data here, so a page
+  // never regresses out of "final" just because a later schedule fetch is thin
+  // or the member brief stopped carrying it (the 08-02 brief collapse).
+  const previousFinalByPk = new Map((previousManifest.pages || []).map(page => [String(page.game_pk), page.final || null]));
+  const persistedRecap = readJsonSafe(RECAP_PATH) || { games: {} };
   const schedule = args.offline ? null : await fetchSchedule(DATE);
   const scheduleGames = (((schedule && schedule.dates || [])[0] || {}).games || []);
   const scheduleByPk = new Map(scheduleGames.map(game => [String(game.gamePk), game]));
@@ -222,6 +315,7 @@ async function main() {
     const rawPitcherGame = (pitcherSource.games && pitcherSource.games[String(game.game_pk)]) || null;
     const pitcherGame = rawPitcherGame ? { ...rawPitcherGame, source_version: pitcherSource.source_version || null } : null;
     const resultGame = findResult(results, DATE, game);
+    const final = finalSummary(scheduleGame, resultGame) || previousFinalByPk.get(String(game.game_pk)) || null;
     const recapReview = args.offline ? null : await buildRecapForGame(game, scheduleGame, pitcherGame);
     if (recapReview) recapByPk.set(String(game.game_pk), { game_pk: game.game_pk, game: game.game, ...recapReview.data, paragraphs: recapReview.paragraphs });
     const previous = previousBySlug.get(slug) || null;
@@ -241,6 +335,7 @@ async function main() {
       totalsGame,
       pitcherGame,
       resultGame,
+      final,
       recapReview,
       weather,
       venue,
@@ -248,7 +343,9 @@ async function main() {
       slug,
       urlPath,
       kprops,
+      officialKIndex,
       teamHitting,
+      venueForm: venueForm.get(String(game.game_pk)) || null,
       gameNumber,
       dayLinks
     }), "utf8");
@@ -288,8 +385,16 @@ async function main() {
     const slug = resolvedSlug(game);
     const outputPath = path.join(MATCHUP_ROOT, slug, "index.html");
     if (!fs.existsSync(outputPath)) continue;
-    const existingHtml = fs.readFileSync(outputPath, "utf8");
     const scheduleGame = scheduleByPk.get(pk) || null;
+    // This "preserved" path used to copy stale HTML verbatim. A page frozen
+    // before its game went final then kept its pre-final HTML forever -- the
+    // cause of the missing 08-02 Final result / "How the analysis held up"
+    // sections after that brief collapsed 15 games to 1. Rebuild the section
+    // from data already on disk (prior manifest score + persisted recap) and
+    // inject it into the frozen page.
+    const recoveredFinal = finalSummary(scheduleGame, findResult(results, DATE, game)) || (prior && prior.final) || null;
+    backfillFinalIntoPage(outputPath, game, recoveredFinal, persistedRecap);
+    const existingHtml = fs.readFileSync(outputPath, "utf8");
     pages.push({
       date: DATE,
       game_pk: game.game_pk,
@@ -308,7 +413,7 @@ async function main() {
       weather: (prior && prior.weather) || null,
       pitcher_source_version: (prior && prior.pitcher_source_version) || pitcherSource.source_version || null,
       preserved: true,
-      final: finalSummary(scheduleGame, null)
+      final: recoveredFinal
     });
     generatedPk.add(pk);
   }
@@ -320,6 +425,10 @@ async function main() {
     if (generatedPk.has(pk)) continue;
     const outputPath = path.join(ROOT, prior.output || path.join("mlb", prior.slug || "", "index.html"));
     if (!prior.slug || !fs.existsSync(outputPath)) continue;
+    // Same durable-final backfill for the fallback path where the full-day slate
+    // could not be built. The prior manifest entry already carries the score.
+    const fallbackFinal = finalSummary(null, findResult(results, DATE, { game_pk: prior.game_pk })) || prior.final || null;
+    backfillFinalIntoPage(outputPath, { game_pk: prior.game_pk, away_team: prior.away_team, home_team: prior.home_team }, fallbackFinal, persistedRecap);
     pages.push({ ...prior, preserved: true });
     generatedPk.add(pk);
   }
@@ -1193,7 +1302,7 @@ function renderTeamMap(brief, game, teamHitting) {
 }
 
 function renderMatchupPage(context) {
-  const { brief, game, scheduleGame, totalsGame, pitcherGame, resultGame, recapReview, weather, venue, quality, slug, urlPath, kprops, teamHitting, gameNumber, dayLinks } = context;
+  const { brief, game, scheduleGame, totalsGame, pitcherGame, resultGame, recapReview, weather, venue, quality, slug, urlPath, kprops, officialKIndex, teamHitting, venueForm, gameNumber, dayLinks } = context;
   const dhSuffix = gameNumber ? ` (Game ${gameNumber})` : "";
   const awayShort = shortTeam(game.away_team);
   const homeShort = shortTeam(game.home_team);
@@ -1208,7 +1317,7 @@ function renderMatchupPage(context) {
   const offense = game.offense_form || {};
   const generatedAt = brief.generated_at || new Date().toISOString();
   const gameTime = game.game_time_iso || (scheduleGame && scheduleGame.gameDate);
-  const final = finalSummary(scheduleGame, resultGame);
+  const final = context.final !== undefined ? context.final : finalSummary(scheduleGame, resultGame);
   const relatedPreview = `/previews/${DATE}.html`;
 
   const articleSchema = {
@@ -1326,13 +1435,13 @@ section.card>h2{text-align:center}
     ${renderPitcherCard(game, pitcherGame)}
     ${renderPitcherTable(game, pitcherGame)}
     ${renderPitchingPlan(pitcherGame)}
-    ${renderStrikeoutProjections(game, pitcherGame, kprops)}
+    ${renderStrikeoutProjections(game, pitcherGame, kprops, officialKIndex)}
     <p class="small dim">Same data source as the <a href="/tools/pitcher-matchups/">Pitcher Matchup Tool</a>, where every starter on the slate is compared side by side.</p>
   </section>
 
   <section class="card">
     <div class="sec-head"><h2>Recent form</h2><a class="tool-link" href="/stats/">Full Stats page &rarr;</a></div>
-    ${renderRecentFormTable(game, teamHitting)}
+    ${renderRecentFormTable(game, teamHitting, venueForm)}
     <p class="small dim">Last 15 days only. Hot and cold streaks for all 30 teams live on the <a href="/stats/">Stats page</a>.</p>
   </section>
 
@@ -1420,6 +1529,50 @@ function renderPitcherCard(game, pitcherGame) {
   return `<div class="pcard-grid">${tile(game.away_team, a)}<div class="pcard-vs">vs</div>${tile(game.home_team, h)}</div>`;
 }
 
+// Blended read: state the actual read, not just the method. When a side's
+// bullpen is projected to throw more of the game than its named starter, LyDia
+// grades that side on a whole-game effective ERA (the starter's line blended
+// with the bullpen behind him, weighted by expected innings). This copy gives
+// the effective-ERA number, compares the two sides, and states which way the
+// blended read leans -- lower effective ERA is better.
+function blendedReadCopy(p, away, home, awayTeam, homeTeam) {
+  const num = v => (typeof v === "number" ? v : null);
+  const two = v => v.toFixed(2);
+  const aEff = num(away.effectiveEra) != null ? num(away.effectiveEra) : num(away.era);
+  const hEff = num(home.effectiveEra) != null ? num(home.effectiveEra) : num(home.era);
+
+  const carriedSentence = (side, teamName) => {
+    const eff = num(side.effectiveEra), own = num(side.era);
+    const ip = Number.isFinite(side.expectedInnings) ? side.expectedInnings.toFixed(1) : null;
+    const name = validPitcher(side.name) ? side.name : "the named starter";
+    let s = `For the ${esc(teamName)}, the bullpen is projected to throw more of the game than ${esc(name)}`;
+    if (ip) s += ` (about ${ip} inning${ip === "1.0" ? "" : "s"} for the starter)`;
+    if (eff != null) {
+      s += `, so LyDia grades that side on a whole-game effective ERA of ${two(eff)}`;
+      if (own != null && Math.abs(own - eff) >= 0.01) s += ` rather than ${esc(name)}'s own ${two(own)}`;
+    }
+    return s + ".";
+  };
+
+  const parts = [];
+  if (away.carriedByBullpen) parts.push(carriedSentence(away, awayTeam));
+  if (home.carriedByBullpen) parts.push(carriedSentence(home, homeTeam));
+
+  let conclusion = "";
+  if (aEff != null && hEff != null) {
+    if (Math.abs(aEff - hEff) < 0.01) {
+      conclusion = ` Whole-game, both sides land on the same effective ERA (${two(aEff)}), so the blended read is a wash.`;
+    } else {
+      const aBetter = aEff < hEff;
+      const lowTeam = aBetter ? awayTeam : homeTeam;
+      const low = two(aBetter ? aEff : hEff);
+      const high = two(aBetter ? hEff : aEff);
+      conclusion = ` Whole-game, that is ${low} for the ${esc(lowTeam)} against ${high} on the other side, so the blended read leans ${esc(lowTeam)}.`;
+    }
+  }
+  return `<p class="notice"><strong>Blended read:</strong> ${parts.join(" ")}${conclusion}</p>`;
+}
+
 function renderPitcherTable(game, pitcherGame) {
   const p = pitcherGame || {};
   const away = p.away || {};
@@ -1461,8 +1614,39 @@ function renderPitcherTable(game, pitcherGame) {
     </tbody>
   </table>
   <p><strong>${(away.carriedByBullpen || home.carriedByBullpen) ? "Pitching plan edge" : "Pitcher edge"}:</strong> ${esc(pitcherEdgeCopy(p, away, home, game.away_team, game.home_team))}</p>
-  ${(away.carriedByBullpen || home.carriedByBullpen) ? `<p class="notice"><strong>Blended read:</strong> ${away.carriedByBullpen && home.carriedByBullpen ? "For both sides, the" : away.carriedByBullpen ? "For the " + esc(game.away_team) + ", the" : "For the " + esc(game.home_team) + ", the"} bullpen is projected to throw more of the game than the named starter, so LyDia scores that side's pitching-plan edge off its whole-game effective ERA (starter plus the bullpen behind him, weighted by expected innings) instead of crediting the starter alone for innings he is not projected to throw.</p>` : ""}
+  ${(away.carriedByBullpen || home.carriedByBullpen) ? blendedReadCopy(p, away, home, game.away_team, game.home_team) : ""}
   <p class="small dim" style="text-align:center"><strong>How to read this:</strong> the scorecards show ERA, WHIP, K/9, and K-BB%. The table adds complementary traits without repeating them. Highlighted cells mark a gap big enough to matter. HR/9 is home runs allowed per nine innings. Ground-ball rate is neither good nor bad on its own: high ground-ball pitchers trade strikeouts for double plays and fewer home runs.</p>`;
+}
+
+// Index the locked published card's strikeout picks by game and pitcher so the
+// page labels a play "Official pick" only when it is actually on the card.
+// Source of truth: data/published-picks/DATE.json; picks[].strikeouts[] each
+// carry { pitcher, pick, line, projection, edge }.
+function buildOfficialKIndex(card) {
+  const index = new Map();
+  const picks = card && Array.isArray(card.picks) ? card.picks : [];
+  for (const pick of picks) {
+    const pk = String(pick.gamePk != null ? pick.gamePk : (pick.game_pk != null ? pick.game_pk : ""));
+    const ks = Array.isArray(pick.strikeouts) ? pick.strikeouts : [];
+    for (const k of ks) {
+      if (!k || !k.pitcher) continue;
+      const nameKey = String(k.pitcher).trim().toLowerCase();
+      if (!index.has(pk)) index.set(pk, new Map());
+      index.get(pk).set(nameKey, k);
+      if (!index.has("")) index.set("", new Map());
+      index.get("").set(nameKey, k); // name-only fallback if game_pk does not line up
+    }
+  }
+  return index;
+}
+
+function officialKFor(index, gamePk, name) {
+  if (!index || !name) return null;
+  const nameKey = String(name).trim().toLowerCase();
+  const byGame = index.get(String(gamePk != null ? gamePk : ""));
+  if (byGame && byGame.has(nameKey)) return byGame.get(nameKey);
+  const global = index.get("");
+  return (global && global.get(nameKey)) || null;
 }
 
 function kpropFor(kprops, name) {
@@ -1487,7 +1671,7 @@ function renderPitchingPlan(pitcherGame) {
   return `<div class="notice" style="margin-top:16px"><strong>Reported pitching plan</strong>${sides}<p class="small dim" style="text-align:center;margin-bottom:0">Each named pitcher is modeled only for his assigned innings. Bullpen fatigue, efficiency, and risk apply only to the remaining bullpen innings.</p></div>`;
 }
 
-function renderStrikeoutProjections(game, pitcherGame, kprops) {
+function renderStrikeoutProjections(game, pitcherGame, kprops, officialKIndex) {
   const p = pitcherGame || {};
   const entries = [
     { team: game.away_team, pitcher: p.away },
@@ -1514,10 +1698,20 @@ function renderStrikeoutProjections(game, pitcherGame, kprops) {
     const prop = entry.prop;
     const hasLine = typeof prop.line === "number";
     const variance = hasLine && typeof prop.projection === "number" ? prop.projection - prop.line : null;
-    const official = variance !== null && Math.abs(variance) >= 0.7 && prop.bullpen_game !== true && Number(prop.expected_innings) >= 4 && Number(prop.books) >= 2 && Number.isFinite(variance > 0 ? prop.over : prop.under);
+    // "Official pick" is decided by the locked published card, never by a gate
+    // recomputed here. A play absent from the card is at most a qualifying
+    // projection; a play present on the card stays official even if the line has
+    // since moved, and is shown with the side and line that were locked.
+    const cardPick = officialKFor(officialKIndex, game.game_pk, entry.pitcher && entry.pitcher.name);
     let leanHtml = "";
-    if (variance !== null && Math.abs(variance) >= 0.7) {
-      leanHtml = `<div class="k-lean ${variance > 0 ? "over" : "under"}">${official ? "Official pick" : "Qualifying projection"}: ${variance > 0 ? "OVER" : "UNDER"} ${esc(oneDecimal(prop.line))}K &middot; ${esc(variance > 0 ? "+" : "")}${esc(variance.toFixed(1))}K difference</div>`;
+    if (cardPick) {
+      const side = String(cardPick.pick || (variance !== null && variance > 0 ? "Over" : "Under"));
+      const cardLine = typeof cardPick.line === "number" ? cardPick.line : prop.line;
+      const cardEdge = typeof cardPick.edge === "number" ? cardPick.edge : variance;
+      const edgeText = typeof cardEdge === "number" ? `${cardEdge > 0 ? "+" : ""}${cardEdge.toFixed(1)}K difference` : "";
+      leanHtml = `<div class="k-lean ${side.toLowerCase() === "over" ? "over" : "under"}">Official pick: ${esc(side.toUpperCase())} ${esc(oneDecimal(cardLine))}K${edgeText ? ` &middot; ${esc(edgeText)}` : ""}</div>`;
+    } else if (variance !== null && Math.abs(variance) >= 0.7) {
+      leanHtml = `<div class="k-lean ${variance > 0 ? "over" : "under"}">Qualifying projection: ${variance > 0 ? "OVER" : "UNDER"} ${esc(oneDecimal(prop.line))}K &middot; ${esc(variance > 0 ? "+" : "")}${esc(variance.toFixed(1))}K difference</div>`;
     } else if (variance !== null) {
       leanHtml = `<div class="k-lean flat">No K play &middot; ${esc(variance > 0 ? "+" : "")}${esc(variance.toFixed(1))}K difference is below LyDia's 0.7K threshold</div>`;
     }
@@ -1528,7 +1722,7 @@ function renderStrikeoutProjections(game, pitcherGame, kprops) {
   }).join("");
   return `<h3 style="margin:16px 0 4px">Strikeout Projections <a class="tool-link" style="font-size:.78rem" href="/tools/strikeout-projections/">Full strikeout projections &rarr;</a></h3>
   <div class="metric-grid">${cells}</div>
-  <p class="small dim">Projections are self-calibrated against graded results${kprops && kprops.learned_n ? ` (${esc(kprops.learned_n)} graded starts)` : ""}. Official K picks require a 0.7+ strikeout edge, a posted price from at least two books, and a confirmed non-opener workload of at least four expected innings.</p>`;
+  <p class="small dim">Projections are self-calibrated against graded results${kprops && kprops.learned_n ? ` (${esc(kprops.learned_n)} graded starts)` : ""}. Official K picks are taken from LyDia's locked published card, which requires a 0.7+ strikeout edge, a posted price from at least two books, a confirmed non-opener workload of at least four expected innings, and a posted starting lineup. Plays shown here that are not on the card are qualifying projections only.</p>`;
 }
 
 // Split into two tables, each holding only stats on one timeframe. They
@@ -1557,13 +1751,14 @@ function offenseTableContext(game, teamHitting) {
   return { away, home, sa, sh, awayKSeason, homeKSeason, awayKRecent, homeKRecent };
 }
 
-function renderRecentFormTable(game, teamHitting) {
+function renderRecentFormTable(game, teamHitting, venueForm) {
   const { away, home, sa, sh, awayKRecent, homeKRecent } = offenseTableContext(game, teamHitting);
   const kCell = (mine, theirs) => typeof mine === "number" && typeof theirs === "number" && mine < theirs ? "adv" : "";
   return `${recentFormCopy(game, sa, sh, away, home)}<table class="matchup-table">
     <thead><tr><th>Metric</th><th>${esc(shortTeam(game.away_team))}</th><th>${esc(shortTeam(game.home_team))}</th></tr></thead>
     <tbody>
       <tr><th>Last 10</th><td>${esc(game.away_l10 || "Not available")}</td><td>${esc(game.home_l10 || "Not available")}</td></tr>
+      <tr><th>Last 10 by venue <span class="dim" style="font-weight:400">(away team on the road, home team at home)</span></th><td>${esc(venueForm && venueForm.away ? `${venueForm.away.record} on the road` : "Not available")}</td><td>${esc(venueForm && venueForm.home ? `${venueForm.home.record} at home` : "Not available")}</td></tr>
       <tr><th>OPS, last 15 days</th><td class="${typeof away.ops_15d === "number" && typeof home.ops_15d === "number" && away.ops_15d > home.ops_15d ? "adv" : ""}">${esc(typeof away.ops_15d === "number" ? away.ops_15d.toFixed(3) : "Not available")}</td><td class="${typeof away.ops_15d === "number" && typeof home.ops_15d === "number" && home.ops_15d > away.ops_15d ? "adv" : ""}">${esc(typeof home.ops_15d === "number" ? home.ops_15d.toFixed(3) : "Not available")}</td></tr>
       <tr><th>Runs per game, last 15 days</th><td>${esc(oneDecimal(away.rpg_15d))}</td><td>${esc(oneDecimal(home.rpg_15d))}</td></tr>
       <tr><th>K% last 15 days <span class="dim" style="font-weight:400">(lower is better)</span></th><td class="${kCell(awayKRecent, homeKRecent)}">${esc(pct(awayKRecent))}</td><td class="${kCell(homeKRecent, awayKRecent)}">${esc(pct(homeKRecent))}</td></tr>
@@ -1773,6 +1968,32 @@ function renderRecapReview(recapReview) {
     ${items}
     <p class="small dim">This checks LyDia's pregame reasoning against what actually happened on the field — independent of whether this game was an official pick. It never changes the pick, the rating, or the probability shown above.</p>
   </div>`;
+}
+
+// Insert a rebuilt Final result section into an already-generated page that is
+// missing it, without re-rendering (which would need the full pregame context
+// the collapsed brief no longer carries). Idempotent: a page that already has
+// the section is returned unchanged.
+function injectFinalSection(html, finalHtml) {
+  if (!finalHtml) return html;
+  if (/<h2>Final result<\/h2>/.test(html)) return html;
+  const anchor = '  <section class="card">\n    <h2>Game information</h2>';
+  const idx = html.indexOf(anchor);
+  if (idx === -1) return html;
+  return html.slice(0, idx) + finalHtml + "\n\n" + html.slice(idx);
+}
+
+function backfillFinalIntoPage(outputPath, gameLike, finalObj, persistedRecap) {
+  if (!finalObj || !outputPath || !fs.existsSync(outputPath)) return;
+  const html = fs.readFileSync(outputPath, "utf8");
+  if (/<h2>Final result<\/h2>/.test(html)) return;
+  const pk = String((gameLike && gameLike.game_pk) || "");
+  const recapEntry = pk ? ((persistedRecap && persistedRecap.games) || {})[pk] : null;
+  const recapReview = recapEntry && Array.isArray(recapEntry.paragraphs) && recapEntry.paragraphs.length
+    ? { paragraphs: recapEntry.paragraphs }
+    : null;
+  const injected = injectFinalSection(html, renderFinal(finalObj, gameLike || {}, recapReview));
+  if (injected !== html) fs.writeFileSync(outputPath, injected, "utf8");
 }
 
 function renderFinal(final, game, recapReview) {
