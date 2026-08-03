@@ -1,6 +1,6 @@
 {
   "date": "2026-08-03",
-  "generated_at": "2026-08-03T20:02:41.660Z",
+  "generated_at": "2026-08-03T20:14:10.473Z",
   "snapshot_type": "posted",
   "source_of_truth": "LyDia Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -12,8 +12,49 @@
     "minimum_market_edge": 0.03,
     "note": "Lab Rating grades LyDia's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
   },
-  "summary": "No official picks cleared the stricter rules in any market — moneyline, game totals or pitcher strikeouts. 0 value-watch setups and 3 watchlist games remain research-only. 0 games reached a Lab Rating of 7.5+/10 but did not clear every official gate.",
-  "official_card": [],
+  "summary": "Brief generated without live market pricing. Treat the card as research-only until pricing is checked.",
+  "official_card": [
+    {
+      "game_pk": 824647,
+      "game": "Los Angeles Dodgers @ Chicago Cubs",
+      "away": "Los Angeles Dodgers",
+      "home": "Chicago Cubs",
+      "time": "2026-08-04T00:05:00Z",
+      "lab_score": 67,
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Matthew Boyd",
+          "pick": "Under",
+          "line": 4.5,
+          "best_price": 112,
+          "projection": 3.63,
+          "edge": -0.87
+        }
+      ]
+    },
+    {
+      "game_pk": 822867,
+      "game": "San Francisco Giants @ Texas Rangers",
+      "away": "San Francisco Giants",
+      "home": "Texas Rangers",
+      "time": "2026-08-04T00:05:00Z",
+      "lab_score": 38,
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Logan Webb",
+          "pick": "Over",
+          "line": 4.5,
+          "best_price": -150,
+          "projection": 5.87,
+          "edge": 1.37
+        }
+      ]
+    }
+  ],
   "games": [
     {
       "game_pk": 823757,
@@ -112,7 +153,7 @@
       "run_model_probability": 0.6649,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": null,
-      "edge": 0.0999,
+      "edge": 0.0998,
       "status": "watchlist",
       "value_tag": "WATCHLIST",
       "lab_score": 72,
@@ -346,12 +387,8 @@
       "pick_team": "New York Yankees",
       "side": "home",
       "model_probability": 0.7621,
-      "model_source": "moneyline-v2-plus-runs-v1",
-      "projected_runs": {
-        "away": 2.1,
-        "home": 4,
-        "total": 6.1
-      },
+      "model_source": "legacy-strength-fallback",
+      "projected_runs": null,
       "pitching_plan": {
         "away": {
           "type": "starter_bullpen",
@@ -425,9 +462,9 @@
         "applied_home": -0.0149,
         "weight": 0.5
       },
-      "run_model_probability": 0.7769,
+      "run_model_probability": null,
       "run_model_weight": 0,
-      "model_probability_pre_bullpen": null,
+      "model_probability_pre_bullpen": 0.7544,
       "edge": 0.1032,
       "status": "watchlist",
       "value_tag": "WATCHLIST",
@@ -443,8 +480,8 @@
         "completeness_points": 0,
         "pitcher_edge_points": 13.3,
         "plan_completeness_points": 6,
-        "model_agreement_gap": 0.0148,
-        "model_agreement_credit": 1,
+        "model_agreement_gap": null,
+        "model_agreement_credit": null,
         "bullpen_innings_weight": 0.76,
         "assigned_bullpen_innings": 3.1,
         "offense_delta": -0.017,
@@ -662,12 +699,8 @@
       "pick_team": "Chicago Cubs",
       "side": "home",
       "model_probability": 0.6162,
-      "model_source": "moneyline-v2-plus-runs-v1",
-      "projected_runs": {
-        "away": 2,
-        "home": 5.4,
-        "total": 7.3
-      },
+      "model_source": "legacy-strength-fallback",
+      "projected_runs": null,
       "pitching_plan": {
         "away": {
           "type": "opener_bullpen",
@@ -741,9 +774,9 @@
         "applied_home": -0.0061,
         "weight": 0.5
       },
-      "run_model_probability": 0.8965,
+      "run_model_probability": null,
       "run_model_weight": 0,
-      "model_probability_pre_bullpen": null,
+      "model_probability_pre_bullpen": 0.5867,
       "edge": 0.2574,
       "status": "watchlist",
       "value_tag": "WATCHLIST",
@@ -759,8 +792,8 @@
         "completeness_points": 0,
         "pitcher_edge_points": 13.3,
         "plan_completeness_points": 6,
-        "model_agreement_gap": 0.2803,
-        "model_agreement_credit": 0,
+        "model_agreement_gap": null,
+        "model_agreement_credit": null,
         "bullpen_innings_weight": 0.88,
         "assigned_bullpen_innings": 3.5,
         "offense_delta": 0.036,
@@ -781,7 +814,7 @@
         "edge_passed": true
       },
       "pass_reason": null,
-      "read": "Chicago Cubs remains on the watchlist. Lab Rating 6.7/10: conviction 9.27, pitching plan 19.3, bullpen 17.97, offense 20. LyDia projects 61.6% against a 35.9% no-vig market number, a 25.7% model edge at +176. Chicago Cubs owns the starting pitcher edge by 19 points. Bullpen read: Supports LyDia side. Chicago Cubs's pen efficiency: Dominant (7.6/10). Pitching plan: TBD 4.5 IP + remaining bullpen 4.5 IP. Bullpen fatigue, efficiency, and combined risk grade only the innings assigned to the bullpen. Lineup check: Chicago Cubs is a touch above its season form (+0.021 OPS); Los Angeles Dodgers is near its season form (-0.015 OPS).",
+      "read": "Chicago Cubs remains on the watchlist. Lab Rating 6.7/10: conviction 9.27, pitching plan 19.3, bullpen 17.97, offense 20. LyDia projects 61.6% against a 35.9% no-vig market number, a 25.7% model edge at +176. Chicago Cubs owns the starting pitcher edge by 19 points. Bullpen read: Supports LyDia side. Chicago Cubs's pen efficiency: Dominant (7.6/10). Bullpen fatigue moved this probability up 2.9 points from 58.7% (starting pitcher and team strength only) to 61.6%. Pitching plan: TBD 4.5 IP + remaining bullpen 4.5 IP. Bullpen fatigue, efficiency, and combined risk grade only the innings assigned to the bullpen. Lineup check: Chicago Cubs is a touch above its season form (+0.021 OPS); Los Angeles Dodgers is near its season form (-0.015 OPS).",
       "pitcher_edge": {
         "team": "Chicago Cubs",
         "gap": 19,
@@ -2221,12 +2254,12 @@
       "home_l10": "4-6",
       "pick_team": "San Francisco Giants",
       "side": "away",
-      "model_probability": 0.5539,
+      "model_probability": 0.5598,
       "model_source": "moneyline-v2-plus-runs-v1",
       "projected_runs": {
-        "away": 5.8,
-        "home": 2.6,
-        "total": 8.4
+        "away": 6,
+        "home": 3.2,
+        "total": 9.2
       },
       "pitching_plan": {
         "away": {
@@ -2260,38 +2293,38 @@
           "bullpen_game": false
         },
         "home": {
-          "type": "opener_bullpen",
-          "confidence": "low",
+          "type": "starter_bullpen",
+          "confidence": "high",
           "reported": false,
           "segments": [
             {
-              "role": "opener",
-              "pitcher_id": null,
-              "pitcher": "TBD",
-              "expected_innings": 4.5,
-              "fip_lite": 4.2,
-              "pitcher_score": 50,
+              "role": "starter",
+              "pitcher_id": 615698,
+              "pitcher": "Cal Quantrill",
+              "expected_innings": 4.388888888888888,
+              "fip_lite": 4.43,
+              "pitcher_score": 60,
               "role_stats": null
             },
             {
               "role": "bullpen",
-              "expected_innings": 4.5
+              "expected_innings": 4.611111111111112
             }
           ],
-          "expected_innings": 4.5,
-          "bullpen_innings": 4.5,
-          "effective_era": 4.69,
-          "pitcher_score": 50,
-          "bullpen_carries_game": false,
-          "description": "TBD 4.5 IP + remaining bullpen 4.5 IP",
-          "pitcher": "TBD",
-          "role": "unknown",
-          "label": "Role unknown",
-          "bullpen_game": true
+          "expected_innings": 4.4,
+          "bullpen_innings": 4.6,
+          "effective_era": 4.81,
+          "pitcher_score": 55,
+          "bullpen_carries_game": true,
+          "description": "Cal Quantrill 4.4 IP + remaining bullpen 4.6 IP",
+          "pitcher": "Cal Quantrill",
+          "role": "limited_starter",
+          "label": "Limited starter",
+          "bullpen_game": false
         }
       },
-      "bullpen_game": true,
-      "legacy_strength_probability": 0.5539,
+      "bullpen_game": false,
+      "legacy_strength_probability": 0.5598,
       "venue_split": {
         "away_record": "21-38",
         "home_record": "28-25",
@@ -2301,25 +2334,25 @@
         "applied_home": 0.0043,
         "weight": 0.5
       },
-      "run_model_probability": 0.8659,
+      "run_model_probability": 0.8214,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": null,
-      "edge": 0.0842,
+      "edge": 0.0901,
       "status": "pass",
       "value_tag": "PASS",
-      "lab_score": 40,
+      "lab_score": 38,
       "lab_score_breakdown": {
-        "score": 40,
+        "score": 38,
         "version": "lab-rating-v3-measured-components",
-        "conviction_points": 0.54,
+        "conviction_points": 1.37,
         "agreement_points": 0,
-        "pitching_plan_points": 20,
+        "pitching_plan_points": 16.5,
         "bullpen_points": 15.63,
         "offense_points": 4.17,
         "completeness_points": 0,
-        "pitcher_edge_points": 14,
+        "pitcher_edge_points": 10.5,
         "plan_completeness_points": 6,
-        "model_agreement_gap": 0.3121,
+        "model_agreement_gap": 0.2617,
         "model_agreement_credit": 0,
         "bullpen_innings_weight": 0.68,
         "assigned_bullpen_innings": 2.7,
@@ -2344,10 +2377,10 @@
       "read": "The combined Lab Rating did not clear the official threshold.",
       "pitcher_edge": {
         "team": "San Francisco Giants",
-        "gap": 20,
+        "gap": 15,
         "conflict": false,
         "away_score": 70,
-        "home_score": 50,
+        "home_score": 55,
         "away_pitcher": "Logan Webb",
         "home_pitcher": "Cal Quantrill",
         "away_pitcher_id": 657277,
@@ -2409,7 +2442,7 @@
         "off_adj": 0.032,
         "bp_adj": -0.111,
         "version": "v3.1-bullpen",
-        "p_home_v2": 0.4461,
+        "p_home_v2": 0.4402,
         "note": "shadow A/B — does not drive picks"
       },
       "bullpen": {
