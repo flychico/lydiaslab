@@ -1,19 +1,33 @@
-name: Refresh prop, totals, and moneyline lines
+name: Refresh prop, totals, and moneyline lines (RETIRED — superseded by Prepare slate)
 
-# Re-captures K-prop, totals, and moneyline lines + projections for today.
-# Touches ONLY data/k-props/, data/totals/, and data/moneyline-odds/ — never
-# picks, previews, or results.
+# RETIRED 2026-08-03. Superseded by prepare-slate.yml.
 #
-# Scheduled once daily near 10:50am ET (the time publish-picks.yml's own cron
-# comments already assumed this ran) plus workflow_dispatch for manual
-# re-capture. Before ERR-20260801-02 this workflow never captured moneyline
-# odds at all, and had no schedule -- either gap alone meant every matchup
-# page showed "Market probability: Not available" unless someone manually
-# ran it same-day.
-#on:
-#  schedule:
-#    - cron: "50 14 * * *"   # 10:50am ET (EDT, UTC-4)
-#  workflow_dispatch:
+# Kept manual-only for a few days as a fallback while the new gather workflow
+# proves itself. Delete this file once prepare-slate.yml has run clean for a
+# week. DO NOT re-enable the schedule — running both writes the same files
+# twice and the two can race.
+#
+# WHY IT WAS RETIRED
+# This workflow ran `update-totals.js` on its 10:50am ET cron, but nothing
+# writes data/bullpen/<date>.json for that day until publish-picks.yml runs at
+# 11:05am — fifteen minutes later. update-totals.js reads that file inside a
+# bare `catch (e) {}` that falls back to {}, so on every scheduled run the
+# totals model was built with NO BULLPEN INPUT AT ALL, silently, since this
+# workflow was created. The bullpen factor is applied across roughly half of
+# every game's innings. See ERR-20260803-01.
+#
+# prepare-slate.yml runs the bullpen generator first, then k-props, then
+# totals, then moneyline odds — the order the dependencies actually require.
+#
+# It also fixes the commit step: `git add` with a path list left the inline-data
+# injections in previews/ and tools/ unstaged, which makes `git pull --rebase`
+# refuse to run. See ERR-20260803-02, and ERR-20260720 for the first occurrence.
+
+on:
+  # Schedule removed deliberately. prepare-slate.yml owns the daily gather now.
+  #  schedule:
+  #    - cron: "50 14 * * *"   # 10:50am ET — RETIRED, see above
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -28,6 +42,12 @@ jobs:
     env:
       ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
     steps:
+      - name: Warn that this workflow is retired
+        run: |
+          echo "::warning::refresh-lines.yml is retired. Use 'Prepare slate (gather data)' instead."
+          echo "This workflow captures totals WITHOUT a fresh bullpen file (ERR-20260803-01)."
+          echo "Continuing only because it was dispatched manually."
+
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
@@ -51,7 +71,8 @@ jobs:
         run: |
           git config user.name "lydia-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/k-props/ data/totals/ data/moneyline-odds/
+          # -A, not a path list. See ERR-20260803-02.
+          git add -A
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
