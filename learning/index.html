@@ -13,249 +13,254 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Learning Summary | LyDia</title>
+<title>Learning Dashboard | LyDia</title>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="LyDia">
-<meta property="og:title" content="Learning Summary | LyDia">
-<meta property="og:description" content="LyDia learning summary: what the model learned from graded moneyline picks, market movement, pitcher signals, bullpen signals, and results.">
+<meta property="og:title" content="Learning Dashboard | LyDia">
+<meta property="og:description" content="How LyDia's pregame reads held up against reality, graded per game.">
 <meta property="og:url" content="https://lydiaslab.com/learning/">
-<meta property="og:image" content="https://lydiaslab.com/img/og-card.png">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Learning Summary | LyDia">
-<meta name="twitter:description" content="LyDia learning summary: what the model learned from graded moneyline picks, market movement, pitcher signals, bullpen signals, and results.">
-<meta name="twitter:image" content="https://lydiaslab.com/img/og-card.png">
-
-<meta name="description" content="LyDia learning summary: what the model learned from graded moneyline picks, market movement, pitcher signals, bullpen signals, and results.">
+<meta name="description" content="How LyDia's pregame reads held up against reality, graded per game.">
 <link rel="canonical" href="https://lydiaslab.com/learning/">
 <link rel="stylesheet" href="/css/style.css">
 <style>
-.controls { display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:16px; }
-.kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin:16px 0 22px; }
+.controls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:14px 0 20px; }
+.controls .seg { display:flex; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.controls .seg button { background:var(--bg-card); border:0; padding:7px 12px; color:var(--text-dim); cursor:pointer; font-size:.82rem; }
+.controls .seg button.on { background:var(--bg-elev); color:inherit; font-weight:700; }
+.controls input { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:7px 10px; color:inherit; min-width:220px; }
+.kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin:8px 0 24px; }
 .kpi { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
-.kpi .label { font-size:.76rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em; }
-.kpi .value { font-size:1.35rem; font-weight:800; }
-.finding { margin-bottom:12px; }
-.metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:10px; margin-top:10px; }
-.metric-box { background:var(--bg-elev); border:1px solid var(--border); border-radius:var(--radius); padding:12px; }
-.metric-box .label { color:var(--text-dim); font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; }
-.metric-box .value { font-size:1.1rem; font-weight:800; font-variant-numeric:tabular-nums; }
-.learning-row { margin:10px 0; padding-bottom:10px; border-bottom:1px solid var(--border); }
-.learning-row:last-child { border-bottom:0; }
+.kpi .label { font-size:.74rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em; }
+.kpi .value { font-size:1.5rem; font-weight:800; font-variant-numeric:tabular-nums; }
+.kpi .sub { font-size:.76rem; color:var(--text-dim); }
+h2.sec { margin:30px 0 4px; font-size:1.15rem; }
+.sec-note { color:var(--text-dim); font-size:.82rem; margin:0 0 14px; }
+.bars { display:grid; gap:10px; }
+.bar-row { display:grid; grid-template-columns:170px 1fr 84px; gap:12px; align-items:center; }
+.bar-row .name { font-size:.9rem; }
+.bar-track { background:var(--bg-elev); border-radius:999px; height:16px; overflow:hidden; border:1px solid var(--border); }
+.bar-fill { height:100%; border-radius:999px; }
+.bar-num { text-align:right; font-variant-numeric:tabular-nums; font-weight:700; font-size:.9rem; }
+.bar-num small { color:var(--text-dim); font-weight:400; }
+table.dash { width:100%; border-collapse:collapse; font-size:.86rem; }
+table.dash th, table.dash td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); white-space:nowrap; }
+table.dash th { color:var(--text-dim); font-weight:600; cursor:pointer; user-select:none; }
+table.dash td.num, table.dash th.num { text-align:right; font-variant-numeric:tabular-nums; }
+.ok { color:#2ecc71; font-weight:700; }
+.no { color:#e74c3c; font-weight:700; }
+.dim { color:var(--text-dim); }
+.spark { display:block; }
+.loading { color:var(--text-dim); }
 </style>
 </head>
 <body>
 <nav id="nav"></nav>
 <main>
   <p class="eyebrow">LyDia's Lab</p>
-  <h1>Learning Summary</h1>
-  <p class="subtitle">A process review of graded moneyline picks, market movement, pitcher signals, bullpen signals, and threshold discipline.</p>
+  <h1>Learning Dashboard</h1>
+  <p class="subtitle">Every graded game's pregame read against what actually happened. This measures the analysis; it never changes a pick.</p>
 
-  <div id="status" class="loading">Loading learning summary...</div>
-  <div id="headline"></div>
-  <div id="kpis" class="kpis"></div>
-  <div id="findings"></div>
-  <div id="buckets"></div>
+  <div id="status" class="loading">Loading the learning ledger…</div>
+
+  <div id="dash" style="display:none">
+    <div class="controls">
+      <div class="seg" id="windowSeg">
+        <button data-w="7">7d</button>
+        <button data-w="14">14d</button>
+        <button data-w="30">30d</button>
+        <button data-w="all" class="on">All</button>
+      </div>
+      <input id="search" type="text" placeholder="Filter games by team…">
+    </div>
+
+    <div class="kpis" id="kpis"></div>
+
+    <h2 class="sec">Are we improving?</h2>
+    <p class="sec-note">Direction accuracy by day — did the model side actually win. 50% is a coin flip.</p>
+    <div id="trend"></div>
+
+    <h2 class="sec">Which pregame reads work</h2>
+    <p class="sec-note">Hit rate of each read over the window, with sample size. A read below 50% is costing you.</p>
+    <div class="bars" id="reads"></div>
+    <p class="sec-note" id="bullpenNote" style="margin-top:12px"></p>
+
+    <h2 class="sec">Projection accuracy</h2>
+    <p class="sec-note">How far the run projections landed from reality. Bias shows whether we run high or low.</p>
+    <div class="kpis" id="projection"></div>
+
+    <h2 class="sec">Every graded game</h2>
+    <p class="sec-note">Click a matchup to open its page. Click a column header to sort.</p>
+    <div style="overflow-x:auto"><table class="dash" id="gamesTable"></table></div>
+  </div>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script>
+renderNav("/learning/"); renderFooter();
 function esc(v){ return escapeHtml(String(v ?? "")); }
-renderNav("/articles/"); renderFooter();
 
-loadLearning();
+const state = { rows: [], windowDays: "all", search: "", sortKey: "date", sortDir: -1 };
 
-async function loadLearning() {
-  const statusEl = document.getElementById("status");
-  const headlineEl = document.getElementById("headline");
-  const kpisEl = document.getElementById("kpis");
-  const findingsEl = document.getElementById("findings");
-  const bucketsEl = document.getElementById("buckets");
+function parseCSV(text){
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const head = splitCsvLine(lines[0]);
+  return lines.slice(1).map(line => {
+    const cells = splitCsvLine(line);
+    const o = {}; head.forEach((h,i) => o[h] = cells[i]); return o;
+  });
+}
+function splitCsvLine(line){
+  const cells = []; let cur = "", q = false;
+  for (const ch of line){ if (ch === '"'){ q = !q; } else if (ch === ',' && !q){ cells.push(cur); cur = ""; } else cur += ch; }
+  cells.push(cur); return cells;
+}
+const numOr = v => (v === "" || v == null || isNaN(+v)) ? null : +v;
+const boolOr = v => (v === "" || v == null) ? null : (v === "1");
+const pctStr = p => p == null ? "—" : (p*100).toFixed(0) + "%";
 
-  let data = null;
-  try {
-    const res = await fetch(`/data/learning-summary.json?v=${Date.now()}`, { cache: "no-store" });
-    if (res.ok) data = await res.json();
-  } catch (e) {}
-
-  if (!data || data.status !== "ready") {
-    statusEl.className = "notice warn";
-    statusEl.innerHTML = `<strong>No learning summary is available yet.</strong><br>Learning is generated after the daily grading workflow runs.`;
-    return;
-  }
-
-  statusEl.innerHTML = "";
-  headlineEl.innerHTML = `<div class="notice"><strong>${esc(data.headline || "Learning summary ready.")}</strong><br><span class="small dim">Generated ${friendlyTime(data.generated_at)}. Current official model: ${esc(data.current_official_model || "moneyline_only")}.</span></div>`;
-
-  const day = data.day || {};
-  const metrics = data.process_metrics || {};
-  kpisEl.innerHTML = `
-    <div class="kpi"><div class="label">Date reviewed</div><div class="value">${esc(data.latest_date || "-")}</div><div class="small dim">${data.days_reviewed || 0} day${data.days_reviewed === 1 ? "" : "s"} in file</div></div>
-    <div class="kpi"><div class="label">Daily moneyline record</div><div class="value">${esc(day.moneyline_record || "0-0")}</div><div class="small dim">${pct(day.moneyline_win_rate)} win rate for reviewed date</div></div>
-    <div class="kpi"><div class="label">Avg model prob</div><div class="value">${pct(metrics.average_model_probability)}</div><div class="small dim">graded moneyline set</div></div>
-    <div class="kpi"><div class="label">Avg Lab Rating</div><div class="value">${typeof metrics.average_lab_score === "number" ? (metrics.average_lab_score/10).toFixed(1)+"/10" : "-"}</div><div class="small dim">setup quality, not probability</div></div>
-    <div class="kpi"><div class="label">Historical gate saves</div><div class="value">${metrics.protected_by_probability_gate_count || 0}</div><div class="small dim">graded high-Lab, low-probability setups</div></div>
-    <div class="kpi"><div class="label">CLV tracked</div><div class="value">${clvTotal(metrics.clv_counts)}</div><div class="small dim">needs market snapshots</div></div>
-  `;
-
-  const findings = data.findings || [];
-  findingsEl.innerHTML = `<h2>What LyDia learned</h2>` + findings.map(f => `
-    <div class="card finding">
-      <h3>${esc(f.title || "Finding")}</h3>
-      <p>${esc(f.read || "")}</p>
-    </div>
-  `).join("");
-
-  const cal = data.calibration || {};
-  // Lab Rating distribution — where do ratings cluster and why
-  let distHtml = "";
-  try {
-    const csv = await fetch("/data/calibration/calibration_model_log.csv?v=" + Date.now(), { cache: "no-store" }).then(r => r.ok ? r.text() : null);
-    if (csv) {
-      // CSV has a quoted matchup field — split carefully
-      const parseRow = l => {
-        const m = l.match(/^([^,]*),([^,]*),([^,]*),("(?:[^"]|"")*"|[^,]*),("(?:[^"]|"")*"|[^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),(.*)$/);
-        return m ? { date: m[1], pk: m[2], model: m[3], matchup: m[4].replace(/^"|"$/g, ""), side: m[5].replace(/^"|"$/g, ""), status: m[6], prob: Number(m[7]), lab: Number(m[9]), result: m[11], score: m[12] } : null;
-      };
-      window._calGames = csv.trim().split("\n").slice(1).map(parseRow).filter(Boolean);
-      const rows = window._calGames;
-      const labs = rows.map(r => ({ lab: r.lab, status: r.status })).filter(x => Number.isFinite(x.lab));
-      if (labs.length >= 10) {
-        const buckets = new Array(10).fill(0);
-        labs.forEach(x => buckets[Math.min(9, Math.floor(x.lab / 10))]++);
-        const maxB = Math.max(...buckets);
-        const byStatus = {};
-        labs.forEach(x => (byStatus[x.status] = byStatus[x.status] || []).push(x.lab));
-        const avg = a => (a.reduce((p, c) => p + c, 0) / a.length / 10).toFixed(1);
-        distHtml = `<h2>Lab Rating distribution</h2><div class="card" style="margin-bottom:14px">
-          <p class="dim small">${labs.length} analyzed games from the current model-version ledger. This distribution shows how often each setup-quality band occurs; it does not measure win probability.</p>
-          ${buckets.map((n, i) => `<div style="display:flex;align-items:center;gap:8px;font-size:.82rem"><span style="width:52px" class="dim">${(i).toFixed(0)}.0–${i}.9</span><div style="flex:1;background:var(--bg-elev);border-radius:4px;height:14px"><div style="width:${maxB ? (n / maxB * 100) : 0}%;height:100%;background:var(--accent2);border-radius:4px"></div></div><span class="dim small" style="width:22px;text-align:right">${n}</span></div>`).join("")}
-          <table style="margin-top:10px"><thead><tr><th>Tier</th><th class="num">Games</th><th class="num">Avg rating</th></tr></thead><tbody>
-          ${["official_pick", "value_watch", "watchlist", "pass"].filter(k => byStatus[k]).map(k => `<tr><td>${k.replace(/_/g, " ")}</td><td class="num">${byStatus[k].length}</td><td class="num"><b>${avg(byStatus[k])}</b>/10</td></tr>`).join("")}</tbody></table>
-        </div>`;
-      }
-    }
-  } catch (e) {}
-
-  const gameLine = g => `<div class="small" style="padding:3px 0;border-top:1px solid var(--border)">${g.result === "W" ? "✅" : g.result === "L" ? "❌" : "⏸"} ${esc(g.date.slice(5))} · ${esc(g.matchup)} — ${esc(g.side)} ${(g.prob * 100).toFixed(0)}%${Number.isFinite(g.lab) ? ` · Lab ${(g.lab / 10).toFixed(1)}` : ""}${g.score ? ` · final ${esc(g.score)}` : ""}</div>`;
-  const gamesDetails = (label, games) => games.length ? `<details style="margin:2px 0 4px"><summary class="small dim" style="cursor:pointer">${label} — show ${games.length} game${games.length === 1 ? "" : "s"}</summary>${games.map(gameLine).join("")}</details>` : "";
-  const G = window._calGames || [];
-  const inBucket = range => { const [lo, hi] = range.replace("%", "").split("-").map(Number); return G.filter(g => Number.isFinite(g.prob) && g.prob * 100 >= lo && g.prob * 100 < (hi === 100 ? 101 : hi) && (g.result === "W" || g.result === "L")); };
-
-  const calHtml = cal.status === "ready" ? `
-    <h2>Full-slate calibration</h2>
-    <div class="card" style="margin-bottom:14px">
-      <p class="dim small">Every analyzed game from the current model version is graded nightly into a learning-only ledger. This measures whether the model's probabilities are honest and what the games below the official gates would have returned. It is not the public record.</p>
-      <p><strong>${cal.games_graded}</strong> games graded for <strong>${esc(cal.model_version || "current model")}</strong> · Brier score <strong>${cal.brier_score}</strong> <span class="dim small">(lower is better; 0.25 = coin flip)</span></p>
-      <table>
-        <thead><tr><th>Model probability</th><th class="num">Games</th><th class="num">Expected win%</th><th class="num">Actual win%</th></tr></thead>
-        <tbody>${(cal.buckets || []).map(b => `<tr><td>${esc(b.range)}</td><td class="num">${b.games}</td><td class="num">${(b.expected_win_rate * 100).toFixed(0)}%</td><td class="num">${(b.actual_win_rate * 100).toFixed(0)}%</td></tr><tr><td colspan="4" style="padding:0 6px">${gamesDetails("games in " + b.range, inBucket(b.range))}</td></tr>`).join("")}</tbody>
-      </table>
-      ${cal.shadow_model && cal.shadow_model.status === "ready" ? `
-      <div style="margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:8px">
-        <b>Versioned model A/B</b><br>
-        <span class="small">${esc(cal.shadow_model.official_model_version)} vs ${esc(cal.shadow_model.shadow_model_version)} · ${cal.shadow_model.games} games · Brier official <b>${cal.shadow_model.brier_official}</b> vs shadow <b>${cal.shadow_model.brier_shadow}</b> → <b>${cal.shadow_model.leader}</b> leads · ${cal.shadow_model.disagreements} disagreement${cal.shadow_model.disagreements === 1 ? "" : "s"}${cal.shadow_model.disagreements ? `, shadow right in ${cal.shadow_model.shadow_wins_disagreements}` : ""}</span>
-        <div id="ab-games"></div>
-      </div>` : ""}
-      ${cal.attribution ? (cal.attribution.status === "ready" ? `
-      <div style="margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:8px">
-        <b>Metric attribution — what actually separates winners from losers</b>
-        <p class="dim small" style="margin:4px 0 8px">${esc(cal.attribution.note || "")} n=${cal.attribution.games}.</p>
-        <table><thead><tr><th>Factor</th><th class="num">Low-band win%</th><th class="num">Mid</th><th class="num">High-band win%</th><th class="num">Spread</th></tr></thead><tbody>
-        ${cal.attribution.factors.map(f => `<tr><td>${esc(f.factor)}</td>${f.tertiles.map(t => `<td class="num">${(t.win_rate * 100).toFixed(0)}% <span class="dim small">(${t.games})</span></td>`).join("")}<td class="num ${f.spread >= 0.08 ? "pos-text" : f.spread <= -0.08 ? "neg-text" : "dim"}"><b>${f.spread > 0 ? "+" : ""}${(f.spread * 100).toFixed(0)}</b></td></tr>`).join("")}</tbody></table>
-      </div>` : `
-      <div style="margin-top:12px;padding:10px;border:1px dashed var(--border);border-radius:8px">
-        <b>Metric attribution</b> <span class="dim small">— dormant until the sample can support it</span>
-        <div style="display:flex;align-items:center;gap:10px;margin-top:6px"><div style="flex:1;background:var(--bg-elev);border-radius:6px;height:12px"><div style="width:${Math.min(100, (cal.attribution.games / cal.attribution.needed * 100)).toFixed(0)}%;height:100%;background:var(--accent2);border-radius:6px"></div></div><span class="small dim">${cal.attribution.games}/${cal.attribution.needed} games</span></div>
-        <p class="dim small" style="margin:6px 0 0">When it wakes up: win rate by tertile for pitcher gap, K-BB% gap, offense form, bullpen fatigue, Lab Rating, and model probability — the evidence for re-weighting the model.</p>
-      </div>`) : ""}
-            ${cal.kprops && cal.kprops.status === "ready" ? `
-      <div style="margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:8px">
-        <b>Strikeout projections — accuracy tracking</b>
-        <p class="dim small" style="margin:4px 0 6px">${esc(cal.kprops.note || "")}</p>
-        <span class="small">${cal.kprops.graded} pitchers graded (${cal.kprops.with_projection} with projections) · bias <b>${cal.kprops.bias > 0 ? "+" : ""}${cal.kprops.bias}</b> Ks · avg miss <b>${cal.kprops.mae}</b> Ks · lean record <b>${cal.kprops.lean_record}</b> · self-calibration: <b>${cal.kprops.self_calibration || "—"}</b> <span class="dim">(over ${cal.kprops.over_lean_record}, under ${cal.kprops.under_lean_record}, no-edge ${cal.kprops.no_lean})</span></span>
-      </div>` : ""}
-      <table style="margin-top:10px">
-        <thead><tr><th>Tier</th><th class="num">Record</th><th class="num">Shadow units (flat 1u)</th></tr></thead>
-        <tbody>${Object.entries(cal.shadow_by_status || {}).map(([k, v]) => `<tr><td>${esc(k.replace(/_/g, " "))}</td><td class="num">${v.wins}-${v.games - v.wins}</td><td class="num">${v.units > 0 ? "+" : ""}${v.units}</td></tr><tr><td colspan="3" style="padding:0 6px">${gamesDetails(k.replace(/_/g, " ") + " games", G.filter(g => g.status === k && (g.result === "W" || g.result === "L")))}</td></tr>`).join("")}</tbody>
-      </table>
-    </div>` : "";
-
-
-
-  bucketsEl.innerHTML = distHtml + calHtml + `
-    <h2>Review buckets</h2>
-    ${bucket("Verified official picks", (data.buckets || {}).strong_official || [], "Graded official picks that cleared all three gates: 72% model probability, 8.0/10 Lab Rating, and 3% market edge.")}
-    ${bucket("Protected by probability gate", (data.buckets || {}).protected_by_probability_gate || [], "High setup quality, but model probability below the official-pick gate. These should stay value watch.")}
-    ${bucket("High bullpen risk", (data.buckets || {}).high_bullpen_risk || [], "Official moneyline picks with meaningful bullpen caution.")}
-    ${bucket("Pitcher conflicts", (data.buckets || {}).pitcher_conflicts || [], "Official moneyline picks where the starting pitcher edge conflicted with the model side.")}
-  `;
-
-  // Name the A/B disagreement games — the ones that decide promotion
-  try {
-    const sh = await fetch("/data/calibration/shadow_model_log.csv?v=" + Date.now(), { cache: "no-store" }).then(r => r.ok ? r.text() : null);
-    const el = document.getElementById("ab-games");
-    if (sh && el) {
-      const byPk = {}; (window._calGames || []).forEach(g => byPk[g.date + "," + g.pk] = g);
-      const dis = sh.trim().split("\n").slice(1).map(l => l.split(",")).filter(r => r.length >= 7 && (Number(r[4]) >= 0.5) !== (Number(r[5]) >= 0.5));
-      if (dis.length) {
-        el.innerHTML = `<details style="margin-top:6px"><summary class="small dim" style="cursor:pointer">show the ${dis.length} disagreement game${dis.length === 1 ? "" : "s"}</summary>` +
-          dis.map(r => {
-            const g = byPk[r[0] + "," + r[1]];
-            const hw = Number(r[6]) === 1, officialHome = Number(r[4]) >= 0.5, shadowHome = Number(r[5]) >= 0.5;
-            const name = g ? g.matchup : "game " + r[1];
-            const [away, home] = (g ? g.matchup.split(" @ ") : ["away", "home"]);
-            const officialSide = officialHome ? home : away, shadowSide = shadowHome ? home : away, winner = hw ? home : away;
-            const shadowRight = shadowHome === hw;
-            return `<div class="small" style="padding:3px 0;border-top:1px solid var(--border)">${esc(r[0].slice(5))} · ${esc(name)} — official: ${esc(officialSide)} ${(Math.max(Number(r[4]), 1 - Number(r[4])) * 100).toFixed(0)}% · shadow: ${esc(shadowSide)} ${(Math.max(Number(r[5]), 1 - Number(r[5])) * 100).toFixed(0)}% → <b>${esc(winner)}</b> won · ${shadowRight ? '<b class="pos-text">shadow right</b>' : '<b class="neg-text">official right</b>'}${g && Number.isFinite(g.lab) ? ` · Lab ${(g.lab / 10).toFixed(1)}` : ""}</div>`;
-          }).join("") + `</details>`;
-      }
-    }
-  } catch (e) {}
-
+function applyWindow(rows){
+  if (state.windowDays === "all") return rows;
+  const dates = rows.map(r => r.date).filter(Boolean).sort();
+  if (!dates.length) return rows;
+  const max = new Date(dates[dates.length-1] + "T00:00:00Z");
+  const cutoff = new Date(max); cutoff.setUTCDate(cutoff.getUTCDate() - (Number(state.windowDays) - 1));
+  return rows.filter(r => new Date(r.date + "T00:00:00Z") >= cutoff);
+}
+function rate(rows, key){ let h=0,n=0; for(const r of rows){ const b=boolOr(r[key]); if(b!==null){ n++; if(b) h++; } } return {hits:h,n,pct:n?h/n:null}; }
+function offenseAccuracy(rows){
+  const diffs=[]; for(const r of rows){ for(const k of ["away_offense_diff","home_offense_diff"]){ const d=numOr(r[k]); if(d!==null) diffs.push(d); } }
+  if(!diffs.length) return {mae:null,bias:null,n:0};
+  return { mae: diffs.reduce((s,d)=>s+Math.abs(d),0)/diffs.length, bias: diffs.reduce((s,d)=>s+d,0)/diffs.length, n: diffs.length };
+}
+function bullpenFlagSignal(rows){
+  const f=[],u=[];
+  for(const r of rows){ for(const s of ["away","home"]){ const fl=boolOr(r[s+"_bullpen_flagged"]); const era=numOr(r[s+"_bullpen_actual_era"]); if(fl!==null&&era!==null) (fl?f:u).push(era); } }
+  const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  return { flaggedEra:avg(f), flaggedN:f.length, unflaggedEra:avg(u), unflaggedN:u.length };
+}
+function trendByDate(rows){
+  const m=new Map();
+  for(const r of rows){ const b=boolOr(r.direction_correct); if(b===null) continue; if(!m.has(r.date)) m.set(r.date,{h:0,n:0}); const o=m.get(r.date); o.n++; if(b) o.h++; }
+  return [...m.entries()].sort().map(([date,o])=>({date,pct:o.h/o.n,n:o.n}));
 }
 
-function bucket(title, rows, empty) {
-  if (!rows || !rows.length) return ""; // empty buckets stay invisible — no broken-looking boxes
+function render(){
+  const rows = applyWindow(state.rows);
+  renderKpis(rows);
+  renderTrend(trendByDate(rows));
+  renderReads(rows);
+  renderProjection(rows);
+  renderGames(rows);
+}
+function renderKpis(rows){
+  const dir = rate(rows,"direction_correct");
+  const edge = rate(rows,"starter_held_up");
+  const off = offenseAccuracy(rows);
+  const el = document.getElementById("kpis");
+  el.innerHTML = [
+    kpi("Direction accuracy", pctStr(dir.pct), `model side won ${dir.hits} of ${dir.n}`),
+    kpi("Pitcher-edge hold rate", pctStr(edge.pct), `${edge.hits} of ${edge.n} held up`),
+    kpi("Offense miss (MAE)", off.mae==null?"—":off.mae.toFixed(1)+" runs", `${off.n} side-projections`),
+    kpi("Offense bias", off.bias==null?"—":(off.bias>0?"+":"")+off.bias.toFixed(1)+" runs", off.bias==null?"":(off.bias>0?"projecting low":"projecting high"))
+  ].join("");
+}
+function kpi(label,value,sub){ return `<div class="kpi"><div class="label">${esc(label)}</div><div class="value">${esc(value)}</div><div class="sub">${esc(sub)}</div></div>`; }
 
-  return `<div class="card" style="margin-bottom:14px">
-    <h3>${esc(title)}</h3>
-    <p class="dim small">${esc(empty)}</p>
-    ${rows.length ? rows.slice(0, 12).map(row).join("") : `<div class="notice">No items in this bucket.</div>`}
-  </div>`;
+function renderTrend(points){
+  const el = document.getElementById("trend");
+  if(!points.length){ el.innerHTML = `<p class="dim">No graded games in this window yet.</p>`; return; }
+  const w=Math.max(320, points.length*60), h=90, pad=24;
+  const x = i => pad + (points.length===1 ? (w-2*pad)/2 : i*(w-2*pad)/(points.length-1));
+  const y = p => (h-pad) - p*(h-2*pad);
+  const pts = points.map((p,i)=>`${x(i)},${y(p.pct)}`).join(" ");
+  const dots = points.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.pct)}" r="3.5" fill="#8b5cf6"><title>${p.date}: ${(p.pct*100).toFixed(0)}% (${p.n})</title></circle>`).join("");
+  const midY = y(0.5);
+  el.innerHTML = `<svg class="spark" viewBox="0 0 ${w} ${h}" width="100%" height="${h}">
+    <line x1="${pad}" y1="${midY}" x2="${w-pad}" y2="${midY}" stroke="var(--border)" stroke-dasharray="4 4"/>
+    ${points.length>1?`<polyline points="${pts}" fill="none" stroke="#8b5cf6" stroke-width="2"/>`:""}
+    ${dots}
+  </svg><p class="sec-note">Dashed line = 50%. Hover a point for the day.</p>`;
 }
 
-function row(x) {
-  return `<div class="learning-row">
-    <strong>${esc(x.pick || "-")}</strong> <span class="dim">in ${esc(x.game || "")}${x.date ? ` · ${esc(x.date)}` : ""}${x.model_version ? ` · ${esc(x.model_version)}` : ""}</span>
-    <div class="metric-grid">
-      <div class="metric-box"><div class="label">Result</div><div class="value">${esc(x.result || "-")}</div></div>
-      <div class="metric-box"><div class="label">Model probability</div><div class="value">${pct(x.model_probability)}</div></div>
-      <div class="metric-box"><div class="label">Lab Rating</div><div class="value">${typeof x.lab_score === "number" ? (x.lab_score/10).toFixed(1)+"/10" : "-"}</div></div>
-      <div class="metric-box"><div class="label">Raw edge</div><div class="value">${pct(x.raw_edge)}</div></div>
-      <div class="metric-box"><div class="label">CLV</div><div class="value small">${esc(humanize(x.clv_result || "not_tracked"))}</div></div>
-      <div class="metric-box"><div class="label">Lesson</div><div class="value small">${esc(humanize(x.lesson_tag || "-"))}</div></div>
-    </div>
-  </div>`;
+function renderReads(rows){
+  const defs = [
+    ["Direction (model side)", rate(rows,"direction_correct")],
+    ["Strength model", rate(rows,"submodel_strength_right")],
+    ["Run model", rate(rows,"submodel_run_right")],
+    ["Pitcher edge held up", rate(rows,"starter_held_up")]
+  ];
+  document.getElementById("reads").innerHTML = defs.map(([name,r])=>{
+    const pct = r.pct==null?0:r.pct*100;
+    const color = r.pct==null?"var(--border)":(r.pct>=0.5?"#2ecc71":"#e74c3c");
+    return `<div class="bar-row"><div class="name">${esc(name)}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct.toFixed(0)}%;background:${color}"></div></div>
+      <div class="bar-num">${pctStr(r.pct)} <small>(${r.n})</small></div></div>`;
+  }).join("");
+  const bp = bullpenFlagSignal(rows);
+  const note = document.getElementById("bullpenNote");
+  if(bp.flaggedN && bp.unflaggedN){
+    const worse = bp.flaggedEra > bp.unflaggedEra;
+    note.innerHTML = `Bullpen flag: pens flagged tired/high-risk pregame allowed <strong>${bp.flaggedEra.toFixed(2)} ERA</strong> in relief (${bp.flaggedN}) vs <strong>${bp.unflaggedEra.toFixed(2)}</strong> for unflagged (${bp.unflaggedN}) — the flag ${worse?"is carrying signal":"did not separate"}.`;
+  } else { note.textContent = ""; }
 }
 
-function pct(v) {
-  return typeof v === "number" ? (v * 100).toFixed(1) + "%" : "-";
+function renderProjection(rows){
+  const off = offenseAccuracy(rows);
+  document.getElementById("projection").innerHTML = [
+    kpi("Offense MAE", off.mae==null?"—":off.mae.toFixed(2)+" runs", `avg absolute miss, ${off.n} projections`),
+    kpi("Directional bias", off.bias==null?"—":(off.bias>0?"+":"")+off.bias.toFixed(2)+" runs", off.bias==null?"":(off.bias>0?"actuals came in higher — projecting low":"actuals came in lower — projecting high"))
+  ].join("");
 }
-function num(v) {
-  return typeof v === "number" ? String(Math.round(v * 10) / 10) : "-";
+
+function cell(v){ if(v===null) return `<td class="dim">—</td>`; return v ? `<td class="ok">✓</td>` : `<td class="no">✗</td>`; }
+function renderGames(rows){
+  let list = rows.slice();
+  const q = state.search.trim().toLowerCase();
+  if(q) list = list.filter(r => (r.game||"").toLowerCase().includes(q));
+  const val = (r,k) => {
+    if(k==="offmiss"){ const a=numOr(r.away_offense_diff),h=numOr(r.home_offense_diff); const arr=[a,h].filter(x=>x!=null).map(Math.abs); return arr.length?arr.reduce((s,x)=>s+x,0)/arr.length:-1; }
+    if(["direction_correct","submodel_strength_right","submodel_run_right","starter_held_up"].includes(k)){ const b=boolOr(r[k]); return b===null?-1:(b?1:0); }
+    return r[k]||"";
+  };
+  list.sort((a,b)=>{ const x=val(a,state.sortKey),y=val(b,state.sortKey); if(x<y)return state.sortDir; if(x>y)return -state.sortDir; return 0; });
+  const cols = [
+    ["date","Date"],["game","Matchup"],["pick_team","Pick"],
+    ["direction_correct","Dir"],["submodel_strength_right","Str"],["submodel_run_right","Run"],
+    ["starter_held_up","Edge"],["offmiss","Off. miss"]
+  ];
+  const head = `<tr>${cols.map(([k,l])=>`<th data-k="${k}" class="${k==='offmiss'?'num':''}">${esc(l)}</th>`).join("")}</tr>`;
+  const body = list.map(r=>{
+    const off = val(r,"offmiss");
+    const matchup = r.matchup_url ? `<a href="${esc(r.matchup_url)}">${esc(r.game)}</a>` : esc(r.game);
+    return `<tr><td>${esc(r.date)}</td><td>${matchup}</td><td>${esc(r.pick_team||"—")}</td>${cell(boolOr(r.direction_correct))}${cell(boolOr(r.submodel_strength_right))}${cell(boolOr(r.submodel_run_right))}${cell(boolOr(r.starter_held_up))}<td class="num">${off<0?"—":off.toFixed(1)}</td></tr>`;
+  }).join("");
+  document.getElementById("gamesTable").innerHTML = `<thead>${head}</thead><tbody>${body||`<tr><td colspan="8" class="dim">No games match.</td></tr>`}</tbody>`;
+  document.querySelectorAll("#gamesTable th").forEach(th=>th.addEventListener("click",()=>{
+    const k=th.getAttribute("data-k"); if(state.sortKey===k) state.sortDir*=-1; else { state.sortKey=k; state.sortDir=(k==="game"||k==="pick_team")?1:-1; }
+    renderGames(applyWindow(state.rows));
+  }));
 }
-function humanize(v) {
-  return String(v || "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-}
-function clvTotal(obj) {
-  if (!obj) return 0;
-  return Object.values(obj).reduce((s, v) => s + Number(v || 0), 0);
-}
-function friendlyTime(iso) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleString("en-US", { month:"short", day:"numeric", hour:"numeric", minute:"2-digit", timeZone:"America/New_York", timeZoneName:"short" });
-}
+
+document.getElementById("windowSeg").addEventListener("click", e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  state.windowDays=b.getAttribute("data-w");
+  document.querySelectorAll("#windowSeg button").forEach(x=>x.classList.toggle("on",x===b));
+  render();
+});
+document.getElementById("search").addEventListener("input", e=>{ state.search=e.target.value; renderGames(applyWindow(state.rows)); });
+
+(async function load(){
+  const statusEl=document.getElementById("status");
+  try{
+    const txt = await fetch("/data/calibration/recap_components.csv?v="+Date.now(), {cache:"no-store"}).then(r=>r.ok?r.text():null);
+    if(!txt){ statusEl.innerHTML = "No graded games yet. The learning ledger fills once the recap backfill has run."; return; }
+    state.rows = parseCSV(txt);
+    if(!state.rows.length){ statusEl.innerHTML = "The learning ledger is empty so far — it fills after the next backfill."; return; }
+    statusEl.style.display="none";
+    document.getElementById("dash").style.display="block";
+    render();
+  }catch(e){ statusEl.textContent = "Could not load the learning ledger."; }
+})();
 </script>
 </body>
 </html>
