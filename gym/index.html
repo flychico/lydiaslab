@@ -90,26 +90,27 @@ textarea{background:var(--card);border:1px solid var(--border);border-radius:9px
 .tabbar .deskonly{display:none}
 /* ---- Wide-screen dashboard layout (phone is untouched) ---- */
 @media(min-width:900px){
-  body{padding-bottom:0;padding-left:212px}
-  .wrap{max-width:760px;padding:26px 28px}
-  body.dashmode .wrap{max-width:1140px}
-  .tabbar{top:0;bottom:0;right:auto;width:212px;flex-direction:column;border-top:none;border-right:1px solid var(--border);padding:20px 10px;align-items:stretch;gap:3px;padding-bottom:20px}
+  body{padding-bottom:0;padding-left:220px}
+  .wrap{max-width:1060px;padding:30px 40px}
+  body.dashmode .wrap{max-width:1280px}
+  .tabbar{top:0;bottom:0;right:auto;width:220px;flex-direction:column;border-top:none;border-right:1px solid var(--border);padding:22px 12px;align-items:stretch;gap:4px}
   .tabbar .deskonly{display:flex}
   .tabbar div{flex:0 0 auto;text-align:left;padding:12px 15px;font-size:.95rem;display:flex;align-items:center;gap:11px;border-radius:10px}
-  .tabbar div.on{background:var(--bg2)}
-  .tabbar div.on{color:var(--pink)}
+  .tabbar div.on{background:var(--bg2);color:var(--pink)}
   .tabbar .ico{display:inline;margin:0;font-size:1.15rem}
-  .dashgrid{grid-template-columns:1fr 1fr}
-  .timer{left:212px}
-  .toast{left:calc(50% + 106px)}
+  .dashgrid{grid-template-columns:1fr 1fr;gap:20px}
+  .timer{left:220px}
+  .toast{left:calc(50% + 110px)}
   .modal{align-items:center}
   .modal>.inner{border-radius:18px;max-width:660px}
-  body:not(.dashmode):not(.workout) #view{column-count:2;column-gap:20px}
+  h2{margin-top:22px}
+  #view .card{padding:18px 20px}
+  body:not(.dashmode):not(.workout) #view{column-count:2;column-gap:30px}
   body:not(.dashmode):not(.workout) #view h1,
-  body:not(.dashmode):not(.workout) #view h2{column-span:all}
+  body:not(.dashmode):not(.workout) #view h2{column-span:all;margin-top:8px}
   body:not(.dashmode):not(.workout) #view .card,
   body:not(.dashmode):not(.workout) #view .statgrid,
-  body:not(.dashmode):not(.workout) #view .quote{break-inside:avoid}
+  body:not(.dashmode):not(.workout) #view .quote{break-inside:avoid;margin-bottom:18px}
 }
 </style>
 </head>
@@ -517,7 +518,7 @@ function e1rm(w, r){ return r > 0 ? w * (1 + r / 30) : 0; }
 function lastEntry(exId){
   for (let i = S.logs.length - 1; i >= 0; i--) {
     const en = S.logs[i].entries.find(x => x.ex === exId && x.sets.some(s => s.done));
-    if (en) return { date: S.logs[i].date, sets: en.sets.filter(s => s.done) };
+    if (en) return { date: S.logs[i].date, sets: en.sets.filter(s => s.done), rpe: en.rpe || null };
   }
   return null;
 }
@@ -539,6 +540,10 @@ function suggestFor(exId, lo, hi){
   const last = lastEntry(exId);
   const ex = EXBY[exId];
   if (!last || !ex || ex.u === "time") return null;
+  if (currentPhase().deload && ex.inc > 0) {
+    const mw = Math.max(...last.sets.map(s => s.w || 0));
+    if (isFinite(mw) && mw > 0) { const dw = Math.round(mw * 0.85 / 5) * 5 || mw; return { text: "Deload week — ~" + dw + " lb, stop 3–4 reps short. Let your body supercompensate.", w: dw, deload: true }; }
+  }
   if (ex.inc > 0 && plateaued(exId)) {
     const maxW = Math.max(...last.sets.map(s => s.w || 0));
     const deload = Math.max(ex.inc, Math.round(maxW * 0.8 / 5) * 5);
@@ -553,7 +558,11 @@ function suggestFor(exId, lo, hi){
   }
   const allTop = sets.length && sets.every(s => (s.r || 0) >= hi && (s.w || 0) >= maxW - 0.01);
   const struggled = sets.filter(s => (s.r || 0) < lo).length >= 2;
-  if (allTop) return { text: "All sets hit " + hi + " @ " + maxW + " lb — go " + (maxW + ex.inc) + " lb", w: maxW + ex.inc };
+  if (allTop) {
+    const r = lastRpe(exId);
+    if (rpeOn() && r && r <= 7) return { text: "All sets maxed and last felt easy (RPE " + r + ") — jump to " + (maxW + 2 * ex.inc) + " lb", w: maxW + 2 * ex.inc };
+    return { text: "All sets hit " + hi + " @ " + maxW + " lb — go " + (maxW + ex.inc) + " lb", w: maxW + ex.inc };
+  }
   if (struggled) { const back = Math.max(ex.inc, Math.round(maxW * 0.9 / 5) * 5); return { text: "Missed reps last time — drop to ~" + back + " lb and rebuild", w: back }; }
   return { text: "Match last: " + maxW + " lb, beat the reps", w: maxW };
 }
@@ -637,6 +646,7 @@ function hitTop(exId, hi, n){
 // After a session: grow volume on lifts you're crushing, trim it on lifts that stalled
 function autoProgress(dayIdx, trained){
   const day = S.plan && S.plan.days[dayIdx]; if (!day) return [];
+  if (currentPhase().deload) return []; // don't grow volume during a deload week
   const goal = S.profile.goal, msgs = [];
   for (const slot of day.exercises) {
     const ex = EXBY[slot.ex]; if (!ex || ex.u === "time") continue;
@@ -649,6 +659,118 @@ function autoProgress(dayIdx, trained){
     }
   }
   return msgs;
+}
+
+/* ============ Effort (RPE), periodization, insights, cleanup ============ */
+function rpeOn(){ return S.rpe !== false; }
+function lastRpe(exId){
+  for (let i = S.logs.length - 1; i >= 0; i--) { const en = S.logs[i].entries.find(x => x.ex === exId && x.sets.length); if (en) return en.rpe || null; }
+  return null;
+}
+function avgRpe(days){
+  const cut = Date.now() - days * 864e5; let sum = 0, n = 0;
+  for (const l of S.logs) { if (new Date(l.date + "T12:00") < cut) continue; for (const en of l.entries) if (en.rpe) { sum += en.rpe; n++; } }
+  return n ? sum / n : null;
+}
+// Planned weekly sets per muscle, derived from the plan (assumes each day ~1×/week)
+function plannedSetsByMuscle(){
+  const acc = {}; if (!S.plan) return acc;
+  for (const d of S.plan.days) for (const s of d.exercises) { const ex = EXBY[s.ex]; if (!ex || ex.u === "time") continue; for (const [m, w] of musclesFor(s.ex)) acc[m] = (acc[m] || 0) + (s.sets || 0) * w; }
+  return acc;
+}
+// 4-week mesocycle; the 4th week is a deload
+function currentPhase(){
+  if (!S.plan || !S.plan.created) return { week: 1, cycle: 4, deload: false };
+  const wk = Math.floor((Date.now() - new Date(S.plan.created + "T12:00")) / (7 * 864e5));
+  const cycle = 4, week = ((wk % cycle) + cycle) % cycle + 1;
+  return { week, cycle, deload: week === cycle };
+}
+// Consistency: sessions done vs target per week, most recent last
+function adherence(nWeeks){
+  const out = [], target = S.profile ? S.profile.days : 0;
+  for (let w = nWeeks - 1; w >= 0; w--) {
+    const mon = new Date(); mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7) - 7 * w); mon.setHours(0, 0, 0, 0);
+    const next = new Date(mon); next.setDate(mon.getDate() + 7);
+    const done = S.logs.filter(l => { const d = new Date(l.date + "T12:00"); return d >= mon && d < next; }).length;
+    out.push({ label: (mon.getMonth() + 1) + "/" + mon.getDate(), done, target });
+  }
+  return out;
+}
+// Duplicate detection by normalized name
+function normName(n){ return String(n).toLowerCase().replace(/[^a-z0-9]/g, "").replace(/s$/, ""); }
+function detectDuplicates(){
+  const ids = new Set();
+  for (const l of S.logs) for (const en of l.entries) ids.add(en.ex);
+  if (S.plan) for (const d of S.plan.days) for (const s of d.exercises) ids.add(s.ex);
+  const groups = {};
+  ids.forEach(id => { const ex = EXBY[id]; const key = normName(ex ? ex.n : id); (groups[key] = groups[key] || []).push(id); });
+  return Object.values(groups).filter(g => g.length > 1);
+}
+function mergeExercise(fromId, toId){
+  if (fromId === toId) return;
+  for (const l of S.logs) for (const en of l.entries) if (en.ex === fromId) en.ex = toId;
+  if (S.plan) for (const d of S.plan.days) for (const s of d.exercises) if (s.ex === fromId) s.ex = toId;
+  if (S.active) for (const en of S.active.entries) if (en.ex === fromId) en.ex = toId;
+  S.customEx = (S.customEx || []).filter(c => c.id !== fromId);
+  save(); render(); toast("Merged — progress combined");
+}
+function mergeGroup(str){
+  const ids = str.split(",");
+  const count = id => S.logs.reduce((a, l) => a + (l.entries.some(e => e.ex === id) ? 1 : 0), 0);
+  const keep = ids.slice().sort((a, b) => count(b) - count(a))[0];
+  const others = ids.filter(i => i !== keep);
+  if (!confirm("Merge " + others.map(i => EXBY[i] ? EXBY[i].n : i).join(", ") + " into “" + (EXBY[keep] ? EXBY[keep].n : keep) + "”? Their history combines into one lift.")) return;
+  others.forEach(id => mergeExercise(id, keep));
+}
+function renameCustom(id){
+  const c = (S.customEx || []).find(c => c.id === id); if (!c) return;
+  const name = (prompt("Rename exercise:", c.n) || "").trim(); if (!name) return;
+  c.n = name.slice(0, 40); if (EXBY[id]) EXBY[id].n = c.n; save(); render();
+}
+// Auto-balance plan volume toward 10–22 sets/muscle by adjusting set counts
+function rebalancePlan(){
+  if (!S.plan) return;
+  const cap = S.profile.goal === "strength" ? 4 : 5, floor = 2;
+  const findSlot = (m, needMore) => { let t = null; for (const d of S.plan.days) for (const s of d.exercises) { const ex = EXBY[s.ex]; if (!ex || ex.u === "time") continue; const prim = musclesFor(s.ex)[0]; if (prim && prim[0] === m) { if (needMore && s.sets < cap) return s; if (!needMore && s.sets > floor) t = s; } } return t; };
+  MUSCLE_ORDER.forEach(m => { let g = 0; while ((plannedSetsByMuscle()[m] || 0) < 10 && g++ < 8) { const s = findSlot(m, true); if (!s) break; s.sets++; } });
+  MUSCLE_ORDER.forEach(m => { let g = 0; while ((plannedSetsByMuscle()[m] || 0) > 22 && g++ < 8) { const s = findSlot(m, false); if (!s) break; s.sets--; } });
+  save(); render(); toast("Plan volume rebalanced");
+}
+// Plain-English coaching insights, prioritized (warn → good → info)
+function insights(){
+  if (!S.profile) return [];
+  const out = [], add = (t, msg) => out.push({ t, msg });
+  const wk = S.logs.filter(l => (Date.now() - new Date(l.date + "T12:00")) / 864e5 < 7).length, tgt = S.profile.days;
+  if (tgt && wk >= tgt) add("good", "On track: " + wk + "/" + tgt + " workouts this week. Consistency is the #1 driver of results.");
+  else if (tgt) add("warn", "Behind pace: " + wk + "/" + tgt + " this week — " + (tgt - wk) + " to go. Even a short session counts.");
+  const ph = currentPhase();
+  if (ph.deload) add("info", "Deload week (" + ph.week + "/" + ph.cycle + ") — drop weight ~15% and stop a few reps short. Planned recovery is how you break plateaus.");
+  const planned = plannedSetsByMuscle();
+  const low = MUSCLE_ORDER.filter(m => (planned[m] || 0) > 0 && (planned[m] || 0) < 10);
+  const high = MUSCLE_ORDER.filter(m => (planned[m] || 0) > 22);
+  if (low.length) add("warn", "Undertrained: " + low.join(", ") + " get under 10 planned sets/week. Add a set or exercise — or tap “Auto-balance volume” in Plan.");
+  if (high.length) add("info", "High volume: " + high.join(", ") + " exceed ~22 sets/week, likely more than you can recover from.");
+  const pushV = (planned.Chest || 0) + (planned.Shoulders || 0) + (planned.Triceps || 0), pullV = (planned.Back || 0) + (planned.Biceps || 0);
+  if (pushV > 0 && pullV > 0) { const r = pushV / pullV; if (r > 1.4) add("warn", "Push-heavy: pushing volume is " + r.toFixed(1) + "× your pulling. Add back/biceps work for balanced shoulders and posture."); else if (r < 0.7) add("warn", "Pull-heavy: pulling is " + (1 / r).toFixed(1) + "× pushing. Add chest/shoulder work to balance."); }
+  const planIds = S.plan ? [...new Set(S.plan.days.flatMap(d => d.exercises.map(e => e.ex)))] : [];
+  const stalled = planIds.filter(id => EXBY[id] && EXBY[id].inc > 0 && plateaued(id));
+  if (stalled.length >= 3) add("warn", stalled.length + " lifts stalled 3+ sessions (" + stalled.slice(0, 3).map(id => EXBY[id].n).join(", ") + (stalled.length > 3 ? "…" : "") + "). Take a deload week.");
+  else if (stalled.length) add("info", "Stalled: " + stalled.map(id => EXBY[id].n).join(", ") + " — each shows a deload weight next session.");
+  const wins = planIds.filter(id => momentum(id) === "up");
+  if (wins.length) add("good", "Climbing: " + wins.slice(0, 3).map(id => EXBY[id] ? EXBY[id].n : id).join(", ") + (wins.length > 3 ? " and more" : "") + ". Keep adding load while it works.");
+  const ar = avgRpe(14);
+  if (ar !== null) { if (ar < 7) add("warn", "Your sets average RPE " + ar.toFixed(1) + " — you're leaving reps in the tank. Push closer to failure (RPE 8–9) to grow."); else if (ar > 9.3) add("info", "Average RPE " + ar.toFixed(1) + " — training very hard. Watch recovery; a deload may be due."); }
+  if (S.profile.goal === "recomp") { const tr = bwTrend(); if (tr) { if (tr.pct <= -0.5 && tr.pct >= -1.5) add("good", "Fat loss on track (" + tr.perWeek.toFixed(1) + " lb/wk). Keep protein high and lifts heavy."); else if (tr.perWeek > -0.05) add("warn", "Weight isn't dropping — fat loss needs a calorie deficit. Tighten intake ~250 kcal/day."); else if (tr.pct < -1.5) add("info", "Losing fast (" + tr.perWeek.toFixed(1) + " lb/wk) — protect muscle: keep protein up, don't crash-diet."); } }
+  const dups = detectDuplicates();
+  if (dups.length) add("info", "Duplicate exercises found (" + dups.slice(0, 2).map(g => g.map(id => EXBY[id] ? EXBY[id].n : id).join("/")).join("; ") + "). Merge them in Settings so progress isn't split.");
+  const pr = { warn: 0, good: 1, info: 2 };
+  return out.sort((a, b) => pr[a.t] - pr[b.t]).slice(0, 8);
+}
+function insightsPanel(extra){
+  const items = insights();
+  const icon = t => t === "good" ? "✅" : t === "warn" ? "⚠️" : "💡";
+  const col = t => t === "good" ? "var(--green)" : t === "warn" ? "var(--gold)" : "var(--blue)";
+  return `<div class="card ${extra || ""}"><h3>What to improve <span class="dim small">· auto-coach</span></h3>${items.length ? items.map((i, k) => `<div style="display:flex;gap:9px;padding:8px 0;${k ? "border-top:1px solid var(--border)" : ""};font-size:.88rem;text-align:left"><span style="color:${col(i.t)}">${icon(i.t)}</span><span style="flex:1">${esc(i.msg)}</span></div>`).join("") : '<p class="dim small">Log a few workouts and your personalized coaching shows up here.</p>'}</div>`;
 }
 
 /* ============ Apple Health bridge ============
@@ -687,9 +809,11 @@ function renderDash(){
   const prRows = Object.entries(prs).filter(([, p]) => p.w > 0).sort((a, b) => b[1].v - a[1].v).slice(0, 8);
   const weeks = weeklyVolume(logs), musc = weeklySetsByMuscle(), muscTotal = Object.values(musc).reduce((a, v) => a + v, 0);
   const doneToday = logs.find(l => l.date === today());
+  const ph = currentPhase(), adh = adherence(8);
   V.innerHTML = `
-  <div class="exhead"><h1><span class="mich">Michel</span><span class="angelo">Angelo</span> <span class="dim" style="font-size:1rem;font-weight:400">dashboard</span></h1><span class="dim small">${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · ${streakText()}</span></div>
+  <div class="exhead"><h1><span class="mich">Michel</span><span class="angelo">Angelo</span> <span class="dim" style="font-size:1rem;font-weight:400">dashboard</span></h1><span class="dim small">${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · ${streakText()} · ${ph.deload ? '<span class="gold">deload week</span>' : "week " + ph.week + "/" + ph.cycle}</span></div>
   <div class="dashgrid">
+    ${insightsPanel("dashwide")}
     <div class="card dashwide">
       <div class="exhead"><h3>Today · ${esc(day.name)}</h3><span class="dim small">${day.exercises.length} exercises${doneToday ? ' · <span class="green">logged ✓</span>' : ""}</span></div>
       ${day.exercises.length ? day.exercises.map(s => { const ex = EXBY[s.ex] || { n: s.ex, u: null }; return `<div class="exline"><span>${esc(ex.n)}</span><span class="dim">${ex.u === "time" ? s.lo + "–" + s.hi + "m" : s.sets + "×" + s.lo + "–" + s.hi}</span></div>`; }).join("") : '<p class="dim small">This day has no exercises yet — add some in Plan.</p>'}
@@ -703,12 +827,37 @@ function renderDash(){
     <div class="card"><h3>Top lifts <span class="dim small">(best e1RM)</span></h3>
       ${prRows.length ? `<table><thead><tr><th>Exercise</th><th class="num">Best set</th><th class="num">e1RM</th></tr></thead><tbody>${prRows.map(([id, p]) => { const mo = momentum(id); const tag = mo === "up" ? ' <span class="green">▲</span>' : mo === "down" ? ' <span class="red">▼</span>' : mo === "flat" ? ' <span class="dim">▬</span>' : ""; return `<tr style="cursor:pointer" onclick="exChart('${id}')"><td style="color:var(--blue);font-weight:600">${esc(EXBY[id] ? EXBY[id].n : id)}${tag}</td><td class="num">${p.w}×${p.r}</td><td class="num gold"><b>${Math.round(p.v)}</b></td></tr>`; }).join("")}</tbody></table>` : '<p class="dim small">Log a workout to see your PRs.</p>'}
     </div>
-    <div class="card dashwide"><h3>Recent workouts</h3>
-      ${logs.length ? [...logs].reverse().slice(0, 8).map(l => `<div class="exline"><span>${l.date.slice(5)} · <b>${esc(l.dayName || "Workout")}</b></span><span class="dim small">${l.entries.reduce((a, en) => a + en.sets.length, 0)} sets · ${l.min}m</span></div>`).join("") : '<p class="dim small">No workouts yet.</p>'}
+    <div class="card"><h3>Consistency <span class="dim small">· done vs ${S.profile.days}/wk target</span></h3>
+      <canvas id="dashadh" width="520" height="120"></canvas>
+      <div class="dim small" style="margin-top:6px">Last 8 weeks · target line at ${S.profile.days}/week</div>
+    </div>
+    <div class="card"><h3>Recent workouts</h3>
+      ${logs.length ? [...logs].reverse().slice(0, 8).map(l => `<div class="exline"><span>${l.date.slice(5)} · <b>${esc(l.dayName || "Workout")}</b>${l.rpe ? ` <span class="dim small">RPE ${l.rpe}</span>` : ""}</span><span class="dim small">${l.entries.reduce((a, en) => a + en.sets.length, 0)} sets · ${l.min}m</span></div>`).join("") : '<p class="dim small">No workouts yet.</p>'}
     </div>
   </div>
   <div id="chartmodal"></div>`;
   drawBars("dashvol", weeks.map(w => w.vol), weeks.map(w => w.label));
+  drawAdherence("dashadh", adh);
+}
+// Consistency bars with a target reference line
+function drawAdherence(id, adh){
+  const c = document.getElementById(id); if (!c || !adh.length) return;
+  const col = chartColors(), x = c.getContext("2d"), W = c.width, H = c.height;
+  const dark = document.documentElement.getAttribute("data-theme") === "dark";
+  const green = dark ? "#3ddc84" : "#1e8e3e";
+  const tgt = adh[0].target || 1, max = Math.max(tgt, ...adh.map(a => a.done)) || 1;
+  x.clearRect(0, 0, W, H);
+  const bw = Math.min(46, (W - 20) / adh.length - 8);
+  adh.forEach((a, i) => {
+    const h = Math.max(2, (a.done / max) * (H - 34));
+    const px = 10 + i * ((W - 20) / adh.length) + ((W - 20) / adh.length - bw) / 2;
+    x.fillStyle = a.target && a.done >= a.target ? green : col.bar;
+    x.beginPath(); x.roundRect(px, H - 20 - h, bw, h, 4); x.fill();
+    x.fillStyle = col.label; x.font = "10px sans-serif"; x.textAlign = "center";
+    x.fillText(a.label, px + bw / 2, H - 6); x.fillText(a.done, px + bw / 2, H - 25 - h);
+  });
+  const ty = H - 20 - (tgt / max) * (H - 34);
+  x.strokeStyle = col.line; x.setLineDash([4, 3]); x.lineWidth = 1.5; x.beginPath(); x.moveTo(8, ty); x.lineTo(W - 8, ty); x.stroke(); x.setLineDash([]);
 }
 
 /* ---- Onboarding ---- */
@@ -805,7 +954,7 @@ function startWorkout(dayIdx){
       const sug = suggestFor(s.ex, s.lo, s.hi);
       const le = lastEntry(s.ex);
       const w = sug && sug.w ? sug.w : (le ? Math.max(...le.sets.map(x => x.w || 0)) : "");
-      return { ex: s.ex, lo: s.lo, hi: s.hi, rest: s.rest || 120, ss: s.ss || null, sets: Array.from({length: s.sets}, () => ({ w: w === "" ? "" : w, r: "", done: false })) };
+      return { ex: s.ex, lo: s.lo, hi: s.hi, rest: s.rest || 120, ss: s.ss || null, rpe: null, sets: Array.from({length: s.sets}, () => ({ w: w === "" ? "" : w, r: "", done: false })) };
     }),
     cur: 0
   };
@@ -862,6 +1011,8 @@ function renderWorkout(){
         <input type="number" inputmode="numeric" placeholder="reps" value="${st.r}" onchange="setVal(${ei},${si},'r',this.value)">
         <button class="chk ${st.done ? "done" : ""}" onclick="toggleSet(${ei},${si})">✓</button>
       </div>`).join("")}
+      ${rpeOn() && !isTime ? `<div class="small dim" style="margin:8px 0 3px">Effort — reps left in the tank on your hardest set:</div>
+      <div class="qopt">${[[10, "0 · max"], [9, "1"], [8, "2"], [7, "3"], [6, "4+"]].map(([v, l]) => `<span class="pill ${en.rpe === v ? "on" : ""}" onclick="setRpe(${ei},${v})">${l}</span>`).join("")}</div>` : ""}
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
         <button class="btn ghost small-btn" onclick="addSet(${ei})">+ set</button>
         <button class="btn ghost small-btn" onclick="dropSet(${ei})">− set</button>
@@ -894,6 +1045,7 @@ function jumpToExercise(i){
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 function setVal(ei, si, k, v){ S.active.entries[ei].sets[si][k] = v === "" ? "" : Number(v); save(); }
+function setRpe(ei, val){ const en = S.active.entries[ei]; en.rpe = en.rpe === val ? null : val; save(); render(); }
 function toggleSet(ei, si){
   const a = S.active;
   const en = a.entries[ei];
@@ -938,7 +1090,7 @@ function finishWorkout(){
   const a = S.active;
   const logged = a.entries.filter(en => en.sets.some(s => s.done));
   if (!logged.length) return toast("Check off at least one set");
-  S.logs.push({ date: a.date, dayIdx: a.dayIdx, dayName: S.plan.days[a.dayIdx].name, min: Math.max(1, Math.round((Date.now() - a.start) / 60000)), entries: a.entries.map(en => ({ ex: en.ex, sets: en.sets.filter(s => s.done).map(s => ({ w: Number(s.w) || 0, r: Number(s.r) || 0, done: true })) })).filter(en => en.sets.length) });
+  S.logs.push({ date: a.date, dayIdx: a.dayIdx, dayName: S.plan.days[a.dayIdx].name, min: Math.max(1, Math.round((Date.now() - a.start) / 60000)), entries: a.entries.map(en => ({ ex: en.ex, rpe: en.rpe || null, sets: en.sets.filter(s => s.done).map(s => ({ w: Number(s.w) || 0, r: Number(s.r) || 0, done: true })) })).filter(en => en.sets.length) });
   const trained = new Set(S.logs[S.logs.length - 1].entries.map(e => e.ex));
   const tune = autoProgress(a.dayIdx, trained);
   if (tune.length) S.tune = { date: today(), msgs: tune };
@@ -993,7 +1145,7 @@ function activeAdd(id){
   const sug = suggestFor(id, lo, hi);
   const le = lastEntry(id);
   const w = sug && sug.w ? sug.w : (le ? Math.max(...le.sets.map(x => x.w || 0)) : "");
-  a.entries.push({ ex: id, lo, hi, rest, ss: null, sets: Array.from({length: setsN}, () => ({ w: w === "" ? "" : w, r: "", done: false })) });
+  a.entries.push({ ex: id, lo, hi, rest, ss: null, rpe: null, sets: Array.from({length: setsN}, () => ({ w: w === "" ? "" : w, r: "", done: false })) });
   if (alsoPlan && S.plan.days[a.dayIdx]) {
     S.plan.days[a.dayIdx].exercises.push(isTime ? { ex: id, sets: 1, lo, hi, rest: 0 } : { ex: id, sets: setsN, lo, hi, rest });
   }
@@ -1045,6 +1197,7 @@ function renderPlan(){
     <button class="btn ghost small-btn" style="margin-top:10px" onclick="planAdd(${di})">＋ add exercise</button>
   </div>`).join("")}
   <button class="btn full ghost" style="margin-bottom:10px" onclick="planAddDay()">＋ Add a day</button>
+  <button class="btn full ghost" style="margin-bottom:10px" onclick="if(confirm('Auto-balance set volume toward 10–20 per muscle? Adjusts set counts on your existing exercises.')){rebalancePlan()}">⚖️ Auto-balance volume</button>
   <button class="btn full ghost" onclick="if(confirm('Generate a fresh plan? Your history is kept.')){S.plan=generatePlan(S.profile);save();render();toast('New plan carved')}">Regenerate plan</button>
   <div id="swapmodal"></div>`;
 }
@@ -1156,6 +1309,7 @@ function renderProgress(){
     <div class="card"><div class="dim small">WORKOUTS</div><div class="big">${logs.length}</div></div>
     <div class="card"><div class="dim small">THIS WEEK</div><div class="big">${logs.filter(l => (Date.now() - new Date(l.date + "T12:00")) / 864e5 < 7).length}<span class="dim" style="font-size:1rem">/${S.profile.days}</span></div></div>
   </div>
+  ${insightsPanel()}
   <div class="card"><h3>Weekly volume (lb lifted)</h3><canvas id="volchart" width="520" height="150"></canvas>
   ${weeks.length ? "" : '<p class="dim small">Log workouts to see volume trends.</p>'}</div>
   <div class="card"><h3>Weekly sets per muscle <span class="dim small">· target 10–20</span></h3>
@@ -1373,12 +1527,23 @@ function logBw(){
 /* ---- Settings tab ---- */
 function renderSettings(){
   const p = S.profile;
+  const dups = detectDuplicates(), customs = (S.customEx || []);
   V.innerHTML = `
   <h1>Settings</h1>
   <div class="card"><h3>Appearance</h3>
     <div class="qopt" style="margin-top:8px">
       ${["auto","light","dark"].map(t => `<span class="pill ${(S.theme||"auto")===t?"on":""}" onclick="S.theme='${t}';save();render()">${t==="auto"?"Match phone":t==="light"?"Light":"Dark"}</span>`).join("")}
     </div></div>
+  <div class="card"><h3>Coaching</h3>
+    <label style="margin-top:0">Effort tracking (RPE)</label>
+    <div class="qopt"><span class="pill ${rpeOn()?"on":""}" onclick="S.rpe=${!rpeOn()};save();render()">${rpeOn()?"✓ On — logging reps in reserve":"Off"}</span></div>
+    <p class="dim small" style="margin-top:6px">When on, you rate how many reps you had left after each exercise. The app uses it to decide when to push weight harder — sessions that felt easy earn bigger jumps.</p>
+  </div>
+  <div class="card"><h3>Clean up exercises</h3>
+    <p class="dim small" style="margin-bottom:8px">Merge duplicates so progress isn't split, and tidy your custom exercises.</p>
+    ${dups.length ? `<b class="small">Possible duplicates</b>` + dups.map(g => `<div class="exline"><span class="small">${g.map(id => esc(EXBY[id] ? EXBY[id].n : id)).join(" · ")}</span><span class="blue small" style="cursor:pointer" onclick="mergeGroup('${g.join(",")}')">merge →</span></div>`).join("") : '<p class="dim small">No duplicates detected. 👍</p>'}
+    ${customs.length ? `<b class="small" style="display:block;margin-top:12px">Your custom exercises</b>` + customs.map(c => `<div class="exline"><span class="small">${esc(c.n)}</span><span class="blue small" style="cursor:pointer" onclick="renameCustom('${c.id}')">rename</span></div>`).join("") : ""}
+  </div>
   <div class="card"><h3>Profile</h3>
     <p class="dim small" style="margin-bottom:4px">${esc(planLabel())}</p>
     <p class="dim small" style="margin-bottom:10px">${p.heightIn ? Math.floor(p.heightIn/12) + "'" + (p.heightIn%12) + '"' : ""}${p.weightLb ? " · " + p.weightLb + " lb" : ""}${p.age ? " · " + p.age + " yrs" : ""}${bmi() ? " · BMI " + bmi() : ""}</p>
