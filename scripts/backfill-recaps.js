@@ -49,7 +49,8 @@ const LEDGER_HEADER = [
   "away_team", "away_proj_runs", "away_actual_runs", "away_offense_diff",
   "home_team", "home_proj_runs", "home_actual_runs", "home_offense_diff",
   "away_bullpen_flagged", "away_bullpen_actual_er", "away_bullpen_actual_era",
-  "home_bullpen_flagged", "home_bullpen_actual_er", "home_bullpen_actual_era"
+  "home_bullpen_flagged", "home_bullpen_actual_er", "home_bullpen_actual_era",
+  "matchup_url"
 ];
 
 function readJsonSafe(p) { try { return JSON.parse(fs.readFileSync(p, "utf8")); } catch (e) { return null; } }
@@ -67,10 +68,22 @@ async function fetchSchedule(date) {
   return r.json();
 }
 
-function ledgerRow(game, review) {
+function ledgerRow(game, review, matchupUrl) {
   const d = review.data || {};
   const dir = d.direction || {};
-  const sub = d.submodel || {};
+  // Grade each submodel's DIRECTION on every game, independent of whether they
+  // disagreed (d.submodel only exists on a 5+ point disagreement -- too sparse
+  // for a ledger). Uses the pick-side probabilities and the actual winner.
+  const winner = dir.winner || null;
+  const pickTeam = game.pick_team || null;
+  const oppTeam = pickTeam ? (pickTeam === game.away_team ? game.home_team : game.away_team) : null;
+  const rightOf = prob => {
+    if (typeof prob !== "number" || !pickTeam || !winner) return null;
+    const favored = prob >= 0.5 ? pickTeam : oppTeam;
+    return favored === winner;
+  };
+  const strengthRight = rightOf(game.legacy_strength_probability);
+  const runRight = rightOf(game.run_model_probability);
   const st = d.starter || {};
   const off = (d.offense || []).filter(Boolean);
   const awayOff = off.find(o => o.team === game.away_team) || {};
@@ -82,13 +95,14 @@ function ledgerRow(game, review) {
   return [
     DATE, game.game_pk, game.game, game.pick_team || "",
     dir.winner || "", boolCell(dir.correct),
-    boolCell(sub.strengthRight), boolCell(sub.runRight),
+    boolCell(strengthRight), boolCell(runRight),
     st.favoredTeam || "", num(st.pitcherGap), boolCell(st.heldUp),
     st.favored ? num(st.favored.era) : "", st.other ? num(st.other.era) : "",
     game.away_team, num(awayOff.projectedRuns), num(awayOff.actualRuns), num(awayOff.diff),
     game.home_team, num(homeOff.projectedRuns), num(homeOff.actualRuns), num(homeOff.diff),
     boolCell(ab.wasFlagged), num(abA.er), num(abA.era),
-    boolCell(hb.wasFlagged), num(hbA.er), num(hbA.era)
+    boolCell(hb.wasFlagged), num(hbA.er), num(hbA.era),
+    matchupUrl || ""
   ].map(csvCell).join(",");
 }
 
@@ -99,6 +113,8 @@ async function main() {
     return;
   }
   const pitchers = readJsonSafe(path.join(ROOT, "data", "pitcher-matchups", `${DATE}.json`)) || { games: {} };
+  const manifest = readJsonSafe(path.join(ROOT, "data", "matchup-pages", `${DATE}.json`)) || { pages: [] };
+  const slugByPk = new Map((manifest.pages || []).map(p => [String(p.game_pk), p.slug]));
 
   let schedule;
   try { schedule = await fetchSchedule(DATE); }
@@ -135,7 +151,11 @@ async function main() {
     if (!review) { skippedFinal++; console.warn(`  no review built for ${game.game} (${pk}) — boxscore or pregame data incomplete.`); continue; }
 
     recapGames[pk] = { game_pk: game.game_pk, game: game.game, ...review.data, paragraphs: review.paragraphs };
-    if (!alreadyInLedger || FORCE) { newRows.push(ledgerRow(game, review)); seenKeys.add(`${DATE}|${pk}`); }
+    if (!alreadyInLedger || FORCE) {
+      const slug = slugByPk.get(pk);
+      newRows.push(ledgerRow(game, review, slug ? `/mlb/${slug}/` : ""));
+      seenKeys.add(`${DATE}|${pk}`);
+    }
     graded++;
   }
 
