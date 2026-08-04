@@ -84,6 +84,33 @@ canvas{width:100%;height:150px}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .quote{font-style:italic;color:var(--dim);font-size:.86rem;border-left:3px solid var(--pink);padding-left:10px;margin:10px 0}
+textarea{background:var(--card);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:1rem;padding:10px 12px;width:100%;font-family:inherit}
+.dashgrid{display:grid;grid-template-columns:1fr;gap:12px;align-items:start}
+.dashwide{grid-column:1/-1}
+.tabbar .deskonly{display:none}
+/* ---- Wide-screen dashboard layout (phone is untouched) ---- */
+@media(min-width:900px){
+  body{padding-bottom:0;padding-left:212px}
+  .wrap{max-width:760px;padding:26px 28px}
+  body.dashmode .wrap{max-width:1140px}
+  .tabbar{top:0;bottom:0;right:auto;width:212px;flex-direction:column;border-top:none;border-right:1px solid var(--border);padding:20px 10px;align-items:stretch;gap:3px;padding-bottom:20px}
+  .tabbar .deskonly{display:flex}
+  .tabbar div{flex:0 0 auto;text-align:left;padding:12px 15px;font-size:.95rem;display:flex;align-items:center;gap:11px;border-radius:10px}
+  .tabbar div.on{background:var(--bg2)}
+  .tabbar div.on{color:var(--pink)}
+  .tabbar .ico{display:inline;margin:0;font-size:1.15rem}
+  .dashgrid{grid-template-columns:1fr 1fr}
+  .timer{left:212px}
+  .toast{left:calc(50% + 106px)}
+  .modal{align-items:center}
+  .modal>.inner{border-radius:18px;max-width:660px}
+  body:not(.dashmode):not(.workout) #view{column-count:2;column-gap:20px}
+  body:not(.dashmode):not(.workout) #view h1,
+  body:not(.dashmode):not(.workout) #view h2{column-span:all}
+  body:not(.dashmode):not(.workout) #view .card,
+  body:not(.dashmode):not(.workout) #view .statgrid,
+  body:not(.dashmode):not(.workout) #view .quote{break-inside:avoid}
+}
 </style>
 </head>
 <body>
@@ -91,6 +118,7 @@ canvas{width:100%;height:150px}
   <div id="view"></div>
 </div>
 <div class="tabbar" id="tabbar">
+  <div data-tab="dash" class="deskonly"><span class="ico">🗿</span>Dashboard</div>
   <div data-tab="today" class="on"><span class="ico">🏋️</span>Today</div>
   <div data-tab="plan"><span class="ico">📋</span>Plan</div>
   <div data-tab="progress"><span class="ico">📈</span>Progress</div>
@@ -632,20 +660,55 @@ function healthWorkoutURL(min){
 
 /* ============ Views ============ */
 const V = document.getElementById("view");
-let tab = "today";
+const isWide = () => window.matchMedia && window.matchMedia("(min-width:900px)").matches;
+let tab = isWide() ? "dash" : "today";
+function syncTabs(){ document.querySelectorAll("#tabbar [data-tab]").forEach(x => x.classList.toggle("on", x.dataset.tab === tab)); }
 document.getElementById("tabbar").addEventListener("click", e => {
   const t = e.target.closest("[data-tab]"); if (!t) return;
-  tab = t.dataset.tab;
-  document.querySelectorAll("#tabbar [data-tab]").forEach(x => x.classList.toggle("on", x === t));
-  render();
+  tab = t.dataset.tab; syncTabs(); render();
 });
 function render(){
   applyTheme();
-  if (!S.profile) return renderOnboarding();
-  if (tab === "today") renderToday();
+  if (!S.profile) { document.body.classList.remove("dashmode", "workout"); return renderOnboarding(); }
+  const active = !!S.active;
+  document.body.classList.toggle("workout", active);
+  document.body.classList.toggle("dashmode", !active && tab === "dash");
+  if (active) return renderWorkout();
+  if (tab === "dash") renderDash();
+  else if (tab === "today") renderToday();
   else if (tab === "plan") renderPlan();
   else if (tab === "progress") renderProgress();
   else renderSettings();
+}
+function renderDash(){
+  const plan = S.plan, dayIdx = plan.nextDay % plan.days.length, day = plan.days[dayIdx], logs = S.logs;
+  const prs = {};
+  for (const l of logs) for (const en of l.entries) for (const s of en.sets) { const v = e1rm(s.w, s.r); if (!prs[en.ex] || v > prs[en.ex].v) prs[en.ex] = { v, w: s.w, r: s.r }; }
+  const prRows = Object.entries(prs).filter(([, p]) => p.w > 0).sort((a, b) => b[1].v - a[1].v).slice(0, 8);
+  const weeks = weeklyVolume(logs), musc = weeklySetsByMuscle(), muscTotal = Object.values(musc).reduce((a, v) => a + v, 0);
+  const doneToday = logs.find(l => l.date === today());
+  V.innerHTML = `
+  <div class="exhead"><h1><span class="mich">Michel</span><span class="angelo">Angelo</span> <span class="dim" style="font-size:1rem;font-weight:400">dashboard</span></h1><span class="dim small">${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · ${streakText()}</span></div>
+  <div class="dashgrid">
+    <div class="card dashwide">
+      <div class="exhead"><h3>Today · ${esc(day.name)}</h3><span class="dim small">${day.exercises.length} exercises${doneToday ? ' · <span class="green">logged ✓</span>' : ""}</span></div>
+      ${day.exercises.length ? day.exercises.map(s => { const ex = EXBY[s.ex] || { n: s.ex, u: null }; return `<div class="exline"><span>${esc(ex.n)}</span><span class="dim">${ex.u === "time" ? s.lo + "–" + s.hi + "m" : s.sets + "×" + s.lo + "–" + s.hi}</span></div>`; }).join("") : '<p class="dim small">This day has no exercises yet — add some in Plan.</p>'}
+      <button class="btn full blue-btn" style="margin-top:12px" onclick="startWorkout(${dayIdx})">Start workout</button>
+      ${plan.days.length > 1 ? `<div class="small dim" style="margin-top:10px">Jump to: ${plan.days.map((d, i) => i === dayIdx ? "" : `<span class="blue" style="cursor:pointer;margin-right:12px" onclick="startWorkout(${i})">${esc(d.name)}</span>`).join("")}</div>` : ""}
+    </div>
+    <div class="card"><h3>Weekly sets per muscle <span class="dim small">· target 10–20</span></h3>
+      ${muscTotal > 0 ? MUSCLE_ORDER.map(mus => { const v = Math.round((musc[mus] || 0) * 10) / 10; const col = v >= 10 && v <= 20 ? "var(--green)" : "var(--gold)"; return `<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;font-size:.82rem"><span>${mus}</span><b style="color:${col}">${v}</b></div><div style="height:5px;background:var(--bg2);border-radius:4px;overflow:hidden;margin-top:2px"><div style="height:100%;width:${Math.min(100, v / 20 * 100)}%;background:${col}"></div></div></div>`; }).join("") : '<p class="dim small">No sets logged this week yet.</p>'}
+      <h3 style="margin:14px 0 4px;font-size:.9rem">Volume (lb lifted)</h3><canvas id="dashvol" width="520" height="120"></canvas>
+    </div>
+    <div class="card"><h3>Top lifts <span class="dim small">(best e1RM)</span></h3>
+      ${prRows.length ? `<table><thead><tr><th>Exercise</th><th class="num">Best set</th><th class="num">e1RM</th></tr></thead><tbody>${prRows.map(([id, p]) => { const mo = momentum(id); const tag = mo === "up" ? ' <span class="green">▲</span>' : mo === "down" ? ' <span class="red">▼</span>' : mo === "flat" ? ' <span class="dim">▬</span>' : ""; return `<tr style="cursor:pointer" onclick="exChart('${id}')"><td style="color:var(--blue);font-weight:600">${esc(EXBY[id] ? EXBY[id].n : id)}${tag}</td><td class="num">${p.w}×${p.r}</td><td class="num gold"><b>${Math.round(p.v)}</b></td></tr>`; }).join("")}</tbody></table>` : '<p class="dim small">Log a workout to see your PRs.</p>'}
+    </div>
+    <div class="card dashwide"><h3>Recent workouts</h3>
+      ${logs.length ? [...logs].reverse().slice(0, 8).map(l => `<div class="exline"><span>${l.date.slice(5)} · <b>${esc(l.dayName || "Workout")}</b></span><span class="dim small">${l.entries.reduce((a, en) => a + en.sets.length, 0)} sets · ${l.min}m</span></div>`).join("") : '<p class="dim small">No workouts yet.</p>'}
+    </div>
+  </div>
+  <div id="chartmodal"></div>`;
+  drawBars("dashvol", weeks.map(w => w.vol), weeks.map(w => w.label));
 }
 
 /* ---- Onboarding ---- */
@@ -735,6 +798,7 @@ function streakText(){
 }
 function startWorkout(dayIdx){
   const day = S.plan.days[dayIdx];
+  if (!day.exercises.length) { tab = "plan"; syncTabs(); render(); return toast("Add exercises to this day first"); }
   S.active = {
     dayIdx, date: today(), start: Date.now(),
     entries: day.exercises.map(s => {
@@ -973,13 +1037,14 @@ function renderPlan(){
   <h1>Plan</h1>
   <p class="dim small">${esc(planLabel())} · created ${S.plan.created}</p>
   ${S.plan.days.map((d, di) => `<div class="card">
-    <div class="exhead"><h3>${esc(d.name)}</h3></div>
-    ${d.exercises.map((s, si) => { const ex = EXBY[s.ex] || { n: s.ex, u: null }; return `<div class="exline"><span>${s.ss ? '<span style="color:var(--blue);font-weight:800">⇄</span> ' : ""}${esc(ex.n)}${s.ss ? ' <span class="dim small">(superset)</span>' : ""}</span>
+    <div class="exhead"><h3>${esc(d.name)}</h3><span class="small"><span class="blue" style="cursor:pointer" onclick="planRenameDay(${di})">rename</span> · <span class="red" style="cursor:pointer" onclick="planDeleteDay(${di})">delete</span></span></div>
+    ${d.exercises.length ? d.exercises.map((s, si) => { const ex = EXBY[s.ex] || { n: s.ex, u: null }; return `<div class="exline"><span>${s.ss ? '<span style="color:var(--blue);font-weight:800">⇄</span> ' : ""}${esc(ex.n)}${s.ss ? ' <span class="dim small">(superset)</span>' : ""}</span>
       <span class="dim">${ex.u === "time" ? s.lo + "–" + s.hi + "m" : s.sets + "×" + s.lo + "–" + s.hi}
       <span class="blue" style="cursor:pointer;margin-left:8px" onclick="planSwap(${di},${si})">swap</span>
-      <span class="red" style="cursor:pointer;margin-left:8px" onclick="planRemove(${di},${si})">×</span></span></div>`; }).join("")}
+      <span class="red" style="cursor:pointer;margin-left:8px" onclick="planRemove(${di},${si})">×</span></span></div>`; }).join("") : '<p class="dim small">No exercises yet — add some below.</p>'}
     <button class="btn ghost small-btn" style="margin-top:10px" onclick="planAdd(${di})">＋ add exercise</button>
   </div>`).join("")}
+  <button class="btn full ghost" style="margin-bottom:10px" onclick="planAddDay()">＋ Add a day</button>
   <button class="btn full ghost" onclick="if(confirm('Generate a fresh plan? Your history is kept.')){S.plan=generatePlan(S.profile);save();render();toast('New plan carved')}">Regenerate plan</button>
   <div id="swapmodal"></div>`;
 }
@@ -1043,6 +1108,24 @@ function planSwap(di, si){
   document.getElementById("swapmodal").innerHTML = `<div class="modal" onclick="if(event.target===this)this.parentNode.innerHTML=''">
     <div class="inner"><h3 style="margin-bottom:10px">Swap ${esc(cur.n)} for:</h3>
     <div class="swaplist">${opts.map(o => `<div class="card" onclick="S.plan.days[${di}].exercises[${si}].ex='${o.id}';save();render();"><b>${esc(o.n)}</b><div class="dim small">${esc(o.m)}</div></div>`).join("") || '<p class="dim">No alternatives.</p>'}</div></div></div>`;
+}
+function planAddDay(){
+  const name = (prompt("Name this day (e.g. Cardio, Home Cardio, Conditioning):", "Cardio") || "").trim();
+  if (!name) return;
+  S.plan.days.push({ name: name.slice(0, 30), exercises: [] });
+  save(); render(); toast("Day added — now add exercises");
+}
+function planRenameDay(di){
+  const name = (prompt("Rename day:", S.plan.days[di].name) || "").trim();
+  if (!name) return;
+  S.plan.days[di].name = name.slice(0, 30); save(); render();
+}
+function planDeleteDay(di){
+  if (S.plan.days.length <= 1) return toast("You need at least one day");
+  if (!confirm("Delete “" + S.plan.days[di].name + "”? Your logged history stays.")) return;
+  S.plan.days.splice(di, 1);
+  if (S.plan.nextDay >= S.plan.days.length) S.plan.nextDay = 0;
+  save(); render(); toast("Day removed");
 }
 
 /* ---- Progress tab ---- */
@@ -1339,7 +1422,8 @@ function renderSettings(){
     <p class="dim small" style="margin-bottom:14px">“Send / save” opens share (AirDrop, Messages, Mail) or downloads a file. “Copy” pairs with Apple Universal Clipboard — copy on iPhone, paste on your Mac.</p>
     <b class="small">2 · Bring it in on the other device</b>
     <label style="margin-top:6px">Restore from a file</label>
-    <input type="file" accept=".json" onchange="importData(this)">
+    <input type="file" onchange="importData(this)">
+    <p class="dim small" style="margin-top:4px">Pick the <b>.json</b> backup. If it won't select on iPhone, use paste below instead — it's the most reliable.</p>
     <label style="margin-top:12px">…or paste backup text</label>
     <textarea id="paste-json" placeholder="Paste the copied backup here" style="width:100%;min-height:70px;background:var(--card);border:1px solid var(--border);border-radius:9px;color:var(--text);padding:10px;font-size:.85rem;font-family:inherit"></textarea>
     <button class="btn small-btn" style="margin-top:6px" onclick="pasteBackup()">Restore from pasted text</button>
@@ -1392,7 +1476,12 @@ function copyBackup(){
 function importData(inp){
   const f = inp.files[0]; if (!f) return;
   const r = new FileReader();
-  r.onload = () => { try { chooseApply(JSON.parse(r.result)); } catch (e) { toast("Not a valid backup"); } };
+  r.onerror = () => toast("Couldn't read that file");
+  r.onload = () => {
+    const txt = String(r.result || "").replace(/^﻿/, "").trim();
+    let d; try { d = JSON.parse(txt); } catch (e) { return toast("That file isn't a MichelAngelo backup (.json)"); }
+    chooseApply(d);
+  };
   r.readAsText(f);
 }
 function pasteBackup(){
@@ -1461,6 +1550,7 @@ function importHealthWeights(inp){
 
 /* ---- Init ---- */
 applyTheme();
+syncTabs();
 render();
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/gym/sw.js").catch(() => {});
 </script>
