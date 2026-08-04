@@ -512,7 +512,7 @@ async function main() {
       // 7-day (see penEra15d above) specifically because the 7-day number
       // was volatile enough on its own to cause that flip.
       const effectiveEraScore = eraToScore(effectiveEraFinal);
-      const bullpenCarriesGame = bullpenInnings > expIP;
+      const bullpenCarriesGame = expIP < 4; // starter under 4 IP is bullpen-carried; a 4-5 IP start is scored on its own line, so 4.4 and 4.6 outings are treated the same (Lynold 2026-08-04)
       const planPitcherScore = bullpenCarriesGame && effectiveEraScore !== null ? effectiveEraScore : namedArmScore;
 
       const planOutput = {

@@ -231,6 +231,7 @@ async function main() {
   const officialKIndex = buildOfficialKIndex(publishedCard);
   const teamHitting = args.offline ? { season: {}, recent: {} } : await fetchTeamHitting(DATE);
   const venueForm = args.offline ? new Map() : await fetchVenueForm(brief.games, DATE);
+  const offense30 = args.offline ? null : await fetchOffense30(DATE);
   if (!args.offline) verifyStandingsCoverage(brief.games, teamHitting);
   const previousManifest = readJsonSafe(MANIFEST_PATH) || { pages: [] };
   const previousBySlug = new Map((previousManifest.pages || []).map(page => [page.slug, page]));
@@ -348,6 +349,7 @@ async function main() {
       officialKIndex,
       teamHitting,
       venueForm: venueForm.get(String(game.game_pk)) || null,
+      offense30,
       gameNumber,
       dayLinks
     }), "utf8");
@@ -585,6 +587,16 @@ function odds(value) {
   return rounded > 0 ? `+${rounded}` : String(rounded);
 }
 
+function inningsThirds(value) {
+  const x = Number(value);
+  if (!Number.isFinite(x)) return null;
+  let whole = Math.floor(x);
+  let outs = Math.round((x - whole) * 3);
+  if (outs >= 3) { whole += 1; outs = 0; }
+  const frac = outs === 1 ? "⅓" : outs === 2 ? "⅔" : "";
+  return frac ? `${whole}${frac}` : String(whole);
+}
+
 function oneDecimal(value) {
   return typeof value === "number" && Number.isFinite(value) ? value.toFixed(1) : "Not available";
 }
@@ -636,6 +648,38 @@ function qualityGate(game, pitcherGame) {
     missing,
     indexable: missing.length === 0
   };
+}
+
+async function fetchOffense30(date) {
+  const year = Number(String(date).slice(0, 4));
+  const start = (() => { const d = new Date(`${date}T12:00:00Z`); d.setUTCDate(d.getUTCDate() - 30); return d.toISOString().slice(0, 10); })();
+  const WW = { bb: 0.69, hbp: 0.72, "1b": 0.89, "2b": 1.27, "3b": 1.62, hr: 2.10 }; // matches update-totals wOBA weights
+  const woba = s => {
+    const n = k => { const v = Number(s[k]); return Number.isFinite(v) ? v : 0; };
+    const singles = n("hits") - n("doubles") - n("triples") - n("homeRuns");
+    const ubb = n("baseOnBalls") - n("intentionalWalks");
+    const num = WW.bb*ubb + WW.hbp*n("hitByPitch") + WW["1b"]*singles + WW["2b"]*n("doubles") + WW["3b"]*n("triples") + WW.hr*n("homeRuns");
+    const den = n("atBats") + n("baseOnBalls") - n("intentionalWalks") + n("sacFlies") + n("hitByPitch");
+    return den > 0 ? num/den : null;
+  };
+  const out = { d30: {}, season: {} };
+  const grab = async (url, apply) => {
+    const r = await fetch(url, { headers: { "user-agent": "LyDia matchup generator" } });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    for (const sp of (((data.stats || [])[0] || {}).splits || [])) { const t = canonicalTeamName(sp.team && sp.team.name); if (t) apply(t, sp.stat || {}); }
+  };
+  try {
+    await grab(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${year}&stats=byDateRange&startDate=${start}&endDate=${date}`, (t, x) => {
+      const pa = Number(x.plateAppearances), g = Number(x.gamesPlayed);
+      out.d30[t] = { ops: x.ops != null ? Number(x.ops) : null, rpg: g > 0 ? Number(x.runs)/g : null, woba: woba(x), kpct: pa > 0 ? Number(x.strikeOuts)/pa : null };
+    });
+    await grab(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${year}&stats=season`, (t, x) => {
+      const pa = Number(x.plateAppearances), g = Number(x.gamesPlayed);
+      out.season[t] = { ops: x.ops != null ? Number(x.ops) : null, rpg: g > 0 ? Number(x.runs)/g : null, woba: woba(x), kpct: pa > 0 ? Number(x.strikeOuts)/pa : null };
+    });
+  } catch (e) { console.warn(`30-day offense unavailable for ${date}: ${e.message}`); }
+  return out;
 }
 
 async function fetchTeamHitting(date) {
@@ -925,15 +969,6 @@ function buildInsights(game, pitcherGame) {
   const caseFor = [];
   const concerns = [];
 
-  if (typeof game.edge === "number" && game.edge >= 0.03 && known(market.no_vig_probability)) {
-    const mispricing = MatchupCopy.marketMispricingCase({
-      pickTeam: game.pick_team,
-      modelProb: game.model_probability,
-      marketProb: market.no_vig_probability,
-      edge: game.edge
-    });
-    if (mispricing) caseFor.push(mispricing);
-  }
   if (pitcher.edge_team && pitcher.edge_team === game.pick_team && Number(pitcher.gap) >= 8) {
     // Same stat-driven sentence already used in the pitcher comparison table
     // (pitcherEdgeCopy, further down this page) instead of a second, vaguer
@@ -953,6 +988,28 @@ function buildInsights(game, pitcherGame) {
   }
   if (off.pick && typeof off.pick.delta_ops === "number" && off.pick.delta_ops >= 0.03) {
     caseFor.push({ title: `Bats are hot: ${signedDecimal(off.pick.delta_ops, 3)} OPS`, detail: `${game.pick_team} is outhitting its own season form over the last 15 days. Recent form is context, not a model input, but it points the same way here.` });
+  }
+
+  // The opposite view: the model leans one way, but state the strongest case for
+  // the OTHER side from the same reads, so the counter-argument is explicit
+  // rather than buried in the risk list.
+  const caseAgainst = [];
+  const oppName = game.pick_team === game.away_team ? game.home_team : (game.pick_team === game.home_team ? game.away_team : null);
+  if (oppName) {
+    if (pitcher.edge_team && pitcher.edge_team === oppName && pitcher.edge_team !== "No clear SP edge" && Number(pitcher.gap) >= 8) {
+      const isPlan = Boolean((pitcher.away && pitcher.away.carriedByBullpen) || (pitcher.home && pitcher.home.carriedByBullpen));
+      caseAgainst.push({ title: `${isPlan ? "Pitching plan" : "Starting pitcher"} edge: ${oppName}`, detail: pitcherEdgeCopy(pitcher, pitcher.away, pitcher.home, game.away_team, game.home_team) });
+    }
+    if (pickRisk !== null && oppRisk !== null && pickRisk - oppRisk >= 15) {
+      const penCase = MatchupCopy.bullpenCase({ pickTeam: oppName, oppTeam: game.pick_team, pickPen: toPenStats(pens.opp), oppPen: toPenStats(pens.pick) });
+      if (penCase) caseAgainst.push(penCase);
+    }
+    if (off.opp && typeof off.opp.delta_ops === "number" && off.opp.delta_ops >= 0.03) {
+      caseAgainst.push({ title: `Their bats are hot: ${signedDecimal(off.opp.delta_ops, 3)} OPS`, detail: `${oppName} is outhitting its own season form over the last 15 days.` });
+    }
+    if (!caseAgainst.length) {
+      caseAgainst.push({ title: `The case is thin`, detail: `The model finds little going ${oppName}'s way — it trails on the pitching plan, bullpen, and recent form. The main path to a ${oppName} win is variance.` });
+    }
   }
 
   if (gate.model_probability_passed === false) {
@@ -1018,16 +1075,18 @@ function buildInsights(game, pitcherGame) {
     verdict = game.pass_reason ? `LyDia passes. ${game.pass_reason}` : `LyDia passes. Nothing about this matchup clears the bar, and passing is a position.`;
   }
 
-  return { caseFor: caseFor.slice(0, 3), concerns: concerns.slice(0, 3), setupReasons, verdict };
+  return { caseFor: caseFor.slice(0, 3), caseAgainst: (typeof caseAgainst !== "undefined" ? caseAgainst : []).slice(0, 3), oppName: (typeof oppName !== "undefined" ? oppName : null), concerns: concerns.slice(0, 3), setupReasons, verdict };
 }
 
 function renderInsights(game, pitcherGame) {
   const insights = buildInsights(game, pitcherGame);
   const forCards = insights.caseFor.map(item => `<div class="callout for"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
   const conCards = insights.concerns.map(item => `<div class="callout against"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
+  const againstCards = (insights.caseAgainst || []).map(item => `<div class="callout against"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
   const setupCards = (insights.setupReasons || []).map(item => `<div class="callout setup"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
   return `
     ${insights.caseFor.length ? `<h3 class="co-head for">The case for ${esc(game.pick_team || "this side")}</h3><div class="callout-grid">${forCards}</div>` : ""}
+    ${insights.caseAgainst && insights.caseAgainst.length ? `<h3 class="co-head against">The case for ${esc(insights.oppName || "the other side")}</h3><div class="callout-grid">${againstCards}</div>` : ""}
     ${insights.concerns.length ? `<h3 class="co-head against">${game.status === "official_pick" ? "What to watch" : "Why it is not official"}</h3><div class="callout-grid">${conCards}</div>` : ""}
     ${insights.setupReasons && insights.setupReasons.length ? `<h3 class="co-head setup">Why the setup score is what it is</h3><div class="callout-grid">${setupCards}</div>` : ""}
     <div class="verdict"><span class="v-label">The verdict</span> ${esc(insights.verdict)}</div>`;
@@ -1192,7 +1251,7 @@ function renderTeamMap(brief, game, teamHitting) {
 }
 
 function renderMatchupPage(context) {
-  const { brief, game, scheduleGame, totalsGame, pitcherGame, resultGame, recapReview, weather, venue, quality, slug, urlPath, kprops, officialKIndex, teamHitting, venueForm, gameNumber, dayLinks } = context;
+  const { brief, game, scheduleGame, totalsGame, pitcherGame, resultGame, recapReview, weather, venue, quality, slug, urlPath, kprops, officialKIndex, teamHitting, venueForm, offense30, gameNumber, dayLinks } = context;
   const dhSuffix = gameNumber ? ` (Game ${gameNumber})` : "";
   const awayShort = shortTeam(game.away_team);
   const homeShort = shortTeam(game.home_team);
@@ -1293,7 +1352,7 @@ section.card>h2{text-align:center}
     <h2>${esc(decisionHeadline(game))}</h2>
     <div class="metric-grid">
       <div class="metric"><div class="label">Lab Rating</div><div class="value">${esc(rating(game.lab_score))}</div></div>
-      <div class="metric"><div class="label">Model probability</div><div class="value">${esc(pct(game.model_probability))}</div></div>
+      <div class="metric"><div class="label">Model lean</div><div class="value">${game.pick_team ? esc(shortTeam(game.pick_team)) + " " : ""}${esc(pct(game.model_probability))}</div></div>
       <div class="metric"><div class="label">Market probability</div><div class="value">${esc(pct(market.no_vig_probability))}</div></div>
       <div class="metric"><div class="label">Model edge</div><div class="value">${esc(signedPct(game.edge))}</div></div>
       <div class="metric"><div class="label">Best moneyline</div><div class="value">${esc(odds(market.best_price))}</div></div>
@@ -1335,6 +1394,8 @@ section.card>h2{text-align:center}
     <p class="small dim">Last 15 days only. Hot and cold streaks for all 30 teams live on the <a href="/stats/">Stats page</a>.</p>
   </section>
 
+  ${renderOffense30(game, offense30)}
+
   <section class="card">
     <div class="sec-head"><h2>Season profile</h2><a class="tool-link" href="/stats/">Full Stats page &rarr;</a></div>
     ${renderSeasonProfileTable(game, teamHitting)}
@@ -1353,17 +1414,6 @@ section.card>h2{text-align:center}
   ${renderTotals(totalsGame)}
 
   ${renderRelatedGames(dayLinks, game)}
-
-  <section class="card">
-    <h2>What could change the prediction</h2>
-    <ul>
-      <li>A listed starting pitcher is scratched or replaced.</li>
-      <li>The moneyline moves enough to remove the current model edge.</li>
-      <li>A confirmed lineup materially changes the offensive matchup.</li>
-      <li>Late bullpen availability differs from the recent workload data.</li>
-      <li>Weather or roof conditions change before first pitch.</li>
-    </ul>
-  </section>
 
   <div class="lead-box" style="margin-top:8px">
     <h3 style="margin:0 0 4px">Every LyDia pick, graded in public</h3>
@@ -1433,10 +1483,10 @@ function blendedReadCopy(p, away, home, awayTeam, homeTeam) {
 
   const carriedSentence = (side, teamName) => {
     const eff = num(side.effectiveEra), own = num(side.era);
-    const ip = Number.isFinite(side.expectedInnings) ? side.expectedInnings.toFixed(1) : null;
+    const ip = Number.isFinite(side.expectedInnings) ? inningsThirds(side.expectedInnings) : null;
     const name = validPitcher(side.name) ? side.name : "the named starter";
     let s = `For the ${esc(teamName)}, the bullpen is projected to throw more of the game than ${esc(name)}`;
-    if (ip) s += ` (about ${ip} inning${ip === "1.0" ? "" : "s"} for the starter)`;
+    if (ip) s += ` (about ${ip} innings for the starter)`;
     if (eff != null) {
       s += `, so LyDia grades that side on a whole-game effective ERA of ${two(eff)}`;
       if (own != null && Math.abs(own - eff) >= 0.01) s += ` rather than ${esc(name)}'s own ${two(own)}`;
@@ -1477,8 +1527,7 @@ function renderPitcherTable(game, pitcherGame) {
     { label: "LyDia pitcher score", a: away.score, h: home.score, better: "high", gap: 8, fmt: v => String(v) },
     { label: "BB/9", a: away.bb9, h: home.bb9, better: "low", gap: 1.0, fmt: v => v.toFixed(1) },
     { label: "HR/9", a: away.hr9, h: home.hr9, better: "low", gap: 0.4, fmt: v => v.toFixed(1) },
-    { label: "Ground-ball rate", a: away.gbPct, h: home.gbPct, better: null, gap: 0, fmt: v => (v * 100).toFixed(1) + "%" },
-    { label: "IP per start", a: away.ipStart, h: home.ipStart, better: "high", gap: 0.6, fmt: v => v.toFixed(1) }
+    { label: "Ground-ball rate", a: away.gbPct, h: home.gbPct, better: null, gap: 0, fmt: v => (v * 100).toFixed(1) + "%" }
   ];
 
   const dirTag = better => better === "low" ? ' <span class="dim" style="font-weight:400">(lower is better)</span>'
@@ -1498,7 +1547,7 @@ function renderPitcherTable(game, pitcherGame) {
     <thead><tr><th>Metric</th><th>${esc(shortTeam(game.away_team))}</th><th>${esc(shortTeam(game.home_team))}</th></tr></thead>
     <tbody>
       <tr><th>Pitching plan</th><td>${esc(away.roleLabel || "Role unknown")}</td><td>${esc(home.roleLabel || "Role unknown")}</td></tr>
-      <tr><th>Expected innings</th><td>${esc(typeof away.expectedInnings === "number" ? away.expectedInnings.toFixed(1) : "Not available")}</td><td>${esc(typeof home.expectedInnings === "number" ? home.expectedInnings.toFixed(1) : "Not available")}</td></tr>
+      <tr><th>Expected innings</th><td>${esc(typeof away.expectedInnings === "number" ? inningsThirds(away.expectedInnings) : "Not available")}</td><td>${esc(typeof home.expectedInnings === "number" ? inningsThirds(home.expectedInnings) : "Not available")}</td></tr>
       <tr><th>Throws</th><td>${esc(away.hand || "Not available")}</td><td>${esc(home.hand || "Not available")}</td></tr>
       ${rows.map(row => `<tr><th>${esc(row.label)}${dirTag(row.better)}</th>${cellPair(row)}</tr>`).join("\n      ")}
     </tbody>
@@ -1553,7 +1602,7 @@ function renderPitchingPlan(pitcherGame) {
       const label = segment.role === "bullpen"
         ? "Remaining bullpen"
         : `${segment.pitcher} · ${segment.role === "bulk" ? "Bulk pitcher" : "Opener"}`;
-      return `<div class="metric"><div class="label">${esc(label)}</div><div class="value">${esc(Number(segment.expected_innings).toFixed(1))} <span class="small dim">expected IP</span></div></div>`;
+      return `<div class="metric"><div class="label">${esc(label)}</div><div class="value">${esc(inningsThirds(segment.expected_innings))} <span class="small dim">expected IP</span></div></div>`;
     }).join("");
     const team = side === "away" ? pitcherGame.away_team : pitcherGame.home_team;
     return `<h3 style="text-align:center">${esc(team)} pitching plan</h3><div class="metric-grid">${segments}</div>`;
@@ -1611,8 +1660,7 @@ function renderStrikeoutProjections(game, pitcherGame, kprops, officialKIndex) {
     return `<div class="metric"><div class="label">${mlbPitcherLink(entry.pitcher)} strikeouts</div><div class="value">${esc(oneDecimal(prop.projection))} <span class="dim small">LyDia projected Ks</span></div>${leanHtml}<div class="small dim">${marketLine}</div></div>`;
   }).join("");
   return `<h3 style="margin:16px 0 4px">Strikeout Projections <a class="tool-link" style="font-size:.78rem" href="/tools/strikeout-projections/">Full strikeout projections &rarr;</a></h3>
-  <div class="metric-grid">${cells}</div>
-  <p class="small dim">Projections are self-calibrated against graded results${kprops && kprops.learned_n ? ` (${esc(kprops.learned_n)} graded starts)` : ""}. Official K picks are taken from LyDia's locked published card, which requires a 0.7+ strikeout edge, a posted price from at least two books, a confirmed non-opener workload of at least four expected innings, and a posted starting lineup. Plays shown here that are not on the card are qualifying projections only.</p>`;
+  <div class="metric-grid">${cells}</div>`;
 }
 
 // Split into two tables, each holding only stats on one timeframe. They
@@ -1639,6 +1687,58 @@ function offenseTableContext(game, teamHitting) {
   const awayKSeason = hit.season[awayCanonical], homeKSeason = hit.season[homeCanonical];
   const awayKRecent = hit.recent[awayCanonical], homeKRecent = hit.recent[homeCanonical];
   return { away, home, sa, sh, awayKSeason, homeKSeason, awayKRecent, homeKRecent };
+}
+
+function offense30Analysis(game, a, h, sa, sh) {
+  if (!a || !h) return "";
+  const parts = [];
+  if (typeof a.woba === "number" && typeof h.woba === "number") {
+    const awayBetter = a.woba > h.woba;
+    const betterTeam = awayBetter ? game.away_team : game.home_team;
+    parts.push(`Over the last 30 days the ${esc(shortTeam(betterTeam))} have been the better offense, ${(awayBetter ? a.woba : h.woba).toFixed(3)} wOBA to ${(awayBetter ? h.woba : a.woba).toFixed(3)}.`);
+    const bs = awayBetter ? sa : sh;
+    if (bs && typeof bs.woba === "number") {
+      const d = (awayBetter ? a.woba : h.woba) - bs.woba;
+      if (Math.abs(d) >= 0.008) parts.push(`They are ${d > 0 ? "running hot" : "cooling off"} against their own season line (${d > 0 ? "+" : ""}${d.toFixed(3)} wOBA).`);
+    }
+  }
+  const hiK = [[game.away_team, a], [game.home_team, h]].filter(x => typeof x[1].kpct === "number").sort((x, y) => y[1].kpct - x[1].kpct)[0];
+  if (hiK && hiK[1].kpct >= 0.24) parts.push(`${esc(shortTeam(hiK[0]))} are striking out at ${(hiK[1].kpct*100).toFixed(1)}% over the window — something the opposing starter can lean on.`);
+  return parts.length ? `<p class="small dim">${parts.join(" ")}</p>` : "";
+}
+
+function renderOffense30(game, off30) {
+  if (!off30 || !off30.d30) return "";
+  const a = off30.d30[game.away_team], h = off30.d30[game.home_team];
+  if (!a && !h) return "";
+  const sa = (off30.season || {})[game.away_team] || {}, sh = (off30.season || {})[game.home_team] || {};
+  const three = v => v.toFixed(3), two = v => v.toFixed(2), pctf = v => (v*100).toFixed(1) + "%";
+  const dtag = (v, base, pct) => {
+    if (typeof v !== "number" || typeof base !== "number") return "";
+    const d = v - base; if (Math.abs(d) < (pct ? 0.005 : 0.006)) return "";
+    return ` <span class="dim" style="font-weight:400">(${d > 0 ? "+" : ""}${pct ? (d*100).toFixed(1) + "%" : d.toFixed(3)} vs szn)</span>`;
+  };
+  const row = (label, av, hv, sav, shv, fmt, pct, goodHigh) => {
+    const bothN = typeof av === "number" && typeof hv === "number";
+    let aAdv = "", hAdv = "";
+    if (bothN && Math.abs(av - hv) > (pct ? 0.003 : 0.004)) { const awayWins = goodHigh ? av > hv : av < hv; if (awayWins) aAdv = "adv"; else hAdv = "adv"; }
+    const c = (v, sv) => typeof v === "number" && Number.isFinite(v) ? `${fmt(v)}${dtag(v, sv, pct)}` : "Not available";
+    return `<tr><th>${label}</th><td class="${aAdv}">${c(av, sav)}</td><td class="${hAdv}">${c(hv, shv)}</td></tr>`;
+  };
+  const A = a || {}, H = h || {};
+  return `<section class="card">
+    <div class="sec-head"><h2>30-day offense</h2><a class="tool-link" href="/tools/offense-matchups/">Full offense tool &rarr;</a></div>
+    <table class="matchup-table">
+      <thead><tr><th>Last 30 days</th><th>${esc(shortTeam(game.away_team))}</th><th>${esc(shortTeam(game.home_team))}</th></tr></thead>
+      <tbody>
+        ${row("OPS", A.ops, H.ops, sa.ops, sh.ops, three, false, true)}
+        ${row("Runs per game", A.rpg, H.rpg, sa.rpg, sh.rpg, two, false, true)}
+        ${row("wOBA <span class=\"dim\" style=\"font-weight:400\">(model offense input)</span>", A.woba, H.woba, sa.woba, sh.woba, three, false, true)}
+        ${row("K% <span class=\"dim\" style=\"font-weight:400\">(lower is better)</span>", A.kpct, H.kpct, sa.kpct, sh.kpct, pctf, true, false)}
+      </tbody>
+    </table>
+    ${offense30Analysis(game, a, h, sa, sh)}
+  </section>`;
 }
 
 function renderRecentFormTable(game, teamHitting, venueForm) {
@@ -1734,7 +1834,7 @@ function pitcherEdgeCopy(p, away, home, awayTeam, homeTeam) {
   // made is explicit rather than implied.
   const betterCarried = Boolean(better.carriedByBullpen);
   const worseCarried = Boolean(worse.carriedByBullpen);
-  const ipClause = side => Number.isFinite(side.expectedInnings) ? `${side.expectedInnings.toFixed(1)} innings` : "a short outing";
+  const ipClause = side => Number.isFinite(side.expectedInnings) ? `${inningsThirds(side.expectedInnings)} innings` : "a short outing";
 
   if (betterCarried && worseCarried) {
     return `LyDia gives the ${betterTeam} pitching plan the edge over the ${worseTeam} pitching plan${gapClause}. `

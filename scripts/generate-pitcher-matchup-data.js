@@ -136,7 +136,7 @@ async function main() {
     const bullpenCarries = side => {
       const totalsSide = totalsSideFor(side);
       return Boolean(totalsSide && Number.isFinite(totalsSide.bullpen_innings) && Number.isFinite(totalsSide.expected_innings)
-        && totalsSide.bullpen_innings > totalsSide.expected_innings);
+        && totalsSide.expected_innings < 4);
     };
     for (const side of ["away", "home"]) {
       if (!row[side]) continue;
