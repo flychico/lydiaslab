@@ -587,6 +587,57 @@ function winSuffix() { return mapWin === 0 ? " (season)" : ` (last ${mapWin} day
 let _mapDots = [];
 let mapWin = 0; // 0 = season, else days
 const _recCache = {};
+const _trailCache = {};
+async function ensureTrail(win) {
+  if (_trailCache[win]) return _trailCache[win];
+  const N = 5, sub = Math.max(5, Math.round(win / 2)), yr = season, dayMs = 864e5;
+  const f = d => d.toISOString().slice(0, 10);
+  const endBase = new Date(Date.now() - dayMs);
+  const step = (win - sub) / (N - 1);
+  const snaps = [];
+  for (let i = 0; i < N; i++) {
+    const end = new Date(endBase.getTime() - Math.round((N - 1 - i) * step) * dayMs);
+    const start = new Date(end.getTime() - (sub - 1) * dayMs);
+    snaps.push({ start, end });
+  }
+  const hitBySnap = await Promise.all(snaps.map(sp =>
+    fetch(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${yr}&stats=byDateRange&startDate=${f(sp.start)}&endDate=${f(sp.end)}`).then(r => r.ok ? r.json() : null).catch(() => null)));
+  const sched = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate=${f(snaps[0].start)}&endDate=${f(snaps[N-1].end)}`).then(r => r.ok ? r.json() : null).catch(() => null);
+  const games = [];
+  for (const day of (sched && sched.dates) || []) for (const g of day.games || []) {
+    if (!g.status || g.status.abstractGameState !== "Final" || g.teams.away.score === undefined) continue;
+    games.push({ date: g.officialDate || String(g.gameDate || "").slice(0, 10), teams: g.teams });
+  }
+  const recAt = (start, end) => {
+    const s0 = f(start), e0 = f(end), rec = {};
+    for (const gm of games) {
+      if (gm.date < s0 || gm.date > e0) continue;
+      for (const side of ["away", "home"]) {
+        const t = gm.teams[side], o = gm.teams[side === "away" ? "home" : "away"], id = t.team.id;
+        (rec[id] = rec[id] || { w: 0, l: 0, rs: 0, ra: 0, g: 0 });
+        rec[id].g++; rec[id].rs += t.score; rec[id].ra += o.score; if (t.score > o.score) rec[id].w++; else rec[id].l++;
+      }
+    }
+    for (const id in rec) { const r = rec[id]; r.winPct = r.g ? r.w / r.g : null; r.rsg = r.g ? r.rs / r.g : null; r.rag = r.g ? r.ra / r.g : null; const num = Math.pow(r.rs, 1.83); r.pyth = (r.rs || r.ra) ? num / (num + Math.pow(r.ra, 1.83)) : null; r.luck = r.pyth !== null ? r.w - r.pyth * r.g : null; }
+    return rec;
+  };
+  const byTeam = {};
+  snaps.forEach((sp, i) => {
+    const hit = {}, data = hitBySnap[i];
+    for (const t of ((data && data.stats && data.stats[0] && data.stats[0].splits) || [])) {
+      const st = t.stat, pa = Number(st.plateAppearances) || 0; _nameToId[t.team.name] = t.team.id;
+      hit[t.team.id] = { ops: Number(st.ops), avg: Number(st.avg), slg: Number(st.slg), kPct: pa ? (Number(st.strikeOuts) || 0) / pa : null, rpg: st.gamesPlayed ? (Number(st.runs) || 0) / Number(st.gamesPlayed) : null };
+    }
+    const rec = recAt(sp.start, sp.end);
+    for (const o of offRows) {
+      const id = _nameToId[o.team]; if (id == null) continue;
+      const h = hit[id] || {}, r = rec[id] || {};
+      (byTeam[o.team] = byTeam[o.team] || []).push({ ops: h.ops, avg: h.avg, slg: h.slg, kPct: h.kPct, rpg: h.rpg, rsg: r.rsg, rag: r.rag, pyth: r.pyth, luck: r.luck, winPct: r.winPct });
+    }
+  });
+  _trailCache[win] = byTeam;
+  return byTeam;
+}
 async function ensureRecord(days) {
   if (_recCache[days]) return _recCache[days];
   const end = new Date(Date.now() - 864e5); // through yesterday (completed games)
@@ -661,11 +712,15 @@ async function drawMap() {
   const raw = await mapRows();
   const rows = raw.map(r => ({ team: r.team, x: MX.get(r), y: MY.get(r) })).filter(r => Number.isFinite(r.x) && Number.isFinite(r.y));
   if (!rows.length) { document.getElementById("map-hint").textContent = "No data for this window yet."; return; }
+  const trails = (mapWin !== 0) ? await ensureTrail(mapWin) : null;
+  const trailByTeam = {};
+  if (trails) for (const r of rows) { const arr = (trails[r.team] || []).map(sp => ({ x: MX.get(sp), y: MY.get(sp) })).filter(p => Number.isFinite(p.x) && Number.isFinite(p.y)); if (arr.length >= 2) trailByTeam[r.team] = arr; }
+  const trailFlat = Object.values(trailByTeam).flat();
   const ctx = c.getContext("2d"), W = c.width, H = c.height;
   const dark = false;
   ctx.clearRect(0, 0, W, H);
   const xs = rows.map(r => r.x), ys = rows.map(r => r.y);
-  const pad = 56, xmin = Math.min(...xs), xmax = Math.max(...xs), ymin = Math.min(...ys), ymax = Math.max(...ys);
+  const pad = 56, xmin = Math.min(...xs, ...trailFlat.map(p => p.x)), xmax = Math.max(...xs, ...trailFlat.map(p => p.x)), ymin = Math.min(...ys, ...trailFlat.map(p => p.y)), ymax = Math.max(...ys, ...trailFlat.map(p => p.y));
   const xr = (xmax - xmin) || 1, yr = (ymax - ymin) || 1;
   const px = v => pad + ((v - xmin) / xr) * (W - pad * 2);
   const py = v => H - pad - ((v - ymin) / yr) * (H - pad * 2);
@@ -690,6 +745,14 @@ async function drawMap() {
   ctx.fillStyle = "#57606a"; ctx.font = "13px sans-serif"; ctx.textAlign = "center";
   ctx.fillText(MX.label + winSuffix() + (MX.invert ? "  (right = worse)" : ""), W / 2, H - 10);
   ctx.save(); ctx.translate(14, H / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(MY.label + winSuffix() + (MY.invert ? "  (up = worse)" : ""), 0, 0); ctx.restore();
+  for (const r of rows) {
+    const path = trailByTeam[r.team]; if (!path) continue;
+    ctx.strokeStyle = "rgba(77,159,220,0.45)"; ctx.lineWidth = 1.5; ctx.beginPath();
+    path.forEach((p, i) => { const X = px(p.x), Y = py(p.y); if (i === 0) ctx.moveTo(X, Y); else ctx.lineTo(X, Y); });
+    ctx.lineTo(px(r.x), py(r.y)); ctx.stroke();
+    ctx.fillStyle = "rgba(77,159,220,0.55)";
+    path.slice(0, -1).forEach(p => { ctx.beginPath(); ctx.arc(px(p.x), py(p.y), 2.5, 0, Math.PI * 2); ctx.fill(); });
+  }
   // dots
   _mapDots = [];
   ctx.font = "11px sans-serif";
@@ -703,7 +766,7 @@ async function drawMap() {
     ctx.fillText(shortTeam(r.team), X, Y - 10);
     _mapDots.push({ x: X, y: Y, team: r.team, vx: r.x, vy: r.y });
   }
-  document.getElementById("map-hint").innerHTML = `Green = strong on both axes · red = weak on both · blue = split. Dotted lines are league medians. Tap any dot for the team's full breakdown.`;
+  document.getElementById("map-hint").innerHTML = (mapWin !== 0 ? `The faint blue trail is each team's movement over the window, leading into its current dot. ` : "") + `Green = strong on both axes · red = weak on both · blue = split. Dotted lines are league medians. Tap any dot for the team's full breakdown.`;
   renderMapExplain(xk, yk, rows, med(xs), med(ys));
 }
 
