@@ -1329,11 +1329,21 @@ function renderSettings(){
     <p class="dim small" style="margin-bottom:6px">In <b>Health</b> → tap your photo → <b>Export All Health Data</b>. Unzip it, then choose <b>export.xml</b> to pull your body-weight history into the trend chart.</p>
     <input type="file" accept=".xml" onchange="importHealthWeights(this)">
   </div>
-  <div class="card"><h3>Backup</h3>
-    <p class="dim small" style="margin-bottom:10px">Your data lives only on this phone. Export a backup now and then — clearing the browser wipes it.</p>
-    <button class="btn full blue-btn" onclick="exportData()">Export backup file</button>
-    <label style="margin-top:12px">Restore from backup</label>
+  <div class="card"><h3>Backup & move devices</h3>
+    <p class="dim small" style="margin-bottom:10px">Your data lives only on this device. To see it on another one (phone ↔ computer), open this same app there and bring your data across. Also back up now and then — clearing the browser wipes it.</p>
+    <b class="small">1 · Send from this device</b>
+    <div style="display:flex;gap:8px;margin:6px 0 4px;flex-wrap:wrap">
+      <button class="btn small-btn blue-btn" onclick="shareBackup()">Send / save file</button>
+      <button class="btn ghost small-btn" onclick="copyBackup()">Copy to clipboard</button>
+    </div>
+    <p class="dim small" style="margin-bottom:14px">“Send / save” opens share (AirDrop, Messages, Mail) or downloads a file. “Copy” pairs with Apple Universal Clipboard — copy on iPhone, paste on your Mac.</p>
+    <b class="small">2 · Bring it in on the other device</b>
+    <label style="margin-top:6px">Restore from a file</label>
     <input type="file" accept=".json" onchange="importData(this)">
+    <label style="margin-top:12px">…or paste backup text</label>
+    <textarea id="paste-json" placeholder="Paste the copied backup here" style="width:100%;min-height:70px;background:var(--card);border:1px solid var(--border);border-radius:9px;color:var(--text);padding:10px;font-size:.85rem;font-family:inherit"></textarea>
+    <button class="btn small-btn" style="margin-top:6px" onclick="pasteBackup()">Restore from pasted text</button>
+    <p class="dim small" style="margin-top:8px">If the device already has data, you'll be asked to <b>merge</b> (combine both) or <b>replace</b>. A fresh device just loads it.</p>
   </div>
   <div class="card"><h3>Danger zone</h3>
     <button class="btn danger full" onclick="if(confirm('Delete ALL workout data? This cannot be undone.')){localStorage.removeItem(KEY);localStorage.removeItem('forge-v1');location.reload()}">Erase everything</button></div>
@@ -1362,14 +1372,56 @@ function exportData(){
   a.download = "michelangelo-backup-" + today() + ".json";
   a.click();
 }
+function shareBackup(){
+  const json = JSON.stringify(S), fname = "michelangelo-backup-" + today() + ".json";
+  try {
+    const file = new File([json], fname, { type: "application/json" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: "MichelAngelo backup" }).catch(() => {});
+      return;
+    }
+  } catch (e) {}
+  exportData(); // fallback: download the file
+}
+function copyBackup(){
+  const json = JSON.stringify(S);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(json).then(() => toast("Backup copied — paste on your other device")).catch(() => toast("Couldn't copy"));
+  } else toast("Copy not supported here");
+}
 function importData(inp){
   const f = inp.files[0]; if (!f) return;
   const r = new FileReader();
-  r.onload = () => {
-    try { const d = JSON.parse(r.result); if (d.v !== 1) throw 0; S = d; save(); render(); toast("Backup restored"); }
-    catch(e) { toast("Not a valid backup"); }
-  };
+  r.onload = () => { try { chooseApply(JSON.parse(r.result)); } catch (e) { toast("Not a valid backup"); } };
   r.readAsText(f);
+}
+function pasteBackup(){
+  const t = document.getElementById("paste-json"), v = t ? t.value.trim() : "";
+  if (!v) return toast("Paste your backup text first");
+  try { chooseApply(JSON.parse(v)); } catch (e) { toast("That doesn't look like backup data"); }
+}
+function chooseApply(d){
+  if (!d || d.v !== 1) return toast("Not a valid backup");
+  const hasData = (S.logs && S.logs.length) || (S.weights && S.weights.length);
+  if (!hasData) return applyBackup(d, true); // fresh device: just load it
+  const merge = confirm("This device already has data.\n\nOK = MERGE (combine both sets)\nCancel = REPLACE (use only the backup)");
+  applyBackup(d, !merge);
+}
+function applyBackup(d, replace){
+  if (replace) { S = d; }
+  else { mergeBackup(d); }
+  save(); hydrateCustom(); render();
+  toast(replace ? "Backup restored" : "Backup merged");
+}
+function mergeBackup(inc){
+  const uniq = (arr, key) => { const m = {}; arr.forEach(x => { m[key(x)] = x; }); return Object.values(m); };
+  const logSig = l => JSON.stringify([l.date, l.dayName, l.min, l.entries]);
+  S.logs = uniq([...(S.logs || []), ...(inc.logs || [])], logSig).sort((a, b) => a.date.localeCompare(b.date));
+  S.weights = uniq([...(S.weights || []), ...(inc.weights || [])], w => w.date).sort((a, b) => a.date.localeCompare(b.date));
+  S.activity = uniq([...(S.activity || []), ...(inc.activity || [])], a => a.date).sort((a, b) => a.date.localeCompare(b.date));
+  S.customEx = uniq([...(S.customEx || []), ...(inc.customEx || [])], c => c.id);
+  if (!S.profile && inc.profile) S.profile = inc.profile;
+  if (!S.plan && inc.plan) S.plan = inc.plan;
 }
 // Parse an Apple Health export.xml and pull body-weight (BodyMass) records in
 function importHealthWeights(inp){
