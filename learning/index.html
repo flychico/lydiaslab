@@ -1,56 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-XVWTMDNBJK"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-XVWTMDNBJK');
-</script>
-
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-XVWTMDNBJK');</script>
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Learning Dashboard | LyDia</title>
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="LyDia">
 <meta property="og:title" content="Learning Dashboard | LyDia">
-<meta property="og:description" content="How LyDia's pregame reads held up against reality, graded per game.">
 <meta property="og:url" content="https://lydiaslab.com/learning/">
-<meta name="description" content="How LyDia's pregame reads held up against reality, graded per game.">
+<meta name="description" content="How LyDia's model and pregame reads have held up against reality, graded across every game.">
 <link rel="canonical" href="https://lydiaslab.com/learning/">
 <link rel="stylesheet" href="/css/style.css">
 <style>
-.controls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:14px 0 20px; }
-.controls .seg { display:flex; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
-.controls .seg button { background:var(--bg-card); border:0; padding:7px 12px; color:var(--text-dim); cursor:pointer; font-size:.82rem; }
-.controls .seg button.on { background:var(--bg-elev); color:inherit; font-weight:700; }
-.controls input { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:7px 10px; color:inherit; min-width:220px; }
-.kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin:8px 0 24px; }
-.kpi { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
-.kpi .label { font-size:.74rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em; }
-.kpi .value { font-size:1.5rem; font-weight:800; font-variant-numeric:tabular-nums; }
-.kpi .sub { font-size:.76rem; color:var(--text-dim); }
-h2.sec { margin:30px 0 4px; font-size:1.15rem; }
-.sec-note { color:var(--text-dim); font-size:.82rem; margin:0 0 14px; }
-.bars { display:grid; gap:10px; }
-.bar-row { display:grid; grid-template-columns:170px 1fr 84px; gap:12px; align-items:center; }
-.bar-row .name { font-size:.9rem; }
-.bar-track { background:var(--bg-elev); border-radius:999px; height:16px; overflow:hidden; border:1px solid var(--border); }
-.bar-fill { height:100%; border-radius:999px; }
-.bar-num { text-align:right; font-variant-numeric:tabular-nums; font-weight:700; font-size:.9rem; }
-.bar-num small { color:var(--text-dim); font-weight:400; }
-table.dash { width:100%; border-collapse:collapse; font-size:.86rem; }
-table.dash th, table.dash td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); white-space:nowrap; }
-table.dash th { color:var(--text-dim); font-weight:600; cursor:pointer; user-select:none; }
-table.dash td.num, table.dash th.num { text-align:right; font-variant-numeric:tabular-nums; }
-.ok { color:#2ecc71; font-weight:700; }
-.no { color:#e74c3c; font-weight:700; }
-.dim { color:var(--text-dim); }
-.spark { display:block; }
-.loading { color:var(--text-dim); }
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0 20px}
+.seg{display:flex;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.seg button{background:var(--bg-card);border:0;padding:7px 12px;color:var(--text-dim);cursor:pointer;font-size:.82rem}
+.seg button.on{background:var(--bg-elev);color:inherit;font-weight:700}
+.controls input{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;color:inherit;min-width:220px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px;margin:8px 0 20px}
+.kpi{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.kpi .label{font-size:.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em}
+.kpi .value{font-size:1.45rem;font-weight:800;font-variant-numeric:tabular-nums}
+.kpi .sub{font-size:.74rem;color:var(--text-dim)}
+h2.sec{margin:30px 0 4px;font-size:1.15rem}
+.sec-note{color:var(--text-dim);font-size:.82rem;margin:0 0 14px}
+.bars{display:grid;gap:10px}
+.bar-row{display:grid;grid-template-columns:190px 1fr 120px;gap:12px;align-items:center}
+.bar-row .name{font-size:.9rem}
+.bar-track{background:var(--bg-elev);border-radius:999px;height:16px;overflow:hidden;border:1px solid var(--border);position:relative}
+.bar-fill{height:100%;border-radius:999px}
+.bar-num{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;font-size:.88rem}
+.bar-num small{color:var(--text-dim);font-weight:400}
+table.dash{width:100%;border-collapse:collapse;font-size:.86rem}
+table.dash th,table.dash td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+table.dash th{color:var(--text-dim);font-weight:600;cursor:pointer;user-select:none}
+table.dash td.num,table.dash th.num{text-align:right;font-variant-numeric:tabular-nums}
+.ok{color:#2ecc71;font-weight:700}.no{color:#e74c3c;font-weight:700}.dim{color:var(--text-dim)}
+.spark{display:block}.loading{color:var(--text-dim)}
+.src-flag{font-size:.74rem;color:var(--text-dim);margin:-8px 0 14px}
 </style>
 </head>
 <body>
@@ -58,38 +46,35 @@ table.dash td.num, table.dash th.num { text-align:right; font-variant-numeric:ta
 <main>
   <p class="eyebrow">LyDia's Lab</p>
   <h1>Learning Dashboard</h1>
-  <p class="subtitle">Every graded game's pregame read against what actually happened. This measures the analysis; it never changes a pick.</p>
-
-  <div id="status" class="loading">Loading the learning ledger…</div>
-
+  <p class="subtitle">Every graded game, model side, market, and pregame read against what actually happened. This measures the analysis; it never changes a pick.</p>
+  <div id="status" class="loading">Loading the learning ledgers…</div>
   <div id="dash" style="display:none">
     <div class="controls">
       <div class="seg" id="windowSeg">
-        <button data-w="7">7d</button>
-        <button data-w="14">14d</button>
-        <button data-w="30">30d</button>
-        <button data-w="all" class="on">All</button>
+        <button data-w="7">7d</button><button data-w="14">14d</button><button data-w="30">30d</button><button data-w="all" class="on">All</button>
       </div>
       <input id="search" type="text" placeholder="Filter games by team…">
+      <span class="dim" id="coverage" style="font-size:.8rem"></span>
     </div>
 
     <div class="kpis" id="kpis"></div>
 
     <h2 class="sec">Are we improving?</h2>
-    <p class="sec-note">Direction accuracy by day — did the model side actually win. 50% is a coin flip.</p>
+    <p class="sec-note">Rolling win rate on the model's side (moneyline direction). Dashed line is 50% — a coin flip.</p>
     <div id="trend"></div>
+    <div id="calibration"></div>
 
     <h2 class="sec">Which pregame reads work</h2>
-    <p class="sec-note">Hit rate of each read over the window, with sample size. A read below 50% is costing you.</p>
-    <div class="bars" id="reads"></div>
-    <p class="sec-note" id="bullpenNote" style="margin-top:12px"></p>
+    <p class="sec-note">Do the Lab Rating components earn their points? Win rate when a component contributed heavily vs when it didn't. Positive lift = real signal; negative = it is hurting.</p>
+    <div class="bars" id="components"></div>
+    <div id="recapReads"></div>
 
     <h2 class="sec">Projection accuracy</h2>
-    <p class="sec-note">How far the run projections landed from reality. Bias shows whether we run high or low.</p>
+    <p class="sec-note">How far the projections landed from reality, across every graded game.</p>
     <div class="kpis" id="projection"></div>
 
     <h2 class="sec">Every graded game</h2>
-    <p class="sec-note">Click a matchup to open its page. Click a column header to sort.</p>
+    <p class="sec-note">All graded moneyline games. Click a header to sort; click a matchup to open its page where available.</p>
     <div style="overflow-x:auto"><table class="dash" id="gamesTable"></table></div>
   </div>
 </main>
@@ -97,169 +82,163 @@ table.dash td.num, table.dash th.num { text-align:right; font-variant-numeric:ta
 <script>
 renderNav("/learning/"); renderFooter();
 function esc(v){ return escapeHtml(String(v ?? "")); }
+const S = { cal:[], report:null, totals:[], kprops:[], recap:[], recapByPk:{}, windowDays:"all", search:"", sortKey:"date", sortDir:-1 };
 
-const state = { rows: [], windowDays: "all", search: "", sortKey: "date", sortDir: -1 };
+function splitCsvLine(line){ const c=[];let cur="",q=false; for(const ch of line){ if(ch==='"')q=!q; else if(ch===','&&!q){c.push(cur);cur="";} else cur+=ch;} c.push(cur); return c; }
+function parseCSV(text){ if(!text) return []; const l=text.trim().split(/\r?\n/); if(l.length<2) return []; const h=splitCsvLine(l[0]); return l.slice(1).map(line=>{ const c=splitCsvLine(line); const o={}; h.forEach((k,i)=>o[k]=c[i]); return o; }); }
+const numOr=v=>(v===""||v==null||isNaN(+v))?null:+v;
+const boolOr=v=>(v===""||v==null)?null:(v==="1");
+const pctStr=p=>p==null?"—":(p*100).toFixed(0)+"%";
 
-function parseCSV(text){
-  const lines = text.trim().split(/\r?\n/);
-  if (lines.length < 2) return [];
-  const head = splitCsvLine(lines[0]);
-  return lines.slice(1).map(line => {
-    const cells = splitCsvLine(line);
-    const o = {}; head.forEach((h,i) => o[h] = cells[i]); return o;
-  });
+function inWindow(dateStr, rows){
+  if(S.windowDays==="all") return true;
+  const dates=rows.map(r=>r.date).filter(Boolean).sort(); if(!dates.length) return true;
+  const max=new Date(dates[dates.length-1]+"T00:00:00Z");
+  const cut=new Date(max); cut.setUTCDate(cut.getUTCDate()-(Number(S.windowDays)-1));
+  return new Date(dateStr+"T00:00:00Z")>=cut;
 }
-function splitCsvLine(line){
-  const cells = []; let cur = "", q = false;
-  for (const ch of line){ if (ch === '"'){ q = !q; } else if (ch === ',' && !q){ cells.push(cur); cur = ""; } else cur += ch; }
-  cells.push(cur); return cells;
-}
-const numOr = v => (v === "" || v == null || isNaN(+v)) ? null : +v;
-const boolOr = v => (v === "" || v == null) ? null : (v === "1");
-const pctStr = p => p == null ? "—" : (p*100).toFixed(0) + "%";
+const calGraded=()=>S.cal.filter(r=>(r.result==="W"||r.result==="L") && inWindow(r.date,S.cal));
 
-function applyWindow(rows){
-  if (state.windowDays === "all") return rows;
-  const dates = rows.map(r => r.date).filter(Boolean).sort();
-  if (!dates.length) return rows;
-  const max = new Date(dates[dates.length-1] + "T00:00:00Z");
-  const cutoff = new Date(max); cutoff.setUTCDate(cutoff.getUTCDate() - (Number(state.windowDays) - 1));
-  return rows.filter(r => new Date(r.date + "T00:00:00Z") >= cutoff);
+function moneylineStats(rows){
+  const w=rows.filter(r=>r.result==="W").length, n=rows.length;
+  let brier=0,bn=0; for(const r of rows){ const p=numOr(r.model_prob); if(p!=null){ brier+=Math.pow(p-(r.result==="W"?1:0),2); bn++; } }
+  return { w, l:n-w, n, pct:n?w/n:null, brier:bn?brier/bn:null };
 }
-function rate(rows, key){ let h=0,n=0; for(const r of rows){ const b=boolOr(r[key]); if(b!==null){ n++; if(b) h++; } } return {hits:h,n,pct:n?h/n:null}; }
-function offenseAccuracy(rows){
-  const diffs=[]; for(const r of rows){ for(const k of ["away_offense_diff","home_offense_diff"]){ const d=numOr(r[k]); if(d!==null) diffs.push(d); } }
-  if(!diffs.length) return {mae:null,bias:null,n:0};
-  return { mae: diffs.reduce((s,d)=>s+Math.abs(d),0)/diffs.length, bias: diffs.reduce((s,d)=>s+d,0)/diffs.length, n: diffs.length };
+function rollingWinRate(rows, k){
+  const s=rows.slice().sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
+  const pts=[]; for(let i=0;i<s.length;i++){ const from=Math.max(0,i-k+1); const win=s.slice(from,i+1); const wr=win.filter(r=>r.result==="W").length/win.length; pts.push({date:s[i].date, pct:wr}); }
+  // thin to ~40 points max
+  const step=Math.max(1,Math.ceil(pts.length/40)); return pts.filter((_,i)=>i%step===0 || i===pts.length-1);
 }
-function bullpenFlagSignal(rows){
-  const f=[],u=[];
-  for(const r of rows){ for(const s of ["away","home"]){ const fl=boolOr(r[s+"_bullpen_flagged"]); const era=numOr(r[s+"_bullpen_actual_era"]); if(fl!==null&&era!==null) (fl?f:u).push(era); } }
-  const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
-  return { flaggedEra:avg(f), flaggedN:f.length, unflaggedEra:avg(u), unflaggedN:u.length };
-}
-function trendByDate(rows){
-  const m=new Map();
-  for(const r of rows){ const b=boolOr(r.direction_correct); if(b===null) continue; if(!m.has(r.date)) m.set(r.date,{h:0,n:0}); const o=m.get(r.date); o.n++; if(b) o.h++; }
-  return [...m.entries()].sort().map(([date,o])=>({date,pct:o.h/o.n,n:o.n}));
-}
+function mae(rows, projKey, actKey){ const d=[]; for(const r of rows){ const p=numOr(r[projKey]),a=numOr(r[actKey]); if(p!=null&&a!=null) d.push(Math.abs(p-a)); } return {mae:d.length?d.reduce((s,x)=>s+x,0)/d.length:null, n:d.length}; }
+function leanRecord(rows,key){ let w=0,l=0; for(const r of rows){ if(r[key]==="W")w++; else if(r[key]==="L")l++; } return {w,l,n:w+l}; }
 
-function render(){
-  const rows = applyWindow(state.rows);
-  renderKpis(rows);
-  renderTrend(trendByDate(rows));
-  renderReads(rows);
-  renderProjection(rows);
-  renderGames(rows);
-}
-function renderKpis(rows){
-  const dir = rate(rows,"direction_correct");
-  const edge = rate(rows,"starter_held_up");
-  const off = offenseAccuracy(rows);
-  const el = document.getElementById("kpis");
-  el.innerHTML = [
-    kpi("Direction accuracy", pctStr(dir.pct), `model side won ${dir.hits} of ${dir.n}`),
-    kpi("Pitcher-edge hold rate", pctStr(edge.pct), `${edge.hits} of ${edge.n} held up`),
-    kpi("Offense miss (MAE)", off.mae==null?"—":off.mae.toFixed(1)+" runs", `${off.n} side-projections`),
-    kpi("Offense bias", off.bias==null?"—":(off.bias>0?"+":"")+off.bias.toFixed(1)+" runs", off.bias==null?"":(off.bias>0?"projecting low":"projecting high"))
-  ].join("");
-}
 function kpi(label,value,sub){ return `<div class="kpi"><div class="label">${esc(label)}</div><div class="value">${esc(value)}</div><div class="sub">${esc(sub)}</div></div>`; }
 
-function renderTrend(points){
-  const el = document.getElementById("trend");
-  if(!points.length){ el.innerHTML = `<p class="dim">No graded games in this window yet.</p>`; return; }
-  const w=Math.max(320, points.length*60), h=90, pad=24;
-  const x = i => pad + (points.length===1 ? (w-2*pad)/2 : i*(w-2*pad)/(points.length-1));
-  const y = p => (h-pad) - p*(h-2*pad);
-  const pts = points.map((p,i)=>`${x(i)},${y(p.pct)}`).join(" ");
-  const dots = points.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.pct)}" r="3.5" fill="#8b5cf6"><title>${p.date}: ${(p.pct*100).toFixed(0)}% (${p.n})</title></circle>`).join("");
-  const midY = y(0.5);
-  el.innerHTML = `<svg class="spark" viewBox="0 0 ${w} ${h}" width="100%" height="${h}">
-    <line x1="${pad}" y1="${midY}" x2="${w-pad}" y2="${midY}" stroke="var(--border)" stroke-dasharray="4 4"/>
-    ${points.length>1?`<polyline points="${pts}" fill="none" stroke="#8b5cf6" stroke-width="2"/>`:""}
-    ${dots}
-  </svg><p class="sec-note">Dashed line = 50%. Hover a point for the day.</p>`;
-}
+function render(){
+  const cal=calGraded();
+  const ml=moneylineStats(cal);
+  const tot=S.totals.filter(r=>inWindow(r.date,S.totals));
+  const kp=S.kprops.filter(r=>inWindow(r.date,S.kprops));
+  const kLean=leanRecord(kp,"lean_result");
+  const tMae=mae(tot,"projection","actual_total");
+  const corr=S.report&&S.report.overall?S.report.overall.corr_lab_win:null;
 
-function renderReads(rows){
-  const defs = [
-    ["Direction (model side)", rate(rows,"direction_correct")],
-    ["Strength model", rate(rows,"submodel_strength_right")],
-    ["Run model", rate(rows,"submodel_run_right")],
-    ["Pitcher edge held up", rate(rows,"starter_held_up")]
-  ];
-  document.getElementById("reads").innerHTML = defs.map(([name,r])=>{
-    const pct = r.pct==null?0:r.pct*100;
-    const color = r.pct==null?"var(--border)":(r.pct>=0.5?"#2ecc71":"#e74c3c");
-    return `<div class="bar-row"><div class="name">${esc(name)}</div>
-      <div class="bar-track"><div class="bar-fill" style="width:${pct.toFixed(0)}%;background:${color}"></div></div>
-      <div class="bar-num">${pctStr(r.pct)} <small>(${r.n})</small></div></div>`;
-  }).join("");
-  const bp = bullpenFlagSignal(rows);
-  const note = document.getElementById("bullpenNote");
-  if(bp.flaggedN && bp.unflaggedN){
-    const worse = bp.flaggedEra > bp.unflaggedEra;
-    note.innerHTML = `Bullpen flag: pens flagged tired/high-risk pregame allowed <strong>${bp.flaggedEra.toFixed(2)} ERA</strong> in relief (${bp.flaggedN}) vs <strong>${bp.unflaggedEra.toFixed(2)}</strong> for unflagged (${bp.unflaggedN}) — the flag ${worse?"is carrying signal":"did not separate"}.`;
-  } else { note.textContent = ""; }
-}
-
-function renderProjection(rows){
-  const off = offenseAccuracy(rows);
-  document.getElementById("projection").innerHTML = [
-    kpi("Offense MAE", off.mae==null?"—":off.mae.toFixed(2)+" runs", `avg absolute miss, ${off.n} projections`),
-    kpi("Directional bias", off.bias==null?"—":(off.bias>0?"+":"")+off.bias.toFixed(2)+" runs", off.bias==null?"":(off.bias>0?"actuals came in higher — projecting low":"actuals came in lower — projecting high"))
+  document.getElementById("kpis").innerHTML=[
+    kpi("Model direction", ml.n?`${ml.w}-${ml.l}`:"—", ml.pct==null?"":`${pctStr(ml.pct)} of ${ml.n} games`),
+    kpi("Moneyline Brier", ml.brier==null?"—":ml.brier.toFixed(4), ml.brier==null?"":(ml.brier>0.25?"worse than a coin flip":"better than 0.25")),
+    kpi("Rating→win corr", corr==null?"—":(corr>0?"+":"")+corr.toFixed(3), "does a higher rating win more?"),
+    kpi("K-prop leans", kLean.n?`${kLean.w}-${kLean.l}`:"—", kLean.n?`${(kLean.w/kLean.n*100).toFixed(0)}%`:""),
+    kpi("Totals miss (MAE)", tMae.mae==null?"—":tMae.mae.toFixed(2), tMae.n?`over ${tMae.n} games`:"")
   ].join("");
+
+  renderTrend(rollingWinRate(cal,20));
+  renderCalibration();
+  renderComponents();
+  renderRecapReads(cal);
+  renderProjection(tot,kp);
+  renderGames(cal);
 }
 
-function cell(v){ if(v===null) return `<td class="dim">—</td>`; return v ? `<td class="ok">✓</td>` : `<td class="no">✗</td>`; }
-function renderGames(rows){
-  let list = rows.slice();
-  const q = state.search.trim().toLowerCase();
-  if(q) list = list.filter(r => (r.game||"").toLowerCase().includes(q));
-  const val = (r,k) => {
-    if(k==="offmiss"){ const a=numOr(r.away_offense_diff),h=numOr(r.home_offense_diff); const arr=[a,h].filter(x=>x!=null).map(Math.abs); return arr.length?arr.reduce((s,x)=>s+x,0)/arr.length:-1; }
-    if(["direction_correct","submodel_strength_right","submodel_run_right","starter_held_up"].includes(k)){ const b=boolOr(r[k]); return b===null?-1:(b?1:0); }
-    return r[k]||"";
-  };
-  list.sort((a,b)=>{ const x=val(a,state.sortKey),y=val(b,state.sortKey); if(x<y)return state.sortDir; if(x>y)return -state.sortDir; return 0; });
-  const cols = [
-    ["date","Date"],["game","Matchup"],["pick_team","Pick"],
-    ["direction_correct","Dir"],["submodel_strength_right","Str"],["submodel_run_right","Run"],
-    ["starter_held_up","Edge"],["offmiss","Off. miss"]
-  ];
-  const head = `<tr>${cols.map(([k,l])=>`<th data-k="${k}" class="${k==='offmiss'?'num':''}">${esc(l)}</th>`).join("")}</tr>`;
-  const body = list.map(r=>{
-    const off = val(r,"offmiss");
-    const matchup = r.matchup_url ? `<a href="${esc(r.matchup_url)}">${esc(r.game)}</a>` : esc(r.game);
-    return `<tr><td>${esc(r.date)}</td><td>${matchup}</td><td>${esc(r.pick_team||"—")}</td>${cell(boolOr(r.direction_correct))}${cell(boolOr(r.submodel_strength_right))}${cell(boolOr(r.submodel_run_right))}${cell(boolOr(r.starter_held_up))}<td class="num">${off<0?"—":off.toFixed(1)}</td></tr>`;
+function renderTrend(points){
+  const el=document.getElementById("trend");
+  if(points.length<2){ el.innerHTML=`<p class="dim">Not enough graded games in this window to trend.</p>`; return; }
+  const w=Math.max(360,points.length*22),h=110,pad=26;
+  const x=i=>pad+i*(w-2*pad)/(points.length-1), y=p=>(h-pad)-p*(h-2*pad);
+  const line=points.map((p,i)=>`${x(i)},${y(p.pct)}`).join(" ");
+  el.innerHTML=`<svg class="spark" viewBox="0 0 ${w} ${h}" width="100%" height="${h}">
+    <line x1="${pad}" y1="${y(0.5)}" x2="${w-pad}" y2="${y(0.5)}" stroke="var(--border)" stroke-dasharray="4 4"/>
+    <polyline points="${line}" fill="none" stroke="#8b5cf6" stroke-width="2"/>
+    <circle cx="${x(points.length-1)}" cy="${y(points[points.length-1].pct)}" r="3.5" fill="#8b5cf6"><title>${points[points.length-1].date}: ${(points[points.length-1].pct*100).toFixed(0)}%</title></circle>
+  </svg><p class="sec-note">20-game rolling win rate, earliest → latest.</p>`;
+}
+
+function renderCalibration(){
+  const el=document.getElementById("calibration");
+  const bands=S.report&&S.report.rating_bands;
+  if(!bands||!bands.length){ el.innerHTML=""; return; }
+  const rows=bands.map(b=>{
+    const pred=b.mean_model_prob*100, act=b.actual_win_rate*100, gap=(b.actual_win_rate-b.mean_model_prob)*100;
+    const cls=gap<=-8?"no":(gap>=8?"ok":"");
+    return `<tr><td>${esc(b.band)}</td><td class="num">${b.n}</td><td class="num">${pred.toFixed(0)}%</td><td class="num">${act.toFixed(0)}%</td><td class="num ${cls}">${gap>0?"+":""}${gap.toFixed(0)}%</td></tr>`;
   }).join("");
-  document.getElementById("gamesTable").innerHTML = `<thead>${head}</thead><tbody>${body||`<tr><td colspan="8" class="dim">No games match.</td></tr>`}</tbody>`;
-  document.querySelectorAll("#gamesTable th").forEach(th=>th.addEventListener("click",()=>{
-    const k=th.getAttribute("data-k"); if(state.sortKey===k) state.sortDir*=-1; else { state.sortKey=k; state.sortDir=(k==="game"||k==="pick_team")?1:-1; }
-    renderGames(applyWindow(state.rows));
-  }));
+  el.innerHTML=`<p class="sec-note" style="margin-top:16px"><strong>Confidence calibration</strong> — full history. Do our more confident games actually win more?</p>
+  <table class="dash"><thead><tr><th>Rating band</th><th class="num">n</th><th class="num">Predicted</th><th class="num">Actual</th><th class="num">Gap</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
-document.getElementById("windowSeg").addEventListener("click", e=>{
-  const b=e.target.closest("button"); if(!b) return;
-  state.windowDays=b.getAttribute("data-w");
-  document.querySelectorAll("#windowSeg button").forEach(x=>x.classList.toggle("on",x===b));
-  render();
-});
-document.getElementById("search").addEventListener("input", e=>{ state.search=e.target.value; renderGames(applyWindow(state.rows)); });
+function renderComponents(){
+  const el=document.getElementById("components");
+  const comps=S.report&&S.report.components;
+  if(!comps||!comps.length){ el.innerHTML=`<p class="dim">Component analysis not available yet.</p>`; return; }
+  const maxAbs=Math.max(...comps.map(c=>Math.abs(c.lift)),0.05);
+  el.innerHTML=comps.map(c=>{
+    const lift=c.lift*100, w=Math.min(100,Math.abs(c.lift)/maxAbs*50), color=c.lift>=0?"#2ecc71":"#e74c3c", left=c.lift>=0?"50%":`${50-w}%`;
+    return `<div class="bar-row"><div class="name">${esc(c.component)}</div>
+      <div class="bar-track"><div class="bar-fill" style="position:absolute;left:${left};width:${w}%;background:${color}"></div><div style="position:absolute;left:50%;top:0;bottom:0;border-left:1px solid var(--text-dim)"></div></div>
+      <div class="bar-num">${lift>0?"+":""}${lift.toFixed(1)}% <small>(n${c.n})</small></div></div>`;
+  }).join("");
+}
+
+function renderRecapReads(cal){
+  const el=document.getElementById("recapReads");
+  const rows=S.recap.filter(r=>inWindow(r.date,S.recap));
+  if(!rows.length){ el.innerHTML=""; return; }
+  const rate=(k)=>{ let h=0,n=0; for(const r of rows){ const b=boolOr(r[k]); if(b!=null){n++;if(b)h++;} } return {pct:n?h/n:null,n}; };
+  const defs=[["Direction","direction_correct"],["Strength model","submodel_strength_right"],["Run model","submodel_run_right"],["Pitcher edge held","starter_held_up"]];
+  el.innerHTML=`<p class="sec-note" style="margin-top:18px"><strong>Pregame-read grading</strong> — from the recap ledger (${rows.length} games so far), how each read matched the field.</p>
+  <div class="bars">${defs.map(([name,k])=>{const r=rate(k);const pct=r.pct==null?0:r.pct*100;const color=r.pct==null?"var(--border)":(r.pct>=.5?"#2ecc71":"#e74c3c");return `<div class="bar-row"><div class="name">${esc(name)}</div><div class="bar-track"><div class="bar-fill" style="width:${pct.toFixed(0)}%;background:${color}"></div></div><div class="bar-num">${pctStr(r.pct)} <small>(${r.n})</small></div></div>`;}).join("")}</div>`;
+}
+
+function renderProjection(tot,kp){
+  const tM=mae(tot,"projection","actual_total"), kM=mae(kp,"projection","actual_k");
+  const kLean=leanRecord(kp,"lean_result");
+  const off=(()=>{ const d=[]; for(const r of S.recap.filter(r=>inWindow(r.date,S.recap))){ for(const k of ["away_offense_diff","home_offense_diff"]){ const v=numOr(r[k]); if(v!=null)d.push(v);} } return d.length?{mae:d.reduce((s,x)=>s+Math.abs(x),0)/d.length,bias:d.reduce((s,x)=>s+x,0)/d.length,n:d.length}:null; })();
+  const cards=[
+    kpi("Totals projection MAE", tM.mae==null?"—":tM.mae.toFixed(2)+" runs", tM.n?`over ${tM.n} games`:""),
+    kpi("K-prop projection MAE", kM.mae==null?"—":kM.mae.toFixed(2)+" K", kM.n?`over ${kM.n} starts`:""),
+    kpi("K-prop lean record", kLean.n?`${kLean.w}-${kLean.l}`:"—", kLean.n?`${(kLean.w/kLean.n*100).toFixed(0)}%`:"")
+  ];
+  if(off) cards.push(kpi("Offense MAE (recap)", off.mae.toFixed(2)+" runs", `${off.bias>0?"+":""}${off.bias.toFixed(1)} bias · ${off.n}`));
+  document.getElementById("projection").innerHTML=cards.join("");
+}
+
+function renderGames(cal){
+  let list=cal.slice();
+  const q=S.search.trim().toLowerCase();
+  if(q) list=list.filter(r=>(r.matchup||"").toLowerCase().includes(q));
+  const val=(r,k)=>{ if(k==="model_prob"||k==="market_prob"||k==="lab_score") return numOr(r[k])??-1; if(k==="result") return r.result==="W"?1:0; return r[k]||""; };
+  list.sort((a,b)=>{const x=val(a,S.sortKey),y=val(b,S.sortKey);if(x<y)return S.sortDir;if(x>y)return -S.sortDir;return 0;});
+  const cols=[["date","Date"],["matchup","Matchup"],["model_side","Model side"],["model_prob","Model%","num"],["market_prob","Mkt%","num"],["lab_score","Lab","num"],["result","Res"],["final_score","Final"]];
+  const head=`<tr>${cols.map(c=>`<th data-k="${c[0]}" class="${c[2]||""}">${esc(c[1])}</th>`).join("")}</tr>`;
+  const body=list.map(r=>{
+    const url=(S.recapByPk[r.gamePk]||{}).matchup_url;
+    const matchup=url?`<a href="${esc(url)}">${esc(r.matchup)}</a>`:esc(r.matchup);
+    const mp=numOr(r.model_prob), kp=numOr(r.market_prob);
+    return `<tr><td>${esc(r.date)}</td><td>${matchup}</td><td>${esc(r.model_side)}</td><td class="num">${mp==null?"—":(mp*100).toFixed(0)+"%"}</td><td class="num">${kp==null?"—":(kp*100).toFixed(0)+"%"}</td><td class="num">${esc(r.lab_score||"—")}</td><td class="${r.result==="W"?"ok":"no"}">${esc(r.result)}</td><td>${esc(r.final_score||"—")}</td></tr>`;
+  }).join("");
+  document.getElementById("gamesTable").innerHTML=`<thead>${head}</thead><tbody>${body||`<tr><td colspan="8" class="dim">No games match.</td></tr>`}</tbody>`;
+  document.querySelectorAll("#gamesTable th").forEach(th=>th.addEventListener("click",()=>{const k=th.getAttribute("data-k");if(S.sortKey===k)S.sortDir*=-1;else{S.sortKey=k;S.sortDir=(k==="matchup"||k==="model_side")?1:-1;}renderGames(calGraded());}));
+}
+
+document.getElementById("windowSeg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;S.windowDays=b.getAttribute("data-w");document.querySelectorAll("#windowSeg button").forEach(x=>x.classList.toggle("on",x===b));render();});
+document.getElementById("search").addEventListener("input",e=>{S.search=e.target.value;renderGames(calGraded());});
 
 (async function load(){
   const statusEl=document.getElementById("status");
-  try{
-    const txt = await fetch("/data/calibration/recap_components.csv?v="+Date.now(), {cache:"no-store"}).then(r=>r.ok?r.text():null);
-    if(!txt){ statusEl.innerHTML = "No graded games yet. The learning ledger fills once the recap backfill has run."; return; }
-    state.rows = parseCSV(txt);
-    if(!state.rows.length){ statusEl.innerHTML = "The learning ledger is empty so far — it fills after the next backfill."; return; }
-    statusEl.style.display="none";
-    document.getElementById("dash").style.display="block";
-    render();
-  }catch(e){ statusEl.textContent = "Could not load the learning ledger."; }
+  const grab=(u,json)=>fetch(u+"?v="+Date.now(),{cache:"no-store"}).then(r=>r.ok?(json?r.json():r.text()):null).catch(()=>null);
+  const [calT,rep,totT,kpT,recapT]=await Promise.all([
+    grab("/data/calibration/calibration_model_log.csv"),
+    grab("/data/calibration/confidence_report.json",true),
+    grab("/data/calibration/totals_model_log.csv"),
+    grab("/data/calibration/kprops_log.csv"),
+    grab("/data/calibration/recap_components.csv")
+  ]);
+  S.cal=parseCSV(calT); S.report=rep||null; S.totals=parseCSV(totT); S.kprops=parseCSV(kpT); S.recap=parseCSV(recapT);
+  S.recapByPk={}; for(const r of S.recap){ if(r.game_pk) S.recapByPk[r.game_pk]=r; }
+  if(!S.cal.length && !S.report && !S.totals.length){ statusEl.textContent="No graded data found yet."; return; }
+  const cov=S.report&&S.report.coverage; if(cov) document.getElementById("coverage").textContent=`Coverage: ${cov.from} → ${cov.to} · ${S.report.n_graded} graded`;
+  statusEl.style.display="none"; document.getElementById("dash").style.display="block";
+  render();
 })();
 </script>
 </body>
