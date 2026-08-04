@@ -23,6 +23,7 @@ const fs = require("fs");
 const path = require("path");
 const MatchupCopy = require("./lib/matchup-copy-core");
 const RecapReview = require("./lib/recap-review-core");
+const RecapBuild = require("./lib/recap-build-core");
 
 const SITE = "https://lydiaslab.com";
 const AUTHOR_URL = `${SITE}/writers/lynold/`;
@@ -316,7 +317,8 @@ async function main() {
     const pitcherGame = rawPitcherGame ? { ...rawPitcherGame, source_version: pitcherSource.source_version || null } : null;
     const resultGame = findResult(results, DATE, game);
     const final = finalSummary(scheduleGame, resultGame) || previousFinalByPk.get(String(game.game_pk)) || null;
-    const recapReview = args.offline ? null : await buildRecapForGame(game, scheduleGame, pitcherGame);
+    const liveRecap = args.offline ? null : await buildRecapForGame(game, scheduleGame, pitcherGame);
+    const recapReview = liveRecap || persistedRecapAsReview(persistedRecap, game.game_pk);
     if (recapReview) recapByPk.set(String(game.game_pk), { game_pk: game.game_pk, game: game.game, ...recapReview.data, paragraphs: recapReview.paragraphs });
     const previous = previousBySlug.get(slug) || null;
     const weather = args.skipWeather
@@ -731,78 +733,6 @@ async function fetchSchedule(date) {
   game, exactly like every other enrichment fetch in this file — it never
   blocks page generation or the indexing quality gate.
 */
-async function fetchBoxscore(gamePk) {
-  const url = `https://statsapi.mlb.com/api/v1/game/${gamePk}/boxscore`;
-  try {
-    const response = await fetch(url, { headers: { "user-agent": "LyDia matchup generator" } });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.json();
-  } catch (error) {
-    console.warn(`Boxscore unavailable for game ${gamePk}: ${error.message}`);
-    return null;
-  }
-}
-
-/* MLB reports innings pitched as X.0 / X.1 / X.2 (whole innings plus zero,
-   one, or two outs) — not a decimal. Converts to a true decimal for ERA math;
-   recap-review-core converts back to the X.1/X.2 display form itself. */
-function parseIpToDecimal(value) {
-  const raw = Number(value);
-  if (!Number.isFinite(raw)) return null;
-  const whole = Math.trunc(raw);
-  const outs = Math.round((raw - whole) * 10); // the digit after the decimal point IS the out count
-  return whole + Math.min(outs, 2) / 3;
-}
-
-/*
-  Pulls the actual per-team pitching line out of a boxscore: the starter
-  (matched against the pregame pitching plan's starter pitcher_id, not by
-  list position — order in the boxscore is not a documented guarantee) and
-  every other pitcher used, aggregated as the bullpen's actual relief line.
-  Also carries the team's whole-staff runs/earned-runs so an unearned decisive
-  run can be flagged rather than misread as a bullpen or starter failure.
-*/
-function extractPitchingActuals(boxscore, game) {
-  if (!boxscore || !boxscore.teams) return null;
-  const sideOf = (mlbSide, memberBriefSide) => {
-    const team = boxscore.teams[mlbSide];
-    if (!team || !team.players || !Array.isArray(team.pitchers)) return null;
-    const plan = (game.pitching_plan && game.pitching_plan[memberBriefSide]) || null;
-    const starterSegment = plan && Array.isArray(plan.segments)
-      ? plan.segments.find(s => s.role !== "bullpen" && s.pitcher_id)
-      : null;
-    const starterPid = starterSegment ? String(starterSegment.pitcher_id) : String(team.pitchers[0] || "");
-
-    let starter = null;
-    const bullpenAgg = { ip: 0, er: 0, h: 0, bb: 0, k: 0 };
-    let bullpenUsed = false;
-    for (const pid of team.pitchers) {
-      const entry = team.players[`ID${pid}`];
-      const stats = entry && entry.stats && entry.stats.pitching;
-      if (!stats) continue;
-      const ip = parseIpToDecimal(stats.inningsPitched);
-      const line = { ip, er: Number(stats.earnedRuns), h: Number(stats.hits), bb: Number(stats.baseOnBalls), k: Number(stats.strikeOuts) };
-      if (String(pid) === starterPid) {
-        starter = { name: entry.person && entry.person.fullName, ...line };
-      } else if (ip !== null) {
-        bullpenUsed = true;
-        bullpenAgg.ip += ip; bullpenAgg.er += line.er; bullpenAgg.h += line.h; bullpenAgg.bb += line.bb; bullpenAgg.k += line.k;
-      }
-    }
-    const teamPitching = team.teamStats && team.teamStats.pitching;
-    return {
-      starter,
-      bullpen: bullpenUsed ? bullpenAgg : null,
-      teamRunsAllowed: teamPitching ? Number(teamPitching.runs) : null,
-      teamEarnedRunsAllowed: teamPitching ? Number(teamPitching.earnedRuns) : null
-    };
-  };
-  const away = sideOf("away", "away");
-  const home = sideOf("home", "home");
-  if (!away && !home) return null;
-  return { away, home };
-}
-
 /*
   Builds the recap review for one game: pregame reasoning (already sitting in
   the member-brief record and the canonical pitcher source) against the
@@ -813,42 +743,8 @@ function extractPitchingActuals(boxscore, game) {
 */
 async function buildRecapForGame(game, scheduleGame, pitcherGame) {
   if (!scheduleGame || !scheduleGame.status || scheduleGame.status.abstractGameState !== "Final") return null;
-  const boxscore = await fetchBoxscore(game.game_pk);
-  const actuals = extractPitchingActuals(boxscore, game);
-  if (!actuals) return null;
-
-  const finalAwayScore = known(scheduleGame.teams && scheduleGame.teams.away && scheduleGame.teams.away.score)
-    ? scheduleGame.teams.away.score : null;
-  const finalHomeScore = known(scheduleGame.teams && scheduleGame.teams.home && scheduleGame.teams.home.score)
-    ? scheduleGame.teams.home.score : null;
-  const actualInnings = scheduleGame.linescore && Number.isFinite(Number(scheduleGame.linescore.currentInning))
-    ? Number(scheduleGame.linescore.currentInning) : null;
-
-  const bp = mapBullpen(game);
-  const pitcher = pitcherGame || {};
-  const projected = game.projected_runs || {};
-  const offense = game.offense_form || {};
-
-  const review = RecapReview.buildRecapReview({
-    pickTeam: game.pick_team, awayTeam: game.away_team, homeTeam: game.home_team,
-    finalAwayScore, finalHomeScore, actualInnings,
-    strengthProbabilityPick: game.legacy_strength_probability,
-    runModelProbabilityPick: game.run_model_probability,
-    pitcherEdgeTeam: pitcher.edge_team, pitcherGap: pitcher.gap,
-    awayPitcherName: pitcher.away && pitcher.away.name, homePitcherName: pitcher.home && pitcher.home.name,
-    awayStarterActual: actuals.away && actuals.away.starter, homeStarterActual: actuals.home && actuals.home.starter,
-    awayBullpenLabel: bp.away && bp.away.risk_label, homeBullpenLabel: bp.home && bp.home.risk_label,
-    awayBullpenScore: bp.away && (bp.away.risk_index ?? bp.away.score), homeBullpenScore: bp.home && (bp.home.risk_index ?? bp.home.score),
-    awayBullpenActual: actuals.away && actuals.away.bullpen, homeBullpenActual: actuals.home && actuals.home.bullpen,
-    awayRunsAllowedByOpposingOffense: finalHomeScore, awayEarnedRunsAllowedByOpposingOffense: actuals.away && actuals.away.teamEarnedRunsAllowed,
-    homeRunsAllowedByOpposingOffense: finalAwayScore, homeEarnedRunsAllowedByOpposingOffense: actuals.home && actuals.home.teamEarnedRunsAllowed,
-    projectedAwayRuns: known(projected.away) ? Number(projected.away) : null,
-    projectedHomeRuns: known(projected.home) ? Number(projected.home) : null,
-    awayDeltaOps: offense.away && Number.isFinite(offense.away.delta_ops) ? offense.away.delta_ops : null,
-    homeDeltaOps: offense.home && Number.isFinite(offense.home.delta_ops) ? offense.home.delta_ops : null
-  });
-  if (!review.paragraphs.length) return null;
-  return review;
+  const boxscore = await RecapBuild.fetchBoxscore(game.game_pk);
+  return RecapBuild.buildReviewFromBoxscore(game, scheduleGame, pitcherGame, boxscore);
 }
 
 function venueForGame(game, scheduleGame) {
@@ -969,13 +865,7 @@ function finalSummary(scheduleGame, resultGame) {
   };
 }
 
-function mapBullpen(game) {
-  const bullpen = game.bullpen || {};
-  if (!bullpen.pick_team || !bullpen.opponent) return { away: null, home: null };
-  if (game.pick_team === game.away_team) return { away: bullpen.pick_team, home: bullpen.opponent };
-  if (game.pick_team === game.home_team) return { away: bullpen.opponent, home: bullpen.pick_team };
-  return { away: null, home: null };
-}
+
 
 function decisionLabel(status) {
   if (status === "official_pick") return "Official Pick";
@@ -1313,7 +1203,7 @@ function renderMatchupPage(context) {
   const robots = quality.indexable ? "index,follow,max-image-preview:large" : "noindex,follow";
   const pitcher = pitcherGame || {};
   const market = game.market || {};
-  const bullpen = mapBullpen(game);
+  const bullpen = RecapBuild.mapBullpen(game);
   const offense = game.offense_form || {};
   const generatedAt = brief.generated_at || new Date().toISOString();
   const gameTime = game.game_time_iso || (scheduleGame && scheduleGame.gameDate);
@@ -1983,6 +1873,17 @@ function injectFinalSection(html, finalHtml) {
   return html.slice(0, idx) + finalHtml + "\n\n" + html.slice(idx);
 }
 
+// A persisted recap-reviews entry stores the review's structured fields spread
+// at the top level plus paragraphs. Rewrap it as { paragraphs, data } so
+// renderFinal can read it exactly like a freshly-built review (direction tone,
+// the "How the analysis held up" block). This is what lets backfill-recaps.js
+// do the heavy fetching and this generator render offline from what it wrote.
+function persistedRecapAsReview(persistedRecap, gamePk) {
+  const entry = persistedRecap && persistedRecap.games ? persistedRecap.games[String(gamePk)] : null;
+  if (!entry || !Array.isArray(entry.paragraphs) || !entry.paragraphs.length) return null;
+  return { paragraphs: entry.paragraphs, data: entry };
+}
+
 function backfillFinalIntoPage(outputPath, gameLike, finalObj, persistedRecap) {
   if (!finalObj || !outputPath || !fs.existsSync(outputPath)) return;
   const html = fs.readFileSync(outputPath, "utf8");
@@ -1990,7 +1891,7 @@ function backfillFinalIntoPage(outputPath, gameLike, finalObj, persistedRecap) {
   const pk = String((gameLike && gameLike.game_pk) || "");
   const recapEntry = pk ? ((persistedRecap && persistedRecap.games) || {})[pk] : null;
   const recapReview = recapEntry && Array.isArray(recapEntry.paragraphs) && recapEntry.paragraphs.length
-    ? { paragraphs: recapEntry.paragraphs }
+    ? { paragraphs: recapEntry.paragraphs, data: recapEntry }
     : null;
   const injected = injectFinalSection(html, renderFinal(finalObj, gameLike || {}, recapReview));
   if (injected !== html) fs.writeFileSync(outputPath, injected, "utf8");
@@ -1999,18 +1900,18 @@ function backfillFinalIntoPage(outputPath, gameLike, finalObj, persistedRecap) {
 function renderFinal(final, game, recapReview) {
   if (!final) return "";
   const scoreKnown = known(final.away_score) && known(final.home_score);
-  const result = final.moneyline_result || "NG";
-  const resultText = result === "W" ? "Win" : result === "L" ? "Loss" : result === "VOID" ? "Void" : "Not graded";
-  const css = result === "W" ? "result-win" : result === "L" ? "result-loss" : "";
+  const hasReview = recapReview && Array.isArray(recapReview.paragraphs) && recapReview.paragraphs.length;
+  // The card grades the ANALYSIS, not the bet. Tone follows whether the pregame
+  // read (direction) held up, when that is known; the moneyline win/loss and the
+  // old "Official grade" line are deliberately gone -- this section exists to
+  // check the reasoning against reality, not to score a wager.
+  const dir = recapReview && recapReview.data && recapReview.data.direction;
+  const css = dir && typeof dir.correct === "boolean" ? (dir.correct ? "result-win" : "result-loss") : "";
   return `<section class="card ${css}">
     <h2>Final result</h2>
-    <div class="metric-grid">
-      <div class="metric"><div class="label">Final score</div><div class="value">${scoreKnown ? `${esc(shortTeam(game.away_team))} ${esc(final.away_score)}, ${esc(shortTeam(game.home_team))} ${esc(final.home_score)}` : "Score unavailable"}</div></div>
-      <div class="metric"><div class="label">Official moneyline grade</div><div class="value">${esc(resultText)}</div></div>
-    </div>
+    <p class="final-score"><strong>${scoreKnown ? `${esc(shortTeam(game.away_team))} ${esc(final.away_score)}, ${esc(shortTeam(game.home_team))} ${esc(final.home_score)}` : "Final score unavailable"}</strong></p>
     ${final.void_reason ? `<p><strong>Void reason:</strong> ${esc(final.void_reason)}</p>` : ""}
-    ${renderRecapReview(recapReview)}
-    <p class="small dim">The pregame analysis remains on this URL. Postgame information is added without rewriting the original decision.</p>
+    ${hasReview ? renderRecapReview(recapReview) : `<p class="small dim">Postgame analysis for this game is being compiled.</p>`}
   </section>`;
 }
 
