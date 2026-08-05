@@ -1,18 +1,18 @@
 {
   "date": "2026-08-05",
-  "generated_at": "2026-08-05T18:09:52.043Z",
+  "generated_at": "2026-08-05T18:50:33.254Z",
   "snapshot_type": "posted",
   "source_of_truth": "LyDia Daily Engine",
   "current_official_model": "multi_market_v1",
   "model_version": "moneyline-v2-plus-runs-v1",
   "lab_rating_version": "lab-rating-v3-measured-components",
   "official_pick_rules": {
-    "minimum_model_probability": 0.72,
+    "minimum_model_probability": 0.61,
     "minimum_lab_score": 80,
     "minimum_market_edge": 0.03,
     "note": "Lab Rating grades LyDia's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
   },
-  "summary": "Brief generated without live market pricing. Treat the card as research-only until pricing is checked.",
+  "summary": "2 official picks cleared their market gates: 1 moneyline and 1 pitcher strikeout prop. 0 value-watch setups had good price math but did not clear official-pick rules.",
   "official_card": [
     {
       "game_pk": 824482,
@@ -23,12 +23,32 @@
       "lab_score": 81,
       "moneyline": {
         "pick": "Cincinnati Reds",
-        "prob": 0.8151,
-        "mkt_prob": 0.5834,
-        "best_price": -146
+        "prob": 0.6576,
+        "mkt_prob": 0.6147,
+        "best_price": -171
       },
       "total": null,
       "strikeouts": []
+    },
+    {
+      "game_pk": 824158,
+      "game": "Toronto Blue Jays @ Houston Astros",
+      "away": "Toronto Blue Jays",
+      "home": "Houston Astros",
+      "time": "2026-08-05T18:10:00Z",
+      "lab_score": 81,
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Hunter Brown",
+          "pick": "Under",
+          "line": 5.5,
+          "best_price": -135,
+          "projection": 3.33,
+          "edge": -2.17
+        }
+      ]
     }
   ],
   "games": [
@@ -358,7 +378,7 @@
       "home_l10": "6-4",
       "pick_team": "Cincinnati Reds",
       "side": "home",
-      "model_probability": 0.8151,
+      "model_probability": 0.6576,
       "model_source": "legacy-strength-fallback",
       "projected_runs": null,
       "pitching_plan": {
@@ -437,7 +457,7 @@
       "run_model_probability": null,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.8128,
-      "edge": 0.2317,
+      "edge": 0.0429,
       "status": "official_pick",
       "value_tag": "OFFICIAL PICK",
       "lab_score": 81,
@@ -466,7 +486,7 @@
         "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
       },
       "official_pick_gate": {
-        "minimum_model_probability": 0.72,
+        "minimum_model_probability": 0.61,
         "minimum_lab_score": 80,
         "minimum_edge": 0.03,
         "model_probability_passed": true,
@@ -474,7 +494,7 @@
         "edge_passed": true
       },
       "pass_reason": null,
-      "read": "Cincinnati Reds is an official moneyline pick because it clears both gates: 81.5% model win probability and 8.1/10 Lab Rating. LyDia projects 81.5% against a 58.3% no-vig market number, a 23.2% model edge at -146. Cincinnati Reds owns the starting pitcher edge by 6 points. Bullpen read: Elevated volatility. Cincinnati Reds's pen efficiency: Effective (5.5/10). Pitching plan: Jacob Lopez 4.4 IP + remaining bullpen 4.6 IP. Bullpen fatigue, efficiency, and combined risk grade only the innings assigned to the bullpen. Lineup check: Cincinnati Reds is near its season form (-0.010 OPS); Athletics is in a cold stretch (-0.069 OPS).",
+      "read": "Cincinnati Reds is an official moneyline pick because it clears both gates: 65.8% model win probability and 8.1/10 Lab Rating. LyDia projects 65.8% against a 61.5% no-vig market number, a 4.3% model edge at -171. Cincinnati Reds owns the starting pitcher edge by 6 points. Bullpen read: Elevated volatility. Cincinnati Reds's pen efficiency: Effective (5.5/10). Bullpen fatigue moved this probability down 15.5 points from 81.3% (starting pitcher and team strength only) to 65.8%. Pitching plan: Jacob Lopez 4.4 IP + remaining bullpen 4.6 IP. Bullpen fatigue, efficiency, and combined risk grade only the innings assigned to the bullpen. Lineup check: Cincinnati Reds is near its season form (-0.010 OPS); Athletics is in a cold stretch (-0.069 OPS).",
       "pitcher_edge": {
         "team": "Cincinnati Reds",
         "gap": 6,
@@ -542,7 +562,7 @@
         "off_adj": 0.0472,
         "bp_adj": 0.015,
         "version": "v3.1-bullpen",
-        "p_home_v2": 0.8151,
+        "p_home_v2": 0.6576,
         "note": "shadow A/B — does not drive picks"
       },
       "bullpen": {
@@ -647,13 +667,13 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": 0.5834,
-        "best_price": -146,
-        "away_price": 137,
-        "home_price": -146,
-        "away_no_vig": 0.4166,
-        "home_no_vig": 0.5834,
-        "books": 9
+        "no_vig_probability": 0.6147,
+        "best_price": -171,
+        "away_price": 158,
+        "home_price": -171,
+        "away_no_vig": 0.3853,
+        "home_no_vig": 0.6147,
+        "books": 4
       }
     },
     {
@@ -986,7 +1006,7 @@
       "home_l10": "6-4",
       "pick_team": "Milwaukee Brewers",
       "side": "home",
-      "model_probability": 0.6738,
+      "model_probability": 0.5869,
       "model_source": "moneyline-v2-plus-runs-v1",
       "projected_runs": {
         "away": 3.9,
@@ -1069,7 +1089,7 @@
       "run_model_probability": 0.3831,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": null,
-      "edge": 0.1286,
+      "edge": 0.0333,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 62,
@@ -1098,7 +1118,7 @@
         "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
       },
       "official_pick_gate": {
-        "minimum_model_probability": 0.72,
+        "minimum_model_probability": 0.61,
         "minimum_lab_score": 80,
         "minimum_edge": 0.03,
         "model_probability_passed": false,
@@ -1174,7 +1194,7 @@
         "off_adj": 0.0712,
         "bp_adj": 0.054,
         "version": "v3.1-bullpen",
-        "p_home_v2": 0.6738,
+        "p_home_v2": 0.5869,
         "note": "shadow A/B — does not drive picks"
       },
       "bullpen": {
@@ -1279,13 +1299,13 @@
         "absolute_risk": "Opponent high"
       },
       "market": {
-        "no_vig_probability": 0.5452,
-        "best_price": -124,
-        "away_price": 119,
-        "home_price": -124,
-        "away_no_vig": 0.4548,
-        "home_no_vig": 0.5452,
-        "books": 9
+        "no_vig_probability": 0.5536,
+        "best_price": -132,
+        "away_price": 122,
+        "home_price": -132,
+        "away_no_vig": 0.4464,
+        "home_no_vig": 0.5536,
+        "books": 4
       }
     },
     {
@@ -1302,7 +1322,7 @@
       "home_l10": "3-7",
       "pick_team": "New York Mets",
       "side": "away",
-      "model_probability": 0.6171,
+      "model_probability": 0.5585,
       "model_source": "moneyline-v2-plus-runs-v1",
       "projected_runs": {
         "away": 3.9,
@@ -1385,7 +1405,7 @@
       "run_model_probability": 0.7222,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": null,
-      "edge": 0.1274,
+      "edge": 0.0677,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 56,
@@ -1414,7 +1434,7 @@
         "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
       },
       "official_pick_gate": {
-        "minimum_model_probability": 0.72,
+        "minimum_model_probability": 0.61,
         "minimum_lab_score": 80,
         "minimum_edge": 0.03,
         "model_probability_passed": false,
@@ -1490,7 +1510,7 @@
         "off_adj": -0.0528,
         "bp_adj": -0.081,
         "version": "v3.1-bullpen",
-        "p_home_v2": 0.3829,
+        "p_home_v2": 0.4415,
         "note": "shadow A/B — does not drive picks"
       },
       "bullpen": {
@@ -1595,13 +1615,13 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": 0.4897,
-        "best_price": 103,
-        "away_price": 103,
-        "home_price": -107,
-        "away_no_vig": 0.4897,
-        "home_no_vig": 0.5103,
-        "books": 9
+        "no_vig_probability": 0.4909,
+        "best_price": 104,
+        "away_price": 104,
+        "home_price": -106,
+        "away_no_vig": 0.4909,
+        "home_no_vig": 0.5091,
+        "books": 4
       }
     },
     {
@@ -1618,7 +1638,7 @@
       "home_l10": "8-2",
       "pick_team": "Boston Red Sox",
       "side": "home",
-      "model_probability": 0.6414,
+      "model_probability": 0.5707,
       "model_source": "legacy-strength-fallback",
       "projected_runs": null,
       "pitching_plan": {
@@ -1697,7 +1717,7 @@
       "run_model_probability": null,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.6379,
-      "edge": 0.0889,
+      "edge": -0.0511,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 55,
@@ -1726,15 +1746,15 @@
         "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
       },
       "official_pick_gate": {
-        "minimum_model_probability": 0.72,
+        "minimum_model_probability": 0.61,
         "minimum_lab_score": 80,
         "minimum_edge": 0.03,
         "model_probability_passed": false,
         "lab_score_passed": false,
-        "edge_passed": true
+        "edge_passed": false
       },
-      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
-      "read": "The combined Lab Rating did not clear the official threshold.",
+      "pass_reason": "Market is higher than LyDia's model probability.",
+      "read": "Market is higher than LyDia's model probability.",
       "pitcher_edge": {
         "team": "No clear SP edge",
         "gap": 1,
@@ -1802,7 +1822,7 @@
         "off_adj": 0.1168,
         "bp_adj": 0.015,
         "version": "v3.1-bullpen",
-        "p_home_v2": 0.6414,
+        "p_home_v2": 0.5707,
         "note": "shadow A/B — does not drive picks"
       },
       "bullpen": {
@@ -1907,13 +1927,13 @@
         "absolute_risk": "Normal"
       },
       "market": {
-        "no_vig_probability": 0.5525,
-        "best_price": -126,
-        "away_price": 120,
-        "home_price": -126,
-        "away_no_vig": 0.4475,
-        "home_no_vig": 0.5525,
-        "books": 9
+        "no_vig_probability": 0.6218,
+        "best_price": -178,
+        "away_price": 162,
+        "home_price": -178,
+        "away_no_vig": 0.3782,
+        "home_no_vig": 0.6218,
+        "books": 4
       }
     },
     {
@@ -1930,7 +1950,7 @@
       "home_l10": "4-6",
       "pick_team": "Kansas City Royals",
       "side": "home",
-      "model_probability": 0.5014,
+      "model_probability": 0.5007,
       "model_source": "moneyline-v2-plus-runs-v1",
       "projected_runs": {
         "away": 4.1,
@@ -2013,7 +2033,7 @@
       "run_model_probability": 0.4007,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": null,
-      "edge": -0.0226,
+      "edge": -0.0167,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 49,
@@ -2042,7 +2062,7 @@
         "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
       },
       "official_pick_gate": {
-        "minimum_model_probability": 0.72,
+        "minimum_model_probability": 0.61,
         "minimum_lab_score": 80,
         "minimum_edge": 0.03,
         "model_probability_passed": false,
@@ -2118,7 +2138,7 @@
         "off_adj": 0.0408,
         "bp_adj": -0.015,
         "version": "v3.1-bullpen",
-        "p_home_v2": 0.5014,
+        "p_home_v2": 0.5007,
         "note": "shadow A/B — does not drive picks"
       },
       "bullpen": {
@@ -2223,13 +2243,13 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": 0.524,
-        "best_price": -113,
-        "away_price": 106,
-        "home_price": -113,
-        "away_no_vig": 0.476,
-        "home_no_vig": 0.524,
-        "books": 9
+        "no_vig_probability": 0.5175,
+        "best_price": -112,
+        "away_price": 102,
+        "home_price": -112,
+        "away_no_vig": 0.4825,
+        "home_no_vig": 0.5175,
+        "books": 3
       }
     },
     {
@@ -2246,7 +2266,7 @@
       "home_l10": "5-5",
       "pick_team": "San Diego Padres",
       "side": "away",
-      "model_probability": 0.5953,
+      "model_probability": 0.5476,
       "model_source": "moneyline-v2-plus-runs-v1",
       "projected_runs": {
         "away": 5.1,
@@ -2329,7 +2349,7 @@
       "run_model_probability": 0.6666,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": null,
-      "edge": 0.0579,
+      "edge": 0.0384,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 49,
@@ -2358,7 +2378,7 @@
         "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
       },
       "official_pick_gate": {
-        "minimum_model_probability": 0.72,
+        "minimum_model_probability": 0.61,
         "minimum_lab_score": 80,
         "minimum_edge": 0.03,
         "model_probability_passed": false,
@@ -2434,7 +2454,7 @@
         "off_adj": -0.0168,
         "bp_adj": 0.06,
         "version": "v3.1-bullpen",
-        "p_home_v2": 0.4047,
+        "p_home_v2": 0.4524,
         "note": "shadow A/B — does not drive picks"
       },
       "bullpen": {
@@ -2539,13 +2559,13 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": 0.5374,
-        "best_price": -119,
-        "away_price": -119,
-        "home_price": 112,
-        "away_no_vig": 0.5374,
-        "home_no_vig": 0.4626,
-        "books": 9
+        "no_vig_probability": 0.5093,
+        "best_price": -102,
+        "away_price": -102,
+        "home_price": 104,
+        "away_no_vig": 0.5093,
+        "home_no_vig": 0.4907,
+        "books": 3
       }
     },
     {
@@ -2562,7 +2582,7 @@
       "home_l10": "4-6",
       "pick_team": "Detroit Tigers",
       "side": "away",
-      "model_probability": 0.5254,
+      "model_probability": 0.5127,
       "model_source": "moneyline-v2-plus-runs-v1",
       "projected_runs": {
         "away": 5.6,
@@ -2645,7 +2665,7 @@
       "run_model_probability": 0.8222,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": null,
-      "edge": 0.113,
+      "edge": 0.0503,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 44,
@@ -2674,7 +2694,7 @@
         "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
       },
       "official_pick_gate": {
-        "minimum_model_probability": 0.72,
+        "minimum_model_probability": 0.61,
         "minimum_lab_score": 80,
         "minimum_edge": 0.03,
         "model_probability_passed": false,
@@ -2750,7 +2770,7 @@
         "off_adj": -0.0936,
         "bp_adj": -0.045,
         "version": "v3.1-bullpen",
-        "p_home_v2": 0.4746,
+        "p_home_v2": 0.4873,
         "note": "shadow A/B — does not drive picks"
       },
       "bullpen": {
@@ -2855,13 +2875,13 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": 0.4124,
-        "best_price": 143,
-        "away_price": 143,
-        "home_price": -150,
-        "away_no_vig": 0.4124,
-        "home_no_vig": 0.5876,
-        "books": 9
+        "no_vig_probability": 0.4624,
+        "best_price": 110,
+        "away_price": 110,
+        "home_price": -120,
+        "away_no_vig": 0.4624,
+        "home_no_vig": 0.5376,
+        "books": 4
       }
     },
     {
@@ -3510,7 +3530,7 @@
       "home_l10": "7-3",
       "pick_team": "Atlanta Braves",
       "side": "home",
-      "model_probability": 0.6096,
+      "model_probability": 0.5548,
       "model_source": "legacy-strength-fallback",
       "projected_runs": null,
       "pitching_plan": {
@@ -3589,7 +3609,7 @@
       "run_model_probability": null,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.6189,
-      "edge": 0.0722,
+      "edge": -0.0322,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 39,
@@ -3618,15 +3638,15 @@
         "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
       },
       "official_pick_gate": {
-        "minimum_model_probability": 0.72,
+        "minimum_model_probability": 0.61,
         "minimum_lab_score": 80,
         "minimum_edge": 0.03,
         "model_probability_passed": false,
         "lab_score_passed": false,
-        "edge_passed": true
+        "edge_passed": false
       },
-      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
-      "read": "The combined Lab Rating did not clear the official threshold.",
+      "pass_reason": "Market is higher than LyDia's model probability.",
+      "read": "Market is higher than LyDia's model probability.",
       "pitcher_edge": {
         "team": "Miami Marlins",
         "gap": 6,
@@ -3694,7 +3714,7 @@
         "off_adj": 0.0192,
         "bp_adj": -0.039,
         "version": "v3.1-bullpen",
-        "p_home_v2": 0.6096,
+        "p_home_v2": 0.5548,
         "note": "shadow A/B — does not drive picks"
       },
       "bullpen": {
@@ -3799,13 +3819,13 @@
         "absolute_risk": "Normal"
       },
       "market": {
-        "no_vig_probability": 0.5374,
-        "best_price": -120,
-        "away_price": 115,
-        "home_price": -120,
-        "away_no_vig": 0.4626,
-        "home_no_vig": 0.5374,
-        "books": 9
+        "no_vig_probability": 0.587,
+        "best_price": -152,
+        "away_price": 138,
+        "home_price": -152,
+        "away_no_vig": 0.413,
+        "home_no_vig": 0.587,
+        "books": 3
       }
     },
     {
@@ -3822,7 +3842,7 @@
       "home_l10": "5-5",
       "pick_team": "Philadelphia Phillies",
       "side": "home",
-      "model_probability": 0.5927,
+      "model_probability": 0.5464,
       "model_source": "moneyline-v2-plus-runs-v1",
       "projected_runs": {
         "away": 3.2,
@@ -3905,7 +3925,7 @@
       "run_model_probability": 0.7433,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": null,
-      "edge": -0.0466,
+      "edge": -0.1922,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 38,
@@ -3934,7 +3954,7 @@
         "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
       },
       "official_pick_gate": {
-        "minimum_model_probability": 0.72,
+        "minimum_model_probability": 0.61,
         "minimum_lab_score": 80,
         "minimum_edge": 0.03,
         "model_probability_passed": false,
@@ -4010,7 +4030,7 @@
         "off_adj": 0,
         "bp_adj": 0.054,
         "version": "v3.1-bullpen",
-        "p_home_v2": 0.5927,
+        "p_home_v2": 0.5464,
         "note": "shadow A/B — does not drive picks"
       },
       "bullpen": {
@@ -4115,13 +4135,13 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": 0.6393,
-        "best_price": -186,
-        "away_price": 174,
-        "home_price": -186,
-        "away_no_vig": 0.3607,
-        "home_no_vig": 0.6393,
-        "books": 9
+        "no_vig_probability": 0.7386,
+        "best_price": -330,
+        "away_price": 270,
+        "home_price": -330,
+        "away_no_vig": 0.2614,
+        "home_no_vig": 0.7386,
+        "books": 2
       }
     },
     {
@@ -4138,7 +4158,7 @@
       "home_l10": "5-5",
       "pick_team": "Baltimore Orioles",
       "side": "home",
-      "model_probability": 0.6224,
+      "model_probability": 0.5612,
       "model_source": "moneyline-v2-plus-runs-v1",
       "projected_runs": {
         "away": 3.3,
@@ -4221,7 +4241,7 @@
       "run_model_probability": 0.5731,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": null,
-      "edge": 0.0911,
+      "edge": -0.027,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 35,
@@ -4250,15 +4270,15 @@
         "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
       },
       "official_pick_gate": {
-        "minimum_model_probability": 0.72,
+        "minimum_model_probability": 0.61,
         "minimum_lab_score": 80,
         "minimum_edge": 0.03,
         "model_probability_passed": false,
         "lab_score_passed": false,
-        "edge_passed": true
+        "edge_passed": false
       },
-      "pass_reason": "Starting pitcher edge conflicts with the model side.",
-      "read": "Starting pitcher edge conflicts with the model side.",
+      "pass_reason": "Market is higher than LyDia's model probability.",
+      "read": "Market is higher than LyDia's model probability.",
       "pitcher_edge": {
         "team": "Los Angeles Angels",
         "gap": 9,
@@ -4326,7 +4346,7 @@
         "off_adj": -0.0104,
         "bp_adj": -0.009,
         "version": "v3.1-bullpen",
-        "p_home_v2": 0.6224,
+        "p_home_v2": 0.5612,
         "note": "shadow A/B — does not drive picks"
       },
       "bullpen": {
@@ -4431,13 +4451,13 @@
         "absolute_risk": "Normal"
       },
       "market": {
-        "no_vig_probability": 0.5313,
-        "best_price": -118,
-        "away_price": 111,
-        "home_price": -118,
-        "away_no_vig": 0.4687,
-        "home_no_vig": 0.5313,
-        "books": 9
+        "no_vig_probability": 0.5882,
+        "best_price": -157,
+        "away_price": 134,
+        "home_price": -157,
+        "away_no_vig": 0.4118,
+        "home_no_vig": 0.5882,
+        "books": 2
       }
     },
     {
@@ -4454,7 +4474,7 @@
       "home_l10": "5-5",
       "pick_team": "New York Yankees",
       "side": "home",
-      "model_probability": 0.6608,
+      "model_probability": 0.5804,
       "model_source": "moneyline-v2-plus-runs-v1",
       "projected_runs": {
         "away": 3.4,
@@ -4537,7 +4557,7 @@
       "run_model_probability": 0.4384,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": null,
-      "edge": 0.0692,
+      "edge": -0.0115,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 34,
@@ -4566,15 +4586,15 @@
         "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
       },
       "official_pick_gate": {
-        "minimum_model_probability": 0.72,
+        "minimum_model_probability": 0.61,
         "minimum_lab_score": 80,
         "minimum_edge": 0.03,
         "model_probability_passed": false,
         "lab_score_passed": false,
-        "edge_passed": true
+        "edge_passed": false
       },
-      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
-      "read": "The combined Lab Rating did not clear the official threshold.",
+      "pass_reason": "Market is higher than LyDia's model probability.",
+      "read": "Market is higher than LyDia's model probability.",
       "pitcher_edge": {
         "team": "St. Louis Cardinals",
         "gap": 6,
@@ -4642,7 +4662,7 @@
         "off_adj": -0.0208,
         "bp_adj": -0.021,
         "version": "v3.1-bullpen",
-        "p_home_v2": 0.6608,
+        "p_home_v2": 0.5804,
         "note": "shadow A/B — does not drive picks"
       },
       "bullpen": {
@@ -4747,12 +4767,12 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": 0.5916,
+        "no_vig_probability": 0.5919,
         "best_price": -153,
         "away_price": 144,
         "home_price": -153,
-        "away_no_vig": 0.4084,
-        "home_no_vig": 0.5916,
+        "away_no_vig": 0.4081,
+        "home_no_vig": 0.5919,
         "books": 9
       }
     }
