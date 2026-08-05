@@ -990,6 +990,19 @@ function buildInsights(game, pitcherGame) {
     caseFor.push({ title: `Bats are hot: ${signedDecimal(off.pick.delta_ops, 3)} OPS`, detail: `${game.pick_team} is outhitting its own season form over the last 15 days. Recent form is context, not a model input, but it points the same way here.` });
   }
 
+  // Always give the pick a stated case. When no single signal clears the display
+  // bar above (a modest lean, low Lab Rating), this section would otherwise be
+  // empty and the page would show only the opponent's case — the exact gap
+  // Lynold flagged on Red Sox / Twins leans.
+  if (!caseFor.length && game.pick_team) {
+    const leans = [];
+    if (pitcher.edge_team === game.pick_team && Number(pitcher.gap) > 0) leans.push("the starting pitcher matchup");
+    if (pickRisk !== null && oppRisk !== null && oppRisk > pickRisk) leans.push("the bullpen");
+    if (off.pick && typeof off.pick.delta_ops === "number" && off.pick.delta_ops > 0) leans.push("recent bats");
+    const driver = leans.length ? `${leans.join(", ")} tilt the same way` : "team strength and the run environment tilt slightly this way";
+    caseFor.push({ title: `Why LyDia leans ${game.pick_team}`, detail: `LyDia's model makes ${game.pick_team} ${pct(game.model_probability)} to win. No single factor dominates — ${driver}, enough to lean ${game.pick_team} even though it does not clear the bar for a high-confidence pick.` });
+  }
+
   // The opposite view: the model leans one way, but state the strongest case for
   // the OTHER side from the same reads, so the counter-argument is explicit
   // rather than buried in the risk list.
