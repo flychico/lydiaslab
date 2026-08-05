@@ -7,17 +7,6 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Learning Dashboard | LyDia</title>
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="LyDia">
-<meta property="og:title" content="Learning Dashboard | LyDia">
-<meta property="og:description" content="Analyze how LyDia">
-<meta property="og:url" content="https://lydiaslab.com/learning/">
-<meta property="og:image" content="https://lydiaslab.com/img/og-card.png">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Learning Dashboard | LyDia">
-<meta name="twitter:description" content="Analyze how LyDia">
-<meta name="twitter:image" content="https://lydiaslab.com/img/og-card.png">
-
 <meta name="description" content="Analyze how LyDia's model and reads held up across every graded game.">
 <link rel="canonical" href="https://lydiaslab.com/learning/">
 <link rel="stylesheet" href="/css/style.css">
@@ -80,7 +69,7 @@ table.dash tbody tr.clickable{cursor:pointer}table.dash tbody tr.clickable:hover
       <div class="kpis" id="kpis"></div>
       <h2 class="sec">Are we improving?</h2><p class="sec-note">20-game rolling win rate on the model's side. Dashed = 50%.</p>
       <div id="trend"></div><div id="calibration"></div>
-      <h2 class="sec">Which Lab Rating components earn their points</h2><p class="sec-note">Full history. Win rate when a component contributed heavily vs when it didn't.</p>
+      <h2 class="sec">Which Lab Rating components earn their points</h2>
       <div id="components"></div>
     </section>
 
@@ -93,8 +82,10 @@ table.dash tbody tr.clickable{cursor:pointer}table.dash tbody tr.clickable:hover
 
     <section class="tab" id="tab-drivers">
       <div class="controls"><label>Driver <select id="drvF"></select></label></div>
-      <p class="sec-note">Games split into five equal buckets by the driver, low to high. If the read has signal, win rate should climb (or fall) across the buckets.</p>
+      <div id="drvDesc"></div>
+      <p class="sec-note">Games are split into five equal buckets by the driver, low to high. If the read predicts, win rate should climb steadily across the buckets.</p>
       <div style="overflow-x:auto"><table class="dash" id="drvTable"></table></div>
+      <div id="drvVerdict"></div>
     </section>
 
     <section class="tab" id="tab-games"><div id="gamesWrap"></div></section>
@@ -104,7 +95,7 @@ table.dash tbody tr.clickable{cursor:pointer}table.dash tbody tr.clickable:hover
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script>
-renderNav("/articles/"); renderFooter();
+renderNav("/learning/"); renderFooter();
 function esc(v){ return escapeHtml(String(v ?? "")); }
 const S={ml:[],report:null,totals:[],kprops:[],recapByPk:{},win:"all",team:"",status:"",ver:"",dim:"status",drv:"pitcher_gap",tab:"overview",page:{games:0,totals:0,kprops:0},sort:{}};
 const PAGE=20;
@@ -187,8 +178,12 @@ function renderCalibration(){
   el.innerHTML=`<p class="sec-note" style="margin-top:14px"><strong>Confidence calibration</strong> (full history) — do more confident games win more?</p><table class="dash"><thead><tr><th>Band</th><th class="num">n</th><th class="num">Predicted</th><th class="num">Actual</th><th class="num">Gap</th></tr></thead><tbody>${b.map(x=>{const g=(x.actual_win_rate-x.mean_model_prob)*100;return `<tr><td>${esc(x.band)}</td><td class="num">${x.n}</td><td class="num">${(x.mean_model_prob*100).toFixed(0)}%</td><td class="num">${(x.actual_win_rate*100).toFixed(0)}%</td><td class="num ${g<=-8?'no':(g>=8?'ok':'')}">${g>0?'+':''}${g.toFixed(0)}%</td></tr>`;}).join("")}</tbody></table>`;
 }
 function renderComponents(){
-  const c=S.report&&S.report.components; const el=document.getElementById("components"); if(!c){el.innerHTML="";return;}
-  el.innerHTML=`<table class="dash"><thead><tr><th>Component</th><th class="num">n</th><th class="num">Win% heavy</th><th class="num">Win% light</th><th class="num">Lift</th></tr></thead><tbody>${c.map(x=>`<tr><td>${esc(x.component)}</td><td class="num">${x.n}</td><td class="num">${(x.win_rate_above*100).toFixed(0)}%</td><td class="num">${(x.win_rate_below*100).toFixed(0)}%</td><td class="num ${x.lift>=0?'ok':'no'}">${x.lift>0?'+':''}${(x.lift*100).toFixed(1)}%</td></tr>`).join("")}</tbody></table>`;
+  const c=S.report&&S.report.components; const el=document.getElementById("components"); if(!c||!c.length){el.innerHTML="";return;}
+  const sorted=c.slice().sort((a,b)=>b.lift-a.lift);
+  const help=sorted.filter(x=>x.lift>=0.02).map(x=>x.component), hurt=sorted.filter(x=>x.lift<=-0.02).map(x=>x.component);
+  const take=(help.length||hurt.length)?`<p class="sec-note"><strong>Takeaway:</strong> ${help.length?`<span class="ok">${esc(help.join(", "))}</span> carr${help.length>1?"y":"ies"} real signal`:""}${help.length&&hurt.length?"; ":""}${hurt.length?`<span class="no">${esc(hurt.join(", "))}</span> ${hurt.length>1?"are":"is"} donating points for free or hurting`:""}. Re-weight the rating toward what helps.</p>`:"";
+  el.innerHTML=`<p class="sec-note">The Lab Rating hands out points across these components. For each one, this compares games where it paid a <strong>lot</strong> of points ("heavy") against games where it paid <strong>little</strong> ("light"): if the component carries information, the heavy games should win more. <strong>Positive lift = real signal. Zero or negative = it is donating points for free, or actively hurting.</strong></p>`
+    +`<table class="dash"><thead><tr><th>Component</th><th class="num">n</th><th class="num">Win% when heavy</th><th class="num">Win% when light</th><th class="num">Lift (heavy − light)</th></tr></thead><tbody>${sorted.map(x=>`<tr><td>${esc(x.component)}</td><td class="num">${x.n}</td><td class="num">${(x.win_rate_above*100).toFixed(0)}%</td><td class="num">${(x.win_rate_below*100).toFixed(0)}%</td><td class="num ${x.lift>=0?'ok':'no'}">${x.lift>0?'+':''}${(x.lift*100).toFixed(1)}%</td></tr>`).join("")}</tbody></table>`+take;
 }
 
 const DIMS=[["status","Status"],["model_version","Model version"],["market","Market (follow / fade)"],["band","Rating band"],["venue","Home / Road"],["model_side","Team"]];
@@ -202,11 +197,31 @@ function renderBreakdown(){
     document.getElementById("bdDrill").innerHTML=`<h2 class="sec">${esc(g.value)} — ${g.w}-${g.l} (${pctStr(g.pct)})</h2>`+gameTable(g.rows.slice().sort((a,b)=>a.date<b.date?1:-1),"drill");
   }));
 }
+const DRIVER_INFO={
+  pitcher_gap:"The model's pitcher-score edge on the side it picked (positive = the pick has the better projected starter). If this read predicts, the pick should win more often as the edge grows.",
+  bullpen_gap:"The pick's bullpen edge — how much fresher / better its pen graded than the opponent's. Higher = a bigger late-game advantage for the pick.",
+  kbb_diff:"The strikeout-minus-walk skill difference favoring the pick's pitching. Higher = a cleaner K-BB edge.",
+  off_delta_diff:"The pick's recent-form offense edge over the opponent (last-15 OPS vs season). Higher = the pick's bats are hotter than the opponent's."
+};
+function driverVerdict(bk){
+  const pts=bk.filter(b=>b.pct!=null); if(pts.length<3) return {cls:"dim",text:"Not enough graded games to judge this read yet."};
+  const first=pts[0].pct, last=pts[pts.length-1].pct, spread=(last-first)*100;
+  let mono=true; for(let i=1;i<pts.length;i++) if(pts[i].pct<pts[i-1].pct-0.02){mono=false;break;}
+  let mi=0; for(let i=1;i<pts.length;i++) if(pts[i].pct>pts[mi].pct) mi=i;
+  const peaked = mi>0 && mi<pts.length-1 && (pts[mi].pct-first)*100>=7 && (pts[mi].pct-last)*100>=7;
+  if(spread>=7&&mono) return {cls:"ok",text:`Signal — win rate climbs ${spread.toFixed(0)} points from the lowest bucket to the highest. A bigger edge here really does mean the pick wins more.`};
+  if(peaked) return {cls:"no",text:`Peaked, not linear — the middle buckets win most (${(pts[mi].pct*100).toFixed(0)}%) while BOTH extremes underperform (${(first*100).toFixed(0)}% / ${(last*100).toFixed(0)}%). Moderate values of this read predict best; the biggest edges either way do not pay off.`};
+  if(Math.abs(spread)<7) return {cls:"dim",text:`Flat — win rate barely moves (${spread>0?"+":""}${spread.toFixed(0)} points low to high). This read is not separating winners in this window; it is close to noise.`};
+  return {cls:"no",text:`No clean trend — win rate swings ${spread>0?"+":""}${spread.toFixed(0)} points but not steadily across the buckets.`};
+}
 function renderDrivers(){
   const rows=filtered(); const bk=quantileBuckets(rows,S.drv);
   const el=document.getElementById("drvTable");
-  if(!bk){el.innerHTML=`<tbody><tr><td class="dim">Not enough games in this window.</td></tr></tbody>`;return;}
-  el.innerHTML=`<thead><tr><th>${esc(S.drv)} bucket (low→high)</th><th class="num">n</th><th class="num">Record</th><th class="num">Win%</th><th>&nbsp;</th></tr></thead><tbody>${bk.map(b=>`<tr><td>${esc(b.label)}</td><td class="num">${b.n}</td><td class="num">${b.w}-${b.l}</td><td class="num">${pctStr(b.pct)}</td><td>${wrBar(b.pct)}</td></tr>`).join("")}</tbody>`;
+  const desc=document.getElementById("drvDesc"); if(desc) desc.innerHTML=`<p class="sec-note">${esc(DRIVER_INFO[S.drv]||"")}</p>`;
+  const vd=document.getElementById("drvVerdict");
+  if(!bk){el.innerHTML=`<tbody><tr><td class="dim">Not enough games in this window.</td></tr></tbody>`;if(vd)vd.innerHTML="";return;}
+  el.innerHTML=`<thead><tr><th>Bucket (low → high)</th><th class="num">n</th><th class="num">Record</th><th class="num">Win%</th><th>&nbsp;</th></tr></thead><tbody>${bk.map(b=>`<tr><td>${esc(b.label)}</td><td class="num">${b.n}</td><td class="num">${b.w}-${b.l}</td><td class="num">${pctStr(b.pct)}</td><td>${wrBar(b.pct)}</td></tr>`).join("")}</tbody>`;
+  const v=driverVerdict(bk); if(vd) vd.innerHTML=`<p class="sec-note ${v.cls}"><strong>Read:</strong> ${esc(v.text)}</p>`;
 }
 
 function gameTable(rows,tag){
@@ -236,15 +251,24 @@ function renderTotals(){
   let rows=S.totals.filter(r=>inWin(r.date)); if(S.team)rows=rows.filter(r=>(r.matchup||"").includes(S.team));
   const graded=rows.filter(r=>r.ou_result==="O"||r.ou_result==="U");
   const o=graded.filter(r=>r.ou_result==="O").length,u=graded.length-o;
+  const leans=rows.filter(r=>r.lean_result==="W"||r.lean_result==="L");
+  const lw=leans.filter(r=>r.lean_result==="W").length;
   const d=rows.map(r=>{const p=numOr(r.projection),a=numOr(r.actual_total);return p!=null&&a!=null?Math.abs(p-a):null;}).filter(x=>x!=null);
   const mae=d.length?(d.reduce((s,x)=>s+x,0)/d.length):null;
-  const byClass=groupByKey(graded,"classification",r=>r.ou_result==="O");
-  const table=slice=>{const cols=["date","matchup","line","projection","actual_total","ou_result","setup_rating","classification"];return `<div style="overflow-x:auto"><table class="dash"><thead><tr>${cols.map(c=>`<th class="${['line','projection','actual_total','setup_rating'].includes(c)?'num':''}">${esc(c.replace(/_/g,' '))}</th>`).join("")}</tr></thead><tbody>${slice.map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.matchup)}</td><td class="num">${esc(r.line)}</td><td class="num">${esc(r.projection)}</td><td class="num">${esc(r.actual_total)}</td><td>${esc(r.ou_result)}</td><td class="num">${esc(r.setup_rating)}</td><td>${esc(r.classification)}</td></tr>`).join("")||`<tr><td colspan="8" class="dim">No rows.</td></tr>`}</tbody></table></div>`;};
+  const setupBuckets=[["70-79",70,80],["80-89",80,90],["90-100",90,101]].map(([lab,lo,hi])=>{
+    const gs=leans.filter(r=>{const sv=numOr(r.setup_rating);return sv!=null&&sv>=lo&&sv<hi;});
+    const w=gs.filter(r=>r.lean_result==="W").length; return {value:lab,n:gs.length,w,l:gs.length-w,pct:gs.length?w/gs.length:null};
+  }).filter(b=>b.n>0);
+  let setupVerdict="";
+  const bs=setupBuckets.filter(b=>b.pct!=null);
+  if(bs.length>=2){const spread=(bs[bs.length-1].pct-bs[0].pct)*100;
+    setupVerdict=`<p class="sec-note ${spread>=7?'ok':(Math.abs(spread)<7?'dim':'no')}"><strong>Read:</strong> ${spread>=7?`the higher the setup rating, the better the over/under lean does (+${spread.toFixed(0)} points, top band vs bottom) — the rating is carrying signal`:(Math.abs(spread)<7?`lean accuracy is flat across setup-rating bands (${spread>0?'+':''}${spread.toFixed(0)} points) — the setup rating is close to noise, it is not telling good leans from bad`:`lean accuracy moves ${spread>0?'+':''}${spread.toFixed(0)} points but not with the rating — no clean relationship`)}.</p>`;}
+  const table=slice=>{const cols=["date","matchup","line","projection","actual_total","ou_result","lean","lean_result","setup_rating"];return `<div style="overflow-x:auto"><table class="dash"><thead><tr>${cols.map(c=>`<th class="${['line','projection','actual_total','setup_rating','lean'].includes(c)?'num':''}">${esc(c.replace(/_/g,' '))}</th>`).join("")}</tr></thead><tbody>${slice.map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.matchup)}</td><td class="num">${esc(r.line)}</td><td class="num">${esc(r.projection)}</td><td class="num">${esc(r.actual_total)}</td><td>${esc(r.ou_result)}</td><td class="num">${esc(r.lean)}</td><td class="${r.lean_result==='W'?'ok':(r.lean_result==='L'?'no':'')}">${esc(r.lean_result||'—')}</td><td class="num">${esc(r.setup_rating)}</td></tr>`).join("")||`<tr><td colspan="9" class="dim">No rows.</td></tr>`}</tbody></table></div>`;};
   const rr=rows.slice().sort((a,b)=>a.date<b.date?1:-1);
   document.getElementById("totalsWrap").innerHTML=
-    `<div class="kpis">${kpi("Over/Under record",`${o}-${u}`,graded.length+" graded")}${kpi("Projection MAE",mae==null?"—":mae.toFixed(2)+" runs",d.length+" games")}</div>`+
-    `<h2 class="sec">By classification</h2>`+dimTable(byClass,"Classification")+
-    `<h2 class="sec">Every totals game</h2>`+paginate(rr,"totals",table);
+    `<div class="kpis">${kpi("Model lean record",leans.length?`${lw}-${leans.length-lw}`:"—",leans.length?`${(lw/leans.length*100).toFixed(0)}% of ${leans.length} graded leans`:"no graded leans in view")}${kpi("Over/Under (all games)",`${o}-${u}`,graded.length+" graded")}${kpi("Projection MAE",mae==null?"—":mae.toFixed(2)+" runs",d.length+" games")}</div>`+
+    `<h2 class="sec">Does the setup rating predict?</h2><p class="sec-note">Over/under lean win rate grouped by the setup rating that produced it. If the rating is real, higher bands should win more; if it is flat, the rating is noise.</p>`+dimTable(setupBuckets,"Setup rating")+setupVerdict+
+    `<h2 class="sec">Every totals game</h2><p class="sec-note">"lean" is the model's over/under edge (projection minus line). "lean result" is W/L only when the game qualified — the edge and the setup rating both cleared the bar.</p>`+paginate(rr,"totals",table);
   wirePager("totals",renderTotals);
 }
 function renderKprops(){
