@@ -16,6 +16,15 @@
   Mirrors update-totals.js / update-k-props.js: capture-when-the-key-exists,
   reuse-when-it-doesn't. Touches ONLY data/moneyline-odds/ -- never picks,
   previews, member-brief, or results.
+
+  2026-08-05: added --if-changed, matching update-totals.js / update-k-props.js.
+  prepare-slate.yml runs this up to 5x/day and was calling all three odds
+  scripts unconditionally every time -- a full h2h odds fetch every run, all
+  day, whether or not anything on the slate had actually moved. --if-changed
+  compares today's probable-pitcher signature against the last capture and
+  skips the fetch when nothing has changed. A missing/stale prior capture
+  (the day's first run) always falls through to a real fetch -- it does not
+  skip, it captures.
 */
 const fs = require("fs");
 const path = require("path");
@@ -26,6 +35,7 @@ const MAX_ABS_PRICE = 1000;
 
 const args = parseArgs(process.argv.slice(2));
 const DATE = args.date || etToday();
+const IF_CHANGED = args["if-changed"] === "true";
 
 if (!/^\d{4}-\d{2}-\d{2}$/.test(DATE)) {
   console.error(`Bad date: ${DATE}`);
@@ -38,7 +48,49 @@ if (!ODDS_API_KEY) {
 
 main().catch(e => { console.error("moneyline odds capture error:", e.message); process.exit(0); });
 
+// Same probable-pitcher signature construction as update-totals.js /
+// update-k-props.js, so the three scripts' --if-changed behavior agrees on
+// what "changed" means for a given slate.
+async function currentProbables() {
+  const sched = await fetchJson(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${DATE}&hydrate=probablePitcher`);
+  const out = {};
+  for (const g of (((sched.dates || [])[0]) || {}).games || []) {
+    if (!g.status || g.status.abstractGameState !== "Preview") continue;
+    out[g.gamePk] = {
+      away: (g.teams.away.probablePitcher || {}).fullName || "TBD",
+      home: (g.teams.home.probablePitcher || {}).fullName || "TBD"
+    };
+  }
+  return out;
+}
+
 async function main() {
+  const probables = await currentProbables().catch(() => ({}));
+
+  if (IF_CHANGED) {
+    // No comparable capture yet today (first run of the day, or a stale file
+    // from a prior date) -> fall through to a real fetch. Only "compared, and
+    // nothing moved" skips the API call.
+    const existingPath = path.join(ROOT, `data/moneyline-odds/${DATE}.json`);
+    let prev = null;
+    if (fs.existsSync(existingPath)) { try { prev = JSON.parse(fs.readFileSync(existingPath, "utf8")); } catch (e) { prev = null; } }
+    if (!prev || prev.date !== DATE || !prev.probables) {
+      console.log("Moneyline odds: no comparable capture for today yet — running a full capture.");
+    } else {
+      const changes = [];
+      for (const [pk, cur] of Object.entries(probables)) {
+        const was = prev.probables[pk];
+        if (!was) continue;
+        for (const side of ["away", "home"]) {
+          if (was[side] !== "TBD" && cur[side] !== was[side]) changes.push(`${was[side]} → ${cur[side]}`);
+          if (was[side] === "TBD" && cur[side] !== "TBD") changes.push(`TBD → ${cur[side]}`);
+        }
+      }
+      if (!changes.length) { console.log("Moneyline odds: probables unchanged — keeping the morning capture, no API call."); return; }
+      console.log(`Moneyline odds: pitcher change (${changes.join("; ")}) — re-capturing.`);
+    }
+  }
+
   const oddsEvents = await fetchJson(`https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?apiKey=${encodeURIComponent(ODDS_API_KEY)}&regions=us&markets=h2h&oddsFormat=american`).catch(() => []);
   const games = buildOddsMap(oddsEvents);
   const gameCount = Object.keys(games).length;
@@ -52,6 +104,7 @@ async function main() {
     date: DATE,
     generated_at: new Date().toISOString(),
     source: "the-odds-api h2h, no-vig blended across books",
+    probables,
     games
   };
 

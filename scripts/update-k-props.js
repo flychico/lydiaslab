@@ -51,24 +51,36 @@ async function main() {
   const pitchingPlanSignature = JSON.stringify(reportedPlans.games || {});
 
   if (IF_CHANGED) {
-    // Lines are captured once at publish and kept all day — only a pitcher change re-captures.
+    // Lines are captured once at publish and kept all day — only a pitcher
+    // change re-captures.
+    //
+    // 2026-08-05: a missing/stale prior capture used to be treated the same
+    // as "nothing changed" (return early, no fetch) -- correct once something
+    // had already captured today, wrong on the day's FIRST run, where it
+    // meant that run silently skipped the odds fetch entirely and nothing
+    // downstream ever got real data. Now: no comparable capture -> fall
+    // through and run the real (paid) capture. Only "compared, and nothing
+    // moved" skips the API call.
     const todayPath = path.join(ROOT, "data", "k-props", "today.json");
-    if (!fs.existsSync(todayPath)) { console.log("No capture yet today — nothing to check."); return; }
-    let prev; try { prev = JSON.parse(fs.readFileSync(todayPath, "utf8")); } catch (e) { prev = null; }
-    if (!prev || prev.date !== DATE || !prev.probables) { console.log("No comparable capture — skipping."); return; }
-    const now = await currentProbables();
-    const changes = [];
-    if (prev.pitching_plan_signature !== pitchingPlanSignature) changes.push("reported pitching plan updated");
-    for (const [pk, cur] of Object.entries(now)) {
-      const was = prev.probables[pk];
-      if (!was) continue;
-      for (const side of ["away", "home"]) {
-        if (was[side] !== "TBD" && cur[side] !== was[side]) changes.push(`${was[side]} → ${cur[side]}`);
-        if (was[side] === "TBD" && cur[side] !== "TBD") changes.push(`TBD → ${cur[side]}`);
+    let prev = null;
+    if (fs.existsSync(todayPath)) { try { prev = JSON.parse(fs.readFileSync(todayPath, "utf8")); } catch (e) { prev = null; } }
+    if (!prev || prev.date !== DATE || !prev.probables) {
+      console.log("No comparable capture for today yet — running a full capture.");
+    } else {
+      const now = await currentProbables();
+      const changes = [];
+      if (prev.pitching_plan_signature !== pitchingPlanSignature) changes.push("reported pitching plan updated");
+      for (const [pk, cur] of Object.entries(now)) {
+        const was = prev.probables[pk];
+        if (!was) continue;
+        for (const side of ["away", "home"]) {
+          if (was[side] !== "TBD" && cur[side] !== was[side]) changes.push(`${was[side]} → ${cur[side]}`);
+          if (was[side] === "TBD" && cur[side] !== "TBD") changes.push(`TBD → ${cur[side]}`);
+        }
       }
+      if (!changes.length) { console.log("Probables unchanged — keeping the morning capture, no API call."); return; }
+      console.log(`Pitcher change detected (${changes.join("; ")}) — re-capturing prop lines.`);
     }
-    if (!changes.length) { console.log("Probables unchanged — keeping the morning capture."); return; }
-    console.log(`Pitcher change detected (${changes.join("; ")}) — re-capturing prop lines.`);
   }
   const events = await j(`https://api.the-odds-api.com/v4/sports/baseball_mlb/events?apiKey=${KEY}`);
   // keep events that start on DATE in ET
