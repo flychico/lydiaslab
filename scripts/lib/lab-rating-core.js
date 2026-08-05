@@ -86,9 +86,19 @@
 
 const LAB_RATING_VERSION = "lab-rating-v3-measured-components";
 
-// Conviction: a coin flip earns nothing. Credit starts at 55% and maxes at 80%.
-const CONVICTION_FLOOR = 0.55;
-const CONVICTION_CEIL = 0.80;
+/*
+  Conviction: a coin flip earns nothing.
+
+  Expressed on the CALIBRATED probability scale as of 2026-08-05. The published
+  moneyline probability is now shrunk toward 0.5 (p -> 0.5 + 0.5*(p-0.5)) because
+  the raw model was measurably overconfident above 55%; see the calibration note
+  in generate-member-lab.js. The old band was 0.55-0.80 on the raw scale, which
+  is 0.525-0.65 after the same transform. Remapping it this way keeps every
+  game's conviction points EXACTLY as they were -- this is a units change, not a
+  scoring change, and it is deliberately not dressed up as an improvement.
+*/
+const CONVICTION_FLOOR = 0.525;
+const CONVICTION_CEIL = 0.65;
 const CONVICTION_MAX = 35;
 
 // Retained at 0 so any consumer reading these still gets a number rather than
