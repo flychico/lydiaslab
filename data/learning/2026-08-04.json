@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-05T03:41:13.139Z",
+  "generated_at": "2026-08-05T13:54:44.911Z",
   "status": "ready",
   "latest_date": "2026-08-04",
   "days_reviewed": 27,
@@ -12,9 +12,9 @@
   "day": {
     "date": "2026-08-04",
     "source": "published-picks",
-    "record_all_markets": "1-4",
-    "units_all_markets": -3.38,
-    "ungraded": 3,
+    "record_all_markets": "3-5",
+    "units_all_markets": -2.5,
+    "ungraded": 0,
     "moneyline_record": "0-0",
     "moneyline_win_rate": null,
     "official_moneyline_picks": 0,
@@ -46,47 +46,110 @@
   "calibration": {
     "status": "ready",
     "model_version": "moneyline-v2-plus-runs-v1",
-    "games_graded": 153,
-    "brier_score": 0.2701,
+    "games_graded": 165,
+    "brier_score": 0.2657,
     "shadow_model": {
       "status": "ready",
-      "games": 155,
+      "games": 167,
       "official_model_version": "moneyline-v2-plus-runs-v1",
       "shadow_model_version": "v3.1-bullpen",
-      "brier_official": 0.2707,
-      "brier_shadow": 0.2587,
+      "brier_official": 0.2663,
+      "brier_shadow": 0.2562,
       "leader": "shadow",
-      "disagreements": 32,
-      "shadow_wins_disagreements": 16,
+      "disagreements": 35,
+      "shadow_wins_disagreements": 17,
       "note": "Only rows from the latest matching official/shadow model-version pair are compared. Promote nothing from a mixed-version sample."
     },
     "attribution": {
       "status": "ready",
-      "games": 153,
+      "games": 165,
       "factors": [
         {
           "factor": "K-BB% gap (pick − opp)",
           "tertiles": [
             {
               "band": "low",
-              "games": 49,
-              "win_rate": 0.673
+              "games": 53,
+              "win_rate": 0.679
             },
             {
               "band": "mid",
-              "games": 48,
-              "win_rate": 0.521
+              "games": 52,
+              "win_rate": 0.538
             },
             {
               "band": "high",
-              "games": 48,
-              "win_rate": 0.417
+              "games": 52,
+              "win_rate": 0.442
             }
           ],
-          "spread": -0.257
+          "spread": -0.237
         },
         {
           "factor": "Lab Rating",
+          "tertiles": [
+            {
+              "band": "low",
+              "games": 56,
+              "win_rate": 0.607
+            },
+            {
+              "band": "mid",
+              "games": 55,
+              "win_rate": 0.545
+            },
+            {
+              "band": "high",
+              "games": 54,
+              "win_rate": 0.463
+            }
+          ],
+          "spread": -0.144
+        },
+        {
+          "factor": "Pitcher score gap (pick − opp)",
+          "tertiles": [
+            {
+              "band": "low",
+              "games": 57,
+              "win_rate": 0.561
+            },
+            {
+              "band": "mid",
+              "games": 55,
+              "win_rate": 0.6
+            },
+            {
+              "band": "high",
+              "games": 53,
+              "win_rate": 0.453
+            }
+          ],
+          "spread": -0.109
+        },
+        {
+          "factor": "Offense form gap (ΔOPS diff)",
+          "tertiles": [
+            {
+              "band": "low",
+              "games": 56,
+              "win_rate": 0.446
+            },
+            {
+              "band": "mid",
+              "games": 55,
+              "win_rate": 0.618
+            },
+            {
+              "band": "high",
+              "games": 54,
+              "win_rate": 0.556
+            }
+          ],
+          "spread": 0.109
+        },
+        {
+          "factor": "Model probability",
           "tertiles": [
             {
               "band": "low",
@@ -95,100 +158,37 @@
             },
             {
               "band": "mid",
-              "games": 47,
-              "win_rate": 0.553
+              "games": 55,
+              "win_rate": 0.527
             },
             {
               "band": "high",
-              "games": 50,
-              "win_rate": 0.44
+              "games": 54,
+              "win_rate": 0.519
             }
           ],
-          "spread": -0.131
-        },
-        {
-          "factor": "Offense form gap (ΔOPS diff)",
-          "tertiles": [
-            {
-              "band": "low",
-              "games": 52,
-              "win_rate": 0.423
-            },
-            {
-              "band": "mid",
-              "games": 51,
-              "win_rate": 0.627
-            },
-            {
-              "band": "high",
-              "games": 50,
-              "win_rate": 0.52
-            }
-          ],
-          "spread": 0.097
+          "spread": -0.053
         },
         {
           "factor": "Bullpen fatigue gap (opp − pick)",
           "tertiles": [
             {
               "band": "low",
-              "games": 53,
-              "win_rate": 0.547
+              "games": 57,
+              "win_rate": 0.561
             },
             {
               "band": "mid",
-              "games": 53,
-              "win_rate": 0.528
+              "games": 57,
+              "win_rate": 0.544
             },
             {
               "band": "high",
-              "games": 47,
-              "win_rate": 0.489
-            }
-          ],
-          "spread": -0.058
-        },
-        {
-          "factor": "Model probability",
-          "tertiles": [
-            {
-              "band": "low",
-              "games": 52,
-              "win_rate": 0.558
-            },
-            {
-              "band": "mid",
               "games": 51,
-              "win_rate": 0.49
-            },
-            {
-              "band": "high",
-              "games": 50,
-              "win_rate": 0.52
+              "win_rate": 0.51
             }
           ],
-          "spread": -0.038
-        },
-        {
-          "factor": "Pitcher score gap (pick − opp)",
-          "tertiles": [
-            {
-              "band": "low",
-              "games": 55,
-              "win_rate": 0.509
-            },
-            {
-              "band": "mid",
-              "games": 49,
-              "win_rate": 0.571
-            },
-            {
-              "band": "high",
-              "games": 49,
-              "win_rate": 0.49
-            }
-          ],
-          "spread": -0.019
+          "spread": -0.052
         }
       ],
       "note": "Win rate by input tertile, pick-side relative. |spread| = high-band win rate minus low-band — bigger magnitude = the metric separates winners from losers harder, and deserves weight. Read direction too: a NEGATIVE spread on a should-be-positive factor is a red flag."
@@ -210,31 +210,31 @@
     "buckets": [
       {
         "range": "50-55%",
-        "games": 41,
-        "wins": 24,
+        "games": 46,
+        "wins": 27,
         "expected_win_rate": 0.528,
-        "actual_win_rate": 0.585
+        "actual_win_rate": 0.587
       },
       {
         "range": "55-60%",
-        "games": 37,
-        "wins": 17,
+        "games": 39,
+        "wins": 19,
         "expected_win_rate": 0.576,
-        "actual_win_rate": 0.459
+        "actual_win_rate": 0.487
       },
       {
         "range": "60-65%",
-        "games": 20,
-        "wins": 11,
-        "expected_win_rate": 0.622,
-        "actual_win_rate": 0.55
+        "games": 24,
+        "wins": 14,
+        "expected_win_rate": 0.62,
+        "actual_win_rate": 0.583
       },
       {
         "range": "65-70%",
-        "games": 25,
-        "wins": 10,
-        "expected_win_rate": 0.675,
-        "actual_win_rate": 0.4
+        "games": 26,
+        "wins": 11,
+        "expected_win_rate": 0.674,
+        "actual_win_rate": 0.423
       },
       {
         "range": "70-75%",
@@ -258,14 +258,14 @@
         "units": -1.93
       },
       "pass": {
-        "games": 122,
-        "wins": 67,
-        "units": 4.29
+        "games": 133,
+        "wins": 75,
+        "units": 7.98
       },
       "watchlist": {
-        "games": 22,
-        "wins": 10,
-        "units": -4.35
+        "games": 23,
+        "wins": 11,
+        "units": -3.5
       },
       "official_pick": {
         "games": 3,
@@ -891,5 +891,17 @@
     "Watch whether official picks with model probability >= 72% beat low-probability value watches over a larger sample.",
     "Track closing price movement once market snapshots have enough data.",
     "Keep value watch separate from official picks."
-  ]
+  ],
+  "coach": {
+    "status": "collecting",
+    "title": "Collecting a trustworthy current-model sample",
+    "summary": "LyDia has 10 of 7 required current-model days and 13 of 20 required current-model official picks. Recommendations remain paused until both minimums are reached.",
+    "current_model_days": 10,
+    "current_model_picks": 13,
+    "minimum_days": 7,
+    "minimum_picks": 20,
+    "bullpen_model_owner": "bullpen-fatigue-v3-runs-aware",
+    "recommendations": [],
+    "hard_stop": "Coach findings are review prompts only. No automatic threshold, weight, formula, publishing, or betting change is permitted."
+  }
 }
