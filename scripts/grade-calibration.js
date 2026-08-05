@@ -184,9 +184,25 @@ async function main() {
           console.log(`K-props ledger header upgraded (+projection_raw, +calibration_band).`);
         }
       }
+      /*
+        A capture can exist and still be ungradeable. On 2026-08-04 the odds
+        fetch returned events_fetched: 0, so 29 of 34 pitchers had line: null,
+        and the 5 that did carry a line were stale rows with no game_pk. Net
+        result was zero graded rows and no explanation anywhere. Say it plainly.
+      */
+      const allRecs = Object.values(kp.pitchers).filter(r => r && r.name);
+      const withLine = allRecs.filter(r => Number.isFinite(r.line));
+      if (!withLine.length) {
+        console.warn(`K-props ${DATE}: capture has ${allRecs.length} pitchers but NONE carry a market line `
+          + `(events_fetched: ${kp.events_fetched ?? "unknown"}). The odds fetch failed for this date, so there is `
+          + `nothing to grade. Fix update-k-props.js / ODDS_API_KEY, not the grader.`);
+      } else if (withLine.length < allRecs.length / 2) {
+        console.warn(`K-props ${DATE}: only ${withLine.length} of ${allRecs.length} pitchers carry a market line `
+          + `(events_fetched: ${kp.events_fetched ?? "unknown"}) — partial odds capture, grading what exists.`);
+      }
       const kSeen = new Set(fs.readFileSync(KLOG, "utf8").split("\n").slice(1).map(l => l.split(",").slice(0, 2).join(",")).filter(Boolean));
       const kRows = [];
-      let kGraded = 0, kScratched = 0;
+      let kGraded = 0, kScratched = 0, kUnlinked = 0;
       for (const rec of Object.values(kp.pitchers)) {
         if (!rec || !rec.name || !Number.isFinite(rec.line)) continue;
         const key = `${DATE},${rec.name}`;
@@ -194,9 +210,17 @@ async function main() {
         // find the pitcher's actual line in the boxscore
         let gamePk = rec.game_pk;
         if (!gamePk && kp.probables) {
-          for (const [pk, pr] of Object.entries(kp.probables)) if (pr.away === rec.name || pr.home === rec.name) { gamePk = pk; break; }
+          // Names do not always match exactly between the odds feed and the
+          // schedule: the 2026-08-04 capture held both "JT Ginn" and
+          // "J.T. Ginn". Compare on a normalized key (letters only, lowercased)
+          // so punctuation and accents cannot silently drop a gradeable prop.
+          const norm = n => String(n || "").toLowerCase().normalize("NFD").replace(/[^a-z]/g, "");
+          const want = norm(rec.name);
+          for (const [pk, pr] of Object.entries(kp.probables)) {
+            if (norm(pr.away) === want || norm(pr.home) === want) { gamePk = pk; break; }
+          }
         }
-        if (!gamePk) continue;
+        if (!gamePk) { kUnlinked++; continue; }
         const box = await getBox(gamePk);
         if (!box) continue;
         let actual = null, pitched = false;
@@ -229,7 +253,7 @@ async function main() {
         kGraded++;
       }
       if (kRows.length) fs.appendFileSync(KLOG, kRows.join("\n") + "\n");
-      console.log(`K-props: graded ${kGraded}, scratched ${kScratched}.`);
+      console.log(`K-props: graded ${kGraded}, scratched ${kScratched}, unlinked-to-a-game ${kUnlinked}.`);
     }
   }
 

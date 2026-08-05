@@ -2076,6 +2076,39 @@ function buildArchive() {
   fs.writeFileSync(path.join(ARCHIVE_DIR, "index.html"),
     page("/mlb/matchups/", "/articles/", "LyDia matchup archive", "MLB Matchup Predictions and Odds", sub), "utf8");
 
+  /*
+    /recaps/ is the archive of past matchup analyses (Lynold 2026-08-05:
+    "this page needs to be all the previous match up pages"). Same source as
+    /mlb/matchups/, but past-facing: it lists only dates before today and shows
+    the final score next to each game, so it reads as a record of what LyDia
+    said and what happened rather than a slate listing.
+  */
+  const todayET = easternDate();
+  const pastSections = [...byDate.keys()].filter(d => d < todayET).sort((a, b) => b.localeCompare(a)).map(date => {
+    const rows = byDate.get(date).map(p => {
+      const fin = p.final && known(p.final.away_score) && known(p.final.home_score)
+        ? `<span class="small">Final ${esc(p.final.away_score)}&ndash;${esc(p.final.home_score)}</span>` : `<span class="small dim">no final recorded</span>`;
+      return `<article class="card matchup-row">
+      <div><a href="${esc(new URL(p.url).pathname)}"><strong>${esc(p.game)}</strong></a></div>
+      <div class="small dim">${esc(decisionLabel(p.status))} &middot; ${fin}</div>
+    </article>`;
+    }).join("\n");
+    return `<h2 style="margin-top:22px">${esc(niceDate(date))}</h2>${rows}`;
+  }).join("\n");
+  const recapsBody = pastSections || '<div class="notice">No completed matchup analyses yet.</div>';
+  const recapsSub = "Every past LyDia matchup analysis, with the final score beside it. Each page keeps its original pregame reasoning and adds how that analysis held up once the game was over.";
+  const recapsDir = path.join(ROOT, "recaps");
+  fs.mkdirSync(recapsDir, { recursive: true });
+  fs.writeFileSync(path.join(recapsDir, "index.html"), `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MLB Recaps: every past LyDia matchup analysis | LyDia</title>
+<meta name="description" content="Every past LyDia MLB matchup analysis with its final score: pregame model reasoning, and how that analysis held up.">
+<link rel="canonical" href="${SITE}/recaps/">
+<link rel="stylesheet" href="/css/style.css"><style>.matchup-row{margin:8px 0}</style></head>
+<body><nav id="nav"></nav><main><p class="eyebrow">LyDia recaps</p><h1>MLB Recaps</h1><p class="subtitle">${esc(recapsSub)}</p>${recapsBody}
+<div class="lead-box" style="border-color:var(--accent2);margin-top:22px"><h3 style="margin:0 0 4px">Get tomorrow's MLB model card free</h3><p class="dim small" style="margin:0">One email each morning with the featured game and the previous day's graded result.</p><p style="margin-top:10px"><a class="btn blue" href="/membership/#free">Get the free card &rarr;</a></p></div>
+</main><footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/recaps/");renderFooter();</script></body></html>`, "utf8");
+
   // The Articles tab now shows LyDia's own matchup analyses instead of scraped
   // outside content. This runs after the Research Desk step in the workflow, so
   // it overwrites that page. External aggregation is dropped from what users see.
