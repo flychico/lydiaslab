@@ -3,6 +3,19 @@
   LyDia true-game daily recap generator.
   Uses official MLB schedule, linescore, boxscore and play-by-play data.
   Usage: node scripts/generate-recap.js [YYYY-MM-DD]
+
+  2026-08-05: this script no longer writes recaps/index.html. That page is
+  now owned exclusively by buildArchive() in generate-matchup-pages.js
+  (DEC-20260805-03 -- "/recaps/ is the archive of all past matchup pages").
+  Two scripts writing the same file meant whichever ran later that day won,
+  and this one (the old dated-recap-roundup format) kept winning over the
+  new matchup-page archive in production -- recaps/index.html stayed on the
+  old "MLB Recap | <date>" list format for days after the new archive was
+  supposedly shipped, even though buildArchive()'s OTHER output
+  (mlb/matchups/index.html) was demonstrably fresh and correct. This script
+  still writes the individual dated recap.html story pages
+  (recaps/YYYY-MM-DD.html) -- their fate alongside the new archive is a
+  separate, still-open question (see HANDOFF "Other /recaps/ content").
 */
 const fs = require("fs");
 const path = require("path");
@@ -259,16 +272,10 @@ async function main() {
   fs.writeFileSync(outFile, pageShell(`MLB Recap ${nice}: key performances, rallies and final scores | LyDia`, desc, body));
   console.log("wrote", path.relative(ROOT, outFile));
 
+  // 2026-08-05: recaps/index.html is no longer written here -- see the file
+  // header. `posts` is kept because the sitemap below still needs the list
+  // of dated recap story pages.
   const posts = fs.readdirSync(RECAP_DIR).filter(f => /^\d{4}-\d{2}-\d{2}\.html$/.test(f)).sort().reverse();
-  const list = posts.map(f => {
-    const d = f.replace(".html", "");
-    return `<a href="/recaps/${f}">MLB Recap | ${esc(niceDate(d))}</a>`;
-  }).join("\n");
-  fs.writeFileSync(path.join(RECAP_DIR, "index.html"), pageShell(
-    "Daily MLB Recaps: game stories, key performers and late rallies | LyDia",
-    "Daily MLB recaps covering the performances, rallies, pitching gems, home runs and moments that actually decided each game.",
-    `<h1>Daily MLB Recaps</h1>\n<p class="subtitle">Not just final scores. The performances, rallies, pitching gems, home runs, and moments that decided each game.</p>\n<div class="card archive-list">\n${list}\n</div>`,
-    `${SITE}/recaps/`));
 
   const staticPages = ["", "dashboard/", "picks/", "previews/", "results/", "tools/", "stats/", "recaps/", "articles/", "membership/", "member-brief/", "how-to-bet-on-mlb/", "mlb-betting-edge-explained/", "no-vig-odds-calculator-guide/", "how-to-find-value-in-mlb-moneylines/", "closing-line-value-mlb-betting/", "mlb-run-line-vs-moneyline/", "mlb-bullpen-fatigue-betting/", "mlb-park-factors-betting-guide/", "mlb-pitching-metrics-for-betting/", "tools/offense-matchups/", "tools/pitcher-matchups/", "tools/bullpen-fatigue/", "tools/strikeout-projections/", "tools/totals-projections/"];
   const previewDir = path.join(ROOT, "previews");
@@ -286,7 +293,7 @@ async function main() {
   const urls = staticPages.map(p => `${SITE}/${p}`).concat(posts.map(f => `${SITE}/recaps/${f}`)).concat(previewPosts.map(p => `${SITE}/${p}`)).concat(extraPages.map(p => `${SITE}/${p}`)).concat(matchupUrls);
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` + [...new Set(urls)].map(u => `  <url><loc>${u}</loc></url>`).join("\n") + `\n</urlset>\n`;
   fs.writeFileSync(path.join(ROOT, "sitemap.xml"), sitemap);
-  console.log("wrote recaps/index.html and sitemap.xml");
+  console.log("wrote sitemap.xml (recaps/index.html is owned by generate-matchup-pages.js's buildArchive())");
 }
 
 main().catch(e => { console.error(e); process.exit(1); });
