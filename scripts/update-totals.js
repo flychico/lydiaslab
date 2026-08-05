@@ -12,9 +12,11 @@
                                  runs via wOBA scale and PA/team-game)
          + starter adjustment  ((starter FIP-lite − LEAGUE_ERA) × innings/9,
                                  per pitching-plan segment)
-         + bullpen adjustment  ((opposing bullpen's era_7d − LEAGUE_ERA) ×
+         + bullpen adjustment  ((opposing bullpen's era_7d, shrunk toward
+                                 LEAGUE_ERA for thin samples − LEAGUE_ERA) ×
                                  bullpen innings/9 — actual runs allowed over
-                                 the last 7 days, unshrunk, per Lynold)
+                                 the last 7 days, shrunk n/(n+k) per Lynold
+                                 2026-08-05; see BULLPEN_SHRINK_K)
 
   LEAGUE_ERA (4.20) is the only fixed reference constant left in the formula,
   kept unchanged per Lynold 2026-07-29. Everything else (league wOBA, PA/game,
@@ -56,6 +58,21 @@ const DATE = (process.argv[2] || "").match(/^\d{4}-\d{2}-\d{2}$/)
 const IF_CHANGED = process.argv.includes("--if-changed");
 
 const LEAGUE_ERA = 4.20;
+
+// 2026-08-05: bullpen era_7d shrinkage toward LEAGUE_ERA, n/(n+k), n = that
+// pen's actual relief innings over the trailing 7 days. Was raw/unshrunk per
+// Lynold 2026-07-29 — a thin sample (e.g. 0.00 ERA over 3 IP, or an equally
+// unlucky 15.00 over 3 IP) swung a side's run projection outside
+// generate-member-lab.js's RUN_PROJ_MIN/MAX plausibility band (2.0–8.5),
+// which silently drops the run model for that game — no run projection, and
+// blank offense fields wherever recap/component logic reads proj_away/
+// proj_home. k=15 means a pen needs roughly 15 trailing-week innings before
+// its own number carries half the weight; below that, LEAGUE_ERA dominates.
+// This only changes the PROJECTION's input — era_7d itself is untouched
+// everywhere it's a display number (opp_pen_era_7d, bullpen risk/efficiency
+// reads), and the win-probability model's own bullpenAdj (generate-member-
+// lab.js, bullpenProbAdjustment) is a separate calculation left alone.
+const BULLPEN_SHRINK_K = 15;
 
 // Same era->score curve PitcherCore.scorePitcher() applies internally (its
 // ERA term, weighted 40% into that function's own score). Used to convert
@@ -122,22 +139,32 @@ async function main() {
   const pitchingPlanSignature = JSON.stringify(reportedPlans.games || {});
 
   if (IF_CHANGED) {
+    // 2026-08-05: a missing/stale prior capture used to be treated the same
+    // as "nothing changed" (return early, no fetch) -- correct once something
+    // had already captured today, wrong on the day's FIRST run, where it
+    // meant that run silently skipped the odds fetch entirely and nothing
+    // downstream ever got real data. Now: no comparable capture -> fall
+    // through and run the real (paid) capture. Only "compared, and nothing
+    // moved" skips the API call.
     const tPath = path.join(ROOT, "data", "totals", "today.json");
-    if (!fs.existsSync(tPath)) { console.log("Totals: no capture yet today."); return; }
-    let prev; try { prev = JSON.parse(fs.readFileSync(tPath, "utf8")); } catch (e) { prev = null; }
-    if (!prev || prev.date !== DATE || !prev.probables) { console.log("Totals: no comparable capture."); return; }
-    const changes = [];
-    if (prev.pitching_plan_signature !== pitchingPlanSignature) changes.push("reported pitching plan updated");
-    for (const [pk, cur] of Object.entries(probables)) {
-      const was = prev.probables[pk];
-      if (!was) continue;
-      for (const side of ["away", "home"]) {
-        if (was[side] !== "TBD" && cur[side] !== was[side]) changes.push(`${was[side]} → ${cur[side]}`);
-        if (was[side] === "TBD" && cur[side] !== "TBD") changes.push(`TBD → ${cur[side]}`);
+    let prev = null;
+    if (fs.existsSync(tPath)) { try { prev = JSON.parse(fs.readFileSync(tPath, "utf8")); } catch (e) { prev = null; } }
+    if (!prev || prev.date !== DATE || !prev.probables) {
+      console.log("Totals: no comparable capture for today yet — running a full capture.");
+    } else {
+      const changes = [];
+      if (prev.pitching_plan_signature !== pitchingPlanSignature) changes.push("reported pitching plan updated");
+      for (const [pk, cur] of Object.entries(probables)) {
+        const was = prev.probables[pk];
+        if (!was) continue;
+        for (const side of ["away", "home"]) {
+          if (was[side] !== "TBD" && cur[side] !== was[side]) changes.push(`${was[side]} → ${cur[side]}`);
+          if (was[side] === "TBD" && cur[side] !== "TBD") changes.push(`TBD → ${cur[side]}`);
+        }
       }
+      if (!changes.length) { console.log("Totals: probables unchanged — keeping the morning capture, no API call."); return; }
+      console.log(`Totals: pitcher change (${changes.join("; ")}) — re-capturing.`);
     }
-    if (!changes.length) { console.log("Totals: probables unchanged — keeping the morning capture."); return; }
-    console.log(`Totals: pitcher change (${changes.join("; ")}) — re-capturing.`);
   }
 
   // --- inputs: standings (offense factors), pitcher stats, bullpen fatigue ---
@@ -438,18 +465,31 @@ async function main() {
       const penEfficiency = pen && Number.isFinite(pen.efficiency_score) ? pen.efficiency_score : null;
       const penEfficiencyLabel = pen && pen.efficiency_label ? pen.efficiency_label : null;
       // Bullpen adjustment driver: actual earned runs allowed per 9 over the
-      // last 7 days. Raw, unshrunk for thin samples — per Lynold 2026-07-29.
+      // last 7 days. This is the DISPLAY number (opp_pen_era_7d, bullpen
+      // risk/efficiency reads) and stays raw/unshrunk.
       const penEra7d = pen && Number.isFinite(pen.era_7d) ? pen.era_7d : null;
+      // Trailing-7-day relief innings for that same pen — the sample size
+      // behind penEra7d, used only to decide how much to trust it below.
+      const penIp7d = pen && Number.isFinite(pen.last7_bp_ip) ? pen.last7_bp_ip : 0;
+      // PROJECTION-ONLY input: era_7d shrunk toward LEAGUE_ERA, n/(n+k) with
+      // n = penIp7d, k = BULLPEN_SHRINK_K. Fixes ERR-class bug where a thin
+      // recent-week sample (e.g. 0.00 ERA over 3 IP) pushed a side's run
+      // projection outside generate-member-lab.js's plausibility band,
+      // silently dropping the run model for that game (Lynold 2026-08-05).
+      // Only this formula input changes; penEra7d above is untouched.
+      const penEra7dShrunk = penEra7d !== null
+        ? LEAGUE_ERA + (penIp7d / (penIp7d + BULLPEN_SHRINK_K)) * (penEra7d - LEAGUE_ERA)
+        : null;
       // Blended pitching-plan-edge reads use a steadier 15-day bullpen ERA
-      // instead -- the win-probability model's own bullpenAdj term below
-      // deliberately stays on the 7-day number per Lynold 2026-07-29 (it is
-      // meant to react fast), but a 7-day sample was too volatile for what
-      // is displayed to users as a plan-quality comparison: a single bad or
-      // dominant outing can push era_7d past 15.00 or to 0.00, which
-      // flipped which pitcher an ordinary pitching-plan edge credited
-      // (confirmed live 2026-07-31, Brewers @ Angels and Marlins @ Mets).
-      // Falls back to era_7d, then league average, if the 15-day figure
-      // isn't available (e.g. early season).
+      // instead -- the win-probability model's own bullpenAdj term (in
+      // generate-member-lab.js) deliberately stays on the 7-day number per
+      // Lynold 2026-07-29 (it is meant to react fast), but a 7-day sample was
+      // too volatile for what is displayed to users as a plan-quality
+      // comparison: a single bad or dominant outing can push era_7d past
+      // 15.00 or to 0.00, which flipped which pitcher an ordinary
+      // pitching-plan edge credited (confirmed live 2026-07-31, Brewers @
+      // Angels and Marlins @ Mets). Falls back to era_7d, then league
+      // average, if the 15-day figure isn't available (e.g. early season).
       const penEra15d = pen && Number.isFinite(pen.era_15d) ? pen.era_15d
         : (penEra7d !== null ? penEra7d : null);
 
@@ -484,7 +524,7 @@ async function main() {
       const expIP = segments.filter(segment => segment.role !== "bullpen")
         .reduce((sum, segment) => sum + Number(segment.expected_innings), 0);
 
-      const bullpenAdj = penEra7d !== null ? (penEra7d - LEAGUE_ERA) * (bullpenInnings / 9) : 0;
+      const bullpenAdj = penEra7dShrunk !== null ? (penEra7dShrunk - LEAGUE_ERA) * (bullpenInnings / 9) : 0;
       effectiveEra += (penEra15d !== null ? penEra15d : LEAGUE_ERA) * bullpenInnings;
       const effectiveEraFinal = Number((effectiveEra / 9).toFixed(2));
 
@@ -558,6 +598,8 @@ async function main() {
         starter_adj: Number(starterAdj.toFixed(2)),
         opp_pen_risk: penRisk, opp_pen_fatigue: penFatigue, opp_pen_efficiency: penEfficiency, opp_pen_efficiency_label: penEfficiencyLabel,
         opp_pen_era_7d: penEra7d,
+        opp_pen_era_7d_shrunk: penEra7dShrunk !== null ? Number(penEra7dShrunk.toFixed(2)) : null,
+        opp_pen_ip_7d: penIp7d,
         bullpen_adj: Number(bullpenAdj.toFixed(2)),
         sp_sample_ok: !!(st && st.ip >= 40 && role.confidence !== "low"),
         pitching_plan_confident: plan.reported || (role.confidence === "high" && !role.bullpenGame)
@@ -696,7 +738,7 @@ async function main() {
     }
   } catch (e) {}
 
-  const payload = { date: DATE, generated_at: new Date().toISOString(), model_version: TOTALS_MODEL_VERSION, policy: TOTALS_POLICY, source: "LyDia totals projection (median RPG + lineup wOBA offense adjustment + FIP-lite starter adjustment + bullpen era_7d adjustment) + the-odds-api totals consensus", league_rpg: Number(lgRPG.toFixed(2)), probables, pitching_plan_signature: pitchingPlanSignature, games: out, learned_bias: learnedBias, learned_n: learnedN };
+  const payload = { date: DATE, generated_at: new Date().toISOString(), model_version: TOTALS_MODEL_VERSION, policy: TOTALS_POLICY, source: "LyDia totals projection (median RPG + lineup wOBA offense adjustment + FIP-lite starter adjustment + shrunk bullpen era_7d adjustment) + the-odds-api totals consensus", league_rpg: Number(lgRPG.toFixed(2)), probables, pitching_plan_signature: pitchingPlanSignature, games: out, learned_bias: learnedBias, learned_n: learnedN };
   fs.mkdirSync(path.join(ROOT, "data", "totals"), { recursive: true });
   fs.writeFileSync(path.join(ROOT, "data", "totals", `${DATE}.json`), JSON.stringify(payload, null, 1));
   fs.writeFileSync(path.join(ROOT, "data", "totals", "today.json"), JSON.stringify(payload, null, 1));
