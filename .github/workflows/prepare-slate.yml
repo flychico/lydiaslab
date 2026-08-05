@@ -28,6 +28,17 @@ name: Prepare slate (gather data)
 #
 # Scheduled ~15 minutes before each publish wave so publish always reads fresh
 # committed data rather than fetching it itself.
+#
+# 2026-08-05: ALL THREE ODDS STEPS NOW PASS --if-changed.
+# This workflow runs up to 5x/day and was calling update-k-props.js,
+# update-totals.js and update-moneyline-odds.js unconditionally every time —
+# a full paid odds fetch on every run, all day, whether or not the slate had
+# actually moved since the last one (~30 API credits per run). Each script's
+# --if-changed compares today's probable-pitcher signature (plus, for totals,
+# the reported pitching plan) against its last capture and skips the fetch
+# when nothing changed. A missing or stale prior capture — the day's first
+# run, or a manual dispatch for a date with no capture yet — always falls
+# through to a real fetch; it is never mistaken for "nothing to do."
 
 on:
   schedule:
@@ -94,18 +105,20 @@ jobs:
             --snapshot posted \
             --defer-publish true
 
+      # --if-changed: skip the paid fetch if today's probables + pitching plan
+      # already match the last capture. First run of the day always captures.
       - name: Capture strikeout prop lines and projections
-        run: node scripts/update-k-props.js "${{ steps.slate_date.outputs.date }}"
+        run: node scripts/update-k-props.js "${{ steps.slate_date.outputs.date }}" --if-changed
 
       - name: Capture totals lines and projections
-        run: node scripts/update-totals.js "${{ steps.slate_date.outputs.date }}"
+        run: node scripts/update-totals.js "${{ steps.slate_date.outputs.date }}" --if-changed
 
       # NOTE the flag. update-k-props.js and update-totals.js take a positional
       # date; update-moneyline-odds.js parses --date. Passing this one
       # positionally is silently ignored and it falls back to "today", which is
       # correct on a schedule but wrong on a manual backfill.
       - name: Capture moneyline odds
-        run: node scripts/update-moneyline-odds.js --date "${{ steps.slate_date.outputs.date }}"
+        run: node scripts/update-moneyline-odds.js --date "${{ steps.slate_date.outputs.date }}" --if-changed
 
       # Report, do not gate. A thin slate is worth seeing in the log; failing
       # here would leave the day with no committed data at all, which is worse
