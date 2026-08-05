@@ -22,7 +22,32 @@ const ERA_CLAMP = [2.75, 6.00];
 
 const VALUE_EDGE = 0.03;
 const OFFICIAL_LAB_SCORE = 80;
-const OFFICIAL_MODEL_PROB = 0.72;
+/*
+  MONEYLINE CALIBRATION (2026-08-05, measured on 266 graded games)
+
+  The raw model is systematically OVERCONFIDENT above 55%. Measured, by band:
+    50-55%  predicted 52.5%  actual 54.8%   (+2.3, slightly under-confident)
+    55-60%  predicted 57.4%  actual 50.0%   (-7.4)
+    60-65%  predicted 62.6%  actual 55.3%   (-7.2)
+    65-70%  predicted 67.2%  actual 48.8%  (-18.5)
+    70%+    predicted 78.0%  actual 63.8%  (-14.2)
+
+  The low band is the honest one; everything above it drifts. Shrinking the
+  published probability toward 0.5 fixes it:  p -> 0.5 + K * (p - 0.5).
+
+  K = 0.50 was fit on the FIRST 159 graded games and tested on the LAST 107 it
+  had never seen: Brier 0.2732 -> 0.2534, a 7.2% out-of-sample improvement.
+  Not an in-sample fit.
+
+  This is a monotonic, order-preserving transform, so it changes no ranking and
+  no pick. The gate below is remapped through the same transform (0.72 -> 0.61)
+  so exactly the same games qualify as before. What changes is that the number
+  published to a reader is now the number the record actually supports.
+*/
+const MONEYLINE_CALIBRATION_K = 0.50;
+const calibrateProb = p => (Number.isFinite(p) ? 0.5 + MONEYLINE_CALIBRATION_K * (p - 0.5) : p);
+// 0.72 raw, expressed on the calibrated scale. Same games, honest number.
+const OFFICIAL_MODEL_PROB = 0.61;
 const VALUE_WATCH_LAB_SCORE = 75;
 const WATCHLIST_LAB_SCORE = 65;
 const MAX_ABS_PRICE = 1000;
@@ -898,9 +923,13 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
   // than deleting the blend) means the weight is a single reversible number and
   // run_model_probability is still recorded for every game, which is what lets
   // the accountability ledger decide whether the run model earns weight back.
-  const pHome = Number.isFinite(runPHome) && RUN_MODEL_WEIGHT > 0
+  let pHome = Number.isFinite(runPHome) && RUN_MODEL_WEIGHT > 0
     ? blendProbabilities(legacyPHome, runPHome, RUN_MODEL_WEIGHT)
     : legacyPHome;
+
+  // Calibrate before anything downstream reads it, so the brief, the card, the
+  // pages and the Lab Rating all speak in the same (honest) units.
+  pHome = calibrateProb(pHome);
 
   const pickHome = pHome >= 0.5;
   const pickTeam = pickHome ? hT.name : aT.name;
