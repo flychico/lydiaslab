@@ -123,17 +123,18 @@ textarea{background:var(--card);border:1px solid var(--border);border-radius:9px
   <div id="view"></div>
 </div>
 <div class="tabbar" id="tabbar">
-  <div data-tab="dash" class="deskonly"><span class="ico">🗿</span>Dashboard</div>
-  <div data-tab="today" class="on"><span class="ico">🏋️</span>Today</div>
-  <div data-tab="meals"><span class="ico">🍽️</span>Meals</div>
-  <div data-tab="plan"><span class="ico">📋</span>Plan</div>
-  <div data-tab="progress"><span class="ico">📈</span>Progress</div>
-  <div data-tab="settings"><span class="ico">⚙️</span>Settings</div>
+  <div data-tab="dash" class="deskonly"><span class="ico">7</span>Dashboard</div>
+  <div data-tab="today"><span class="ico">7</span>Today</div>
+  <div data-tab="meals"><span class="ico">7</span>Meals</div>
+  <div data-tab="plan"><span class="ico">7</span>Plan</div>
+  <div data-tab="progress"><span class="ico">7</span>Progress</div>
+  <div data-tab="settings"><span class="ico">7</span>Settings</div>
 </div>
 <div id="timer" class="timer hidden"></div>
 <div id="swapmodal"></div>
 <script>
 "use strict";
+
 /* ============ MEAL TRACKING SECTION ============ */
 function mealTotalsForDate(date) {
   const dayMeals = (S.meals || []).filter(m => m.date === date);
@@ -149,21 +150,25 @@ function mealTotalsForDate(date) {
   }
   return totals;
 }
+
 function saveMealTemplate(name, cal, protein, carbs, fat, fiber) {
   S.savedMeals = S.savedMeals || [];
   S.savedMeals.push({ id: Date.now(), name, cal, protein, carbs, fat, fiber });
   save();
   toast("Saved " + name);
 }
+
 function deleteMealTemplate(id) {
   S.savedMeals = (S.savedMeals || []).filter(m => m.id !== id);
   save();
 }
+
 function deleteMeal(id) {
   S.meals = (S.meals || []).filter(m => m.id !== id);
   save();
   render();
 }
+
 function addMeal(date, name, cal, protein, carbs, fat, fiber) {
   S.meals = S.meals || [];
   S.meals.push({ id: Date.now(), date, name, cal: Number(cal) || 0, protein: Number(protein) || 0, carbs: Number(carbs) || 0, fat: Number(fat) || 0, fiber: Number(fiber) || 0 });
@@ -171,6 +176,7 @@ function addMeal(date, name, cal, protein, carbs, fat, fiber) {
   render();
   toast("Added " + name);
 }
+
 function renderMealsTab() {
   const date = today();
   const dayMeals = (S.meals || []).filter(m => m.date === date).sort((a, b) => (a.date === b.date ? a.id - b.id : 0));
@@ -197,7 +203,7 @@ function renderMealsTab() {
     html += '<h2>Today\'s meals</h2>';
     for (const m of dayMeals) {
       html += '<div class="card"><div style="display:flex;justify-content:space-between;align-items:start"><div><b>' + esc(m.name) + '</b><div class="dim small">' + m.cal + ' kcal · ' + m.protein + 'g P · ' + m.carbs + 'g C · ' + m.fat + 'g F</div></div>';
-      html += '<button class="btn danger small-btn" onclick="deleteMeal(' + m.id + ')">✕</button></div></div>';
+      html += '<button class="btn danger small-btn" onclick="deleteMeal(' + m.id + ')">X</button></div></div>';
     }
   }
 
@@ -216,6 +222,7 @@ function renderMealsTab() {
 
   V.innerHTML = html;
 }
+
 function openMealModal() {
   const cal = prompt("Calories:", "");
   if (cal === null) return;
@@ -237,11 +244,13 @@ function openMealModal() {
     saveMealTemplate(name.trim(), Number(cal) || 0, Number(protein) || 0, Number(carbs) || 0, Number(fat) || 0, Number(fiber) || 0);
   }
 }
+
 function quickAddMeal(templateId) {
   const t = (S.savedMeals || []).find(m => m.id === templateId);
   if (!t) return;
   addMeal(today(), t.name, t.cal, t.protein, t.carbs, t.fat, t.fiber);
 }
+
 function openSavedMealsModal() {
   const saved = S.savedMeals || [];
   let html = '<div class="modal" onclick="if(event.target===this)this.parentNode.innerHTML=\'\'"><div class="inner"><h3>Saved meals</h3>';
@@ -265,6 +274,7 @@ const KEY = "mangelo-v1";
 let S = load();
 function load(){
   try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 1) return s; } catch(e){}
+  try { const f = JSON.parse(localStorage.getItem("forge-v1")); if (f && f.v === 1) { f.profile = null; f.meals = []; f.savedMeals = []; return f; } } catch(e){}
   return { v:1, profile:null, plan:null, logs:[], weights:[], meals:[], savedMeals:[], active:null, theme:"auto" };
 }
 function save(){ localStorage.setItem(KEY, JSON.stringify(S)); }
@@ -288,18 +298,279 @@ document.getElementById("tabbar").addEventListener("click", e => {
   const t = e.target.closest("[data-tab]"); if (!t) return;
   tab = t.dataset.tab; syncTabs(); render();
 });
+
 function render(){
   applyTheme();
   if (!S.profile) { return renderOnboarding(); }
+  if (tab === "dash") { return renderDashboard(); }
+  if (tab === "today") { return renderToday(); }
   if (tab === "meals") { return renderMealsTab(); }
+  if (tab === "plan") { return renderPlan(); }
+  if (tab === "progress") { return renderProgress(); }
+  if (tab === "settings") { return renderSettings(); }
   V.innerHTML = '<p>Tab: ' + tab + '</p>';
 }
+
 function renderOnboarding(){
-  V.innerHTML = '<h1>Welcome to MichelAngelo</h1><p>Let\'s get started with your profile.</p><button class="btn full" onclick="setupProfile()">Setup</button>';
+  V.innerHTML = `<h1><span class="mich">Michel</span><span class="angelo">Angelo</span></h1>
+    <p class="quote">Every block of stone has a statue inside it, and it is the task of the sculptor to discover it.</p>
+    <div class="card">
+      <h3>Welcome to MichelAngelo</h3>
+      <p class="dim small">Track your workouts. Log your meals. Shape your future.</p>
+    </div>
+    <button class="btn full" onclick="setupProfile()">Get Started</button>`;
 }
+
 function setupProfile(){
-  S.profile = { days: 4, goal: "muscle", equip: "gym", heightIn: 70, weightLb: 180, mealTargets: { cal: 2000, protein: 150 } };
-  save(); render();
+  S.profile = {
+    days: 4, goal: "muscle", equip: "gym", heightIn: 70, weightLb: 180,
+    mealTargets: { cal: 2000, protein: 150 }
+  };
+  save();
+  render();
+}
+
+function renderDashboard(){
+  document.body.classList.add("dashmode");
+  let html = '<h1><span class="mich">Michel</span><span class="angelo">Angelo</span></h1>';
+
+  const wkLogs = S.logs || [];
+  const todayLogs = wkLogs.filter(l => l.date === today());
+  const completedSets = todayLogs.reduce((acc, l) => acc + (l.sets || []).filter(s => s.done).length, 0);
+  const totalSets = todayLogs.reduce((acc, l) => acc + (l.sets || []).length, 0);
+
+  html += '<div class="card"><h3>Today\'s Workout</h3>';
+  html += '<div class="statgrid">';
+  html += '<div><div class="dim small">Sets</div><div class="big">' + completedSets + '/' + totalSets + '</div></div>';
+  html += '<div><div class="dim small">Exercises</div><div class="big">' + todayLogs.length + '</div></div>';
+  html += '</div>';
+  html += '<button class="btn small-btn blue-btn" onclick="tab=\'today\';render()">Start workout</button>';
+  html += '</div>';
+
+  const mealTotals = mealTotalsForDate(today());
+  const mealTargets = S.profile && S.profile.mealTargets ? S.profile.mealTargets : { cal: 2000, protein: 150 };
+  const calPct = mealTargets.cal ? Math.min(100, (mealTotals.cal / mealTargets.cal) * 100) : 0;
+  const proteinPct = mealTargets.protein ? Math.min(100, (mealTotals.protein / mealTargets.protein) * 100) : 0;
+
+  html += '<div class="card"><h3>Nutrition <span class="dim small">. today</span></h3>';
+  html += '<div class="statgrid">';
+  html += '<div><div class="dim small">Calories</div><div class="big">' + mealTotals.cal + '</div><div class="dim small">of ' + mealTargets.cal + ' kcal</div>';
+  html += '<div class="progress-bar"><div class="progress-fill" style="width:' + calPct + '%"></div></div></div>';
+  html += '<div><div class="dim small">Protein</div><div class="big">' + mealTotals.protein.toFixed(0) + 'g</div><div class="dim small">of ' + mealTargets.protein + 'g</div>';
+  html += '<div class="progress-bar"><div class="progress-fill" style="width:' + proteinPct + '%"></div></div></div>';
+  html += '</div>';
+  html += '<button class="btn small-btn blue-btn" onclick="tab=\'meals\';render()">Log meal</button>';
+  html += '</div>';
+
+  html += '<div class="card"><h3>This Week</h3>';
+  html += '<p class="dim small">Track your progress over time</p>';
+  html += '<button class="btn small-btn ghost" onclick="tab=\'progress\';render()">View analytics</button>';
+  html += '</div>';
+
+  V.innerHTML = html;
+}
+
+function renderToday(){
+  document.body.classList.remove("dashmode");
+  let html = '<h1>Today</h1>';
+  const todayLogs = (S.logs || []).filter(l => l.date === today());
+
+  if (!todayLogs.length) {
+    html += '<div class="card"><p class="dim">No workout logged yet today.</p>';
+    html += '<button class="btn full" onclick="addExercise()">Start First Exercise</button></div>';
+  } else {
+    for (const log of todayLogs) {
+      html += '<div class="card"><div class="exhead"><b>' + esc(log.name) + '</b></div>';
+      if (log.sets) {
+        for (let i = 0; i < log.sets.length; i++) {
+          const s = log.sets[i];
+          const done = s.done ? ' done' : '';
+          html += '<div class="setrow"><div class="setnum">' + (i+1) + '</div><div>' + s.reps + ' reps</div><div class="x">X</div><div>' + s.wt + ' lb</div>';
+          html += '<button class="chk' + done + '" onclick="toggleSet(' + log.id + ',' + i + ')">V</button></div>';
+        }
+      }
+      html += '<button class="btn small-btn ghost" style="margin-top:8px" onclick="removeLog(' + log.id + ')">Delete</button>';
+      html += '</div>';
+    }
+  }
+
+  html += '<h2>Add Exercise</h2>';
+  html += '<button class="btn full blue-btn" onclick="addExercise()">+ Log an exercise</button>';
+
+  V.innerHTML = html;
+}
+
+function renderPlan(){
+  document.body.classList.remove("dashmode");
+  let html = '<h1>My Plan</h1>';
+
+  if (!S.plan) {
+    html += '<div class="card"><p class="dim">No plan created yet.</p>';
+    html += '<button class="btn full blue-btn" onclick="createPlan()">Create Plan</button></div>';
+  } else {
+    html += '<div class="card"><h2>' + esc(S.plan.name || "Training Plan") + '</h2>';
+    html += '<p><span class="gold">' + (S.plan.days || 4) + ' days</span> . <span class="blue">' + (S.plan.goal || "General") + '</span></p>';
+    if (S.plan.days_outline) {
+      for (const day of S.plan.days_outline) {
+        html += '<div style="padding:12px 0;border-top:1px solid var(--border)"><b>' + esc(day.name) + '</b><div class="dim small">' + esc(day.focus || "Mixed") + '</div></div>';
+      }
+    }
+    html += '<button class="btn small-btn ghost" style="margin-top:12px" onclick="editPlan()">Edit Plan</button>';
+    html += '</div>';
+  }
+
+  V.innerHTML = html;
+}
+
+function renderProgress(){
+  document.body.classList.remove("dashmode");
+  let html = '<h1>Progress</h1>';
+
+  const wkLogs = S.logs || [];
+  const weights = S.weights || [];
+
+  if (weights.length) {
+    html += '<h2>Weight Trend</h2>';
+    html += '<div class="card"><canvas id="progress-chart"></canvas>';
+    html += '<table><tr><th>Date</th><th class="num">Weight</th></tr>';
+    for (let i = Math.max(0, weights.length - 8); i < weights.length; i++) {
+      const w = weights[i];
+      html += '<tr><td>' + (w.date || '') + '</td><td class="num">' + w.weight + ' lb</td></tr>';
+    }
+    html += '</table></div>';
+  } else {
+    html += '<div class="card"><p class="dim">No weight data logged yet.</p></div>';
+  }
+
+  html += '<h2>Activity</h2>';
+  const last7 = {};
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  for (const log of wkLogs) {
+    if (new Date(log.date) >= sevenDaysAgo) {
+      last7[log.date] = (last7[log.date] || 0) + 1;
+    }
+  }
+
+  html += '<div class="card">';
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toLocaleDateString("en-CA");
+    const count = last7[dateStr] || 0;
+    html += '<div class="exline"><span>' + dateStr + '</span><span class="blue">' + count + ' sets</span></div>';
+  }
+  html += '</div>';
+
+  V.innerHTML = html;
+}
+
+function renderSettings(){
+  document.body.classList.remove("dashmode");
+  let html = '<h1>Settings</h1>';
+
+  html += '<h2>Profile</h2>';
+  html += '<div class="card">';
+  html += '<label>Height (inches)</label>';
+  html += '<input type="number" id="set-height" value="' + (S.profile.heightIn || 70) + '">';
+  html += '<label style="margin-top:12px">Weight (lbs)</label>';
+  html += '<input type="number" id="set-weight" value="' + (S.profile.weightLb || 180) + '">';
+  html += '<label style="margin-top:12px">Goal</label>';
+  html += '<select id="set-goal"><option value="strength" ' + (S.profile.goal === "strength" ? "selected" : "") + '>Build Strength</option><option value="muscle" ' + (S.profile.goal === "muscle" ? "selected" : "") + '>Gain Muscle</option><option value="endurance" ' + (S.profile.goal === "endurance" ? "selected" : "") + '>Build Endurance</option><option value="weight-loss" ' + (S.profile.goal === "weight-loss" ? "selected" : "") + '>Lose Weight</option></select>';
+  html += '<label style="margin-top:12px">Equipment</label>';
+  html += '<select id="set-equip"><option value="gym" ' + (S.profile.equip === "gym" ? "selected" : "") + '>Full Gym</option><option value="home" ' + (S.profile.equip === "home" ? "selected" : "") + '>Home Gym</option><option value="bodyweight" ' + (S.profile.equip === "bodyweight" ? "selected" : "") + '>Bodyweight</option></select>';
+  html += '</div>';
+
+  html += '<h2>Meal Targets</h2>';
+  html += '<div class="card">';
+  html += '<label>Daily Calories</label>';
+  html += '<input type="number" id="tgt-cal" value="' + ((S.profile.mealTargets && S.profile.mealTargets.cal) || 2000) + '">';
+  html += '<label style="margin-top:12px">Daily Protein (g)</label>';
+  html += '<input type="number" id="tgt-protein" value="' + ((S.profile.mealTargets && S.profile.mealTargets.protein) || 150) + '">';
+  html += '</div>';
+
+  html += '<h2>App Settings</h2>';
+  html += '<div class="card">';
+  html += '<label>Theme</label>';
+  html += '<select id="set-theme"><option value="auto" ' + (S.theme === "auto" ? "selected" : "") + '>Auto</option><option value="light" ' + (S.theme === "light" ? "selected" : "") + '>Light</option><option value="dark" ' + (S.theme === "dark" ? "selected" : "") + '>Dark</option></select>';
+  html += '</div>';
+
+  html += '<button class="btn full" style="margin:20px 0" onclick="saveSettings()">Save Settings</button>';
+  html += '<button class="btn ghost full danger" onclick="if(confirm(\'Clear all data?\')){{localStorage.clear();location.reload()}}">Clear All Data</button>';
+
+  V.innerHTML = html;
+}
+
+function saveSettings(){
+  S.profile.heightIn = Number(document.getElementById("set-height").value) || 70;
+  S.profile.weightLb = Number(document.getElementById("set-weight").value) || 180;
+  S.profile.goal = document.getElementById("set-goal").value;
+  S.profile.equip = document.getElementById("set-equip").value;
+  S.profile.mealTargets = {
+    cal: Number(document.getElementById("tgt-cal").value) || 2000,
+    protein: Number(document.getElementById("tgt-protein").value) || 150
+  };
+  S.theme = document.getElementById("set-theme").value;
+  save();
+  toast("Settings saved");
+  render();
+}
+
+function addExercise(){
+  const name = prompt("Exercise name:", "Bench Press");
+  if (!name) return;
+  const sets = prompt("How many sets?", "3");
+  const reps = prompt("Reps per set?", "8");
+  const weight = prompt("Weight (lbs)?", "185");
+
+  S.logs = S.logs || [];
+  const setArray = [];
+  for (let i = 0; i < Number(sets); i++) {
+    setArray.push({ reps: Number(reps), wt: Number(weight), done: false });
+  }
+  S.logs.push({ id: Date.now(), date: today(), name, sets: setArray });
+  save();
+  render();
+  toast("Added " + name);
+}
+
+function toggleSet(logId, setIdx){
+  for (const log of S.logs) {
+    if (log.id === logId && log.sets[setIdx]) {
+      log.sets[setIdx].done = !log.sets[setIdx].done;
+      save();
+      render();
+      return;
+    }
+  }
+}
+
+function removeLog(logId){
+  S.logs = (S.logs || []).filter(l => l.id !== logId);
+  save();
+  render();
+}
+
+function createPlan(){
+  const name = prompt("Plan name:", "My Training Plan");
+  if (!name) return;
+  S.plan = { name, days: 4, goal: S.profile.goal, days_outline: [
+    { name: "Day 1", focus: "Chest & Triceps" },
+    { name: "Day 2", focus: "Back & Biceps" },
+    { name: "Day 3", focus: "Rest or Cardio" },
+    { name: "Day 4", focus: "Legs & Shoulders" }
+  ]};
+  save();
+  render();
+  toast("Plan created");
+}
+
+function editPlan(){
+  const name = prompt("Plan name:", S.plan.name);
+  if (!name) return;
+  S.plan.name = name;
+  save();
+  render();
 }
 
 render();
