@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-05T22:35:47.143Z",
+  "generated_at": "2026-08-06T03:46:52.163Z",
   "status": "ready",
   "latest_date": "2026-08-05",
   "days_reviewed": 28,
@@ -8,16 +8,16 @@
     "clv": "data/clv/clv_log.csv"
   },
   "current_official_model": "multi-market-v1",
-  "headline": "Learning summary for 2026-08-05: no graded official moneyline picks yet.",
+  "headline": "Learning summary for 2026-08-05: moneyline record 1-0 (100.0%).",
   "day": {
     "date": "2026-08-05",
     "source": "published-picks",
-    "record_all_markets": "0-0",
-    "units_all_markets": null,
-    "ungraded": 5,
-    "moneyline_record": "0-0",
-    "moneyline_win_rate": null,
-    "official_moneyline_picks": 0,
+    "record_all_markets": "3-3",
+    "units_all_markets": -0.59,
+    "ungraded": 1,
+    "moneyline_record": "1-0",
+    "moneyline_win_rate": 1,
+    "official_moneyline_picks": 1,
     "legacy_market_entries": 0
   },
   "gates": {
@@ -27,20 +27,36 @@
     "note": "Official picks require high model probability and strong setup quality. A high Lab Rating alone is not enough."
   },
   "process_metrics": {
-    "average_model_probability": null,
-    "average_lab_score": null,
-    "average_raw_edge": null,
-    "clv_counts": {},
-    "lesson_counts": {},
+    "average_model_probability": 0.6576,
+    "average_lab_score": 81,
+    "average_raw_edge": 0.0404,
+    "clv_counts": {
+      "not_tracked": 1
+    },
+    "lesson_counts": {
+      "win_needs_more_sample": 1
+    },
     "strong_official_count": 15,
-    "protected_by_probability_gate_count": 11,
+    "protected_by_probability_gate_count": 12,
     "high_bullpen_risk_count": 7,
     "pitcher_conflict_count": 0
   },
   "findings": [
     {
-      "title": "No official moneyline picks graded yet",
-      "read": "Learning will become useful after a finished slate is graded under the current model."
+      "title": "Official-pick discipline",
+      "read": "1 moneyline pick was graded. Record: 1-0 (100.0%)."
+    },
+    {
+      "title": "Probability gate",
+      "read": "Across all reviewed days, 12 graded setups had strong Lab Rating but model probability below 72%. Those should remain value watch, not official picks."
+    },
+    {
+      "title": "Bullpen learning",
+      "read": "Across all reviewed days, 7 graded moneyline picks carried a meaningful bullpen caution. Review these before adjusting thresholds."
+    },
+    {
+      "title": "Pitcher learning",
+      "read": "No major starting-pitcher conflicts showed up in the graded moneyline set."
     }
   ],
   "calibration": {
@@ -745,6 +761,24 @@
         "bullpen_label": null,
         "pick_side_bullpen_score": null,
         "opponent_bullpen_score": null
+      },
+      {
+        "date": "2026-08-05",
+        "status": "official_pick",
+        "model_version": "multi-market-v1",
+        "game": "Athletics @ Cincinnati Reds",
+        "pick": "Cincinnati Reds",
+        "result": "W",
+        "model_probability": 0.6576,
+        "lab_score": 81,
+        "raw_edge": 0.0404,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Cincinnati Reds",
+        "pitcher_gap": 6,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 67,
+        "opponent_bullpen_score": 54
       }
     ],
     "high_bullpen_risk": [
@@ -876,14 +910,33 @@
       }
     ],
     "pitcher_conflicts": [],
-    "all_moneyline": []
+    "all_moneyline": [
+      {
+        "date": null,
+        "status": "official_pick",
+        "model_version": "multi-market-v1",
+        "game": "Athletics @ Cincinnati Reds",
+        "pick": "Cincinnati Reds",
+        "result": "W",
+        "model_probability": 0.6576,
+        "lab_score": 81,
+        "raw_edge": 0.0404,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Cincinnati Reds",
+        "pitcher_gap": 6,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 67,
+        "opponent_bullpen_score": 54
+      }
+    ]
   },
   "multi_day": {
-    "moneyline_record": "23-11",
-    "moneyline_win_rate": 0.6765,
-    "official_moneyline_entries": 34,
+    "moneyline_record": "24-11",
+    "moneyline_win_rate": 0.6857,
+    "official_moneyline_entries": 35,
     "strict_gate_candidates": 15,
-    "high_lab_low_probability_entries": 11,
+    "high_lab_low_probability_entries": 12,
     "note": "Multi-day view includes whatever historical data exists. Older days may include legacy model behavior."
   },
   "next_review": [
