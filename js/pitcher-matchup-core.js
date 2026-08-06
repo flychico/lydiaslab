@@ -200,7 +200,10 @@
         k9: null,
         bb9: null,
         kbbPct: null,
+        kPct: null,
+        bbPct: null,
         gbPct: null,
+        fbPct: null,
         babip: null,
         hr9: null,
         ipStart: null
@@ -239,7 +242,18 @@
       ? role.reason
       : ip < 20 ? "limited innings; treat score with caution" : role.key === "limited_starter" ? role.reason : null;
     const kbbPct = stat.bf ? (stat.so - stat.bb) / stat.bf : null;
+    // 2026-08-06, Lynold: K% and BB% shown alongside K-BB% (the combined stat
+    // was already computed; these are its two halves, same battersFaced base).
+    const kPct = stat.bf ? stat.so / stat.bf : null;
+    const bbPct = stat.bf ? stat.bb / stat.bf : null;
     const gbPct = stat.go + stat.ao ? stat.go / (stat.go + stat.ao) : null;
+    // 2026-08-06, Lynold: fly-ball rate alongside ground-ball rate. MLB
+    // StatsAPI's "airOuts" bucket is fly balls + line drives + pop-ups
+    // together (it does not separate them), so fbPct is exactly 1-gbPct on
+    // this data source -- a real limitation of the input, not a rounding
+    // choice, and worth knowing before reading too much into the two
+    // side by side.
+    const fbPct = stat.go + stat.ao ? stat.ao / (stat.go + stat.ao) : null;
     const babipDen = stat.ab - stat.so - stat.hr + (stat.sf || 0);
     const babip = babipDen > 0 ? (stat.h - stat.hr) / babipDen : null;
     const hr9 = ip ? (stat.hr / ip) * 9 : null;
@@ -261,7 +275,10 @@
       k9,
       bb9,
       kbbPct,
+      kPct,
+      bbPct,
       gbPct,
+      fbPct,
       babip,
       hr9,
       ipStart
