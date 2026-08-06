@@ -355,6 +355,15 @@ function tKbb(v){ if(!Number.isFinite(v))return null;
   if(v>=0.08)return{t:"below avg",c:"neg-text"}; return{t:"poor",c:"neg-text"}; }
 function tGb(v){ if(!Number.isFinite(v))return null;
   if(v>=0.50)return{t:"ground-ball",c:""}; if(v>=0.43)return{t:"neutral",c:""}; return{t:"fly-ball",c:""}; }
+// 2026-08-06, Lynold: K% and BB% added alongside K-BB% (its two halves).
+// Bands follow the same modern league-average anchors as tKbb/tBb9 above
+// (~22% league K%, ~8.5% league BB%).
+function tK(v){ if(!Number.isFinite(v))return null;
+  if(v>=0.28)return{t:"elite",c:"pos-text"}; if(v>=0.25)return{t:"great",c:"pos-text"}; if(v>=0.20)return{t:"average",c:""};
+  if(v>=0.17)return{t:"below avg",c:"neg-text"}; return{t:"poor",c:"neg-text"}; }
+function tBbPct(v){ if(!Number.isFinite(v))return null;
+  if(v<0.05)return{t:"elite command",c:"pos-text"}; if(v<0.065)return{t:"good command",c:"pos-text"};
+  if(v<0.09)return{t:"average",c:""}; if(v<0.11)return{t:"below avg",c:"neg-text"}; return{t:"poor command",c:"neg-text"}; }
 function tBabip(v){ if(!Number.isFinite(v))return null;
   if(v<0.270)return{t:"lucky — due to correct",c:"neg-text"}; if(v<=0.330)return{t:"normal",c:""}; return{t:"unlucky — better than ERA",c:"pos-text"}; }
 function tHr9(v){ if(!Number.isFinite(v))return null;
@@ -427,9 +436,12 @@ function renderPitcherBox(label, team, p) {
     <div class="stat-row"><span>IP</span><b>${p.ip ? Math.round(p.ip) : "—"}</b></div>
     <div class="stat-row" title="Wins and losses track run support more than pitching skill"><span>W-L</span><b>${Number.isFinite(p.w) ? p.w + "-" + p.l : "—"}</b></div>
     <div class="stat-row"><span>K/9</span><span><b>${p.k9 ? fmt(p.k9, 1) : "—"}</b>${chip(tK9(p.k9))}</span></div>
+    <div class="stat-row" title="Strikeouts as a share of batters faced"><span>K%</span><span><b>${Number.isFinite(p.kPct) ? (p.kPct * 100).toFixed(1) + "%" : "—"}</b>${chip(tK(p.kPct))}</span></div>
     <div class="stat-row"><span>BB/9</span><span><b>${p.bb9 ? fmt(p.bb9, 1) : "—"}</b>${chip(tBb9(p.bb9))}</span></div>
+    <div class="stat-row" title="Walks as a share of batters faced"><span>BB%</span><span><b>${Number.isFinite(p.bbPct) ? (p.bbPct * 100).toFixed(1) + "%" : "—"}</b>${chip(tBbPct(p.bbPct))}</span></div>
     <div class="stat-row" title="Strikeout rate minus walk rate — one of the most predictive pitcher skills"><span>K-BB%</span><span><b>${Number.isFinite(p.kbbPct) ? (p.kbbPct * 100).toFixed(1) + "%" : "—"}</b>${chip(tKbb(p.kbbPct))}</span></div>
     <div class="stat-row" title="Ground-out share of outs in play — higher keeps the ball in the park"><span>GB%</span><span><b>${Number.isFinite(p.gbPct) ? (p.gbPct * 100).toFixed(0) + "%" : "—"}</b>${chip(tGb(p.gbPct))}</span></div>
+    <div class="stat-row" title="Fly-ball share of outs in play. On this data source it is the complement of GB% (MLB's stats do not separate fly balls from liners/pop-ups within outs in play), so read it alongside GB%, not as an independent signal"><span>FB%</span><b>${Number.isFinite(p.fbPct) ? (p.fbPct * 100).toFixed(0) + "%" : "—"}</b></div>
     <div class="stat-row" title="Batting average on balls in play against — far from ~.300 often signals luck due to regress"><span>BABIP</span><span><b>${Number.isFinite(p.babip) ? p.babip.toFixed(3).replace(/^0/, "") : "—"}</b>${chip(tBabip(p.babip))}</span></div>
     <div class="stat-row" title="Home runs allowed per 9 innings"><span>HR/9</span><span><b>${Number.isFinite(p.hr9) ? fmt(p.hr9, 1) : "—"}</b>${chip(tHr9(p.hr9))}</span></div>
     <div class="stat-row" title="Average innings per start — how deep he goes before the bullpen"><span>IP/start</span><span><b>${Number.isFinite(p.ipStart) ? fmt(p.ipStart, 1) : "—"}</b>${chip(tIpStart(p.ipStart))}</span></div>

@@ -1465,19 +1465,17 @@ function renderQualityNotice(quality) {
   return `<div class="notice" style="margin-bottom:16px"><strong>Analysis still building.</strong> This page is available to users but is not submitted for search indexing until these inputs are complete: ${esc(labels.join(", "))}.</div>`;
 }
 
+// 2026-08-06, Lynold: ERA/WHIP/K9/K-BB% moved off the card and onto the
+// table below (renderPitcherTable) -- the card is now just pitcher identity.
+// Splitting the numbers across two places meant half the pitcher's stat line
+// never got the table's "gap big enough to matter" highlighting; on the
+// table, all of it does.
 function renderPitcherCard(game, pitcherGame) {
   const p = pitcherGame || {};
   const a = p.away || {}, h = p.home || {};
   if (!validPitcher(a.name) && !validPitcher(h.name)) return "";
-  const stat = (v, fmt) => typeof v === "number" ? fmt(v) : "-";
-  const tile = (team, x) => `<div class="pcard">
+  const tile = (team, x) => `<div class="pcard pcard-id">
     <div class="pcard-top"><b>${mlbPitcherLink(x)}</b><span class="dim small">${esc(shortTeam(team))}${x.hand ? " · " + esc(x.hand) + "HP" : ""}</span></div>
-    <div class="pcard-stats">
-      <div><span class="pc-num">${esc(stat(x.era, v => v.toFixed(2)))}</span><span class="pc-lab">ERA</span></div>
-      <div><span class="pc-num">${esc(stat(x.whip, v => v.toFixed(2)))}</span><span class="pc-lab">WHIP</span></div>
-      <div><span class="pc-num">${esc(stat(x.k9, v => v.toFixed(1)))}</span><span class="pc-lab">K/9</span></div>
-      <div><span class="pc-num">${esc(stat(x.kbbPct, v => (v*100).toFixed(1) + "%"))}</span><span class="pc-lab">K-BB%</span></div>
-    </div>
   </div>`;
   return `<div class="pcard-grid">${tile(game.away_team, a)}<div class="pcard-vs">vs</div>${tile(game.home_team, h)}</div>`;
 }
@@ -1536,11 +1534,29 @@ function renderPitcherTable(game, pitcherGame) {
   // Every stat declares its direction and a materiality threshold. A cell only
   // lights up when the gap actually matters, so a 2-run ERA edge is called out
   // and a 0.1 K/9 difference is not.
+  //
+  // 2026-08-06, Lynold: ERA/WHIP/K9/K-BB% moved here from the pitcher card so
+  // every headline number gets the same "gap that matters" highlighting the
+  // rest of the table already had. ERA/WHIP materiality (0.50 / 0.10) match
+  // the "roughly one class of pitcher" language already used on the Pitcher
+  // Matchup Tool page -- same bar, not a new one invented for this table.
+  // K% and BB% added alongside K-BB% (its two halves). Fly-ball rate added
+  // alongside ground-ball rate -- treated the same way (no better/worse
+  // direction): on this data source fbPct is exactly 1-gbPct (MLB StatsAPI's
+  // "airOuts" bucket does not separate fly balls from liners and pop-ups),
+  // so the two rows are complementary, not two independent reads.
   const rows = [
     { label: "LyDia pitcher score", a: away.score, h: home.score, better: "high", gap: 8, fmt: v => String(v) },
+    { label: "ERA", a: away.era, h: home.era, better: "low", gap: 0.5, fmt: v => v.toFixed(2) },
+    { label: "WHIP", a: away.whip, h: home.whip, better: "low", gap: 0.1, fmt: v => v.toFixed(2) },
+    { label: "K/9", a: away.k9, h: home.k9, better: "high", gap: 1.0, fmt: v => v.toFixed(1) },
+    { label: "K-BB%", a: away.kbbPct, h: home.kbbPct, better: "high", gap: 0.03, fmt: v => (v * 100).toFixed(1) + "%" },
+    { label: "K%", a: away.kPct, h: home.kPct, better: "high", gap: 0.04, fmt: v => (v * 100).toFixed(1) + "%" },
+    { label: "BB%", a: away.bbPct, h: home.bbPct, better: "low", gap: 0.02, fmt: v => (v * 100).toFixed(1) + "%" },
     { label: "BB/9", a: away.bb9, h: home.bb9, better: "low", gap: 1.0, fmt: v => v.toFixed(1) },
     { label: "HR/9", a: away.hr9, h: home.hr9, better: "low", gap: 0.4, fmt: v => v.toFixed(1) },
-    { label: "Ground-ball rate", a: away.gbPct, h: home.gbPct, better: null, gap: 0, fmt: v => (v * 100).toFixed(1) + "%" }
+    { label: "Ground-ball rate", a: away.gbPct, h: home.gbPct, better: null, gap: 0, fmt: v => (v * 100).toFixed(1) + "%" },
+    { label: "Fly-ball rate", a: away.fbPct, h: home.fbPct, better: null, gap: 0, fmt: v => (v * 100).toFixed(1) + "%" }
   ];
 
   const dirTag = better => better === "low" ? ' <span class="dim" style="font-weight:400">(lower is better)</span>'
@@ -1567,7 +1583,7 @@ function renderPitcherTable(game, pitcherGame) {
   </table>
   <p><strong>${(away.carriedByBullpen || home.carriedByBullpen) ? "Pitching plan edge" : "Pitcher edge"}:</strong> ${esc(pitcherEdgeCopy(p, away, home, game.away_team, game.home_team))}</p>
   ${(away.carriedByBullpen || home.carriedByBullpen) ? blendedReadCopy(p, away, home, game.away_team, game.home_team) : ""}
-  <p class="small dim" style="text-align:center"><strong>How to read this:</strong> the scorecards show ERA, WHIP, K/9, and K-BB%. The table adds complementary traits without repeating them. Highlighted cells mark a gap big enough to matter. HR/9 is home runs allowed per nine innings. Ground-ball rate is neither good nor bad on its own: high ground-ball pitchers trade strikeouts for double plays and fewer home runs.</p>`;
+  <p class="small dim" style="text-align:center"><strong>How to read this:</strong> the scorecards above name the starters; every number lives in this table. Highlighted cells mark a gap big enough to matter. K% and BB% are strikeout and walk rate as a share of batters faced -- K-BB% is the two combined into one skill number. HR/9 is home runs allowed per nine innings. Ground-ball and fly-ball rate are neither good nor bad on their own: high ground-ball pitchers trade strikeouts for double plays and fewer home runs, and on this data source the two rates are complementary (they add to 100%), not independent reads.</p>`;
 }
 
 // Index the locked published card's strikeout picks by game and pitcher so the
