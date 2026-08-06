@@ -20,6 +20,13 @@ const LEAGUE_ERA = 4.20;
 const MIN_IP = 20;
 const ERA_CLAMP = [2.75, 6.00];
 
+// 2026-08-06, Lynold: the current live moneyline model is called "leo" in
+// conversation and in the vault (Model Versions.md). Every prior version is
+// "the old model". Single source of truth for the string written to every
+// graded ledger row (calibration_model_log.csv, attribution_model_log.csv,
+// the member brief, etc.) so it can never drift between the two write sites.
+const MONEYLINE_MODEL_VERSION = "leo";
+
 const VALUE_EDGE = 0.03;
 const OFFICIAL_LAB_SCORE = 80;
 /*
@@ -324,7 +331,7 @@ async function main() {
     snapshot_type: SNAPSHOT,
     source_of_truth: "LyDia Daily Engine",
     current_official_model: "multi_market_v1",
-    model_version: "moneyline-v2-plus-runs-v1",
+    model_version: MONEYLINE_MODEL_VERSION,
     lab_rating_version: LAB_RATING_VERSION,
     official_pick_rules: {
       minimum_model_probability: OFFICIAL_MODEL_PROB,
@@ -1048,7 +1055,10 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
     pick_team: pickTeam,
     side,
     model_probability: round(modelProb, 4),
-    model_source: Number.isFinite(runPHome) ? "moneyline-v2-plus-runs-v1" : "legacy-strength-fallback",
+    // Both branches are "leo" -- whether a run projection was computable for
+    // this game (RUN_MODEL_WEIGHT is currently 0 either way, see above) is still
+    // visible from projected_runs being null or not on this same row.
+    model_source: MONEYLINE_MODEL_VERSION,
     projected_runs: Number.isFinite(runPHome) ? {
       away: Number(runProjection.proj_away),
       home: Number(runProjection.proj_home),
