@@ -1462,7 +1462,12 @@ function buildPicksFile(rows, generatedAt) {
     locked_at: generatedAt,
     source_of_truth: "LyDia Daily Engine",
     current_official_model: "multi_market_v1",
-    lock_policy: "Dated official pick files are append-only. A published pick is never changed or removed once it is on the card, and no pick is ever added to a game that has already started. New picks CAN be appended during the day as they qualify — pitcher strikeout picks require the real posted starting lineup, which for a late game does not exist until the early evening, so the card is expected to grow as the slate progresses.",
+    // 2026-08-06, Lynold: removed the "no pick added to a game that has
+    // already started" sentence from this public-facing string, matching the
+    // code change in writeOrReusePublishedPicks() below (his explicit
+    // instruction, see DEC-20260806-04). A published pick is still never
+    // changed or removed once on the card -- that part is unchanged.
+    lock_policy: "Dated official pick files are append-only. A published pick is never changed or removed once it is on the card. New picks CAN be appended during the day as they qualify — pitcher strikeout picks require the real posted starting lineup, which for a late game does not exist until the early evening, so the card is expected to grow as the slate progresses.",
     note: `Official records are separated by market. Moneylines use the ${(OFFICIAL_MODEL_PROB * 100).toFixed(0)}% probability and ${(OFFICIAL_LAB_SCORE / 10).toFixed(1)}/10 Lab gates; game totals ${totalsOfficialEnabled ? `use a ${totalsOfficialEdge}-run edge and ${(totalsOfficialLab / 10).toFixed(1)}/10 totals setup` : "are currently paused while the totals setup rating is rebuilt (see EXP-20260727-01)"}; pitcher Ks use a 0.7-K edge, posted price, two-book coverage, a confirmed non-opener workload, and the real posted starting lineup (not a projected one). No market publishes an official pick at a price of ${MIN_OFFICIAL_PRICE} or shorter — a favourite that heavy has to win ${(100 * (185 / 285)).toFixed(1)}% of the time just to break even, and LyDia's graded record does not support paying that.`,
     rules: {
       // Applies to every market. -185 needs a 64.9% strike rate to break even
@@ -1546,18 +1551,9 @@ function writeOrReusePublishedPicks(candidate, scheduledGameCount) {
 
     // A zero-pick file is a provisional snapshot, not an immutable official-pick
     // lock. Morning runs can happen before the market and all model inputs are
-    // ready. If a later run produces official picks, promote whichever of them
-    // are still pregame before first pitch. A pick whose game has already
-    // started is dropped rather than promoted -- publishing it now would be a
-    // retroactive lock, exactly what this file exists to prevent -- but one
-    // early game must not veto every other still-pregame pick found in the
-    // same run (this is the same per-pick pregame filter used above for line
-    // moves and schema promotion, applied here too after ERR-20260801-01: the
-    // old all-or-nothing check threw and hard-failed the whole publish step
-    // for the rest of the day whenever any single candidate game had started,
-    // silently withholding otherwise-valid picks on games hours from first
-    // pitch). Once a pick is promoted, only a manual, evidence-backed repair
-    // may change the dated file.
+    // ready. If a later run produces official picks, promote them. Once a pick
+    // is promoted, only a manual, evidence-backed repair may change the dated
+    // file.
     /*
       APPEND-ONLY MEANS APPEND. (2026-08-02)
 
@@ -1579,24 +1575,26 @@ function writeOrReusePublishedPicks(candidate, scheduledGameCount) {
       on the floor. Same family as ERR-20260801-01: an all-or-nothing check
       withholding valid pregame picks.
 
-      The hard rule is unchanged and is enforced per pick, not per card:
-        - a pick whose game has started is never added (retroactive lock)
-        - a market already published on the card is never overwritten or removed
-      Only genuinely new, still-pregame entries are appended. Merging happens at
-      the MARKET level, not the game level, because a game already on the card
-      for strikeouts can legitimately qualify for a moneyline later.
+      Merging happens at the MARKET level, not the game level, because a game
+      already on the card for strikeouts can legitimately qualify for a
+      moneyline later.
+
+      2026-08-06, Lynold: the "pick whose game has already started is never
+      added" rule (previously enforced here via an `isPregame()` filter that
+      dropped any candidate past its first-pitch time, logging it as
+      `startedSkipped`) is REMOVED at his explicit instruction. He confirmed
+      this directly, after being shown that it would let already-live/in-progress
+      games (e.g. a game already showing a 3-0 score) be posted as an official
+      "pregame" call — see DEC-20260806-04 and ERR-20260806-02 in the vault.
+      What is UNCHANGED: a market already published on the card is still never
+      overwritten or removed (the loop below still only fills markets a game
+      doesn't already have) — only the started-game timing veto is gone.
     */
     if (candidate.picks.length > 0) {
-      const now = Date.now();
-      const isPregame = p => {
-        const firstPitch = Date.parse(p.time);
-        return Number.isFinite(firstPitch) && now < firstPitch;
-      };
       const byPk = new Map(existing.picks.map(p => [String(p.gamePk), p]));
-      let addedGroups = 0, addedMarkets = 0, startedSkipped = 0;
+      let addedGroups = 0, addedMarkets = 0;
 
       for (const cand of candidate.picks) {
-        if (!isPregame(cand)) { startedSkipped++; continue; }
         const prior = byPk.get(String(cand.gamePk));
         if (!prior) {
           existing.picks.push(cand);
@@ -1628,9 +1626,6 @@ function writeOrReusePublishedPicks(candidate, scheduledGameCount) {
         // Any market already present is left exactly as published.
       }
 
-      if (startedSkipped > 0) {
-        console.log(`${startedSkipped} candidate pick group(s) for ${DATE} are past first pitch; not appended (would be a retroactive lock).`);
-      }
 
       if (addedGroups || addedMarkets) {
         existing.picks.sort((a, b) => String(a.time).localeCompare(String(b.time)));
