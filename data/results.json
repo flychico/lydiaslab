@@ -20601,21 +20601,21 @@
     },
     "2026-08-05": {
       "date": "2026-08-05",
-      "wins": 0,
-      "losses": 0,
-      "ungraded": 5,
+      "wins": 3,
+      "losses": 1,
+      "ungraded": 3,
       "voided": 0,
-      "units": null,
+      "units": 1.41,
       "source": "published-picks",
       "current_official_model": "multi_market_v1",
       "model_version": "multi-market-v1",
       "market_records": {
         "moneyline": {
-          "wins": 0,
+          "wins": 1,
           "losses": 0,
           "pushes": 0,
           "voids": 0,
-          "units": 0
+          "units": 0.57
         },
         "game_total": {
           "wins": 0,
@@ -20625,11 +20625,11 @@
           "units": 0
         },
         "pitcher_strikeouts": {
-          "wins": 0,
-          "losses": 0,
+          "wins": 2,
+          "losses": 1,
           "pushes": 0,
           "voids": 0,
-          "units": 0
+          "units": 0.83
         }
       },
       "picks": [
@@ -20825,7 +20825,29 @@
               "valueTag": "OFFICIAL PICK"
             }
           ],
-          "result": "NG",
+          "mlResult": "NG",
+          "totResult": "NG",
+          "kResults": [
+            {
+              "pitcher": "Reid Detmers",
+              "pick": "Over",
+              "line": 6.5,
+              "bestAm": -154,
+              "projection": 8.02,
+              "edge": 1.52,
+              "books": 5,
+              "expectedInnings": 5.7,
+              "pitcherRole": "traditional_starter",
+              "lineupSource": "posted",
+              "modelVersion": "pitcher-strikeouts-self-calibrated-v1",
+              "valueTag": "OFFICIAL PICK",
+              "actual": 5,
+              "result": "L"
+            }
+          ],
+          "rlResult": "NG",
+          "finalAway": 2,
+          "finalHome": 5,
           "learning": {
             "model_version": "multi-market-v1",
             "official_model": "moneyline_only",
@@ -21066,7 +21088,45 @@
             "why": "Cincinnati Reds is an official moneyline pick because it clears both gates: 65.8% model win probability and 8.1/10 Lab Rating. LyDia projects 65.8% against a 61.7% no-vig market number, a 4.0% model edge at -174. Cincinnati Reds owns the starting pitcher edge by 6 points. Bullpen read: Elevated volatility. Cincinnati Reds's pen efficiency: Effective (5.5/10). Bullpen fatigue moved this probability down 15.5 points from 81.3% (starting pitcher and team strength only) to 65.8%. Pitching plan: Jacob Lopez 4.4 IP + remaining bullpen 4.6 IP. Bullpen fatigue, efficiency, and combined risk grade only the innings assigned to the bullpen. Lineup check: Cincinnati Reds is near its season form (-0.010 OPS); Athletics is in a cold stretch (-0.069 OPS).",
             "risk": "Primary caution: bullpen workload adds late-game volatility. Recheck official news before first pitch."
           },
-          "result": "NG",
+          "mlResult": "W",
+          "totResult": "NG",
+          "kResults": [
+            {
+              "pitcher": "Jacob Lopez",
+              "pick": "Over",
+              "line": 5.5,
+              "bestAm": 118,
+              "projection": 6.22,
+              "edge": 0.72,
+              "books": 6,
+              "expectedInnings": 4.4,
+              "pitcherRole": "limited_starter",
+              "lineupSource": "posted",
+              "modelVersion": "pitcher-strikeouts-self-calibrated-v1",
+              "valueTag": "OFFICIAL PICK",
+              "actual": 9,
+              "result": "W"
+            },
+            {
+              "pitcher": "Rhett Lowder",
+              "pick": "Under",
+              "line": 4.5,
+              "bestAm": -153,
+              "projection": 3.55,
+              "edge": -0.95,
+              "books": 6,
+              "expectedInnings": 4.8,
+              "pitcherRole": "traditional_starter",
+              "lineupSource": "posted",
+              "modelVersion": "pitcher-strikeouts-self-calibrated-v1",
+              "valueTag": "OFFICIAL PICK",
+              "actual": 3,
+              "result": "W"
+            }
+          ],
+          "rlResult": "NG",
+          "finalAway": 2,
+          "finalHome": 3,
           "learning": {
             "model_version": "multi-market-v1",
             "official_model": "moneyline_only",
@@ -21084,8 +21144,8 @@
             "current_price": null,
             "closing_price": null,
             "clv_result": "not_tracked",
-            "result": "NG",
-            "lesson_tag": "not_graded"
+            "result": "W",
+            "lesson_tag": "win_needs_more_sample"
           }
         },
         {
