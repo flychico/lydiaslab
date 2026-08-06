@@ -336,7 +336,9 @@ async function main() {
     official_pick_rules: {
       minimum_model_probability: OFFICIAL_MODEL_PROB,
       minimum_lab_score: OFFICIAL_LAB_SCORE,
-      minimum_market_edge: VALUE_EDGE,
+      // 2026-08-06: market edge dropped as an official-pick requirement
+      // (Lynold's call) -- this note already didn't claim edge was a gate,
+      // so it's untouched and still accurate.
       note: "Lab Rating grades LyDia's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
     },
     summary: summarize(rows, Boolean(ODDS_API_KEY), officialCard),
@@ -992,13 +994,22 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
     hasRunProjection: Boolean(runProjection)
   });
   const priceTooShort = Number.isFinite(bestPrice) && !priceAllowsOfficial(bestPrice);
-  if (priceTooShort && edge !== null && edge >= VALUE_EDGE
+  // 2026-08-06, Lynold: market edge (VALUE_EDGE) is no longer a requirement
+  // for an official moneyline pick. His case: LyDia at 68% win probability
+  // against a 66% no-vig market is only a 2-point edge -- below the old 3-point
+  // floor -- but he still wants that published as official. `edge !== null` is
+  // kept (not dropped) because it's the only thing here guaranteeing real
+  // market pricing exists for this side at all; it no longer checks the SIZE
+  // of the edge, just that one was computable. VALUE_EDGE itself is untouched
+  // and still gates the separate value_watch tier below -- that tier exists
+  // specifically to flag real edge that didn't reach official on prob/lab, so
+  // removing edge from the official gate doesn't collapse the two tiers.
+  if (priceTooShort && edge !== null
     && modelProb >= OFFICIAL_MODEL_PROB && lab.score >= OFFICIAL_LAB_SCORE && !pitcherConflict) {
     console.log(`Price gate: ${pickTeam} cleared every official moneyline gate but the best price is ${bestPrice} `
       + `(floor ${MIN_OFFICIAL_PRICE}). Not published as official.`);
   }
   const officialEligible = edge !== null
-    && edge >= VALUE_EDGE
     && modelProb >= OFFICIAL_MODEL_PROB
     && lab.score >= OFFICIAL_LAB_SCORE
     && !pitcherConflict
@@ -1095,13 +1106,15 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
     value_tag: status === "official_pick" ? "OFFICIAL PICK" : status === "value_watch" ? "VALUE WATCH" : status === "watchlist" ? "WATCHLIST" : "PASS",
     lab_score: lab.score,
     lab_score_breakdown: lab,
+    // 2026-08-06: edge is no longer part of the official gate (Lynold's call).
+    // Removed minimum_edge/edge_passed from here rather than leaving them in
+    // as dead/misleading fields -- the top-level `edge` field a few lines up
+    // still shows the actual number for context, it's just not a pass/fail gate.
     official_pick_gate: {
       minimum_model_probability: OFFICIAL_MODEL_PROB,
       minimum_lab_score: OFFICIAL_LAB_SCORE,
-      minimum_edge: VALUE_EDGE,
       model_probability_passed: modelProb >= OFFICIAL_MODEL_PROB,
-      lab_score_passed: lab.score >= OFFICIAL_LAB_SCORE,
-      edge_passed: edge !== null && edge >= VALUE_EDGE
+      lab_score_passed: lab.score >= OFFICIAL_LAB_SCORE
     },
     pass_reason: passReason,
     read,
@@ -1184,12 +1197,18 @@ function absoluteBullpenRisk(pick, opp) {
 }
 function passReasonFor({ edge, modelProb, pitchEdgeTeam, pickTeam, pitcherConflict, labScore, market, majorBullpenCaution }) {
   if (!market) return "No market data available, so this stays research-only until pricing is checked.";
-  if (edge !== null && edge < 0) return "Market is higher than LyDia's model probability.";
-  if (edge !== null && edge < VALUE_EDGE) return "Model and market are too close for a clear official pick.";
+  // 2026-08-06: edge no longer gates the official pick, so the reasons below
+  // are reordered -- prob/lab/pitcher-conflict are checked first because
+  // those are what can actually keep a game out of official now. Edge is
+  // checked last and the copy was reworded: edge still gates the separate
+  // value_watch tier, so a low/negative edge here means "not even a value
+  // watch," not "not an official pick" (that would now be inaccurate).
   if (modelProb < OFFICIAL_MODEL_PROB && labScore >= VALUE_WATCH_LAB_SCORE) return `Setup quality is strong, but LyDia's win probability is only ${fmtPct(modelProb)}. That is not high enough for an official pick.`;
   if (pitcherConflict) return "Starting pitcher edge conflicts with the model side.";
   if (labScore < OFFICIAL_LAB_SCORE) return "The combined Lab Rating did not clear the official threshold.";
   if (pitchEdgeTeam !== "No clear SP edge" && pitchEdgeTeam !== pickTeam) return "Starting pitcher edge does not support the model side.";
+  if (edge !== null && edge < 0) return "Market is higher than LyDia's model probability, and the edge was too small for a value-watch grade.";
+  if (edge !== null && edge < VALUE_EDGE) return "Model edge was too small for a value-watch grade.";
   return "No clear setup.";
 }
 
@@ -1449,7 +1468,9 @@ function buildPicksFile(rows, generatedAt) {
       // Applies to every market. -185 needs a 64.9% strike rate to break even
       // and the graded record does not support paying that.
       maximum_price_all_markets: MIN_OFFICIAL_PRICE,
-      moneyline: { minimum_probability: OFFICIAL_MODEL_PROB, minimum_lab: OFFICIAL_LAB_SCORE, minimum_edge: VALUE_EDGE, maximum_price: MIN_OFFICIAL_PRICE },
+      // 2026-08-06: minimum_edge dropped -- market edge is no longer an
+      // official-pick requirement for moneylines (Lynold's call).
+      moneyline: { minimum_probability: OFFICIAL_MODEL_PROB, minimum_lab: OFFICIAL_LAB_SCORE, maximum_price: MIN_OFFICIAL_PRICE },
       game_total: { minimum_edge_runs: totalsOfficialEdge, minimum_lab: totalsOfficialLab, official_enabled: totalsOfficialEnabled, maximum_price: MIN_OFFICIAL_PRICE },
       pitcher_strikeouts: { minimum_edge_k: OFFICIAL_K_EDGE, minimum_books: OFFICIAL_K_MIN_BOOKS, minimum_expected_innings: 4, requires_posted_lineup: true, maximum_price: MIN_OFFICIAL_PRICE },
       team_totals: { official_enabled: false, status: "research_only" }
