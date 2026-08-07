@@ -552,12 +552,47 @@ async function main() {
     }
   } catch (e) { console.warn("projection compute skipped:", e.message); }
   // MERGE with any existing capture — started games keep their morning lines/projections.
+  //
+  // 2026-08-06, Lynold: this comment was already a lie before today (flagged in
+  // HANDOFF's "Also open" as "the k-props merge lies"), and today gave a concrete
+  // case -- Dylan Cease and others had a real captured line (7.5, real odds) this
+  // morning, and by evening, once their games had started and the sportsbook
+  // pulled the pregame market, the line came back null on a later run and this
+  // merge did NOT restore it. Root cause: the projection-compute loop above
+  // (~line 500) unconditionally creates a `pitchers[key]` entry -- with
+  // `line: null` -- for EVERY probable pitcher, whether or not odds exist for
+  // them this run. So by the time this merge runs, the key is never actually
+  // "absent" for any pitcher still on today's slate -- `if (!pitchers[k])` can
+  // only ever fire for a pitcher dropped from the probables list entirely
+  // (scratched), never for one who simply lost market coverage. His instruction:
+  // "before all those games went live we had their info -- we had pitcher, line,
+  // projected -- that's what needs to be logged." Once real market data
+  // (line/over/under/books) is captured, it must persist for the day even after
+  // the book pulls the market -- everything else (projection, lineup, expected
+  // innings) should keep updating fresh, since those get MORE accurate later in
+  // the day (real posted lineup vs. this morning's projected regulars).
   try {
     const prevPath = path.join(ROOT, "data", "k-props", `${DATE}.json`);
     if (fs.existsSync(prevPath)) {
       const prev = JSON.parse(fs.readFileSync(prevPath, "utf8"));
       if (prev && prev.date === DATE && prev.pitchers) {
-        for (const [k, v] of Object.entries(prev.pitchers)) if (!pitchers[k]) pitchers[k] = v;
+        for (const [k, v] of Object.entries(prev.pitchers)) {
+          if (!pitchers[k]) {
+            // Pitcher isn't in today's fresh probables/projection pass at all
+            // (e.g. scratched) -- restore the whole prior record, as before.
+            pitchers[k] = v;
+          } else if (pitchers[k].line === null && Number.isFinite(v.line)) {
+            // Still on today's slate and this run recomputed a fresh
+            // projection/lineup for them, but the market line came back empty
+            // (the book pulled it, almost always because the game started).
+            // Keep the last real captured market data; leave the fresh
+            // projection/lineup/etc. this run just computed untouched.
+            pitchers[k].line = v.line;
+            pitchers[k].over = v.over;
+            pitchers[k].under = v.under;
+            pitchers[k].books = v.books;
+          }
+        }
       }
     }
   } catch (e) {}
