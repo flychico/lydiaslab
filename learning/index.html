@@ -50,6 +50,27 @@ table.dash tbody tr.clickable{cursor:pointer}table.dash tbody tr.clickable:hover
 .pager button{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:5px 10px;color:inherit;cursor:pointer}
 .pager button:disabled{opacity:.4;cursor:default}
 .spark{display:block}.loading{color:var(--text-dim)}
+/* Game Detail & What-If */
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+.detail-grid.wide{grid-template-columns:1fr 1fr 1fr}
+@media (max-width:900px){.detail-grid,.detail-grid.wide{grid-template-columns:1fr}}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.card h3{margin:0 0 10px;font-size:.92rem}
+.card table{width:100%;font-size:.82rem;border-collapse:collapse}
+.card table td{padding:4px 0;border-bottom:1px solid var(--border);vertical-align:top}
+.card table td:last-child{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.formula-note{font-size:.75rem;color:var(--text-dim);margin-top:8px;line-height:1.45}
+.whif-row{display:flex;gap:10px;align-items:center;margin:7px 0;flex-wrap:wrap}
+.whif-row label{font-size:.8rem;color:var(--text-dim);min-width:190px}
+.whif-row input{width:90px}
+.whif-result{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+.whif-box{flex:1;min-width:170px;background:var(--bg-elev);border-radius:var(--radius);padding:11px 13px;border:1px solid var(--border)}
+.whif-box .big{font-size:1.5rem;font-weight:800;font-variant-numeric:tabular-nums}
+.whif-box .delta{font-size:.78rem;margin-top:2px}
+.warn-box{background:rgba(230,126,34,.08);border:1px solid rgba(230,126,34,.35);border-radius:var(--radius);padding:10px 13px;font-size:.81rem;margin:12px 0;line-height:1.45}
+.btn{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:7px 13px;color:inherit;cursor:pointer;font-size:.83rem}
+.btn:hover{background:var(--bg-card)}
+.btn.primary{border-color:#8b5cf6;color:#8b5cf6;font-weight:700}
 </style>
 </head>
 <body>
@@ -74,6 +95,7 @@ table.dash tbody tr.clickable{cursor:pointer}table.dash tbody tr.clickable:hover
       <button data-t="games">Moneyline</button>
       <button data-t="totals">Totals</button>
       <button data-t="kprops">K-Props</button>
+      <button data-t="detail">Game Detail</button>
     </div>
 
     <section class="tab on" id="tab-overview">
@@ -102,13 +124,23 @@ table.dash tbody tr.clickable{cursor:pointer}table.dash tbody tr.clickable:hover
     <section class="tab" id="tab-games"><div id="gamesWrap"></div></section>
     <section class="tab" id="tab-totals"><div id="totalsWrap"></div></section>
     <section class="tab" id="tab-kprops"><div id="kpropsWrap"></div></section>
+
+    <section class="tab" id="tab-detail">
+      <p class="sec-note">Pick any past graded date and game to see the real inputs the model used — starter quality, bullpen state, offense form, market price — and the shadow model's read alongside Leo's. Then try swapping a pitcher, a bullpen, or an offense in the what-if panel below and see both models' probabilities recompute live.</p>
+      <div class="controls">
+        <label>Date <input type="date" id="detDate"></label>
+        <label>Game <select id="detGame"><option value="">Pick a date…</option></select></label>
+      </div>
+      <div id="detStatus" class="dim"></div>
+      <div id="detBody"></div>
+    </section>
   </div>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script>
 renderNav("/articles/"); renderFooter();
 function esc(v){ return escapeHtml(String(v ?? "")); }
-const S={ml:[],report:null,totals:[],kprops:[],recapByPk:{},win:"all",team:"",status:"",ver:"",dim:"status",drv:"pitcher_gap",tab:"overview",page:{games:0,totals:0,kprops:0},sort:{}};
+const S={ml:[],report:null,totals:[],kprops:[],recapByPk:{},win:"all",team:"",status:"",ver:"",dim:"status",drv:"pitcher_gap",tab:"overview",page:{games:0,totals:0,kprops:0},sort:{},detail:{date:"",games:[],game:null,briefCache:{}}};
 const PAGE=20;
 
 function splitCsv(l){const c=[];let cur="",q=false;for(const ch of l){if(ch==='"')q=!q;else if(ch===','&&!q){c.push(cur);cur="";}else cur+=ch;}c.push(cur);return c;}
@@ -300,6 +332,229 @@ function renderKprops(){
 function groupByKey(rows,key,winFn){ const m=new Map(); for(const r of rows){const k=r[key]||"—";if(!m.has(k))m.set(k,{n:0,w:0});const o=m.get(k);o.n++;if(winFn(r))o.w++;} return [...m.entries()].map(([value,o])=>({value,n:o.n,w:o.w,l:o.n-o.w,pct:o.n?o.w/o.n:null})).sort((a,b)=>b.n-a.n); }
 function dimTable(groups,label){ return `<table class="dash"><thead><tr><th>${esc(label)}</th><th class="num">n</th><th class="num">Record</th><th class="num">Win%</th><th>&nbsp;</th></tr></thead><tbody>${groups.map(g=>`<tr><td>${esc(g.value)}</td><td class="num">${g.n}</td><td class="num">${g.w}-${g.l}</td><td class="num">${pctStr(g.pct)}</td><td>${wrBar(g.pct)}</td></tr>`).join("")}</tbody></table>`; }
 
+/* ============================================================
+   Game Detail & What-If
+   ============================================================
+   Reads a game's real per-input record straight from the locked
+   data/member-brief/<date>.json (the same file the pregame brief
+   was built from — it already carries pitching_plan, pitcher_edge,
+   offense_form, bullpen, market, and model_v3 for every game, home
+   and away, official and shadow). No new pipeline data is needed.
+
+   The what-if calculator does NOT reimplement Leo's team-strength
+   blend (log5Home) from scratch — that would require guessing at
+   internals never fetched here. Instead it reconstructs the one
+   number that blend produces, pBase, by algebraically reversing the
+   two published, real values for this game (legacy_strength_probability
+   and the bullpen/pitching constants below), then holds pBase fixed
+   while the user's overrides move forward from it. This is exact
+   arithmetic on real recorded numbers, not an approximation.
+
+   Formula constants below are Leo's and the shadow model's real,
+   documented constants (see Model Versions.md, v3.1-bullpen entry
+   and the "Leo" entry) — ERA_K, BULLPEN_PROB_K, V3_OFF_K, and the
+   calibration shrink. RUN_MODEL_WEIGHT is currently 0 (frozen,
+   DEC-20260802-01), so Leo's real published probability is not
+   blended with the run-projection model at all right now — the
+   tool discloses this rather than silently ignoring it.
+*/
+const MODEL_K = { ERA_K:0.20, BULLPEN_PROB_K:0.3, V3_OFF_K:0.8 };
+function clamp(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); }
+function calibrate(p){ return 0.5+0.5*(p-0.5); }
+function riskOf(o){ if(!o) return null; const v = (o.risk_index!=null?o.risk_index:o.score); return Number.isFinite(v)?v:null; }
+function fmtP(p){ return p==null?"—":(p*100).toFixed(1)+"%"; }
+
+function orient(g){
+  const pickIsHome = g.side === "home";
+  const plan = g.pitching_plan || {};
+  const v3 = g.model_v3 || {};
+  const bp = g.bullpen || {};
+  const off = g.offense_form || {};
+  const bpHomeObj = pickIsHome ? bp.pick_team : bp.opponent;
+  const bpAwayObj = pickIsHome ? bp.opponent : bp.pick_team;
+  const legacyHome = Number.isFinite(g.legacy_strength_probability)
+    ? (pickIsHome ? g.legacy_strength_probability : 1-g.legacy_strength_probability) : null;
+  // v3.p_home_v2 is Leo's own final (calibrated) probability, home-oriented,
+  // stored on the shadow object purely for convenient side-by-side display —
+  // it is not a shadow-model value. Falls back to model_probability if a
+  // brief predates that field.
+  const officialHomeFinal = Number.isFinite(v3.p_home_v2) ? v3.p_home_v2
+    : (Number.isFinite(g.model_probability) ? (pickIsHome ? g.model_probability : 1-g.model_probability) : null);
+  return {
+    pickIsHome,
+    awayTeam: g.away_team || (g.game||"").split(" @ ")[0] || "Away",
+    homeTeam: g.home_team || (g.game||"").split(" @ ")[1] || "Home",
+    effEraAway: plan.away && Number.isFinite(plan.away.effective_era) ? plan.away.effective_era : null,
+    effEraHome: plan.home && Number.isFinite(plan.home.effective_era) ? plan.home.effective_era : null,
+    fipAwayShadow: Number.isFinite(v3.fip_away) ? v3.fip_away : null,
+    fipHomeShadow: Number.isFinite(v3.fip_home) ? v3.fip_home : null,
+    bpRiskHome: riskOf(bpHomeObj), bpRiskAway: riskOf(bpAwayObj),
+    bpHomeObj, bpAwayObj,
+    deltaOpsAway: off.away && Number.isFinite(off.away.delta_ops) ? off.away.delta_ops : null,
+    deltaOpsHome: off.home && Number.isFinite(off.home.delta_ops) ? off.home.delta_ops : null,
+    legacyHome, officialHomeFinal,
+    shadowHomeFinal: Number.isFinite(v3.p_home) ? v3.p_home : null,
+    shadowOffAdj: Number.isFinite(v3.off_adj) ? v3.off_adj : null,
+    shadowBpAdj: Number.isFinite(v3.bp_adj) ? v3.bp_adj : null,
+    shadowVersion: v3.version || "unknown",
+    v3, plan, bp, off, pe: g.pitcher_edge || {}, market: g.market || {}, status: g.status
+  };
+}
+
+function reconstructPBase(o){
+  if(o.legacyHome==null || o.bpRiskHome==null || o.bpRiskAway==null || o.effEraAway==null || o.effEraHome==null) return null;
+  if(o.legacyHome<=0 || o.legacyHome>=1) return null;
+  const legacyOdds = o.legacyHome/(1-o.legacyHome);
+  const bpAdj = MODEL_K.BULLPEN_PROB_K*(clamp(o.bpRiskAway-o.bpRiskHome,-50,50)/100);
+  const preBullpenOdds = legacyOdds/Math.exp(bpAdj);
+  const pBaseOdds = preBullpenOdds/Math.exp(MODEL_K.ERA_K*(o.effEraAway-o.effEraHome));
+  const pBase = pBaseOdds/(1+pBaseOdds);
+  return (pBase>0 && pBase<1) ? pBase : null;
+}
+
+function recomputeBoth(pBase, ov){
+  const preBullpenOfficial = (pBase/(1-pBase))*Math.exp(MODEL_K.ERA_K*(ov.spA-ov.spH));
+  const bpAdj = MODEL_K.BULLPEN_PROB_K*(clamp(ov.bpA-ov.bpH,-50,50)/100);
+  const officialOddsFinal = preBullpenOfficial*Math.exp(bpAdj);
+  const officialHomeRaw = officialOddsFinal/(1+officialOddsFinal);
+  const officialHome = calibrate(officialHomeRaw); // RUN_MODEL_WEIGHT=0 right now — no run blend
+
+  const preBullpenShadow = (pBase/(1-pBase))*Math.exp(MODEL_K.ERA_K*(ov.fipA-ov.fipH));
+  const dA = clamp(ov.dA,-0.1,0.1), dH = clamp(ov.dH,-0.1,0.1);
+  const offAdj = MODEL_K.V3_OFF_K*(dH-dA);
+  const shadowOddsFinal = preBullpenShadow*Math.exp(offAdj)*Math.exp(bpAdj);
+  const shadowHome = shadowOddsFinal/(1+shadowOddsFinal); // shadow is never calibration-shrunk
+
+  return { officialHome, shadowHome, offAdj, bpAdj };
+}
+
+async function grabJson(u){ try{ const r=await fetch(u+"?v="+Date.now(),{cache:"no-store"}); return r.ok?await r.json():null; }catch(e){ return null; } }
+
+function detGameLabel(g){ return `${g.game}${g.status?` (${g.status})`:""}`; }
+
+async function loadDetailDate(date){
+  const statusEl=document.getElementById("detStatus"), sel=document.getElementById("detGame"), body=document.getElementById("detBody");
+  body.innerHTML=""; sel.innerHTML=`<option value="">Loading…</option>`;
+  statusEl.textContent=`Loading ${date}…`;
+  let brief=S.detail.briefCache[date];
+  if(brief===undefined){ brief=await grabJson(`/data/member-brief/${date}.json`); S.detail.briefCache[date]=brief; }
+  if(!brief || !Array.isArray(brief.games) || !brief.games.length){
+    sel.innerHTML=`<option value="">No moneyline-graded games found for this date</option>`;
+    statusEl.textContent = brief ? `${date}: brief exists but has no per-game moneyline records (may be a K-props-only day).` : `No member brief found for ${date}.`;
+    S.detail.games=[]; return;
+  }
+  S.detail.games=brief.games;
+  sel.innerHTML = `<option value="">Pick a game…</option>` + brief.games.map((g,i)=>`<option value="${i}">${esc(detGameLabel(g))}</option>`).join("");
+  statusEl.textContent = `${brief.games.length} game(s) on ${date}.`;
+}
+
+function renderGameDetail(g){
+  const o = orient(g);
+  const pBase = reconstructPBase(o);
+  const homeWon = null; // final score not in member-brief; recap/calibration ledgers carry results separately
+  const marketHomeProb = o.market.home_no_vig!=null ? o.market.home_no_vig : null;
+
+  const sideCard = (label, team, effEra, fipShadow, adv, off, bp) => `
+    <div class="card">
+      <h3>${esc(label)} — ${esc(team||"—")}</h3>
+      <table>
+        <tr><td>Starter effective ERA (Leo's input)</td><td>${effEra==null?'—':effEra.toFixed(2)}</td></tr>
+        <tr><td>Starter FIP-lite (shadow's input)</td><td>${fipShadow==null?'—':fipShadow.toFixed(2)}</td></tr>
+        <tr><td>K-BB%</td><td>${adv&&adv.kbb_pct!=null?(adv.kbb_pct*100).toFixed(1)+'%':'—'}</td></tr>
+        <tr><td>GB%</td><td>${adv&&adv.gb_pct!=null?(adv.gb_pct*100).toFixed(1)+'%':'—'}</td></tr>
+        <tr><td>BABIP</td><td>${adv&&adv.babip!=null?adv.babip.toFixed(3):'—'}</td></tr>
+        <tr><td>15-day OPS</td><td>${off&&off.ops_15d!=null?off.ops_15d.toFixed(3):'—'}</td></tr>
+        <tr><td>Season OPS</td><td>${off&&off.season_ops!=null?off.season_ops.toFixed(3):'—'}</td></tr>
+        <tr><td>Offense delta (form − season)</td><td class="${off&&off.delta_ops>0?'ok':(off&&off.delta_ops<0?'no':'')}">${off&&off.delta_ops!=null?(off.delta_ops>0?'+':'')+off.delta_ops.toFixed(3):'—'}</td></tr>
+        <tr><td>Bullpen fatigue</td><td>${bp?`${bp.score} (${esc(bp.label||'')})`:'—'}</td></tr>
+        <tr><td>Bullpen efficiency</td><td>${bp?`${bp.efficiency_score} (${esc(bp.efficiency_label||'')})`:'—'}</td></tr>
+        <tr><td>Bullpen risk index</td><td>${bp&&bp.risk_index!=null?`${bp.risk_index} (${esc(bp.risk_label||'')})`:'—'}</td></tr>
+      </table>
+      ${bp&&bp.score_reason?`<p class="formula-note">${esc(bp.score_reason)}</p>`:""}
+      ${bp&&bp.efficiency_reason?`<p class="formula-note">${esc(bp.efficiency_reason)}</p>`:""}
+    </div>`;
+
+  const awayAdv = o.pe.away_advanced, homeAdv = o.pe.home_advanced;
+  const awayCard = sideCard("Away", o.awayTeam, o.effEraAway, o.fipAwayShadow, awayAdv, o.off.away, o.bpAwayObj);
+  const homeCard = sideCard("Home", o.homeTeam, o.effEraHome, o.fipHomeShadow, homeAdv, o.off.home, o.bpHomeObj);
+
+  const compareCard = `
+    <div class="card">
+      <h3>Official (Leo) vs shadow (${esc(o.shadowVersion)})</h3>
+      <table>
+        <tr><td>Leo — Home win %</td><td>${fmtP(o.officialHomeFinal)}</td></tr>
+        <tr><td>Leo — Away win %</td><td>${o.officialHomeFinal==null?'—':fmtP(1-o.officialHomeFinal)}</td></tr>
+        <tr><td>Shadow — Home win %</td><td>${fmtP(o.shadowHomeFinal)}</td></tr>
+        <tr><td>Shadow — Away win %</td><td>${o.shadowHomeFinal==null?'—':fmtP(1-o.shadowHomeFinal)}</td></tr>
+        <tr><td>Shadow's offense adjustment (log-odds)</td><td>${o.shadowOffAdj==null?'—':(o.shadowOffAdj>0?'+':'')+o.shadowOffAdj.toFixed(3)}</td></tr>
+        <tr><td>Shared bullpen adjustment (log-odds)</td><td>${o.shadowBpAdj==null?'—':(o.shadowBpAdj>0?'+':'')+o.shadowBpAdj.toFixed(3)}</td></tr>
+        <tr><td>Market no-vig — Home</td><td>${fmtP(marketHomeProb)}</td></tr>
+        <tr><td>Best price / books</td><td>${o.market.best_price!=null?o.market.best_price:'—'} / ${o.market.books!=null?o.market.books:'—'}</td></tr>
+        <tr><td>Status</td><td>${esc(o.status||'—')}</td></tr>
+      </table>
+      <p class="formula-note">Leo's probability is calibrated (shrunk toward 50%, DEC-20260805-01). Shadow's is raw — it is never shown to members or shrunk, by design, so its calibration can be judged on its own.</p>
+    </div>`;
+
+  const whatIfDisabled = pBase==null;
+  const wi = `
+    <div class="card">
+      <h3>What if…</h3>
+      ${whatIfDisabled ? `<p class="warn-box">This game is missing one of the inputs needed to reconstruct a team-strength baseline (legacy_strength_probability, bullpen risk, or effective ERA), so the what-if calculator can't run for it. Try a more recent date — this field set has been complete since early August.</p>` : `
+      <p class="sec-note">Team strength (records, recent form venue split) is held at its real value. These four inputs recompute forward from there using Leo's and the shadow model's real, documented formulas.</p>
+      <div class="whif-row"><label>Away starter effective ERA</label><input type="number" step="0.01" id="wiSpA" value="${o.effEraAway.toFixed(2)}"></div>
+      <div class="whif-row"><label>Home starter effective ERA</label><input type="number" step="0.01" id="wiSpH" value="${o.effEraHome.toFixed(2)}"></div>
+      <div class="whif-row"><label>Away starter FIP-lite (shadow)</label><input type="number" step="0.01" id="wiFipA" value="${(o.fipAwayShadow??o.effEraAway).toFixed(2)}"></div>
+      <div class="whif-row"><label>Home starter FIP-lite (shadow)</label><input type="number" step="0.01" id="wiFipH" value="${(o.fipHomeShadow??o.effEraHome).toFixed(2)}"></div>
+      <div class="whif-row"><label>Away bullpen risk index (0-100)</label><input type="number" step="1" id="wiBpA" value="${o.bpRiskAway}"></div>
+      <div class="whif-row"><label>Home bullpen risk index (0-100)</label><input type="number" step="1" id="wiBpH" value="${o.bpRiskHome}"></div>
+      <div class="whif-row"><label>Away offense delta (OPS)</label><input type="number" step="0.001" id="wiDA" value="${(o.deltaOpsAway??0).toFixed(3)}"></div>
+      <div class="whif-row"><label>Home offense delta (OPS)</label><input type="number" step="0.001" id="wiDH" value="${(o.deltaOpsHome??0).toFixed(3)}"></div>
+      <div style="margin-top:10px"><button class="btn primary" id="wiRun">Recompute</button> <button class="btn" id="wiReset">Reset to actual</button></div>
+      <div class="warn-box"><strong>Leo's own probability will not move if you only change the offense-delta fields.</strong> The run-projection model that reads offense form is currently frozen at zero weight (RUN_MODEL_WEIGHT=0, DEC-20260802-01) — Leo's real published number structurally ignores offense form right now. Only the shadow model's V3_OFF_K term uses it. Changing starter quality or bullpen risk moves both models.</div>
+      <div class="whif-result" id="wiResult"></div>
+      `}
+    </div>`;
+
+  document.getElementById("detBody").innerHTML =
+    `<h2 class="sec">${esc(o.awayTeam)} @ ${esc(o.homeTeam)}</h2>`
+    + `<div class="detail-grid">${awayCard}${homeCard}</div>`
+    + `<div class="detail-grid">${compareCard}${wi}</div>`;
+
+  if(!whatIfDisabled){
+    const run=()=>{
+      const ov={
+        spA:+document.getElementById("wiSpA").value, spH:+document.getElementById("wiSpH").value,
+        fipA:+document.getElementById("wiFipA").value, fipH:+document.getElementById("wiFipH").value,
+        bpA:+document.getElementById("wiBpA").value, bpH:+document.getElementById("wiBpH").value,
+        dA:+document.getElementById("wiDA").value, dH:+document.getElementById("wiDH").value
+      };
+      const r = recomputeBoth(pBase, ov);
+      const box=(label, orig, now)=>{ const d=(now-orig)*100; return `<div class="whif-box"><div class="dim" style="font-size:.75rem">${esc(label)}</div><div class="big">${fmtP(now)}</div><div class="delta ${d>=0?'ok':'no'}">${d>=0?'+':''}${d.toFixed(1)} pts vs actual (${fmtP(orig)})</div></div>`; };
+      document.getElementById("wiResult").innerHTML =
+        box("Leo — Home win %", o.officialHomeFinal, r.officialHome)
+        + box("Shadow — Home win %", o.shadowHomeFinal, r.shadowHome);
+    };
+    document.getElementById("wiRun").addEventListener("click",run);
+    document.getElementById("wiReset").addEventListener("click",()=>{ renderGameDetail(g); });
+    run();
+  }
+}
+
+function wireDetailTab(){
+  const dateInput=document.getElementById("detDate"), sel=document.getElementById("detGame");
+  // Default to most recent date we have graded moneyline data for, if any.
+  const dates=[...new Set(S.ml.map(r=>r.date))].sort();
+  if(dates.length) dateInput.value=dates[dates.length-1];
+  dateInput.addEventListener("change",()=>{ S.detail.date=dateInput.value; document.getElementById("detBody").innerHTML=""; if(dateInput.value) loadDetailDate(dateInput.value); });
+  sel.addEventListener("change",()=>{
+    const i=sel.value; document.getElementById("detBody").innerHTML="";
+    if(i==="") return;
+    S.detail.game=S.detail.games[+i];
+    renderGameDetail(S.detail.game);
+  });
+  if(dateInput.value){ S.detail.date=dateInput.value; loadDetailDate(dateInput.value); }
+}
+
 function renderAll(){ renderOverview(); renderBreakdown(); renderDrivers(); renderGames(); renderTotals(); renderKprops(); }
 function showTab(t){ S.tab=t; document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on")); document.getElementById("tab-"+t).classList.add("on"); document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.getAttribute("data-t")===t)); }
 
@@ -332,6 +587,7 @@ document.getElementById("windowSeg").addEventListener("click",e=>{const b=e.targ
   const cov=S.report&&S.report.coverage; if(cov)document.getElementById("coverage").textContent=`${cov.from} → ${cov.to} · ${S.report.n_graded} graded`;
   st.style.display="none"; document.getElementById("dash").style.display="block";
   renderAll();
+  wireDetailTab();
   function fill(id,opts){document.getElementById(id).innerHTML=opts.map(o=>`<option value="${esc(o[0])}">${esc(o[1])}</option>`).join("");}
   function bindSel(id,set,all=true){document.getElementById(id).addEventListener("change",e=>{set(e.target.value);if(all){S.page={games:0,totals:0,kprops:0};renderAll();}});}
 })();

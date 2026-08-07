@@ -303,10 +303,46 @@ async function main() {
   // ---- Versioned shadow-model ledger ----
   // Start a clean ledger instead of mixing the current run-enhanced official
   // model with historical p_home_v2 values from the retired ERA-only model.
+  //
+  // 2026-08-07: extended with component columns, per Lynold. The ledger used to
+  // record only the two final probabilities (p_home_official, p_home_shadow),
+  // which was enough to know THAT shadow's Brier score beats official's across
+  // every window checked (see DEC-20260807-01) but not enough to know WHICH of
+  // shadow's three formula differences (starter FIP-lite, the 15-day offense-
+  // form term, or the shared bullpen term) is actually doing the work. The
+  // extra columns below are all read straight off the member-brief game object
+  // — generate-member-lab.js was already computing and storing every one of
+  // them (model_v3.fip_away/fip_home/off_adj/bp_adj, pitching_plan.*.effective_era,
+  // legacy_strength_probability, bullpen.pick_team/opponent) for its own display
+  // purposes. Nothing new is computed here; this just stops discarding data
+  // that was already sitting in the brief.
+  //
+  // Same safe-upgrade pattern already used above for kprops_log.csv: the header
+  // is upgraded in place, old rows keep their original (shorter) width, and any
+  // reader must treat a short row's new fields as blank rather than assume every
+  // row is the current width.
   const SLOG = path.join(ROOT, "data", "calibration", "shadow_model_log.csv");
-  if (!fs.existsSync(SLOG)) fs.writeFileSync(SLOG, "date,gamePk,official_model_version,shadow_model_version,p_home_official,p_home_shadow,home_won\n");
+  const SHEAD = "date,gamePk,official_model_version,shadow_model_version,p_home_official,p_home_shadow,home_won,"
+    + "shadow_fip_away,shadow_fip_home,shadow_off_adj,shadow_bp_adj,"
+    + "official_effective_era_away,official_effective_era_home,official_legacy_strength_home,"
+    + "official_bullpen_risk_away,official_bullpen_risk_home\n";
+  if (!fs.existsSync(SLOG)) fs.writeFileSync(SLOG, SHEAD);
+  {
+    const cur = fs.readFileSync(SLOG, "utf8");
+    const nl = cur.indexOf("\n");
+    const curHead = (nl === -1 ? cur : cur.slice(0, nl)).trim();
+    const wantHead = SHEAD.trim();
+    if (curHead !== wantHead && curHead.startsWith("date,gamePk,official_model_version")) {
+      fs.writeFileSync(SLOG, wantHead + "\n" + (nl === -1 ? "" : cur.slice(nl + 1)));
+      console.log(`Shadow-model ledger header upgraded (+component columns).`);
+    }
+  }
   const sExisting = new Set(fs.readFileSync(SLOG, "utf8").split("\n").slice(1).map(l => l.split(",").slice(0, 2).join(",")).filter(Boolean));
   const sRows = [];
+  // risk_index falls back to the older raw fatigue `score` for any bullpen
+  // record generated before the efficiency/risk split existed — same fallback
+  // generate-member-lab.js itself uses everywhere it reads bullpen risk.
+  const riskIndexOf = b => (b && Number.isFinite(b.risk_index ?? b.score)) ? (b.risk_index ?? b.score) : "";
   for (const g of games) {
     const key = `${DATE},${g.game_pk}`;
     if (sExisting.has(key)) continue;
@@ -314,10 +350,27 @@ async function main() {
     const v3 = g.model_v3;
     if (!f || !v3 || !Number.isFinite(v3.p_home) || !Number.isFinite(g.model_probability) || !["home", "away"].includes(g.side)) continue;
     if (await gameVoided(g)) continue;
-    const pHomeOfficial = g.side === "home" ? g.model_probability : 1 - g.model_probability;
+    const pickIsHome = g.side === "home";
+    const pHomeOfficial = pickIsHome ? g.model_probability : 1 - g.model_probability;
     const officialVersion = g.model_source || brief.model_version || "unknown";
     const shadowVersion = v3.version || "unknown";
-    sRows.push([DATE, g.game_pk, csvField(officialVersion), csvField(shadowVersion), pHomeOfficial, v3.p_home, f.homeScore > f.awayScore ? 1 : 0].join(","));
+    const plan = g.pitching_plan || {};
+    const effEraAway = plan.away && Number.isFinite(plan.away.effective_era) ? plan.away.effective_era : "";
+    const effEraHome = plan.home && Number.isFinite(plan.home.effective_era) ? plan.home.effective_era : "";
+    const legacyHome = Number.isFinite(g.legacy_strength_probability)
+      ? (pickIsHome ? g.legacy_strength_probability : 1 - g.legacy_strength_probability)
+      : "";
+    const bp = g.bullpen || {};
+    // bullpen.pick_team/opponent are relative to which side the model picked,
+    // not to home/away — re-orient using the same side flag as everything else.
+    const bpRiskHome = pickIsHome ? riskIndexOf(bp.pick_team) : riskIndexOf(bp.opponent);
+    const bpRiskAway = pickIsHome ? riskIndexOf(bp.opponent) : riskIndexOf(bp.pick_team);
+    sRows.push([
+      DATE, g.game_pk, csvField(officialVersion), csvField(shadowVersion), pHomeOfficial, v3.p_home, f.homeScore > f.awayScore ? 1 : 0,
+      Number.isFinite(v3.fip_away) ? v3.fip_away : "", Number.isFinite(v3.fip_home) ? v3.fip_home : "",
+      Number.isFinite(v3.off_adj) ? v3.off_adj : "", Number.isFinite(v3.bp_adj) ? v3.bp_adj : "",
+      effEraAway, effEraHome, legacyHome, bpRiskAway, bpRiskHome
+    ].join(","));
   }
   if (sRows.length) fs.appendFileSync(SLOG, sRows.join("\n") + "\n");
   if (voidRows.length) {
