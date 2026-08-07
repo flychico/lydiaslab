@@ -541,14 +541,10 @@ function suggestFor(exId, lo, hi){
   const last = lastEntry(exId);
   const ex = EXBY[exId];
   if (!last || !ex || ex.u === "time") return null;
-  if (currentPhase().deload && ex.inc > 0) {
-    const mw = Math.max(...last.sets.map(s => s.w || 0));
-    if (isFinite(mw) && mw > 0) { const dw = Math.round(mw * 0.85 / 5) * 5 || mw; return { text: "Deload week — ~" + dw + " lb, stop 3–4 reps short. Let your body supercompensate.", w: dw, deload: true }; }
-  }
   if (ex.inc > 0 && plateaued(exId)) {
     const maxW = Math.max(...last.sets.map(s => s.w || 0));
     const deload = Math.max(ex.inc, Math.round(maxW * 0.8 / 5) * 5);
-    return { text: "Plateaued 3 sessions — deload: " + deload + " lb this week, then build back. Backing off IS the plan.", w: deload, deload: true };
+    return { text: "Stalled 3 sessions — ease off to " + deload + " lb this week, then build back up. Backing off is how you break through.", w: deload, deload: true };
   }
   const sets = last.sets;
   const maxW = Math.max(...sets.map(s => s.w || 0));
@@ -647,7 +643,6 @@ function hitTop(exId, hi, n){
 // After a session: grow volume on lifts you're crushing, trim it on lifts that stalled
 function autoProgress(dayIdx, trained){
   const day = S.plan && S.plan.days[dayIdx]; if (!day) return [];
-  if (currentPhase().deload) return []; // don't grow volume during a deload week
   const goal = S.profile.goal, msgs = [];
   for (const slot of day.exercises) {
     const ex = EXBY[slot.ex]; if (!ex || ex.u === "time") continue;
@@ -742,21 +737,20 @@ function insights(){
   if (!S.profile) return [];
   const out = [], add = (t, msg) => out.push({ t, msg });
   const wk = S.logs.filter(l => (Date.now() - new Date(l.date + "T12:00")) / 864e5 < 7).length, tgt = S.profile.days;
-  if (tgt && wk >= tgt) add("good", "On track: " + wk + "/" + tgt + " workouts this week. Consistency is the #1 driver of results.");
-  else if (tgt) add("warn", "Behind pace: " + wk + "/" + tgt + " this week — " + (tgt - wk) + " to go. Even a short session counts.");
-  const ph = currentPhase();
-  if (ph.deload) add("info", "Deload week (" + ph.week + "/" + ph.cycle + ") — drop weight ~15% and stop a few reps short. Planned recovery is how you break plateaus.");
+  if (tgt && wk >= tgt) add("good", "On track: " + wk + " workout" + (wk === 1 ? "" : "s") + " logged this week. Consistency is the #1 driver of results.");
   const planned = plannedSetsByMuscle();
   const low = MUSCLE_ORDER.filter(m => (planned[m] || 0) > 0 && (planned[m] || 0) < 10);
   const high = MUSCLE_ORDER.filter(m => (planned[m] || 0) > 22);
   if (low.length) add("warn", "Undertrained: " + low.join(", ") + " get under 10 planned sets/week. Add a set or exercise — or tap “Auto-balance volume” in Plan.");
   if (high.length) add("info", "High volume: " + high.join(", ") + " exceed ~22 sets/week, likely more than you can recover from.");
-  const pushV = (planned.Chest || 0) + (planned.Shoulders || 0) + (planned.Triceps || 0), pullV = (planned.Back || 0) + (planned.Biceps || 0);
-  if (pushV > 0 && pullV > 0) { const r = pushV / pullV; if (r > 1.4) add("warn", "Push-heavy: pushing volume is " + r.toFixed(1) + "× your pulling. Add back/biceps work for balanced shoulders and posture."); else if (r < 0.7) add("warn", "Pull-heavy: pulling is " + (1 / r).toFixed(1) + "× pushing. Add chest/shoulder work to balance."); }
+  const pressV = (planned.Chest || 0) + (planned.Triceps || 0), pullV = (planned.Back || 0) + (planned.Biceps || 0);
+  if (pressV > 0 && pullV > 0) { const r = pressV / pullV;
+    if (r > 1.5) add("warn", "Push/pull imbalance: your pushing sets (chest + triceps) are " + r.toFixed(1) + "× your pulling sets (back + biceps). Add more pulling volume — extra back/biceps sets — so they roughly match. Even push/pull keeps shoulders healthy and posture upright.");
+    else if (r < 0.67) add("warn", "Push/pull imbalance: your pulling sets (back + biceps) are " + (1 / r).toFixed(1) + "× your pushing sets (chest + triceps). Add more pushing volume — extra chest/triceps sets — to balance them out."); }
   const planIds = S.plan ? [...new Set(S.plan.days.flatMap(d => d.exercises.map(e => e.ex)))] : [];
   const stalled = planIds.filter(id => EXBY[id] && EXBY[id].inc > 0 && plateaued(id));
-  if (stalled.length >= 3) add("warn", stalled.length + " lifts stalled 3+ sessions (" + stalled.slice(0, 3).map(id => EXBY[id].n).join(", ") + (stalled.length > 3 ? "…" : "") + "). Take a deload week.");
-  else if (stalled.length) add("info", "Stalled: " + stalled.map(id => EXBY[id].n).join(", ") + " — each shows a deload weight next session.");
+  if (stalled.length >= 3) add("warn", stalled.length + " lifts have stalled 3+ sessions (" + stalled.slice(0, 3).map(id => EXBY[id].n).join(", ") + (stalled.length > 3 ? "…" : "") + "). Take an easier week — drop those weights ~15%, then build back up. Backing off is how you push past a stall.");
+  else if (stalled.length) add("info", "Stalled: " + stalled.map(id => EXBY[id].n).join(", ") + " — each shows a lighter target next session to help you break through.");
   const wins = planIds.filter(id => momentum(id) === "up");
   if (wins.length) add("good", "Climbing: " + wins.slice(0, 3).map(id => EXBY[id] ? EXBY[id].n : id).join(", ") + (wins.length > 3 ? " and more" : "") + ". Keep adding load while it works.");
   const ar = avgRpe(14);
@@ -819,14 +813,14 @@ function renderDash(){
   const prRows = Object.entries(prs).filter(([, p]) => p.w > 0).sort((a, b) => b[1].v - a[1].v).slice(0, 8);
   const weeks = weeklyVolume(logs), musc = weeklySetsByMuscle(), muscTotal = Object.values(musc).reduce((a, v) => a + v, 0);
   const doneToday = logs.find(l => l.date === today());
-  const ph = currentPhase(), adh = adherence(8), nt = effTargets(), nd = dayNutrition(today());
+  const adh = adherence(8), nt = effTargets(), nd = dayNutrition(today());
   V.innerHTML = `
-  <div class="exhead"><h1><span class="mich">Michel</span><span class="angelo">Angelo</span> <span class="dim" style="font-size:1rem;font-weight:400">dashboard</span></h1><span class="dim small">${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · ${streakText()} · ${ph.deload ? '<span class="gold">deload week</span>' : "week " + ph.week + "/" + ph.cycle}</span></div>
+  <div class="exhead"><h1><span class="mich">Michel</span><span class="angelo">Angelo</span> <span class="dim" style="font-size:1rem;font-weight:400">dashboard</span></h1><span class="dim small">${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · ${streakText()}</span></div>
   <div class="dashgrid">
     ${insightsPanel("dashwide")}
     <div class="card dashwide">
       <div class="exhead"><h3>Today · ${esc(day.name)}</h3><span class="dim small">${day.exercises.length} exercises${doneToday ? ' · <span class="green">logged ✓</span>' : ""}</span></div>
-      ${day.exercises.length ? day.exercises.map(s => { const ex = EXBY[s.ex] || { n: s.ex, u: null }; return `<div class="exline"><span>${esc(ex.n)}</span><span class="dim">${ex.u === "time" ? s.lo + "–" + s.hi + "m" : s.sets + "×" + s.lo + "–" + s.hi}</span></div>`; }).join("") : '<p class="dim small">This day has no exercises yet — add some in Plan.</p>'}
+      ${day.exercises.length ? day.exercises.map(s => { const ex = EXBY[s.ex] || { n: s.ex, u: null }; return `<div class="exline"><span>${esc(ex.n)}${ex.m ? ` <span class="dim small">· ${esc(ex.m)}</span>` : ""}</span><span class="dim">${ex.u === "time" ? s.lo + "–" + s.hi + "m" : s.sets + "×" + s.lo + "–" + s.hi}</span></div>`; }).join("") : '<p class="dim small">This day has no exercises yet — add some in Plan.</p>'}
       <button class="btn full blue-btn" style="margin-top:12px" onclick="startWorkout(${dayIdx})">Start workout</button>
       ${plan.days.length > 1 ? `<div class="small dim" style="margin-top:10px">Jump to: ${plan.days.map((d, i) => i === dayIdx ? "" : `<span class="blue" style="cursor:pointer;margin-right:12px" onclick="startWorkout(${i})">${esc(d.name)}</span>`).join("")}</div>` : ""}
     </div>
@@ -943,10 +937,10 @@ function renderToday(){
   <p class="dim small">${new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})} · ${streakText()}</p>
   ${doneToday ? `<div class="card"><b class="green">✓ Workout logged today.</b><div class="dim small">Muscles grow between sessions — rest is part of the program.</div>${S.health ? `<a class="btn ghost small-btn" style="margin-top:10px;display:inline-block;text-decoration:none" href="${healthWorkoutURL(doneToday.min)}">❤️ Log to Apple Health</a>` : ""}</div>` : ""}
   ${S.tune && S.tune.msgs && S.tune.msgs.length ? `<div class="card" style="border-color:var(--blue)"><b class="blue">🗿 Plan auto-tuned after your last session</b><div class="dim small" style="margin-top:5px;line-height:1.6">${S.tune.msgs.map(esc).join("<br>")}</div><button class="btn ghost small-btn" style="margin-top:10px" onclick="S.tune=null;save();render()">Got it</button></div>` : ""}
-  ${(() => { const stalled = [...new Set(S.plan.days.flatMap(d => d.exercises.map(e => e.ex)))].filter(id => EXBY[id] && EXBY[id].inc > 0 && plateaued(id)); return stalled.length >= 3 ? `<div class="card" style="border-color:var(--gold)"><b class="gold">Deload week suggested</b><div class="dim small">${stalled.length} lifts have stalled for 3 straight sessions (${stalled.slice(0, 3).map(id => EXBY[id].n).join(", ")}${stalled.length > 3 ? "…" : ""}). Take a week at ~80% weight — planned recovery is how plateaus break. Each stalled exercise already shows its deload weight.</div></div>` : ""; })()}
+  ${(() => { const stalled = [...new Set(S.plan.days.flatMap(d => d.exercises.map(e => e.ex)))].filter(id => EXBY[id] && EXBY[id].inc > 0 && plateaued(id)); return stalled.length >= 3 ? `<div class="card" style="border-color:var(--gold)"><b class="gold">Time to back off a week</b><div class="dim small">${stalled.length} lifts have stalled for 3 straight sessions (${stalled.slice(0, 3).map(id => EXBY[id].n).join(", ")}${stalled.length > 3 ? "…" : ""}). Run them ~15% lighter this week so your body recovers — then build back up. Each shows its lighter target already.</div></div>` : ""; })()}
   <div class="card">
     <div class="exhead"><h3>${esc(day.name)}</h3><span class="dim small">${day.exercises.length} exercises</span></div>
-    ${day.exercises.map(s => { const ex = EXBY[s.ex]; return `<div class="exline"><span>${esc(ex.n)}</span><span class="dim">${s.sets}×${s.lo}–${s.hi}</span></div>`; }).join("")}
+    ${day.exercises.map(s => { const ex = EXBY[s.ex] || { n: s.ex }; return `<div class="exline"><span>${esc(ex.n)}${ex.m ? ` <span class="dim small">· ${esc(ex.m)}</span>` : ""}</span><span class="dim">${s.sets}×${s.lo}–${s.hi}</span></div>`; }).join("")}
     <button class="btn full blue-btn" style="margin-top:12px" onclick="startWorkout(${dayIdx})">Start workout</button>
   </div>
   <h2>Or jump to another day</h2>
@@ -969,7 +963,8 @@ function startWorkout(dayIdx){
       const sug = suggestFor(s.ex, s.lo, s.hi);
       const le = lastEntry(s.ex);
       const w = sug && sug.w ? sug.w : (le ? Math.max(...le.sets.map(x => x.w || 0)) : "");
-      return { ex: s.ex, lo: s.lo, hi: s.hi, rest: s.rest || 120, ss: s.ss || null, rpe: null, sets: Array.from({length: s.sets}, () => ({ w: w === "" ? "" : w, r: "", done: false })) };
+      const tex = EXBY[s.ex]; const tr = tex && tex.u === "time" ? s.lo : s.hi; // pre-fill the target reps/mins to aim for
+      return { ex: s.ex, lo: s.lo, hi: s.hi, rest: s.rest || 120, ss: s.ss || null, rpe: null, sets: Array.from({length: s.sets}, () => ({ w: w === "" ? "" : w, r: tr, done: false })) };
     }),
     cur: 0
   };
@@ -1205,7 +1200,7 @@ function renderPlan(){
   <p class="dim small">${esc(planLabel())} · created ${S.plan.created}</p>
   ${S.plan.days.map((d, di) => `<div class="card">
     <div class="exhead"><h3>${esc(d.name)}</h3><span class="small"><span class="blue" style="cursor:pointer" onclick="planRenameDay(${di})">rename</span> · <span class="red" style="cursor:pointer" onclick="planDeleteDay(${di})">delete</span></span></div>
-    ${d.exercises.length ? d.exercises.map((s, si) => { const ex = EXBY[s.ex] || { n: s.ex, u: null }; return `<div class="exline"><span>${s.ss ? '<span style="color:var(--blue);font-weight:800">⇄</span> ' : ""}${esc(ex.n)}${s.ss ? ' <span class="dim small">(superset)</span>' : ""}</span>
+    ${d.exercises.length ? d.exercises.map((s, si) => { const ex = EXBY[s.ex] || { n: s.ex, u: null }; return `<div class="exline"><span>${s.ss ? '<span style="color:var(--blue);font-weight:800">⇄</span> ' : ""}${esc(ex.n)}${ex.m ? ` <span class="dim small">· ${esc(ex.m)}</span>` : ""}${s.ss ? ' <span class="dim small">(superset)</span>' : ""}</span>
       <span class="dim">${ex.u === "time" ? s.lo + "–" + s.hi + "m" : s.sets + "×" + s.lo + "–" + s.hi}
       <span class="blue" style="cursor:pointer;margin-left:8px" onclick="planSwap(${di},${si})">swap</span>
       <span class="red" style="cursor:pointer;margin-left:8px" onclick="planRemove(${di},${si})">×</span></span></div>`; }).join("") : '<p class="dim small">No exercises yet — add some below.</p>'}
@@ -1345,7 +1340,7 @@ function renderProgress(){
     ${prRows.map(([id, p]) => { const mo = momentum(id); const tag = mo === "up" ? ' <span class="green">▲</span>' : mo === "down" ? ' <span class="red">▼</span>' : mo === "flat" ? ' <span class="dim">▬</span>' : ""; return `<tr style="cursor:pointer" onclick="exChart('${id}')"><td style="color:var(--blue);font-weight:600">${esc(EXBY[id] ? EXBY[id].n : id)}${tag}</td><td class="num">${p.w}×${p.r}</td><td class="num gold"><b>${Math.round(p.v)}</b></td></tr>`; }).join("")}</tbody></table>` : '<p class="dim small">PRs appear after your first logged workout.</p>'}
   </div>
   <div class="card"><h3>Progress by exercise</h3>
-    ${exList.length ? `<p class="dim small" style="margin-bottom:6px">Tap any lift for its full history, charts, best set, and next-session target.</p>${exList.map(id => { const ex = EXBY[id]; const mo = momentum(id); const tag = mo === "up" ? ' <span class="green">▲</span>' : mo === "down" ? ' <span class="red">▼</span>' : mo === "flat" ? ' <span class="dim">▬</span>' : ""; return `<div class="exline" style="cursor:pointer" onclick="exChart('${id}')"><span style="color:var(--blue);font-weight:600">${esc(ex ? ex.n : id)}${tag}</span><span class="dim small">${loggedEx[id]} session${loggedEx[id] === 1 ? "" : "s"} ›</span></div>`; }).join("")}` : '<p class="dim small">Log a workout to start tracking each lift individually.</p>'}
+    ${exList.length ? `<p class="dim small" style="margin-bottom:6px">Tap any lift for its full history, charts, best set, and next-session target.</p>${exList.map(id => { const ex = EXBY[id]; const mo = momentum(id); const tag = mo === "up" ? ' <span class="green">▲</span>' : mo === "down" ? ' <span class="red">▼</span>' : mo === "flat" ? ' <span class="dim">▬</span>' : ""; return `<div class="exline" style="cursor:pointer" onclick="exChart('${id}')"><span style="color:var(--blue);font-weight:600">${esc(ex ? ex.n : id)}${tag}${ex && ex.m ? ` <span class="dim small" style="font-weight:400">· ${esc(ex.m)}</span>` : ""}</span><span class="dim small">${loggedEx[id]} session${loggedEx[id] === 1 ? "" : "s"} ›</span></div>`; }).join("")}` : '<p class="dim small">Log a workout to start tracking each lift individually.</p>'}
   </div>
   <div class="card"><h3>Body weight ${b ? `<span class="dim small">· BMI ${b}</span>` : ""}</h3>
     <div style="display:flex;gap:8px;margin:8px 0"><input type="number" inputmode="decimal" id="bw-in" placeholder="lbs today"><button class="btn small-btn" onclick="logBw()">Log</button></div>
