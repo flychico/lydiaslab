@@ -123,6 +123,7 @@ textarea{background:var(--card);border:1px solid var(--border);border-radius:9px
   <div data-tab="today" class="on"><span class="ico">🏋️</span>Today</div>
   <div data-tab="plan"><span class="ico">📋</span>Plan</div>
   <div data-tab="progress"><span class="ico">📈</span>Progress</div>
+  <div data-tab="food"><span class="ico">🍎</span>Food</div>
   <div data-tab="settings"><span class="ico">⚙️</span>Settings</div>
 </div>
 <div id="timer" class="timer hidden"></div>
@@ -761,6 +762,14 @@ function insights(){
   const ar = avgRpe(14);
   if (ar !== null) { if (ar < 7) add("warn", "Your sets average RPE " + ar.toFixed(1) + " — you're leaving reps in the tank. Push closer to failure (RPE 8–9) to grow."); else if (ar > 9.3) add("info", "Average RPE " + ar.toFixed(1) + " — training very hard. Watch recovery; a deload may be due."); }
   if (S.profile.goal === "recomp") { const tr = bwTrend(); if (tr) { if (tr.pct <= -0.5 && tr.pct >= -1.5) add("good", "Fat loss on track (" + tr.perWeek.toFixed(1) + " lb/wk). Keep protein high and lifts heavy."); else if (tr.perWeek > -0.05) add("warn", "Weight isn't dropping — fat loss needs a calorie deficit. Tighten intake ~250 kcal/day."); else if (tr.pct < -1.5) add("info", "Losing fast (" + tr.perWeek.toFixed(1) + " lb/wk) — protect muscle: keep protein up, don't crash-diet."); } }
+  const days = {};
+  (S.nutrition || []).forEach(x => { const D = days[x.date] = days[x.date] || { p: 0 }; D.p += x.p || 0; });
+  const loggedDays = Object.keys(days).filter(k => (Date.now() - new Date(k + "T12:00")) / 864e5 < 7);
+  if (loggedDays.length) {
+    const t = effTargets(), avgP = loggedDays.reduce((a, k) => a + days[k].p, 0) / loggedDays.length;
+    if (avgP < t.protein * 0.85) add("warn", "Protein low: averaging " + Math.round(avgP) + "g/day vs your " + t.protein + "g target. Protein protects muscle in a cut and drives growth — bump it up.");
+    else add("good", "Protein dialed in: ~" + Math.round(avgP) + "g/day. That's what holds muscle while you lean out.");
+  }
   const dups = detectDuplicates();
   if (dups.length) add("info", "Duplicate exercises found (" + dups.slice(0, 2).map(g => g.map(id => EXBY[id] ? EXBY[id].n : id).join("/")).join("; ") + "). Merge them in Settings so progress isn't split.");
   const pr = { warn: 0, good: 1, info: 2 };
@@ -800,6 +809,7 @@ function render(){
   else if (tab === "today") renderToday();
   else if (tab === "plan") renderPlan();
   else if (tab === "progress") renderProgress();
+  else if (tab === "food") renderNutrition();
   else renderSettings();
 }
 function renderDash(){
@@ -809,7 +819,7 @@ function renderDash(){
   const prRows = Object.entries(prs).filter(([, p]) => p.w > 0).sort((a, b) => b[1].v - a[1].v).slice(0, 8);
   const weeks = weeklyVolume(logs), musc = weeklySetsByMuscle(), muscTotal = Object.values(musc).reduce((a, v) => a + v, 0);
   const doneToday = logs.find(l => l.date === today());
-  const ph = currentPhase(), adh = adherence(8);
+  const ph = currentPhase(), adh = adherence(8), nt = effTargets(), nd = dayNutrition(today());
   V.innerHTML = `
   <div class="exhead"><h1><span class="mich">Michel</span><span class="angelo">Angelo</span> <span class="dim" style="font-size:1rem;font-weight:400">dashboard</span></h1><span class="dim small">${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · ${streakText()} · ${ph.deload ? '<span class="gold">deload week</span>' : "week " + ph.week + "/" + ph.cycle}</span></div>
   <div class="dashgrid">
@@ -826,6 +836,11 @@ function renderDash(){
     </div>
     <div class="card"><h3>Top lifts <span class="dim small">(best e1RM)</span></h3>
       ${prRows.length ? `<table><thead><tr><th>Exercise</th><th class="num">Best set</th><th class="num">e1RM</th></tr></thead><tbody>${prRows.map(([id, p]) => { const mo = momentum(id); const tag = mo === "up" ? ' <span class="green">▲</span>' : mo === "down" ? ' <span class="red">▼</span>' : mo === "flat" ? ' <span class="dim">▬</span>' : ""; return `<tr style="cursor:pointer" onclick="exChart('${id}')"><td style="color:var(--blue);font-weight:600">${esc(EXBY[id] ? EXBY[id].n : id)}${tag}</td><td class="num">${p.w}×${p.r}</td><td class="num gold"><b>${Math.round(p.v)}</b></td></tr>`; }).join("")}</tbody></table>` : '<p class="dim small">Log a workout to see your PRs.</p>'}
+    </div>
+    <div class="card"><h3>Nutrition today</h3>
+      <div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:.85rem"><span>Calories</span><span><b>${Math.round(nd.cal)}</b> / ${nt.cal}</span></div><div style="height:7px;background:var(--bg2);border-radius:5px;overflow:hidden;margin-top:3px"><div style="height:100%;width:${Math.min(100, Math.round(nd.cal / nt.cal * 100))}%;background:var(--blue)"></div></div></div>
+      <div><div style="display:flex;justify-content:space-between;font-size:.85rem"><span>Protein</span><span><b>${Math.round(nd.p)}</b> / ${nt.protein} g</span></div><div style="height:7px;background:var(--bg2);border-radius:5px;overflow:hidden;margin-top:3px"><div style="height:100%;width:${Math.min(100, Math.round(nd.p / nt.protein * 100))}%;background:var(--pink)"></div></div></div>
+      <div class="small dim" style="margin-top:8px">${Math.round(nd.c)}g carbs · ${Math.round(nd.f)}g fat · <span class="blue" style="cursor:pointer" onclick="tab='food';syncTabs();render()">log food →</span></div>
     </div>
     <div class="card"><h3>Consistency <span class="dim small">· done vs ${S.profile.days}/wk target</span></h3>
       <canvas id="dashadh" width="520" height="120"></canvas>
@@ -1674,6 +1689,9 @@ function mergeBackup(inc){
   S.weights = uniq([...(S.weights || []), ...(inc.weights || [])], w => w.date).sort((a, b) => a.date.localeCompare(b.date));
   S.activity = uniq([...(S.activity || []), ...(inc.activity || [])], a => a.date).sort((a, b) => a.date.localeCompare(b.date));
   S.customEx = uniq([...(S.customEx || []), ...(inc.customEx || [])], c => c.id);
+  S.foods = uniq([...(S.foods || []), ...(inc.foods || [])], m => m.id);
+  S.nutrition = uniq([...(S.nutrition || []), ...(inc.nutrition || [])], x => JSON.stringify([x.date, x.n, x.cal, x.p, x.c, x.f])).sort((a, b) => a.date.localeCompare(b.date));
+  if (!S.targets && inc.targets) S.targets = inc.targets;
   if (!S.profile && inc.profile) S.profile = inc.profile;
   if (!S.plan && inc.plan) S.plan = inc.plan;
 }
@@ -1711,6 +1729,79 @@ function importHealthWeights(inp){
     } catch (e) { toast("Couldn't read that file"); }
   };
   r.readAsText(f);
+}
+
+/* ---- Nutrition ---- */
+function defaultTargets(){
+  const p = S.profile || {}, lb = p.weightLb || 160;
+  const protein = Math.round((p.goal === "recomp" ? 1.0 : 0.8) * lb / 5) * 5;
+  let cal = 2000;
+  if (p.weightLb && p.heightIn && p.age) {
+    const kg = p.weightLb / 2.2046226, cm = p.heightIn * 2.54;
+    let tdee = (10 * kg + 6.25 * cm - 5 * p.age - 78) * 1.45; // Mifflin-St Jeor, sex-neutral, lightly active
+    if (p.goal === "recomp") tdee -= 500; else if (p.goal === "muscle") tdee += 200;
+    cal = Math.round(tdee / 10) * 10;
+  }
+  return { cal: cal || 2000, protein: protein || 130 };
+}
+function effTargets(){ const d = defaultTargets(); return { cal: (S.targets && S.targets.cal) || d.cal, protein: (S.targets && S.targets.protein) || d.protein }; }
+function dayNutrition(date){
+  return (S.nutrition || []).filter(x => x.date === date).reduce((a, x) => ({ cal: a.cal + (x.cal || 0), p: a.p + (x.p || 0), c: a.c + (x.c || 0), f: a.f + (x.f || 0), n: a.n + 1 }), { cal: 0, p: 0, c: 0, f: 0, n: 0 });
+}
+function logFood(it){ S.nutrition = S.nutrition || []; S.nutrition.push({ date: today(), n: it.n, cal: +it.cal || 0, p: +it.p || 0, c: +it.c || 0, f: +it.f || 0 }); save(); }
+function logSaved(id){ const m = (S.foods || []).find(x => x.id === id); if (!m) return; logFood(m); render(); toast("Logged " + m.n); }
+function deleteMeal(id){ if (!confirm("Delete this saved meal?")) return; S.foods = (S.foods || []).filter(x => x.id !== id); save(); render(); }
+function addCustomFood(saveMeal){
+  const name = (document.getElementById("nf-name").value || "").trim();
+  const cal = +document.getElementById("nf-cal").value || 0, p = +document.getElementById("nf-p").value || 0, c = +document.getElementById("nf-c").value || 0, f = +document.getElementById("nf-f").value || 0;
+  if (!name) return toast("Give the food a name");
+  if (!cal && !p && !c && !f) return toast("Enter at least calories or protein");
+  if (saveMeal) { S.foods = S.foods || []; S.foods.push({ id: "meal-" + Date.now(), n: name.slice(0, 40), cal, p, c, f }); save(); render(); toast("Saved to your meals"); }
+  else { logFood({ n: name, cal, p, c, f }); render(); toast("Added to today"); }
+}
+function removeFood(i){ (S.nutrition || []).splice(i, 1); save(); render(); }
+function saveTargets(){ const cal = +document.getElementById("tg-cal").value || 0, p = +document.getElementById("tg-p").value || 0; S.targets = { cal, protein: p }; save(); render(); toast("Targets saved"); }
+function nutHistory(){
+  const days = {};
+  (S.nutrition || []).forEach(x => { const D = days[x.date] = days[x.date] || { cal: 0, p: 0 }; D.cal += x.cal || 0; D.p += x.p || 0; });
+  const keys = Object.keys(days).sort().reverse().slice(0, 7);
+  if (!keys.length) return "";
+  const t = effTargets();
+  return `<div class="card"><h3>Recent days</h3>${keys.map(k => `<div class="exline"><span>${k.slice(5)}</span><span class="dim small">${Math.round(days[k].cal)} kcal · <b class="${days[k].p >= t.protein ? "green" : "gold"}">${Math.round(days[k].p)}g</b> protein</span></div>`).join("")}</div>`;
+}
+function renderNutrition(){
+  const t = effTargets(), d = dayNutrition(today());
+  const items = (S.nutrition || []).map((x, i) => ({ x, i })).filter(o => o.x.date === today());
+  const meals = S.foods || [];
+  const pct = (v, m) => Math.min(100, Math.round(v / (m || 1) * 100));
+  const bar = (label, v, m, unit, color) => `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:.9rem"><span>${label}</span><span><b>${Math.round(v)}</b> / ${m} ${unit}</span></div><div style="height:8px;background:var(--bg2);border-radius:5px;overflow:hidden;margin-top:3px"><div style="height:100%;width:${pct(v, m)}%;background:${color}"></div></div></div>`;
+  V.innerHTML = `
+  <h1>Food</h1>
+  <p class="dim small">${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
+  <div class="card"><h3>Today</h3>
+    ${bar("Calories", d.cal, t.cal, "kcal", "var(--blue)")}
+    ${bar("Protein", d.p, t.protein, "g", "var(--pink)")}
+    <div class="row2" style="margin-top:8px">
+      <div class="card" style="margin:0;text-align:center;padding:10px"><div class="dim small">CARBS</div><div style="font-size:1.2rem;font-weight:800">${Math.round(d.c)}g</div></div>
+      <div class="card" style="margin:0;text-align:center;padding:10px"><div class="dim small">FAT</div><div style="font-size:1.2rem;font-weight:800">${Math.round(d.f)}g</div></div>
+    </div>
+  </div>
+  <div class="card"><h3>Quick add from saved meals</h3>
+    ${meals.length ? meals.map(m => `<div class="exline"><span><b>${esc(m.n)}</b> <span class="dim small">${m.cal} kcal · ${m.p}p ${m.c}c ${m.f}f</span></span><span><span class="blue" style="cursor:pointer;margin-right:12px" onclick="logSaved('${m.id}')">＋ log</span><span class="red" style="cursor:pointer" onclick="deleteMeal('${m.id}')">×</span></span></div>`).join("") : '<p class="dim small">No saved meals yet — add a food below and tap “Save as meal” to reuse it.</p>'}
+  </div>
+  <div class="card"><h3>Add a food</h3>
+    <label style="margin-top:0">Name</label><input id="nf-name" placeholder="e.g. Chicken & rice bowl">
+    <div class="row2"><div><label>Calories</label><input id="nf-cal" type="number" inputmode="numeric" placeholder="kcal"></div><div><label>Protein (g)</label><input id="nf-p" type="number" inputmode="numeric" placeholder="g"></div></div>
+    <div class="row2"><div><label>Carbs (g)</label><input id="nf-c" type="number" inputmode="numeric" placeholder="g"></div><div><label>Fat (g)</label><input id="nf-f" type="number" inputmode="numeric" placeholder="g"></div></div>
+    <div style="display:flex;gap:8px;margin-top:12px"><button class="btn blue-btn full" onclick="addCustomFood(false)">Add to today</button><button class="btn ghost full" onclick="addCustomFood(true)">Save as meal</button></div>
+  </div>
+  ${items.length ? `<div class="card"><h3>Logged today</h3>${items.slice().reverse().map(o => `<div class="exline"><span>${esc(o.x.n)} <span class="dim small">${Math.round(o.x.cal)} kcal · ${o.x.p}g p</span></span><span class="red" style="cursor:pointer" onclick="removeFood(${o.i})">×</span></div>`).join("")}</div>` : ""}
+  <div class="card"><h3>Targets <span class="dim small">· editable</span></h3>
+    <div class="row2"><div><label style="margin-top:0">Calories</label><input id="tg-cal" type="number" inputmode="numeric" value="${t.cal}"></div><div><label style="margin-top:0">Protein (g)</label><input id="tg-p" type="number" inputmode="numeric" value="${t.protein}"></div></div>
+    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn small-btn" onclick="saveTargets()">Save targets</button><button class="btn ghost small-btn" onclick="S.targets=null;save();render();toast('Reset to auto')">Reset to auto</button></div>
+    <p class="dim small" style="margin-top:6px">Auto-estimated from your stats & goal. Adjust to what works for you — your weight trend is the real feedback loop.</p>
+  </div>
+  ${nutHistory()}`;
 }
 
 /* ---- Init ---- */
