@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-07T01:03:58.004Z",
+  "generated_at": "2026-08-07T12:08:58.173Z",
   "status": "ready",
   "latest_date": "2026-08-06",
   "days_reviewed": 29,
@@ -8,16 +8,16 @@
     "clv": "data/clv/clv_log.csv"
   },
   "current_official_model": "multi-market-v1",
-  "headline": "Learning summary for 2026-08-06: no graded official moneyline picks yet.",
+  "headline": "Learning summary for 2026-08-06: moneyline record 1-0 (100.0%).",
   "day": {
     "date": "2026-08-06",
     "source": "published-picks",
-    "record_all_markets": "2-2",
-    "units_all_markets": -0.21,
-    "ungraded": 3,
-    "moneyline_record": "0-0",
-    "moneyline_win_rate": null,
-    "official_moneyline_picks": 0,
+    "record_all_markets": "3-6",
+    "units_all_markets": -3.67,
+    "ungraded": 0,
+    "moneyline_record": "1-0",
+    "moneyline_win_rate": 1,
+    "official_moneyline_picks": 1,
     "legacy_market_entries": 0
   },
   "gates": {
@@ -27,250 +27,107 @@
     "note": "Official picks require high model probability and strong setup quality. A high Lab Rating alone is not enough."
   },
   "process_metrics": {
-    "average_model_probability": null,
-    "average_lab_score": null,
-    "average_raw_edge": null,
-    "clv_counts": {},
-    "lesson_counts": {},
+    "average_model_probability": 0.6114,
+    "average_lab_score": 80,
+    "average_raw_edge": -0.0259,
+    "clv_counts": {
+      "not_tracked": 1
+    },
+    "lesson_counts": {
+      "win_needs_more_sample": 1
+    },
     "strong_official_count": 15,
-    "protected_by_probability_gate_count": 12,
+    "protected_by_probability_gate_count": 13,
     "high_bullpen_risk_count": 7,
     "pitcher_conflict_count": 0
   },
   "findings": [
     {
-      "title": "No official moneyline picks graded yet",
-      "read": "Learning will become useful after a finished slate is graded under the current model."
+      "title": "Official-pick discipline",
+      "read": "1 moneyline pick was graded. Record: 1-0 (100.0%)."
+    },
+    {
+      "title": "Probability gate",
+      "read": "Across all reviewed days, 13 graded setups had strong Lab Rating but model probability below 72%. Those should remain value watch, not official picks."
+    },
+    {
+      "title": "Bullpen learning",
+      "read": "Across all reviewed days, 7 graded moneyline picks carried a meaningful bullpen caution. Review these before adjusting thresholds."
+    },
+    {
+      "title": "Pitcher learning",
+      "read": "No major starting-pitcher conflicts showed up in the graded moneyline set."
     }
   ],
   "calibration": {
     "status": "ready",
-    "model_version": "moneyline-v2-plus-runs-v1",
-    "games_graded": 176,
-    "brier_score": 0.2631,
+    "model_version": "leo",
+    "games_graded": 9,
+    "brier_score": 0.2056,
     "shadow_model": {
       "status": "ready",
-      "games": 178,
-      "official_model_version": "moneyline-v2-plus-runs-v1",
+      "games": 9,
+      "official_model_version": "leo",
       "shadow_model_version": "v3.1-bullpen",
-      "brier_official": 0.2637,
-      "brier_shadow": 0.2537,
+      "brier_official": 0.2056,
+      "brier_shadow": 0.1681,
       "leader": "shadow",
-      "disagreements": 35,
-      "shadow_wins_disagreements": 17,
+      "disagreements": 1,
+      "shadow_wins_disagreements": 1,
       "note": "Only rows from the latest matching official/shadow model-version pair are compared. Promote nothing from a mixed-version sample."
     },
     "attribution": {
-      "status": "ready",
-      "games": 176,
-      "factors": [
-        {
-          "factor": "K-BB% gap (pick − opp)",
-          "tertiles": [
-            {
-              "band": "low",
-              "games": 57,
-              "win_rate": 0.684
-            },
-            {
-              "band": "mid",
-              "games": 56,
-              "win_rate": 0.536
-            },
-            {
-              "band": "high",
-              "games": 55,
-              "win_rate": 0.455
-            }
-          ],
-          "spread": -0.23
-        },
-        {
-          "factor": "Offense form gap (ΔOPS diff)",
-          "tertiles": [
-            {
-              "band": "low",
-              "games": 59,
-              "win_rate": 0.441
-            },
-            {
-              "band": "mid",
-              "games": 60,
-              "win_rate": 0.633
-            },
-            {
-              "band": "high",
-              "games": 57,
-              "win_rate": 0.561
-            }
-          ],
-          "spread": 0.121
-        },
-        {
-          "factor": "Lab Rating",
-          "tertiles": [
-            {
-              "band": "low",
-              "games": 60,
-              "win_rate": 0.6
-            },
-            {
-              "band": "mid",
-              "games": 59,
-              "win_rate": 0.542
-            },
-            {
-              "band": "high",
-              "games": 57,
-              "win_rate": 0.491
-            }
-          ],
-          "spread": -0.109
-        },
-        {
-          "factor": "Pitcher score gap (pick − opp)",
-          "tertiles": [
-            {
-              "band": "low",
-              "games": 61,
-              "win_rate": 0.557
-            },
-            {
-              "band": "mid",
-              "games": 58,
-              "win_rate": 0.603
-            },
-            {
-              "band": "high",
-              "games": 57,
-              "win_rate": 0.474
-            }
-          ],
-          "spread": -0.084
-        },
-        {
-          "factor": "Model probability",
-          "tertiles": [
-            {
-              "band": "low",
-              "games": 59,
-              "win_rate": 0.593
-            },
-            {
-              "band": "mid",
-              "games": 59,
-              "win_rate": 0.508
-            },
-            {
-              "band": "high",
-              "games": 58,
-              "win_rate": 0.534
-            }
-          ],
-          "spread": -0.059
-        },
-        {
-          "factor": "Bullpen fatigue gap (opp − pick)",
-          "tertiles": [
-            {
-              "band": "low",
-              "games": 60,
-              "win_rate": 0.55
-            },
-            {
-              "band": "mid",
-              "games": 63,
-              "win_rate": 0.556
-            },
-            {
-              "band": "high",
-              "games": 53,
-              "win_rate": 0.528
-            }
-          ],
-          "spread": -0.022
-        }
-      ],
-      "note": "Win rate by input tertile, pick-side relative. |spread| = high-band win rate minus low-band — bigger magnitude = the metric separates winners from losers harder, and deserves weight. Read direction too: a NEGATIVE spread on a should-be-positive factor is a red flag."
+      "status": "collecting",
+      "games": 9,
+      "needed": 150
     },
     "kprops": {
       "status": "ready",
       "self_calibration": "+0.33 K correction active (n=150)",
-      "graded": 215,
-      "with_projection": 215,
-      "bias": 0.01,
-      "mae": 1.9,
-      "lean_record": "105-110",
-      "over_lean_record": "43-50",
-      "under_lean_record": "62-58",
-      "no_lean": 121,
+      "graded": 224,
+      "with_projection": 223,
+      "bias": -0.06,
+      "mae": 1.92,
+      "lean_record": "105-114",
+      "over_lean_record": "43-53",
+      "under_lean_record": "62-59",
+      "no_lean": 125,
       "note": "Bias = actual minus projection (positive means we under-project). Leans only counted at 0.7+ strikeout edges. Small samples early — a lean record means little before ~100 graded pitchers."
     },
     "note": "Shadow ledger for learning only — never part of the public record. Official picks stay the only published record.",
     "buckets": [
       {
         "range": "50-55%",
-        "games": 51,
-        "wins": 29,
-        "expected_win_rate": 0.528,
-        "actual_win_rate": 0.569
+        "games": 4,
+        "wins": 1,
+        "expected_win_rate": 0.512,
+        "actual_win_rate": 0.25
       },
       {
         "range": "55-60%",
-        "games": 43,
-        "wins": 22,
-        "expected_win_rate": 0.576,
-        "actual_win_rate": 0.512
+        "games": 4,
+        "wins": 4,
+        "expected_win_rate": 0.578,
+        "actual_win_rate": 1
       },
       {
         "range": "60-65%",
-        "games": 25,
-        "wins": 15,
-        "expected_win_rate": 0.621,
-        "actual_win_rate": 0.6
-      },
-      {
-        "range": "65-70%",
-        "games": 27,
-        "wins": 12,
-        "expected_win_rate": 0.675,
-        "actual_win_rate": 0.444
-      },
-      {
-        "range": "70-75%",
-        "games": 11,
-        "wins": 9,
-        "expected_win_rate": 0.721,
-        "actual_win_rate": 0.818
-      },
-      {
-        "range": "75-100%",
-        "games": 19,
-        "wins": 9,
-        "expected_win_rate": 0.837,
-        "actual_win_rate": 0.474
+        "games": 1,
+        "wins": 1,
+        "expected_win_rate": 0.611,
+        "actual_win_rate": 1
       }
     ],
     "shadow_by_status": {
-      "value_watch": {
-        "games": 6,
-        "wins": 2,
-        "units": -1.93
+      "official_pick": {
+        "games": 1,
+        "wins": 1,
+        "units": 0.54
       },
       "pass": {
-        "games": 143,
-        "wins": 81,
-        "units": 8.49
-      },
-      "watchlist": {
-        "games": 24,
-        "wins": 12,
-        "units": -3.5
-      },
-      "official_pick": {
-        "games": 3,
-        "wins": 1,
-        "units": -1.26
+        "games": 8,
+        "wins": 5,
+        "units": 0.77
       }
     }
   },
@@ -763,6 +620,24 @@
         "bullpen_label": "Elevated volatility",
         "pick_side_bullpen_score": 67,
         "opponent_bullpen_score": 54
+      },
+      {
+        "date": "2026-08-06",
+        "status": "official_pick",
+        "model_version": "multi-market-v1",
+        "game": "Chicago White Sox @ Boston Red Sox",
+        "pick": "Boston Red Sox",
+        "result": "W",
+        "model_probability": 0.6114,
+        "lab_score": 80,
+        "raw_edge": -0.0259,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Boston Red Sox",
+        "pitcher_gap": 18,
+        "bullpen_label": "Neutral",
+        "pick_side_bullpen_score": 58,
+        "opponent_bullpen_score": 62
       }
     ],
     "high_bullpen_risk": [
@@ -894,14 +769,33 @@
       }
     ],
     "pitcher_conflicts": [],
-    "all_moneyline": []
+    "all_moneyline": [
+      {
+        "date": null,
+        "status": "official_pick",
+        "model_version": "multi-market-v1",
+        "game": "Chicago White Sox @ Boston Red Sox",
+        "pick": "Boston Red Sox",
+        "result": "W",
+        "model_probability": 0.6114,
+        "lab_score": 80,
+        "raw_edge": -0.0259,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Boston Red Sox",
+        "pitcher_gap": 18,
+        "bullpen_label": "Neutral",
+        "pick_side_bullpen_score": 58,
+        "opponent_bullpen_score": 62
+      }
+    ]
   },
   "multi_day": {
-    "moneyline_record": "24-11",
-    "moneyline_win_rate": 0.6857,
-    "official_moneyline_entries": 35,
+    "moneyline_record": "25-11",
+    "moneyline_win_rate": 0.6944,
+    "official_moneyline_entries": 36,
     "strict_gate_candidates": 15,
-    "high_lab_low_probability_entries": 12,
+    "high_lab_low_probability_entries": 13,
     "note": "Multi-day view includes whatever historical data exists. Older days may include legacy model behavior."
   },
   "next_review": [
@@ -909,5 +803,17 @@
     "Watch whether official picks with model probability >= 72% beat low-probability value watches over a larger sample.",
     "Track closing price movement once market snapshots have enough data.",
     "Keep value watch separate from official picks."
-  ]
+  ],
+  "coach": {
+    "status": "collecting",
+    "title": "Collecting a trustworthy current-model sample",
+    "summary": "LyDia has 12 of 7 required current-model days and 15 of 20 required current-model official picks. Recommendations remain paused until both minimums are reached.",
+    "current_model_days": 12,
+    "current_model_picks": 15,
+    "minimum_days": 7,
+    "minimum_picks": 20,
+    "bullpen_model_owner": "bullpen-fatigue-v3-runs-aware",
+    "recommendations": [],
+    "hard_stop": "Coach findings are review prompts only. No automatic threshold, weight, formula, publishing, or betting change is permitted."
+  }
 }
