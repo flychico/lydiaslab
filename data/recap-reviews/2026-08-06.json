@@ -1,7 +1,105 @@
 {
   "date": "2026-08-06",
-  "generated_at": "2026-08-06T21:40:23.087Z",
+  "generated_at": "2026-08-07T00:25:44.054Z",
   "games": {
+    "823105": {
+      "game_pk": 823105,
+      "game": "Detroit Tigers @ Seattle Mariners",
+      "direction": {
+        "winner": "Detroit Tigers",
+        "correct": false
+      },
+      "submodel": {
+        "gap": 20.7,
+        "strengthFavored": "Seattle Mariners",
+        "runFavored": "Detroit Tigers",
+        "verdict": "runs",
+        "strengthProbabilityPick": 0.5077,
+        "runModelProbabilityPick": 0.3012
+      },
+      "starter": {
+        "favoredTeam": "Seattle Mariners",
+        "favoredName": "Bryce Miller",
+        "otherName": "Framber Valdez",
+        "pitcherGap": 19,
+        "favored": {
+          "name": "Bryce Miller",
+          "ip": 5,
+          "er": 4,
+          "h": 5,
+          "bb": 2,
+          "k": 5,
+          "era": 7.2
+        },
+        "other": {
+          "name": "Framber Valdez",
+          "ip": 7,
+          "er": 0,
+          "h": 5,
+          "bb": 2,
+          "k": 5,
+          "era": 0
+        },
+        "heldUp": false
+      },
+      "away_bullpen": {
+        "team": "Detroit Tigers",
+        "oppTeam": "Seattle Mariners",
+        "bullpenLabel": "Normal",
+        "bullpenScore": 52,
+        "wasFlagged": false,
+        "actual": {
+          "ip": 2,
+          "er": 0,
+          "h": 2,
+          "bb": 0,
+          "k": 2,
+          "era": 0
+        },
+        "unearnedRuns": 0
+      },
+      "home_bullpen": {
+        "team": "Seattle Mariners",
+        "oppTeam": "Detroit Tigers",
+        "bullpenLabel": "Normal",
+        "bullpenScore": 61,
+        "wasFlagged": false,
+        "actual": {
+          "ip": 4,
+          "er": 6,
+          "h": 11,
+          "bb": 2,
+          "k": 6,
+          "era": 13.5
+        },
+        "unearnedRuns": 1
+      },
+      "offense": [
+        {
+          "team": "Detroit Tigers",
+          "projectedRuns": 4.8,
+          "actualRuns": 11,
+          "skipped": false,
+          "diff": 6.2,
+          "deltaOpsPregame": 0.129
+        },
+        {
+          "team": "Seattle Mariners",
+          "projectedRuns": 3.3,
+          "actualRuns": 0,
+          "skipped": false,
+          "diff": -3.3,
+          "deltaOpsPregame": -0.009
+        }
+      ],
+      "paragraphs": [
+        "Detroit Tigers won. LyDia's model favored the other side.",
+        "LyDia's two internal reads disagreed pregame by 20.7 points — the team-strength model favored Seattle Mariners, the run-projection model favored Detroit Tigers. The run-projection model had the winner here.",
+        "Bryce Miller (Seattle Mariners) was LyDia's favored starter by pitcher score, but Framber Valdez actually pitched better tonight: 7.0 IP, 0 ER (0.00 ERA) against 5.0 IP, 4 ER (7.20 ERA). The edge did not show up in this game.",
+        "Detroit Tigers scored 11, 6.2 more than the 4.8 pregame projection.",
+        "Seattle Mariners scored 0, 3.3 fewer than the 3.3 pregame projection."
+      ]
+    },
     "823754": {
       "game_pk": 823754,
       "game": "Pittsburgh Pirates @ Milwaukee Brewers",
@@ -189,6 +287,97 @@
         "The Cleveland Guardians bullpen was flagged as elevated risk pregame (Tired). In relief it actually allowed 8 earned runs over 5.0 innings (14.40 ERA) — the risk read showed up.",
         "New York Mets scored 13, 10.2 more than the 2.8 pregame projection.",
         "Cleveland Guardians scored 6, 2.1 more than the 3.9 pregame projection."
+      ]
+    },
+    "824664": {
+      "game_pk": 824664,
+      "game": "Toronto Blue Jays @ Chicago Cubs",
+      "direction": {
+        "winner": "Chicago Cubs",
+        "correct": true
+      },
+      "submodel": null,
+      "starter": {
+        "favoredTeam": "Toronto Blue Jays",
+        "favoredName": "Dylan Cease",
+        "otherName": "David Peterson",
+        "pitcherGap": 36,
+        "favored": {
+          "name": "Dylan Cease",
+          "ip": 7,
+          "er": 0,
+          "h": 2,
+          "bb": 1,
+          "k": 10,
+          "era": 0
+        },
+        "other": {
+          "name": "David Peterson",
+          "ip": 5,
+          "er": 1,
+          "h": 7,
+          "bb": 3,
+          "k": 3,
+          "era": 1.8
+        },
+        "heldUp": true
+      },
+      "away_bullpen": {
+        "team": "Toronto Blue Jays",
+        "oppTeam": "Chicago Cubs",
+        "bullpenLabel": "High risk",
+        "bullpenScore": 93,
+        "wasFlagged": true,
+        "actual": {
+          "ip": 3.3333333333333335,
+          "er": 2,
+          "h": 3,
+          "bb": 2,
+          "k": 2,
+          "era": 5.4
+        },
+        "unearnedRuns": 1
+      },
+      "home_bullpen": {
+        "team": "Chicago Cubs",
+        "oppTeam": "Toronto Blue Jays",
+        "bullpenLabel": "Tired",
+        "bullpenScore": 67,
+        "wasFlagged": false,
+        "actual": {
+          "ip": 6,
+          "er": 1,
+          "h": 4,
+          "bb": 1,
+          "k": 4,
+          "era": 1.5
+        },
+        "unearnedRuns": 0
+      },
+      "offense": [
+        {
+          "team": "Toronto Blue Jays",
+          "projectedRuns": 3.4,
+          "actualRuns": 2,
+          "skipped": true,
+          "actualInnings": 11,
+          "deltaOpsPregame": -0.03
+        },
+        {
+          "team": "Chicago Cubs",
+          "projectedRuns": 4,
+          "actualRuns": 3,
+          "skipped": true,
+          "actualInnings": 11,
+          "deltaOpsPregame": 0.021
+        }
+      ],
+      "paragraphs": [
+        "Chicago Cubs won, the side LyDia's model favored.",
+        "Dylan Cease (Toronto Blue Jays), the starter LyDia's pitcher score favored, actually outpitched David Peterson: 7.0 IP, 0 ER (0.00 ERA) against 5.0 IP, 1 ER (1.80 ERA). The edge held up.",
+        "The Toronto Blue Jays bullpen was flagged as elevated risk pregame (High risk). In relief it actually allowed 2 earned runs over 3.1 innings (5.40 ERA) — the risk read showed up. Note: 1 of the runs charged to the Toronto Blue Jays pitching staff overall was unearned — not something the bullpen's stuff should be blamed for.",
+        "Toronto Blue Jays scored 2 in a game that went 11 innings — not compared against the 3.4 pregame projection, which assumed nine.",
+        "Chicago Cubs scored 3 in a game that went 11 innings — not compared against the 4 pregame projection, which assumed nine."
       ]
     }
   }
