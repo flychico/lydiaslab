@@ -88,11 +88,19 @@ function buildLearningSummary({ date, day, allDays, clvRows }) {
   const avgLabScore = avg(gradedMoneyline.map(p => p.lab_score));
   const avgRawEdge = avg(gradedMoneyline.map(p => p.raw_edge));
 
+  // 2026-08-08 (Lynold): the edge-magnitude requirement was removed from the
+  // real official-pick gate in generate-member-lab.js (officialEligible no
+  // longer checks raw_edge, just that market data exists at all). This
+  // report used to carry its own separate copy of the old >= 0.03 edge
+  // requirement here, in the gates display block below, and in
+  // buildMultiDayView()'s strict_gate_candidates count -- all three were
+  // stale and out of sync with the actual gate. Removed from all three so
+  // this report never miscounts an official pick (e.g. a 65% model read vs.
+  // a 67% market read, edge = -0.02) as something other than what it is.
   const strongOfficial = allGradedMoneyline.filter(p =>
     p.status === "official_pick" &&
     num(p.model_probability) >= 0.72 &&
-    num(p.lab_score) >= 80 &&
-    num(p.raw_edge) >= 0.03
+    num(p.lab_score) >= 80
   );
 
   const protectedByGate = (allDays || []).flatMap(d =>
@@ -136,6 +144,13 @@ function buildLearningSummary({ date, day, allDays, clvRows }) {
     clvCounts
   });
 
+  // Computed before the headline so a zero-picks-today date can still
+  // report Leo's actual current record instead of a misleading "no picks
+  // yet" (Lynold 2026-08-08 — you've had official picks since Leo started;
+  // that phrasing only ever meant "none finished grading for this one
+  // date," never "none ever," but it read like the latter).
+  const calibration = buildCalibration();
+
   return {
     generated_at: new Date().toISOString(),
     status: "ready",
@@ -146,7 +161,7 @@ function buildLearningSummary({ date, day, allDays, clvRows }) {
       clv: fs.existsSync(CLV_PATH) ? "data/clv/clv_log.csv" : null
     },
     current_official_model: currentModelVersion(gradedMoneyline, allGradedMoneyline, day),
-    headline: makeHeadline({ date, wins, losses, winRate, day }),
+    headline: makeHeadline({ date, wins, losses, winRate, day, calibration }),
     day: {
       date,
       source: day.source || "unknown",
@@ -161,8 +176,7 @@ function buildLearningSummary({ date, day, allDays, clvRows }) {
     gates: {
       official_model_probability: 0.72,
       official_lab_score: 80,
-      official_market_edge: 0.03,
-      note: "Official picks require high model probability and strong setup quality. A high Lab Rating alone is not enough."
+      note: "Official picks require high model probability and strong setup quality. A high Lab Rating alone is not enough. (Market edge is no longer a gate -- a picked side with a lower market-implied probability than the model's read can still qualify, as long as market data exists for the game at all.)"
     },
     process_metrics: {
       average_model_probability: avgModelProbability,
@@ -176,7 +190,7 @@ function buildLearningSummary({ date, day, allDays, clvRows }) {
       pitcher_conflict_count: pitcherConflict.length
     },
     findings,
-    calibration: buildCalibration(),
+    calibration,
     buckets: {
       strong_official: strongOfficial.map(publicPickRow),
       protected_by_probability_gate: protectedByGate.map(publicPickRow),
@@ -255,21 +269,29 @@ function legacyMarketRows(p) {
   return out;
 }
 
+// 2026-08-08 (Lynold): removed the early return that used to bail out with a
+// single generic finding the moment TODAY's graded-moneyline count was zero.
+// Three of these four findings (probability gate, bullpen learning, pitcher
+// learning) are built from ALL historical days already and never depended on
+// today's count -- the early return was throwing that data away on any date
+// with zero moneyline picks graded, which is common (most days aren't
+// moneyline-heavy). The "Official-pick discipline" finding below still
+// reports honestly when today's count is zero; it just no longer skips the
+// other three.
 function buildFindings(ctx) {
   const findings = [];
 
-  if (!ctx.gradedMoneyline.length) {
+  if (ctx.gradedMoneyline.length) {
     findings.push({
-      title: "No official moneyline picks graded yet",
-      read: "Learning will become useful after a finished slate is graded under the current model."
+      title: "Official-pick discipline",
+      read: `${ctx.gradedMoneyline.length} moneyline pick${ctx.gradedMoneyline.length === 1 ? "" : "s"} ${ctx.gradedMoneyline.length === 1 ? "was" : "were"} graded today. Record: ${ctx.wins}-${ctx.losses}${ctx.winRate !== null ? ` (${pct(ctx.winRate)})` : ""}.`
     });
-    return findings;
+  } else {
+    findings.push({
+      title: "No new moneyline picks graded today",
+      read: "No moneyline picks finished grading for this date. The findings below draw on the full graded history instead."
+    });
   }
-
-  findings.push({
-    title: "Official-pick discipline",
-    read: `${ctx.gradedMoneyline.length} moneyline pick${ctx.gradedMoneyline.length === 1 ? "" : "s"} ${ctx.gradedMoneyline.length === 1 ? "was" : "were"} graded. Record: ${ctx.wins}-${ctx.losses}${ctx.winRate !== null ? ` (${pct(ctx.winRate)})` : ""}.`
-  });
 
   findings.push({
     title: "Probability gate",
@@ -309,7 +331,10 @@ function buildMultiDayView(days) {
       officialMoneyline++;
       if (row.result === "W") wins++;
       if (row.result === "L") losses++;
-      if (row.status === "official_pick" && num(row.model_probability) >= 0.72 && num(row.lab_score) >= 80 && num(row.raw_edge) >= 0.03) strictGateCandidates++;
+      // 2026-08-08 (Lynold): dropped the stale raw_edge >= 0.03 condition
+      // here too -- see the matching note above strongOfficial. This count
+      // now matches the real gate (probability + Lab only).
+      if (row.status === "official_pick" && num(row.model_probability) >= 0.72 && num(row.lab_score) >= 80) strictGateCandidates++;
       if (num(row.model_probability) < 0.72 && num(row.lab_score) >= 80) lowProbHighLab++;
     }
   }
@@ -352,11 +377,27 @@ function currentModelVersion(dayRows, allRows, day) {
   return day.model_version || historical[historical.length - 1] || day.current_official_model || "unknown";
 }
 
-function makeHeadline({ date, wins, losses, winRate, day }) {
-  if (wins + losses === 0) {
-    return `Learning summary for ${date}: no graded official moneyline picks yet.`;
+// 2026-08-08 (Lynold): when today has zero graded moneyline picks, this used
+// to always print "no graded official moneyline picks yet" -- true only in
+// the narrow sense of "not today," but it read like "we've never had one,"
+// which isn't true (see multi_day.official_moneyline_entries). Now falls
+// back to Leo's actual current record, sourced from the calibration ledger
+// (calibration_model_log.csv, filtered to the latest model_version -- "leo"
+// -- same source the calibration section below already uses), which covers
+// every graded game under the current model regardless of official status.
+// Only falls back to the old cold-start wording if there's truly no
+// calibration data at all yet.
+function makeHeadline({ date, wins, losses, winRate, day, calibration }) {
+  if (wins + losses > 0) {
+    return `Learning summary for ${date}: moneyline record ${wins}-${losses}${winRate !== null ? ` (${pct(winRate)})` : ""}.`;
   }
-  return `Learning summary for ${date}: moneyline record ${wins}-${losses}${winRate !== null ? ` (${pct(winRate)})` : ""}.`;
+  if (calibration && calibration.status === "ready" && calibration.games_graded) {
+    const cw = calibration.wins || 0;
+    const cl = calibration.losses || 0;
+    const cwr = cw + cl ? pct(cw / (cw + cl)) : "-";
+    return `Learning summary for ${date}: no new moneyline picks graded today. Leo's current record: ${cw}-${cl}${cw + cl ? ` (${cwr})` : ""} across ${calibration.games_graded} graded game${calibration.games_graded === 1 ? "" : "s"} (all statuses, model ${calibration.model_version}).`;
+  }
+  return `Learning summary for ${date}: no graded official moneyline picks yet.`;
 }
 
 function readJsonSafe(p) {
@@ -599,6 +640,8 @@ function buildCalibration() {
     status: "ready",
     model_version: latestModelVersion,
     games_graded: rows.length,
+    wins: rows.filter(r => r.won).length,
+    losses: rows.filter(r => !r.won).length,
     brier_score: brier,
     shadow_model: shadow,
     attribution,
