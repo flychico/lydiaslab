@@ -1985,7 +1985,6 @@ function renderRecapReview(recapReview) {
   return `<div class="recap-review">
     <h3>How the analysis held up</h3>
     ${items}
-    <p class="small dim">This checks LyDia's pregame reasoning against what actually happened on the field — independent of whether this game was an official pick. It never changes the pick, the rating, or the probability shown above.</p>
   </div>`;
 }
 
