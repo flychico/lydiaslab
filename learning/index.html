@@ -93,7 +93,8 @@ table.dash tbody tr.clickable.day-row td.date-cell{font-weight:700}
       <span class="dim" id="coverage" style="font-size:.8rem"></span>
     </div>
     <div class="tabs" id="tabs">
-      <button data-t="overview" class="on">Overview</button>
+      <button data-t="summary" class="on">Summary</button>
+      <button data-t="overview">Overview</button>
       <button data-t="breakdown">Break down</button>
       <button data-t="drivers">Drivers</button>
       <button data-t="games">Moneyline</button>
@@ -103,7 +104,12 @@ table.dash tbody tr.clickable.day-row td.date-cell{font-weight:700}
       <button data-t="detail">Game Detail</button>
     </div>
 
-    <section class="tab on" id="tab-overview">
+    <section class="tab on" id="tab-summary">
+      <p class="sec-note">The daily learning summary (<code>data/learning-summary.json</code>) — headline, findings, official-pick gates, and the multi-day record, straight from the same file the pipeline writes every night. This did not appear anywhere on the site before 2026-08-08.</p>
+      <div id="summaryBody" class="loading">Loading learning summary…</div>
+    </section>
+
+    <section class="tab" id="tab-overview">
       <div class="kpis" id="kpis"></div>
       <h2 class="sec">Are we improving?</h2><p class="sec-note">20-game rolling win rate on the model's side. Dashed = 50%.</p>
       <div id="trend"></div><div id="calibration"></div>
@@ -154,7 +160,7 @@ table.dash tbody tr.clickable.day-row td.date-cell{font-weight:700}
 <script>
 renderNav("/articles/"); renderFooter();
 function esc(v){ return escapeHtml(String(v ?? "")); }
-const S={ml:[],report:null,totals:[],kprops:[],recapByPk:{},win:"all",team:"",status:"",ver:"",dim:"status",drv:"pitcher_gap",tab:"overview",page:{games:0,totals:0,kprops:0},sort:{},detail:{date:"",games:[],game:null,briefCache:{}},shadowRaw:[],shadowRows:[],shadowDays:[]};
+const S={ml:[],report:null,totals:[],kprops:[],recapByPk:{},learningSummary:null,win:"all",team:"",status:"",ver:"",dim:"status",drv:"pitcher_gap",tab:"summary",page:{games:0,totals:0,kprops:0},sort:{},detail:{date:"",games:[],game:null,briefCache:{}},shadowRaw:[],shadowRows:[],shadowDays:[]};
 const PAGE=20;
 
 function splitCsv(l){const c=[];let cur="",q=false;for(const ch of l){if(ch==='"')q=!q;else if(ch===','&&!q){c.push(cur);cur="";}else cur+=ch;}c.push(cur);return c;}
@@ -241,6 +247,54 @@ function renderComponents(){
   const take=(help.length||hurt.length)?`<p class="sec-note"><strong>Takeaway:</strong> ${help.length?`<span class="ok">${esc(help.join(", "))}</span> carr${help.length>1?"y":"ies"} real signal`:""}${help.length&&hurt.length?"; ":""}${hurt.length?`<span class="no">${esc(hurt.join(", "))}</span> ${hurt.length>1?"are":"is"} donating points for free or hurting`:""}. Re-weight the rating toward what helps.</p>`:"";
   el.innerHTML=`<p class="sec-note">The Lab Rating hands out points across these components. For each one, this compares games where it paid a <strong>lot</strong> of points ("heavy") against games where it paid <strong>little</strong> ("light"): if the component carries information, the heavy games should win more. <strong>Positive lift = real signal. Zero or negative = it is donating points for free, or actively hurting.</strong></p>`
     +`<table class="dash"><thead><tr><th>Component</th><th class="num">n</th><th class="num">Win% when heavy</th><th class="num">Win% when light</th><th class="num">Lift (heavy − light)</th></tr></thead><tbody>${sorted.map(x=>`<tr><td>${esc(x.component)}</td><td class="num">${x.n}</td><td class="num">${(x.win_rate_above*100).toFixed(0)}%</td><td class="num">${(x.win_rate_below*100).toFixed(0)}%</td><td class="num ${x.lift>=0?'ok':'no'}">${x.lift>0?'+':''}${(x.lift*100).toFixed(1)}%</td></tr>`).join("")}</tbody></table>`+take;
+}
+
+/* ============================================================
+   Learning Summary panel — added 2026-08-08. Renders
+   data/learning-summary.json (headline, findings, gates,
+   process metrics, multi-day record) directly. This file existed
+   and was written every night by the pipeline but nothing on the
+   site read it before today.
+*/
+function renderLearningSummary(){
+  const el = document.getElementById("summaryBody");
+  if(!el) return;
+  const s = S.learningSummary;
+  if(!s){ el.innerHTML = `<p class="dim">data/learning-summary.json not available yet.</p>`; return; }
+  const gates = s.gates || {};
+  const pm = s.process_metrics || {};
+  const md = s.multi_day || {};
+  const day = s.day || {};
+  const findingsHtml = (s.findings || []).map(f =>
+    `<div class="card" style="margin-bottom:10px"><h3>${esc(f.title)}</h3><p class="sec-note" style="margin:0">${esc(f.read)}</p></div>`
+  ).join("") || `<p class="dim">No findings in this file yet.</p>`;
+  const nextReview = (s.next_review || []).map(n => `<li class="sec-note">${esc(n)}</li>`).join("");
+  const cal = s.calibration || {};
+  const kp = cal.kprops || {};
+  el.innerHTML = `
+    <div class="card" style="margin-bottom:16px">
+      <h3 style="margin:0 0 6px">${esc(s.headline || "")}</h3>
+      <p class="sec-note" style="margin:0">Generated ${esc(s.generated_at || "—")} · ${esc(s.days_reviewed || 0)} day(s) reviewed · current model: ${esc(s.current_official_model || "—")}</p>
+    </div>
+    <div class="kpis">
+      ${kpi("Today's moneyline record", day.moneyline_record || "—", day.moneyline_win_rate != null ? pctStr(day.moneyline_win_rate) : "no picks graded today")}
+      ${kpi("Multi-day moneyline record", md.moneyline_record || "—", (md.moneyline_win_rate != null ? pctStr(md.moneyline_win_rate) + " · " : "") + (md.official_moneyline_entries || 0) + " entries")}
+      ${kpi("Strong official (prob + Lab)", pm.strong_official_count ?? "—", "qualifies both gates")}
+      ${kpi("Protected by prob gate", pm.protected_by_probability_gate_count ?? "—", "high Lab, model prob < 72%")}
+    </div>
+    <h2 class="sec">Official-pick gates</h2>
+    <p class="sec-note">${esc(gates.note || "")}</p>
+    <table class="dash"><tbody>
+      <tr><td>Minimum model probability</td><td class="num">${gates.official_model_probability != null ? pctStr(gates.official_model_probability) : "—"}</td></tr>
+      <tr><td>Minimum Lab Rating</td><td class="num">${gates.official_lab_score ?? "—"}</td></tr>
+    </tbody></table>
+    <h2 class="sec">Findings</h2>
+    ${findingsHtml}
+    <h2 class="sec">K-props self-calibration</h2>
+    <p class="sec-note">${kp.status === "ready" ? `${esc(kp.self_calibration || "")} · ${esc(kp.graded ?? 0)} graded, bias ${esc(kp.bias ?? "—")}, MAE ${esc(kp.mae ?? "—")}, lean record ${esc(kp.lean_record || "—")}` : "Not enough graded K-props yet."}</p>
+    <h2 class="sec">Next review</h2>
+    <ul>${nextReview || `<li class="dim">Nothing queued.</li>`}</ul>
+  `;
 }
 
 const DIMS=[["status","Status"],["model_version","Model version"],["market","Market (follow / fade)"],["band","Rating band"],["venue","Home / Road"],["model_side","Team"]];
@@ -596,8 +650,25 @@ function parseShadowCSV(text){
   }));
 }
 function buildShadowRows(){
+  // 2026-08-08 (Sherlock audit): this used to fold EVERY row shadow_model_log.csv
+  // has ever logged into one "full history" Brier score, mixing whichever
+  // official/shadow model-version pairs happened to run on different days
+  // (e.g. an old official era vs. Leo, or an old shadow build vs.
+  // v3.1-bullpen). generate-learning-summary.js's own shadow_model block
+  // explicitly filters to only the LATEST matching official/shadow version
+  // pair for exactly this reason -- its note field literally says "Promote
+  // nothing from a mixed-version sample." This page was violating that rule
+  // while the JSON file next to it was following it, so the two Brier
+  // numbers could (and did) disagree. Now filtered the same way, so this
+  // page and data/learning-summary.json's calibration.shadow_model read the
+  // same games.
+  const latest = S.shadowRaw[S.shadowRaw.length - 1];
+  const raw = latest
+    ? S.shadowRaw.filter(r => r.officialVersion === latest.officialVersion && r.shadowVersion === latest.shadowVersion)
+    : S.shadowRaw;
+  S.shadowVersionPair = latest ? { official: latest.officialVersion, shadow: latest.shadowVersion } : null;
   const mlByPk = {}; for(const r of S.ml) mlByPk[r.gamePk] = r;
-  return S.shadowRaw.map(s => {
+  return raw.map(s => {
     const m = mlByPk[s.gamePk] || {};
     const homeTeam = homeOf(m.matchup);
     const awayTeam = (m.matchup||"").split(" @ ")[0] || "";
@@ -635,12 +706,13 @@ function renderShadowKpis(){
   const disagreements = rows.filter(r=>r.agree===false).length;
   const days = new Set(rows.map(r=>r.date)).size;
   const lead = (oBrier!=null && sBrier!=null) ? (sBrier < oBrier ? "Shadow" : (oBrier < sBrier ? "Leo" : "Tied")) : "—";
+  const pair = S.shadowVersionPair;
   document.getElementById("shadowKpis").innerHTML = [
-    kpi("Full history — Leo Brier", oBrier==null?"—":oBrier.toFixed(4), `${oW}-${og.length-oW} · ${og.length} graded`),
-    kpi("Full history — Shadow Brier", sBrier==null?"—":sBrier.toFixed(4), `${sW}-${sg.length-sW} · ${sg.length} graded`),
+    kpi("Current model — Leo Brier", oBrier==null?"—":oBrier.toFixed(4), `${oW}-${og.length-oW} · ${og.length} graded`),
+    kpi("Current model — Shadow Brier", sBrier==null?"—":sBrier.toFixed(4), `${sW}-${sg.length-sW} · ${sg.length} graded`),
     kpi("Lower Brier so far", lead, oBrier!=null&&sBrier!=null?`${Math.abs(oBrier-sBrier).toFixed(4)} gap`:""),
     kpi("Disagreement rate", rows.length?((disagreements/rows.length)*100).toFixed(0)+"%":"—", `${disagreements} of ${rows.length} games, ${days} nights`)
-  ].join("");
+  ].join("") + (pair ? `<p class="sec-note" style="margin-top:8px">Matches data/learning-summary.json's shadow_model block: only the latest official/shadow version pair (${esc(pair.official)} vs ${esc(pair.shadow)}) is compared, same as that file. Older mixed-version games are excluded here, not just hidden.</p>` : "");
 }
 function renderShadowDayTable(){
   const byDate = new Map();
@@ -702,7 +774,7 @@ async function openGameDetail(date, gamePk){
   }
 }
 
-function renderAll(){ renderOverview(); renderBreakdown(); renderDrivers(); renderGames(); renderTotals(); renderKprops(); renderShadowTab(); }
+function renderAll(){ renderLearningSummary(); renderOverview(); renderBreakdown(); renderDrivers(); renderGames(); renderTotals(); renderKprops(); renderShadowTab(); }
 function showTab(t){ S.tab=t; document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on")); document.getElementById("tab-"+t).classList.add("on"); document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.getAttribute("data-t")===t)); }
 
 document.getElementById("tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(b)showTab(b.getAttribute("data-t"));});
@@ -712,16 +784,16 @@ document.getElementById("windowSeg").addEventListener("click",e=>{const b=e.targ
 (async function(){
   const st=document.getElementById("status");
   const grab=(u,j)=>fetch(u+"?v="+Date.now(),{cache:"no-store"}).then(r=>r.ok?(j?r.json():r.text()):null).catch(()=>null);
-  const [attT,calT,rep,totT,kpT,recapT,shadowT]=await Promise.all([
+  const [attT,calT,rep,totT,kpT,recapT,shadowT,learnSumT]=await Promise.all([
     grab("/data/calibration/attribution_model_log.csv"),grab("/data/calibration/calibration_model_log.csv"),
     grab("/data/calibration/confidence_report.json",true),grab("/data/calibration/totals_model_log.csv"),
     grab("/data/calibration/kprops_log.csv"),grab("/data/calibration/recap_components.csv"),
-    grab("/data/calibration/shadow_model_log.csv")
+    grab("/data/calibration/shadow_model_log.csv"),grab("/data/learning-summary.json",true)
   ]);
   const att=parseCSV(attT), cal=parseCSV(calT);
   if(!att.length && !cal.length){ st.textContent="No graded data found yet."; return; }
   S.ml=buildMoneyline(att.length?att:cal.map(c=>({...c,lab:c.lab_score})), cal);
-  S.report=rep||null; S.totals=parseCSV(totT); S.kprops=parseCSV(kpT);
+  S.report=rep||null; S.totals=parseCSV(totT); S.kprops=parseCSV(kpT); S.learningSummary=learnSumT||null;
   const recap=parseCSV(recapT); S.recapByPk={}; for(const r of recap){if(r.game_pk)S.recapByPk[r.game_pk]=r;}
   S.shadowRaw = shadowT ? parseShadowCSV(shadowT) : [];
   S.shadowRows = buildShadowRows();
