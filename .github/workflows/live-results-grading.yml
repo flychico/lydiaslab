@@ -1,13 +1,26 @@
 name: Live results grading
 
-# Updates the public results record during the game window.
-# It grades both today and yesterday in Eastern time so late games that finish after midnight are covered.
+# Updates the public results record.
+#
+# 2026-08-08: Cut from every 30 minutes to once a day, at 10:00pm ET
+# (02:00 UTC), per Lynold — deployment volume reduction. This workflow was
+# by far the single biggest source of commits/deploys: up to ~32 runs/day
+# during the live-game window (17-23 UTC and 0-8 UTC), each committing and
+# triggering a Pages deploy whenever a score changed.
+#
+# Still grades both yesterday and today in Eastern time on every run, same as
+# before, so a game that finishes after midnight ET is still covered by the
+# next run picking up "yesterday." One real consequence of going from
+# every-30-min to once-daily: a West Coast game that's still in progress at
+# 10pm ET won't be reflected on the public results page until the NEXT run —
+# either tomorrow's 10pm run, or daily-recap.yml's 7:35am ET run the next
+# morning, which also calls grade-results.js and will catch it before
+# calibration grading happens either way. Nothing is lost permanently; the
+# live page is just no longer live-live during the overnight stretch.
 
 on:
   schedule:
-    # MLB day and night window in UTC. GitHub cron uses UTC.
-    - cron: "*/30 17-23 * * *"
-    - cron: "*/30 0-8 * * *"
+    - cron: "0 2 * * *"    # 10:00pm ET — once daily, was */30 across ~15hrs/day
   workflow_dispatch:
     inputs:
       date:
