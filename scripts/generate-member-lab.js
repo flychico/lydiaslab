@@ -1448,7 +1448,17 @@ function buildPicksFile(rows, generatedAt) {
       edgeScore: r.lab_score,
       rawEdge: r.edge,
       why: r.read,
-      risk: riskNote(r)
+      risk: riskNote(r),
+      // 2026-08-08: totals and strikeouts each tag their OWN modelVersion
+      // inside their own sub-object (see below); moneyline previously had
+      // no such field and downstream grading fell back to the pick GROUP's
+      // modelVersion ("multi-market-v1", a publish-policy label, not a
+      // formula name) -- so a graded moneyline pick logged "multi-market-v1"
+      // as its model version while the separate calibration ledger logged
+      // the identical game as "leo". Same model, two different labels in
+      // two different ledgers. Tagging it explicitly here fixes that; see
+      // grade-results.js's buildLearning(), which now prefers this field.
+      modelVersion: MONEYLINE_MODEL_VERSION
     };
   }
 
@@ -1520,7 +1530,13 @@ function buildPicksFile(rows, generatedAt) {
       expectedInnings: rec.expected_innings,
       pitcherRole: rec.pitcher_role,
       lineupSource: rec.opp_lineup_source,
-      modelVersion: "pitcher-strikeouts-self-calibrated-v1",
+      // 2026-08-08: renamed from "pitcher-strikeouts-self-calibrated-v1" —
+      // Lynold's call, "Leo" is the model name across the site now and this
+      // needed to be discoverable as the same model family. Rename only;
+      // the computation in update-k-props.js did not change. Formula
+      // written out explicitly at the top of that file and in the vault
+      // (Model Versions.md > "leo-kprop").
+      modelVersion: "leo-kprop",
       valueTag: "OFFICIAL PICK"
     });
   }

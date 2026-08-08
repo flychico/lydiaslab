@@ -8,6 +8,67 @@
   - Writes data/k-props/<date>.json and data/k-props/today.json keyed by pitcher name:
     consensus line (median), best over/under prices at that line, book count.
   - No key or missing data → logs and exits 0. The daily run is never blocked.
+
+  Model name: "Leo K-Prop" (renamed 2026-08-08 from
+  pitcher-strikeouts-self-calibrated-v1, published in generate-member-lab.js
+  as modelVersion "leo-kprop" -- Lynold's call: "Leo" is the model name
+  across the site now, and it needed to be discoverable that this is the
+  same model family, computed fresh every run plus one learned correction).
+  Rename only -- the computation below did not change.
+
+  ============================================================
+  THE FORMULA, WRITTEN OUT EXPLICITLY
+  ============================================================
+    projRaw = expIP × bfPerIp × kRate × adj × whiffFactor
+    proj    = projRaw + selfCalBias(projRaw)
+
+  expIP        Expected innings for this pitcher: from the reported pitching
+               plan if one exists, else the role classifier's default for
+               his usage pattern (starter / opener / bulk).
+
+  bfPerIp      Batters faced per inning, THIS pitcher's own rate (role-aware
+               -- a bulk-role pitcher uses his role-specific BF/IP, not his
+               overall season number), clamped to [3.6, 4.8] so a thin
+               sample can't produce an unrealistic pace.
+
+  kRate        Season K/BF blended toward his last 5 starts, sample-weighted
+               so a short recent window can't overrule a full season alone:
+                 weight = recentBF / (recentBF + 200)
+                 kRate  = seasonRate + weight × (recentRate − seasonRate)
+               capped to within ±15% of the season rate either direction.
+
+  adj          Opponent adjustment = this lineup's K rate ÷ the slate-wide
+               average lineup K rate. "This lineup's K rate" is the
+               UNWEIGHTED mean of the nine batters' individual trailing-30-
+               day K%, using the posted lineup once it's up, or the team's
+               projected regulars before it posts. Falls back to a team-
+               season-K%-vs-pitcher-hand ratio if fewer than 7 of 9 hitters
+               can be resolved.
+
+  whiffFactor  Arsenal / swing-and-miss leverage: how much MORE or LESS this
+               specific lineup whiffs against this specific pitcher's actual
+               pitch-type mix, versus a league-average lineup facing the
+               same mix. Capped ±12%, confidence-scaled to half weight when
+               only projected regulars are available instead of the posted
+               lineup.
+
+  selfCalBias  A rolling correction learned from the last 150 graded starts
+               (K_WINDOW), banded by projection size (<6 / 6-7 / >=7 Ks --
+               K_BANDS), shrunk toward zero for thin bands (n < 15 games --
+               K_MIN_N -- or a correction smaller than 0.15 K -- K_MIN_BIAS
+               -- does nothing), capped at ±1.5 K (K_CAP) so no single band
+               can swing a projection too far. This is the ONLY place recent
+               grading results feed back into the number -- everything
+               above is recomputed from real, current data every run, never
+               cached or reused from a prior day.
+
+  Market line, price, and the official-pick gate (edge >= 0.7 K, posted
+  lineup required, 2+ books, non-opener workload >= 4 expected innings) are
+  handled separately in generate-member-lab.js -- this formula only
+  produces the projection itself. Full narrative version, with the incident
+  history behind each constant, is in the Learning Vault: 04 Model and
+  Picks > Model Versions.md > "leo-kprop".
+  ============================================================
 */
 const fs = require("fs");
 const path = require("path");
