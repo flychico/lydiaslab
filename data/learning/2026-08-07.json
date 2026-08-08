@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-08T19:08:59.952Z",
+  "generated_at": "2026-08-08T19:21:18.534Z",
   "status": "ready",
   "latest_date": "2026-08-07",
   "days_reviewed": 30,
@@ -8,7 +8,7 @@
     "clv": "data/clv/clv_log.csv"
   },
   "current_official_model": "multi-market-v1",
-  "headline": "Learning summary for 2026-08-07: no graded official moneyline picks yet.",
+  "headline": "Learning summary for 2026-08-07: no new moneyline picks graded today. Leo's current record: 13-11 (54.2%) across 24 graded games (all statuses, model leo).",
   "day": {
     "date": "2026-08-07",
     "source": "published-picks",
@@ -23,8 +23,7 @@
   "gates": {
     "official_model_probability": 0.72,
     "official_lab_score": 80,
-    "official_market_edge": 0.03,
-    "note": "Official picks require high model probability and strong setup quality. A high Lab Rating alone is not enough."
+    "note": "Official picks require high model probability and strong setup quality. A high Lab Rating alone is not enough. (Market edge is no longer a gate -- a picked side with a lower market-implied probability than the model's read can still qualify, as long as market data exists for the game at all.)"
   },
   "process_metrics": {
     "average_model_probability": null,
@@ -39,14 +38,28 @@
   },
   "findings": [
     {
-      "title": "No official moneyline picks graded yet",
-      "read": "Learning will become useful after a finished slate is graded under the current model."
+      "title": "No new moneyline picks graded today",
+      "read": "No moneyline picks finished grading for this date. The findings below draw on the full graded history instead."
+    },
+    {
+      "title": "Probability gate",
+      "read": "Across all reviewed days, 13 graded setups had strong Lab Rating but model probability below 72%. Those should remain value watch, not official picks."
+    },
+    {
+      "title": "Bullpen learning",
+      "read": "Across all reviewed days, 7 graded moneyline picks carried a meaningful bullpen caution. Review these before adjusting thresholds."
+    },
+    {
+      "title": "Pitcher learning",
+      "read": "No major starting-pitcher conflicts showed up in the graded moneyline set."
     }
   ],
   "calibration": {
     "status": "ready",
     "model_version": "leo",
     "games_graded": 24,
+    "wins": 13,
+    "losses": 11,
     "brier_score": 0.2338,
     "shadow_model": {
       "status": "ready",
