@@ -132,8 +132,8 @@ function jumpToGame(pk) {
 function f3(v){ return Number.isFinite(v) ? v.toFixed(3).replace(/^0/, "") : "—"; }
 function seasonYear(){ const d = new Date(datePick.value + "T12:00"); return d.getMonth() >= 2 ? d.getFullYear() : d.getFullYear() - 1; }
 
-// wOBA linear weights -- must match scripts/generate-matchup-pages.js's
-// fetchOffense30(), scripts/generate-member-lab.js's wobaOf(), and
+// wOBA linear weights -- must match LyDia daily engine's
+// fetchOffense30(), LyDia daily engine's wobaOf(), and
 // stats/index.html's wobaOf() exactly (kept in sync manually across all four).
 const WOBA_W = { bb: 0.69, hbp: 0.72, "1b": 0.89, "2b": 1.27, "3b": 1.62, hr: 2.10 };
 function wobaOf(st) {
