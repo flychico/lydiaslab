@@ -25,6 +25,21 @@
   skips the fetch when nothing has changed. A missing/stale prior capture
   (the day's first run) always falls through to a real fetch -- it does not
   skip, it captures.
+
+  2026-08-08 (ERR-20260808-02): added a second, free trigger -- a game whose
+  lineup has since posted also forces a re-capture, using the same schedule
+  call this script already makes for probables (now hydrated with
+  ,lineups too, at zero extra cost -- statsapi.mlb.com is free regardless of
+  hydrate params). NOTE this is a weaker signal here than it is for
+  update-k-props.js / update-totals.js: this script's own model (market
+  win probability, read directly off h2h odds) does not consume lineup data
+  at all, so a lineup posting is only a loose correlate of "the price may
+  have moved," not a direct trigger the way it is for a lineup-wOBA-driven
+  projection. It's included because it's free and better than nothing, not
+  because it's a targeted fix. Genuine price drift with no lineup or pitcher
+  change (the actual gap the Cubs case exposed) still requires the paid
+  odds call itself to detect -- there is no free proxy for that. See
+  NOTES.md.
 */
 const fs = require("fs");
 const path = require("path");
@@ -50,22 +65,29 @@ main().catch(e => { console.error("moneyline odds capture error:", e.message); p
 
 // Same probable-pitcher signature construction as update-totals.js /
 // update-k-props.js, so the three scripts' --if-changed behavior agrees on
-// what "changed" means for a given slate.
-async function currentProbables() {
-  const sched = await fetchJson(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${DATE}&hydrate=probablePitcher`);
-  const out = {};
+// what "changed" means for a given slate. Now also hydrates lineups on the
+// same call (free) to build a lineup-posted signature alongside it.
+async function currentProbablesAndLineups() {
+  const sched = await fetchJson(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${DATE}&hydrate=probablePitcher,lineups`);
+  const probables = {};
+  const lineupsPosted = {};
   for (const g of (((sched.dates || [])[0]) || {}).games || []) {
     if (!g.status || g.status.abstractGameState !== "Preview") continue;
-    out[g.gamePk] = {
+    probables[g.gamePk] = {
       away: (g.teams.away.probablePitcher || {}).fullName || "TBD",
       home: (g.teams.home.probablePitcher || {}).fullName || "TBD"
     };
+    const lu = g.lineups || {};
+    lineupsPosted[g.gamePk] = {
+      away: (lu.awayPlayers || []).length >= 9,
+      home: (lu.homePlayers || []).length >= 9
+    };
   }
-  return out;
+  return { probables, lineupsPosted };
 }
 
 async function main() {
-  const probables = await currentProbables().catch(() => ({}));
+  const { probables, lineupsPosted } = await currentProbablesAndLineups().catch(() => ({ probables: {}, lineupsPosted: {} }));
 
   if (IF_CHANGED) {
     // No comparable capture yet today (first run of the day, or a stale file
@@ -86,8 +108,18 @@ async function main() {
           if (was[side] === "TBD" && cur[side] !== "TBD") changes.push(`TBD → ${cur[side]}`);
         }
       }
-      if (!changes.length) { console.log("Moneyline odds: probables unchanged — keeping the morning capture, no API call."); return; }
-      console.log(`Moneyline odds: pitcher change (${changes.join("; ")}) — re-capturing.`);
+      // 2026-08-08 (ERR-20260808-02): same free lineup-posted trigger added
+      // to update-k-props.js / update-totals.js. See file header for why
+      // this is a weaker signal for moneyline specifically.
+      const prevLineups = prev.lineups_posted || {};
+      for (const [pk, cur] of Object.entries(lineupsPosted)) {
+        const was = prevLineups[pk];
+        if (!was) continue;
+        if (was.away === false && cur.away) changes.push(`game ${pk}: away lineup now posted`);
+        if (was.home === false && cur.home) changes.push(`game ${pk}: home lineup now posted`);
+      }
+      if (!changes.length) { console.log("Moneyline odds: probables and lineups unchanged — keeping the morning capture, no API call."); return; }
+      console.log(`Moneyline odds: change (${changes.join("; ")}) — re-capturing.`);
     }
   }
 
@@ -105,6 +137,7 @@ async function main() {
     generated_at: new Date().toISOString(),
     source: "the-odds-api h2h, no-vig blended across books",
     probables,
+    lineups_posted: lineupsPosted,
     games
   };
 

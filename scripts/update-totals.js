@@ -34,7 +34,11 @@
   - Market line: The Odds API featured `totals` market (ONE bulk request for the
     whole slate). Consensus = most common posted line; best O/U prices at it.
   - Captured once at publish, kept all day; --if-changed re-captures only when a
-    listed starter changes (same policy as K props).
+    listed starter changes (same policy as K props), OR — 2026-08-08,
+    ERR-20260808-02 — when a game's lineup has since posted. The lineup check
+    piggybacks on the schedule call this script already makes every run
+    (hydrate=probablePitcher,lineups), so it costs zero extra API calls even
+    though this script's paid odds fetch is what --if-changed exists to avoid.
   - No key → projections still computed, lines null. Nothing blocks the run.
 
   official_totals_enabled is permanently OFF, per Lynold 2026-07-29: totals
@@ -131,10 +135,28 @@ async function currentProbables(games) {
   return out;
 }
 
+// 2026-08-08 (ERR-20260808-02): lineup-posted status per game, read straight
+// off the `games` array the main schedule call already fetched with
+// hydrate=lineups — no separate API call. away/home is "has 9+ hitters
+// posted", same threshold generate-member-lab.js and update-k-props.js use.
+function currentLineupsPosted(games) {
+  const out = {};
+  for (const g of games) {
+    if (!g.status || g.status.abstractGameState !== "Preview") continue;
+    const lu = g.lineups || {};
+    out[g.gamePk] = {
+      away: (lu.awayPlayers || []).length >= 9,
+      home: (lu.homePlayers || []).length >= 9
+    };
+  }
+  return out;
+}
+
 async function main() {
   const sched = await j(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${DATE}&hydrate=probablePitcher,lineups`);
   const games = (((sched.dates || [])[0]) || {}).games || [];
   const probables = await currentProbables(games);
+  const lineupsPosted = currentLineupsPosted(games);
   const reportedPlans = PitchingPlan.load(ROOT, DATE);
   const pitchingPlanSignature = JSON.stringify(reportedPlans.games || {});
 
@@ -162,8 +184,23 @@ async function main() {
           if (was[side] === "TBD" && cur[side] !== "TBD") changes.push(`TBD → ${cur[side]}`);
         }
       }
-      if (!changes.length) { console.log("Totals: probables unchanged — keeping the morning capture, no API call."); return; }
-      console.log(`Totals: pitcher change (${changes.join("; ")}) — re-capturing.`);
+      // 2026-08-08 (ERR-20260808-02): a game whose pitcher was locked in
+      // early otherwise never gets its lineup-wOBA offense_adj recomputed
+      // for the rest of the day, no matter how many more times prepare-slate
+      // runs -- lineup_available stays false and offense_adj stays 0 (the
+      // exact bug reported for K props, same root cause, same fix pattern).
+      // Compares against prev.lineups_posted (added below) using the
+      // lineups already hydrated on the schedule call above -- zero extra
+      // API calls either way.
+      const prevLineups = prev.lineups_posted || {};
+      for (const [pk, cur] of Object.entries(lineupsPosted)) {
+        const was = prevLineups[pk];
+        if (!was) continue;
+        if (was.away === false && cur.away) changes.push(`game ${pk}: away lineup now posted`);
+        if (was.home === false && cur.home) changes.push(`game ${pk}: home lineup now posted`);
+      }
+      if (!changes.length) { console.log("Totals: probables and lineups unchanged — keeping the morning capture, no API call."); return; }
+      console.log(`Totals: change (${changes.join("; ")}) — re-capturing.`);
     }
   }
 
@@ -738,7 +775,7 @@ async function main() {
     }
   } catch (e) {}
 
-  const payload = { date: DATE, generated_at: new Date().toISOString(), model_version: TOTALS_MODEL_VERSION, policy: TOTALS_POLICY, source: "LyDia totals projection (median RPG + lineup wOBA offense adjustment + FIP-lite starter adjustment + shrunk bullpen era_7d adjustment) + the-odds-api totals consensus", league_rpg: Number(lgRPG.toFixed(2)), probables, pitching_plan_signature: pitchingPlanSignature, games: out, learned_bias: learnedBias, learned_n: learnedN };
+  const payload = { date: DATE, generated_at: new Date().toISOString(), model_version: TOTALS_MODEL_VERSION, policy: TOTALS_POLICY, source: "LyDia totals projection (median RPG + lineup wOBA offense adjustment + FIP-lite starter adjustment + shrunk bullpen era_7d adjustment) + the-odds-api totals consensus", league_rpg: Number(lgRPG.toFixed(2)), probables, lineups_posted: lineupsPosted, pitching_plan_signature: pitchingPlanSignature, games: out, learned_bias: learnedBias, learned_n: learnedN };
   fs.mkdirSync(path.join(ROOT, "data", "totals"), { recursive: true });
   fs.writeFileSync(path.join(ROOT, "data", "totals", `${DATE}.json`), JSON.stringify(payload, null, 1));
   fs.writeFileSync(path.join(ROOT, "data", "totals", "today.json"), JSON.stringify(payload, null, 1));

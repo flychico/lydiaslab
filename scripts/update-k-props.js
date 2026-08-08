@@ -45,6 +45,35 @@ async function currentProbables() {
   return out;
 }
 
+/*
+  2026-08-08, ERR-20260808-02: a second, narrower schedule fetch (hydrate=lineups,
+  free MLB endpoint, not paid odds quota) built specifically to catch the gap
+  `currentProbables()` cannot see -- a game whose PITCHER hasn't changed all day
+  but whose OPPOSING LINEUP has since posted. The official-pick gate for K props
+  requires opp_lineup_source === "posted" (2026-07-30, Lynold's call). Before
+  this, a pitcher confirmed at the day's first capture (e.g. the 4am run, before
+  any lineup posts) could never re-trigger a capture later in the day under
+  --if-changed's old pitcher-only change detection, since "the probable pitcher"
+  is the only thing it compared -- so opp_lineup_source stayed frozen at
+  "projected_regulars" all day even once the real lineup went up and the K prop
+  could never clear the gate, no matter how many times prepare-slate.yml ran.
+  Diagnosed from a live case: Chris Sale / Gerrit Cole (Braves @ Yankees,
+  2026-08-08), both locked in as probables since the 4:02am UTC capture, both
+  showing a real Over edge that never went official.
+*/
+async function currentLineupsPosted() {
+  const sched = await j(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${DATE}&hydrate=lineups`);
+  const out = {};
+  for (const g of (((sched.dates || [])[0]) || {}).games || []) {
+    if (!g.status || g.status.abstractGameState !== "Preview") continue;
+    out[g.gamePk] = {
+      away: (((g.lineups || {}).awayPlayers) || []).length >= 9,
+      home: (((g.lineups || {}).homePlayers) || []).length >= 9
+    };
+  }
+  return out;
+}
+
 async function main() {
   if (!KEY) { console.log("ODDS_API_KEY not set — strikeout props skipped."); return; }
   const reportedPlans = PitchingPlan.load(ROOT, DATE);
@@ -52,7 +81,8 @@ async function main() {
 
   if (IF_CHANGED) {
     // Lines are captured once at publish and kept all day — only a pitcher
-    // change re-captures.
+    // change, or (2026-08-08) an opposing lineup that has since posted,
+    // re-captures.
     //
     // 2026-08-05: a missing/stale prior capture used to be treated the same
     // as "nothing changed" (return early, no fetch) -- correct once something
@@ -78,8 +108,25 @@ async function main() {
           if (was[side] === "TBD" && cur[side] !== "TBD") changes.push(`TBD → ${cur[side]}`);
         }
       }
-      if (!changes.length) { console.log("Probables unchanged — keeping the morning capture, no API call."); return; }
-      console.log(`Pitcher change detected (${changes.join("; ")}) — re-capturing prop lines.`);
+      // 2026-08-08 (ERR-20260808-02): catch a lineup that has since posted for
+      // any pitcher whose prior capture still shows a non-posted opposing
+      // lineup. Checked with a free MLB schedule call, not the paid odds API,
+      // so this costs nothing when nothing has actually posted. Checking
+      // "either side posted" per game rather than resolving each pitcher's
+      // specific opponent side is deliberately loose -- the cost of a false
+      // trigger is one harmless extra event call, the cost of a false skip is
+      // a K prop that can never go official all day.
+      const stillWaiting = Object.values(prev.pitchers || {}).some(rec => rec.opp_lineup_source !== "posted");
+      if (stillWaiting) {
+        const lineupsNow = await currentLineupsPosted().catch(() => ({}));
+        for (const [key, rec] of Object.entries(prev.pitchers || {})) {
+          if (rec.opp_lineup_source === "posted") continue;
+          const lu = lineupsNow[rec.game_pk];
+          if (lu && (lu.away || lu.home)) changes.push(`${rec.name}: opposing lineup now posted`);
+        }
+      }
+      if (!changes.length) { console.log("Probables and lineups unchanged — keeping the morning capture, no API call."); return; }
+      console.log(`Change detected (${changes.join("; ")}) — re-capturing prop lines.`);
     }
   }
   const events = await j(`https://api.the-odds-api.com/v4/sports/baseball_mlb/events?apiKey=${KEY}`);
