@@ -71,6 +71,10 @@ table.dash tbody tr.clickable{cursor:pointer}table.dash tbody tr.clickable:hover
 .btn{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:7px 13px;color:inherit;cursor:pointer;font-size:.83rem}
 .btn:hover{background:var(--bg-card)}
 .btn.primary{border-color:#8b5cf6;color:#8b5cf6;font-weight:700}
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.72rem;font-weight:700}
+.tag.agree{background:rgba(46,204,113,.12);color:#2ecc71}
+.tag.disagree{background:rgba(230,126,34,.14);color:#e67e22}
+table.dash tbody tr.clickable.day-row td.date-cell{font-weight:700}
 </style>
 </head>
 <body>
@@ -95,6 +99,7 @@ table.dash tbody tr.clickable{cursor:pointer}table.dash tbody tr.clickable:hover
       <button data-t="games">Moneyline</button>
       <button data-t="totals">Totals</button>
       <button data-t="kprops">K-Props</button>
+      <button data-t="shadow">Leo vs Shadow</button>
       <button data-t="detail">Game Detail</button>
     </div>
 
@@ -125,6 +130,15 @@ table.dash tbody tr.clickable{cursor:pointer}table.dash tbody tr.clickable:hover
     <section class="tab" id="tab-totals"><div id="totalsWrap"></div></section>
     <section class="tab" id="tab-kprops"><div id="kpropsWrap"></div></section>
 
+    <section class="tab" id="tab-shadow">
+      <p class="sec-note">Leo is the official model — calibrated, drives real picks. <code>v3.1-bullpen</code> ("shadow") runs beside it on every graded game, never drives a pick, and is never shown to members. This compares them game by game and night by night: who called it, whose probability was closer to the truth (Brier score — lower is better), and where they disagreed.</p>
+      <div class="kpis" id="shadowKpis"></div>
+      <h2 class="sec">Night by night</h2>
+      <p class="sec-note">Click a date to see every game that night: both models' probabilities, which side each favored, and the actual result. A red Brier delta means shadow was worse that night; green means shadow was better.</p>
+      <div style="overflow-x:auto"><table class="dash" id="shadowDayTable"></table></div>
+      <div id="shadowDrill"></div>
+    </section>
+
     <section class="tab" id="tab-detail">
       <p class="sec-note">Pick any past graded date and game to see the real inputs the model used — starter quality, bullpen state, offense form, market price — and the shadow model's read alongside Leo's. Then try swapping a pitcher, a bullpen, or an offense in the what-if panel below and see both models' probabilities recompute live.</p>
       <div class="controls">
@@ -140,7 +154,7 @@ table.dash tbody tr.clickable{cursor:pointer}table.dash tbody tr.clickable:hover
 <script>
 renderNav("/articles/"); renderFooter();
 function esc(v){ return escapeHtml(String(v ?? "")); }
-const S={ml:[],report:null,totals:[],kprops:[],recapByPk:{},win:"all",team:"",status:"",ver:"",dim:"status",drv:"pitcher_gap",tab:"overview",page:{games:0,totals:0,kprops:0},sort:{},detail:{date:"",games:[],game:null,briefCache:{}}};
+const S={ml:[],report:null,totals:[],kprops:[],recapByPk:{},win:"all",team:"",status:"",ver:"",dim:"status",drv:"pitcher_gap",tab:"overview",page:{games:0,totals:0,kprops:0},sort:{},detail:{date:"",games:[],game:null,briefCache:{}},shadowRaw:[],shadowRows:[],shadowDays:[]};
 const PAGE=20;
 
 function splitCsv(l){const c=[];let cur="",q=false;for(const ch of l){if(ch==='"')q=!q;else if(ch===','&&!q){c.push(cur);cur="";}else cur+=ch;}c.push(cur);return c;}
@@ -555,7 +569,140 @@ function wireDetailTab(){
   if(dateInput.value){ S.detail.date=dateInput.value; loadDetailDate(dateInput.value); }
 }
 
-function renderAll(){ renderOverview(); renderBreakdown(); renderDrivers(); renderGames(); renderTotals(); renderKprops(); }
+/* ============================================================
+   Leo vs Shadow — night-by-night breakdown
+   ============================================================
+   Reads data/calibration/shadow_model_log.csv directly (date, gamePk,
+   p_home_official, p_home_shadow, home_won, plus the component columns
+   added 2026-08-07 — off_adj/bp_adj/fip per side, present from that date
+   forward, blank on older rows). Joined against S.ml (already loaded from
+   attribution+calibration) by gamePk to get the matchup name, which side
+   the official pick actually was, and the real W/L result — S.ml's
+   "result" column is pick-side, not home-side, and is the correct measure
+   of whether the model's call was right.
+*/
+function parseShadowCSV(text){
+  const rows = parseCSV(text);
+  return rows.map(r => ({
+    date: r.date, gamePk: r.gamePk,
+    officialVersion: r.official_model_version, shadowVersion: r.shadow_model_version,
+    pHomeOfficial: numOr(r.p_home_official), pHomeShadow: numOr(r.p_home_shadow),
+    homeWon: r.home_won === "1" ? 1 : (r.home_won === "0" ? 0 : null),
+    shadowFipAway: numOr(r.shadow_fip_away), shadowFipHome: numOr(r.shadow_fip_home),
+    shadowOffAdj: numOr(r.shadow_off_adj), shadowBpAdj: numOr(r.shadow_bp_adj),
+    officialEffEraAway: numOr(r.official_effective_era_away), officialEffEraHome: numOr(r.official_effective_era_home),
+    officialLegacyHome: numOr(r.official_legacy_strength_home),
+    officialBpRiskAway: numOr(r.official_bullpen_risk_away), officialBpRiskHome: numOr(r.official_bullpen_risk_home)
+  }));
+}
+function buildShadowRows(){
+  const mlByPk = {}; for(const r of S.ml) mlByPk[r.gamePk] = r;
+  return S.shadowRaw.map(s => {
+    const m = mlByPk[s.gamePk] || {};
+    const homeTeam = homeOf(m.matchup);
+    const awayTeam = (m.matchup||"").split(" @ ")[0] || "";
+    const officialWon = m.won; // pick-side correctness, from the calibration ledger — the real metric
+    const shadowPicksHome = s.pHomeShadow != null ? s.pHomeShadow >= 0.5 : null;
+    const officialPicksHome = m.model_side && homeTeam ? (m.model_side === homeTeam) : (s.pHomeOfficial != null ? s.pHomeOfficial >= 0.5 : null);
+    const shadowWon = (shadowPicksHome != null && s.homeWon != null) ? ((shadowPicksHome && s.homeWon === 1) || (!shadowPicksHome && s.homeWon === 0)) : null;
+    const agree = (shadowPicksHome != null && officialPicksHome != null) ? (shadowPicksHome === officialPicksHome) : null;
+    const briefOfficial = s.pHomeOfficial != null && s.homeWon != null ? Math.pow(s.pHomeOfficial - s.homeWon, 2) : null;
+    const briefShadow = s.pHomeShadow != null && s.homeWon != null ? Math.pow(s.pHomeShadow - s.homeWon, 2) : null;
+    return { ...s, matchup: m.matchup || "", awayTeam, homeTeam, officialPickTeam: m.model_side || "",
+      officialWon, shadowPicksHome, officialPicksHome, shadowWon, agree, briefOfficial, briefShadow };
+  }).filter(r => r.matchup); // drop rows whose gamePk never matched a moneyline row (e.g. voided games)
+}
+function aggShadowDay(rows){
+  const n = rows.length;
+  const officialGraded = rows.filter(r => r.officialWon != null);
+  const shadowGraded = rows.filter(r => r.shadowWon != null);
+  const oW = officialGraded.filter(r => r.officialWon === 1).length;
+  const sW = shadowGraded.filter(r => r.shadowWon === true).length;
+  const oBrier = avg(rows.map(r => r.briefOfficial).filter(v => v != null));
+  const sBrier = avg(rows.map(r => r.briefShadow).filter(v => v != null));
+  const disagreements = rows.filter(r => r.agree === false).length;
+  return { n, oRecord: `${oW}-${officialGraded.length-oW}`, sRecord: `${sW}-${shadowGraded.length-sW}`,
+    oWinPct: officialGraded.length ? oW/officialGraded.length : null, sWinPct: shadowGraded.length ? sW/shadowGraded.length : null,
+    oBrier, sBrier, disagreements, rows };
+}
+function avg(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null; }
+function renderShadowKpis(){
+  const rows = S.shadowRows;
+  const oBrier = avg(rows.map(r=>r.briefOfficial).filter(v=>v!=null));
+  const sBrier = avg(rows.map(r=>r.briefShadow).filter(v=>v!=null));
+  const og = rows.filter(r=>r.officialWon!=null), sg = rows.filter(r=>r.shadowWon!=null);
+  const oW = og.filter(r=>r.officialWon===1).length, sW = sg.filter(r=>r.shadowWon===true).length;
+  const disagreements = rows.filter(r=>r.agree===false).length;
+  const days = new Set(rows.map(r=>r.date)).size;
+  const lead = (oBrier!=null && sBrier!=null) ? (sBrier < oBrier ? "Shadow" : (oBrier < sBrier ? "Leo" : "Tied")) : "—";
+  document.getElementById("shadowKpis").innerHTML = [
+    kpi("Full history — Leo Brier", oBrier==null?"—":oBrier.toFixed(4), `${oW}-${og.length-oW} · ${og.length} graded`),
+    kpi("Full history — Shadow Brier", sBrier==null?"—":sBrier.toFixed(4), `${sW}-${sg.length-sW} · ${sg.length} graded`),
+    kpi("Lower Brier so far", lead, oBrier!=null&&sBrier!=null?`${Math.abs(oBrier-sBrier).toFixed(4)} gap`:""),
+    kpi("Disagreement rate", rows.length?((disagreements/rows.length)*100).toFixed(0)+"%":"—", `${disagreements} of ${rows.length} games, ${days} nights`)
+  ].join("");
+}
+function renderShadowDayTable(){
+  const byDate = new Map();
+  for(const r of S.shadowRows){ if(!byDate.has(r.date)) byDate.set(r.date, []); byDate.get(r.date).push(r); }
+  S.shadowDays = [...byDate.entries()].map(([date,rows])=>({date,...aggShadowDay(rows)})).sort((a,b)=>a.date<b.date?1:-1);
+  const body = S.shadowDays.map((d,i)=>{
+    const delta = (d.oBrier!=null && d.sBrier!=null) ? d.sBrier - d.oBrier : null; // negative = shadow better that night
+    return `<tr class="clickable day-row" data-i="${i}"><td class="date-cell">${esc(d.date)}</td><td class="num">${d.n}</td>`
+      + `<td class="num">${esc(d.oRecord)}</td><td class="num">${d.oBrier==null?'—':d.oBrier.toFixed(4)}</td>`
+      + `<td class="num">${esc(d.sRecord)}</td><td class="num">${d.sBrier==null?'—':d.sBrier.toFixed(4)}</td>`
+      + `<td class="num ${delta==null?'':(delta<0?'ok':'no')}">${delta==null?'—':(delta>0?'+':'')+delta.toFixed(4)}</td>`
+      + `<td class="num">${d.disagreements}</td></tr>`;
+  }).join("");
+  document.getElementById("shadowDayTable").innerHTML = `<thead><tr><th>Date</th><th class="num">Games</th><th class="num">Leo record</th><th class="num">Leo Brier</th><th class="num">Shadow record</th><th class="num">Shadow Brier</th><th class="num">Δ Brier (shadow−Leo)</th><th class="num">Disagreements</th></tr></thead><tbody>${body||`<tr><td colspan="8" class="dim">No shadow data yet.</td></tr>`}</tbody>`;
+  document.getElementById("shadowDrill").innerHTML = "";
+  document.querySelectorAll("#shadowDayTable tbody tr").forEach(tr=>tr.addEventListener("click",()=>{
+    const d = S.shadowDays[+tr.getAttribute("data-i")];
+    renderShadowDrill(d);
+  }));
+}
+function renderShadowDrill(d){
+  const rows = d.rows.slice().sort((a,b)=> (a.homeTeam||"").localeCompare(b.homeTeam||""));
+  const hasComponents = rows.some(r=>r.shadowFipAway!=null);
+  const body = rows.map(r=>{
+    const oTeam = r.officialPickTeam || (r.officialPicksHome ? r.homeTeam : r.awayTeam);
+    const sTeam = r.shadowPicksHome==null ? "—" : (r.shadowPicksHome ? r.homeTeam : r.awayTeam);
+    const agreeTag = r.agree==null ? "—" : (r.agree ? `<span class="tag agree">agree</span>` : `<span class="tag disagree">disagree</span>`);
+    const oRes = r.officialWon==null?"—":(r.officialWon?`<span class="ok">W</span>`:`<span class="no">L</span>`);
+    const sRes = r.shadowWon==null?"—":(r.shadowWon?`<span class="ok">W</span>`:`<span class="no">L</span>`);
+    return `<tr class="clickable" data-date="${esc(r.date)}" data-pk="${esc(r.gamePk)}">`
+      + `<td>${esc(r.awayTeam)} @ ${esc(r.homeTeam)}</td>`
+      + `<td>${esc(oTeam)}</td><td class="num">${r.pHomeOfficial==null?'—':(r.officialPicksHome?(r.pHomeOfficial*100).toFixed(0):((1-r.pHomeOfficial)*100).toFixed(0))+'%'}</td><td>${oRes}</td>`
+      + `<td>${esc(sTeam)}</td><td class="num">${r.pHomeShadow==null?'—':(r.shadowPicksHome?(r.pHomeShadow*100).toFixed(0):((1-r.pHomeShadow)*100).toFixed(0))+'%'}</td><td>${sRes}</td>`
+      + `<td>${agreeTag}</td>`
+      + (hasComponents ? `<td class="num">${r.shadowOffAdj==null?'—':(r.shadowOffAdj>0?'+':'')+r.shadowOffAdj.toFixed(3)}</td><td class="num">${r.shadowBpAdj==null?'—':(r.shadowBpAdj>0?'+':'')+r.shadowBpAdj.toFixed(3)}</td>` : "")
+      + `</tr>`;
+  }).join("");
+  const extraHead = hasComponents ? `<th class="num">Shadow off_adj</th><th class="num">Shadow bp_adj</th>` : "";
+  document.getElementById("shadowDrill").innerHTML = `<h2 class="sec">${esc(d.date)} — click a game to open it in Game Detail</h2>`
+    + `<div style="overflow-x:auto"><table class="dash" id="shadowGameTable"><thead><tr><th>Matchup</th><th>Leo picked</th><th class="num">Leo %</th><th>Result</th><th>Shadow leaned</th><th class="num">Shadow %</th><th>Result</th><th>Sides</th>${extraHead}</tr></thead><tbody>${body||`<tr><td colspan="9" class="dim">No games.</td></tr>`}</tbody></table></div>`;
+  document.querySelectorAll("#shadowGameTable tbody tr").forEach(tr=>tr.addEventListener("click",()=>{
+    openGameDetail(tr.getAttribute("data-date"), tr.getAttribute("data-pk"));
+  }));
+}
+function renderShadowTab(){ renderShadowKpis(); renderShadowDayTable(); }
+
+// Jump from a Leo-vs-Shadow game row straight into the Game Detail tab,
+// pre-loaded to that exact date and game.
+async function openGameDetail(date, gamePk){
+  showTab("detail");
+  const dateInput = document.getElementById("detDate"), sel = document.getElementById("detGame");
+  dateInput.value = date;
+  await loadDetailDate(date);
+  const idx = S.detail.games.findIndex(g => String(g.game_pk) === String(gamePk));
+  if(idx >= 0){
+    sel.value = String(idx);
+    S.detail.game = S.detail.games[idx];
+    renderGameDetail(S.detail.game);
+  }
+}
+
+function renderAll(){ renderOverview(); renderBreakdown(); renderDrivers(); renderGames(); renderTotals(); renderKprops(); renderShadowTab(); }
 function showTab(t){ S.tab=t; document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on")); document.getElementById("tab-"+t).classList.add("on"); document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.getAttribute("data-t")===t)); }
 
 document.getElementById("tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(b)showTab(b.getAttribute("data-t"));});
@@ -565,16 +712,19 @@ document.getElementById("windowSeg").addEventListener("click",e=>{const b=e.targ
 (async function(){
   const st=document.getElementById("status");
   const grab=(u,j)=>fetch(u+"?v="+Date.now(),{cache:"no-store"}).then(r=>r.ok?(j?r.json():r.text()):null).catch(()=>null);
-  const [attT,calT,rep,totT,kpT,recapT]=await Promise.all([
+  const [attT,calT,rep,totT,kpT,recapT,shadowT]=await Promise.all([
     grab("/data/calibration/attribution_model_log.csv"),grab("/data/calibration/calibration_model_log.csv"),
     grab("/data/calibration/confidence_report.json",true),grab("/data/calibration/totals_model_log.csv"),
-    grab("/data/calibration/kprops_log.csv"),grab("/data/calibration/recap_components.csv")
+    grab("/data/calibration/kprops_log.csv"),grab("/data/calibration/recap_components.csv"),
+    grab("/data/calibration/shadow_model_log.csv")
   ]);
   const att=parseCSV(attT), cal=parseCSV(calT);
   if(!att.length && !cal.length){ st.textContent="No graded data found yet."; return; }
   S.ml=buildMoneyline(att.length?att:cal.map(c=>({...c,lab:c.lab_score})), cal);
   S.report=rep||null; S.totals=parseCSV(totT); S.kprops=parseCSV(kpT);
   const recap=parseCSV(recapT); S.recapByPk={}; for(const r of recap){if(r.game_pk)S.recapByPk[r.game_pk]=r;}
+  S.shadowRaw = shadowT ? parseShadowCSV(shadowT) : [];
+  S.shadowRows = buildShadowRows();
   // fill selects
   const teams=[...new Set(S.ml.flatMap(r=>[r.model_side,homeOf(r.matchup)]).filter(Boolean))].sort();
   fill("teamF",[["","All teams"],...teams.map(t=>[t,t])]);
