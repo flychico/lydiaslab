@@ -755,11 +755,29 @@ function buildLockedMarketOddsMap(snapshot) {
   return map;
 }
 
+// wOBA linear weights -- must match scripts/generate-matchup-pages.js's
+// fetchOffense30() exactly (kept in sync manually; both compute the same
+// stat from the same MLB StatsAPI hitting split). Matchup pages display it;
+// this file's shadow model (modelV3, v3.2-woba) uses it as a model input.
+const WOBA_WEIGHTS = { bb: 0.69, hbp: 0.72, "1b": 0.89, "2b": 1.27, "3b": 1.62, hr: 2.10 };
+function wobaOf(stat) {
+  const s = stat || {};
+  const n = key => { const v = Number(s[key]); return Number.isFinite(v) ? v : 0; };
+  const singles = n("hits") - n("doubles") - n("triples") - n("homeRuns");
+  const ubb = n("baseOnBalls") - n("intentionalWalks");
+  const num = WOBA_WEIGHTS.bb * ubb + WOBA_WEIGHTS.hbp * n("hitByPitch") + WOBA_WEIGHTS["1b"] * singles
+    + WOBA_WEIGHTS["2b"] * n("doubles") + WOBA_WEIGHTS["3b"] * n("triples") + WOBA_WEIGHTS.hr * n("homeRuns");
+  const den = n("atBats") + n("baseOnBalls") - n("intentionalWalks") + n("sacFlies") + n("hitByPitch");
+  return den > 0 ? num / den : null;
+}
 async function fetchOffenseForm(date) {
   // Team offense snapshots captured daily for relevance analysis (NOT in any score yet).
   // Same gate as the pitcher advanced stats: the learning pass must establish
   // predictive value before recent offensive form enters the model.
-  const out = { season: {}, window: {}, vsHand: {}, windowDays: 15 };
+  // seasonWoba / window[].woba added 2026-08-08 for shadow's head-to-head
+  // wOBA term (modelV3, DEC-20260808-04). Leo's own offense_form fields
+  // (ops_15d, season_ops, delta_ops below) are unchanged and untouched.
+  const out = { season: {}, seasonWoba: {}, window: {}, vsHand: {}, windowDays: 15 };
   try {
     const yr = Number(date.slice(0, 4));
     const end = new Date(date + "T12:00:00Z");
@@ -773,8 +791,8 @@ async function fetchOffenseForm(date) {
       fetchJson(base + "&stats=statSplits&sitCodes=vr")
     ]);
     const splitsOf = d => (((d || {}).stats || [])[0] || {}).splits || [];
-    for (const t of splitsOf(sn)) out.season[t.team.id] = Number(t.stat.ops);
-    for (const t of splitsOf(win)) out.window[t.team.id] = { ops: Number(t.stat.ops), rpg: t.stat.gamesPlayed ? Number(((t.stat.runs || 0) / t.stat.gamesPlayed).toFixed(2)) : null, g: Number(t.stat.gamesPlayed) || 0 };
+    for (const t of splitsOf(sn)) { out.season[t.team.id] = Number(t.stat.ops); out.seasonWoba[t.team.id] = wobaOf(t.stat); }
+    for (const t of splitsOf(win)) out.window[t.team.id] = { ops: Number(t.stat.ops), rpg: t.stat.gamesPlayed ? Number(((t.stat.runs || 0) / t.stat.gamesPlayed).toFixed(2)) : null, g: Number(t.stat.gamesPlayed) || 0, woba: wobaOf(t.stat) };
     for (const t of splitsOf(vl)) (out.vsHand[t.team.id] = out.vsHand[t.team.id] || {}).vl = Number(t.stat.ops);
     for (const t of splitsOf(vr)) (out.vsHand[t.team.id] = out.vsHand[t.team.id] || {}).vr = Number(t.stat.ops);
   } catch (e) {
@@ -786,12 +804,17 @@ function offenseFormFor(teamId, oppPitcher, offense) {
   if (!offense || !offense.season || offense.season[teamId] === undefined) return null;
   const w = offense.window[teamId] || {};
   const sOps = offense.season[teamId];
+  const sWoba = offense.seasonWoba ? offense.seasonWoba[teamId] : null;
   const hand = oppPitcher && oppPitcher.hand ? oppPitcher.hand : null;
   const vs = hand ? ((offense.vsHand[teamId] || {})[hand === "L" ? "vl" : "vr"] ?? null) : null;
   return {
     ops_15d: Number.isFinite(w.ops) ? w.ops : null,
     season_ops: Number.isFinite(sOps) ? sOps : null,
     delta_ops: (Number.isFinite(w.ops) && Number.isFinite(sOps)) ? Number((w.ops - sOps).toFixed(3)) : null,
+    // Added 2026-08-08 for shadow's head-to-head wOBA term (modelV3). Leo's
+    // own probability and read text use delta_ops/ops_15d above, unchanged.
+    woba_15d: Number.isFinite(w.woba) ? Number(w.woba.toFixed(4)) : null,
+    woba_season: Number.isFinite(sWoba) ? Number(sWoba.toFixed(4)) : null,
     rpg_15d: w.rpg ?? null,
     opp_hand: hand,
     ops_vs_opp_hand: Number.isFinite(vs) ? vs : null
@@ -800,12 +823,44 @@ function offenseFormFor(teamId, oppPitcher, offense) {
 /* ============ Shadow model v3 (A/B test — NEVER drives official picks) ============
    Candidate inputs:
    1. FIP-lite pitcher skill (K, BB, HR per IP).
-   2. A capped 15-day OPS-form adjustment.
+   2. A capped head-to-head wOBA comparison (each team's trailing-15-day wOBA
+      vs the opponent's — see V3_OFF_K_WOBA below. Replaced the OPS-delta term
+      2026-08-08, DEC-20260808-04, Lynold's call: compare current offense
+      directly against the opponent, not each team's deviation from its own
+      season norm).
    3. Bullpen workload differential.
    The locked shadow probability is recorded beside the locked production
    probability. grade-calibration.js writes both with explicit model versions
    to data/calibration/shadow_model_log.csv. Never compare mixed model eras. */
-const V3_OFF_K = 0.8;      // log-odds per full point of OPS-delta difference (capped ±0.1 → max ~±2%)
+/*
+  2026-08-08: offense term rebuilt around wOBA, head-to-head.
+
+  Previous term (V3_OFF_K = 0.8) compared each team's OWN 15-day OPS against
+  its OWN season OPS -- a "hot or cold vs itself" signal -- each side capped
+  at +/-0.10, coefficient 0.8, so max log-odds swing = 0.8 * 0.2 = 0.16.
+
+  Lynold's correction: compare the two teams' CURRENT offense directly
+  against each other, not against their own history. The new term takes each
+  team's trailing-15-day wOBA (same formula/weights as the display-only wOBA
+  already shown on matchup pages, generate-matchup-pages.js's fetchOffense30)
+  and takes the home-minus-away gap.
+
+  wOBA's team-to-team spread is much tighter than OPS's (full-season wOBA
+  typically runs ~0.290-0.360 across all 30 teams, spread ~0.07; OPS spread
+  is roughly 3x that). A 15-day window can widen it further on small samples,
+  so the gap is capped at +/-0.060 -- already close to the full season's
+  best-to-worst spread, rather than a fluke week.
+
+  Coefficient chosen to reproduce the OLD term's max swing at the new cap, so
+  this change isolates "OPS-delta vs wOBA head-to-head" as the only variable
+  and doesn't also quietly make the term stronger or weaker:
+    V3_OFF_K_WOBA = (0.8 * 0.2) / 0.060 = 2.6667
+  Same +/-0.16 max log-odds shift (~+/-4% win probability) as before, at the
+  cap. Revisit once shadow_model_log.csv has enough graded games under the
+  new term to test it on its own evidence, same as every other constant here.
+*/
+const V3_OFF_WOBA_CAP = 0.060;     // max |home wOBA - away wOBA| gap applied, in wOBA points
+const V3_OFF_K_WOBA = 2.6667;      // log-odds per point of wOBA gap (cap * coef matches old term's 0.16 max)
 const V3_FIP_C = 3.15;     // FIP constant
 // Shared by v2 and v3 — a starter only covers 5-6 of 9 innings; the bullpen
 // covers the rest and was previously invisible to the probability itself
@@ -827,14 +882,24 @@ function fipLite(st) {
 function modelV3(pBase, awayStats, homeStats, offAway, offHome, bpAway, bpHome) {
   const spA = fipLite(awayStats), spH = fipLite(homeStats);
   let odds = (pBase / (1 - pBase)) * Math.exp(ERA_K * (spA - spH));
-  const dA = offAway && Number.isFinite(offAway.delta_ops) ? Math.max(-0.1, Math.min(0.1, offAway.delta_ops)) : 0;
-  const dH = offHome && Number.isFinite(offHome.delta_ops) ? Math.max(-0.1, Math.min(0.1, offHome.delta_ops)) : 0;
-  odds *= Math.exp(V3_OFF_K * (dH - dA));
+  // Head-to-head current offense: each team's trailing-15-day wOBA compared
+  // directly to the opponent's, not to its own season norm. See the
+  // 2026-08-08 comment above V3_OFF_K_WOBA for the full reasoning.
+  const wobaA = offAway && Number.isFinite(offAway.woba_15d) ? offAway.woba_15d : null;
+  const wobaH = offHome && Number.isFinite(offHome.woba_15d) ? offHome.woba_15d : null;
+  const wobaGapRaw = (wobaA !== null && wobaH !== null) ? (wobaH - wobaA) : 0;
+  const wobaGap = Math.max(-V3_OFF_WOBA_CAP, Math.min(V3_OFF_WOBA_CAP, wobaGapRaw));
+  const offAdj = V3_OFF_K_WOBA * wobaGap;
+  odds *= Math.exp(offAdj);
   // v3.1: bullpen fatigue differential — home gains when the AWAY pen is the tired one
   const bpAdj = bullpenProbAdjustment(bpAway, bpHome);
   odds *= Math.exp(bpAdj);
   const pHome = odds / (1 + odds);
-  return { p_home: Number(pHome.toFixed(4)), fip_away: Number(spA.toFixed(2)), fip_home: Number(spH.toFixed(2)), off_adj: Number((V3_OFF_K * (dH - dA)).toFixed(4)), bp_adj: Number(bpAdj.toFixed(4)), version: "v3.1-bullpen" };
+  // version bumped v3.1-bullpen -> v3.2-woba: the offense term's MEANING
+  // changed (OPS-delta-from-self vs wOBA-head-to-head), not just its value,
+  // so mixed-era comparisons in shadow_model_log.csv must be able to tell
+  // rows apart. See the "Never compare mixed model eras" note above.
+  return { p_home: Number(pHome.toFixed(4)), fip_away: Number(spA.toFixed(2)), fip_home: Number(spH.toFixed(2)), off_adj: Number(offAdj.toFixed(4)), woba_away: wobaA, woba_home: wobaH, bp_adj: Number(bpAdj.toFixed(4)), version: "v3.2-woba" };
 }
 
 // Convert the same expected runs shown publicly into an additional moneyline
