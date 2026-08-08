@@ -109,8 +109,8 @@ const season = new Date().getMonth() >= 2 ? new Date().getFullYear() : new Date(
 // ---------- Offense trends (last 15 days vs season) ----------
 const OFF_DAYS = 15;
 function f3(v){ return isFinite(v) ? v.toFixed(3).replace(/^0/, "") : "—"; }
-// wOBA linear weights -- must match scripts/generate-matchup-pages.js's
-// fetchOffense30() and scripts/generate-member-lab.js's wobaOf() exactly
+// wOBA linear weights -- must match LyDia daily engine's
+// fetchOffense30() and LyDia daily engine's wobaOf() exactly
 // (kept in sync manually across all three).
 const WOBA_W = { bb: 0.69, hbp: 0.72, "1b": 0.89, "2b": 1.27, "3b": 1.62, hr: 2.10 };
 function wobaOf(st) {

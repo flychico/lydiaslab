@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-08T19:21:18.534Z",
+  "generated_at": "2026-08-08T20:41:17.444Z",
   "status": "ready",
   "latest_date": "2026-08-07",
   "days_reviewed": 30,
@@ -8,7 +8,7 @@
     "clv": "data/clv/clv_log.csv"
   },
   "current_official_model": "multi-market-v1",
-  "headline": "Learning summary for 2026-08-07: no new moneyline picks graded today. Leo's current record: 13-11 (54.2%) across 24 graded games (all statuses, model leo).",
+  "headline": "Learning summary for 2026-08-07: no new moneyline picks graded today. Leo's current record: 7-8 (46.7%) across 15 graded games (all statuses, model leo).",
   "day": {
     "date": "2026-08-07",
     "source": "published-picks",
@@ -57,10 +57,10 @@
   "calibration": {
     "status": "ready",
     "model_version": "leo",
-    "games_graded": 24,
-    "wins": 13,
-    "losses": 11,
-    "brier_score": 0.2338,
+    "games_graded": 15,
+    "wins": 7,
+    "losses": 8,
+    "brier_score": 0.2507,
     "shadow_model": {
       "status": "ready",
       "games": 24,
@@ -81,38 +81,38 @@
     "kprops": {
       "status": "ready",
       "self_calibration": "no correction needed yet",
-      "graded": 262,
-      "with_projection": 260,
-      "bias": -0.07,
+      "graded": 286,
+      "with_projection": 284,
+      "bias": -0.06,
       "mae": 1.89,
-      "lean_record": "125-121",
-      "over_lean_record": "53-60",
-      "under_lean_record": "72-59",
-      "no_lean": 143,
+      "lean_record": "9-1",
+      "over_lean_record": "6-1",
+      "under_lean_record": "3-0",
+      "no_lean": 158,
       "note": "Bias = actual minus projection (positive means we under-project). Leans only counted at 0.7+ strikeout edges. Small samples early — a lean record means little before ~100 graded pitchers."
     },
     "note": "Shadow ledger for learning only — never part of the public record. Official picks stay the only published record.",
     "buckets": [
       {
         "range": "50-55%",
-        "games": 13,
-        "wins": 5,
-        "expected_win_rate": 0.523,
-        "actual_win_rate": 0.385
+        "games": 9,
+        "wins": 4,
+        "expected_win_rate": 0.528,
+        "actual_win_rate": 0.444
       },
       {
         "range": "55-60%",
-        "games": 8,
-        "wins": 6,
-        "expected_win_rate": 0.574,
-        "actual_win_rate": 0.75
+        "games": 4,
+        "wins": 2,
+        "expected_win_rate": 0.571,
+        "actual_win_rate": 0.5
       },
       {
         "range": "60-65%",
-        "games": 2,
-        "wins": 1,
-        "expected_win_rate": 0.609,
-        "actual_win_rate": 0.5
+        "games": 1,
+        "wins": 0,
+        "expected_win_rate": 0.607,
+        "actual_win_rate": 0
       },
       {
         "range": "65-70%",
@@ -123,20 +123,15 @@
       }
     ],
     "shadow_by_status": {
-      "official_pick": {
-        "games": 1,
-        "wins": 1,
-        "units": 0.54
-      },
-      "pass": {
-        "games": 21,
-        "wins": 11,
-        "units": -0.05
-      },
       "watchlist": {
         "games": 2,
         "wins": 1,
         "units": -0.53
+      },
+      "pass": {
+        "games": 13,
+        "wins": 6,
+        "units": -0.82
       }
     }
   },
@@ -793,5 +788,17 @@
     "Watch whether official picks with model probability >= 72% beat low-probability value watches over a larger sample.",
     "Track closing price movement once market snapshots have enough data.",
     "Keep value watch separate from official picks."
-  ]
+  ],
+  "coach": {
+    "status": "collecting",
+    "title": "Collecting a trustworthy current-model sample",
+    "summary": "LyDia has 12 of 7 required current-model days and 15 of 20 required current-model official picks. Recommendations remain paused until both minimums are reached.",
+    "current_model_days": 12,
+    "current_model_picks": 15,
+    "minimum_days": 7,
+    "minimum_picks": 20,
+    "bullpen_model_owner": "bullpen-fatigue-v3-runs-aware",
+    "recommendations": [],
+    "hard_stop": "Coach findings are review prompts only. No automatic threshold, weight, formula, publishing, or betting change is permitted."
+  }
 }
