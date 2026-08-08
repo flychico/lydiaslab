@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-08T11:54:21.955Z",
+  "generated_at": "2026-08-07T22:07:18.266Z",
   "status": "ready",
   "latest_date": "2026-08-07",
   "days_reviewed": 30,
@@ -7,13 +7,13 @@
     "results": "data/results.json",
     "clv": "data/clv/clv_log.csv"
   },
-  "current_official_model": "multi-market-v1",
+  "current_official_model": "unknown",
   "headline": "Learning summary for 2026-08-07: no graded official moneyline picks yet.",
   "day": {
     "date": "2026-08-07",
     "source": "published-picks",
-    "record_all_markets": "6-1",
-    "units_all_markets": 4.53,
+    "record_all_markets": "0-0",
+    "units_all_markets": null,
     "ungraded": 0,
     "moneyline_record": "0-0",
     "moneyline_win_rate": null,
@@ -46,66 +46,59 @@
   "calibration": {
     "status": "ready",
     "model_version": "leo",
-    "games_graded": 24,
-    "brier_score": 0.2338,
+    "games_graded": 9,
+    "brier_score": 0.2056,
     "shadow_model": {
       "status": "ready",
-      "games": 24,
+      "games": 9,
       "official_model_version": "leo",
       "shadow_model_version": "v3.1-bullpen",
-      "brier_official": 0.2338,
-      "brier_shadow": 0.2332,
+      "brier_official": 0.2056,
+      "brier_shadow": 0.1681,
       "leader": "shadow",
-      "disagreements": 2,
+      "disagreements": 1,
       "shadow_wins_disagreements": 1,
       "note": "Only rows from the latest matching official/shadow model-version pair are compared. Promote nothing from a mixed-version sample."
     },
     "attribution": {
       "status": "collecting",
-      "games": 24,
+      "games": 9,
       "needed": 150
     },
     "kprops": {
       "status": "ready",
       "self_calibration": "no correction needed yet",
-      "graded": 262,
-      "with_projection": 260,
-      "bias": -0.07,
-      "mae": 1.89,
-      "lean_record": "125-121",
-      "over_lean_record": "53-60",
-      "under_lean_record": "72-59",
-      "no_lean": 143,
+      "graded": 236,
+      "with_projection": 236,
+      "bias": -0.09,
+      "mae": 1.88,
+      "lean_record": "116-120",
+      "over_lean_record": "47-59",
+      "under_lean_record": "69-59",
+      "no_lean": 129,
       "note": "Bias = actual minus projection (positive means we under-project). Leans only counted at 0.7+ strikeout edges. Small samples early — a lean record means little before ~100 graded pitchers."
     },
     "note": "Shadow ledger for learning only — never part of the public record. Official picks stay the only published record.",
     "buckets": [
       {
         "range": "50-55%",
-        "games": 13,
-        "wins": 5,
-        "expected_win_rate": 0.523,
-        "actual_win_rate": 0.385
+        "games": 4,
+        "wins": 1,
+        "expected_win_rate": 0.512,
+        "actual_win_rate": 0.25
       },
       {
         "range": "55-60%",
-        "games": 8,
-        "wins": 6,
-        "expected_win_rate": 0.574,
-        "actual_win_rate": 0.75
+        "games": 4,
+        "wins": 4,
+        "expected_win_rate": 0.578,
+        "actual_win_rate": 1
       },
       {
         "range": "60-65%",
-        "games": 2,
-        "wins": 1,
-        "expected_win_rate": 0.609,
-        "actual_win_rate": 0.5
-      },
-      {
-        "range": "65-70%",
         "games": 1,
         "wins": 1,
-        "expected_win_rate": 0.683,
+        "expected_win_rate": 0.611,
         "actual_win_rate": 1
       }
     ],
@@ -116,14 +109,9 @@
         "units": 0.54
       },
       "pass": {
-        "games": 21,
-        "wins": 11,
-        "units": -0.05
-      },
-      "watchlist": {
-        "games": 2,
-        "wins": 1,
-        "units": -0.53
+        "games": 8,
+        "wins": 5,
+        "units": 0.77
       }
     }
   },
@@ -780,17 +768,5 @@
     "Watch whether official picks with model probability >= 72% beat low-probability value watches over a larger sample.",
     "Track closing price movement once market snapshots have enough data.",
     "Keep value watch separate from official picks."
-  ],
-  "coach": {
-    "status": "collecting",
-    "title": "Collecting a trustworthy current-model sample",
-    "summary": "LyDia has 12 of 7 required current-model days and 15 of 20 required current-model official picks. Recommendations remain paused until both minimums are reached.",
-    "current_model_days": 12,
-    "current_model_picks": 15,
-    "minimum_days": 7,
-    "minimum_picks": 20,
-    "bullpen_model_owner": "bullpen-fatigue-v3-runs-aware",
-    "recommendations": [],
-    "hard_stop": "Coach findings are review prompts only. No automatic threshold, weight, formula, publishing, or betting change is permitted."
-  }
+  ]
 }
