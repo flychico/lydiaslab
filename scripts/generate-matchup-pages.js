@@ -958,6 +958,18 @@ function pickOffense(game) {
   if (game.pick_team === game.home_team) return { pick: offense.home || null, opp: offense.away || null };
   return { pick: null, opp: null };
 }
+/*
+  2026-08-08: hot/cold offense thresholds switched from OPS to wOBA (Lynold's
+  call, system-wide, DEC-20260808-05). Was 0.03 ("Bats are hot"/"Cold stretch")
+  and 0.05 ("Opponent is swinging it"). wOBA's spread runs roughly a third of
+  OPS's, so 0.03 -> ~0.01; using 0.008 to match the wOBA hot/cold threshold
+  already established in this file's 30-day offense section (offense30Analysis)
+  and in scripts/lib/matchup-copy-core.js's WOBA_HOT, so "hot" means the same
+  thing everywhere on the page. 0.05 scales proportionally to ~0.013.
+*/
+const WOBA_HOT = 0.008;
+const WOBA_SWINGING = 0.013;
+
 function buildInsights(game, pitcherGame) {
   const market = game.market || {};
   const gate = game.official_pick_gate || {};
@@ -986,8 +998,8 @@ function buildInsights(game, pitcherGame) {
     });
     if (penCase) caseFor.push(penCase);
   }
-  if (off.pick && typeof off.pick.delta_ops === "number" && off.pick.delta_ops >= 0.03) {
-    caseFor.push({ title: `Bats are hot: ${signedDecimal(off.pick.delta_ops, 3)} OPS`, detail: `${game.pick_team} is outhitting its own season form over the last 15 days. Recent form is context, not a model input, but it points the same way here.` });
+  if (off.pick && typeof off.pick.delta_woba === "number" && off.pick.delta_woba >= WOBA_HOT) {
+    caseFor.push({ title: `Bats are hot: ${signedDecimal(off.pick.delta_woba, 3)} wOBA`, detail: `${game.pick_team} is outhitting its own season form over the last 15 days. Recent form is context, not a model input, but it points the same way here.` });
   }
 
   // Always give the pick a stated case. When no single signal clears the display
@@ -998,7 +1010,7 @@ function buildInsights(game, pitcherGame) {
     const leans = [];
     if (pitcher.edge_team === game.pick_team && Number(pitcher.gap) > 0) leans.push("the starting pitcher matchup");
     if (pickRisk !== null && oppRisk !== null && oppRisk > pickRisk) leans.push("the bullpen");
-    if (off.pick && typeof off.pick.delta_ops === "number" && off.pick.delta_ops > 0) leans.push("recent bats");
+    if (off.pick && typeof off.pick.delta_woba === "number" && off.pick.delta_woba > 0) leans.push("recent bats");
     const driver = leans.length ? `${leans.join(", ")} tilt the same way` : "team strength and the run environment tilt slightly this way";
     caseFor.push({ title: `Why LyDia leans ${game.pick_team}`, detail: `LyDia's model makes ${game.pick_team} ${pct(game.model_probability)} to win. No single factor dominates — ${driver}, enough to lean ${game.pick_team} even though it does not clear the bar for a high-confidence pick.` });
   }
@@ -1017,8 +1029,8 @@ function buildInsights(game, pitcherGame) {
       const penCase = MatchupCopy.bullpenCase({ pickTeam: oppName, oppTeam: game.pick_team, pickPen: toPenStats(pens.opp), oppPen: toPenStats(pens.pick) });
       if (penCase) caseAgainst.push(penCase);
     }
-    if (off.opp && typeof off.opp.delta_ops === "number" && off.opp.delta_ops >= 0.03) {
-      caseAgainst.push({ title: `Their bats are hot: ${signedDecimal(off.opp.delta_ops, 3)} OPS`, detail: `${oppName} is outhitting its own season form over the last 15 days.` });
+    if (off.opp && typeof off.opp.delta_woba === "number" && off.opp.delta_woba >= WOBA_HOT) {
+      caseAgainst.push({ title: `Their bats are hot: ${signedDecimal(off.opp.delta_woba, 3)} wOBA`, detail: `${oppName} is outhitting its own season form over the last 15 days.` });
     }
     if (!caseAgainst.length) {
       caseAgainst.push({ title: `The case is thin`, detail: `The model finds little going ${oppName}'s way — it trails on the pitching plan, bullpen, and recent form. The main path to a ${oppName} win is variance.` });
@@ -1069,11 +1081,11 @@ function buildInsights(game, pitcherGame) {
   if (pickRisk !== null && pickRisk >= 60) {
     concerns.push({ title: `Own bullpen carries risk: ${(pickRisk/10).toFixed(1)}/10`, detail: `The ${game.pick_team} bullpen comes in ${pens.pick && pens.pick.risk_label ? String(pens.pick.risk_label).toLowerCase() : "elevated"}. A lead after six innings is less safe than usual.` });
   }
-  if (off.opp && typeof off.opp.delta_ops === "number" && off.opp.delta_ops >= 0.05) {
-    concerns.push({ title: `Opponent is swinging it`, detail: `The other lineup is ${signedDecimal(off.opp.delta_ops, 3)} OPS above its season form over the last 15 days.` });
+  if (off.opp && typeof off.opp.delta_woba === "number" && off.opp.delta_woba >= WOBA_SWINGING) {
+    concerns.push({ title: `Opponent is swinging it`, detail: `The other lineup is ${signedDecimal(off.opp.delta_woba, 3)} wOBA above its season form over the last 15 days.` });
   }
-  if (off.pick && typeof off.pick.delta_ops === "number" && off.pick.delta_ops <= -0.03) {
-    concerns.push({ title: `Cold stretch at the plate`, detail: `${game.pick_team} is ${signedDecimal(off.pick.delta_ops, 3)} OPS below its own season form.` });
+  if (off.pick && typeof off.pick.delta_woba === "number" && off.pick.delta_woba <= -WOBA_HOT) {
+    concerns.push({ title: `Cold stretch at the plate`, detail: `${game.pick_team} is ${signedDecimal(off.pick.delta_woba, 3)} wOBA below its own season form.` });
   }
 
   let verdict;
@@ -1779,6 +1791,7 @@ function renderRecentFormTable(game, teamHitting, venueForm) {
       <tr><th>Last 10</th><td>${esc(game.away_l10 || "Not available")}</td><td>${esc(game.home_l10 || "Not available")}</td></tr>
       <tr><th>Last 10 by venue <span class="dim" style="font-weight:400">(away team on the road, home team at home)</span></th><td>${esc(venueForm && venueForm.away ? `${venueForm.away.record} on the road` : "Not available")}</td><td>${esc(venueForm && venueForm.home ? `${venueForm.home.record} at home` : "Not available")}</td></tr>
       <tr><th>OPS, last 15 days</th><td class="${typeof away.ops_15d === "number" && typeof home.ops_15d === "number" && away.ops_15d > home.ops_15d ? "adv" : ""}">${esc(typeof away.ops_15d === "number" ? away.ops_15d.toFixed(3) : "Not available")}</td><td class="${typeof away.ops_15d === "number" && typeof home.ops_15d === "number" && home.ops_15d > away.ops_15d ? "adv" : ""}">${esc(typeof home.ops_15d === "number" ? home.ops_15d.toFixed(3) : "Not available")}</td></tr>
+      <tr><th>wOBA, last 15 days <span class="dim" style="font-weight:400">(hot/cold read)</span></th><td class="${typeof away.woba_15d === "number" && typeof home.woba_15d === "number" && away.woba_15d > home.woba_15d ? "adv" : ""}">${esc(typeof away.woba_15d === "number" ? away.woba_15d.toFixed(3) : "Not available")}</td><td class="${typeof away.woba_15d === "number" && typeof home.woba_15d === "number" && home.woba_15d > away.woba_15d ? "adv" : ""}">${esc(typeof home.woba_15d === "number" ? home.woba_15d.toFixed(3) : "Not available")}</td></tr>
       <tr><th>Runs per game, last 15 days</th><td>${esc(oneDecimal(away.rpg_15d))}</td><td>${esc(oneDecimal(home.rpg_15d))}</td></tr>
       <tr><th>K% last 15 days <span class="dim" style="font-weight:400">(lower is better)</span></th><td class="${kCell(awayKRecent, homeKRecent)}">${esc(pct(awayKRecent))}</td><td class="${kCell(homeKRecent, awayKRecent)}">${esc(pct(homeKRecent))}</td></tr>
     </tbody>
@@ -1897,8 +1910,9 @@ function recentFormCopy(game, sa, sh, away, home) {
     homeRunDiff: typeof sh.run_diff_pg === "number" ? sh.run_diff_pg : null,
     awayRpg15: typeof away.rpg_15d === "number" ? away.rpg_15d : null,
     homeRpg15: typeof home.rpg_15d === "number" ? home.rpg_15d : null,
-    awayDeltaOps: typeof away.delta_ops === "number" ? away.delta_ops : null,
-    homeDeltaOps: typeof home.delta_ops === "number" ? home.delta_ops : null
+    // Switched from OPS delta to wOBA delta 2026-08-08 (DEC-20260808-05).
+    awayDeltaWoba: typeof away.delta_woba === "number" ? away.delta_woba : null,
+    homeDeltaWoba: typeof home.delta_woba === "number" ? home.delta_woba : null
   });
   return sentence ? `<p class="form-headline">${esc(sentence)}</p>` : "";
 }

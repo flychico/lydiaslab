@@ -34,8 +34,21 @@ const {
 const LEAN_MIN = CONVICTION_FLOOR;
 // A team-quality gap in runs per game worth calling out.
 const RUNDIFF_NOTABLE = 0.35;
-// Recent-vs-season OPS swing that counts as genuinely hot or cold.
-const OPS_HOT = 0.030;
+/*
+  2026-08-08: recent-form "hot/cold" swing switched from OPS to wOBA
+  (Lynold's call — system-wide, DEC-20260808-05). Was OPS_HOT = 0.030.
+
+  wOBA's team-to-team and window-to-season spread runs roughly a third of
+  OPS's (OPS mixes on-base and slugging with equal, unweighted importance;
+  wOBA uses linear weights sized to each event's actual run value, so it
+  compresses the same real difference into a smaller number). 0.030 OPS
+  scales to ~0.010 wOBA at that ratio; using 0.008 instead to match the
+  wOBA hot/cold threshold already established elsewhere on the matchup page
+  (generate-matchup-pages.js's 30-day offense section), so the same swing
+  reads as "hot" consistently across the site rather than at two different
+  bars depending on which section a reader is looking at.
+*/
+const WOBA_HOT = 0.008;
 
 function isNum(n) { return typeof n === "number" && Number.isFinite(n); }
 function pct(v, dp = 1) { return (v * 100).toFixed(dp) + "%"; }
@@ -177,22 +190,22 @@ function joinClauses(list) {
   return list.slice(0, -1).join(", ") + ", and " + list[list.length - 1];
 }
 
-function describeForm(team, l10, rpg15, deltaOps) {
+function describeForm(team, l10, rpg15, deltaWoba) {
   const rec = wins(l10);
   const bits = [];
   if (rec) bits.push(`${rec.w}-${rec.l} in their last 10`);
   if (isNum(rpg15)) bits.push(`averaging ${one(rpg15)} runs per game over the last 15 days`);
-  if (isNum(deltaOps)) {
-    if (deltaOps >= OPS_HOT) bits.push("swinging above their season form");
-    else if (deltaOps <= -OPS_HOT) bits.push("hitting below their season form");
+  if (isNum(deltaWoba)) {
+    if (deltaWoba >= WOBA_HOT) bits.push("swinging above their season form");
+    else if (deltaWoba <= -WOBA_HOT) bits.push("hitting below their season form");
   }
   if (!bits.length) return null;
   return `${team} are ${joinClauses(bits)}`;
 }
 
-function recentFormSentence({ awayTeam, homeTeam, awayL10, homeL10, awayRunDiff, homeRunDiff, awayRpg15, homeRpg15, awayDeltaOps, homeDeltaOps }) {
-  const a = describeForm(awayTeam, awayL10, awayRpg15, awayDeltaOps);
-  const h = describeForm(homeTeam, homeL10, homeRpg15, homeDeltaOps);
+function recentFormSentence({ awayTeam, homeTeam, awayL10, homeL10, awayRunDiff, homeRunDiff, awayRpg15, homeRpg15, awayDeltaWoba, homeDeltaWoba }) {
+  const a = describeForm(awayTeam, awayL10, awayRpg15, awayDeltaWoba);
+  const h = describeForm(homeTeam, homeL10, homeRpg15, homeDeltaWoba);
   if (!a && !h) return "";
 
   let lead = "";

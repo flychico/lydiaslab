@@ -812,9 +812,14 @@ function offenseFormFor(teamId, oppPitcher, offense) {
     season_ops: Number.isFinite(sOps) ? sOps : null,
     delta_ops: (Number.isFinite(w.ops) && Number.isFinite(sOps)) ? Number((w.ops - sOps).toFixed(3)) : null,
     // Added 2026-08-08 for shadow's head-to-head wOBA term (modelV3). Leo's
-    // own probability and read text use delta_ops/ops_15d above, unchanged.
+    // own probability text still uses delta_ops/ops_15d for its own model
+    // logic (unchanged), but the "hot/cold/steady" DISPLAY classification
+    // system-wide (matchup pages, /stats/, the offense matchup tool) has
+    // moved to delta_woba, per Lynold's 2026-08-08 instruction: compare
+    // rolling wOBA to season wOBA, not rolling OPS to season OPS. DEC-20260808-05.
     woba_15d: Number.isFinite(w.woba) ? Number(w.woba.toFixed(4)) : null,
     woba_season: Number.isFinite(sWoba) ? Number(sWoba.toFixed(4)) : null,
+    delta_woba: (Number.isFinite(w.woba) && Number.isFinite(sWoba)) ? Number((w.woba - sWoba).toFixed(4)) : null,
     rpg_15d: w.rpg ?? null,
     opp_hand: hand,
     ops_vs_opp_hand: Number.isFinite(vs) ? vs : null

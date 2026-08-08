@@ -109,6 +109,29 @@ const season = new Date().getMonth() >= 2 ? new Date().getFullYear() : new Date(
 // ---------- Offense trends (last 15 days vs season) ----------
 const OFF_DAYS = 15;
 function f3(v){ return isFinite(v) ? v.toFixed(3).replace(/^0/, "") : "—"; }
+// wOBA linear weights -- must match scripts/generate-matchup-pages.js's
+// fetchOffense30() and scripts/generate-member-lab.js's wobaOf() exactly
+// (kept in sync manually across all three).
+const WOBA_W = { bb: 0.69, hbp: 0.72, "1b": 0.89, "2b": 1.27, "3b": 1.62, hr: 2.10 };
+function wobaOf(st) {
+  if (!st) return null;
+  const n = k => { const v = Number(st[k]); return Number.isFinite(v) ? v : 0; };
+  const singles = n("hits") - n("doubles") - n("triples") - n("homeRuns");
+  const ubb = n("baseOnBalls") - n("intentionalWalks");
+  const num = WOBA_W.bb * ubb + WOBA_W.hbp * n("hitByPitch") + WOBA_W["1b"] * singles
+    + WOBA_W["2b"] * n("doubles") + WOBA_W["3b"] * n("triples") + WOBA_W.hr * n("homeRuns");
+  const den = n("atBats") + n("baseOnBalls") - n("intentionalWalks") + n("sacFlies") + n("hitByPitch");
+  return den > 0 ? num / den : null;
+}
+// 2026-08-08: hot/cold threshold switched from OPS (0.03) to wOBA (Lynold's
+// call, system-wide, DEC-20260808-05). wOBA's spread runs roughly a third of
+// OPS's, so 0.03 scales to ~0.01; using 0.008 to match the wOBA hot/cold
+// threshold already established on the matchup page (generate-matchup-pages.js,
+// scripts/lib/matchup-copy-core.js), so "hot" means the same thing everywhere.
+const WOBA_HOT = 0.008;
+function wobaTier(v) { if(!Number.isFinite(v))return null;
+  if(v>=.360)return{t:"elite",cls:"pos-text"}; if(v>=.340)return{t:"great",cls:"pos-text"}; if(v>=.325)return{t:"good",cls:"pos-text"};
+  if(v>=.310)return{t:"average",cls:""}; if(v>=.295)return{t:"below avg",cls:"neg-text"}; if(v>=.280)return{t:"poor",cls:"neg-text"}; return{t:"very poor",cls:"neg-text"}; }
 let offRows = [], offSort = { key: "ops", dir: -1 };
 let offFilter = new Set(); // team names; empty = show all
 let offFetchedAt = null;
@@ -168,17 +191,23 @@ async function loadOffense() {
       seasonBy[t.team.id] = t.stat;
       _nameToId[t.team.name] = t.team.id;
       const st = t.stat, pa = Number(st.plateAppearances) || 0;
-      _winCache[0][t.team.id] = { g: Number(st.gamesPlayed) || 0, avg: Number(st.avg), ops: Number(st.ops), rpg: st.gamesPlayed ? (Number(st.runs) || 0) / Number(st.gamesPlayed) : null, kPct: pa ? (Number(st.strikeOuts) || 0) / pa : null, slg: Number(st.slg) };
+      _winCache[0][t.team.id] = { g: Number(st.gamesPlayed) || 0, avg: Number(st.avg), ops: Number(st.ops), rpg: st.gamesPlayed ? (Number(st.runs) || 0) / Number(st.gamesPlayed) : null, kPct: pa ? (Number(st.strikeOuts) || 0) / pa : null, slg: Number(st.slg), woba: wobaOf(st) };
     }
 
     offRows = rangeSplits.map(t => {
       const r = t.stat, sn = seasonBy[t.team.id] || {};
       const pa = Number(r.plateAppearances) || 0;
+      const woba = wobaOf(r), seasonWoba = wobaOf(sn);
       return {
         team: t.team.name,
         g: Number(r.gamesPlayed) || 0,
         avg: Number(r.avg), obp: Number(r.obp), slg: Number(r.slg), ops: Number(r.ops),
         seasonOps: Number(sn.ops),
+        // Added 2026-08-08 for the wOBA columns and the hot/cold classifier
+        // (DEC-20260808-05). woba/seasonWoba computed from the same raw stat
+        // objects already fetched above -- no extra network calls.
+        woba: woba, seasonWoba: seasonWoba,
+        deltaWoba: (Number.isFinite(woba) && Number.isFinite(seasonWoba)) ? (woba - seasonWoba) : null,
         hr: Number(r.homeRuns) || 0,
         rpg: r.gamesPlayed ? (Number(r.runs) || 0) / Number(r.gamesPlayed) : 0,
         kPct: pa ? (Number(r.strikeOuts) || 0) / pa : 0,
@@ -247,6 +276,9 @@ function renderOffense() {
       <td class="num"><b>${f3(r.slg)}</b>${tierChip(slgTier(r.slg))}</td>
       <td class="num"><b>${f3(r.ops)}</b>${tierChip(opsTier(r.ops))}</td>
       <td class="num dim">${f3(r.seasonOps)}</td>
+      <td class="num"><b>${f3(r.woba)}</b>${tierChip(wobaTier(r.woba))}</td>
+      <td class="num dim">${f3(r.seasonWoba)}</td>
+      <td class="num ${Number.isFinite(r.deltaWoba) ? (r.deltaWoba >= WOBA_HOT ? "pos-text" : r.deltaWoba <= -WOBA_HOT ? "neg-text" : "") : ""}">${Number.isFinite(r.deltaWoba) ? (r.deltaWoba >= 0 ? "+" : "") + f3(r.deltaWoba) : "—"}${Number.isFinite(r.deltaWoba) ? (r.deltaWoba >= WOBA_HOT ? " 🔥" : r.deltaWoba <= -WOBA_HOT ? " 🧊" : "") : ""}</td>
       <td class="num">${r.rpg.toFixed(1)}${tierChip(rpgTier(r.rpg))}</td>
       <td class="num">${r.hr}</td>
       <td class="num">${(r.kPct * 100).toFixed(1)}%${tierChip(kTier(r.kPct))}</td>
@@ -442,7 +474,7 @@ async function ensureWindows(days) {
   for (const t of (data.stats[0] || {}).splits || []) {
     const st = t.stat, pa = Number(st.plateAppearances) || 0;
     _nameToId[t.team.name] = t.team.id;
-    out[t.team.id] = { g: Number(st.gamesPlayed) || 0, avg: Number(st.avg), ops: Number(st.ops), rpg: st.gamesPlayed ? (Number(st.runs) || 0) / Number(st.gamesPlayed) : null, kPct: pa ? (Number(st.strikeOuts) || 0) / pa : null, hr: Number(st.homeRuns) || 0 };
+    out[t.team.id] = { g: Number(st.gamesPlayed) || 0, avg: Number(st.avg), ops: Number(st.ops), woba: wobaOf(st), rpg: st.gamesPlayed ? (Number(st.runs) || 0) / Number(st.gamesPlayed) : null, kPct: pa ? (Number(st.strikeOuts) || 0) / pa : null, hr: Number(st.homeRuns) || 0 };
   }
   _winCache[days] = out;
   return out;
@@ -489,7 +521,14 @@ async function teamPanel(name) {
     const seasonRow = offRows.find(r => r.team === name) || {};
     const winRow = d => (d[id] || {});
     const fmt3 = v => Number.isFinite(v) ? v.toFixed(3).replace(/^0/, "") : "—";
-    const trendRow = (label, d) => { const w = winRow(d); return `<tr><td>${label}</td><td class="num">${w.g ?? "—"}</td><td class="num">${fmt3(w.avg)}</td><td class="num"><b>${fmt3(w.ops)}</b>${Number.isFinite(w.ops) && Number.isFinite(seasonRow.seasonOps) ? tierChip({ t: (w.ops - seasonRow.seasonOps >= 0.03 ? "hot" : w.ops - seasonRow.seasonOps <= -0.03 ? "cold" : "steady"), cls: w.ops - seasonRow.seasonOps >= 0.03 ? "pos-text" : w.ops - seasonRow.seasonOps <= -0.03 ? "neg-text" : "" }) : ""}</td><td class="num">${Number.isFinite(w.rpg) ? w.rpg.toFixed(1) : "—"}</td><td class="num">${Number.isFinite(w.kPct) ? (w.kPct * 100).toFixed(1) + "%" : "—"}</td></tr>`; };
+    // Hot/cold/steady switched from OPS delta (0.03) to wOBA delta (0.008)
+    // 2026-08-08, Lynold's call, system-wide (DEC-20260808-05): rolling wOBA
+    // compared to season wOBA is the actual classifier now; OPS/season OPS
+    // stay in the table for reference only.
+    const trendRow = (label, d) => { const w = winRow(d);
+      const dw = (Number.isFinite(w.woba) && Number.isFinite(seasonRow.seasonWoba)) ? (w.woba - seasonRow.seasonWoba) : null;
+      const tag = Number.isFinite(dw) ? tierChip({ t: (dw >= WOBA_HOT ? "hot" : dw <= -WOBA_HOT ? "cold" : "steady"), cls: dw >= WOBA_HOT ? "pos-text" : dw <= -WOBA_HOT ? "neg-text" : "" }) : "";
+      return `<tr><td>${label}</td><td class="num">${w.g ?? "—"}</td><td class="num">${fmt3(w.avg)}</td><td class="num">${fmt3(w.ops)}</td><td class="num"><b>${fmt3(w.woba)}</b>${tag}</td><td class="num">${Number.isFinite(w.rpg) ? w.rpg.toFixed(1) : "—"}</td><td class="num">${Number.isFinite(w.kPct) ? (w.kPct * 100).toFixed(1) + "%" : "—"}</td></tr>`; };
     const g = (_sched || []).find(x => x.teams.away.team.name === name || x.teams.home.team.name === name);
     let tonight = "No game today.";
     if (g) {
@@ -503,9 +542,9 @@ async function teamPanel(name) {
       <p class="dim small" style="margin:4px 0 10px">${st.w ?? "?"}-${st.l ?? "?"} · ${st.l10 ? "L10 " + st.l10 : ""} ${st.streak ? "· streak " + st.streak : ""} · ${Number.isFinite(st.rsg) ? st.rsg + " RS/G, " + st.rag + " RA/G" : ""}</p>
       ${luckLine ? `<div class="notice" style="margin-bottom:10px">${luckLine}</div>` : ""}
       <h3>Offense by window</h3>
-      <table><thead><tr><th>Window</th><th class="num">G</th><th class="num">AVG</th><th class="num">OPS</th><th class="num">R/G</th><th class="num">K%</th></tr></thead><tbody>
+      <table><thead><tr><th>Window</th><th class="num">G</th><th class="num">AVG</th><th class="num">OPS</th><th class="num">wOBA</th><th class="num">R/G</th><th class="num">K%</th></tr></thead><tbody>
         ${trendRow("Last 7 days", w7)}${trendRow("Last 15 days", w15)}${trendRow("Last 30 days", w30)}
-        <tr><td>Season</td><td class="num">${(st.w ?? 0) + (st.l ?? 0)}</td><td class="num">${fmt3(seasonRow.avg)}</td><td class="num"><b>${fmt3(seasonRow.seasonOps)}</b></td><td class="num">${Number.isFinite(st.rsg) ? st.rsg.toFixed(1) : "—"}</td><td class="num">—</td></tr>
+        <tr><td>Season</td><td class="num">${(st.w ?? 0) + (st.l ?? 0)}</td><td class="num">${fmt3(seasonRow.avg)}</td><td class="num">${fmt3(seasonRow.seasonOps)}</td><td class="num"><b>${fmt3(seasonRow.seasonWoba)}</b></td><td class="num">${Number.isFinite(st.rsg) ? st.rsg.toFixed(1) : "—"}</td><td class="num">—</td></tr>
       </tbody></table>
       <h3 style="margin-top:12px">Splits</h3>
       <div class="exline"><span>OPS vs left-handed pitching</span><b>${fmt3(sp.vl)}</b></div>
@@ -535,7 +574,9 @@ async function comparePanel() {
     const fInt = v => Number.isFinite(v) ? v.toFixed(1) : "—";
     const fPct = v => Number.isFinite(v) ? (v * 100).toFixed(1) + "%" : "—";
     const verdicts = [];
-    if (Number.isFinite(A.off.ops) && Number.isFinite(B.off.ops) && Math.abs(A.off.ops - B.off.ops) >= 0.03) verdicts.push(`${A.off.ops > B.off.ops ? A.name : B.name} is the better offense over the last 15 days.`);
+    // Switched to wOBA 2026-08-08 (DEC-20260808-05) -- wOBA is the better proxy
+    // for actual run scoring than OPS (linear weights vs OPS's unweighted sum).
+    if (Number.isFinite(A.off.woba) && Number.isFinite(B.off.woba) && Math.abs(A.off.woba - B.off.woba) >= 0.010) verdicts.push(`${A.off.woba > B.off.woba ? A.name : B.name} is the better offense over the last 15 days (wOBA).`);
     if (Number.isFinite(A.st.luck) && Number.isFinite(B.st.luck) && Math.abs(A.st.luck - B.st.luck) >= 4) verdicts.push(`${A.st.luck < B.st.luck ? A.name : B.name}'s record understates them the most.`);
     openModal(`
       <div style="display:flex;justify-content:space-between;align-items:baseline"><h2 style="margin:0">${escapeHtml(A.name)} vs ${escapeHtml(B.name)}</h2><span class="dim" style="cursor:pointer;font-size:1.3rem" onclick="closePanel()">✕</span></div>
@@ -543,6 +584,8 @@ async function comparePanel() {
         ${metric("Record", A.st.w + "-" + A.st.l, B.st.w + "-" + B.st.l, v => v ?? "—", true).replace(/win-cell/g, "")}
         ${metric("OPS (last 15d)", A.off.ops, B.off.ops)}
         ${metric("Season OPS", A.off.seasonOps, B.off.seasonOps)}
+        ${metric("wOBA (last 15d)", A.off.woba, B.off.woba)}
+        ${metric("Season wOBA", A.off.seasonWoba, B.off.seasonWoba)}
         ${metric("R/G (window)", A.off.rpg, B.off.rpg, fInt)}
         ${metric("K% (lower better)", A.off.kPct, B.off.kPct, fPct, false)}
         ${metric("RS/G season", A.st.rsg, B.st.rsg, fInt)}

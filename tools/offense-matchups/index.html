@@ -93,7 +93,7 @@ table.lu td:first-child, table.lu td:nth-child(2) { text-align:left; }
   </div>
 
   <div class="notice">
-    <strong>How to read it:</strong> <b>OPS (window)</b> is quality right now; <b>Δ vs season</b> is heat — a bad offense can be hot and an elite one can be cold. Tier labels translate the decimals: every ~25 OPS points is one class of offense (.700 below avg · .750 average · .800 good · .850 great · .900 elite). <b>HOW a team is hot matters</b>: contact-driven heat holds up; strikeout-heavy power binges collapse. The <b>vs-hand line</b> is each lineup's full-season OPS against tonight's opposing starter's throwing hand. <b>Starting lineup</b> shows the actual posted batting order once MLB posts it (usually ~2 hours before first pitch) — before that it falls back to a note, not a guess. Each hitter's line is over the <b>same window</b> selected above, not season totals: <b>PA</b> is the sample size, <b>OBP</b> is how often he reaches base, <b>ISO</b> (SLG − AVG) is raw power, <b>K%</b> is how often he strikes out — colored green/red at the good/bad ends of each. Short windows mean small samples; check PA before trusting a hot or cold number.
+    <strong>How to read it:</strong> <b>wOBA (window)</b> is quality right now; <b>Δ vs season</b> is heat — a bad offense can be hot and an elite one can be cold. wOBA (weighted on-base average) uses linear run-value weights instead of OPS's unweighted on-base-plus-slugging, so it is the better read on which lineup is actually scoring more — that is why it drives the tier labels and the heat read here (OPS is still shown alongside as a reference stat). Tier labels translate the decimals: every ~15 wOBA points is roughly one class of offense (.295 below avg · .310 average · .325 good · .340 great · .360 elite). <b>HOW a team is hot matters</b>: contact-driven heat holds up; strikeout-heavy power binges collapse. The <b>vs-hand line</b> is each lineup's full-season OPS against tonight's opposing starter's throwing hand. <b>Starting lineup</b> shows the actual posted batting order once MLB posts it (usually ~2 hours before first pitch) — before that it falls back to a note, not a guess. Each hitter's line is over the <b>same window</b> selected above, not season totals: <b>PA</b> is the sample size, <b>OBP</b> is how often he reaches base, <b>ISO</b> (SLG − AVG) is raw power, <b>K%</b> is how often he strikes out — colored green/red at the good/bad ends of each. Short windows mean small samples; check PA before trusting a hot or cold number.
   </div>
 
   <div id="status"></div>
@@ -132,6 +132,21 @@ function jumpToGame(pk) {
 function f3(v){ return Number.isFinite(v) ? v.toFixed(3).replace(/^0/, "") : "—"; }
 function seasonYear(){ const d = new Date(datePick.value + "T12:00"); return d.getMonth() >= 2 ? d.getFullYear() : d.getFullYear() - 1; }
 
+// wOBA linear weights -- must match scripts/generate-matchup-pages.js's
+// fetchOffense30(), scripts/generate-member-lab.js's wobaOf(), and
+// stats/index.html's wobaOf() exactly (kept in sync manually across all four).
+const WOBA_W = { bb: 0.69, hbp: 0.72, "1b": 0.89, "2b": 1.27, "3b": 1.62, hr: 2.10 };
+function wobaOf(st) {
+  if (!st) return null;
+  const n = k => { const v = Number(st[k]); return Number.isFinite(v) ? v : 0; };
+  const singles = n("hits") - n("doubles") - n("triples") - n("homeRuns");
+  const ubb = n("baseOnBalls") - n("intentionalWalks");
+  const num = WOBA_W.bb * ubb + WOBA_W.hbp * n("hitByPitch") + WOBA_W["1b"] * singles
+    + WOBA_W["2b"] * n("doubles") + WOBA_W["3b"] * n("triples") + WOBA_W.hr * n("homeRuns");
+  const den = n("atBats") + n("baseOnBalls") - n("intentionalWalks") + n("sacFlies") + n("hitByPitch");
+  return den > 0 ? num / den : null;
+}
+
 async function teamStats(params) {
   const res = await fetch(`https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${seasonYear()}&` + params);
   if (!res.ok) throw new Error("team stats HTTP " + res.status);
@@ -143,6 +158,9 @@ function shape(st) {
   return {
     g: Number(st.gamesPlayed) || 0,
     avg: Number(st.avg), obp: Number(st.obp), slg: Number(st.slg), ops: Number(st.ops),
+    // Added 2026-08-08 (DEC-20260808-05): wOBA is now the primary offense-quality
+    // and heat metric in this tool; OPS stays as a secondary reference stat.
+    woba: wobaOf(st),
     rpg: st.gamesPlayed ? (Number(st.runs) || 0) / Number(st.gamesPlayed) : null,
     kPct: pa ? (Number(st.strikeOuts) || 0) / pa : null,
     hr: Number(st.homeRuns) || 0
@@ -238,7 +256,19 @@ async function load() {
 }
 
 /* ---- Tiers: translate the decimals into plain English ----
-   OPS tiers use the scout calibration: every ~25 points is a class of offense. */
+   wOBA tiers (2026-08-08, DEC-20260808-05): every ~15 points is a class of
+   offense -- matches the tiers used on /stats/. OPS tiers kept below for the
+   OPS reference stat still shown in each team box. */
+function wobaTier(v) {
+  if (!Number.isFinite(v)) return null;
+  if (v >= 0.360) return { t: "elite", cls: "pos-text" };
+  if (v >= 0.340) return { t: "great", cls: "pos-text" };
+  if (v >= 0.325) return { t: "good", cls: "pos-text" };
+  if (v >= 0.310) return { t: "average", cls: "" };
+  if (v >= 0.295) return { t: "below avg", cls: "neg-text" };
+  if (v >= 0.280) return { t: "poor", cls: "neg-text" };
+  return { t: "very poor", cls: "neg-text" };
+}
 function opsTier(v) {
   if (!Number.isFinite(v)) return null;
   if (v >= 0.900) return { t: "elite", cls: "pos-text" };
@@ -268,22 +298,31 @@ function rpgTier(v) { // league ≈ 4.5 R/G
 function tierChip(tier) {
   return tier ? ` <span class="tier ${tier.cls}">${tier.t}</span>` : "";
 }
-/* Heat now judges HOW a team is hot, not just how much:
-   contact-driven heat is sturdier than a strikeout-heavy power binge,
-   and extreme deltas in either direction are regression candidates. */
+/*
+  Heat now judges HOW a team is hot, not just how much, and (2026-08-08,
+  DEC-20260808-05) runs on wOBA delta instead of OPS delta -- Lynold's call,
+  system-wide: wOBA's linear run-value weights make it the better read on
+  which team is actually scoring more, so it is also the better read on
+  which team is genuinely hot versus just running up empty OPS points.
+
+  Thresholds rescaled from the old OPS-based ones by wOBA's spread, which
+  runs roughly a third of OPS's: 0.120 -> 0.040, 0.060 -> 0.020, 0.025 -> 0.008
+  (0.008 matches the wOBA hot/cold threshold already established on the
+  matchup page and on /stats/, so "hot" means the same swing everywhere).
+*/
 function heatTag(d, w) {
   if (!Number.isFinite(d)) return { txt: "—", cls: "dim", note: "" };
   const whiffy = w && Number.isFinite(w.kPct) && w.kPct >= 0.24;
   let note = "";
-  if (d >= 0.120) note = whiffy ? "extreme + strikeout-heavy — a fragile power binge, expect cooling" : "extreme heat — good form, but this pace never holds";
-  else if (d >= 0.060) note = whiffy ? "power binge profile (high K%) — the fragile kind of hot" : "healthy heat — contact-driven, the sturdier kind";
-  else if (d <= -0.120) note = "extreme cold — snapback likely, but regression has no schedule";
-  else if (d <= -0.060) note = "real slump — but priced in by now; the question is the number";
-  if (d >= 0.060) return { txt: "🔥 hot +" + f3(d), cls: "pos-text", note };
-  if (d >= 0.025) return { txt: "warming +" + f3(d), cls: "pos-text", note };
-  if (d <= -0.060) return { txt: "❄️ cold −" + f3(-d), cls: "neg-text", note };
-  if (d <= -0.025) return { txt: "cooling −" + f3(-d), cls: "neg-text", note };
-  return { txt: "steady " + (d >= 0 ? "+" : "−") + f3(Math.abs(d)), cls: "dim", note };
+  if (d >= 0.040) note = whiffy ? "extreme + strikeout-heavy — a fragile power binge, expect cooling" : "extreme heat — good form, but this pace never holds";
+  else if (d >= 0.020) note = whiffy ? "power binge profile (high K%) — the fragile kind of hot" : "healthy heat — contact-driven, the sturdier kind";
+  else if (d <= -0.040) note = "extreme cold — snapback likely, but regression has no schedule";
+  else if (d <= -0.020) note = "real slump — but priced in by now; the question is the number";
+  if (d >= 0.020) return { txt: "🔥 hot +" + f3(d) + " wOBA", cls: "pos-text", note };
+  if (d >= 0.008) return { txt: "warming +" + f3(d) + " wOBA", cls: "pos-text", note };
+  if (d <= -0.020) return { txt: "❄️ cold −" + f3(-d) + " wOBA", cls: "neg-text", note };
+  if (d <= -0.008) return { txt: "cooling −" + f3(-d) + " wOBA", cls: "neg-text", note };
+  return { txt: "steady " + (d >= 0 ? "+" : "−") + f3(Math.abs(d)) + " wOBA", cls: "dim", note };
 }
 
 /* Starting lineup table — nine hitters in the actual posted batting order
@@ -314,7 +353,8 @@ function lineupTable(lineup) {
 
 function teamBox(teamName, id, win, season, oppStarter, lineup) {
   const w = win || {}, sn = season || {};
-  const delta = (Number.isFinite(w.ops) && Number.isFinite(sn.ops)) ? w.ops - sn.ops : null;
+  // Switched to wOBA delta 2026-08-08 (DEC-20260808-05).
+  const delta = (Number.isFinite(w.woba) && Number.isFinite(sn.woba)) ? w.woba - sn.woba : null;
   const heat = heatTag(delta, w);
   const sp = splitsBy && splitsBy[id] ? splitsBy[id] : {};
   let handLine = "";
@@ -333,8 +373,10 @@ function teamBox(teamName, id, win, season, oppStarter, lineup) {
     <h3>${escapeHtml(teamName)}</h3>
     <div class="heat ${heat.cls}">${heat.txt}</div>
     ${heat.note ? `<div class="small dim" style="margin-top:2px">${heat.note}</div>` : ""}
-    <div class="stat-row"><span>OPS (last ${WINDOW}d)</span><span><b>${f3(w.ops)}</b>${tierChip(opsTier(w.ops))}</span></div>
-    <div class="stat-row"><span>Season OPS</span><span><b>${f3(sn.ops)}</b>${tierChip(opsTier(sn.ops))}</span></div>
+    <div class="stat-row"><span>wOBA (last ${WINDOW}d)</span><span><b>${f3(w.woba)}</b>${tierChip(wobaTier(w.woba))}</span></div>
+    <div class="stat-row"><span>Season wOBA</span><span><b>${f3(sn.woba)}</b>${tierChip(wobaTier(sn.woba))}</span></div>
+    <div class="stat-row"><span>OPS (last ${WINDOW}d) <span class="dim">reference</span></span><span>${f3(w.ops)}${tierChip(opsTier(w.ops))}</span></div>
+    <div class="stat-row"><span>Season OPS <span class="dim">reference</span></span><span>${f3(sn.ops)}${tierChip(opsTier(sn.ops))}</span></div>
     <div class="stat-row"><span>R/G (window)</span><span><b>${Number.isFinite(w.rpg) ? w.rpg.toFixed(1) : "—"}</b>${tierChip(rpgTier(w.rpg))}</span></div>
     <div class="stat-row"><span>AVG (window)</span><b>${f3(w.avg)}</b></div>
     <div class="stat-row"><span>K% (window)</span><span><b>${Number.isFinite(w.kPct) ? (w.kPct * 100).toFixed(1) + "%" : "—"}</b>${tierChip(kTier(w.kPct))}</span></div>
@@ -348,24 +390,28 @@ function teamBox(teamName, id, win, season, oppStarter, lineup) {
 }
 
 /* Compose a specific, actionable read from this game's actual numbers.
-   Sentences are only included when the data earns them — no boilerplate. */
+   Sentences are only included when the data earns them — no boilerplate.
+   2026-08-08 (DEC-20260808-05): every quality/heat comparison here runs on
+   wOBA instead of OPS -- Lynold's call, system-wide. Thresholds rescaled by
+   wOBA's roughly-1/3 spread relative to OPS (0.030->0.010, 0.120->0.040,
+   0.05->0.017, 0.020->0.007, 0.030->0.010, 0.080->0.027, 0.025->0.008). */
 function buildRead(aT, hT, aWin, hWin, aSn, hSn, aOpp, hOpp) {
-  if (!aWin || !hWin || !aSn || !hSn || !Number.isFinite(aWin.ops) || !Number.isFinite(hWin.ops)) {
+  if (!aWin || !hWin || !aSn || !hSn || !Number.isFinite(aWin.woba) || !Number.isFinite(hWin.woba)) {
     return "Window data unavailable for one or both teams.";
   }
-  const A = { name: aT.name, id: aT.id, w: aWin, sn: aSn, d: aWin.ops - aSn.ops, opp: aOpp };
-  const H = { name: hT.name, id: hT.id, w: hWin, sn: hSn, d: hWin.ops - hSn.ops, opp: hOpp };
-  const lead = A.w.ops >= H.w.ops ? A : H;
+  const A = { name: aT.name, id: aT.id, w: aWin, sn: aSn, d: aWin.woba - aSn.woba, opp: aOpp };
+  const H = { name: hT.name, id: hT.id, w: hWin, sn: hSn, d: hWin.woba - hSn.woba, opp: hOpp };
+  const lead = A.w.woba >= H.w.woba ? A : H;
   const trail = lead === A ? H : A;
-  const gap = lead.w.ops - trail.w.ops;
+  const gap = lead.w.woba - trail.w.woba;
   const parts = [];
 
   // 1. What is happening
-  if (gap < 0.030) {
-    parts.push(`Neither lineup separates itself over the last ${WINDOW} days (${f3(A.w.ops)} vs ${f3(H.w.ops)} OPS).`);
+  if (gap < 0.010) {
+    parts.push(`Neither lineup separates itself over the last ${WINDOW} days (${f3(A.w.woba)} vs ${f3(H.w.woba)} wOBA).`);
   } else {
-    const lt = opsTier(lead.w.ops), tt = opsTier(trail.w.ops);
-    parts.push(`${lead.name} have hit like a${lt && /^[aeiou]/i.test(lt.t) ? "n" : ""} ${lt ? lt.t : ""} offense over the last ${WINDOW} days (${f3(lead.w.ops)} OPS, ${Number.isFinite(lead.w.rpg) ? lead.w.rpg.toFixed(1) : "—"} R/G) while ${trail.name} have been ${tt ? tt.t : "quiet"} (${f3(trail.w.ops)}).`);
+    const lt = wobaTier(lead.w.woba), tt = wobaTier(trail.w.woba);
+    parts.push(`${lead.name} have hit like a${lt && /^[aeiou]/i.test(lt.t) ? "n" : ""} ${lt ? lt.t : ""} offense over the last ${WINDOW} days (${f3(lead.w.woba)} wOBA, ${Number.isFinite(lead.w.rpg) ? lead.w.rpg.toFixed(1) : "—"} R/G) while ${trail.name} have been ${tt ? tt.t : "quiet"} (${f3(trail.w.woba)}).`);
   }
 
   // 2. HOW it's happening — contact contrast, only when the K% gap is real
@@ -381,11 +427,11 @@ function buildRead(aT, hT, aWin, hWin, aSn, hSn, aOpp, hOpp) {
 
   // 3. Sustainability — only for extreme deltas
   for (const t of [lead, trail]) {
-    if (t.d >= 0.120) {
-      const cooled = (t.sn.ops + 0.030);
-      parts.push(`+${f3(t.d)} above their own baseline never holds — expect ${t.name} to cool toward the ${f3(t.sn.ops)} season level${cooled > trail.w.ops && t === lead && gap >= 0.03 ? ", though even the cooled version out-hits what " + trail.name + " are doing right now" : ""}.`);
-    } else if (t.d <= -0.120) {
-      parts.push(`${t.name} sitting ${f3(Math.abs(t.d))} under their own baseline are in a slump, not at a talent level, not a talent level — snapback is coming, it just keeps no schedule.`);
+    if (t.d >= 0.040) {
+      const cooled = (t.sn.woba + 0.010);
+      parts.push(`+${f3(t.d)} wOBA above their own baseline never holds — expect ${t.name} to cool toward the ${f3(t.sn.woba)} season level${cooled > trail.w.woba && t === lead && gap >= 0.010 ? ", though even the cooled version out-hits what " + trail.name + " are doing right now" : ""}.`);
+    } else if (t.d <= -0.040) {
+      parts.push(`${t.name} sitting ${f3(Math.abs(t.d))} wOBA under their own baseline are in a slump, not at a talent level — snapback is coming, it just keeps no schedule.`);
     }
   }
 
@@ -396,20 +442,23 @@ function buildRead(aT, hT, aWin, hWin, aSn, hSn, aOpp, hOpp) {
     const vs = t.opp.hand === "L" ? sp.vl : sp.vr;
     if (!Number.isFinite(vs)) continue;
     const lg = t.opp.hand === "L" ? "lefties" : "righties";
-    if (t === lead && t.d >= 0.05 && vs < t.sn.ops - 0.020) {
-      parts.push(`A check on the heat: against ${lg} like ${t.opp.name}, ${t.name} have hit just ${f3(vs)} all season — tonight's matchup blunts some of it.`);
+    // The vs-hand split is still OPS (MLB doesn't publish a wOBA split via
+    // this endpoint), so this comparison stays on the OPS scale intentionally
+    // -- it is checked against the team's own season OPS, not its wOBA delta.
+    if (t === lead && t.d >= 0.017 && vs < t.sn.ops - 0.020) {
+      parts.push(`A check on the heat: against ${lg} like ${t.opp.name}, ${t.name} have hit just ${f3(vs)} OPS all season — tonight's matchup blunts some of it.`);
     } else if (t === trail && vs >= t.sn.ops + 0.030) {
-      parts.push(`${t.name}'s counter: they hit ${lg} well (${f3(vs)} season) and get one in ${t.opp.name}.`);
+      parts.push(`${t.name}'s counter: they hit ${lg} well (${f3(vs)} OPS season) and get one in ${t.opp.name}.`);
     }
   }
 
   // 5. The angle — derived, not canned
-  const bothHot = A.d >= 0.05 && H.d >= 0.05, bothCold = A.d <= -0.05 && H.d <= -0.05;
+  const bothHot = A.d >= 0.017 && H.d >= 0.017, bothCold = A.d <= -0.017 && H.d <= -0.017;
   if (bothHot) parts.push(`With both lineups above their baselines, this reads more like an over angle than a side.`);
   else if (bothCold) parts.push(`Two cold lineups is an under profile until one of them proves otherwise.`);
-  else if (gap >= 0.080 && lead.d >= 0.025 && Number.isFinite(lead.w.kPct) && lead.w.kPct < 0.24) {
+  else if (gap >= 0.027 && lead.d >= 0.008 && Number.isFinite(lead.w.kPct) && lead.w.kPct < 0.24) {
     parts.push(`Form, quality, and contact profile all point the same way: ${lead.name}.`);
-  } else if (gap >= 0.030 && lead.d < trail.d) {
+  } else if (gap >= 0.010 && lead.d < trail.d) {
     parts.push(`Split signal — ${lead.name} own the window but ${trail.name} are the ones trending up. Thin edge either way.`);
   }
 
