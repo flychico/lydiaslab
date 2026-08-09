@@ -1,6 +1,6 @@
 {
   "date": "2026-08-09",
-  "generated_at": "2026-08-09T19:12:18.401Z",
+  "generated_at": "2026-08-09T21:53:43.494Z",
   "snapshot_type": "posted",
   "source_of_truth": "LyDia Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -2423,12 +2423,12 @@
       "home_l10": "6-4",
       "pick_team": "Houston Astros",
       "side": "away",
-      "model_probability": 0.5066,
+      "model_probability": 0.5134,
       "model_source": "leo",
       "projected_runs": {
-        "away": 5.2,
-        "home": 4,
-        "total": 9.4
+        "away": 6.8,
+        "home": 5.1,
+        "total": 12.2
       },
       "pitching_plan": {
         "away": {
@@ -2462,51 +2462,51 @@
           "bullpen_game": false
         },
         "home": {
-          "type": "opener_bullpen",
-          "confidence": "low",
+          "type": "starter_bullpen",
+          "confidence": "high",
           "reported": false,
           "segments": [
             {
-              "role": "opener",
-              "pitcher_id": null,
-              "pitcher": "TBD",
-              "expected_innings": 4.5,
-              "fip_lite": 4.2,
-              "pitcher_score": 50,
+              "role": "starter",
+              "pitcher_id": 681190,
+              "pitcher": "Randy Vásquez",
+              "expected_innings": 4.962962962962964,
+              "fip_lite": 4.59,
+              "pitcher_score": 57,
               "role_stats": null
             },
             {
               "role": "bullpen",
-              "expected_innings": 4.5
+              "expected_innings": 4.037037037037036
             }
           ],
-          "expected_innings": 4.5,
-          "bullpen_innings": 4.5,
-          "effective_era": 3.58,
-          "pitcher_score": 50,
+          "expected_innings": 5,
+          "bullpen_innings": 4,
+          "effective_era": 3.86,
+          "pitcher_score": 57,
           "bullpen_carries_game": false,
-          "description": "TBD 4.5 IP + remaining bullpen 4.5 IP",
-          "pitcher": "TBD",
-          "role": "unknown",
-          "label": "Role unknown",
-          "bullpen_game": true
+          "description": "Randy Vásquez 5.0 IP + remaining bullpen 4.0 IP",
+          "pitcher": "Randy Vásquez",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
         }
       },
-      "bullpen_game": true,
-      "legacy_strength_probability": 0.5132,
+      "bullpen_game": false,
+      "legacy_strength_probability": 0.5269,
       "venue_split": {
         "away_record": "30-29",
         "home_record": "33-26",
-        "away_edge": 0.0147,
-        "home_edge": 0.0105,
-        "applied_away": 0.0074,
-        "applied_home": 0.0052,
+        "away_edge": 0.0144,
+        "home_edge": 0.0108,
+        "applied_away": 0.0072,
+        "applied_home": 0.0054,
         "weight": 0.5
       },
-      "run_model_probability": 0.6521,
+      "run_model_probability": 0.6875,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": null,
-      "edge": 0.035,
+      "edge": 0.0418,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 52,
@@ -2521,14 +2521,14 @@
         "completeness_points": 0,
         "pitcher_edge_points": 14,
         "plan_completeness_points": 6,
-        "model_agreement_gap": 0.1388,
-        "model_agreement_credit": 0.086,
+        "model_agreement_gap": 0.1606,
+        "model_agreement_credit": 0,
         "bullpen_innings_weight": 1,
         "assigned_bullpen_innings": 5.3,
         "offense_delta": 0.022,
-        "completeness_checks_passed": 4,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -2544,18 +2544,18 @@
       "read": "The combined Lab Rating did not clear the official threshold.",
       "pitcher_edge": {
         "team": "Houston Astros",
-        "gap": 29,
+        "gap": 22,
         "conflict": false,
         "away_score": 79,
-        "home_score": 50,
+        "home_score": 57,
         "away_pitcher": "Cristian Javier",
-        "home_pitcher": "TBD",
+        "home_pitcher": "Randy Vásquez",
         "away_pitcher_id": 664299,
-        "home_pitcher_id": null,
+        "home_pitcher_id": 681190,
         "away_era": 6.59,
-        "home_era": null,
+        "home_era": 4.19,
         "away_whip": 1.68,
-        "home_whip": null,
+        "home_whip": 1.42,
         "away_advanced": {
           "w": 1,
           "l": 2,
@@ -2569,7 +2569,19 @@
           "expected_innings": 3.7,
           "bullpen_innings": 5.3
         },
-        "home_advanced": null
+        "home_advanced": {
+          "w": 7,
+          "l": 6,
+          "kbb_pct": 0.0783,
+          "gb_pct": 0.3964,
+          "babip": 0.3072,
+          "hr9": 1.25,
+          "ip_per_start": 5,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 5,
+          "bullpen_innings": 4
+        }
       },
       "offense_form": {
         "away": {
@@ -2580,8 +2592,8 @@
           "woba_season": 0.3243,
           "delta_woba": 0.0295,
           "rpg_15d": 5.08,
-          "opp_hand": null,
-          "ops_vs_opp_hand": null
+          "opp_hand": "R",
+          "ops_vs_opp_hand": 0.748
         },
         "home": {
           "ops_15d": 0.739,
@@ -2597,15 +2609,15 @@
         "window_days": 15
       },
       "model_v3": {
-        "p_home": 0.4962,
+        "p_home": 0.4773,
         "fip_away": 4.48,
-        "fip_home": 4.2,
+        "fip_home": 4.59,
         "off_adj": -0.0659,
         "woba_away": 0.3539,
         "woba_home": 0.3292,
         "bp_adj": -0.072,
         "version": "v3.2-woba",
-        "p_home_v2": 0.4934,
+        "p_home_v2": 0.4866,
         "note": "shadow A/B — does not drive picks"
       },
       "bullpen": {
