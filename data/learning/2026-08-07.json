@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-08-08T21:56:59.113Z",
+  "generated_at": "2026-08-09T17:16:16.509Z",
   "status": "ready",
   "latest_date": "2026-08-07",
-  "days_reviewed": 30,
+  "days_reviewed": 31,
   "source_files": {
     "results": "data/results.json",
     "clv": "data/clv/clv_log.csv"
   },
   "current_official_model": "multi-market-v1",
-  "headline": "Learning summary for 2026-08-07: no new moneyline picks graded today. Leo's current record: 7-8 (46.7%) across 15 graded games (all statuses, model leo).",
+  "headline": "Learning summary for 2026-08-07: no new moneyline picks graded today. Leo's current record: 12-17 (41.4%) across 29 graded games (all statuses, model leo).",
   "day": {
     "date": "2026-08-07",
     "source": "published-picks",
@@ -32,8 +32,8 @@
     "clv_counts": {},
     "lesson_counts": {},
     "strong_official_count": 15,
-    "protected_by_probability_gate_count": 13,
-    "high_bullpen_risk_count": 7,
+    "protected_by_probability_gate_count": 14,
+    "high_bullpen_risk_count": 8,
     "pitcher_conflict_count": 0
   },
   "findings": [
@@ -43,11 +43,11 @@
     },
     {
       "title": "Probability gate",
-      "read": "Across all reviewed days, 13 graded setups had strong Lab Rating but model probability below 72%. Those should remain value watch, not official picks."
+      "read": "Across all reviewed days, 14 graded setups had strong Lab Rating but model probability below 72%. Those should remain value watch, not official picks."
     },
     {
       "title": "Bullpen learning",
-      "read": "Across all reviewed days, 7 graded moneyline picks carried a meaningful bullpen caution. Review these before adjusting thresholds."
+      "read": "Across all reviewed days, 8 graded moneyline picks carried a meaningful bullpen caution. Review these before adjusting thresholds."
     },
     {
       "title": "Pitcher learning",
@@ -57,81 +57,86 @@
   "calibration": {
     "status": "ready",
     "model_version": "leo",
-    "games_graded": 15,
-    "wins": 7,
-    "losses": 8,
-    "brier_score": 0.2507,
+    "games_graded": 29,
+    "wins": 12,
+    "losses": 17,
+    "brier_score": 0.2644,
     "shadow_model": {
       "status": "ready",
-      "games": 24,
+      "games": 14,
       "official_model_version": "leo",
-      "shadow_model_version": "v3.1-bullpen",
-      "brier_official": 0.2338,
-      "brier_shadow": 0.2332,
-      "leader": "shadow",
-      "disagreements": 2,
-      "shadow_wins_disagreements": 1,
+      "shadow_model_version": "v3.2-woba",
+      "brier_official": 0.279,
+      "brier_shadow": 0.3145,
+      "leader": "official",
+      "disagreements": 0,
+      "shadow_wins_disagreements": 0,
       "note": "Only rows from the latest matching official/shadow model-version pair are compared. Promote nothing from a mixed-version sample."
     },
     "attribution": {
       "status": "collecting",
-      "games": 0,
+      "games": 29,
       "needed": 150
     },
     "kprops": {
       "status": "ready",
       "self_calibration": "no correction needed yet",
-      "graded": 284,
-      "with_projection": 284,
-      "bias": -0.06,
-      "mae": 1.89,
-      "lean_record": "73-52",
-      "over_lean_record": "35-28",
-      "under_lean_record": "38-24",
-      "no_lean": 157,
+      "graded": 211,
+      "with_projection": 209,
+      "bias": -0.09,
+      "mae": 1.85,
+      "lean_record": "50-33",
+      "over_lean_record": "23-17",
+      "under_lean_record": "27-16",
+      "no_lean": 124,
       "note": "Bias = actual minus projection (positive means we under-project). Leans only counted at 0.7+ strikeout edges. Small samples early — a lean record means little before ~100 graded pitchers."
     },
     "note": "Shadow ledger for learning only — never part of the public record. Official picks stay the only published record.",
     "buckets": [
       {
         "range": "50-55%",
-        "games": 9,
-        "wins": 4,
-        "expected_win_rate": 0.528,
-        "actual_win_rate": 0.444
+        "games": 18,
+        "wins": 7,
+        "expected_win_rate": 0.529,
+        "actual_win_rate": 0.389
       },
       {
         "range": "55-60%",
-        "games": 4,
-        "wins": 2,
-        "expected_win_rate": 0.571,
-        "actual_win_rate": 0.5
+        "games": 7,
+        "wins": 4,
+        "expected_win_rate": 0.57,
+        "actual_win_rate": 0.571
       },
       {
         "range": "60-65%",
-        "games": 1,
+        "games": 2,
         "wins": 0,
-        "expected_win_rate": 0.607,
+        "expected_win_rate": 0.613,
         "actual_win_rate": 0
       },
       {
         "range": "65-70%",
-        "games": 1,
+        "games": 2,
         "wins": 1,
-        "expected_win_rate": 0.683,
-        "actual_win_rate": 1
+        "expected_win_rate": 0.686,
+        "actual_win_rate": 0.5
       }
     ],
     "shadow_by_status": {
       "watchlist": {
-        "games": 2,
+        "games": 3,
         "wins": 1,
-        "units": -0.53
+        "units": -1.53
       },
       "pass": {
-        "games": 13,
-        "wins": 6,
-        "units": -0.82
+        "games": 25,
+        "wins": 11,
+        "units": -4.09
+      },
+      "official_pick": {
+        "games": 1,
+        "wins": 0,
+        "units": -1
       }
     }
   },
@@ -642,6 +647,24 @@
         "bullpen_label": "Neutral",
         "pick_side_bullpen_score": 58,
         "opponent_bullpen_score": 62
+      },
+      {
+        "date": "2026-08-08",
+        "status": "official_pick",
+        "model_version": "multi-market-v1",
+        "game": "Chicago Cubs @ Kansas City Royals",
+        "pick": "Chicago Cubs",
+        "result": "L",
+        "model_probability": 0.6188,
+        "lab_score": 84,
+        "raw_edge": 0.0046,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Chicago Cubs",
+        "pitcher_gap": 19,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 80,
+        "opponent_bullpen_score": 82
       }
     ],
     "high_bullpen_risk": [
@@ -770,17 +793,35 @@
         "bullpen_label": "Both bullpens stressed",
         "pick_side_bullpen_score": 75,
         "opponent_bullpen_score": 65
+      },
+      {
+        "date": "2026-08-08",
+        "status": "official_pick",
+        "model_version": "multi-market-v1",
+        "game": "Chicago Cubs @ Kansas City Royals",
+        "pick": "Chicago Cubs",
+        "result": "L",
+        "model_probability": 0.6188,
+        "lab_score": 84,
+        "raw_edge": 0.0046,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Chicago Cubs",
+        "pitcher_gap": 19,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 80,
+        "opponent_bullpen_score": 82
       }
     ],
     "pitcher_conflicts": [],
     "all_moneyline": []
   },
   "multi_day": {
-    "moneyline_record": "25-11",
-    "moneyline_win_rate": 0.6944,
-    "official_moneyline_entries": 36,
+    "moneyline_record": "25-12",
+    "moneyline_win_rate": 0.6757,
+    "official_moneyline_entries": 37,
     "strict_gate_candidates": 15,
-    "high_lab_low_probability_entries": 13,
+    "high_lab_low_probability_entries": 14,
     "note": "Multi-day view includes whatever historical data exists. Older days may include legacy model behavior."
   },
   "next_review": [
@@ -788,5 +829,17 @@
     "Watch whether official picks with model probability >= 72% beat low-probability value watches over a larger sample.",
     "Track closing price movement once market snapshots have enough data.",
     "Keep value watch separate from official picks."
-  ]
+  ],
+  "coach": {
+    "status": "collecting",
+    "title": "Collecting a trustworthy current-model sample",
+    "summary": "LyDia has 13 of 7 required current-model days and 16 of 20 required current-model official picks. Recommendations remain paused until both minimums are reached.",
+    "current_model_days": 13,
+    "current_model_picks": 16,
+    "minimum_days": 7,
+    "minimum_picks": 20,
+    "bullpen_model_owner": "bullpen-fatigue-v3-runs-aware",
+    "recommendations": [],
+    "hard_stop": "Coach findings are review prompts only. No automatic threshold, weight, formula, publishing, or betting change is permitted."
+  }
 }
