@@ -613,6 +613,213 @@
       ]
     },
     {
+      "gamePk": 823751,
+      "away": "Minnesota Twins",
+      "home": "Milwaukee Brewers",
+      "time": "2026-08-09T18:10:00Z",
+      "labScore": 78,
+      "labScoreBreakdown": {
+        "score": 78,
+        "version": "lab-rating-v3-measured-components",
+        "conviction_points": 24.8,
+        "agreement_points": 0,
+        "pitching_plan_points": 20,
+        "bullpen_points": 11.31,
+        "offense_points": 21.67,
+        "completeness_points": 0,
+        "pitcher_edge_points": 14,
+        "plan_completeness_points": 6,
+        "model_agreement_gap": null,
+        "model_agreement_credit": null,
+        "bullpen_innings_weight": 0.74,
+        "assigned_bullpen_innings": 3,
+        "offense_delta": 0.044,
+        "completeness_checks_passed": 5,
+        "completeness_checks_total": 5,
+        "data_complete": true,
+        "market_points": 0,
+        "model_edge_points": 0,
+        "base_points": 0,
+        "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
+      },
+      "status": "official_pick",
+      "modelVersion": "multi-market-v1",
+      "pitcherEdge": {
+        "team": "Milwaukee Brewers",
+        "gap": 32,
+        "conflict": false,
+        "away_score": 58,
+        "home_score": 90,
+        "away_pitcher": "Connor Prielipp",
+        "home_pitcher": "Jacob Misiorowski",
+        "away_pitcher_id": 687570,
+        "home_pitcher_id": 694819,
+        "away_era": 4.75,
+        "home_era": 1.63,
+        "away_whip": 1.31,
+        "home_whip": 0.73,
+        "away_advanced": {
+          "w": 3,
+          "l": 5,
+          "kbb_pct": 0.1518,
+          "gb_pct": 0.4694,
+          "babip": 0.3043,
+          "hr9": 1.04,
+          "ip_per_start": 5.2,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 5.2,
+          "bullpen_innings": 3.8
+        },
+        "home_advanced": {
+          "w": 11,
+          "l": 5,
+          "kbb_pct": 0.3458,
+          "gb_pct": 0.5027,
+          "babip": 0.2255,
+          "hr9": 0.78,
+          "ip_per_start": 6,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 6,
+          "bullpen_innings": 3
+        }
+      },
+      "bullpen": {
+        "pick_team": {
+          "score": 74,
+          "label": "Tired",
+          "last_game_bp_ip": 4.3,
+          "last7_bp_ip": 25.3,
+          "last7_bp_runs": 5,
+          "last_game_relievers": 4,
+          "last7_relievers": 21,
+          "back_to_back_arms": 6,
+          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+          "score_reason": "Tired (7.4/10): 25.3 recent relief innings, recency-weighted — 4.3 in the last game (pitched yesterday), 6 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 4,
+            "last7_relievers": 21,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 11.9,
+            "back_to_back_arms": 16.7,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 73.6
+          },
+          "efficiency_score": 70,
+          "efficiency_label": "Effective",
+          "efficiency_reason": "Effective (7.0/10): 1.78 ERA and 0.91 WHIP over 25.3 relief innings (5 ER, 15 H, 8 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": 14.5,
+            "whip_term": 5.9,
+            "confidence": 1,
+            "raw_score": 70.4
+          },
+          "era_7d": 1.78,
+          "whip_7d": 0.91,
+          "last15_bp_ip": 49.7,
+          "last15_bp_runs": 24,
+          "era_15d": 3.62,
+          "whip_15d": 1.19,
+          "recent15_games_tracked": 14,
+          "risk_index": 64,
+          "risk_label": "Tired",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "opponent": {
+          "score": 70,
+          "label": "Tired",
+          "last_game_bp_ip": 3,
+          "last7_bp_ip": 18,
+          "last7_bp_runs": 9,
+          "last_game_relievers": 3,
+          "last7_relievers": 20,
+          "back_to_back_arms": 7,
+          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+          "score_reason": "Tired (7.0/10): 18 recent relief innings, recency-weighted (pitched yesterday), 7 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 3,
+            "last7_relievers": 20,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 2.8,
+            "back_to_back_arms": 21.8,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 69.5
+          },
+          "efficiency_score": 47,
+          "efficiency_label": "Average",
+          "efficiency_reason": "Average (4.7/10): 4.5 ERA and 1.39 WHIP over 18 relief innings (9 ER, 18 H, 7 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": -1.8,
+            "whip_term": -1.3,
+            "confidence": 1,
+            "raw_score": 46.9
+          },
+          "era_7d": 4.5,
+          "whip_7d": 1.39,
+          "last15_bp_ip": 42.7,
+          "last15_bp_runs": 17,
+          "era_15d": 3.59,
+          "whip_15d": 1.41,
+          "recent15_games_tracked": 13,
+          "risk_index": 72,
+          "risk_label": "Tired",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "label": "Elevated volatility",
+        "major_caution": false,
+        "absolute_risk": "Elevated"
+      },
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Jacob Misiorowski",
+          "pick": "Under",
+          "line": 8.5,
+          "bestAm": 113,
+          "projection": 7.74,
+          "edge": -0.76,
+          "books": 6,
+          "expectedInnings": 6,
+          "pitcherRole": "traditional_starter",
+          "lineupSource": "posted",
+          "modelVersion": "leo-kprop",
+          "valueTag": "OFFICIAL PICK"
+        },
+        {
+          "pitcher": "Connor Prielipp",
+          "pick": "Over",
+          "line": 5.5,
+          "bestAm": -102,
+          "projection": 7.18,
+          "edge": 1.68,
+          "books": 6,
+          "expectedInnings": 5.2,
+          "pitcherRole": "traditional_starter",
+          "lineupSource": "posted",
+          "modelVersion": "leo-kprop",
+          "valueTag": "OFFICIAL PICK"
+        }
+      ]
+    },
+    {
       "gamePk": 823020,
       "away": "Colorado Rockies",
       "home": "St. Louis Cardinals",
@@ -819,5 +1026,6 @@
         }
       ]
     }
-  ]
+  ],
+  "last_appended_at": "2026-08-09T16:06:12.621Z"
 }
