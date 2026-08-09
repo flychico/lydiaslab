@@ -1,23 +1,23 @@
 {
-  "generated_at": "2026-08-09T17:25:22.078Z",
+  "generated_at": "2026-08-09T19:12:27.165Z",
   "status": "ready",
-  "latest_date": "2026-08-04",
+  "latest_date": "2026-08-08",
   "days_reviewed": 31,
   "source_files": {
     "results": "data/results.json",
     "clv": "data/clv/clv_log.csv"
   },
   "current_official_model": "multi-market-v1",
-  "headline": "Learning summary for 2026-08-04: no new moneyline picks graded today. Leo's current record: 9-3 (75.0%) across 12 graded games (all statuses, model moneyline-v2-plus-runs-v1).",
+  "headline": "Learning summary for 2026-08-08: moneyline record 0-1 (0.0%).",
   "day": {
-    "date": "2026-08-04",
+    "date": "2026-08-08",
     "source": "published-picks",
-    "record_all_markets": "3-5",
-    "units_all_markets": -2.5,
+    "record_all_markets": "5-7",
+    "units_all_markets": -2.96,
     "ungraded": 0,
-    "moneyline_record": "0-0",
-    "moneyline_win_rate": null,
-    "official_moneyline_picks": 0,
+    "moneyline_record": "0-1",
+    "moneyline_win_rate": 0,
+    "official_moneyline_picks": 1,
     "legacy_market_entries": 0
   },
   "gates": {
@@ -26,11 +26,15 @@
     "note": "Official picks require high model probability and strong setup quality. A high Lab Rating alone is not enough. (Market edge is no longer a gate -- a picked side with a lower market-implied probability than the model's read can still qualify, as long as market data exists for the game at all.)"
   },
   "process_metrics": {
-    "average_model_probability": null,
-    "average_lab_score": null,
-    "average_raw_edge": null,
-    "clv_counts": {},
-    "lesson_counts": {},
+    "average_model_probability": 0.6188,
+    "average_lab_score": 84,
+    "average_raw_edge": 0.0046,
+    "clv_counts": {
+      "not_tracked": 1
+    },
+    "lesson_counts": {
+      "loss_needs_review": 1
+    },
     "strong_official_count": 15,
     "protected_by_probability_gate_count": 14,
     "high_bullpen_risk_count": 8,
@@ -38,8 +42,8 @@
   },
   "findings": [
     {
-      "title": "No new moneyline picks graded today",
-      "read": "No moneyline picks finished grading for this date. The findings below draw on the full graded history instead."
+      "title": "Official-pick discipline",
+      "read": "1 moneyline pick was graded today. Record: 0-1 (0.0%)."
     },
     {
       "title": "Probability gate",
@@ -81,14 +85,14 @@
     "kprops": {
       "status": "ready",
       "self_calibration": "no correction needed yet",
-      "graded": 211,
-      "with_projection": 209,
-      "bias": -0.09,
-      "mae": 1.85,
-      "lean_record": "50-33",
-      "over_lean_record": "23-17",
-      "under_lean_record": "27-16",
-      "no_lean": 124,
+      "graded": 146,
+      "with_projection": 146,
+      "bias": -0.14,
+      "mae": 1.81,
+      "lean_record": "0-0",
+      "over_lean_record": "0-0",
+      "under_lean_record": "0-0",
+      "no_lean": 91,
       "note": "Bias = actual minus projection (positive means we under-project). Leans only counted at 0.7+ strikeout edges. Small samples early — a lean record means little before ~100 graded pitchers."
     },
     "note": "Shadow ledger for learning only — never part of the public record. Official picks stay the only published record.",
@@ -809,7 +813,26 @@
       }
     ],
     "pitcher_conflicts": [],
-    "all_moneyline": []
+    "all_moneyline": [
+      {
+        "date": null,
+        "status": "official_pick",
+        "model_version": "multi-market-v1",
+        "game": "Chicago Cubs @ Kansas City Royals",
+        "pick": "Chicago Cubs",
+        "result": "L",
+        "model_probability": 0.6188,
+        "lab_score": 84,
+        "raw_edge": 0.0046,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Chicago Cubs",
+        "pitcher_gap": 19,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 80,
+        "opponent_bullpen_score": 82
+      }
+    ]
   },
   "multi_day": {
     "moneyline_record": "25-12",
@@ -824,17 +847,5 @@
     "Watch whether official picks with model probability >= 72% beat low-probability value watches over a larger sample.",
     "Track closing price movement once market snapshots have enough data.",
     "Keep value watch separate from official picks."
-  ],
-  "coach": {
-    "status": "collecting",
-    "title": "Collecting a trustworthy current-model sample",
-    "summary": "LyDia has 13 of 7 required current-model days and 16 of 20 required current-model official picks. Recommendations remain paused until both minimums are reached.",
-    "current_model_days": 13,
-    "current_model_picks": 16,
-    "minimum_days": 7,
-    "minimum_picks": 20,
-    "bullpen_model_owner": "bullpen-fatigue-v3-runs-aware",
-    "recommendations": [],
-    "hard_stop": "Coach findings are review prompts only. No automatic threshold, weight, formula, publishing, or betting change is permitted."
-  }
+  ]
 }
