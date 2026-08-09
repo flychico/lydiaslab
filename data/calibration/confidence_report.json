@@ -1,39 +1,39 @@
 {
- "generated_at": "2026-08-08T20:41:17.381Z",
- "n_graded": 15,
- "n_with_usable_breakdown": 15,
+ "generated_at": "2026-08-09T11:56:05.590Z",
+ "n_graded": 29,
+ "n_with_usable_breakdown": 29,
  "n_excluded_from_component_analysis": 0,
  "exclusion_reason": null,
  "coverage": {
   "from": "2026-08-07",
-  "to": "2026-08-07"
+  "to": "2026-08-08"
  },
  "overall": {
-  "mean_lab": 45.87,
-  "mean_model_prob": 0.5552,
-  "actual_win_rate": 0.4667,
-  "corr_lab_win": 0.0455
+  "mean_lab": 48.34,
+  "mean_model_prob": 0.5555,
+  "actual_win_rate": 0.4138,
+  "corr_lab_win": -0.1012
  },
  "by_lab_version": {
   "lab-rating-v3-measured-components": {
-   "n": 15,
-   "corr_lab_win": 0.0455
+   "n": 29,
+   "corr_lab_win": -0.1012
   }
  },
  "rating_bands": [
   {
    "band": "0-49",
-   "n": 10,
-   "mean_model_prob": 0.536,
-   "actual_win_rate": 0.5,
-   "gap": -0.036
+   "n": 18,
+   "mean_model_prob": 0.5357,
+   "actual_win_rate": 0.4444,
+   "gap": -0.0912
   },
   {
    "band": "50-64",
-   "n": 3,
-   "mean_model_prob": 0.5591,
-   "actual_win_rate": 0.3333,
-   "gap": -0.2258
+   "n": 7,
+   "mean_model_prob": 0.5528,
+   "actual_win_rate": 0.4286,
+   "gap": -0.1243
   },
   {
    "band": "65-74",
@@ -43,16 +43,128 @@
    "gap": -0.6073
   },
   {
-   "band": "85-100",
+   "band": "75-84",
    "n": 1,
-   "mean_model_prob": 0.6834,
-   "actual_win_rate": 1,
-   "gap": 0.3166
+   "mean_model_prob": 0.6185,
+   "actual_win_rate": 0,
+   "gap": -0.6185
+  },
+  {
+   "band": "85-100",
+   "n": 2,
+   "mean_model_prob": 0.6855,
+   "actual_win_rate": 0.5,
+   "gap": -0.1855
   }
  ],
- "components": [],
- "components_note": "too few reconciling breakdowns (15) to analyse components",
+ "components": [
+  {
+   "component": "conviction",
+   "key": "conviction_points",
+   "max_points": 30,
+   "n": 29,
+   "median_points": 4.56,
+   "mean_points": 8.45,
+   "n_above": 14,
+   "win_rate_above": 0.4286,
+   "n_below": 15,
+   "win_rate_below": 0.4,
+   "lift": 0.0286,
+   "corr_with_win": 0.0253
+  },
+  {
+   "component": "agreement",
+   "key": "agreement_points",
+   "n": 29,
+   "constant": true,
+   "note": "never varies in this sample — contributes nothing to discrimination"
+  },
+  {
+   "component": "pitching plan",
+   "key": "pitching_plan_points",
+   "max_points": 20,
+   "n": 29,
+   "median_points": 10.9,
+   "mean_points": 11.89,
+   "n_above": 14,
+   "win_rate_above": 0.2857,
+   "n_below": 15,
+   "win_rate_below": 0.5333,
+   "lift": -0.2476,
+   "corr_with_win": -0.2309
+  },
+  {
+   "component": "bullpen",
+   "key": "bullpen_points",
+   "max_points": 15,
+   "n": 29,
+   "median_points": 10,
+   "mean_points": 9.76,
+   "n_above": 13,
+   "win_rate_above": 0.3846,
+   "n_below": 16,
+   "win_rate_below": 0.4375,
+   "lift": -0.0529,
+   "corr_with_win": -0.0367
+  },
+  {
+   "component": "offense",
+   "key": "offense_points",
+   "max_points": 10,
+   "n": 29,
+   "median_points": 21.25,
+   "mean_points": 18.18,
+   "n_above": 14,
+   "win_rate_above": 0.4286,
+   "n_below": 15,
+   "win_rate_below": 0.4,
+   "lift": 0.0286,
+   "corr_with_win": -0.0567
+  },
+  {
+   "component": "completeness",
+   "key": "completeness_points",
+   "n": 29,
+   "constant": true,
+   "note": "never varies in this sample — contributes nothing to discrimination"
+  }
+ ],
+ "components_note": "computed on 29 game(s) whose breakdown reconciles with its score",
  "worst_misses": [
+  {
+   "date": "2026-08-08",
+   "game": "Athletics @ Boston Red Sox",
+   "pick": "Boston Red Sox",
+   "status": "watchlist",
+   "lab_score": 89,
+   "model_prob": 0.6877,
+   "result": "L",
+   "points_from": {
+    "conviction": 35,
+    "agreement": 0,
+    "pitching plan": 20,
+    "bullpen": 8.81,
+    "offense": 25,
+    "completeness": 0
+   }
+  },
+  {
+   "date": "2026-08-08",
+   "game": "Chicago Cubs @ Kansas City Royals",
+   "pick": "Chicago Cubs",
+   "status": "official_pick",
+   "lab_score": 83,
+   "model_prob": 0.6185,
+   "result": "L",
+   "points_from": {
+    "conviction": 26.19,
+    "agreement": 0,
+    "pitching plan": 19.3,
+    "bullpen": 12.97,
+    "offense": 25,
+    "completeness": 0
+   }
+  },
   {
    "date": "2026-08-07",
    "game": "Minnesota Twins @ Milwaukee Brewers",
@@ -66,6 +178,23 @@
     "agreement": 0,
     "pitching plan": 16.5,
     "bullpen": 6.28,
+    "offense": 25,
+    "completeness": 0
+   }
+  },
+  {
+   "date": "2026-08-08",
+   "game": "New York Mets @ Pittsburgh Pirates",
+   "pick": "New York Mets",
+   "status": "pass",
+   "lab_score": 60,
+   "model_prob": 0.5361,
+   "result": "L",
+   "points_from": {
+    "conviction": 3.11,
+    "agreement": 0,
+    "pitching plan": 20,
+    "bullpen": 12,
     "offense": 25,
     "completeness": 0
    }
@@ -88,6 +217,23 @@
    }
   },
   {
+   "date": "2026-08-08",
+   "game": "Cincinnati Reds @ Washington Nationals",
+   "pick": "Cincinnati Reds",
+   "status": "pass",
+   "lab_score": 55,
+   "model_prob": 0.545,
+   "result": "L",
+   "points_from": {
+    "conviction": 5.6,
+    "agreement": 0,
+    "pitching plan": 20,
+    "bullpen": 6.65,
+    "offense": 22.71,
+    "completeness": 0
+   }
+  },
+  {
    "date": "2026-08-07",
    "game": "Toronto Blue Jays @ Philadelphia Phillies",
    "pick": "Philadelphia Phillies",
@@ -105,6 +251,23 @@
    }
   },
   {
+   "date": "2026-08-08",
+   "game": "Atlanta Braves @ New York Yankees",
+   "pick": "Atlanta Braves",
+   "status": "pass",
+   "lab_score": 49,
+   "model_prob": 0.5331,
+   "result": "L",
+   "points_from": {
+    "conviction": 2.26,
+    "agreement": 0,
+    "pitching plan": 13.7,
+    "bullpen": 7.55,
+    "offense": 25,
+    "completeness": 0
+   }
+  },
+  {
    "date": "2026-08-07",
    "game": "Cleveland Guardians @ Chicago White Sox",
    "pick": "Chicago White Sox",
@@ -118,6 +281,23 @@
     "pitching plan": 6,
     "bullpen": 11.33,
     "offense": 18.75,
+    "completeness": 0
+   }
+  },
+  {
+   "date": "2026-08-08",
+   "game": "Houston Astros @ San Diego Padres",
+   "pick": "Houston Astros",
+   "status": "pass",
+   "lab_score": 46,
+   "model_prob": 0.5195,
+   "result": "L",
+   "points_from": {
+    "conviction": 0,
+    "agreement": 0,
+    "pitching plan": 10.2,
+    "bullpen": 14.74,
+    "offense": 21.25,
     "completeness": 0
    }
   },
@@ -154,168 +334,126 @@
     "offense": 21.04,
     "completeness": 0
    }
-  },
-  {
-   "date": "2026-08-07",
-   "game": "Houston Astros @ San Diego Padres",
-   "pick": "San Diego Padres",
-   "status": "pass",
-   "lab_score": 28,
-   "model_prob": 0.5175,
-   "result": "L",
-   "points_from": {
-    "conviction": 0,
-    "agreement": 0,
-    "pitching plan": 20,
-    "bullpen": 4.43,
-    "offense": 3.75,
-    "completeness": 0
-   }
-  },
-  {
-   "date": "2026-08-07",
-   "game": "Baltimore Orioles @ Texas Rangers",
-   "pick": "Baltimore Orioles",
-   "status": "pass",
-   "lab_score": 18,
-   "model_prob": 0.5145,
-   "result": "L",
-   "points_from": {
-    "conviction": 0,
-    "agreement": 0,
-    "pitching plan": 6,
-    "bullpen": 11.58,
-    "offense": 0,
-    "completeness": 0
-   }
   }
  ],
  "focus": {
-  "date": "2026-08-07",
-  "n": 15,
-  "mean_lab": 45.87,
-  "mean_model_prob": 0.5552,
-  "actual_win_rate": 0.4667,
+  "date": "2026-08-08",
+  "n": 14,
+  "mean_lab": 51,
+  "mean_model_prob": 0.5558,
+  "actual_win_rate": 0.3571,
   "games": [
    {
     "game": "Athletics @ Boston Red Sox",
     "pick": "Boston Red Sox",
     "status": "watchlist",
-    "lab_score": 86,
-    "model_prob": 0.6834,
-    "result": "W"
-   },
-   {
-    "game": "Minnesota Twins @ Milwaukee Brewers",
-    "pick": "Milwaukee Brewers",
-    "status": "watchlist",
-    "lab_score": 71,
-    "model_prob": 0.6073,
-    "result": "L"
-   },
-   {
-    "game": "Detroit Tigers @ San Francisco Giants",
-    "pick": "Detroit Tigers",
-    "status": "pass",
-    "lab_score": 59,
-    "model_prob": 0.5453,
+    "lab_score": 89,
+    "model_prob": 0.6877,
     "result": "L"
    },
    {
     "game": "Chicago Cubs @ Kansas City Royals",
     "pick": "Chicago Cubs",
-    "status": "pass",
-    "lab_score": 57,
-    "model_prob": 0.5968,
-    "result": "W"
-   },
-   {
-    "game": "Toronto Blue Jays @ Philadelphia Phillies",
-    "pick": "Philadelphia Phillies",
-    "status": "pass",
-    "lab_score": 52,
-    "model_prob": 0.5353,
+    "status": "official_pick",
+    "lab_score": 83,
+    "model_prob": 0.6185,
     "result": "L"
    },
    {
     "game": "New York Mets @ Pittsburgh Pirates",
     "pick": "New York Mets",
     "status": "pass",
-    "lab_score": 48,
-    "model_prob": 0.5291,
-    "result": "W"
-   },
-   {
-    "game": "Cleveland Guardians @ Chicago White Sox",
-    "pick": "Chicago White Sox",
-    "status": "pass",
-    "lab_score": 48,
-    "model_prob": 0.5658,
+    "lab_score": 60,
+    "model_prob": 0.5361,
     "result": "L"
    },
    {
-    "game": "Colorado Rockies @ St. Louis Cardinals",
-    "pick": "St. Louis Cardinals",
+    "game": "Minnesota Twins @ Milwaukee Brewers",
+    "pick": "Milwaukee Brewers",
     "status": "pass",
-    "lab_score": 46,
-    "model_prob": 0.5678,
+    "lab_score": 57,
+    "model_prob": 0.5795,
     "result": "W"
-   },
-   {
-    "game": "Los Angeles Angels @ Miami Marlins",
-    "pick": "Miami Marlins",
-    "status": "pass",
-    "lab_score": 43,
-    "model_prob": 0.5547,
-    "result": "L"
    },
    {
     "game": "Cincinnati Reds @ Washington Nationals",
     "pick": "Cincinnati Reds",
     "status": "pass",
-    "lab_score": 42,
-    "model_prob": 0.5413,
+    "lab_score": 55,
+    "model_prob": 0.545,
+    "result": "L"
+   },
+   {
+    "game": "Detroit Tigers @ San Francisco Giants",
+    "pick": "Detroit Tigers",
+    "status": "pass",
+    "lab_score": 51,
+    "model_prob": 0.5318,
+    "result": "W"
+   },
+   {
+    "game": "Atlanta Braves @ New York Yankees",
+    "pick": "Atlanta Braves",
+    "status": "pass",
+    "lab_score": 49,
+    "model_prob": 0.5331,
+    "result": "L"
+   },
+   {
+    "game": "Los Angeles Angels @ Miami Marlins",
+    "pick": "Miami Marlins",
+    "status": "pass",
+    "lab_score": 47,
+    "model_prob": 0.5633,
+    "result": "W"
+   },
+   {
+    "game": "Houston Astros @ San Diego Padres",
+    "pick": "Houston Astros",
+    "status": "pass",
+    "lab_score": 46,
+    "model_prob": 0.5195,
+    "result": "L"
+   },
+   {
+    "game": "Baltimore Orioles @ Texas Rangers",
+    "pick": "Texas Rangers",
+    "status": "pass",
+    "lab_score": 45,
+    "model_prob": 0.5112,
+    "result": "W"
+   },
+   {
+    "game": "Colorado Rockies @ St. Louis Cardinals",
+    "pick": "St. Louis Cardinals",
+    "status": "pass",
+    "lab_score": 37,
+    "model_prob": 0.5652,
+    "result": "L"
+   },
+   {
+    "game": "Toronto Blue Jays @ Philadelphia Phillies",
+    "pick": "Philadelphia Phillies",
+    "status": "pass",
+    "lab_score": 35,
+    "model_prob": 0.5245,
     "result": "L"
    },
    {
     "game": "Los Angeles Dodgers @ Arizona Diamondbacks",
     "pick": "Arizona Diamondbacks",
     "status": "pass",
-    "lab_score": 37,
-    "model_prob": 0.5216,
-    "result": "W"
+    "lab_score": 32,
+    "model_prob": 0.5278,
+    "result": "L"
    },
    {
-    "game": "Atlanta Braves @ New York Yankees",
-    "pick": "New York Yankees",
-    "status": "pass",
-    "lab_score": 30,
-    "model_prob": 0.5031,
-    "result": "W"
-   },
-   {
-    "game": "Houston Astros @ San Diego Padres",
-    "pick": "San Diego Padres",
+    "game": "Cleveland Guardians @ Chicago White Sox",
+    "pick": "Chicago White Sox",
     "status": "pass",
     "lab_score": 28,
-    "model_prob": 0.5175,
-    "result": "L"
-   },
-   {
-    "game": "Tampa Bay Rays @ Seattle Mariners",
-    "pick": "Tampa Bay Rays",
-    "status": "pass",
-    "lab_score": 23,
-    "model_prob": 0.5446,
+    "model_prob": 0.5376,
     "result": "W"
-   },
-   {
-    "game": "Baltimore Orioles @ Texas Rangers",
-    "pick": "Baltimore Orioles",
-    "status": "pass",
-    "lab_score": 18,
-    "model_prob": 0.5145,
-    "result": "L"
    }
   ]
  }

@@ -24602,8 +24602,8 @@
       "date": "2026-08-08",
       "wins": 5,
       "losses": 7,
-      "ungraded": 1,
-      "voided": 0,
+      "ungraded": 0,
+      "voided": 1,
       "units": -2.96,
       "source": "published-picks",
       "current_official_model": "multi_market_v1",
@@ -24627,7 +24627,7 @@
           "wins": 5,
           "losses": 6,
           "pushes": 0,
-          "voids": 0,
+          "voids": 1,
           "units": -1.96
         }
       },
@@ -27225,7 +27225,29 @@
               "valueTag": "OFFICIAL PICK"
             }
           ],
-          "result": "NG",
+          "mlResult": "NG",
+          "totResult": "NG",
+          "kResults": [
+            {
+              "pitcher": "Griffin Jax",
+              "pick": "Under",
+              "line": 5.5,
+              "bestAm": -120,
+              "projection": 4.47,
+              "edge": -1.03,
+              "books": 6,
+              "expectedInnings": 4.6,
+              "pitcherRole": "traditional_starter",
+              "lineupSource": "posted",
+              "modelVersion": "leo-kprop",
+              "valueTag": "OFFICIAL PICK",
+              "actual": null,
+              "result": "VOID"
+            }
+          ],
+          "rlResult": "NG",
+          "finalAway": 3,
+          "finalHome": 2,
           "learning": {
             "model_version": "multi-market-v1",
             "official_model": "moneyline_only",
