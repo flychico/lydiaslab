@@ -156,7 +156,18 @@ async function main() {
 
   // ---- K-props grading: projection vs market line vs actual strikeouts ----
   const KLOG = path.join(ROOT, "data", "calibration", "kprops_log.csv");
-  const KHEAD = "date,pitcher,line,over_price,under_price,projection,actual_k,ou_result,lean,lean_result,projection_raw,calibration_band\n";
+  // The first 12 columns are the ORIGINAL layout and must never move — see the
+  // 2026-08-09 addition below. update-k-props.js's self-calibration reader
+  // addresses this file positionally (r[5]=projection, r[6]=actual_k,
+  // r[10]=projection_raw), so any reorder of columns 1-12 corrupts every
+  // already-graded row without the reader ever throwing an error. Everything
+  // new is appended after column 12 instead.
+  const KHEAD = "date,pitcher,line,over_price,under_price,projection,actual_k,ou_result,lean,lean_result,projection_raw,calibration_band,"
+    + "game,game_pk,role,expected_innings,bullpen_game,pitching_plan_reported,books,"
+    + "k_rate_season,k_rate_used,recent_form_starts,recent_form_bf,recent_form_k_rate,recent_form_weight,recent_form_capped,"
+    + "bf_per_ip,opp_k_adjustment,opp_k_source,opp_lineup_k,opp_lineup_k_weighted,opp_lineup_k_resolved,opp_team_season_k,league_lineup_k,"
+    + "whiff_leverage,whiff_leverage_applied,whiff_lineup_source,opp_lineup_source,"
+    + "calibration_bias,error_raw,abs_error_raw,error_corrected,abs_error_corrected\n";
   const kpPath = path.join(ROOT, "data", "k-props", `${DATE}.json`);
   // A missing capture used to fall straight through this block with no output at
   // all, so "the K loop is broken" and "there were no K props that day" looked
@@ -181,7 +192,7 @@ async function main() {
         const wantHead = KHEAD.trim();
         if (curHead !== wantHead && curHead.startsWith("date,pitcher,line")) {
           fs.writeFileSync(KLOG, wantHead + "\n" + (nl === -1 ? "" : cur.slice(nl + 1)));
-          console.log(`K-props ledger header upgraded (+projection_raw, +calibration_band).`);
+          console.log(`K-props ledger header upgraded (+31 projection-input/error columns, appended after column 12).`);
         }
       }
       /*
@@ -239,17 +250,35 @@ async function main() {
         const lean = Number.isFinite(rec.projection) ? Number((rec.projection - rec.line).toFixed(2)) : "";
         let leanRes = "";
         if (lean !== "" && Math.abs(lean) >= 0.7 && ou !== "P") leanRes = (lean > 0) === (ou === "O") ? "W" : "L";
-        // projection_raw and calibration_band are APPENDED, never inserted, so
-        // every existing column index stays put for readers that address this
-        // file positionally (update-k-props.js reads r[5] and r[6]). Older rows
-        // simply have fewer fields, which those readers already tolerate.
-        // Recording the pre-correction number is what lets the banded
-        // self-calibration eventually band on raw values instead of corrected
-        // ones — see the comment block in update-k-props.js.
+        const rf = rec.recent_form || {};
+        const num = v => Number.isFinite(v) ? v : "";
+        const bool = v => v === true ? "true" : v === false ? "false" : "";
+        // actual-vs-raw and actual-vs-corrected errors, computed once here at
+        // grading time (when actual is finally known) rather than left for
+        // every downstream reader to re-derive from projection - actual.
+        const errRaw = Number.isFinite(rec.projection_raw) ? Number((actual - rec.projection_raw).toFixed(2)) : "";
+        const absErrRaw = errRaw !== "" ? Math.abs(errRaw) : "";
+        const errCorr = Number.isFinite(rec.projection) ? Number((actual - rec.projection).toFixed(2)) : "";
+        const absErrCorr = errCorr !== "" ? Math.abs(errCorr) : "";
+        // Columns 1-12 (through calibration_band) are the ORIGINAL layout —
+        // never reordered, see the KHEAD comment above. Columns 13+ are the
+        // 2026-08-09 addition: every input the projection formula used, so a
+        // graded row is fully self-explaining without needing to go find that
+        // day's data/k-props/<date>.json (which isn't retained indefinitely).
         kRows.push([DATE, rec.name, rec.line, rec.over ?? "", rec.under ?? "",
           Number.isFinite(rec.projection) ? rec.projection : "", actual, ou, lean, leanRes,
           Number.isFinite(rec.projection_raw) ? rec.projection_raw : "",
-          rec.calibration_band || ""].join(","));
+          rec.calibration_band || "",
+          csvField(rec.game || ""), rec.game_pk ?? "", csvField(rec.pitcher_role_label || ""),
+          num(rec.expected_innings), bool(rec.bullpen_game), bool(rec.pitching_plan_reported), rec.books ?? "",
+          num(rec.k_rate_season), num(rec.k_rate_used),
+          num(rf.starts), num(rf.batters_faced), num(rf.recent_k_rate), num(rf.weight), bool(rf.capped),
+          num(rec.bf_per_ip), num(rec.opp_k_adjustment), csvField(rec.opp_k_source || ""),
+          num(rec.opp_lineup_k), num(rec.opp_lineup_k_weighted), rec.opp_lineup_k_resolved ?? "",
+          num(rec.opp_team_season_k), num(rec.league_lineup_k),
+          num(rec.whiff_leverage), bool(rec.whiff_leverage_applied), csvField(rec.whiff_lineup_source || ""), csvField(rec.opp_lineup_source || ""),
+          num(rec.calibration_bias), errRaw, absErrRaw, errCorr, absErrCorr
+        ].join(","));
         kGraded++;
       }
       if (kRows.length) fs.appendFileSync(KLOG, kRows.join("\n") + "\n");
