@@ -256,12 +256,24 @@ function renderCalibration(){
   el.innerHTML=`<p class="sec-note" style="margin-top:14px"><strong>Confidence calibration</strong> (full history) — do more confident games win more?</p><table class="dash"><thead><tr><th>Band</th><th class="num">n</th><th class="num">Predicted</th><th class="num">Actual</th><th class="num">Gap</th></tr></thead><tbody>${b.map(x=>{const g=(x.actual_win_rate-x.mean_model_prob)*100;return `<tr><td>${esc(x.band)}</td><td class="num">${x.n}</td><td class="num">${(x.mean_model_prob*100).toFixed(0)}%</td><td class="num">${(x.actual_win_rate*100).toFixed(0)}%</td><td class="num ${g<=-8?'no':(g>=8?'ok':'')}">${g>0?'+':''}${g.toFixed(0)}%</td></tr>`;}).join("")}</tbody></table>`;
 }
 function renderComponents(){
+  // 2026-08-09: grade-confidence.js deliberately omits win_rate_above /
+  // win_rate_below / lift for a component that never varies in the sample
+  // (spread === 0) -- it returns { constant: true, note: "..." } instead,
+  // exactly so a flat component doesn't get a fake split. This code used to
+  // multiply those missing fields by 100 unconditionally, producing "NaN%"
+  // for every constant component (agreement, completeness) instead of
+  // saying what's actually true: there's nothing to measure yet because
+  // every graded game scored identically on that component.
   const c=S.report&&S.report.components; const el=document.getElementById("components"); if(!c||!c.length){el.innerHTML="";return;}
-  const sorted=c.slice().sort((a,b)=>b.lift-a.lift);
-  const help=sorted.filter(x=>x.lift>=0.02).map(x=>x.component), hurt=sorted.filter(x=>x.lift<=-0.02).map(x=>x.component);
-  const take=(help.length||hurt.length)?`<p class="sec-note"><strong>Takeaway:</strong> ${help.length?`<span class="ok">${esc(help.join(", "))}</span> carr${help.length>1?"y":"ies"} real signal`:""}${help.length&&hurt.length?"; ":""}${hurt.length?`<span class="no">${esc(hurt.join(", "))}</span> ${hurt.length>1?"are":"is"} donating points for free or hurting`:""}. Re-weight the rating toward what helps.</p>`:"";
-  el.innerHTML=`<p class="sec-note">The Lab Rating hands out points across these components. For each one, this compares games where it paid a <strong>lot</strong> of points ("heavy") against games where it paid <strong>little</strong> ("light"): if the component carries information, the heavy games should win more. <strong>Positive lift = real signal. Zero or negative = it is donating points for free, or actively hurting.</strong></p>`
-    +`<table class="dash"><thead><tr><th>Component</th><th class="num">n</th><th class="num">Win% when heavy</th><th class="num">Win% when light</th><th class="num">Lift (heavy − light)</th></tr></thead><tbody>${sorted.map(x=>`<tr><td>${esc(x.component)}</td><td class="num">${x.n}</td><td class="num">${(x.win_rate_above*100).toFixed(0)}%</td><td class="num">${(x.win_rate_below*100).toFixed(0)}%</td><td class="num ${x.lift>=0?'ok':'no'}">${x.lift>0?'+':''}${(x.lift*100).toFixed(1)}%</td></tr>`).join("")}</tbody></table>`+take;
+  const sorted=c.slice().sort((a,b)=>(b.constant?-1:b.lift)-(a.constant?-1:a.lift));
+  const help=sorted.filter(x=>!x.constant&&x.lift>=0.02).map(x=>x.component), hurt=sorted.filter(x=>!x.constant&&x.lift<=-0.02).map(x=>x.component);
+  const flat=sorted.filter(x=>x.constant).map(x=>x.component);
+  const take=(help.length||hurt.length)?`<p class="sec-note"><strong>Takeaway:</strong> ${help.length?`<span class="ok">${esc(help.join(", "))}</span> carr${help.length>1?"y":"ies"} real signal`:""}${help.length&&hurt.length?"; ":""}${hurt.length?`<span class="no">${esc(hurt.join(", "))}</span> ${hurt.length>1?"are":"is"} donating points for free or hurting`:""}${flat.length?`; <span class="dim">${esc(flat.join(", "))}</span> ${flat.length>1?"haven't":"hasn't"} varied yet in this sample, so ${flat.length>1?"they":"it"} can't be judged`:""}. Re-weight the rating toward what helps.</p>`:"";
+  el.innerHTML=`<p class="sec-note">The Lab Rating hands out points across these components. For each one, this compares games where it paid a <strong>lot</strong> of points ("heavy") against games where it paid <strong>little</strong> ("light"): if the component carries information, the heavy games should win more. <strong>Positive lift = real signal. Zero or negative = it is donating points for free, or actively hurting.</strong> A component that has scored identically on every graded game so far shows as <strong>constant</strong> — there's no split to compare yet, not a zero.</p>`
+    +`<table class="dash"><thead><tr><th>Component</th><th class="num">n</th><th class="num">Win% when heavy</th><th class="num">Win% when light</th><th class="num">Lift (heavy − light)</th></tr></thead><tbody>${sorted.map(x=>x.constant
+      ? `<tr><td>${esc(x.component)}</td><td class="num">${x.n}</td><td class="dim" colspan="3">constant so far — never varies in this sample</td></tr>`
+      : `<tr><td>${esc(x.component)}</td><td class="num">${x.n}</td><td class="num">${(x.win_rate_above*100).toFixed(0)}%</td><td class="num">${(x.win_rate_below*100).toFixed(0)}%</td><td class="num ${x.lift>=0?'ok':'no'}">${x.lift>0?'+':''}${(x.lift*100).toFixed(1)}%</td></tr>`
+    ).join("")}</tbody></table>`+take;
 }
 
 /* ============================================================
