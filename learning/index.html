@@ -172,17 +172,32 @@ function bandOf(lab){const n=numOr(lab);if(n==null)return"—";if(n<50)return"0-
 function edgeBucket(e){if(e==null)return"—";if(e<0)return"model < market";if(e<0.05)return"0–5%";if(e<0.10)return"5–10%";if(e<0.15)return"10–15%";return"15%+";}
 
 function buildMoneyline(att, cal){
-  const calByPk={}; for(const r of cal) calByPk[r.gamePk]=r;
-  return att.map(a=>{
-    const c=calByPk[a.gamePk]||{};
-    const mp=numOr(a.model_prob), kp=numOr(c.market_prob);
+  // 2026-08-09: this used to map over ATTRIBUTION (att) as the base list
+  // whenever it had any rows at all, using calibration_model_log.csv (cal)
+  // only as a per-game lookup for a couple of fields. attribution_model_log.csv
+  // is a NEWER, NARROWER ledger -- it only carries the extra driver columns
+  // the Drivers tab needs (pitcher_gap, bullpen_gap, kbb_diff, off_delta_diff)
+  // and only started being written recently, so on any day where it has
+  // rows at all, this silently threw away every earlier day sitting in cal.
+  // Confirmed live 2026-08-09: att had exactly 14 rows, all from 2026-08-08
+  // ("last night") -- the Moneyline/Overview tabs showed only that, while
+  // cal had the full history back to 07-22 the whole time.
+  // Fixed: cal (the long, complete ledger) is now always the base. att is
+  // joined in ONLY for its extra driver columns, by gamePk, where available
+  // -- older games simply won't have driver data (it wasn't tracked yet),
+  // same as before this file existed.
+  const attByPk={}; for(const r of att) attByPk[r.gamePk]=r;
+  return cal.map(c=>{
+    const a=attByPk[c.gamePk]||{};
+    const mp=numOr(c.model_prob), kp=numOr(c.market_prob);
     const edge=(mp!=null&&kp!=null)?mp-kp:null;
     const matchup=c.matchup||"", side=c.model_side||"";
+    const lab=numOr(c.lab_score);
     return {
-      date:a.date, gamePk:a.gamePk, matchup, model_side:side, status:a.status, model_version:a.model_version,
-      result:a.result, won:a.result==="W"?1:(a.result==="L"?0:null),
-      model_prob:mp, market_prob:kp, edge, lab:numOr(a.lab), final_score:c.final_score,
-      band:bandOf(a.lab), market:kp==null?"—":(kp>=0.5?"Follow market":"Fade market"),
+      date:c.date, gamePk:c.gamePk, matchup, model_side:side, status:c.status, model_version:c.model_version,
+      result:c.result, won:c.result==="W"?1:(c.result==="L"?0:null),
+      model_prob:mp, market_prob:kp, edge, lab, final_score:c.final_score,
+      band:bandOf(lab), market:kp==null?"—":(kp>=0.5?"Follow market":"Fade market"),
       venue:(side&&matchup)?(side===homeOf(matchup)?"Home":"Road"):"—",
       pitcher_gap:numOr(a.pitcher_gap), bullpen_gap:numOr(a.bullpen_gap), kbb_diff:numOr(a.kbb_diff), off_delta_diff:numOr(a.off_delta_diff)
     };
@@ -792,7 +807,7 @@ document.getElementById("windowSeg").addEventListener("click",e=>{const b=e.targ
   ]);
   const att=parseCSV(attT), cal=parseCSV(calT);
   if(!att.length && !cal.length){ st.textContent="No graded data found yet."; return; }
-  S.ml=buildMoneyline(att.length?att:cal.map(c=>({...c,lab:c.lab_score})), cal);
+  S.ml=buildMoneyline(att, cal);
   S.report=rep||null; S.totals=parseCSV(totT); S.kprops=parseCSV(kpT); S.learningSummary=learnSumT||null;
   const recap=parseCSV(recapT); S.recapByPk={}; for(const r of recap){if(r.game_pk)S.recapByPk[r.game_pk]=r;}
   S.shadowRaw = shadowT ? parseShadowCSV(shadowT) : [];
