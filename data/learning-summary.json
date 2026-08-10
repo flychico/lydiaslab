@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-08-10T17:29:26.688Z",
+  "generated_at": "2026-08-10T17:30:45.004Z",
   "status": "ready",
-  "latest_date": "2026-08-06",
-  "days_reviewed": 4,
+  "latest_date": "2026-08-05",
+  "days_reviewed": 5,
   "source_files": {
     "results": "data/results.json",
     "clv": "data/clv/clv_log.csv"
   },
   "current_official_model": "multi-market-v1",
-  "headline": "Learning summary for 2026-08-06: moneyline record 1-0 (100.0%).",
+  "headline": "Learning summary for 2026-08-05: moneyline record 1-0 (100.0%).",
   "day": {
-    "date": "2026-08-06",
+    "date": "2026-08-05",
     "source": "published-picks",
-    "record_all_markets": "3-6",
-    "units_all_markets": -3.67,
+    "record_all_markets": "3-4",
+    "units_all_markets": -1.59,
     "ungraded": 0,
     "moneyline_record": "1-0",
     "moneyline_win_rate": 1,
@@ -26,9 +26,9 @@
     "note": "Official picks require high model probability and strong setup quality. A high Lab Rating alone is not enough. (Market edge is no longer a gate -- a picked side with a lower market-implied probability than the model's read can still qualify, as long as market data exists for the game at all.)"
   },
   "process_metrics": {
-    "average_model_probability": 0.6114,
-    "average_lab_score": 80,
-    "average_raw_edge": -0.0259,
+    "average_model_probability": 0.6576,
+    "average_lab_score": 81,
+    "average_raw_edge": 0.0404,
     "clv_counts": {
       "not_tracked": 1
     },
@@ -36,7 +36,7 @@
       "win_needs_more_sample": 1
     },
     "strong_official_count": 0,
-    "protected_by_probability_gate_count": 2,
+    "protected_by_probability_gate_count": 3,
     "high_bullpen_risk_count": 1,
     "pitcher_conflict_count": 0
   },
@@ -47,7 +47,7 @@
     },
     {
       "title": "Probability gate",
-      "read": "Across all reviewed days, 2 graded setups had strong Lab Rating but model probability below 72%. Those should remain value watch, not official picks."
+      "read": "Across all reviewed days, 3 graded setups had strong Lab Rating but model probability below 72%. Those should remain value watch, not official picks."
     },
     {
       "title": "Bullpen learning",
@@ -60,11 +60,11 @@
   ],
   "calibration": {
     "status": "ready",
-    "model_version": "leo",
-    "games_graded": 53,
-    "wins": 28,
-    "losses": 25,
-    "brier_score": 0.2445,
+    "model_version": "moneyline-v2-plus-runs-v1",
+    "games_graded": 23,
+    "wins": 16,
+    "losses": 7,
+    "brier_score": 0.2165,
     "shadow_model": {
       "status": "ready",
       "games": 29,
@@ -79,74 +79,87 @@
     },
     "attribution": {
       "status": "collecting",
-      "games": 53,
+      "games": 23,
       "needed": 150
     },
     "kprops": {
       "status": "ready",
       "self_calibration": "-0.2 K correction active (n=150)",
-      "graded": 87,
-      "with_projection": 82,
-      "bias": -0.2,
-      "mae": 1.92,
-      "lean_record": "19-17",
-      "over_lean_record": "9-9",
-      "under_lean_record": "10-8",
-      "no_lean": 46,
+      "graded": 109,
+      "with_projection": 104,
+      "bias": -0.01,
+      "mae": 2.03,
+      "lean_record": "23-24",
+      "over_lean_record": "11-13",
+      "under_lean_record": "12-11",
+      "no_lean": 57,
       "note": "Bias = actual minus projection (positive means we under-project). Leans only counted at 0.7+ strikeout edges. Small samples early — a lean record means little before ~100 graded pitchers."
     },
     "note": "Shadow ledger for learning only — never part of the public record. Official picks stay the only published record.",
     "buckets": [
       {
         "range": "50-55%",
-        "games": 29,
-        "wins": 11,
-        "expected_win_rate": 0.523,
-        "actual_win_rate": 0.379
+        "games": 10,
+        "wins": 5,
+        "expected_win_rate": 0.527,
+        "actual_win_rate": 0.5
       },
       {
         "range": "55-60%",
-        "games": 16,
-        "wins": 13,
-        "expected_win_rate": 0.574,
-        "actual_win_rate": 0.813
+        "games": 6,
+        "wins": 5,
+        "expected_win_rate": 0.576,
+        "actual_win_rate": 0.833
       },
       {
         "range": "60-65%",
         "games": 5,
-        "wins": 3,
-        "expected_win_rate": 0.61,
-        "actual_win_rate": 0.6
+        "wins": 4,
+        "expected_win_rate": 0.618,
+        "actual_win_rate": 0.8
       },
       {
         "range": "65-70%",
-        "games": 3,
-        "wins": 1,
-        "expected_win_rate": 0.687,
-        "actual_win_rate": 0.333
+        "games": 2,
+        "wins": 2,
+        "expected_win_rate": 0.677,
+        "actual_win_rate": 1
       }
     ],
     "shadow_by_status": {
       "watchlist": {
-        "games": 7,
-        "wins": 4,
-        "units": -0.58
+        "games": 2,
+        "wins": 2,
+        "units": 0.85
       },
       "pass": {
-        "games": 44,
-        "wins": 23,
-        "units": -0.82
-      },
-      "official_pick": {
-        "games": 2,
-        "wins": 1,
-        "units": -0.46
+        "games": 21,
+        "wins": 14,
+        "units": 4.2
       }
     }
   },
   "buckets": {
     "strong_official": [],
     "protected_by_probability_gate": [
+      {
+        "date": "2026-08-05",
+        "status": "official_pick",
+        "model_version": "multi-market-v1",
+        "game": "Athletics @ Cincinnati Reds",
+        "pick": "Cincinnati Reds",
+        "result": "W",
+        "model_probability": 0.6576,
+        "lab_score": 81,
+        "raw_edge": 0.0404,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Cincinnati Reds",
+        "pitcher_gap": 6,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 67,
+        "opponent_bullpen_score": 54
+      },
       {
         "date": "2026-08-06",
         "status": "official_pick",
@@ -210,28 +223,28 @@
         "date": null,
         "status": "official_pick",
         "model_version": "multi-market-v1",
-        "game": "Chicago White Sox @ Boston Red Sox",
-        "pick": "Boston Red Sox",
+        "game": "Athletics @ Cincinnati Reds",
+        "pick": "Cincinnati Reds",
         "result": "W",
-        "model_probability": 0.6114,
-        "lab_score": 80,
-        "raw_edge": -0.0259,
+        "model_probability": 0.6576,
+        "lab_score": 81,
+        "raw_edge": 0.0404,
         "clv_result": "not_tracked",
         "lesson_tag": "win_needs_more_sample",
-        "pitcher_edge_team": "Boston Red Sox",
-        "pitcher_gap": 18,
-        "bullpen_label": "Neutral",
-        "pick_side_bullpen_score": 58,
-        "opponent_bullpen_score": 62
+        "pitcher_edge_team": "Cincinnati Reds",
+        "pitcher_gap": 6,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 67,
+        "opponent_bullpen_score": 54
       }
     ]
   },
   "multi_day": {
-    "moneyline_record": "1-1",
-    "moneyline_win_rate": 0.5,
-    "official_moneyline_entries": 2,
+    "moneyline_record": "2-1",
+    "moneyline_win_rate": 0.6667,
+    "official_moneyline_entries": 3,
     "strict_gate_candidates": 0,
-    "high_lab_low_probability_entries": 2,
+    "high_lab_low_probability_entries": 3,
     "note": "Multi-day view includes whatever historical data exists. Older days may include legacy model behavior."
   },
   "next_review": [
@@ -243,9 +256,9 @@
   "coach": {
     "status": "collecting",
     "title": "Collecting a trustworthy current-model sample",
-    "summary": "LyDia has 2 of 7 required current-model days and 2 of 20 required current-model official picks. Recommendations remain paused until both minimums are reached.",
-    "current_model_days": 2,
-    "current_model_picks": 2,
+    "summary": "LyDia has 3 of 7 required current-model days and 3 of 20 required current-model official picks. Recommendations remain paused until both minimums are reached.",
+    "current_model_days": 3,
+    "current_model_picks": 3,
     "minimum_days": 7,
     "minimum_picks": 20,
     "bullpen_model_owner": "bullpen-fatigue-v3-runs-aware",
