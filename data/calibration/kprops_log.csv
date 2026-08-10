@@ -1,4 +1,4 @@
-date,pitcher,line,over_price,under_price,projection,actual_k,ou_result,lean,lean_result,projection_raw,calibration_band
+date,pitcher,line,over_price,under_price,projection,actual_k,ou_result,lean,lean_result,projection_raw,calibration_band,game,game_pk,role,expected_innings,bullpen_game,pitching_plan_reported,books,k_rate_season,k_rate_used,recent_form_starts,recent_form_bf,recent_form_k_rate,recent_form_weight,recent_form_capped,bf_per_ip,opp_k_adjustment,opp_k_source,opp_lineup_k,opp_lineup_k_weighted,opp_lineup_k_resolved,opp_team_season_k,league_lineup_k,whiff_leverage,whiff_leverage_applied,whiff_lineup_source,opp_lineup_source,calibration_bias,error_raw,abs_error_raw,error_corrected,abs_error_corrected
 8/3/2026,Brandon Pfaadt,3.5,-215,160,3.15,3,U,-0.16,,3.15,<6
 8/3/2026,Andrew Alvarez,4.5,-118,122,4.81,5,O,0.50,,4.81,<6
 8/3/2026,Aaron Nola,5.5,,,3.41,5,U,-1.90,W,3.41,<6
@@ -20,7 +20,7 @@ date,pitcher,line,over_price,under_price,projection,actual_k,ou_result,lean,lean
 8/4/2026,J.T. Ginn,4.5,-105,-125,6.92,5,O,2.42,W,6.92,6-7
 8/4/2026,Brady Singer,4.5,-105,-125,3.56,6,O,-0.78,,3.56,<6
 8/4/2026,Carson Palmquist,1.5,-110,140,1.51,0,U,0.17,,1.51,<6
-8/4/2026,Jesús Luzardo,7.5,,,6.31,7,U,-1.19,W,6.31,6-7
+8/4/2026,Jesï¿½s Luzardo,7.5,,,6.31,7,U,-1.19,W,6.31,6-7
 8/4/2026,Hunter Dobbins,3.5,-159,130,5.46,4,O,2.12,W,5.46,<6
 8/4/2026,Ryan Weathers,5.5,-108,-118,5.45,6,O,0.11,,5.45,<6
 8/4/2026,Davis Martin,4.5,120,-154,3.77,1,U,-0.57,,3.77,<6
@@ -37,7 +37,7 @@ date,pitcher,line,over_price,under_price,projection,actual_k,ou_result,lean,lean
 8/4/2026,Trey Yesavage,5.5,-111,-115,4.13,0,U,-1.21,W,4.13,<6
 8/4/2026,Freddy Peralta,5.5,120,-154,5.62,3,U,0.28,,5.62,<6
 8/4/2026,Gabriel Hughes,3.5,108,-138,3.91,7,O,0.57,,3.91,<6
-8/4/2026,Randy Vásquez,2.5,-152,115,2.18,1,U,-0.16,,2.18,<6
+8/4/2026,Randy Vï¿½squez,2.5,-152,115,2.18,1,U,-0.16,,2.18,<6
 8/4/2026,Eduardo Rodriguez,3.5,-180,140,3.52,4,O,0.18,,3.52,<6
 8/4/2026,Troy Melton,5.5,110,-140,4.93,4,U,-0.41,,4.93,<6
 8/4/2026,Emerson Hancock,4.5,,,3.96,6,O,-0.38,,3.96,<6
@@ -69,7 +69,7 @@ date,pitcher,line,over_price,under_price,projection,actual_k,ou_result,lean,lean
 8/5/2026,Shota Imanaga,4.5,-118,117,4.43,5,O,-0.07,,4.43,<6
 8/5/2026,Carson Whisenhunt,4.5,130,-118,4.91,4,U,0.41,,4.91,<6
 8/5/2026,Tomoyuki Sugano,2.5,100,100,2.44,3,O,-0.06,,2.44,<6
-8/5/2026,Eury Pérez,5.5,106,-115,6.21,9,O,0.71,,6.21,6-7
+8/5/2026,Eury Pï¿½rez,5.5,106,-115,6.21,9,O,0.71,,6.21,6-7
 8/6/2026,Framber Valdez,3.5,-120,115,4.08,5,O,0.25,,4.08,<6
 8/6/2026,Miles Mikolas,2.5,-164,140,2.36,1,U,-0.47,,2.36,<6
 8/6/2026,Ranger Suarez,5.5,-138,125,7.75,3,U,2.25,L,7.75,>=7
@@ -89,8 +89,8 @@ date,pitcher,line,over_price,under_price,projection,actual_k,ou_result,lean,lean
 8/6/2026,Dylan Cease,7.5,,,9.48,10,O,1.98,W,9.48,>=7
 8/6/2026,David Peterson,3.5,-113,112,3.44,3,U,-0.39,,3.44,<6
 8/6/2026,Bryce Miller,4.5,-110,105,4.67,5,O,-0.16,,4.67,<6
-8/6/2026,Cristopher Sánchez,7.5,120,-118,6.10,6,U,-1.40,W,6.10,6-7
-8/6/2026,Martín Pérez,3.5,-133,133,5.16,3,U,1.33,L,5.16,<6
+8/6/2026,Cristopher Sï¿½nchez,7.5,120,-118,6.10,6,U,-1.40,W,6.10,6-7
+8/6/2026,Martï¿½n Pï¿½rez,3.5,-133,133,5.16,3,U,1.33,L,5.16,<6
 8/7/2026,Carmen Mlodzinski,3.5,139,-164,3.88,1,U,0.38,,3.88,<6
 8/7/2026,Payton Tolle,6.5,-132,110,7.49,14,O,0.99,W,7.49,>=7
 8/7/2026,Jack Perkins,4.5,-113,102,4.26,3,U,-0.24,,4.26,<6
@@ -145,3 +145,28 @@ date,pitcher,line,over_price,under_price,projection,actual_k,ou_result,lean,lean
 8/8/2026,Jake Bennett,4.5,-130,113,4.60,5,O,0.10,,4.60,<6
 8/8/2026,Walbert Urena,4.5,138,134,5.54,2,U,1.04,L,5.54,<6
 8/8/2026,Clay Holmes,3.5,-117,111,4.15,1,U,0.65,,4.15,<6
+2026-08-09,Brady Singer,3.5,-115,-105,3.68,3,U,0.18,,3.68,<6,Cincinnati Reds @ Washington Nationals,822700,Traditional starter,5.2,false,false,2,0.1887,0.1882,5,128,0.1875,0.39,false,4.43,0.8936,lineup_unweighted_30d_posted,0.199,0.2076,9,0.2059,0.2227,0.9499,true,posted,posted,0,-0.68,0.68,-0.68,0.68
+2026-08-09,Sean Manaea,10.5,130,-180,6.25,11,O,-4.25,L,6.25,6-7,New York Mets @ Pittsburgh Pirates,823345,Traditional starter,5.6,false,false,1,0.2335,0.2421,5,125,0.256,0.385,false,4.34,0.9735,lineup_unweighted_30d_posted,0.2168,0.2496,9,0.2572,0.2227,1.09,true,posted,posted,0,4.75,4.75,4.75,4.75
+2026-08-09,Jared Jones,5.5,116,-140,5.57,3,U,0.07,,5.57,<6,New York Mets @ Pittsburgh Pirates,823345,Traditional starter,4.5,false,false,5,0.261,0.2564,5,105,0.2476,0.344,false,4.22,1.1652,lineup_unweighted_30d_posted,0.2595,0.2538,9,0.2248,0.2227,0.9739,true,posted,posted,0,-2.57,2.57,-2.57,2.57
+2026-08-09,Shane Bieber,3.5,-116,115,2.86,4,O,-0.64,,2.86,<6,Toronto Blue Jays @ Philadelphia Phillies,823425,Traditional starter,4.7,false,false,6,0.1641,0.1677,5,109,0.1743,0.353,false,4.57,0.8382,lineup_unweighted_30d_posted,0.1867,0.1898,9,0.2262,0.2227,0.9398,true,posted,posted,0,1.14,1.14,1.14,1.14
+2026-08-09,Grant Holmes,4.5,-154,124,4.7,2,U,0.2,,4.7,<6,Atlanta Braves @ New York Yankees,823513,Traditional starter,5,false,false,6,0.193,0.182,5,111,0.1622,0.357,false,4.27,1.1518,lineup_unweighted_30d_posted,0.2566,0.259,9,0.2439,0.2227,1.0505,true,posted,posted,0,-2.7,2.7,-2.7,2.7
+2026-08-09,Cam Schlittler,10.5,-130,-105,8.61,11,O,-1.89,L,8.61,>=7,Atlanta Braves @ New York Yankees,823513,Traditional starter,5.9,false,false,1,0.3143,0.348,5,110,0.4091,0.355,false,3.95,0.9948,lineup_unweighted_30d_posted,0.2216,0.2196,9,0.2176,0.2227,1.0743,true,posted,posted,0,2.39,2.39,2.39,2.39
+2026-08-09,Grayson Rodriguez,5.5,130,-157,4.76,8,O,-0.74,L,4.76,<6,Los Angeles Angels @ Miami Marlins,823835,Traditional starter,4.6,false,false,6,0.1969,0.2122,5,108,0.2407,0.351,false,4.62,1.0669,lineup_unweighted_30d_posted,0.2376,0.2186,9,0.2096,0.2227,0.9941,true,posted,posted,0,3.24,3.24,3.24,3.24
+2026-08-09,Ryan Gusto,4.5,-122,106,3.99,4,U,-0.51,,3.99,<6,Los Angeles Angels @ Miami Marlins,823835,Limited starter,4,false,false,6,0.1991,0.1966,5,94,0.1915,0.32,false,4.41,1.1429,lineup_unweighted_30d_posted,0.2546,0.2462,9,0.2507,0.2227,1.0152,true,posted,posted,0,0.01,0.01,0.01,0.01
+2026-08-09,Matthew Boyd,5.5,120,-160,3.37,3,U,-2.13,W,3.37,<6,Chicago Cubs @ Kansas City Royals,824078,Traditional starter,5.7,false,false,2,0.2006,0.1775,5,133,0.1429,0.399,false,4.13,0.8694,lineup_unweighted_30d_posted,0.1937,0.174,9,0.2091,0.2227,0.9281,true,posted,posted,0,-0.37,0.37,-0.37,0.37
+2026-08-09,Randy Dobnak,2.5,-130,110,3.11,4,O,0.61,,3.11,<6,Chicago Cubs @ Kansas City Royals,824078,Traditional starter,5.3,false,false,6,0.1242,0.1277,5,112,0.1339,0.359,false,4.25,1.1221,lineup_unweighted_30d_posted,0.2499,0.2405,9,0.218,0.2227,0.9686,true,posted,posted,0,0.89,0.89,0.89,0.89
+2026-08-09,Joey Cantillo,5.5,-119,-102,5.71,3,U,0.21,,5.71,<6,Cleveland Guardians @ Chicago White Sox,824564,Traditional starter,4.8,false,false,6,0.2529,0.2657,5,92,0.2935,0.315,false,4.36,1.0164,lineup_unweighted_30d_posted,0.2264,0.2536,9,0.2467,0.2227,1.013,true,posted,posted,0,-2.71,2.71,-2.71,2.71
+2026-08-09,Davis Martin,3.5,-118,100,2.9,1,U,-0.6,,2.9,<6,Cleveland Guardians @ Chicago White Sox,824564,Traditional starter,5.3,false,false,6,0.2081,0.1908,5,102,0.1569,0.338,false,4.22,0.7644,lineup_unweighted_30d_posted,0.1703,0.1866,9,0.2179,0.2227,0.88,true,posted,posted,0,-1.9,1.9,-1.9,1.9
+2026-08-09,Connor Prielipp,8.5,-105,-130,7.76,7,U,-0.74,W,7.76,>=7,Minnesota Twins @ Milwaukee Brewers,823751,Traditional starter,5.2,false,false,1,0.2472,0.2668,5,109,0.3028,0.353,false,4.31,1.3575,lineup_unweighted_30d_posted,0.3024,0.2218,9,0.2158,0.2227,0.963,true,posted,posted,0,-0.76,0.76,-0.76,0.76
+2026-08-09,Jacob Misiorowski,11.5,-110,-125,7.63,9,U,-3.87,W,7.63,>=7,Minnesota Twins @ Milwaukee Brewers,823751,Traditional starter,6,false,false,1,0.4056,0.4219,5,106,0.4528,0.346,false,3.78,0.8624,lineup_unweighted_30d_posted,0.1921,0.1938,9,0.211,0.2227,0.9169,true,posted,posted,0,1.37,1.37,1.37,1.37
+2026-08-09,Michael Lorenzen,1.5,-120,-110,2.37,1,U,0.87,L,2.37,<6,Colorado Rockies @ St. Louis Cardinals,823020,Traditional starter,4.6,false,false,1,0.1492,0.1286,5,102,0.0882,0.338,false,4.8,0.9071,lineup_unweighted_30d_posted,0.2021,0.1967,9,0.212,0.2227,0.917,true,posted,posted,0,-1.37,1.37,-1.37,1.37
+2026-08-09,Michael McGreevy,3.5,100,-135,4.08,4,O,0.58,,4.08,<6,Colorado Rockies @ St. Louis Cardinals,823020,Traditional starter,5.5,false,false,1,0.1657,0.1671,5,112,0.1696,0.359,false,4.07,1.0308,lineup_unweighted_30d_posted,0.2296,0.2296,9,0.2169,0.2227,1.0614,true,posted,posted,0,-0.08,0.08,-0.08,0.08
+2026-08-09,Cade Povich,4.5,115,-155,4.65,2,U,0.15,,4.65,<6,Baltimore Orioles @ Texas Rangers,822862,Traditional starter,4.5,false,false,1,0.175,0.1824,5,96,0.1979,0.324,false,4.24,1.245,lineup_unweighted_30d_posted,0.2773,0.2726,8,0.2496,0.2227,1.0672,true,posted,posted,0,-2.65,2.65,-2.65,2.65
+2026-08-09,Kumar Rocker,5.5,-110,-125,7.02,5,U,1.52,L,7.02,>=7,Baltimore Orioles @ Texas Rangers,822862,Traditional starter,4.9,false,false,1,0.2141,0.2252,5,119,0.2437,0.373,false,4.33,1.307,lineup_unweighted_30d_posted,0.2911,0.2787,9,0.2379,0.2227,1.12,true,posted,posted,0,-2.02,2.02,-2.02,2.02
+2026-08-09,Troy Melton,5.5,132,-161,5.04,5,U,-0.46,,5.04,<6,Detroit Tigers @ San Francisco Giants,823190,Traditional starter,6.2,false,false,6,0.2248,0.2294,5,118,0.2373,0.371,false,3.84,0.9362,lineup_unweighted_30d_posted,0.2085,0.2125,9,0.2013,0.2227,0.9944,true,posted,posted,0,-0.04,0.04,-0.04,0.04
+2026-08-09,Logan Webb,5.5,128,-155,4.83,2,U,-0.67,,4.83,<6,Detroit Tigers @ San Francisco Giants,823190,Traditional starter,6.3,false,false,6,0.1929,0.1912,5,122,0.1885,0.379,false,4.05,1.0058,lineup_unweighted_30d_posted,0.224,0.2138,9,0.2263,0.2227,0.9882,true,posted,posted,0,-2.83,2.83,-2.83,2.83
+2026-08-09,Justin Wrobleski,4.5,130,-165,4.01,3,U,-0.49,,4.01,<6,Los Angeles Dodgers @ Arizona Diamondbacks,825050,Traditional starter,6.1,false,false,6,0.1911,0.2125,5,121,0.2479,0.377,false,4.09,0.8576,lineup_unweighted_30d_posted,0.191,0.1917,9,0.1721,0.2227,0.88,true,posted,posted,0,-1.01,1.01,-1.01,1.01
+2026-08-09,Eduardo Rodriguez,3.5,-132,114,3.11,9,O,-0.39,,3.11,<6,Los Angeles Dodgers @ Arizona Diamondbacks,825050,Traditional starter,5.9,false,false,6,0.1706,0.1712,5,122,0.1721,0.379,false,4.13,0.7844,lineup_unweighted_30d_posted,0.1747,0.1889,9,0.1979,0.2227,0.9497,true,posted,posted,0,5.89,5.89,5.89,5.89
+2026-08-09,Ian Seymour,5.5,-111,-101,5.1,7,O,-0.4,,5.1,<6,Tampa Bay Rays @ Seattle Mariners,823104,Limited starter,4.4,false,false,6,0.2846,0.304,5,99,0.3434,0.331,false,4.13,0.9708,lineup_unweighted_30d_posted,0.2162,0.202,9,0.2364,0.2227,0.9488,true,posted,posted,0,1.9,1.9,1.9,1.9
+2026-08-09,Emerson Hancock,4.5,115,-127,3.6,3,U,-0.9,W,3.6,<6,Tampa Bay Rays @ Seattle Mariners,823104,Traditional starter,5.5,false,false,6,0.2265,0.2102,5,106,0.1792,0.346,false,4.05,0.8752,lineup_unweighted_30d_posted,0.1949,0.1874,9,0.1948,0.2227,0.88,true,posted,posted,0,-0.6,0.6,-0.6,0.6
+2026-08-09,Cristian Javier,3.5,107,-120,2.08,2,U,-1.42,W,2.08,<6,Houston Astros @ San Diego Padres,823268,Limited starter,3.7,false,false,6,0.184,0.1625,5,88,0.1136,0.306,false,4.57,0.77,lineup_unweighted_30d_posted,0.1715,0.1781,9,0.2206,0.2227,0.9928,true,posted,posted,0,-0.08,0.08,-0.08,0.08
