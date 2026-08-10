@@ -1,0 +1,63 @@
+name: Rebuild results from CSV
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rebuild-results
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Rebuild data/results.json and results/index.html from results_log.csv
+        run: node scripts/rebuild-results.js
+
+      - name: Commit and push if changed
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "lydia-bot"
+          git config user.email "actions@users.noreply.github.com"
+
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "Rebuild results from results_log.csv (manual correction)"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "ERROR: Working tree became dirty after commit."
+            git status --short
+            exit 1
+          fi
+
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "ERROR: Working tree is dirty after rebase."
+            git status --short
+            exit 1
+          fi
+
+          git push origin "HEAD:${GITHUB_REF_NAME}"
