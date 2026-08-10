@@ -225,7 +225,12 @@ function project(p, oppTeamId, kv){
   const ov = Number(IP_OVERRIDES[key]);
   const expIP = Number.isFinite(ov) && ov > 0 ? ov : modelIP;
 
-  const kbf = p.so/p.bf;
+  const kbf = p.so/p.bf; // season-only; display/fallback for pitchers with no published record
+  // 2026-08-10: recovery below must divide by the SAME K rate the server
+  // actually multiplied by (blended season + last-5-starts), or the
+  // recovered adjustment comes out wrong. This was silently using the
+  // season-only kbf above -- same root cause as the K-rate walkthrough bug.
+  const kbfForRecovery = (hasServer && Number.isFinite(server.k_rate_used)) ? server.k_rate_used : kbf;
   const bfPerIp = Number.isFinite(server && server.bf_per_ip) ? server.bf_per_ip : 4.28;
 
   // The server's own implied lineup adjustment, recovered by division rather
@@ -234,7 +239,7 @@ function project(p, oppTeamId, kv){
   if (hasServer) {
     const lev = Number(server.whiff_leverage);
     const raw = Number(server.projection_raw);
-    const denom = (modelIP * bfPerIp) * kbf * (Number.isFinite(lev) ? lev : 1);
+    const denom = (modelIP * bfPerIp) * kbfForRecovery * (Number.isFinite(lev) ? lev : 1);
     if (denom > 0 && Number.isFinite(raw)) serverAdj = raw / denom;
   }
 
@@ -275,10 +280,19 @@ function kFromParts(pr){
   if (pr.hasServer) {
     const raw = Number(pr.server.projection_raw);
     const proj = Number(pr.server.projection);
+    // 2026-08-10, Lynold's call: this tool's own displayed number excludes
+    // arsenal leverage (pitch-mix-vs-lineup whiff edge). Divide it back out
+    // of the server's raw figure before anything else touches it. This is
+    // local to this tool only -- data/k-props/<date>.json, the official
+    // pick, and the site's published projection are untouched; leverage
+    // still stays in the real model everywhere else.
+    const lev = Number(pr.server.whiff_leverage);
+    const rawNoLev = (Number.isFinite(raw) && Number.isFinite(lev) && lev > 0) ? raw / lev : raw;
     // Swap the server's lineup adjustment for the edited one. Unedited, the
-    // ratio is exactly 1 and this reproduces the published projection.
+    // ratio is exactly 1 and this reproduces the published projection (minus
+    // leverage, per above).
     const ratio = (pr.kEdited && pr.serverAdj > 0 && Number.isFinite(raw)) ? (pr.adj / pr.serverAdj) : 1;
-    const base = Number.isFinite(raw) ? (raw * ratio + (proj - raw)) : proj;
+    const base = Number.isFinite(rawNoLev) ? (rawNoLev * ratio + (proj - raw)) : proj;
     return Math.max(0, base * (pr.expIP / pr.modelIP));
   }
   return Math.max(0, pr.expIP * pr.bfPerIp * pr.kbf * pr.adj + (KBIAS || 0));
@@ -399,7 +413,19 @@ function derivation(pr, pid){
       <div class="ars-note">This pitcher has no published projection today, so the page fell back to its own estimate: ${pr.expIP.toFixed(1)} IP x ${pr.bfPerIp.toFixed(2)} batters/IP x ${(pr.kbf*100).toFixed(1)}% K rate, adjusted for the opposing lineup. Arsenal leverage is not available without the published record.</div>
     </details>`;
   }
-  const kbf = pr.kbf;
+  // 2026-08-10: this walkthrough is supposed to mirror update-k-props.js
+  // exactly, but it was showing pr.kbf -- the CLIENT's own season-only SO/BF,
+  // recomputed locally -- instead of the blended (season + last-5-starts
+  // recent form) rate the server actually used to build projection_raw.
+  // The final total was never wrong (it comes from the server's own
+  // raw/proj figures, not from summing these display rows), but this row's
+  // number didn't match what the model really did. Prefer the published
+  // blended rate; fall back to the client's season-only figure only for
+  // older captures written before k_rate_used existed.
+  // Number.isFinite (not the coercing global isFinite/Number()) so a
+  // missing or null field falls back correctly instead of coercing to 0.
+  const kbfUsed = s.k_rate_used;
+  const kbf = Number.isFinite(kbfUsed) ? kbfUsed : pr.kbf;
   const lev = Number(s.whiff_leverage);
   const raw = Number(s.projection_raw);
   const bias = Number(s.projection) - raw;
@@ -415,14 +441,14 @@ function derivation(pr, pid){
   return `<details class="ars">
     <summary>Show the math</summary>
     <div class="ars-note" style="margin-bottom:6px"><b>${(pr.expIP).toFixed(1)} IP × ${pr.bfPerIp.toFixed(2)} batters/IP = ${(bf*scale).toFixed(1)} batters faced</b></div>
-    ${row("× K rate", `${(kbf*100).toFixed(1)}% per batter faced`, (baseK*scale).toFixed(2)+" K")}
+    ${row("× K rate", `${(kbf*100).toFixed(1)}% per batter faced${Number.isFinite(kbfUsed) ? " (blended: season + last 5 starts)" : " (season only — no blended figure published for this capture)"}`, (baseK*scale).toFixed(2)+" K")}
     ${row("× lineup K% vs hand", adj>=1?"helps":"hurts", (adj>=1?"+":"")+((adj-1)*100).toFixed(1)+"%", "deriv-adj-"+pid)}
-    ${row("× arsenal leverage", Number.isFinite(lev)?(lev>=1?"pitch mix favours him":"pitch mix works against him"):"", Number.isFinite(lev)?((lev>=1?"+":"")+((lev-1)*100).toFixed(1)+"%"):"—")}
     ${Math.abs(bias)>=0.01 ? row("+ self-calibration", `learned from graded starts`, (bias>0?"+":"")+bias.toFixed(2)+" K") : ""}
     <div class="ars-row" style="grid-template-columns:1fr auto;border-top:1px solid var(--border);margin-top:5px;padding-top:5px">
       <span><b>Projection</b></span><span class="ars-ratio" id="deriv-proj-${pid}"><b>${pr.k.toFixed(2)} K</b></span></div>
     ${pr.ipEdited?`<div class="ars-note">Rescaled from the published ${Number(s.projection).toFixed(2)}K at ${pr.modelIP.toFixed(1)} IP. Every other term is unchanged.</div>`:""}
     ${pr.kEdited?`<div class="ars-note">Lineup K% edited by you. The published projection used ${((pr.serverAdj-1)*100).toFixed(1)}%; this card uses ${((adj-1)*100).toFixed(1)}%. Nothing is published.</div>`:""}
+    ${Number.isFinite(lev) && lev !== 1 ? `<div class="ars-note">2026-08-10: this card's projection excludes arsenal leverage (pitch-mix-vs-lineup whiff edge, ${lev.toFixed(3)} on the published pick). The site's official pick and data/k-props still include it — this is a local, this-tool-only view.</div>` : ""}
   </details>`;
 }
 
@@ -597,8 +623,6 @@ function kBox(pitcher, oppTeam, oppTeamId, kv, pid){
     <div class="k-row"><span>K per batter (season)</span><b>${(pr.kbf*100).toFixed(1)}%</b></div>
     ${ipControl(pr, pid)}
     ${pr.role.bullpenGame ? '<div class="small dim">Strikeout projection covers the opener only. Remaining innings belong to the bullpen.</div>' : ""}
-    <div class="k-row"><span title="How often this lineup strikes out against pitchers of his hand — higher means more strikeouts available">${escapeHtml(oppTeam)} vs ${p.hand==="L"?"lefties":"righties"}</span><span id="opptier-${pid}">${oppTierChip(pr.oppK)}</span></div>
-    ${kControl(pr, pid)}
     ${(() => { const L = LINES[p.name.toLowerCase()]; if (!L || L.line === null || L.line === undefined) return ""; return `<div class="k-row"><span>Market line (${L.books} book${L.books === 1 ? "" : "s"})</span><span><b>${L.line}</b> <span class="dim small">O ${L.over > 0 ? "+" : ""}${L.over ?? "—"} / U ${L.under > 0 ? "+" : ""}${L.under ?? "—"}</span></span></div>`; })()}
     ${derivation(pr, pid)}
     ${lineupBlock(pr, pid, oppTeamId, window.__currentGame)}
