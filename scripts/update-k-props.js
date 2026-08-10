@@ -140,10 +140,25 @@ async function main() {
   const reportedPlans = PitchingPlan.load(ROOT, DATE);
   const pitchingPlanSignature = JSON.stringify(reportedPlans.games || {});
 
+  // 2026-08-10: whether this run needs a fresh PAID odds pull at all. A
+  // lineup posting changes opp_lineup_k (our own projection input) -- it
+  // does not change the sportsbook's line or price. Re-pulling odds for the
+  // entire slate every time any one pitcher's opposing lineup posts was
+  // burning ~1 paid event call per game on the slate for a change that only
+  // ever affects the projection math, never the market data. Lynold: "the
+  // pitcher itself did not change... we only need to do k prop [odds] when
+  // we don't have it for that pitcher." Below, a run with ONLY lineup-posted
+  // changes (no pitcher swap, no plan change) skips the paid fetch entirely;
+  // the projection loop still runs fresh off free MLB data, and the
+  // merge-forward logic near the bottom of this file (the 2026-08-06 Dylan
+  // Cease fix) carries the already-captured line/over/under/books forward
+  // since this run's pitchers object never populates them.
+  let skipOddsFetch = false;
+
   if (IF_CHANGED) {
     // Lines are captured once at publish and kept all day — only a pitcher
-    // change, or (2026-08-08) an opposing lineup that has since posted,
-    // re-captures.
+    // change, a pitching-plan update, or (2026-08-08) an opposing lineup
+    // that has since posted, re-triggers this script at all.
     //
     // 2026-08-05: a missing/stale prior capture used to be treated the same
     // as "nothing changed" (return early, no fetch) -- correct once something
@@ -159,14 +174,19 @@ async function main() {
       console.log("No comparable capture for today yet — running a full capture.");
     } else {
       const now = await currentProbables();
-      const changes = [];
-      if (prev.pitching_plan_signature !== pitchingPlanSignature) changes.push("reported pitching plan updated");
+      // Changes that mean we may not have a price for someone yet, and need
+      // a real paid fetch.
+      const criticalChanges = [];
+      // Changes that only affect OUR projection math (opp_lineup_k), never
+      // the market's price -- never need a paid fetch on their own.
+      const lineupChanges = [];
+      if (prev.pitching_plan_signature !== pitchingPlanSignature) criticalChanges.push("reported pitching plan updated");
       for (const [pk, cur] of Object.entries(now)) {
         const was = prev.probables[pk];
         if (!was) continue;
         for (const side of ["away", "home"]) {
-          if (was[side] !== "TBD" && cur[side] !== was[side]) changes.push(`${was[side]} → ${cur[side]}`);
-          if (was[side] === "TBD" && cur[side] !== "TBD") changes.push(`TBD → ${cur[side]}`);
+          if (was[side] !== "TBD" && cur[side] !== was[side]) criticalChanges.push(`${was[side]} → ${cur[side]}`);
+          if (was[side] === "TBD" && cur[side] !== "TBD") criticalChanges.push(`TBD → ${cur[side]}`);
         }
       }
       // 2026-08-08 (ERR-20260808-02): catch a lineup that has since posted for
@@ -175,64 +195,78 @@ async function main() {
       // so this costs nothing when nothing has actually posted. Checking
       // "either side posted" per game rather than resolving each pitcher's
       // specific opponent side is deliberately loose -- the cost of a false
-      // trigger is one harmless extra event call, the cost of a false skip is
-      // a K prop that can never go official all day.
+      // trigger is one harmless extra projection recompute, the cost of a
+      // false skip is a K prop that can never go official all day.
       const stillWaiting = Object.values(prev.pitchers || {}).some(rec => rec.opp_lineup_source !== "posted");
       if (stillWaiting) {
         const lineupsNow = await currentLineupsPosted().catch(() => ({}));
         for (const [key, rec] of Object.entries(prev.pitchers || {})) {
           if (rec.opp_lineup_source === "posted") continue;
           const lu = lineupsNow[rec.game_pk];
-          if (lu && (lu.away || lu.home)) changes.push(`${rec.name}: opposing lineup now posted`);
+          if (lu && (lu.away || lu.home)) lineupChanges.push(`${rec.name}: opposing lineup now posted`);
         }
       }
-      if (!changes.length) { console.log("Probables and lineups unchanged — keeping the morning capture, no API call."); return; }
-      console.log(`Change detected (${changes.join("; ")}) — re-capturing prop lines.`);
+      if (!criticalChanges.length && !lineupChanges.length) {
+        console.log("Probables and lineups unchanged — keeping the morning capture, no API call.");
+        return;
+      }
+      if (!criticalChanges.length) {
+        skipOddsFetch = true;
+        console.log(`Lineup(s) posted (${lineupChanges.join("; ")}) — recomputing projections only, no odds fetch.`);
+      } else {
+        console.log(`Change detected (${[...criticalChanges, ...lineupChanges].join("; ")}) — re-capturing prop lines.`);
+      }
     }
   }
-  const events = await j(`https://api.the-odds-api.com/v4/sports/baseball_mlb/events?apiKey=${KEY}`);
-  // keep events that start on DATE in ET
-  const todays = (events || []).filter(e => new Date(e.commence_time).toLocaleDateString("en-CA", { timeZone: "America/New_York" }) === DATE);
-  console.log(`K-props: ${todays.length} event(s) on ${DATE}.`);
+
   const pitchers = {};
   let fetched = 0;
 
-  for (const ev of todays) {
-    let data;
-    try {
-      data = await j(`https://api.the-odds-api.com/v4/sports/baseball_mlb/events/${ev.id}/odds?apiKey=${KEY}&regions=us&markets=pitcher_strikeouts&oddsFormat=american`);
-      fetched++;
-    } catch (e) { console.warn(`event ${ev.id}: ${e.message}`); continue; }
-    // collect per pitcher: [{point, overPrice, underPrice, book}]
-    const rows = {};
-    for (const bk of data.bookmakers || []) {
-      const mkt = (bk.markets || []).find(m => m.key === "pitcher_strikeouts");
-      if (!mkt) continue;
-      const byPitcher = {};
-      for (const o of mkt.outcomes || []) {
-        const name = (o.description || "").trim();
-        if (!name) continue;
-        (byPitcher[name] = byPitcher[name] || {})[o.name === "Over" ? "over" : "under"] = { price: o.price, point: o.point };
+  if (!skipOddsFetch) {
+    const events = await j(`https://api.the-odds-api.com/v4/sports/baseball_mlb/events?apiKey=${KEY}`);
+    // keep events that start on DATE in ET
+    const todays = (events || []).filter(e => new Date(e.commence_time).toLocaleDateString("en-CA", { timeZone: "America/New_York" }) === DATE);
+    console.log(`K-props: ${todays.length} event(s) on ${DATE}.`);
+
+    for (const ev of todays) {
+      let data;
+      try {
+        data = await j(`https://api.the-odds-api.com/v4/sports/baseball_mlb/events/${ev.id}/odds?apiKey=${KEY}&regions=us&markets=pitcher_strikeouts&oddsFormat=american`);
+        fetched++;
+      } catch (e) { console.warn(`event ${ev.id}: ${e.message}`); continue; }
+      // collect per pitcher: [{point, overPrice, underPrice, book}]
+      const rows = {};
+      for (const bk of data.bookmakers || []) {
+        const mkt = (bk.markets || []).find(m => m.key === "pitcher_strikeouts");
+        if (!mkt) continue;
+        const byPitcher = {};
+        for (const o of mkt.outcomes || []) {
+          const name = (o.description || "").trim();
+          if (!name) continue;
+          (byPitcher[name] = byPitcher[name] || {})[o.name === "Over" ? "over" : "under"] = { price: o.price, point: o.point };
+        }
+        for (const [name, ou] of Object.entries(byPitcher)) {
+          const pt = (ou.over && ou.over.point) ?? (ou.under && ou.under.point);
+          if (!Number.isFinite(pt)) continue;
+          (rows[name] = rows[name] || []).push({ point: pt, over: ou.over ? ou.over.price : null, under: ou.under ? ou.under.price : null, book: bk.key });
+        }
       }
-      for (const [name, ou] of Object.entries(byPitcher)) {
-        const pt = (ou.over && ou.over.point) ?? (ou.under && ou.under.point);
-        if (!Number.isFinite(pt)) continue;
-        (rows[name] = rows[name] || []).push({ point: pt, over: ou.over ? ou.over.price : null, under: ou.under ? ou.under.price : null, book: bk.key });
+      for (const [name, arr] of Object.entries(rows)) {
+        const line = consensus(arr.map(r => r.point));
+        const atLine = arr.filter(r => Math.abs(r.point - line) < 0.01);
+        const bestOver = atLine.filter(r => r.over !== null).sort((a, b) => b.over - a.over)[0] || null;
+        const bestUnder = atLine.filter(r => r.under !== null).sort((a, b) => b.under - a.under)[0] || null;
+        pitchers[name.toLowerCase()] = {
+          name, line,
+          over: bestOver ? bestOver.over : null,
+          under: bestUnder ? bestUnder.under : null,
+          books: arr.length,
+          game: `${ev.away_team} @ ${ev.home_team}`
+        };
       }
     }
-    for (const [name, arr] of Object.entries(rows)) {
-      const line = consensus(arr.map(r => r.point));
-      const atLine = arr.filter(r => Math.abs(r.point - line) < 0.01);
-      const bestOver = atLine.filter(r => r.over !== null).sort((a, b) => b.over - a.over)[0] || null;
-      const bestUnder = atLine.filter(r => r.under !== null).sort((a, b) => b.under - a.under)[0] || null;
-      pitchers[name.toLowerCase()] = {
-        name, line,
-        over: bestOver ? bestOver.over : null,
-        under: bestUnder ? bestUnder.under : null,
-        books: arr.length,
-        game: `${ev.away_team} @ ${ev.home_team}`
-      };
-    }
+  } else {
+    console.log("K-props: skipping paid event odds calls (lineup-only change) — prior line/price will be carried forward.");
   }
 
   const probables = await currentProbables().catch(() => ({}));
