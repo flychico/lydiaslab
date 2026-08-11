@@ -1,20 +1,20 @@
 {
-  "generated_at": "2026-08-11T17:16:25.062Z",
+  "generated_at": "2026-08-11T19:37:11.374Z",
   "status": "ready",
   "latest_date": "2026-08-10",
-  "days_reviewed": 6,
+  "days_reviewed": 9,
   "source_files": {
     "results": "data/results.json",
     "clv": "data/clv/clv_log.csv"
   },
   "current_official_model": "multi-market-v1",
-  "headline": "Learning summary for 2026-08-10: no new moneyline picks graded today. Leo's current record: 33-30 (52.4%) across 63 graded games (all statuses, model leo).",
+  "headline": "Learning summary for 2026-08-10: no new moneyline picks graded today. Leo's current record: 29-14 (67.4%) across 43 graded games (all statuses, model moneyline-v2-plus-runs-v1).",
   "day": {
     "date": "2026-08-10",
     "source": "published-picks",
     "record_all_markets": "5-5",
     "units_all_markets": 0.15,
-    "ungraded": 1,
+    "ungraded": 0,
     "moneyline_record": "0-0",
     "moneyline_win_rate": null,
     "official_moneyline_picks": 0,
@@ -31,7 +31,7 @@
     "average_raw_edge": null,
     "clv_counts": {},
     "lesson_counts": {},
-    "strong_official_count": 0,
+    "strong_official_count": 1,
     "protected_by_probability_gate_count": 3,
     "high_bullpen_risk_count": 1,
     "pitcher_conflict_count": 0
@@ -56,11 +56,11 @@
   ],
   "calibration": {
     "status": "ready",
-    "model_version": "leo",
-    "games_graded": 63,
-    "wins": 33,
-    "losses": 30,
-    "brier_score": 0.2431,
+    "model_version": "moneyline-v2-plus-runs-v1",
+    "games_graded": 43,
+    "wins": 29,
+    "losses": 14,
+    "brier_score": 0.2218,
     "shadow_model": {
       "status": "ready",
       "games": 39,
@@ -75,73 +75,101 @@
     },
     "attribution": {
       "status": "collecting",
-      "games": 63,
+      "games": 43,
       "needed": 150
     },
     "kprops": {
       "status": "ready",
-      "self_calibration": "no correction needed yet",
-      "graded": 129,
-      "with_projection": 123,
-      "bias": 0,
-      "mae": 1.94,
-      "lean_record": "29-27",
-      "over_lean_record": "15-16",
-      "under_lean_record": "14-11",
-      "no_lean": 67,
+      "self_calibration": "+0.16 K correction active (n=150)",
+      "graded": 190,
+      "with_projection": 188,
+      "bias": -0.07,
+      "mae": 1.76,
+      "lean_record": "40-29",
+      "over_lean_record": "27-18",
+      "under_lean_record": "0-0",
+      "no_lean": 78,
       "note": "Bias = actual minus projection (positive means we under-project). Leans only counted at 0.7+ strikeout edges. Small samples early — a lean record means little before ~100 graded pitchers."
     },
     "note": "Shadow ledger for learning only — never part of the public record. Official picks stay the only published record.",
     "buckets": [
       {
         "range": "50-55%",
-        "games": 35,
-        "wins": 13,
-        "expected_win_rate": 0.523,
-        "actual_win_rate": 0.371
+        "games": 14,
+        "wins": 7,
+        "expected_win_rate": 0.529,
+        "actual_win_rate": 0.5
       },
       {
         "range": "55-60%",
-        "games": 16,
-        "wins": 13,
-        "expected_win_rate": 0.574,
-        "actual_win_rate": 0.813
+        "games": 11,
+        "wins": 8,
+        "expected_win_rate": 0.576,
+        "actual_win_rate": 0.727
       },
       {
         "range": "60-65%",
-        "games": 9,
-        "wins": 6,
-        "expected_win_rate": 0.614,
-        "actual_win_rate": 0.667
+        "games": 6,
+        "wins": 5,
+        "expected_win_rate": 0.623,
+        "actual_win_rate": 0.833
       },
       {
         "range": "65-70%",
+        "games": 5,
+        "wins": 4,
+        "expected_win_rate": 0.683,
+        "actual_win_rate": 0.8
+      },
+      {
+        "range": "70-75%",
         "games": 3,
-        "wins": 1,
-        "expected_win_rate": 0.687,
-        "actual_win_rate": 0.333
+        "wins": 2,
+        "expected_win_rate": 0.718,
+        "actual_win_rate": 0.667
+      },
+      {
+        "range": "75-100%",
+        "games": 4,
+        "wins": 3,
+        "expected_win_rate": 0.852,
+        "actual_win_rate": 0.75
       }
     ],
     "shadow_by_status": {
       "watchlist": {
-        "games": 9,
-        "wins": 5,
-        "units": -0.97
+        "games": 4,
+        "wins": 3,
+        "units": 0.79
       },
       "pass": {
-        "games": 52,
-        "wins": 27,
-        "units": -2.64
-      },
-      "official_pick": {
-        "games": 2,
-        "wins": 1,
-        "units": -0.46
+        "games": 39,
+        "wins": 26,
+        "units": 11.05
       }
     }
   },
   "buckets": {
-    "strong_official": [],
+    "strong_official": [
+      {
+        "date": "2026-08-02",
+        "status": "official_pick",
+        "model_version": "multi-market-v1",
+        "game": "Detroit Tigers @ Athletics",
+        "pick": "Detroit Tigers",
+        "result": "W",
+        "model_probability": 0.7358,
+        "lab_score": 82,
+        "raw_edge": 0.2248,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Detroit Tigers",
+        "pitcher_gap": 15,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 66,
+        "opponent_bullpen_score": 70
+      }
+    ],
     "protected_by_probability_gate": [
       {
         "date": "2026-08-05",
@@ -222,10 +250,10 @@
     "all_moneyline": []
   },
   "multi_day": {
-    "moneyline_record": "2-1",
-    "moneyline_win_rate": 0.6667,
-    "official_moneyline_entries": 3,
-    "strict_gate_candidates": 0,
+    "moneyline_record": "3-1",
+    "moneyline_win_rate": 0.75,
+    "official_moneyline_entries": 4,
+    "strict_gate_candidates": 1,
     "high_lab_low_probability_entries": 3,
     "note": "Multi-day view includes whatever historical data exists. Older days may include legacy model behavior."
   },

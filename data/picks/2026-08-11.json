@@ -226,6 +226,199 @@
       "strikeouts": []
     },
     {
+      "gamePk": 822778,
+      "away": "Boston Red Sox",
+      "home": "Toronto Blue Jays",
+      "time": "2026-08-11T23:07:00Z",
+      "labScore": 56,
+      "labScoreBreakdown": {
+        "score": 56,
+        "version": "lab-rating-v3-measured-components",
+        "conviction_points": 10.11,
+        "agreement_points": 0,
+        "pitching_plan_points": 6,
+        "bullpen_points": 14.89,
+        "offense_points": 25,
+        "completeness_points": 0,
+        "pitcher_edge_points": 0,
+        "plan_completeness_points": 6,
+        "model_agreement_gap": null,
+        "model_agreement_credit": null,
+        "bullpen_innings_weight": 1,
+        "assigned_bullpen_innings": 4.2,
+        "offense_delta": 0.124,
+        "completeness_checks_passed": 5,
+        "completeness_checks_total": 5,
+        "data_complete": true,
+        "market_points": 0,
+        "model_edge_points": 0,
+        "base_points": 0,
+        "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
+      },
+      "status": "official_pick",
+      "modelVersion": "multi-market-v1",
+      "pitcherEdge": {
+        "team": "Toronto Blue Jays",
+        "gap": 30,
+        "conflict": true,
+        "away_score": 55,
+        "home_score": 85,
+        "away_pitcher": "Patrick Sandoval",
+        "home_pitcher": "Dylan Cease",
+        "away_pitcher_id": 663776,
+        "home_pitcher_id": 656302,
+        "away_era": 3.38,
+        "home_era": 2.28,
+        "away_whip": 1.67,
+        "home_whip": 1.04,
+        "away_advanced": {
+          "w": 1,
+          "l": 0,
+          "kbb_pct": 0.1376,
+          "gb_pct": 0.3721,
+          "babip": 0.3857,
+          "hr9": 1.13,
+          "ip_per_start": 4.8,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 4.8,
+          "bullpen_innings": 4.2
+        },
+        "home_advanced": {
+          "w": 7,
+          "l": 5,
+          "kbb_pct": 0.2614,
+          "gb_pct": 0.5,
+          "babip": 0.2829,
+          "hr9": 0.5,
+          "ip_per_start": 6,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 6,
+          "bullpen_innings": 3
+        }
+      },
+      "bullpen": {
+        "pick_team": {
+          "score": 85,
+          "label": "High risk",
+          "last_game_bp_ip": 2,
+          "last7_bp_ip": 34.7,
+          "last7_bp_runs": 14,
+          "last_game_relievers": 1,
+          "last7_relievers": 24,
+          "back_to_back_arms": 7,
+          "workload_read": "Heavy recent workload. Late-game pitching condition could materially affect the read.",
+          "score_reason": "High risk (8.5/10): 34.7 recent relief innings, recency-weighted (pitched yesterday), 7 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 1,
+            "last7_relievers": 24,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 23.2,
+            "back_to_back_arms": 16.9,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 85.1
+          },
+          "efficiency_score": 66,
+          "efficiency_label": "Effective",
+          "efficiency_reason": "Effective (6.6/10): 2.34 ERA and 0.95 WHIP over 34.7 relief innings (9 ER, 24 H, 9 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": 11.2,
+            "whip_term": 5.2,
+            "confidence": 1,
+            "raw_score": 66.4
+          },
+          "era_7d": 2.34,
+          "whip_7d": 0.95,
+          "last15_bp_ip": 57.7,
+          "last15_bp_runs": 17,
+          "era_15d": 1.87,
+          "whip_15d": 0.94,
+          "recent15_games_tracked": 14,
+          "risk_index": 77,
+          "risk_label": "Tired",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "opponent": {
+          "score": 100,
+          "label": "High risk",
+          "last_game_bp_ip": 5,
+          "last7_bp_ip": 38,
+          "last7_bp_runs": 19,
+          "last_game_relievers": 3,
+          "last7_relievers": 33,
+          "back_to_back_arms": 11,
+          "workload_read": "Heavy recent workload. Late-game pitching condition could materially affect the read.",
+          "score_reason": "High risk (10.0/10): 38 recent relief innings, recency-weighted — 5 in the last game (pitched yesterday), 11 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 3,
+            "last7_relievers": 33,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 29.5,
+            "back_to_back_arms": 37.6,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 112.1
+          },
+          "efficiency_score": 52,
+          "efficiency_label": "Average",
+          "efficiency_reason": "Average (5.2/10): 3.32 ERA and 1.55 WHIP over 38 relief innings (14 ER, 30 H, 29 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": 5.3,
+            "whip_term": -3.8,
+            "confidence": 1,
+            "raw_score": 51.5
+          },
+          "era_7d": 3.32,
+          "whip_7d": 1.55,
+          "last15_bp_ip": 67.3,
+          "last15_bp_runs": 33,
+          "era_15d": 3.21,
+          "whip_15d": 1.5,
+          "recent15_games_tracked": 14,
+          "risk_index": 99,
+          "risk_label": "High risk",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "label": "Supports LyDia side",
+        "major_caution": false,
+        "absolute_risk": "Opponent high"
+      },
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Patrick Sandoval",
+          "pick": "Under",
+          "line": 4.5,
+          "bestAm": -134,
+          "projection": 3.69,
+          "edge": -0.81,
+          "books": 6,
+          "expectedInnings": 4.8,
+          "pitcherRole": "traditional_starter",
+          "lineupSource": "posted",
+          "modelVersion": "leo-kprop",
+          "valueTag": "OFFICIAL PICK"
+        }
+      ]
+    },
+    {
       "gamePk": 824970,
       "away": "Tampa Bay Rays",
       "home": "Athletics",
@@ -417,5 +610,6 @@
       "total": null,
       "strikeouts": []
     }
-  ]
+  ],
+  "last_appended_at": "2026-08-11T19:37:06.854Z"
 }
