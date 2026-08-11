@@ -1,20 +1,24 @@
 {
- "generated_at": "2026-08-11T18:43:40.841Z",
- "n_graded": 94,
- "n_with_usable_breakdown": 94,
+ "generated_at": "2026-08-11T18:45:13.187Z",
+ "n_graded": 108,
+ "n_with_usable_breakdown": 108,
  "n_excluded_from_component_analysis": 0,
  "exclusion_reason": null,
  "coverage": {
-  "from": "2026-08-02",
+  "from": "2026-08-01",
   "to": "2026-08-10"
  },
  "overall": {
-  "mean_lab": 48.86,
-  "mean_model_prob": 0.5667,
-  "actual_win_rate": 0.5957,
-  "corr_lab_win": 0.1429
+  "mean_lab": 48.65,
+  "mean_model_prob": 0.5843,
+  "actual_win_rate": 0.6019,
+  "corr_lab_win": 0.1595
  },
  "by_lab_version": {
+  "lab-rating-v2-market-independent": {
+   "n": 14,
+   "corr_lab_win": 0.3468
+  },
   "lab-rating-v3-measured-components": {
    "n": 94,
    "corr_lab_win": 0.1429
@@ -23,24 +27,24 @@
  "rating_bands": [
   {
    "band": "0-49",
-   "n": 54,
-   "mean_model_prob": 0.5409,
-   "actual_win_rate": 0.5,
-   "gap": -0.0409
+   "n": 62,
+   "mean_model_prob": 0.555,
+   "actual_win_rate": 0.5161,
+   "gap": -0.0389
   },
   {
    "band": "50-64",
-   "n": 25,
-   "mean_model_prob": 0.5764,
-   "actual_win_rate": 0.8,
-   "gap": 0.2236
+   "n": 30,
+   "mean_model_prob": 0.6031,
+   "actual_win_rate": 0.7667,
+   "gap": 0.1636
   },
   {
    "band": "65-74",
-   "n": 6,
-   "mean_model_prob": 0.6271,
-   "actual_win_rate": 0.8333,
-   "gap": 0.2062
+   "n": 7,
+   "mean_model_prob": 0.674,
+   "actual_win_rate": 0.8571,
+   "gap": 0.1831
   },
   {
    "band": "75-84",
@@ -62,74 +66,88 @@
    "component": "conviction",
    "key": "conviction_points",
    "max_points": 30,
-   "n": 94,
-   "median_points": 6.38,
-   "mean_points": 9.42,
-   "n_above": 46,
-   "win_rate_above": 0.7609,
-   "n_below": 48,
-   "win_rate_below": 0.4375,
-   "lift": 0.3234,
-   "corr_with_win": 0.2015
+   "n": 108,
+   "median_points": 8.31,
+   "mean_points": 10.32,
+   "n_above": 53,
+   "win_rate_above": 0.7736,
+   "n_below": 55,
+   "win_rate_below": 0.4364,
+   "lift": 0.3372,
+   "corr_with_win": 0.2188
   },
   {
    "component": "agreement",
    "key": "agreement_points",
-   "n": 94,
-   "constant": true,
-   "note": "never varies in this sample — contributes nothing to discrimination"
+   "max_points": 20,
+   "n": 108,
+   "median_points": 0,
+   "mean_points": 0.21,
+   "n_above": 3,
+   "win_rate_above": 0.6667,
+   "n_below": 105,
+   "win_rate_below": 0.6,
+   "lift": 0.0667,
+   "corr_with_win": -0.0638
   },
   {
    "component": "pitching plan",
    "key": "pitching_plan_points",
    "max_points": 20,
-   "n": 94,
-   "median_points": 10.2,
-   "mean_points": 11.5,
-   "n_above": 44,
-   "win_rate_above": 0.5455,
-   "n_below": 50,
-   "win_rate_below": 0.64,
-   "lift": -0.0945,
-   "corr_with_win": -0.1787
+   "n": 108,
+   "median_points": 9.5,
+   "mean_points": 11.24,
+   "n_above": 53,
+   "win_rate_above": 0.5472,
+   "n_below": 55,
+   "win_rate_below": 0.6545,
+   "lift": -0.1074,
+   "corr_with_win": -0.193
   },
   {
    "component": "bullpen",
    "key": "bullpen_points",
    "max_points": 15,
-   "n": 94,
-   "median_points": 10.81,
-   "mean_points": 10.67,
-   "n_above": 46,
-   "win_rate_above": 0.6087,
-   "n_below": 48,
-   "win_rate_below": 0.5833,
-   "lift": 0.0254,
-   "corr_with_win": -0.0235
+   "n": 108,
+   "median_points": 10.63,
+   "mean_points": 10.46,
+   "n_above": 53,
+   "win_rate_above": 0.6415,
+   "n_below": 55,
+   "win_rate_below": 0.5636,
+   "lift": 0.0779,
+   "corr_with_win": -0.0041
   },
   {
    "component": "offense",
    "key": "offense_points",
    "max_points": 10,
-   "n": 94,
-   "median_points": 21.25,
-   "mean_points": 17.27,
-   "n_above": 45,
-   "win_rate_above": 0.6667,
-   "n_below": 49,
-   "win_rate_below": 0.5306,
-   "lift": 0.1361,
-   "corr_with_win": 0.1667
+   "n": 108,
+   "median_points": 18.13,
+   "mean_points": 15.78,
+   "n_above": 53,
+   "win_rate_above": 0.6415,
+   "n_below": 55,
+   "win_rate_below": 0.5636,
+   "lift": 0.0779,
+   "corr_with_win": 0.1569
   },
   {
    "component": "completeness",
    "key": "completeness_points",
-   "n": 94,
-   "constant": true,
-   "note": "never varies in this sample — contributes nothing to discrimination"
+   "max_points": 5,
+   "n": 108,
+   "median_points": 0,
+   "mean_points": 0.65,
+   "n_above": 14,
+   "win_rate_above": 0.6429,
+   "n_below": 94,
+   "win_rate_below": 0.5957,
+   "lift": 0.0471,
+   "corr_with_win": 0.0323
   }
  ],
- "components_note": "computed on 94 game(s) whose breakdown reconciles with its score",
+ "components_note": "computed on 108 game(s) whose breakdown reconciles with its score",
  "worst_misses": [
   {
    "date": "2026-08-08",
@@ -234,6 +252,23 @@
    }
   },
   {
+   "date": "2026-08-01",
+   "game": "Miami Marlins @ New York Mets",
+   "pick": "New York Mets",
+   "status": "pass",
+   "lab_score": 61,
+   "model_prob": 0.5844,
+   "result": "L",
+   "points_from": {
+    "conviction": 4.12,
+    "agreement": 14.53,
+    "pitching plan": 19.3,
+    "bullpen": 7.76,
+    "offense": 9.92,
+    "completeness": 5
+   }
+  },
+  {
    "date": "2026-08-08",
    "game": "New York Mets @ Pittsburgh Pirates",
    "pick": "New York Mets",
@@ -317,39 +352,126 @@
     "offense": 17.08,
     "completeness": 0
    }
-  },
-  {
-   "date": "2026-08-05",
-   "game": "San Diego Padres @ Arizona Diamondbacks",
-   "pick": "San Diego Padres",
-   "status": "pass",
-   "lab_score": 49,
-   "model_prob": 0.5476,
-   "result": "L",
-   "points_from": {
-    "conviction": 6.34,
-    "agreement": 0,
-    "pitching plan": 20,
-    "bullpen": 6.02,
-    "offense": 16.88,
-    "completeness": 0
-   }
   }
  ],
  "focus": {
-  "date": "2026-08-02",
-  "n": 1,
-  "mean_lab": 51,
-  "mean_model_prob": 0.5335,
-  "actual_win_rate": 1,
+  "date": "2026-08-01",
+  "n": 14,
+  "mean_lab": 47.21,
+  "mean_model_prob": 0.7028,
+  "actual_win_rate": 0.6429,
   "games": [
+   {
+    "game": "Detroit Tigers @ Athletics",
+    "pick": "Detroit Tigers",
+    "status": "watchlist",
+    "lab_score": 68,
+    "model_prob": 0.9552,
+    "result": "W"
+   },
+   {
+    "game": "Miami Marlins @ New York Mets",
+    "pick": "New York Mets",
+    "status": "pass",
+    "lab_score": 61,
+    "model_prob": 0.5844,
+    "result": "L"
+   },
+   {
+    "game": "Texas Rangers @ Houston Astros",
+    "pick": "Houston Astros",
+    "status": "pass",
+    "lab_score": 59,
+    "model_prob": 0.7179,
+    "result": "W"
+   },
+   {
+    "game": "San Francisco Giants @ San Diego Padres",
+    "pick": "San Diego Padres",
+    "status": "pass",
+    "lab_score": 54,
+    "model_prob": 0.8082,
+    "result": "W"
+   },
+   {
+    "game": "Philadelphia Phillies @ Baltimore Orioles",
+    "pick": "Baltimore Orioles",
+    "status": "pass",
+    "lab_score": 51,
+    "model_prob": 0.8796,
+    "result": "L"
+   },
    {
     "game": "Boston Red Sox @ Los Angeles Dodgers",
     "pick": "Boston Red Sox",
     "status": "pass",
     "lab_score": 51,
-    "model_prob": 0.5335,
+    "model_prob": 0.6925,
     "result": "W"
+   },
+   {
+    "game": "New York Yankees @ Chicago Cubs",
+    "pick": "Chicago Cubs",
+    "status": "pass",
+    "lab_score": 48,
+    "model_prob": 0.7023,
+    "result": "W"
+   },
+   {
+    "game": "Kansas City Royals @ Colorado Rockies",
+    "pick": "Colorado Rockies",
+    "status": "pass",
+    "lab_score": 47,
+    "model_prob": 0.7638,
+    "result": "W"
+   },
+   {
+    "game": "St. Louis Cardinals @ Toronto Blue Jays",
+    "pick": "Toronto Blue Jays",
+    "status": "pass",
+    "lab_score": 42,
+    "model_prob": 0.5538,
+    "result": "W"
+   },
+   {
+    "game": "Minnesota Twins @ Seattle Mariners",
+    "pick": "Minnesota Twins",
+    "status": "pass",
+    "lab_score": 42,
+    "model_prob": 0.7349,
+    "result": "L"
+   },
+   {
+    "game": "Arizona Diamondbacks @ Cleveland Guardians",
+    "pick": "Arizona Diamondbacks",
+    "status": "pass",
+    "lab_score": 42,
+    "model_prob": 0.6499,
+    "result": "W"
+   },
+   {
+    "game": "Pittsburgh Pirates @ Cincinnati Reds",
+    "pick": "Pittsburgh Pirates",
+    "status": "pass",
+    "lab_score": 40,
+    "model_prob": 0.6819,
+    "result": "W"
+   },
+   {
+    "game": "Milwaukee Brewers @ Los Angeles Angels",
+    "pick": "Los Angeles Angels",
+    "status": "pass",
+    "lab_score": 33,
+    "model_prob": 0.5709,
+    "result": "L"
+   },
+   {
+    "game": "Chicago White Sox @ Tampa Bay Rays",
+    "pick": "Chicago White Sox",
+    "status": "pass",
+    "lab_score": 23,
+    "model_prob": 0.5437,
+    "result": "L"
    }
   ]
  }
