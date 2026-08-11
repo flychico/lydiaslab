@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-11T16:03:26.065Z",
+  "generated_at": "2026-08-11T17:16:25.062Z",
   "status": "ready",
   "latest_date": "2026-08-10",
   "days_reviewed": 6,
@@ -7,17 +7,17 @@
     "results": "data/results.json",
     "clv": "data/clv/clv_log.csv"
   },
-  "current_official_model": "leo",
-  "headline": "Learning summary for 2026-08-10: moneyline record 0-1 (0.0%).",
+  "current_official_model": "multi-market-v1",
+  "headline": "Learning summary for 2026-08-10: no new moneyline picks graded today. Leo's current record: 33-30 (52.4%) across 63 graded games (all statuses, model leo).",
   "day": {
     "date": "2026-08-10",
     "source": "published-picks",
-    "record_all_markets": "5-6",
-    "units_all_markets": -0.85,
-    "ungraded": 0,
-    "moneyline_record": "0-1",
-    "moneyline_win_rate": 0,
-    "official_moneyline_picks": 1,
+    "record_all_markets": "5-5",
+    "units_all_markets": 0.15,
+    "ungraded": 1,
+    "moneyline_record": "0-0",
+    "moneyline_win_rate": null,
+    "official_moneyline_picks": 0,
     "legacy_market_entries": 0
   },
   "gates": {
@@ -26,32 +26,28 @@
     "note": "Official picks require high model probability and strong setup quality. A high Lab Rating alone is not enough. (Market edge is no longer a gate -- a picked side with a lower market-implied probability than the model's read can still qualify, as long as market data exists for the game at all.)"
   },
   "process_metrics": {
-    "average_model_probability": 0.6179,
-    "average_lab_score": 82,
-    "average_raw_edge": 0.1774,
-    "clv_counts": {
-      "not_tracked": 1
-    },
-    "lesson_counts": {
-      "loss_needs_review": 1
-    },
+    "average_model_probability": null,
+    "average_lab_score": null,
+    "average_raw_edge": null,
+    "clv_counts": {},
+    "lesson_counts": {},
     "strong_official_count": 0,
-    "protected_by_probability_gate_count": 4,
-    "high_bullpen_risk_count": 2,
+    "protected_by_probability_gate_count": 3,
+    "high_bullpen_risk_count": 1,
     "pitcher_conflict_count": 0
   },
   "findings": [
     {
-      "title": "Official-pick discipline",
-      "read": "1 moneyline pick was graded today. Record: 0-1 (0.0%)."
+      "title": "No new moneyline picks graded today",
+      "read": "No moneyline picks finished grading for this date. The findings below draw on the full graded history instead."
     },
     {
       "title": "Probability gate",
-      "read": "Across all reviewed days, 4 graded setups had strong Lab Rating but model probability below 72%. Those should remain value watch, not official picks."
+      "read": "Across all reviewed days, 3 graded setups had strong Lab Rating but model probability below 72%. Those should remain value watch, not official picks."
     },
     {
       "title": "Bullpen learning",
-      "read": "Across all reviewed days, 2 graded moneyline picks carried a meaningful bullpen caution. Review these before adjusting thresholds."
+      "read": "Across all reviewed days, 1 graded moneyline pick carried a meaningful bullpen caution. Review these before adjusting thresholds."
     },
     {
       "title": "Pitcher learning",
@@ -128,9 +124,9 @@
     ],
     "shadow_by_status": {
       "watchlist": {
-        "games": 8,
+        "games": 9,
         "wins": 5,
-        "units": 0.03
+        "units": -0.97
       },
       "pass": {
         "games": 52,
@@ -138,9 +134,9 @@
         "units": -2.64
       },
       "official_pick": {
-        "games": 3,
+        "games": 2,
         "wins": 1,
-        "units": -1.46
+        "units": -0.46
       }
     }
   },
@@ -200,24 +196,6 @@
         "bullpen_label": "Supports LyDia side",
         "pick_side_bullpen_score": 80,
         "opponent_bullpen_score": 82
-      },
-      {
-        "date": "2026-08-10",
-        "status": "official_pick",
-        "model_version": "leo",
-        "game": "Boston Red Sox @ Toronto Blue Jays",
-        "pick": "Boston Red Sox",
-        "result": "L",
-        "model_probability": 0.6179,
-        "lab_score": 82,
-        "raw_edge": 0.1774,
-        "clv_result": "not_tracked",
-        "lesson_tag": "loss_needs_review",
-        "pitcher_edge_team": "Boston Red Sox",
-        "pitcher_gap": 29,
-        "bullpen_label": "Both bullpens stressed",
-        "pick_side_bullpen_score": 99,
-        "opponent_bullpen_score": 100
       }
     ],
     "high_bullpen_risk": [
@@ -238,54 +216,17 @@
         "bullpen_label": "Supports LyDia side",
         "pick_side_bullpen_score": 80,
         "opponent_bullpen_score": 82
-      },
-      {
-        "date": "2026-08-10",
-        "status": "official_pick",
-        "model_version": "leo",
-        "game": "Boston Red Sox @ Toronto Blue Jays",
-        "pick": "Boston Red Sox",
-        "result": "L",
-        "model_probability": 0.6179,
-        "lab_score": 82,
-        "raw_edge": 0.1774,
-        "clv_result": "not_tracked",
-        "lesson_tag": "loss_needs_review",
-        "pitcher_edge_team": "Boston Red Sox",
-        "pitcher_gap": 29,
-        "bullpen_label": "Both bullpens stressed",
-        "pick_side_bullpen_score": 99,
-        "opponent_bullpen_score": 100
       }
     ],
     "pitcher_conflicts": [],
-    "all_moneyline": [
-      {
-        "date": null,
-        "status": "official_pick",
-        "model_version": "leo",
-        "game": "Boston Red Sox @ Toronto Blue Jays",
-        "pick": "Boston Red Sox",
-        "result": "L",
-        "model_probability": 0.6179,
-        "lab_score": 82,
-        "raw_edge": 0.1774,
-        "clv_result": "not_tracked",
-        "lesson_tag": "loss_needs_review",
-        "pitcher_edge_team": "Boston Red Sox",
-        "pitcher_gap": 29,
-        "bullpen_label": "Both bullpens stressed",
-        "pick_side_bullpen_score": 99,
-        "opponent_bullpen_score": 100
-      }
-    ]
+    "all_moneyline": []
   },
   "multi_day": {
-    "moneyline_record": "2-2",
-    "moneyline_win_rate": 0.5,
-    "official_moneyline_entries": 4,
+    "moneyline_record": "2-1",
+    "moneyline_win_rate": 0.6667,
+    "official_moneyline_entries": 3,
     "strict_gate_candidates": 0,
-    "high_lab_low_probability_entries": 4,
+    "high_lab_low_probability_entries": 3,
     "note": "Multi-day view includes whatever historical data exists. Older days may include legacy model behavior."
   },
   "next_review": [
