@@ -15,7 +15,6 @@
 */
 const fs = require("fs");
 const path = require("path");
-const { buildRow: buildKpropsXlsxRow, writeWorkbook: writeKpropsXlsx } = require("./lib/kprops-xlsx");
 
 const ROOT = path.join(__dirname, "..");
 const LOG = path.join(ROOT, "data", "calibration", "calibration_model_log.csv");
@@ -28,6 +27,21 @@ const DATE = (process.argv[2] || "").match(/^\d{4}-\d{2}-\d{2}$/)
 function csvField(s) {
   s = String(s == null ? "" : s);
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+// Ledger dates have historically been written in two different string
+// formats (legacy M/D/YYYY from an older build, current YYYY-MM-DD/en-CA).
+// The idempotency check below is a straight string comparison, so without
+// normalizing first, a game graded under one format is invisible to a rerun
+// using the other and gets silently re-appended as a "new" row. Confirmed
+// this happened for 08-01..08-06 (61 duplicate rows) before this fix.
+function normDate(s) {
+  s = String(s || "").trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return s;
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return `${m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`;
+  return s;
 }
 
 async function main() {
@@ -88,9 +102,24 @@ async function main() {
 
   fs.mkdirSync(path.dirname(LOG), { recursive: true });
   if (!fs.existsSync(LOG)) fs.writeFileSync(LOG, HEADER);
+  // Header upgrade in place: this file predates the final_score column, and
+  // (unlike KLOG below) never had upgrade logic, so 115+ rows have a 12th
+  // value sitting under an 11-name header — the value that then gets
+  // misread as a date ("3-2") by any spreadsheet app that opens the file,
+  // because there's no header telling it otherwise.
+  {
+    const cur = fs.readFileSync(LOG, "utf8");
+    const nl = cur.indexOf("\n");
+    const curHead = (nl === -1 ? cur : cur.slice(0, nl)).trim();
+    const wantHead = HEADER.trim();
+    if (curHead !== wantHead && curHead.startsWith("date,gamePk,model_version,matchup")) {
+      fs.writeFileSync(LOG, wantHead + "\n" + (nl === -1 ? "" : cur.slice(nl + 1)));
+      console.log(`Calibration ledger header upgraded (+final_score).`);
+    }
+  }
   const existing = new Set(
     fs.readFileSync(LOG, "utf8").split("\n").slice(1)
-      .map(l => l.split(",").slice(0, 2).join(","))
+      .map(l => { const p = l.split(","); return p.length >= 2 ? `${normDate(p[0])},${p[1]}` : ""; })
       .filter(Boolean)
   );
 
@@ -118,13 +147,24 @@ async function main() {
   if (rows.length) fs.appendFileSync(LOG, rows.join("\n") + "\n");
 
   // ---- Attribution ledger: the INPUTS behind each graded game, for the
-  // n>=150 weight-relevance analysis. All values are pick-side relative. ----
+  // n>=150 weight-relevance analysis. Pick-side/opp-side values are the real
+  // number for each team; the *_gap/*_diff columns are pick-minus-opp,
+  // pre-computed for anyone who just wants the differential. matchup/
+  // pick_team/opp_team added 2026-08-11 so a row can be read without a
+  // separate join against calibration_model_log.csv. Everything below
+  // pitcher_gap is pick-side then opp-side, in that order, per metric. ----
   const ALOG = path.join(ROOT, "data", "calibration", "attribution_model_log.csv");
-  const AHEAD = "date,gamePk,model_version,status,result,model_prob,lab,pitcher_gap,kbb_diff,gb_pick,babip_pick,off_delta_diff,bullpen_gap\n";
+  const AHEAD = "date,gamePk,model_version,matchup,pick_team,opp_team,status,result,model_prob,lab,"
+    + "pitcher_gap,pick_pitcher_score,opp_pitcher_score,pick_era,opp_era,pick_whip,opp_whip,"
+    + "kbb_diff,pick_kbb_pct,opp_kbb_pct,pick_gb_pct,opp_gb_pct,pick_babip,opp_babip,pick_hr9,opp_hr9,"
+    + "off_delta_diff,pick_delta_ops,opp_delta_ops,pick_delta_woba,opp_delta_woba,"
+    + "bullpen_gap,pick_bullpen_risk,opp_bullpen_risk\n";
   if (!fs.existsSync(ALOG)) fs.writeFileSync(ALOG, AHEAD);
-  const aSeen = new Set(fs.readFileSync(ALOG, "utf8").split("\n").slice(1).map(l => l.split(",").slice(0, 2).join(",")).filter(Boolean));
+  const aSeen = new Set(fs.readFileSync(ALOG, "utf8").split("\n").slice(1).map(l => { const p = l.split(","); return p.length >= 2 ? `${normDate(p[0])},${p[1]}` : ""; }).filter(Boolean));
   const aRows = [];
   const n2 = v => (typeof v === "number" && isFinite(v)) ? v : "";
+  // Raw numeric (or null) — for arithmetic. Use n2() only when writing a cell.
+  const bpRiskNum = t => { const v = t ? (t.risk_index ?? t.score) : null; return (typeof v === "number" && isFinite(v)) ? v : null; };
   for (const g of games) {
     const key = `${DATE},${g.game_pk}`;
     if (aSeen.has(key)) continue;
@@ -139,36 +179,38 @@ async function main() {
     const oAdv = pickHome ? pe.away_advanced : pe.home_advanced;
     const pScore = pickHome ? pe.home_score : pe.away_score;
     const oScore = pickHome ? pe.away_score : pe.home_score;
+    const pEra = pickHome ? pe.home_era : pe.away_era;
+    const oEra = pickHome ? pe.away_era : pe.home_era;
+    const pWhip = pickHome ? pe.home_whip : pe.away_whip;
+    const oWhip = pickHome ? pe.away_whip : pe.home_whip;
     const of_ = g.offense_form || {};
     const pOff = pickHome ? of_.home : of_.away;
     const oOff = pickHome ? of_.away : of_.home;
     const bp = g.bullpen || {};
-    aRows.push([DATE, g.game_pk, csvField(g.model_source || brief.model_version || "unknown"), g.status || "", won ? "W" : "L",
+    const pRiskV = bpRiskNum(bp.pick_team), oRiskV = bpRiskNum(bp.opponent);
+    const opp_team = pickHome ? g.away_team : g.home_team;
+    aRows.push([DATE, g.game_pk, csvField(g.model_source || brief.model_version || "unknown"),
+      csvField(g.game), csvField(g.pick_team), csvField(opp_team), g.status || "", won ? "W" : "L",
       n2(g.model_probability), n2(g.lab_score),
-      (isFinite(pScore) && isFinite(oScore)) ? pScore - oScore : "",
+      (isFinite(pScore) && isFinite(oScore)) ? pScore - oScore : "", n2(pScore), n2(oScore),
+      n2(pEra), n2(oEra), n2(pWhip), n2(oWhip),
       (pAdv && oAdv && isFinite(pAdv.kbb_pct) && isFinite(oAdv.kbb_pct)) ? Number((pAdv.kbb_pct - oAdv.kbb_pct).toFixed(4)) : "",
-      pAdv && isFinite(pAdv.gb_pct) ? pAdv.gb_pct : "",
-      pAdv && isFinite(pAdv.babip) ? pAdv.babip : "",
+      pAdv ? n2(pAdv.kbb_pct) : "", oAdv ? n2(oAdv.kbb_pct) : "",
+      pAdv ? n2(pAdv.gb_pct) : "", oAdv ? n2(oAdv.gb_pct) : "",
+      pAdv ? n2(pAdv.babip) : "", oAdv ? n2(oAdv.babip) : "",
+      pAdv ? n2(pAdv.hr9) : "", oAdv ? n2(oAdv.hr9) : "",
       (pOff && oOff && isFinite(pOff.delta_ops) && isFinite(oOff.delta_ops)) ? Number((pOff.delta_ops - oOff.delta_ops).toFixed(3)) : "",
-      (bp.opponent && bp.pick_team && isFinite(bp.opponent.score) && isFinite(bp.pick_team.score)) ? bp.opponent.score - bp.pick_team.score : ""
+      pOff ? n2(pOff.delta_ops) : "", oOff ? n2(oOff.delta_ops) : "",
+      pOff ? n2(pOff.delta_woba) : "", oOff ? n2(oOff.delta_woba) : "",
+      (pRiskV !== null && oRiskV !== null) ? Number((oRiskV - pRiskV).toFixed(2)) : "",
+      n2(pRiskV), n2(oRiskV)
     ].join(","));
   }
   if (aRows.length) fs.appendFileSync(ALOG, aRows.join("\n") + "\n");
 
   // ---- K-props grading: projection vs market line vs actual strikeouts ----
   const KLOG = path.join(ROOT, "data", "calibration", "kprops_log.csv");
-  // The first 12 columns are the ORIGINAL layout and must never move — see the
-  // 2026-08-09 addition below. update-k-props.js's self-calibration reader
-  // addresses this file positionally (r[5]=projection, r[6]=actual_k,
-  // r[10]=projection_raw), so any reorder of columns 1-12 corrupts every
-  // already-graded row without the reader ever throwing an error. Everything
-  // new is appended after column 12 instead.
-  const KHEAD = "date,pitcher,line,over_price,under_price,projection,actual_k,ou_result,lean,lean_result,projection_raw,calibration_band,"
-    + "game,game_pk,role,expected_innings,bullpen_game,pitching_plan_reported,books,"
-    + "k_rate_season,k_rate_used,recent_form_starts,recent_form_bf,recent_form_k_rate,recent_form_weight,recent_form_capped,"
-    + "bf_per_ip,opp_k_adjustment,opp_k_source,opp_lineup_k,opp_lineup_k_weighted,opp_lineup_k_resolved,opp_team_season_k,league_lineup_k,"
-    + "whiff_leverage,whiff_leverage_applied,whiff_lineup_source,opp_lineup_source,"
-    + "calibration_bias,error_raw,abs_error_raw,error_corrected,abs_error_corrected\n";
+  const KHEAD = "date,pitcher,line,over_price,under_price,projection,actual_k,ou_result,lean,lean_result,projection_raw,calibration_band\n";
   const kpPath = path.join(ROOT, "data", "k-props", `${DATE}.json`);
   // A missing capture used to fall straight through this block with no output at
   // all, so "the K loop is broken" and "there were no K props that day" looked
@@ -193,7 +235,7 @@ async function main() {
         const wantHead = KHEAD.trim();
         if (curHead !== wantHead && curHead.startsWith("date,pitcher,line")) {
           fs.writeFileSync(KLOG, wantHead + "\n" + (nl === -1 ? "" : cur.slice(nl + 1)));
-          console.log(`K-props ledger header upgraded (+31 projection-input/error columns, appended after column 12).`);
+          console.log(`K-props ledger header upgraded (+projection_raw, +calibration_band).`);
         }
       }
       /*
@@ -214,11 +256,6 @@ async function main() {
       }
       const kSeen = new Set(fs.readFileSync(KLOG, "utf8").split("\n").slice(1).map(l => l.split(",").slice(0, 2).join(",")).filter(Boolean));
       const kRows = [];
-      // Collected alongside kRows so the data/k-props/<date>.xlsx refresh
-      // below can include EVERY pitcher captured that day (graded or not),
-      // not just the ones newly graded this run — kSeen would otherwise
-      // silently drop already-graded pitchers from a re-run's xlsx.
-      const gradedByName = {};
       let kGraded = 0, kScratched = 0, kUnlinked = 0;
       for (const rec of Object.values(kp.pitchers)) {
         if (!rec || !rec.name || !Number.isFinite(rec.line)) continue;
@@ -256,67 +293,21 @@ async function main() {
         const lean = Number.isFinite(rec.projection) ? Number((rec.projection - rec.line).toFixed(2)) : "";
         let leanRes = "";
         if (lean !== "" && Math.abs(lean) >= 0.7 && ou !== "P") leanRes = (lean > 0) === (ou === "O") ? "W" : "L";
-        const rf = rec.recent_form || {};
-        const num = v => Number.isFinite(v) ? v : "";
-        const bool = v => v === true ? "true" : v === false ? "false" : "";
-        // actual-vs-raw and actual-vs-corrected errors, computed once here at
-        // grading time (when actual is finally known) rather than left for
-        // every downstream reader to re-derive from projection - actual.
-        const errRaw = Number.isFinite(rec.projection_raw) ? Number((actual - rec.projection_raw).toFixed(2)) : "";
-        const absErrRaw = errRaw !== "" ? Math.abs(errRaw) : "";
-        const errCorr = Number.isFinite(rec.projection) ? Number((actual - rec.projection).toFixed(2)) : "";
-        const absErrCorr = errCorr !== "" ? Math.abs(errCorr) : "";
-        // Columns 1-12 (through calibration_band) are the ORIGINAL layout —
-        // never reordered, see the KHEAD comment above. Columns 13+ are the
-        // 2026-08-09 addition: every input the projection formula used, so a
-        // graded row is fully self-explaining without needing to go find that
-        // day's data/k-props/<date>.json (which isn't retained indefinitely).
+        // projection_raw and calibration_band are APPENDED, never inserted, so
+        // every existing column index stays put for readers that address this
+        // file positionally (update-k-props.js reads r[5] and r[6]). Older rows
+        // simply have fewer fields, which those readers already tolerate.
+        // Recording the pre-correction number is what lets the banded
+        // self-calibration eventually band on raw values instead of corrected
+        // ones — see the comment block in update-k-props.js.
         kRows.push([DATE, rec.name, rec.line, rec.over ?? "", rec.under ?? "",
           Number.isFinite(rec.projection) ? rec.projection : "", actual, ou, lean, leanRes,
           Number.isFinite(rec.projection_raw) ? rec.projection_raw : "",
-          rec.calibration_band || "",
-          csvField(rec.game || ""), rec.game_pk ?? "", csvField(rec.pitcher_role_label || ""),
-          num(rec.expected_innings), bool(rec.bullpen_game), bool(rec.pitching_plan_reported), rec.books ?? "",
-          num(rec.k_rate_season), num(rec.k_rate_used),
-          num(rf.starts), num(rf.batters_faced), num(rf.recent_k_rate), num(rf.weight), bool(rf.capped),
-          num(rec.bf_per_ip), num(rec.opp_k_adjustment), csvField(rec.opp_k_source || ""),
-          num(rec.opp_lineup_k), num(rec.opp_lineup_k_weighted), rec.opp_lineup_k_resolved ?? "",
-          num(rec.opp_team_season_k), num(rec.league_lineup_k),
-          num(rec.whiff_leverage), bool(rec.whiff_leverage_applied), csvField(rec.whiff_lineup_source || ""), csvField(rec.opp_lineup_source || ""),
-          num(rec.calibration_bias), errRaw, absErrRaw, errCorr, absErrCorr
-        ].join(","));
-        gradedByName[rec.name] = { actual_k: actual, ou_result: ou, lean, lean_result: leanRes };
+          rec.calibration_band || ""].join(","));
         kGraded++;
       }
       if (kRows.length) fs.appendFileSync(KLOG, kRows.join("\n") + "\n");
       console.log(`K-props: graded ${kGraded}, scratched ${kScratched}, unlinked-to-a-game ${kUnlinked}.`);
-
-      // Refresh data/k-props/<date>.xlsx with real outcomes now that grading
-      // has run. gradedByName only holds pitchers graded THIS run (kSeen
-      // skips already-graded ones on a re-run), so pull anything already in
-      // kprops_log.csv for this date too — the xlsx should always show every
-      // pitcher captured that day, graded or not, regardless of how many
-      // times this script has run for it.
-      try {
-        const existingRows = fs.readFileSync(KLOG, "utf8").trim().split("\n").slice(1).map(l => l.split(","));
-        for (const r of existingRows) {
-          if (r[0] !== DATE || !r[1]) continue;
-          if (gradedByName[r[1]]) continue; // this run's fresher value wins
-          if (r[6] === "" || r[6] === undefined) continue; // not graded (no actual_k)
-          gradedByName[r[1]] = { actual_k: Number(r[6]), ou_result: r[7] || "", lean: r[8] === "" ? "" : Number(r[8]), lean_result: r[9] || "" };
-        }
-        const xlsxRows = Object.values(kp.pitchers)
-          .filter(rec => rec && rec.name)
-          .map(rec => buildKpropsXlsxRow(DATE, rec, gradedByName[rec.name] || null));
-        const xlsxPath = path.join(ROOT, "data", "k-props", `${DATE}.xlsx`);
-        await writeKpropsXlsx(xlsxPath, xlsxRows);
-        console.log(`K-props: refreshed data/k-props/${DATE}.xlsx (${xlsxRows.length} rows, ${Object.keys(gradedByName).length} graded).`);
-      } catch (e) {
-        // Never let the Excel export break the actual grading run — the CSV
-        // ledger above is the real learning data; the xlsx is a convenience
-        // export on top of it.
-        console.warn(`K-props: xlsx refresh failed (non-fatal): ${e.message}`);
-      }
     }
   }
 
