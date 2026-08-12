@@ -1,6 +1,6 @@
 {
   "date": "2026-08-12",
-  "generated_at": "2026-08-12T17:06:41.170Z",
+  "generated_at": "2026-08-12T17:16:23.382Z",
   "snapshot_type": "posted",
   "source_of_truth": "LyDia Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -11,7 +11,7 @@
     "minimum_lab_score": 80,
     "note": "Lab Rating grades LyDia's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
   },
-  "summary": "2 official picks cleared their market gates: 2 pitcher strikeout props. 1 value-watch setup had good price math but did not clear official-pick rules.",
+  "summary": "Brief generated without live market pricing. Treat the card as research-only until pricing is checked.",
   "official_card": [
     {
       "game_pk": 823672,
@@ -52,6 +52,66 @@
           "edge": 0.7
         }
       ]
+    },
+    {
+      "game_pk": 824967,
+      "game": "Tampa Bay Rays @ Athletics",
+      "away": "Tampa Bay Rays",
+      "home": "Athletics",
+      "time": "2026-08-12T19:05:00Z",
+      "lab_score": 94,
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Drew Rasmussen",
+          "pick": "Over",
+          "line": 5.5,
+          "best_price": -113,
+          "projection": 7.7,
+          "edge": 2.2
+        }
+      ]
+    },
+    {
+      "game_pk": 825047,
+      "game": "Colorado Rockies @ Arizona Diamondbacks",
+      "away": "Colorado Rockies",
+      "home": "Arizona Diamondbacks",
+      "time": "2026-08-12T19:40:00Z",
+      "lab_score": 48,
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Merrill Kelly",
+          "pick": "Over",
+          "line": 4.5,
+          "best_price": -132,
+          "projection": 5.4,
+          "edge": 0.9
+        }
+      ]
+    },
+    {
+      "game_pk": 823263,
+      "game": "Milwaukee Brewers @ San Diego Padres",
+      "away": "Milwaukee Brewers",
+      "home": "San Diego Padres",
+      "time": "2026-08-12T20:10:00Z",
+      "lab_score": 46,
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Dustin May",
+          "pick": "Under",
+          "line": 4.5,
+          "best_price": 110,
+          "projection": 3.58,
+          "edge": -0.92
+        }
+      ]
     }
   ],
   "games": [
@@ -72,9 +132,9 @@
       "model_probability": 0.6838,
       "model_source": "leo",
       "projected_runs": {
-        "away": 4.4,
-        "home": 2.8,
-        "total": 8.1
+        "away": 4.5,
+        "home": 2.4,
+        "total": 7.8
       },
       "pitching_plan": {
         "away": {
@@ -149,7 +209,7 @@
         "applied_home": -0.0183,
         "weight": 0.5
       },
-      "run_model_probability": 0.7221,
+      "run_model_probability": 0.7862,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": null,
       "edge": 0.0139,
@@ -167,8 +227,8 @@
         "completeness_points": 0,
         "pitcher_edge_points": 14,
         "plan_completeness_points": 6,
-        "model_agreement_gap": 0.1454,
-        "model_agreement_credit": 0.035,
+        "model_agreement_gap": 0.0813,
+        "model_agreement_credit": 0.529,
         "bullpen_innings_weight": 0.84,
         "assigned_bullpen_innings": 3.3,
         "offense_delta": 0.079,
@@ -474,7 +534,7 @@
       "run_model_probability": 0.7481,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": null,
-      "edge": 0.1104,
+      "edge": 0.1103,
       "status": "value_watch",
       "value_tag": "VALUE WATCH",
       "lab_score": 80,
@@ -713,42 +773,53 @@
       "home_l10": "3-7",
       "pick_team": "Houston Astros",
       "side": "away",
-      "model_probability": 0.5707,
+      "model_probability": 0.5612,
       "model_source": "leo",
       "projected_runs": {
         "away": 5.6,
-        "home": 3,
-        "total": 9.4
+        "home": 3.1,
+        "total": 9.6
       },
       "pitching_plan": {
         "away": {
-          "type": "opener_bullpen",
-          "confidence": "low",
-          "reported": false,
+          "team": "Houston Astros",
+          "type": "opener_bulk",
+          "confidence": "manual",
+          "source_note": "Manual pitching update: Bryan King 1 IP, Ronel Blanco 4 IP, bullpen 4 IP.",
           "segments": [
             {
               "role": "opener",
               "pitcher_id": 687911,
               "pitcher": "Bryan King",
-              "expected_innings": 4.5,
+              "expected_innings": 1,
               "fip_lite": 4.33,
               "pitcher_score": 58,
               "role_stats": null
             },
             {
+              "role": "bulk",
+              "pitcher_id": 669854,
+              "pitcher": "Ronel Blanco",
+              "expected_innings": 4,
+              "fip_lite": 4.91,
+              "pitcher_score": 39,
+              "role_stats": null
+            },
+            {
               "role": "bullpen",
-              "expected_innings": 4.5
+              "expected_innings": 4
             }
           ],
-          "expected_innings": 4.5,
-          "bullpen_innings": 4.5,
-          "effective_era": 2.97,
-          "pitcher_score": 58,
+          "reported": true,
+          "expected_innings": 5,
+          "bullpen_innings": 4,
+          "effective_era": 3.38,
+          "pitcher_score": 43,
           "bullpen_carries_game": false,
-          "description": "Bryan King 4.5 IP + remaining bullpen 4.5 IP",
+          "description": "Bryan King 1.0 IP + Ronel Blanco 4.0 IP + remaining bullpen 4.0 IP",
           "pitcher": "Bryan King",
-          "role": "unknown",
-          "label": "Role unknown",
+          "role": "opener_bulk",
+          "label": "Opener + bulk pitcher",
           "bullpen_game": true
         },
         "home": {
@@ -783,7 +854,7 @@
         }
       },
       "bullpen_game": true,
-      "legacy_strength_probability": 0.6415,
+      "legacy_strength_probability": 0.6224,
       "venue_split": {
         "away_record": "31-31",
         "home_record": "28-30",
@@ -793,17 +864,17 @@
         "applied_home": 0.012,
         "weight": 0.5
       },
-      "run_model_probability": 0.8115,
+      "run_model_probability": 0.8006,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": null,
-      "edge": -0.0074,
+      "edge": -0.017,
       "status": "pass",
       "value_tag": "PASS",
-      "lab_score": 64,
+      "lab_score": 61,
       "lab_score_breakdown": {
-        "score": 64,
+        "score": 61,
         "version": "lab-rating-v3-measured-components",
-        "conviction_points": 12.81,
+        "conviction_points": 10.14,
         "agreement_points": 0,
         "pitching_plan_points": 6,
         "bullpen_points": 20,
@@ -811,10 +882,10 @@
         "completeness_points": 0,
         "pitcher_edge_points": 0,
         "plan_completeness_points": 6,
-        "model_agreement_gap": 0.17,
+        "model_agreement_gap": 0.1782,
         "model_agreement_credit": 0,
         "bullpen_innings_weight": 1,
-        "assigned_bullpen_innings": 4.5,
+        "assigned_bullpen_innings": 4,
         "offense_delta": 0.123,
         "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
@@ -830,35 +901,23 @@
         "model_probability_passed": false,
         "lab_score_passed": false
       },
-      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
-      "read": "The combined Lab Rating did not clear the official threshold.",
+      "pass_reason": "Starting pitcher edge conflicts with the model side.",
+      "read": "Starting pitcher edge conflicts with the model side.",
       "pitcher_edge": {
-        "team": "No clear SP edge",
-        "gap": 2,
-        "conflict": false,
-        "away_score": 58,
+        "team": "San Francisco Giants",
+        "gap": 13,
+        "conflict": true,
+        "away_score": 43,
         "home_score": 56,
         "away_pitcher": "Bryan King",
         "home_pitcher": "Adrian Houser",
         "away_pitcher_id": 687911,
         "home_pitcher_id": 605288,
-        "away_era": 3.83,
+        "away_era": null,
         "home_era": 4.55,
-        "away_whip": 1.36,
+        "away_whip": null,
         "home_whip": 1.37,
-        "away_advanced": {
-          "w": 2,
-          "l": 3,
-          "kbb_pct": 0.1065,
-          "gb_pct": 0.5288,
-          "babip": 0.2945,
-          "hr9": 1.28,
-          "ip_per_start": null,
-          "role": "unknown",
-          "role_label": "Role unknown",
-          "expected_innings": 4.5,
-          "bullpen_innings": 4.5
-        },
+        "away_advanced": null,
         "home_advanced": {
           "w": 3,
           "l": 7,
@@ -907,7 +966,7 @@
         "woba_home": 0.2851,
         "bp_adj": -0.144,
         "version": "v3.2-woba",
-        "p_home_v2": 0.4293,
+        "p_home_v2": 0.4388,
         "note": "shadow A/B — does not drive picks"
       },
       "bullpen": {
@@ -2322,9 +2381,9 @@
       "model_probability": 0.5735,
       "model_source": "leo",
       "projected_runs": {
-        "away": 5.3,
+        "away": 6.6,
         "home": 4.7,
-        "total": 10.8
+        "total": 12.1
       },
       "pitching_plan": {
         "away": {
@@ -2399,7 +2458,7 @@
         "applied_home": 0.008,
         "weight": 0.5
       },
-      "run_model_probability": 0.4257,
+      "run_model_probability": 0.2875,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": null,
       "edge": -0.0371,
@@ -2417,7 +2476,7 @@
         "completeness_points": 0,
         "pitcher_edge_points": 4.2,
         "plan_completeness_points": 6,
-        "model_agreement_gap": 0.2214,
+        "model_agreement_gap": 0.3596,
         "model_agreement_credit": 0,
         "bullpen_innings_weight": 0.82,
         "assigned_bullpen_innings": 3.3,
@@ -3289,8 +3348,8 @@
       "model_source": "leo",
       "projected_runs": {
         "away": 3.7,
-        "home": 4,
-        "total": 8.4
+        "home": 5.1,
+        "total": 9.6
       },
       "pitching_plan": {
         "away": {
@@ -3365,10 +3424,10 @@
         "applied_home": 0.008,
         "weight": 0.5
       },
-      "run_model_probability": 0.5423,
+      "run_model_probability": 0.6796,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": null,
-      "edge": 0.0305,
+      "edge": 0.0304,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 46,
@@ -3383,8 +3442,8 @@
         "completeness_points": 0,
         "pitcher_edge_points": 2.8,
         "plan_completeness_points": 6,
-        "model_agreement_gap": 0.0413,
-        "model_agreement_credit": 0.837,
+        "model_agreement_gap": 0.1785,
+        "model_agreement_credit": 0,
         "bullpen_innings_weight": 0.87,
         "assigned_bullpen_innings": 3.5,
         "offense_delta": 0.103,

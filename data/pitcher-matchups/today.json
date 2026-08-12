@@ -1,6 +1,6 @@
 {
   "date": "2026-08-12",
-  "generated_at": "2026-08-12T16:01:26.541Z",
+  "generated_at": "2026-08-12T17:16:35.521Z",
   "source_of_truth": "LyDia Pitcher Matchup Tool",
   "source_version": "pitcher-matchup-core-v2-role-aware",
   "method": "Role-aware pitcher model using starter-only game logs. Traditional starters, limited starters, openers, and unknown roles receive workload-appropriate innings; the remainder belongs to the bullpen.",
@@ -441,6 +441,29 @@
       "sf": 2,
       "starterIp": 47,
       "starterGames": 10
+    },
+    "669854": {
+      "id": 669854,
+      "name": "Ronel Blanco",
+      "hand": "R",
+      "era": 6.98,
+      "whip": 1.34,
+      "ip": 19.333333333333332,
+      "so": 17,
+      "bb": 11,
+      "hr": 6,
+      "gs": 4,
+      "gp": 4,
+      "w": 0,
+      "l": 1,
+      "bf": 81,
+      "go": 19,
+      "ao": 18,
+      "h": 15,
+      "ab": 68,
+      "sf": 0,
+      "starterIp": 19.333333333333332,
+      "starterGames": 4
     },
     "676083": {
       "id": 676083,
@@ -1105,7 +1128,7 @@
         "rawScore": 60,
         "score": 58,
         "grade": "Average",
-        "note": "Starter-only innings are unavailable.",
+        "note": "Bryan King is the reported opener; see the full pitching plan below.",
         "role": {
           "key": "unknown",
           "label": "Role unknown",
@@ -1115,11 +1138,11 @@
           "bullpenGame": true,
           "reason": "Starter-only innings are unavailable."
         },
-        "roleKey": "unknown",
-        "roleLabel": "Role unknown",
-        "expectedInnings": 4.5,
-        "bullpenInnings": 4.5,
-        "roleConfidence": "low",
+        "roleKey": "opener",
+        "roleLabel": "Reported opener",
+        "expectedInnings": 1,
+        "bullpenInnings": 8,
+        "roleConfidence": "manual",
         "bullpenGame": true,
         "k9": 7.2972972972972965,
         "bb9": 3.1013513513513513,
@@ -1131,7 +1154,7 @@
         "babip": 0.2945205479452055,
         "hr9": 1.277027027027027,
         "ipStart": null,
-        "effectiveEra": 2.97,
+        "effectiveEra": 3.38,
         "carriedByBullpen": false
       },
       "home": {
@@ -1191,12 +1214,96 @@
         "effectiveEra": 4.57,
         "carriedByBullpen": false
       },
-      "gap": 2,
-      "strength": "No clear edge",
-      "edge_team": "No clear pitching-plan edge",
+      "gap": 13,
+      "strength": "Moderate",
+      "edge_team": "San Francisco Giants",
       "bullpen_game": true,
-      "pitching_plan_confidence": "low",
-      "away_plan_score": 58,
+      "pitching_plan_confidence": "manual",
+      "schedule_probable": {
+        "away": {
+          "id": 687911,
+          "name": "Bryan King"
+        }
+      },
+      "pitching_plan": {
+        "away": {
+          "team": "Houston Astros",
+          "type": "opener_bulk",
+          "confidence": "manual",
+          "source_note": "Manual pitching update: Bryan King 1 IP, Ronel Blanco 4 IP, bullpen 4 IP.",
+          "segments": [
+            {
+              "role": "opener",
+              "pitcher_id": 687911,
+              "pitcher": "Bryan King",
+              "expected_innings": 1,
+              "stats": {
+                "id": 687911,
+                "name": "Bryan King",
+                "hand": "L",
+                "era": 3.83,
+                "whip": 1.36,
+                "ip": 49.333333333333336,
+                "so": 40,
+                "bb": 17,
+                "hr": 7,
+                "gs": 0,
+                "gp": 47,
+                "w": 2,
+                "l": 3,
+                "bf": 216,
+                "go": 55,
+                "ao": 49,
+                "h": 50,
+                "ab": 191,
+                "sf": 2,
+                "starterIp": null,
+                "starterGames": null
+              },
+              "role_stats": null
+            },
+            {
+              "role": "bulk",
+              "pitcher_id": 669854,
+              "pitcher": "Ronel Blanco",
+              "expected_innings": 4,
+              "stats": {
+                "id": 669854,
+                "name": "Ronel Blanco",
+                "hand": "R",
+                "era": 6.98,
+                "whip": 1.34,
+                "ip": 19.333333333333332,
+                "so": 17,
+                "bb": 11,
+                "hr": 6,
+                "gs": 4,
+                "gp": 4,
+                "w": 0,
+                "l": 1,
+                "bf": 81,
+                "go": 19,
+                "ao": 18,
+                "h": 15,
+                "ab": 68,
+                "sf": 0,
+                "starterIp": 19.333333333333332,
+                "starterGames": 4
+              },
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4,
+              "stats": null,
+              "role_stats": null
+            }
+          ],
+          "reported": true,
+          "description": "Bryan King 1.0 IP + Ronel Blanco 4.0 IP + remaining bullpen 4.0 IP"
+        }
+      },
+      "away_plan_score": 43,
       "home_plan_score": 56
     },
     "823263": {
