@@ -77,9 +77,45 @@
 
   100 points:
      35  model conviction
-     20  pitching-plan support (14 pitcher edge + 6 plan completeness)
+     20  pitching-plan support (pitcher edge only)
      20  bullpen support, weighted by assigned bullpen innings only
      25  offensive matchup support
+
+  ---------------------------------------------------------------------------
+  2026-08-12: PLAN-COMPLETENESS SCORING REMOVED
+
+  Pitching-plan support used to split 20 points as 14 pitcher edge + 6 plan
+  completeness (4.2 for the pick's own plan summing to 9 innings, 1.8 for both
+  sides' plans doing so). Checked planAllocatesFullGame() against every
+  team-side plan in every day of member-brief data on hand (410 plans,
+  2026-07-07 through 2026-08-08): 0 were ever incomplete. The 6 points were
+  unconditional — every game got them regardless of analysis quality, which is
+  exactly the failure mode v2's completeness component had (see above).
+  Folded the 6 points into pitcher edge instead of dropping the total:
+  PITCHER_MAX 14 -> 20, so pitching-plan support still maxes at 20 and the
+  score still maxes at 100. planAllocatesFullGame() itself is unchanged and
+  still feeds the (already zero-point) data-completeness diagnostic below.
+
+  ---------------------------------------------------------------------------
+  2026-08-12: OFFENSE COMPONENT MOVED FROM OPS TO HEAD-TO-HEAD wOBA
+
+  Offense support used to compare each side's own trailing-15-day OPS against
+  its own season OPS (delta_ops) -- a "hot or cold vs itself" read. Lynold's
+  2026-08-08 instruction (DEC-20260808-05) already moved the site's display
+  labels and the shadow model's offense term off OPS and onto wOBA, compared
+  head-to-head between the two teams rather than each team against its own
+  history -- but Lab Rating's own scoring was missed in that pass and kept
+  using delta_ops until now.
+
+  This brings offense_points in line with the same head-to-head wOBA read the
+  shadow model (v3.2-woba) already uses, now averaged across two windows
+  (Lynold's call, 2026-08-12): each side's trailing-15-day wOBA gap and its
+  trailing-30-day wOBA gap, versus the opponent, averaged together (whichever
+  windows are available if one is missing). The +/-0.060 cap is the same
+  OFFENSE_WOBA_CAP the shadow model already uses for its head-to-head gap --
+  chosen there because full-season wOBA spread across all 30 teams runs
+  ~0.07, so 0.060 sits close to a real best-to-worst gap rather than a fluke
+  week. Reused here rather than re-deriving a new threshold.
 */
 
 "use strict";
@@ -110,14 +146,21 @@ const COMPLETENESS_MAX = 0;
 const AGREEMENT_FREE = 0.02;
 const AGREEMENT_ZERO = 0.15;
 
-const PITCHER_MAX = 14;
+// 2026-08-12: absorbed the old 6-pt plan-completeness bonus (see version note
+// above) -- was 14. PITCHER_FULL_GAP is unchanged, so a maxed-out gap now
+// earns 20 instead of 14; nothing else about how the gap is read changed.
+const PITCHER_MAX = 20;
 const PITCHER_FULL_GAP = 20; // pitcher-score gap that earns full credit
-const PLAN_COMPLETE_MAX = 6;
 const BULLPEN_MAX = 20;
 const OFFENSE_MAX = 25;
-const OFFENSE_SPAN = 0.06; // delta-OPS differential for full / zero credit
+// 2026-08-12: was OFFENSE_SPAN, a delta-OPS threshold. Now the cap on the
+// averaged head-to-head wOBA gap (15-day and 30-day) -- reused from the
+// shadow model's V3_OFF_WOBA_CAP. See the version note at the top of this file.
+const OFFENSE_WOBA_CAP = 0.06;
 
-// A plan must allocate the full nine innings to count as complete.
+// A plan must allocate the full nine innings to count as complete. Still used
+// by the data-completeness diagnostic (zero points) even though it no longer
+// scores pitching-plan support directly.
 const FULL_GAME_INNINGS = 9;
 const INNINGS_TOLERANCE = 0.05;
 // Bullpen differential is judged against the same 45-point spread v1 used, so
@@ -168,25 +211,25 @@ function agreementDiagnostic(strengthProbPick, runProbPick) {
 }
 
 /*
-  Pitching-plan support. Two independent things:
-    - does the projected pitching favour the side LyDia picked, and by how much
-    - is the plan actually complete (all nine innings allocated on both sides)
+  Pitching-plan support: does the projected pitching favour the side LyDia
+  picked, and by how much.
 
   An opposing pitcher edge scores zero here. It does not go negative: a hard
   pitcher conflict is a separate official-pick gate, not a rating penalty.
+
+  2026-08-12: this used to also award up to 6 points for the plan simply
+  summing to nine innings. Removed -- see the version note at the top of this
+  file. Every plan in 410 checked always summed to nine innings, so that
+  credit was unconditional.
 */
-function pitchingPlanPoints({ pitchGap, pitchEdgeSupports, planComplete, bothSidesPlanned }) {
+function pitchingPlanPoints({ pitchGap, pitchEdgeSupports }) {
   const gap = isNum(pitchGap) ? pitchGap : 0;
   const edgePts = pitchEdgeSupports
     ? clamp(gap / PITCHER_FULL_GAP, 0, 1) * PITCHER_MAX
     : 0;
-  let completePts = 0;
-  if (planComplete) completePts += PLAN_COMPLETE_MAX * 0.7;
-  if (bothSidesPlanned) completePts += PLAN_COMPLETE_MAX * 0.3;
   return {
-    points: edgePts + completePts,
-    pitcher_edge_points: round(edgePts),
-    plan_completeness_points: round(completePts)
+    points: edgePts,
+    pitcher_edge_points: round(edgePts)
   };
 }
 
@@ -209,20 +252,32 @@ function bullpenPoints({ pickRisk, oppRisk, pickBullpenInnings }) {
 }
 
 /*
-  Offensive matchup support from recent form, as a differential. Neutral form on
-  both sides sits at half credit rather than zero, because "no offensive signal"
-  is not the same as "the offence argues against this pick".
+  Offensive matchup support: each side's current offense compared directly to
+  the opponent's, not to its own history. Neutral form on both sides sits at
+  half credit rather than zero, because "no offensive signal" is not the same
+  as "the offence argues against this pick".
 
   Now the largest non-conviction component: it was the only part of v2 that
-  measured a clearly positive relationship with winning (+6.6% lift).
+  measured a clearly positive relationship with winning (+6.6% lift), back
+  when this was still an OPS-vs-own-season read. See the 2026-08-12 version
+  note for why it is now a head-to-head wOBA read instead.
 */
-function offensePoints(pickDeltaOps, oppDeltaOps) {
-  if (!isNum(pickDeltaOps) || !isNum(oppDeltaOps)) {
-    return { points: OFFENSE_MAX / 2, diff: null, available: false };
+function offensePoints({ pickWoba15, oppWoba15, pickWoba30, oppWoba30 }) {
+  const gap15 = (isNum(pickWoba15) && isNum(oppWoba15)) ? (pickWoba15 - oppWoba15) : null;
+  const gap30 = (isNum(pickWoba30) && isNum(oppWoba30)) ? (pickWoba30 - oppWoba30) : null;
+  const gaps = [gap15, gap30].filter(isNum);
+  if (!gaps.length) {
+    return { points: OFFENSE_MAX / 2, diff: null, diff_15d: null, diff_30d: null, available: false };
   }
-  const diff = pickDeltaOps - oppDeltaOps;
-  const credit = clamp((diff + OFFENSE_SPAN) / (OFFENSE_SPAN * 2), 0, 1);
-  return { points: credit * OFFENSE_MAX, diff: round(diff, 3), available: true };
+  const avgGap = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+  const credit = clamp((avgGap + OFFENSE_WOBA_CAP) / (OFFENSE_WOBA_CAP * 2), 0, 1);
+  return {
+    points: credit * OFFENSE_MAX,
+    diff: round(avgGap, 4),
+    diff_15d: gap15 === null ? null : round(gap15, 4),
+    diff_30d: gap30 === null ? null : round(gap30, 4),
+    available: true
+  };
 }
 
 /*
@@ -288,8 +343,10 @@ function calcLabRating(input) {
     oppPlan = null,
     pickBullpenRisk = null,
     oppBullpenRisk = null,
-    pickDeltaOps = null,
-    oppDeltaOps = null,
+    pickWoba15 = null,
+    oppWoba15 = null,
+    pickWoba30 = null,
+    oppWoba30 = null,
     hasTeamStrength = true,
     hasBothPitchers = true,
     hasRunProjection = null
@@ -302,9 +359,7 @@ function calcLabRating(input) {
   const oppPlanComplete = planAllocatesFullGame(oppPlan);
   const plan = pitchingPlanPoints({
     pitchGap,
-    pitchEdgeSupports,
-    planComplete: pickPlanComplete,
-    bothSidesPlanned: pickPlanComplete && oppPlanComplete
+    pitchEdgeSupports
   });
 
   const penInnings = assignedBullpenInnings(pickPlan);
@@ -314,7 +369,7 @@ function calcLabRating(input) {
     pickBullpenInnings: penInnings
   });
 
-  const offense = offensePoints(pickDeltaOps, oppDeltaOps);
+  const offense = offensePoints({ pickWoba15, oppWoba15, pickWoba30, oppWoba30 });
 
   const completeness = completenessDiagnostic({
     hasTeamStrength,
@@ -343,12 +398,13 @@ function calcLabRating(input) {
     completeness_points: round(completeness.points),    // always 0 in v3
 
     pitcher_edge_points: plan.pitcher_edge_points,
-    plan_completeness_points: plan.plan_completeness_points,
     model_agreement_gap: agreement.gap === null ? null : round(agreement.gap, 4),
     model_agreement_credit: agreement.credit,           // what v2 would have scored on
     bullpen_innings_weight: bullpen.weight,
     assigned_bullpen_innings: penInnings === null ? null : round(penInnings, 1),
-    offense_delta: offense.diff,
+    offense_delta: offense.diff,               // average of the 15d/30d wOBA gaps below
+    offense_delta_15d: offense.diff_15d,
+    offense_delta_30d: offense.diff_30d,
     completeness_checks_passed: completeness.passed,
     completeness_checks_total: completeness.total,
     data_complete: completeness.complete,
@@ -379,9 +435,9 @@ module.exports = {
   CONVICTION_MAX,
   AGREEMENT_MAX,
   PITCHER_MAX,
-  PLAN_COMPLETE_MAX,
   BULLPEN_MAX,
   OFFENSE_MAX,
+  OFFENSE_WOBA_CAP,
   COMPLETENESS_MAX,
   // Exported so consumers (matchup-copy-core.js) can define "a real lean"
   // identically to how the rating itself defines conviction, instead of

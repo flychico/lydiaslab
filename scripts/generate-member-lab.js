@@ -777,22 +777,29 @@ async function fetchOffenseForm(date) {
   // seasonWoba / window[].woba added 2026-08-08 for shadow's head-to-head
   // wOBA term (modelV3, DEC-20260808-04). Leo's own offense_form fields
   // (ops_15d, season_ops, delta_ops below) are unchanged and untouched.
-  const out = { season: {}, seasonWoba: {}, window: {}, vsHand: {}, windowDays: 15 };
+  // window30 added 2026-08-12 for Lab Rating's offense component, which moved
+  // from an OPS-vs-own-season read to a head-to-head wOBA read averaged across
+  // a 15-day and a 30-day window (Lynold's call). Same byDateRange call shape
+  // as the existing 15-day window, just a wider start date.
+  const out = { season: {}, seasonWoba: {}, window: {}, window30: {}, vsHand: {}, windowDays: 15, window30Days: 30 };
   try {
     const yr = Number(date.slice(0, 4));
     const end = new Date(date + "T12:00:00Z");
     const start = new Date(end.getTime() - 15 * 86400000);
+    const start30 = new Date(end.getTime() - 30 * 86400000);
     const fmtD = d => d.toISOString().slice(0, 10);
     const base = `https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=hitting&season=${yr}`;
-    const [sn, win, vl, vr] = await Promise.all([
+    const [sn, win, win30, vl, vr] = await Promise.all([
       fetchJson(base + "&stats=season"),
       fetchJson(base + `&stats=byDateRange&startDate=${fmtD(start)}&endDate=${fmtD(end)}`),
+      fetchJson(base + `&stats=byDateRange&startDate=${fmtD(start30)}&endDate=${fmtD(end)}`),
       fetchJson(base + "&stats=statSplits&sitCodes=vl"),
       fetchJson(base + "&stats=statSplits&sitCodes=vr")
     ]);
     const splitsOf = d => (((d || {}).stats || [])[0] || {}).splits || [];
     for (const t of splitsOf(sn)) { out.season[t.team.id] = Number(t.stat.ops); out.seasonWoba[t.team.id] = wobaOf(t.stat); }
     for (const t of splitsOf(win)) out.window[t.team.id] = { ops: Number(t.stat.ops), rpg: t.stat.gamesPlayed ? Number(((t.stat.runs || 0) / t.stat.gamesPlayed).toFixed(2)) : null, g: Number(t.stat.gamesPlayed) || 0, woba: wobaOf(t.stat) };
+    for (const t of splitsOf(win30)) out.window30[t.team.id] = { woba: wobaOf(t.stat) };
     for (const t of splitsOf(vl)) (out.vsHand[t.team.id] = out.vsHand[t.team.id] || {}).vl = Number(t.stat.ops);
     for (const t of splitsOf(vr)) (out.vsHand[t.team.id] = out.vsHand[t.team.id] || {}).vr = Number(t.stat.ops);
   } catch (e) {
@@ -803,6 +810,7 @@ async function fetchOffenseForm(date) {
 function offenseFormFor(teamId, oppPitcher, offense) {
   if (!offense || !offense.season || offense.season[teamId] === undefined) return null;
   const w = offense.window[teamId] || {};
+  const w30 = (offense.window30 || {})[teamId] || {};
   const sOps = offense.season[teamId];
   const sWoba = offense.seasonWoba ? offense.seasonWoba[teamId] : null;
   const hand = oppPitcher && oppPitcher.hand ? oppPitcher.hand : null;
@@ -818,6 +826,9 @@ function offenseFormFor(teamId, oppPitcher, offense) {
     // moved to delta_woba, per Lynold's 2026-08-08 instruction: compare
     // rolling wOBA to season wOBA, not rolling OPS to season OPS. DEC-20260808-05.
     woba_15d: Number.isFinite(w.woba) ? Number(w.woba.toFixed(4)) : null,
+    // Added 2026-08-12 alongside woba_15d for Lab Rating's offense component
+    // (averaged 15d/30d head-to-head wOBA gap). See fetchOffenseForm's note.
+    woba_30d: Number.isFinite(w30.woba) ? Number(w30.woba.toFixed(4)) : null,
     woba_season: Number.isFinite(sWoba) ? Number(sWoba.toFixed(4)) : null,
     delta_woba: (Number.isFinite(w.woba) && Number.isFinite(sWoba)) ? Number((w.woba - sWoba).toFixed(4)) : null,
     rpg_15d: w.rpg ?? null,
@@ -1057,8 +1068,13 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
     oppPlan: pitchingPlan ? (pickHome ? pitchingPlan.away : pitchingPlan.home) : null,
     pickBullpenRisk: pickBullpen ? (pickBullpen.risk_index ?? pickBullpen.score) : null,
     oppBullpenRisk: oppBullpen ? (oppBullpen.risk_index ?? oppBullpen.score) : null,
-    pickDeltaOps: pickOffCtx && Number.isFinite(pickOffCtx.delta_ops) ? pickOffCtx.delta_ops : null,
-    oppDeltaOps: oppOffCtx && Number.isFinite(oppOffCtx.delta_ops) ? oppOffCtx.delta_ops : null,
+    // 2026-08-12: offense component moved from OPS to head-to-head wOBA,
+    // averaged across the 15-day and 30-day windows (Lynold's call). See the
+    // 2026-08-12 version note in lab-rating-core.js.
+    pickWoba15: pickOffCtx && Number.isFinite(pickOffCtx.woba_15d) ? pickOffCtx.woba_15d : null,
+    oppWoba15: oppOffCtx && Number.isFinite(oppOffCtx.woba_15d) ? oppOffCtx.woba_15d : null,
+    pickWoba30: pickOffCtx && Number.isFinite(pickOffCtx.woba_30d) ? pickOffCtx.woba_30d : null,
+    oppWoba30: oppOffCtx && Number.isFinite(oppOffCtx.woba_30d) ? oppOffCtx.woba_30d : null,
     hasTeamStrength: Boolean(sA && sH),
     hasBothPitchers: Boolean(awayStats && homeStats),
     hasRunProjection: Boolean(runProjection)
