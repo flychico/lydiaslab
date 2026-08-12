@@ -819,7 +819,201 @@
           "valueTag": "OFFICIAL PICK"
         }
       ]
+    },
+    {
+      "gamePk": 824241,
+      "away": "Cleveland Guardians",
+      "home": "Detroit Tigers",
+      "time": "2026-08-12T22:40:00Z",
+      "labScore": 72,
+      "labScoreBreakdown": {
+        "score": 72,
+        "version": "lab-rating-v3-measured-components",
+        "conviction_points": 34.68,
+        "agreement_points": 0,
+        "pitching_plan_points": 0,
+        "bullpen_points": 14.81,
+        "offense_points": 22.1,
+        "completeness_points": 0,
+        "pitcher_edge_points": 0,
+        "model_agreement_gap": 0.0376,
+        "model_agreement_credit": 0.864,
+        "bullpen_innings_weight": 0.87,
+        "assigned_bullpen_innings": 3.5,
+        "offense_delta": 0.0461,
+        "offense_delta_15d": 0.0574,
+        "offense_delta_30d": 0.0348,
+        "completeness_checks_passed": 5,
+        "completeness_checks_total": 5,
+        "data_complete": true,
+        "market_points": 0,
+        "model_edge_points": 0,
+        "base_points": 0,
+        "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
+      },
+      "status": "official_pick",
+      "modelVersion": "multi-market-v1",
+      "pitcherEdge": {
+        "team": "Cleveland Guardians",
+        "gap": 15,
+        "conflict": true,
+        "away_score": 75,
+        "home_score": 60,
+        "away_pitcher": "Foster Griffin",
+        "home_pitcher": "Framber Valdez",
+        "away_pitcher_id": 656492,
+        "home_pitcher_id": 664285,
+        "away_era": 3.31,
+        "home_era": 4.17,
+        "away_whip": 1.11,
+        "home_whip": 1.37,
+        "away_advanced": {
+          "w": 12,
+          "l": 4,
+          "kbb_pct": 0.1651,
+          "gb_pct": 0.5169,
+          "babip": 0.2639,
+          "hr9": 1.42,
+          "ip_per_start": 5.8,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 5.8,
+          "bullpen_innings": 3.2
+        },
+        "home_advanced": {
+          "w": 7,
+          "l": 7,
+          "kbb_pct": 0.1039,
+          "gb_pct": 0.5874,
+          "babip": 0.3031,
+          "hr9": 0.85,
+          "ip_per_start": 5.5,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 5.5,
+          "bullpen_innings": 3.5
+        }
+      },
+      "bullpen": {
+        "pick_team": {
+          "score": 61,
+          "label": "Normal",
+          "last_game_bp_ip": 5,
+          "last7_bp_ip": 21.3,
+          "last7_bp_runs": 7,
+          "last_game_relievers": 5,
+          "last7_relievers": 19,
+          "back_to_back_arms": 2,
+          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
+          "score_reason": "Normal (6.1/10): 21.3 recent relief innings, recency-weighted — 5 in the last game (pitched yesterday), 2 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 5,
+            "last7_relievers": 19,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 11.1,
+            "back_to_back_arms": 5.4,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 61.5
+          },
+          "efficiency_score": 65,
+          "efficiency_label": "Effective",
+          "efficiency_reason": "Effective (6.5/10): 2.53 ERA and 0.98 WHIP over 21.3 relief innings (6 ER, 14 H, 7 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": 10,
+            "whip_term": 4.7,
+            "confidence": 1,
+            "raw_score": 64.7
+          },
+          "era_7d": 2.53,
+          "whip_7d": 0.98,
+          "last15_bp_ip": 44.7,
+          "last15_bp_runs": 19,
+          "era_15d": 3.22,
+          "whip_15d": 1.14,
+          "recent15_games_tracked": 12,
+          "risk_index": 54,
+          "risk_label": "Normal",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "opponent": {
+          "score": 66,
+          "label": "Tired",
+          "last_game_bp_ip": 1.7,
+          "last7_bp_ip": 23.3,
+          "last7_bp_runs": 19,
+          "last_game_relievers": 2,
+          "last7_relievers": 25,
+          "back_to_back_arms": 9,
+          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+          "score_reason": "Tired (6.6/10): 23.3 recent relief innings, recency-weighted (pitched yesterday), 9 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 2,
+            "last7_relievers": 25,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 5.6,
+            "back_to_back_arms": 15.6,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 66.2
+          },
+          "efficiency_score": 24,
+          "efficiency_label": "Struggling",
+          "efficiency_reason": "Struggling (2.4/10): 6.56 ERA and 2.06 WHIP over 23.3 relief innings (17 ER, 30 H, 18 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": -14.1,
+            "whip_term": -11.4,
+            "confidence": 1,
+            "raw_score": 24.5
+          },
+          "era_7d": 6.56,
+          "whip_7d": 2.06,
+          "last15_bp_ip": 48.3,
+          "last15_bp_runs": 34,
+          "era_15d": 5.77,
+          "whip_15d": 1.72,
+          "recent15_games_tracked": 13,
+          "risk_index": 79,
+          "risk_label": "Tired",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "label": "Supports LyDia side",
+        "major_caution": false,
+        "absolute_risk": "Opponent high"
+      },
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Framber Valdez",
+          "pick": "Under",
+          "line": 4.5,
+          "bestAm": -122,
+          "projection": 3.5,
+          "edge": -1,
+          "books": 6,
+          "expectedInnings": 5.5,
+          "pitcherRole": "traditional_starter",
+          "lineupSource": "posted",
+          "modelVersion": "leo-kprop",
+          "valueTag": "OFFICIAL PICK"
+        }
+      ]
     }
   ],
-  "last_appended_at": "2026-08-12T18:55:41.059Z"
+  "last_appended_at": "2026-08-12T19:40:07.115Z"
 }
