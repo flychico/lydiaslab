@@ -836,7 +836,201 @@
           "valueTag": "OFFICIAL PICK"
         }
       ]
+    },
+    {
+      "gamePk": 823669,
+      "away": "Philadelphia Phillies",
+      "home": "Minnesota Twins",
+      "time": "2026-08-13T23:30:00Z",
+      "labScore": 41,
+      "labScoreBreakdown": {
+        "score": 41,
+        "version": "lab-rating-v3-measured-components",
+        "conviction_points": 4.12,
+        "agreement_points": 0,
+        "pitching_plan_points": 16,
+        "bullpen_points": 11.82,
+        "offense_points": 8.6,
+        "completeness_points": 0,
+        "pitcher_edge_points": 16,
+        "model_agreement_gap": 0.2098,
+        "model_agreement_credit": 0,
+        "bullpen_innings_weight": 0.82,
+        "assigned_bullpen_innings": 3.3,
+        "offense_delta": -0.0187,
+        "offense_delta_15d": -0.0187,
+        "offense_delta_30d": -0.0187,
+        "completeness_checks_passed": 5,
+        "completeness_checks_total": 5,
+        "data_complete": true,
+        "market_points": 0,
+        "model_edge_points": 0,
+        "base_points": 0,
+        "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
+      },
+      "status": "official_pick",
+      "modelVersion": "multi-market-v1",
+      "pitcherEdge": {
+        "team": "Minnesota Twins",
+        "gap": 16,
+        "conflict": false,
+        "away_score": 52,
+        "home_score": 68,
+        "away_pitcher": "Aaron Nola",
+        "home_pitcher": "Taj Bradley",
+        "away_pitcher_id": 605400,
+        "home_pitcher_id": 671737,
+        "away_era": 5.47,
+        "home_era": 3.76,
+        "away_whip": 1.45,
+        "home_whip": 1.25,
+        "away_advanced": {
+          "w": 3,
+          "l": 9,
+          "kbb_pct": 0.1581,
+          "gb_pct": 0.4592,
+          "babip": 0.3206,
+          "hr9": 2.09,
+          "ip_per_start": 5.2,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 5.2,
+          "bullpen_innings": 3.8
+        },
+        "home_advanced": {
+          "w": 9,
+          "l": 4,
+          "kbb_pct": 0.1673,
+          "gb_pct": 0.4025,
+          "babip": 0.2771,
+          "hr9": 1.16,
+          "ip_per_start": 5.7,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 5.7,
+          "bullpen_innings": 3.3
+        }
+      },
+      "bullpen": {
+        "pick_team": {
+          "score": 63,
+          "label": "Tired",
+          "last_game_bp_ip": 4,
+          "last7_bp_ip": 23.3,
+          "last7_bp_runs": 7,
+          "last_game_relievers": 4,
+          "last7_relievers": 25,
+          "back_to_back_arms": 7,
+          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+          "score_reason": "Tired (6.3/10): 23.3 recent relief innings, recency-weighted — 4 in the last game (pitched yesterday), 7 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 4,
+            "last7_relievers": 25,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 4.7,
+            "back_to_back_arms": 13.7,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 63.5
+          },
+          "efficiency_score": 60,
+          "efficiency_label": "Effective",
+          "efficiency_reason": "Effective (6.0/10): 2.31 ERA and 1.41 WHIP over 23.3 relief innings (6 ER, 19 H, 14 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": 11.3,
+            "whip_term": -1.7,
+            "confidence": 1,
+            "raw_score": 59.6
+          },
+          "era_7d": 2.31,
+          "whip_7d": 1.41,
+          "last15_bp_ip": 44.7,
+          "last15_bp_runs": 16,
+          "era_15d": 3.02,
+          "whip_15d": 1.52,
+          "recent15_games_tracked": 14,
+          "risk_index": 58,
+          "risk_label": "Normal",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "opponent": {
+          "score": 65,
+          "label": "Tired",
+          "last_game_bp_ip": 3,
+          "last7_bp_ip": 27.3,
+          "last7_bp_runs": 18,
+          "last_game_relievers": 3,
+          "last7_relievers": 25,
+          "back_to_back_arms": 8,
+          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+          "score_reason": "Tired (6.5/10): 27.3 recent relief innings, recency-weighted (pitched yesterday), 8 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 3,
+            "last7_relievers": 25,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 6.7,
+            "back_to_back_arms": 13.5,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 65.3
+          },
+          "efficiency_score": 45,
+          "efficiency_label": "Average",
+          "efficiency_reason": "Average (4.5/10): 4.94 ERA and 1.32 WHIP over 27.3 relief innings (15 ER, 24 H, 12 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": -4.4,
+            "whip_term": -0.3,
+            "confidence": 1,
+            "raw_score": 45.3
+          },
+          "era_7d": 4.94,
+          "whip_7d": 1.32,
+          "last15_bp_ip": 50,
+          "last15_bp_runs": 33,
+          "era_15d": 5.04,
+          "whip_15d": 1.36,
+          "recent15_games_tracked": 14,
+          "risk_index": 68,
+          "risk_label": "Tired",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "label": "Elevated volatility",
+        "major_caution": false,
+        "absolute_risk": "Elevated"
+      },
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Aaron Nola",
+          "pick": "Under",
+          "line": 5.5,
+          "bestAm": -152,
+          "projection": 4.76,
+          "edge": -0.74,
+          "books": 6,
+          "expectedInnings": 5.2,
+          "pitcherRole": "traditional_starter",
+          "lineupSource": "posted",
+          "modelVersion": "leo-kprop",
+          "valueTag": "OFFICIAL PICK"
+        }
+      ]
     }
   ],
-  "last_appended_at": "2026-08-13T19:36:13.884Z"
+  "last_appended_at": "2026-08-13T22:12:19.736Z"
 }
