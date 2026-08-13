@@ -1175,10 +1175,13 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
     model_effective_era_away: round(spA, 2),
     model_effective_era_home: round(spH, 2),
     // Team-strength-only inputs, before any pitcher or bullpen adjustment.
-    // team_strength_blend is this pick's own form+venue blend (clampStrength
-    // output); team_strength_probability is pBase run through log5Home,
-    // pick-relative -- the same convention as model_probability below.
-    team_strength_blend: round(pickHome ? blendH : blendA, 4),
+    // away/home (not pick-relative) so both sides of log5Home's actual inputs
+    // are visible -- a single pick-relative number can't be combined back into
+    // the joint log5 result the way away_era/home_era can be. team_strength_probability
+    // is pBase run through log5Home, pick-relative -- same convention as
+    // model_probability below, since that IS the joint result already.
+    team_strength_blend_away: round(blendA, 4),
+    team_strength_blend_home: round(blendH, 4),
     team_strength_probability: round(pickHome ? pBase : 1 - pBase, 4),
     // The bullpen risk gap's actual effect on the odds, in log-odds units,
     // pick-relative (positive = favored this pick). bullpen.pick_team/opponent

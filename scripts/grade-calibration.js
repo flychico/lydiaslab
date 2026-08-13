@@ -154,23 +154,28 @@ async function main() {
   // separate join against calibration_model_log.csv. Everything below
   // pitcher_gap is pick-side then opp-side, in that order, per metric. ----
   const ALOG = path.join(ROOT, "data", "calibration", "attribution_model_log.csv");
-  // 2026-08-13: +team_strength_blend, +team_strength_prob, +bullpen_log_odds_adj.
-  // These are leo's own intermediate checkpoints (team-strength-only input,
-  // team-strength-only probability, and what the bullpen risk gap actually did
-  // to the odds in log-odds units) -- previously computed and thrown away,
-  // never written anywhere. Also: pick_era/opp_era below now read the EXACT
-  // effective ERA leo used (model_effective_era_away/home, clamped and
-  // workload-blended), not the pitcher's raw season ERA -- those two numbers
-  // differ and the raw one was never what the model actually priced.
+  // 2026-08-13: full moneyline decision-trace chain, so a row can be walked
+  // step by step -- team strength (both sides) -> team-strength-only prob ->
+  // +starter ERA (pre_bullpen_prob) -> +bullpen (legacy_strength_prob) ->
+  // +calibration (model_prob, already existed). pick_team_strength_blend/
+  // opp_team_strength_blend are both sides' raw log5 inputs (not pick-relative
+  // like the probability checkpoints -- log5 needs both sides to reconstruct,
+  // the same reason pick_era/opp_era are both sides too). bullpen_log_odds_adj
+  // is what the bullpen risk gap actually did to the odds, pick-relative.
+  // Also: pick_era/opp_era below now read the EXACT effective ERA leo used
+  // (model_effective_era_away/home, clamped and workload-blended), not the
+  // pitcher's raw season ERA -- those two numbers differ and the raw one was
+  // never what the model actually priced.
   const AHEAD = "date,gamePk,model_version,matchup,pick_team,opp_team,status,result,model_prob,lab,"
     + "pitcher_gap,pick_pitcher_score,opp_pitcher_score,pick_era,opp_era,pick_whip,opp_whip,"
     + "kbb_diff,pick_kbb_pct,opp_kbb_pct,pick_gb_pct,opp_gb_pct,pick_babip,opp_babip,pick_hr9,opp_hr9,"
     + "off_delta_diff,pick_delta_ops,opp_delta_ops,pick_delta_woba,opp_delta_woba,"
     + "bullpen_gap,pick_bullpen_risk,opp_bullpen_risk,"
-    + "team_strength_blend,team_strength_prob,bullpen_log_odds_adj\n";
+    + "pick_team_strength_blend,opp_team_strength_blend,team_strength_prob,"
+    + "pre_bullpen_prob,legacy_strength_prob,bullpen_log_odds_adj\n";
   if (!fs.existsSync(ALOG)) fs.writeFileSync(ALOG, AHEAD);
   // Header-upgrade-in-place, same pattern as the K-props ledger below: existing
-  // rows keep their width, the 3 new trailing columns simply read empty for
+  // rows keep their width, the 6 new trailing columns simply read empty for
   // them (that data was never computed for games predating this change).
   {
     const cur = fs.readFileSync(ALOG, "utf8");
@@ -179,7 +184,7 @@ async function main() {
     const wantHead = AHEAD.trim();
     if (curHead !== wantHead && curHead.startsWith("date,gamePk,model_version,matchup")) {
       fs.writeFileSync(ALOG, wantHead + "\n" + (nl === -1 ? "" : cur.slice(nl + 1)));
-      console.log(`Attribution ledger header upgraded (+team_strength_blend, +team_strength_prob, +bullpen_log_odds_adj).`);
+      console.log(`Attribution ledger header upgraded (+pick/opp_team_strength_blend, +team_strength_prob, +pre_bullpen_prob, +legacy_strength_prob, +bullpen_log_odds_adj).`);
     }
   }
   const aSeen = new Set(fs.readFileSync(ALOG, "utf8").split("\n").slice(1).map(l => { const p = l.split(","); return p.length >= 2 ? `${normDate(p[0])},${p[1]}` : ""; }).filter(Boolean));
@@ -229,7 +234,10 @@ async function main() {
       pOff ? n2(pOff.delta_woba) : "", oOff ? n2(oOff.delta_woba) : "",
       (pRiskV !== null && oRiskV !== null) ? Number((oRiskV - pRiskV).toFixed(2)) : "",
       n2(pRiskV), n2(oRiskV),
-      n2(g.team_strength_blend), n2(g.team_strength_probability), n2(g.bullpen_log_odds_adjustment)
+      n2(pickHome ? g.team_strength_blend_home : g.team_strength_blend_away),
+      n2(pickHome ? g.team_strength_blend_away : g.team_strength_blend_home),
+      n2(g.team_strength_probability), n2(g.model_probability_pre_bullpen), n2(g.legacy_strength_probability),
+      n2(g.bullpen_log_odds_adjustment)
     ].join(","));
   }
   if (aRows.length) fs.appendFileSync(ALOG, aRows.join("\n") + "\n");
