@@ -1164,6 +1164,26 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
     pitching_plan: pitchingPlan,
     bullpen_game: bullpenGame,
     legacy_strength_probability: round(pickHome ? legacyPHome : 1 - legacyPHome, 4),
+    // 2026-08-13: decision-trace fields added so the calibration ledgers can
+    // show the inputs leo actually used, not just the final probability.
+    // model_effective_era_away/home are the EXACT spA/spH this game's
+    // exponential ERA adjustment used -- not the pitcher's raw season ERA
+    // (that's pitcher_edge.away_era/home_era, a different number: raw ERA is
+    // unclamped and un-blended toward league average for a thin sample).
+    // attribution_model_log.csv's pick_era/opp_era previously read the raw
+    // field, which is why they never matched what the model actually priced.
+    model_effective_era_away: round(spA, 2),
+    model_effective_era_home: round(spH, 2),
+    // Team-strength-only inputs, before any pitcher or bullpen adjustment.
+    // team_strength_blend is this pick's own form+venue blend (clampStrength
+    // output); team_strength_probability is pBase run through log5Home,
+    // pick-relative -- the same convention as model_probability below.
+    team_strength_blend: round(pickHome ? blendH : blendA, 4),
+    team_strength_probability: round(pickHome ? pBase : 1 - pBase, 4),
+    // The bullpen risk gap's actual effect on the odds, in log-odds units,
+    // pick-relative (positive = favored this pick). bullpen.pick_team/opponent
+    // already show the raw risk_index gap; this is what that gap DID.
+    bullpen_log_odds_adjustment: round(pickHome ? bullpenAdj : -bullpenAdj, 4),
     // Venue split, recorded per game so grade-confidence.js can measure whether
     // it earns its weight instead of it being assumed. away_record is how the
     // road team travels, home_record how the host holds its park; the _edge
@@ -1184,9 +1204,13 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
     // Same team's win probability WITHOUT the bullpen adjustment, so the
     // effect is auditable and can be disclosed as a plain percentage-point
     // shift instead of a raw log-odds number.
-    model_probability_pre_bullpen: Number.isFinite(runPHome)
-      ? null
-      : round(pickHome ? preBullpenHomeProb : 1 - preBullpenHomeProb, 4),
+    // 2026-08-13 bug fix: this was `Number.isFinite(runPHome) ? null : ...`,
+    // which nulled the field out on every game that HAD a computable run
+    // projection -- unrelated to whether the run model is actually weighted
+    // in (RUN_MODEL_WEIGHT is 0 either way, see above). Since most slates
+    // have a run projection, this field was null on most rows. preBullpenHomeProb
+    // is always computable once spA/spH exist, independent of the run model.
+    model_probability_pre_bullpen: round(pickHome ? preBullpenHomeProb : 1 - preBullpenHomeProb, 4),
     edge: edge === null ? null : round(edge, 4),
     status,
     value_tag: status === "official_pick" ? "OFFICIAL PICK" : status === "value_watch" ? "VALUE WATCH" : status === "watchlist" ? "WATCHLIST" : "PASS",

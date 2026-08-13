@@ -154,12 +154,34 @@ async function main() {
   // separate join against calibration_model_log.csv. Everything below
   // pitcher_gap is pick-side then opp-side, in that order, per metric. ----
   const ALOG = path.join(ROOT, "data", "calibration", "attribution_model_log.csv");
+  // 2026-08-13: +team_strength_blend, +team_strength_prob, +bullpen_log_odds_adj.
+  // These are leo's own intermediate checkpoints (team-strength-only input,
+  // team-strength-only probability, and what the bullpen risk gap actually did
+  // to the odds in log-odds units) -- previously computed and thrown away,
+  // never written anywhere. Also: pick_era/opp_era below now read the EXACT
+  // effective ERA leo used (model_effective_era_away/home, clamped and
+  // workload-blended), not the pitcher's raw season ERA -- those two numbers
+  // differ and the raw one was never what the model actually priced.
   const AHEAD = "date,gamePk,model_version,matchup,pick_team,opp_team,status,result,model_prob,lab,"
     + "pitcher_gap,pick_pitcher_score,opp_pitcher_score,pick_era,opp_era,pick_whip,opp_whip,"
     + "kbb_diff,pick_kbb_pct,opp_kbb_pct,pick_gb_pct,opp_gb_pct,pick_babip,opp_babip,pick_hr9,opp_hr9,"
     + "off_delta_diff,pick_delta_ops,opp_delta_ops,pick_delta_woba,opp_delta_woba,"
-    + "bullpen_gap,pick_bullpen_risk,opp_bullpen_risk\n";
+    + "bullpen_gap,pick_bullpen_risk,opp_bullpen_risk,"
+    + "team_strength_blend,team_strength_prob,bullpen_log_odds_adj\n";
   if (!fs.existsSync(ALOG)) fs.writeFileSync(ALOG, AHEAD);
+  // Header-upgrade-in-place, same pattern as the K-props ledger below: existing
+  // rows keep their width, the 3 new trailing columns simply read empty for
+  // them (that data was never computed for games predating this change).
+  {
+    const cur = fs.readFileSync(ALOG, "utf8");
+    const nl = cur.indexOf("\n");
+    const curHead = (nl === -1 ? cur : cur.slice(0, nl)).trim();
+    const wantHead = AHEAD.trim();
+    if (curHead !== wantHead && curHead.startsWith("date,gamePk,model_version,matchup")) {
+      fs.writeFileSync(ALOG, wantHead + "\n" + (nl === -1 ? "" : cur.slice(nl + 1)));
+      console.log(`Attribution ledger header upgraded (+team_strength_blend, +team_strength_prob, +bullpen_log_odds_adj).`);
+    }
+  }
   const aSeen = new Set(fs.readFileSync(ALOG, "utf8").split("\n").slice(1).map(l => { const p = l.split(","); return p.length >= 2 ? `${normDate(p[0])},${p[1]}` : ""; }).filter(Boolean));
   const aRows = [];
   const n2 = v => (typeof v === "number" && isFinite(v)) ? v : "";
@@ -179,8 +201,11 @@ async function main() {
     const oAdv = pickHome ? pe.away_advanced : pe.home_advanced;
     const pScore = pickHome ? pe.home_score : pe.away_score;
     const oScore = pickHome ? pe.away_score : pe.home_score;
-    const pEra = pickHome ? pe.home_era : pe.away_era;
-    const oEra = pickHome ? pe.away_era : pe.home_era;
+    // 2026-08-13: was pe.home_era/away_era (raw season ERA) -- corrected to
+    // the exact effective ERA leo's exponential adjustment used. See the AHEAD
+    // comment above for why these are different numbers.
+    const pEra = pickHome ? g.model_effective_era_home : g.model_effective_era_away;
+    const oEra = pickHome ? g.model_effective_era_away : g.model_effective_era_home;
     const pWhip = pickHome ? pe.home_whip : pe.away_whip;
     const oWhip = pickHome ? pe.away_whip : pe.home_whip;
     const of_ = g.offense_form || {};
@@ -203,7 +228,8 @@ async function main() {
       pOff ? n2(pOff.delta_ops) : "", oOff ? n2(oOff.delta_ops) : "",
       pOff ? n2(pOff.delta_woba) : "", oOff ? n2(oOff.delta_woba) : "",
       (pRiskV !== null && oRiskV !== null) ? Number((oRiskV - pRiskV).toFixed(2)) : "",
-      n2(pRiskV), n2(oRiskV)
+      n2(pRiskV), n2(oRiskV),
+      n2(g.team_strength_blend), n2(g.team_strength_probability), n2(g.bullpen_log_odds_adjustment)
     ].join(","));
   }
   if (aRows.length) fs.appendFileSync(ALOG, aRows.join("\n") + "\n");
