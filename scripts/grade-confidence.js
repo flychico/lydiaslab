@@ -90,17 +90,38 @@ const FOCUS_DATE = (process.argv[2] || "").match(/^\d{4}-\d{2}-\d{2}$/) ? proces
 // The six Lab Rating v2 components, with the maximum each can contribute.
 // Sourced from lib/lab-rating-core.js; if that file is retuned these need to
 // follow, which is why the max is asserted against observed data below.
+// 2026-08-13: max points corrected to the current v3 weights. Were still
+// v1/v2 values (30/20/20/15/10/5) despite the file's own header comment
+// claiming these are "asserted against observed data" -- no such assertion
+// exists anywhere in this file. These are display-only (max_points in
+// confidence_report.json / confidence_components.csv) and never fed scoring,
+// but they were wrong. Current weights per lab-rating-core.js: conviction 35,
+// agreement 0, pitching plan 20 (pitcher-edge-only since 2026-08-12), bullpen
+// 20, offense 25, completeness 0.
 const COMPONENTS = [
-  { key: "conviction_points",    label: "conviction",    max: 30 },
-  { key: "agreement_points",     label: "agreement",     max: 20 },
+  { key: "conviction_points",    label: "conviction",    max: 35 },
+  { key: "agreement_points",     label: "agreement",     max: 0 },
   { key: "pitching_plan_points", label: "pitching plan", max: 20 },
-  { key: "bullpen_points",       label: "bullpen",       max: 15 },
-  { key: "offense_points",       label: "offense",       max: 10 },
-  { key: "completeness_points",  label: "completeness",  max: 5 }
+  { key: "bullpen_points",       label: "bullpen",       max: 20 },
+  { key: "offense_points",       label: "offense",       max: 25 },
+  { key: "completeness_points",  label: "completeness",  max: 0 }
 ];
 
-const HEADER = ["date", "gamePk", "lab_version", "status", "lab_score", "model_prob", "result"]
-  .concat(COMPONENTS.map(c => c.key)).join(",");
+// 2026-08-13, Lynold's spec: confidence_log.csv's columns, exact order.
+// Separate from COMPONENTS above (which still drives the full six-component
+// analysis in confidence_report.json) -- this omits agreement/completeness
+// (zero-point diagnostics in v3) and adds the raw pregame inputs the four
+// scored components are actually computed from, so a reader can see
+// input -> score without cross-referencing member-brief by hand.
+const LOG_SCORED = ["conviction_points", "pitching_plan_points", "bullpen_points", "offense_points"];
+const LOG_COLUMNS = [
+  "date", "gamePk", "lab_version", "status",
+  "pitcher_edge_team", "pitcher_gap",
+  "pick_bullpen_risk_index", "opp_bullpen_risk_index",
+  "pick_woba_15d", "opp_woba_15d", "pick_woba_30d", "opp_woba_30d",
+  "lab_score", "model_prob", "result"
+].concat(LOG_SCORED);
+const HEADER = LOG_COLUMNS.join(",");
 
 const csvField = s => {
   s = String(s == null ? "" : s);
@@ -144,6 +165,16 @@ function collect(outcomes) {
       // NOTE: no date filter here, deliberately. See the FOCUS_DATE comment.
       const b = g.lab_score_breakdown;
       if (!b) continue;                              // pre-v2 brief, no breakdown
+      // Raw pregame inputs for confidence_log.csv (2026-08-13 spec). pick/opp
+      // is side-relative, same convention as attribution_model_log.csv.
+      const pickHome = g.side === "home";
+      const pe = g.pitcher_edge || {};
+      const bp = g.bullpen || {};
+      const pickBp = bp.pick_team || {};
+      const oppBp = bp.opponent || {};
+      const off = g.offense_form || {};
+      const pickOff = off[g.side] || {};
+      const oppOff = off[pickHome ? "away" : "home"] || {};
       const row = {
         date, gamePk: g.game_pk,
         lab_version: b.version || brief.lab_rating_version || "unknown",
@@ -152,7 +183,15 @@ function collect(outcomes) {
         prob: num(g.model_probability),
         won: outcomes.get(key),
         game: g.game || "",
-        pick: g.pick_team || ""
+        pick: g.pick_team || "",
+        pitcher_edge_team: pe.team || "",
+        pitcher_gap: num(pe.gap),
+        pick_bullpen_risk_index: num(pickBp.risk_index),
+        opp_bullpen_risk_index: num(oppBp.risk_index),
+        pick_woba_15d: num(pickOff.woba_15d),
+        opp_woba_15d: num(oppOff.woba_15d),
+        pick_woba_30d: num(pickOff.woba_30d),
+        opp_woba_30d: num(oppOff.woba_30d)
       };
       if (row.lab === null || row.prob === null) continue;
       for (const c of COMPONENTS) row[c.key] = num(b[c.key]) ?? 0;
@@ -270,8 +309,14 @@ fs.mkdirSync(CAL_DIR, { recursive: true });
 // Ledger is rebuilt wholesale rather than appended: it is derived entirely from
 // member-brief + the graded ledger, both of which are themselves append-only.
 // Nothing original lives here, so a rebuild cannot lose evidence.
-const body = rows.map(r => [r.date, r.gamePk, csvField(r.lab_version), r.status, r.lab, r.prob, r.won ? "W" : "L"]
-  .concat(COMPONENTS.map(c => r[c.key])).join(",")).join("\n");
+const blank = v => (v === null || v === undefined) ? "" : v;
+const body = rows.map(r => [
+  r.date, r.gamePk, csvField(r.lab_version), r.status,
+  csvField(r.pitcher_edge_team), blank(r.pitcher_gap),
+  blank(r.pick_bullpen_risk_index), blank(r.opp_bullpen_risk_index),
+  blank(r.pick_woba_15d), blank(r.opp_woba_15d), blank(r.pick_woba_30d), blank(r.opp_woba_30d),
+  r.lab, r.prob, r.won ? "W" : "L"
+].concat(LOG_SCORED.map(k => blank(r[k]))).join(",")).join("\n");
 fs.writeFileSync(LOG, HEADER + "\n" + body + "\n");
 
 const byVersion = {};
