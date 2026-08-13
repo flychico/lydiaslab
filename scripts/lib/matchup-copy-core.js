@@ -245,7 +245,13 @@ function recentFormSentence({ awayTeam, homeTeam, awayL10, homeL10, awayRunDiff,
 --------------------------------------------------------------------------- */
 const LAB_MAX = {
   conviction: CONVICTION_MAX,
-  pitching_plan: PITCHER_MAX + 6, // pitcher-edge (PITCHER_MAX) + plan completeness (6, not separately exported)
+  // 2026-08-12: pitching-plan support absorbed its old 6-pt plan-completeness
+  // bonus into PITCHER_MAX itself (14 -> 20; see lab-rating-core.js's version
+  // note). PITCHER_MAX is now the WHOLE pitching-plan max on its own -- the
+  // "+6" here was left over from when it was two separate pieces, and after
+  // that change it made this read 26 instead of 20, so a fully-earned 20/20
+  // rendered as "0/26" (looked broken; the input was actually just weak).
+  pitching_plan: PITCHER_MAX,
   bullpen: BULLPEN_MAX,
   offense: OFFENSE_MAX
 };
