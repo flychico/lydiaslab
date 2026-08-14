@@ -12,7 +12,11 @@ const { calcLabRating, labRatingSentence, LAB_RATING_VERSION } = require("./lib/
 const PitcherCore = require("../js/pitcher-matchup-core.js");
 
 const ROOT = path.join(__dirname, "..");
-const HFA = 54 / 46;
+// 2026-08-14, Lynold's explicit instruction: log5 (and the flat league-wide
+// HFA it applied) removed from the moneyline model. team_strength_blend now
+// feeds the pitcher-boost step directly instead of first being combined
+// against the opponent via log5Home(). See the removal note at former
+// log5Home() call site (search "log5 REMOVED") for what this drops.
 const PYTH_EXP = 1.83;
 const FORM_WEIGHT = 0.25;
 const ERA_K = 0.20;
@@ -496,11 +500,23 @@ function pythag(rs, ra) {
   const num = Math.pow(rs, PYTH_EXP);
   return num / (num + Math.pow(ra, PYTH_EXP));
 }
-function log5Home(sHome, sAway) {
-  const raw = (sHome * (1 - sAway)) / (sHome * (1 - sAway) + sAway * (1 - sHome));
-  const odds = (raw / (1 - raw)) * HFA;
-  return odds / (1 + odds);
-}
+// 2026-08-14: log5Home() REMOVED, Lynold's explicit instruction. It used to
+// combine both teams' blends against each other (log5) and apply a flat
+// league-wide home-field multiplier (HFA = 54/46) on top. Neither happens
+// anymore -- team_strength_blend now feeds the pitcher-boost step directly
+// (see modelGame(), "const pBase = blendH"). Two real effects this drops,
+// not just a rename:
+//   1. Opponent strength no longer affects the starting probability. A .700
+//      blend gets the same starting number facing a .300 team or a .650 team.
+//   2. League-wide home-field advantage is gone. team_strength_blend still
+//      carries a team-specific venue edge (how far THIS team's home/away
+//      record deviates from its own overall record, see VENUE_WEIGHT above),
+//      but that was always deliberately isolated from the league-average
+//      home edge specifically so log5Home()'s flat HFA could handle the
+//      baseline -- see the "DOUBLE-COUNTING IS THE TRAP HERE" comment above
+//      VENUE_WEIGHT. With log5Home() gone, nothing applies that baseline
+//      anymore. A perfectly average-at-home team now gets zero home-field
+//      benefit at all, where before it got the full 54/46 split.
 function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
 function round(n, dp = 4) {
   if (typeof n !== "number" || !Number.isFinite(n)) return null;
@@ -976,7 +992,15 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
   const clampStrength = v => Math.max(0.05, Math.min(0.95, v));
   const blendA = clampStrength(formA + venueA);
   const blendH = clampStrength(formH + venueH);
-  const pBase = log5Home(blendH, blendA);
+  // 2026-08-14: log5Home(blendH, blendA) REMOVED, Lynold's explicit
+  // instruction -- see the removal note above former log5Home() for what
+  // this drops (opponent-relative comparison, league-wide home-field edge).
+  // pBase now IS blendH: the home team's own strength rating, unadjusted for
+  // who it's playing. Downstream code is untouched -- everything from here
+  // down still treats pBase as "home team's probability so far" exactly like
+  // it did when log5Home() produced it, so the ERA/bullpen/calibration steps
+  // don't need to change to stay correct.
+  const pBase = blendH;
   const runProjection = runProjections && runProjections[String(g.gamePk)];
   const pitchingPlan = runProjection && runProjection.pitching_plan ? runProjection.pitching_plan : null;
   // Prefer the totals capture's effective ERA, but fall back to the confirmed
