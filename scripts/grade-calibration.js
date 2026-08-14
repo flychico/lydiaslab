@@ -166,32 +166,68 @@ async function main() {
   // (model_effective_era_away/home, clamped and workload-blended), not the
   // pitcher's raw season ERA -- those two numbers differ and the raw one was
   // never what the model actually priced.
-  const AHEAD = "date,gamePk,model_version,matchup,pick_team,opp_team,status,result,model_prob,lab,"
-    + "pitcher_gap,pick_pitcher_score,opp_pitcher_score,pick_era,opp_era,pick_whip,opp_whip,"
-    + "kbb_diff,pick_kbb_pct,opp_kbb_pct,pick_gb_pct,opp_gb_pct,pick_babip,opp_babip,pick_hr9,opp_hr9,"
-    + "off_delta_diff,pick_delta_ops,opp_delta_ops,pick_delta_woba,opp_delta_woba,"
-    + "bullpen_gap,pick_bullpen_risk,opp_bullpen_risk,"
-    + "pick_team_strength_blend,opp_team_strength_blend,team_strength_prob,"
-    + "pre_bullpen_prob,legacy_strength_prob,bullpen_log_odds_adj\n";
+  // 2026-08-13, Lynold's exact spec: full column reorder, several columns
+  // dropped (lab, kbb/gb/babip diffs, OPS-delta pair), and 6 new "show your
+  // work" columns appended that turn the manual reverse-engineering walkthrough
+  // from chat into real, checkable formulas run on every row:
+  //   pre_bullpen_odds     = odds(pre_bullpen_prob)
+  //   team_strength_odds   = odds(team_strength_prob)
+  //   pitcher_boost        = exp(ERA_K * (opp_era - pick_era))            -- the ERA step's multiplier
+  //   legacy_strength_prob_calc = calibrate(legacy_strength_prob)         -- recomputed FINAL prob; cross-check against model_prob
+  //   prob_calc            = odds(legacy_strength_prob)                  -- NOTE: identical to legacy_strength_odds on every row checked; kept as asked, flagged as a likely duplicate
+  //   legacy_strength_odds = odds(legacy_strength_prob)
+  // This is a RESHAPE, not an append -- column order changed and columns were
+  // removed, so the header-upgrade-in-place trick used elsewhere in this file
+  // (safe only for pure trailing additions) does not apply here. Pair this
+  // code with a full CSV rebuild; do not rely on this alone to fix old rows.
+  const ALOG_COLUMNS = [
+    "date", "gamePk", "model_version", "matchup", "pick_team", "opp_team", "status", "result",
+    "model_prob", "pitcher_gap", "pick_pitcher_score", "opp_pitcher_score",
+    "pick_era", "opp_era", "pick_whip", "opp_whip", "pick_hr9", "opp_hr9",
+    "off_diff", "pick_woba", "opp_woba",
+    "bullpen_gap", "pick_bullpen_risk", "opp_bullpen_risk",
+    "pick_team_strength_blend", "opp_team_strength_blend", "team_strength_prob",
+    "pre_bullpen_prob", "legacy_strength_prob", "bullpen_log_odds_adj",
+    "pre_bullpen_odds", "team_strength_odds", "pitcher_boost",
+    "legacy_strength_prob_calc", "prob_calc", "legacy_strength_odds"
+  ];
+  const AHEAD = ALOG_COLUMNS.join(",") + "\n";
   if (!fs.existsSync(ALOG)) fs.writeFileSync(ALOG, AHEAD);
-  // Header-upgrade-in-place, same pattern as the K-props ledger below: existing
-  // rows keep their width, the 6 new trailing columns simply read empty for
-  // them (that data was never computed for games predating this change).
   {
     const cur = fs.readFileSync(ALOG, "utf8");
     const nl = cur.indexOf("\n");
     const curHead = (nl === -1 ? cur : cur.slice(0, nl)).trim();
     const wantHead = AHEAD.trim();
-    if (curHead !== wantHead && curHead.startsWith("date,gamePk,model_version,matchup")) {
-      fs.writeFileSync(ALOG, wantHead + "\n" + (nl === -1 ? "" : cur.slice(nl + 1)));
-      console.log(`Attribution ledger header upgraded (+pick/opp_team_strength_blend, +team_strength_prob, +pre_bullpen_prob, +legacy_strength_prob, +bullpen_log_odds_adj).`);
+    if (curHead !== wantHead) {
+      if (curHead.split(",").length === ALOG_COLUMNS.length) {
+        // Same width, different names/order -- safe to swap the header text only.
+        fs.writeFileSync(ALOG, wantHead + "\n" + (nl === -1 ? "" : cur.slice(nl + 1)));
+        console.log("Attribution ledger header text updated (same column count, new names/order).");
+      } else {
+        console.warn(`Attribution ledger header does not match the current ${ALOG_COLUMNS.length}-column schema `
+          + `and is a different width -- NOT auto-upgrading (would misalign existing rows). `
+          + `Rebuild the file from a fresh backfill instead of letting this script touch it.`);
+      }
     }
   }
   const aSeen = new Set(fs.readFileSync(ALOG, "utf8").split("\n").slice(1).map(l => { const p = l.split(","); return p.length >= 2 ? `${normDate(p[0])},${p[1]}` : ""; }).filter(Boolean));
   const aRows = [];
-  const n2 = v => (typeof v === "number" && isFinite(v)) ? v : "";
-  // Raw numeric (or null) — for arithmetic. Use n2() only when writing a cell.
-  const bpRiskNum = t => { const v = t ? (t.risk_index ?? t.score) : null; return (typeof v === "number" && isFinite(v)) ? v : null; };
+  // 2026-08-13, Lynold's explicit instruction: "ensure everything is rounded
+  // 4 decimal places before any calculations so we can avoid rounding
+  // discrepancies." r4() is the single rounding point — every raw value below
+  // is passed through it BEFORE it's used in any diff/odds/exp formula, not
+  // just when written to the cell. That's what makes the 6 calc columns
+  // reproducible by hand against the raw columns in this same row.
+  const r4 = v => (typeof v === "number" && isFinite(v)) ? Number(v.toFixed(4)) : null;
+  const n2 = v => v === null || v === undefined ? "" : v;
+  const bpRiskNum = t => { const v = t ? (t.risk_index ?? t.score) : null; return r4(typeof v === "number" ? v : NaN); };
+  // odds(p) = p / (1-p). Guarded against p<=0 or p>=1 (division by zero / negative odds).
+  const odds = p => (p !== null && p > 0 && p < 1) ? r4(p / (1 - p)) : null;
+  // ERA_K and MONEYLINE_CALIBRATION_K are not exported from generate-member-lab.js
+  // (module.exports = { summarize, officialMarketCounts } only) -- hardcoded here,
+  // kept in sync manually with the constants of the same name in that file.
+  const ERA_K = 0.20;
+  const MONEYLINE_CALIBRATION_K = 0.50;
   for (const g of games) {
     const key = `${DATE},${g.game_pk}`;
     if (aSeen.has(key)) continue;
@@ -204,40 +240,58 @@ async function main() {
     const pickHome = g.side === "home";
     const pAdv = pickHome ? pe.home_advanced : pe.away_advanced;
     const oAdv = pickHome ? pe.away_advanced : pe.home_advanced;
-    const pScore = pickHome ? pe.home_score : pe.away_score;
-    const oScore = pickHome ? pe.away_score : pe.home_score;
+    const pScore = r4(pickHome ? pe.home_score : pe.away_score);
+    const oScore = r4(pickHome ? pe.away_score : pe.home_score);
     // 2026-08-13: was pe.home_era/away_era (raw season ERA) -- corrected to
-    // the exact effective ERA leo's exponential adjustment used. See the AHEAD
-    // comment above for why these are different numbers.
-    const pEra = pickHome ? g.model_effective_era_home : g.model_effective_era_away;
-    const oEra = pickHome ? g.model_effective_era_away : g.model_effective_era_home;
-    const pWhip = pickHome ? pe.home_whip : pe.away_whip;
-    const oWhip = pickHome ? pe.away_whip : pe.home_whip;
+    // the exact effective ERA leo's exponential adjustment used.
+    const pEra = r4(pickHome ? g.model_effective_era_home : g.model_effective_era_away);
+    const oEra = r4(pickHome ? g.model_effective_era_away : g.model_effective_era_home);
+    const pWhip = r4(pickHome ? pe.home_whip : pe.away_whip);
+    const oWhip = r4(pickHome ? pe.away_whip : pe.home_whip);
+    const pHr9 = r4(pAdv ? pAdv.hr9 : NaN);
+    const oHr9 = r4(oAdv ? oAdv.hr9 : NaN);
     const of_ = g.offense_form || {};
     const pOff = pickHome ? of_.home : of_.away;
     const oOff = pickHome ? of_.away : of_.home;
+    const pWoba = r4(pOff ? pOff.woba_15d : NaN);
+    const oWoba = r4(oOff ? oOff.woba_15d : NaN);
     const bp = g.bullpen || {};
-    const pRiskV = bpRiskNum(bp.pick_team), oRiskV = bpRiskNum(bp.opponent);
+    const pRisk = bpRiskNum(bp.pick_team), oRisk = bpRiskNum(bp.opponent);
     const opp_team = pickHome ? g.away_team : g.home_team;
-    aRows.push([DATE, g.game_pk, csvField(g.model_source || brief.model_version || "unknown"),
+    const pBlend = r4(pickHome ? g.team_strength_blend_home : g.team_strength_blend_away);
+    const oBlend = r4(pickHome ? g.team_strength_blend_away : g.team_strength_blend_home);
+    const teamStrengthProb = r4(g.team_strength_probability);
+    const preBullpenProb = r4(g.model_probability_pre_bullpen);
+    const legacyStrengthProb = r4(g.legacy_strength_probability);
+    const bullpenLogOddsAdj = r4(g.bullpen_log_odds_adjustment);
+    const modelProb = r4(g.model_probability);
+
+    const pitcherGap = (pScore !== null && oScore !== null) ? r4(pScore - oScore) : null;
+    const offDiff = (pWoba !== null && oWoba !== null) ? r4(pWoba - oWoba) : null;
+    const bullpenGap = (pRisk !== null && oRisk !== null) ? r4(oRisk - pRisk) : null;
+
+    // -- the 6 calc columns, built only from the already-rounded values above --
+    const preBullpenOdds = odds(preBullpenProb);
+    const teamStrengthOdds = odds(teamStrengthProb);
+    const pitcherBoost = (pEra !== null && oEra !== null) ? r4(Math.exp(ERA_K * (oEra - pEra))) : null;
+    const legacyStrengthProbCalc = (legacyStrengthProb !== null) ? r4(0.5 + MONEYLINE_CALIBRATION_K * (legacyStrengthProb - 0.5)) : null;
+    // NOTE: prob_calc and legacy_strength_odds are the same formula (odds of
+    // legacy_strength_prob) -- flagged to Lynold as a likely duplicate; kept
+    // as two columns per his file until he confirms prob_calc should differ.
+    const probCalc = odds(legacyStrengthProb);
+    const legacyStrengthOdds = odds(legacyStrengthProb);
+
+    aRows.push([
+      DATE, g.game_pk, csvField(g.model_source || brief.model_version || "unknown"),
       csvField(g.game), csvField(g.pick_team), csvField(opp_team), g.status || "", won ? "W" : "L",
-      n2(g.model_probability), n2(g.lab_score),
-      (isFinite(pScore) && isFinite(oScore)) ? pScore - oScore : "", n2(pScore), n2(oScore),
-      n2(pEra), n2(oEra), n2(pWhip), n2(oWhip),
-      (pAdv && oAdv && isFinite(pAdv.kbb_pct) && isFinite(oAdv.kbb_pct)) ? Number((pAdv.kbb_pct - oAdv.kbb_pct).toFixed(4)) : "",
-      pAdv ? n2(pAdv.kbb_pct) : "", oAdv ? n2(oAdv.kbb_pct) : "",
-      pAdv ? n2(pAdv.gb_pct) : "", oAdv ? n2(oAdv.gb_pct) : "",
-      pAdv ? n2(pAdv.babip) : "", oAdv ? n2(oAdv.babip) : "",
-      pAdv ? n2(pAdv.hr9) : "", oAdv ? n2(oAdv.hr9) : "",
-      (pOff && oOff && isFinite(pOff.delta_ops) && isFinite(oOff.delta_ops)) ? Number((pOff.delta_ops - oOff.delta_ops).toFixed(3)) : "",
-      pOff ? n2(pOff.delta_ops) : "", oOff ? n2(oOff.delta_ops) : "",
-      pOff ? n2(pOff.delta_woba) : "", oOff ? n2(oOff.delta_woba) : "",
-      (pRiskV !== null && oRiskV !== null) ? Number((oRiskV - pRiskV).toFixed(2)) : "",
-      n2(pRiskV), n2(oRiskV),
-      n2(pickHome ? g.team_strength_blend_home : g.team_strength_blend_away),
-      n2(pickHome ? g.team_strength_blend_away : g.team_strength_blend_home),
-      n2(g.team_strength_probability), n2(g.model_probability_pre_bullpen), n2(g.legacy_strength_probability),
-      n2(g.bullpen_log_odds_adjustment)
+      n2(modelProb), n2(pitcherGap), n2(pScore), n2(oScore),
+      n2(pEra), n2(oEra), n2(pWhip), n2(oWhip), n2(pHr9), n2(oHr9),
+      n2(offDiff), n2(pWoba), n2(oWoba),
+      n2(bullpenGap), n2(pRisk), n2(oRisk),
+      n2(pBlend), n2(oBlend), n2(teamStrengthProb),
+      n2(preBullpenProb), n2(legacyStrengthProb), n2(bullpenLogOddsAdj),
+      n2(preBullpenOdds), n2(teamStrengthOdds), n2(pitcherBoost),
+      n2(legacyStrengthProbCalc), n2(probCalc), n2(legacyStrengthOdds)
     ].join(","));
   }
   if (aRows.length) fs.appendFileSync(ALOG, aRows.join("\n") + "\n");

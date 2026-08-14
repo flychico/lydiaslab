@@ -113,11 +113,21 @@ const COMPONENTS = [
 // (zero-point diagnostics in v3) and adds the raw pregame inputs the four
 // scored components are actually computed from, so a reader can see
 // input -> score without cross-referencing member-brief by hand.
+//
+// 2026-08-13, gap fix: added pick_team and pick_bullpen_innings. Without
+// pick_team there was no way to independently check pitchEdgeSupports
+// (pitcher_edge_team === pick_team), which is half of pitching_plan_points'
+// formula in lab-rating-core.js -- a reader could see the edge team but not
+// which side was actually picked. Without pick_bullpen_innings there was no
+// way to reconstruct bullpen_points' weight factor
+// (clamp(pickBullpenInnings / BULLPEN_FULL_INNINGS, BULLPEN_MIN_WEIGHT, 1)) --
+// the risk-index gap alone under-determines the score. offense_points and
+// conviction_points needed nothing added; their raw inputs were already here.
 const LOG_SCORED = ["conviction_points", "pitching_plan_points", "bullpen_points", "offense_points"];
 const LOG_COLUMNS = [
-  "date", "gamePk", "lab_version", "status",
+  "date", "gamePk", "lab_version", "status", "pick_team",
   "pitcher_edge_team", "pitcher_gap",
-  "pick_bullpen_risk_index", "opp_bullpen_risk_index",
+  "pick_bullpen_risk_index", "opp_bullpen_risk_index", "pick_bullpen_innings",
   "pick_woba_15d", "opp_woba_15d", "pick_woba_30d", "opp_woba_30d",
   "lab_score", "model_prob", "result"
 ].concat(LOG_SCORED);
@@ -175,6 +185,11 @@ function collect(outcomes) {
       const off = g.offense_form || {};
       const pickOff = off[g.side] || {};
       const oppOff = off[pickHome ? "away" : "home"] || {};
+      // pick_bullpen_innings: bullpen_innings is stored on pitching_plan.<side>
+      // for the PICK's own side (role.bullpenInnings from generate-member-lab.js),
+      // same field bullpenPoints()'s weight factor is computed from.
+      const plan = g.pitching_plan || {};
+      const pickPlan = plan[g.side] || {};
       const row = {
         date, gamePk: g.game_pk,
         lab_version: b.version || brief.lab_rating_version || "unknown",
@@ -188,6 +203,7 @@ function collect(outcomes) {
         pitcher_gap: num(pe.gap),
         pick_bullpen_risk_index: num(pickBp.risk_index),
         opp_bullpen_risk_index: num(oppBp.risk_index),
+        pick_bullpen_innings: num(pickPlan.bullpen_innings),
         pick_woba_15d: num(pickOff.woba_15d),
         opp_woba_15d: num(oppOff.woba_15d),
         pick_woba_30d: num(pickOff.woba_30d),
@@ -311,9 +327,9 @@ fs.mkdirSync(CAL_DIR, { recursive: true });
 // Nothing original lives here, so a rebuild cannot lose evidence.
 const blank = v => (v === null || v === undefined) ? "" : v;
 const body = rows.map(r => [
-  r.date, r.gamePk, csvField(r.lab_version), r.status,
+  r.date, r.gamePk, csvField(r.lab_version), r.status, csvField(r.pick),
   csvField(r.pitcher_edge_team), blank(r.pitcher_gap),
-  blank(r.pick_bullpen_risk_index), blank(r.opp_bullpen_risk_index),
+  blank(r.pick_bullpen_risk_index), blank(r.opp_bullpen_risk_index), blank(r.pick_bullpen_innings),
   blank(r.pick_woba_15d), blank(r.opp_woba_15d), blank(r.pick_woba_30d), blank(r.opp_woba_30d),
   r.lab, r.prob, r.won ? "W" : "L"
 ].concat(LOG_SCORED.map(k => blank(r[k]))).join(",")).join("\n");
