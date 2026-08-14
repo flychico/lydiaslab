@@ -188,16 +188,27 @@ async function main() {
   // removed, so the header-upgrade-in-place trick used elsewhere in this file
   // (safe only for pure trailing additions) does not apply here. Pair this
   // code with a full CSV rebuild; do not rely on this alone to fix old rows.
+  // 2026-08-14, Lynold's exact spec (2nd reorder): pick_pitcher/opp_pitcher
+  // names added; off_diff renamed to woba_diff and moved later in the row;
+  // bullpen_log_odds_adj renamed to bullpen_adj. team_strength_prob and
+  // team_strength_odds DROPPED -- both were log5Home()'s output, and log5
+  // was removed from generate-member-lab.js the same day (Lynold's explicit
+  // instruction), so team_strength_prob is now just a duplicate of
+  // pick_team_strength_blend and no longer worth a separate column.
+  // legacy_strength_prob_calc and prob_calc DROPPED (the calibration
+  // cross-check and the flagged-duplicate column). legacy_strength_prob and
+  // legacy_strength_odds RENAMED to moneyline_prop / money_line_odds and
+  // moved to the end -- same numbers, same formulas, just now named for what
+  // they are: the final pre-calibration moneyline read, distinct from
+  // model_prob (post-calibration) up near the top of the row.
   const ALOG_COLUMNS = [
     "date", "gamePk", "model_version", "matchup", "pick_team", "opp_team", "status", "result",
-    "model_prob", "pitcher_gap", "pick_pitcher_score", "opp_pitcher_score",
+    "model_prob", "pitcher_gap", "pick_pitcher", "pick_pitcher_score", "opp_pitcher", "opp_pitcher_score",
     "pick_era", "opp_era", "pick_whip", "opp_whip", "pick_hr9", "opp_hr9",
-    "off_diff", "pick_woba", "opp_woba",
-    "bullpen_gap", "pick_bullpen_risk", "opp_bullpen_risk",
-    "pick_team_strength_blend", "opp_team_strength_blend", "team_strength_prob",
-    "pre_bullpen_prob", "legacy_strength_prob", "bullpen_log_odds_adj",
-    "pre_bullpen_odds", "team_strength_odds", "pitcher_boost",
-    "legacy_strength_prob_calc", "prob_calc", "legacy_strength_odds"
+    "pick_woba", "opp_woba", "pick_bullpen_risk", "opp_bullpen_risk",
+    "pick_team_strength_blend", "opp_team_strength_blend", "woba_diff", "bullpen_gap",
+    "pitcher_boost", "pre_bullpen_odds", "pre_bullpen_prob", "bullpen_adj",
+    "money_line_odds", "moneyline_prop"
   ];
   const AHEAD = ALOG_COLUMNS.join(",") + "\n";
   if (!fs.existsSync(ALOG)) fs.writeFileSync(ALOG, AHEAD);
@@ -260,6 +271,11 @@ async function main() {
     const pickHome = g.side === "home";
     const pAdv = pickHome ? pe.home_advanced : pe.away_advanced;
     const oAdv = pickHome ? pe.away_advanced : pe.home_advanced;
+    // 2026-08-14: pick_pitcher/opp_pitcher added -- pe.home_pitcher/away_pitcher
+    // already existed on every row (used for the matchup page), just never
+    // pulled into this ledger. Same pick-relative convention as pScore/oScore.
+    const pPitcher = pickHome ? pe.home_pitcher : pe.away_pitcher;
+    const oPitcher = pickHome ? pe.away_pitcher : pe.home_pitcher;
     const pScore = r4(pickHome ? pe.home_score : pe.away_score);
     const oScore = r4(pickHome ? pe.away_score : pe.home_score);
     // 2026-08-13: was pe.home_era/away_era (raw season ERA) -- corrected to
@@ -280,38 +296,35 @@ async function main() {
     const opp_team = pickHome ? g.away_team : g.home_team;
     const pBlend = r4(pickHome ? g.team_strength_blend_home : g.team_strength_blend_away);
     const oBlend = r4(pickHome ? g.team_strength_blend_away : g.team_strength_blend_home);
-    const teamStrengthProb = r4(g.team_strength_probability);
     const preBullpenProb = r4(g.model_probability_pre_bullpen);
     const legacyStrengthProb = r4(g.legacy_strength_probability);
-    const bullpenLogOddsAdj = r4(g.bullpen_log_odds_adjustment);
+    const bullpenAdj = r4(g.bullpen_log_odds_adjustment);
     const modelProb = r4(g.model_probability);
 
     const pitcherGap = (pScore !== null && oScore !== null) ? r4(pScore - oScore) : null;
-    const offDiff = (pWoba !== null && oWoba !== null) ? r4(pWoba - oWoba) : null;
+    const wobaDiff = (pWoba !== null && oWoba !== null) ? r4(pWoba - oWoba) : null;
     const bullpenGap = (pRisk !== null && oRisk !== null) ? r4(oRisk - pRisk) : null;
 
-    // -- the 6 calc columns, built only from the already-rounded values above --
+    // -- the 3 calc columns, built only from the already-rounded values above --
     const preBullpenOdds = odds(preBullpenProb);
-    const teamStrengthOdds = odds(teamStrengthProb);
     const pitcherBoost = (pEra !== null && oEra !== null) ? r4(Math.exp(ERA_K * (oEra - pEra))) : null;
-    const legacyStrengthProbCalc = (legacyStrengthProb !== null) ? r4(0.5 + MONEYLINE_CALIBRATION_K * (legacyStrengthProb - 0.5)) : null;
-    // NOTE: prob_calc and legacy_strength_odds are the same formula (odds of
-    // legacy_strength_prob) -- flagged to Lynold as a likely duplicate; kept
-    // as two columns per his file until he confirms prob_calc should differ.
-    const probCalc = odds(legacyStrengthProb);
-    const legacyStrengthOdds = odds(legacyStrengthProb);
+    // money_line_odds/moneyline_prop: the final pre-calibration read -- same
+    // legacy_strength_probability the model already carries, just named for
+    // what it is and moved to the end of the row so it sits next to
+    // model_prob (post-calibration) for an easy side-by-side comparison of
+    // how much the calibration shrink actually moved this game's number.
+    const moneyLineOdds = odds(legacyStrengthProb);
+    const moneylineProp = legacyStrengthProb;
 
     aRows.push([
       DATE, g.game_pk, csvField(g.model_source || brief.model_version || "unknown"),
       csvField(g.game), csvField(g.pick_team), csvField(opp_team), g.status || "", won ? "W" : "L",
-      n2(modelProb), n2(pitcherGap), n2(pScore), n2(oScore),
+      n2(modelProb), n2(pitcherGap), csvField(pPitcher || ""), n2(pScore), csvField(oPitcher || ""), n2(oScore),
       n2(pEra), n2(oEra), n2(pWhip), n2(oWhip), n2(pHr9), n2(oHr9),
-      n2(offDiff), n2(pWoba), n2(oWoba),
-      n2(bullpenGap), n2(pRisk), n2(oRisk),
-      n2(pBlend), n2(oBlend), n2(teamStrengthProb),
-      n2(preBullpenProb), n2(legacyStrengthProb), n2(bullpenLogOddsAdj),
-      n2(preBullpenOdds), n2(teamStrengthOdds), n2(pitcherBoost),
-      n2(legacyStrengthProbCalc), n2(probCalc), n2(legacyStrengthOdds)
+      n2(pWoba), n2(oWoba), n2(pRisk), n2(oRisk),
+      n2(pBlend), n2(oBlend), n2(wobaDiff), n2(bullpenGap),
+      n2(pitcherBoost), n2(preBullpenOdds), n2(preBullpenProb), n2(bullpenAdj),
+      n2(moneyLineOdds), n2(moneylineProp)
     ].join(","));
   }
   if (aRows.length) fs.appendFileSync(ALOG, aRows.join("\n") + "\n");
