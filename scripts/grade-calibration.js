@@ -193,6 +193,14 @@ async function main() {
   ];
   const AHEAD = ALOG_COLUMNS.join(",") + "\n";
   if (!fs.existsSync(ALOG)) fs.writeFileSync(ALOG, AHEAD);
+  // 2026-08-14: this header check used to only gate whether the HEADER TEXT got
+  // rewritten -- it did NOT stop the code below from building and appending
+  // rows in the NEW shape regardless of the outcome. On a width mismatch that
+  // meant: header stays old, warning gets printed, and new rows STILL get
+  // appended underneath it in the new column count -- silently misaligning
+  // every column for anyone reading the file, worse than doing nothing.
+  // alogHeaderOk now actually gates the append below, not just the header swap.
+  let alogHeaderOk = true;
   {
     const cur = fs.readFileSync(ALOG, "utf8");
     const nl = cur.indexOf("\n");
@@ -204,13 +212,17 @@ async function main() {
         fs.writeFileSync(ALOG, wantHead + "\n" + (nl === -1 ? "" : cur.slice(nl + 1)));
         console.log("Attribution ledger header text updated (same column count, new names/order).");
       } else {
+        alogHeaderOk = false;
         console.warn(`Attribution ledger header does not match the current ${ALOG_COLUMNS.length}-column schema `
           + `and is a different width -- NOT auto-upgrading (would misalign existing rows). `
-          + `Rebuild the file from a fresh backfill instead of letting this script touch it.`);
+          + `SKIPPING attribution grading this run so nothing gets appended under the wrong header. `
+          + `Rebuild the file from a fresh backfill, then re-run.`);
       }
     }
   }
-  const aSeen = new Set(fs.readFileSync(ALOG, "utf8").split("\n").slice(1).map(l => { const p = l.split(","); return p.length >= 2 ? `${normDate(p[0])},${p[1]}` : ""; }).filter(Boolean));
+  const aSeen = alogHeaderOk
+    ? new Set(fs.readFileSync(ALOG, "utf8").split("\n").slice(1).map(l => { const p = l.split(","); return p.length >= 2 ? `${normDate(p[0])},${p[1]}` : ""; }).filter(Boolean))
+    : new Set();
   const aRows = [];
   // 2026-08-13, Lynold's explicit instruction: "ensure everything is rounded
   // 4 decimal places before any calculations so we can avoid rounding
@@ -228,7 +240,7 @@ async function main() {
   // kept in sync manually with the constants of the same name in that file.
   const ERA_K = 0.20;
   const MONEYLINE_CALIBRATION_K = 0.50;
-  for (const g of games) {
+  if (alogHeaderOk) for (const g of games) {
     const key = `${DATE},${g.game_pk}`;
     if (aSeen.has(key)) continue;
     const f = finals[g.game_pk];
@@ -333,6 +345,13 @@ async function main() {
     let kp; try { kp = JSON.parse(fs.readFileSync(kpPath, "utf8")); } catch (e) { kp = null; }
     if (kp && kp.pitchers) {
       if (!fs.existsSync(KLOG)) fs.writeFileSync(KLOG, KHEAD);
+      // 2026-08-14: same bug fixed the same way as the attribution ledger above
+      // -- this check used to only gate the HEADER TEXT rewrite, not whether
+      // rows got appended below. On a width mismatch that meant: header stays
+      // old, a warning prints, and new rows still get appended in the NEW
+      // column count underneath it -- silently misaligning every column.
+      // klogHeaderOk now actually gates the grading loop and append below.
+      let klogHeaderOk = true;
       {
         const cur = fs.readFileSync(KLOG, "utf8");
         const nl = cur.indexOf("\n");
@@ -344,12 +363,17 @@ async function main() {
             fs.writeFileSync(KLOG, wantHead + "\n" + (nl === -1 ? "" : cur.slice(nl + 1)));
             console.log("K-props ledger header text updated (same column count, new names/order).");
           } else {
+            klogHeaderOk = false;
             console.warn(`K-props ledger header does not match the current ${KLOG_COLUMNS.length}-column schema `
               + `and is a different width -- NOT auto-upgrading (would misalign existing rows). `
-              + `Rebuild the file from a fresh backfill instead of letting this script touch it.`);
+              + `SKIPPING K-props grading this run so nothing gets appended under the wrong header. `
+              + `Rebuild the file from a fresh backfill, then re-run.`);
           }
         }
       }
+      if (!klogHeaderOk) {
+        console.log("K-props: skipped grading this run — header mismatch, see warning above. Nothing appended.");
+      } else {
       /*
         A capture can exist and still be ungradeable. On 2026-08-04 the odds
         fetch returned events_fetched: 0, so 29 of 34 pitchers had line: null,
@@ -432,6 +456,7 @@ async function main() {
       }
       if (kRows.length) fs.appendFileSync(KLOG, kRows.join("\n") + "\n");
       console.log(`K-props: graded ${kGraded}, scratched ${kScratched}, unlinked-to-a-game ${kUnlinked}.`);
+      }
     }
   }
 
