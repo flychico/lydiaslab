@@ -9,8 +9,26 @@
   - data/clv/clv_log.csv when present
 
   Writes:
-  - data/learning-summary.json
-  - data/learning/<date>.json
+  - data/learning-summary.json           (legacy — still written for
+    generate-coach.js and the current /learning/ page; being phased out)
+  - data/learning/<date>.json            (per-date archive, unchanged)
+  - data/learning_summary.csv            (one row: every scalar/summary field)
+  - data/learning_findings.csv
+  - data/learning_calibration_buckets.csv
+  - data/learning_shadow_by_status.csv
+  - data/learning_games.csv              (one row per unique game, boolean
+    flag columns for which review bucket(s) it fell into)
+  - data/learning_next_review.csv
+  - data/learning_clv_counts.csv
+  - data/learning_lesson_counts.csv
+
+  2026-08-11: added the CSV set above per Lynold's request to move off
+  learning-summary.json. This is step 1 of 2 — the JSON is still written
+  because generate-coach.js currently does a read-modify-write on it
+  (reads the file, adds its own "coach" block, writes it back), and the
+  /learning/ page still fetches it directly. Both get converted in the next
+  pass; until then this script intentionally writes both formats so nothing
+  downstream breaks. See NOTES.md in the delivery folder for the full plan.
 
   Purpose:
   Turn graded results into a readable process review.
@@ -39,6 +57,7 @@ function main() {
       days_reviewed: 0
     };
     writeJson("data/learning-summary.json", empty);
+    writeCsv("data/learning_summary.csv", ["generated_at", "status", "summary", "latest_date", "days_reviewed"], [empty]);
     console.log("No results found. Wrote empty learning summary.");
     return;
   }
@@ -58,6 +77,7 @@ function main() {
 
   writeJson(`data/learning/${date}.json`, summary);
   writeJson("data/learning-summary.json", summary);
+  writeLearningSummaryCsvs(summary);
 
   console.log(`Learning summary generated for ${date}.`);
 }
@@ -351,6 +371,12 @@ function buildMultiDayView(days) {
 
 function publicPickRow(p) {
   return {
+    // game_pk added 2026-08-11: it was already computed on every normalized
+    // pick (see normalizePickForLearning) but never surfaced here, so the
+    // JSON buckets had no clean join key across a game that appears in more
+    // than one bucket. Needed now so learning_games.csv can be one row per
+    // real game instead of one row per (game-string, bucket) pair.
+    game_pk: p.game_pk || null,
     date: p.date || null,
     status: p.status || null,
     model_version: p.model_version || null,
@@ -408,6 +434,147 @@ function writeJson(rel, obj) {
   const out = path.join(ROOT, rel);
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, JSON.stringify(obj, null, 2) + "\n", "utf8");
+}
+
+function csvCell(v) {
+  if (v === null || v === undefined) return "";
+  const s = String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+function writeCsv(rel, header, rows) {
+  const out = path.join(ROOT, rel);
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  const body = [header.join(","), ...rows.map(r => header.map(h => csvCell(r[h])).join(","))].join("\n") + "\n";
+  fs.writeFileSync(out, body, "utf8");
+}
+
+/*
+  Splits the single nested learning-summary object into flat tables. Reads
+  ONLY from the `summary` object buildLearningSummary() already returns —
+  no new analysis, just a different serialization of the same numbers.
+
+  learning_games.csv de-duplicates the five overlapping JSON buckets
+  (strong_official / protected_by_probability_gate / high_bullpen_risk /
+  pitcher_conflicts / all_moneyline) into one row per game with a boolean
+  flag column per bucket, keyed on game_pk where present. NOTE: the
+  all_moneyline bucket's rows never carried a `date` in the old JSON either
+  (a pre-existing quirk in how that bucket is built vs. the other four,
+  which get `date` stitched on from the day being iterated) — not something
+  this migration introduces or fixes; flagged here so a blank date in that
+  bucket's rows isn't mistaken for a new bug.
+*/
+function writeLearningSummaryCsvs(summary) {
+  const c = summary.calibration || {};
+  const shadow = c.shadow_model || {};
+  const attribution = c.attribution || {};
+  const kprops = c.kprops || {};
+  const md = summary.multi_day || {};
+  const coach = summary.coach || {}; // not populated by this script — see header note
+  const day = summary.day || {};
+  const gates = summary.gates || {};
+  const pm = summary.process_metrics || {};
+
+  writeCsv("data/learning_summary.csv", [
+    "generated_at", "status", "latest_date", "days_reviewed", "source_results", "source_clv",
+    "current_official_model", "headline",
+    "day_date", "day_source", "day_record_all_markets", "day_units_all_markets", "day_ungraded",
+    "day_moneyline_record", "day_moneyline_win_rate", "day_official_moneyline_picks", "day_legacy_market_entries",
+    "gate_official_model_probability", "gate_official_lab_score", "gate_note",
+    "avg_model_probability", "avg_lab_score", "avg_raw_edge",
+    "strong_official_count", "protected_by_probability_gate_count", "high_bullpen_risk_count", "pitcher_conflict_count",
+    "calibration_status", "calibration_model_version", "calibration_games_graded", "calibration_wins",
+    "calibration_losses", "calibration_brier_score", "calibration_note",
+    "shadow_status", "shadow_games", "shadow_official_model_version", "shadow_model_version",
+    "shadow_brier_official", "shadow_brier_shadow", "shadow_leader", "shadow_disagreements",
+    "shadow_wins_disagreements", "shadow_note",
+    "attribution_status", "attribution_games", "attribution_needed",
+    "kprops_status", "kprops_self_calibration", "kprops_graded", "kprops_with_projection", "kprops_bias",
+    "kprops_mae", "kprops_lean_record", "kprops_over_lean_record", "kprops_under_lean_record",
+    "kprops_no_lean", "kprops_note",
+    "multi_day_moneyline_record", "multi_day_moneyline_win_rate", "multi_day_official_moneyline_entries",
+    "multi_day_strict_gate_candidates", "multi_day_high_lab_low_probability_entries", "multi_day_note",
+    "coach_status", "coach_title", "coach_summary", "coach_current_model_days", "coach_current_model_picks",
+    "coach_minimum_days", "coach_minimum_picks", "coach_bullpen_model_owner", "coach_hard_stop"
+  ], [{
+    generated_at: summary.generated_at, status: summary.status, latest_date: summary.latest_date,
+    days_reviewed: summary.days_reviewed,
+    source_results: summary.source_files && summary.source_files.results,
+    source_clv: summary.source_files && summary.source_files.clv,
+    current_official_model: summary.current_official_model, headline: summary.headline,
+    day_date: day.date, day_source: day.source, day_record_all_markets: day.record_all_markets,
+    day_units_all_markets: day.units_all_markets, day_ungraded: day.ungraded,
+    day_moneyline_record: day.moneyline_record, day_moneyline_win_rate: day.moneyline_win_rate,
+    day_official_moneyline_picks: day.official_moneyline_picks, day_legacy_market_entries: day.legacy_market_entries,
+    gate_official_model_probability: gates.official_model_probability, gate_official_lab_score: gates.official_lab_score,
+    gate_note: gates.note,
+    avg_model_probability: pm.average_model_probability, avg_lab_score: pm.average_lab_score,
+    avg_raw_edge: pm.average_raw_edge,
+    strong_official_count: pm.strong_official_count, protected_by_probability_gate_count: pm.protected_by_probability_gate_count,
+    high_bullpen_risk_count: pm.high_bullpen_risk_count, pitcher_conflict_count: pm.pitcher_conflict_count,
+    calibration_status: c.status, calibration_model_version: c.model_version, calibration_games_graded: c.games_graded,
+    calibration_wins: c.wins, calibration_losses: c.losses, calibration_brier_score: c.brier_score, calibration_note: c.note,
+    shadow_status: shadow.status, shadow_games: shadow.games, shadow_official_model_version: shadow.official_model_version,
+    shadow_model_version: shadow.shadow_model_version, shadow_brier_official: shadow.brier_official,
+    shadow_brier_shadow: shadow.brier_shadow, shadow_leader: shadow.leader, shadow_disagreements: shadow.disagreements,
+    shadow_wins_disagreements: shadow.shadow_wins_disagreements, shadow_note: shadow.note,
+    attribution_status: attribution.status, attribution_games: attribution.games, attribution_needed: attribution.needed,
+    kprops_status: kprops.status, kprops_self_calibration: kprops.self_calibration, kprops_graded: kprops.graded,
+    kprops_with_projection: kprops.with_projection, kprops_bias: kprops.bias, kprops_mae: kprops.mae,
+    kprops_lean_record: kprops.lean_record, kprops_over_lean_record: kprops.over_lean_record,
+    kprops_under_lean_record: kprops.under_lean_record, kprops_no_lean: kprops.no_lean, kprops_note: kprops.note,
+    multi_day_moneyline_record: md.moneyline_record, multi_day_moneyline_win_rate: md.moneyline_win_rate,
+    multi_day_official_moneyline_entries: md.official_moneyline_entries,
+    multi_day_strict_gate_candidates: md.strict_gate_candidates,
+    multi_day_high_lab_low_probability_entries: md.high_lab_low_probability_entries, multi_day_note: md.note,
+    coach_status: coach.status, coach_title: coach.title, coach_summary: coach.summary,
+    coach_current_model_days: coach.current_model_days, coach_current_model_picks: coach.current_model_picks,
+    coach_minimum_days: coach.minimum_days, coach_minimum_picks: coach.minimum_picks,
+    coach_bullpen_model_owner: coach.bullpen_model_owner, coach_hard_stop: coach.hard_stop
+  }]);
+
+  writeCsv("data/learning_findings.csv", ["title", "read"], summary.findings || []);
+
+  writeCsv("data/learning_calibration_buckets.csv",
+    ["range", "games", "wins", "expected_win_rate", "actual_win_rate"], c.buckets || []);
+
+  writeCsv("data/learning_shadow_by_status.csv", ["status", "games", "wins", "units"],
+    Object.entries(c.shadow_by_status || {}).map(([status, v]) => ({ status, ...v })));
+
+  writeCsv("data/learning_next_review.csv", ["item"],
+    (summary.next_review || []).map(item => ({ item })));
+
+  writeCsv("data/learning_clv_counts.csv", ["label", "count"],
+    Object.entries(pm.clv_counts || {}).map(([label, count]) => ({ label, count })));
+
+  writeCsv("data/learning_lesson_counts.csv", ["label", "count"],
+    Object.entries(pm.lesson_counts || {}).map(([label, count]) => ({ label, count })));
+
+  const GAME_COLS = ["game_pk", "date", "status", "model_version", "game", "pick", "result", "model_probability",
+    "lab_score", "raw_edge", "clv_result", "lesson_tag", "pitcher_edge_team", "pitcher_gap",
+    "bullpen_label", "pick_side_bullpen_score", "opponent_bullpen_score"];
+  const FLAG_BUCKETS = [
+    ["strong_official", "in_strong_official"],
+    ["protected_by_probability_gate", "in_protected_by_probability_gate"],
+    ["high_bullpen_risk", "in_high_bullpen_risk"],
+    ["pitcher_conflicts", "in_pitcher_conflicts"],
+    ["all_moneyline", "in_all_moneyline"]
+  ];
+  const buckets = summary.buckets || {};
+  const gameMap = new Map();
+  const keyOf = p => p.game_pk != null ? `pk:${p.game_pk}` : `k:${p.date}|${p.game}|${p.pick}|${p.model_version}`;
+  for (const [bucketKey, flagCol] of FLAG_BUCKETS) {
+    for (const p of buckets[bucketKey] || []) {
+      const k = keyOf(p);
+      if (!gameMap.has(k)) {
+        const row = {};
+        GAME_COLS.forEach(col => row[col] = p[col]);
+        FLAG_BUCKETS.forEach(([, fc]) => row[fc] = 0);
+        gameMap.set(k, row);
+      }
+      gameMap.get(k)[flagCol] = 1;
+    }
+  }
+  writeCsv("data/learning_games.csv", [...GAME_COLS, ...FLAG_BUCKETS.map(([, fc]) => fc)], [...gameMap.values()]);
 }
 
 function readCsvSafe(p) {
@@ -615,28 +782,42 @@ function buildCalibration() {
   let kprops = { status: "no_data" };
   const kPath = path.join(ROOT, "data", "calibration", "kprops_log.csv");
   if (fs.existsSync(kPath)) {
-    const kRows = fs.readFileSync(kPath, "utf8").trim().split("\n").slice(1).map(l => l.split(",")).filter(r => r.length >= 10 && r[6] !== "");
-    const withProj = kRows.filter(r => r[5] !== "" && isFinite(Number(r[5])));
-    if (withProj.length) {
-      const errs = withProj.map(r => Number(r[6]) - Number(r[5]));
-      const leans = kRows.filter(r => r[9] === "W" || r[9] === "L");
-      const overLeans = leans.filter(r => Number(r[8]) > 0), underLeans = leans.filter(r => Number(r[8]) < 0);
-      const rec = a => `${a.filter(r => r[9] === "W").length}-${a.filter(r => r[9] === "L").length}`;
-      let kliveBias = 0, kliveN = 0;
-      try { const kf = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "k-props", "today.json"), "utf8")); kliveBias = kf.learned_bias || 0; kliveN = kf.learned_n || 0; } catch (e) {}
-      kprops = {
-        status: "ready",
-        self_calibration: kliveBias ? `${kliveBias > 0 ? "+" : ""}${kliveBias} K correction active (n=${kliveN})` : "no correction needed yet",
-        graded: kRows.length,
-        with_projection: withProj.length,
-        bias: Number((errs.reduce((a, b) => a + b, 0) / errs.length).toFixed(2)),
-        mae: Number((errs.reduce((a, b) => a + Math.abs(b), 0) / errs.length).toFixed(2)),
-        lean_record: rec(leans),
-        over_lean_record: rec(overLeans),
-        under_lean_record: rec(underLeans),
-        no_lean: kRows.filter(r => r[8] !== "" && Math.abs(Number(r[8])) < 0.7).length,
-        note: "Bias = actual minus projection (positive means we under-project). Leans only counted at 0.7+ strikeout edges. Small samples early — a lean record means little before ~100 graded pitchers."
-      };
+    const kLines = fs.readFileSync(kPath, "utf8").trim().split("\n");
+    // 2026-08-14: kprops_log.csv's columns were reordered/renamed/trimmed to
+    // Lynold's exact spec. This reader used to address the file POSITIONALLY
+    // (r[5]=projection, r[6]=actual_k, r[8]=lean, r[9]=lean_result) — the same
+    // bug fixed the same day in update-k-props.js's self-calibration reader.
+    // Switched to header-name lookups so a future reorder can't silently break
+    // this report's numbers.
+    const kHead = (kLines[0] || "").split(",");
+    const kIdx = name => kHead.indexOf(name);
+    const iProj = kIdx("projection"), iActual = kIdx("actual_k"), iLean = kIdx("lean"), iLeanRes = kIdx("lean_result");
+    if (iProj === -1 || iActual === -1 || iLean === -1 || iLeanRes === -1) {
+      kprops = { status: "no_data", note: `kprops_log.csv header missing an expected column (found: ${kHead.join("|") || "no header"}).` };
+    } else {
+      const kRows = kLines.slice(1).map(l => l.split(",")).filter(r => r.length > Math.max(iProj, iActual, iLean, iLeanRes) && r[iActual] !== "");
+      const withProj = kRows.filter(r => r[iProj] !== "" && isFinite(Number(r[iProj])));
+      if (withProj.length) {
+        const errs = withProj.map(r => Number(r[iActual]) - Number(r[iProj]));
+        const leans = kRows.filter(r => r[iLeanRes] === "W" || r[iLeanRes] === "L");
+        const overLeans = leans.filter(r => Number(r[iLean]) > 0), underLeans = leans.filter(r => Number(r[iLean]) < 0);
+        const rec = a => `${a.filter(r => r[iLeanRes] === "W").length}-${a.filter(r => r[iLeanRes] === "L").length}`;
+        let kliveBias = 0, kliveN = 0;
+        try { const kf = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "k-props", "today.json"), "utf8")); kliveBias = kf.learned_bias || 0; kliveN = kf.learned_n || 0; } catch (e) {}
+        kprops = {
+          status: "ready",
+          self_calibration: kliveBias ? `${kliveBias > 0 ? "+" : ""}${kliveBias} K correction active (n=${kliveN})` : "no correction needed yet",
+          graded: kRows.length,
+          with_projection: withProj.length,
+          bias: Number((errs.reduce((a, b) => a + b, 0) / errs.length).toFixed(2)),
+          mae: Number((errs.reduce((a, b) => a + Math.abs(b), 0) / errs.length).toFixed(2)),
+          lean_record: rec(leans),
+          over_lean_record: rec(overLeans),
+          under_lean_record: rec(underLeans),
+          no_lean: kRows.filter(r => r[iLean] !== "" && Math.abs(Number(r[iLean])) < 0.7).length,
+          note: "Bias = actual minus projection (positive means we under-project). Leans only counted at 0.7+ strikeout edges. Small samples early — a lean record means little before ~100 graded pitchers."
+        };
+      }
     }
   }
 

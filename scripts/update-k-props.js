@@ -301,10 +301,11 @@ async function main() {
     Banding plus sample-size shrinkage removes most of that: a band only moves
     in proportion to n/(n+SHRINK_K), so it drifts rather than snapping.
 
-    Bias is measured on projection_raw where the ledger has it (column 11,
-    written from this version forward and backfilled from data/k-props/*.json).
-    Older rows fall back to the corrected projection, which biases their band
-    assignment slightly; that self-heals as the window rolls over.
+    Bias is measured on the projection_raw column where the ledger has it
+    (found by header name, not position — see the reader below), written from
+    this version forward and backfilled from data/k-props/*.json). Older rows
+    fall back to the corrected projection, which biases their band assignment
+    slightly; that self-heals as the window rolls over.
 
     The >=7 band is where the real problem lives and a bias correction is a
     patch on it, not a diagnosis. The leading hypothesis is short outings
@@ -328,36 +329,54 @@ async function main() {
   try {
     const klog = path.join(ROOT, "data", "calibration", "kprops_log.csv");
     if (fs.existsSync(klog)) {
-      const rows = fs.readFileSync(klog, "utf8").trim().split("\n").slice(1).map(l => l.split(","))
-        .filter(r => r.length >= 7 && r[5] !== "" && r[6] !== "" && isFinite(Number(r[5])) && isFinite(Number(r[6])))
-        .slice(-K_WINDOW);
-      learnedN = rows.length;
-      const byBand = {};
-      for (const r of rows) {
-        const proj = Number(r[5]), actual = Number(r[6]);
-        // Band on the pre-correction projection when the row carries it
-        // (column 10). Banding on the corrected number measures the residual
-        // after last week's correction rather than the model's own error, which
-        // is how the <6 band looked unbiased at -0.09 when its true error was
-        // -0.48. Fall back to the corrected value for legacy rows.
-        const rawLogged = r.length > 10 && r[10] !== "" && isFinite(Number(r[10])) ? Number(r[10]) : null;
-        const bandOn = rawLogged !== null ? rawLogged : proj;
-        const b = bandFor(bandOn);
-        // The error is always actual minus what was actually projected and
-        // graded, regardless of which value chose the band.
-        (byBand[b] = byBand[b] || []).push(actual - (rawLogged !== null ? rawLogged : proj));
-      }
-      for (const band of K_BANDS) {
-        const errs = byBand[band.key] || [];
-        if (errs.length < K_MIN_N) continue;
-        const raw = errs.reduce((a, e) => a + e, 0) / errs.length;
-        const shrunk = raw * (errs.length / (errs.length + K_SHRINK));
-        if (Math.abs(shrunk) < K_MIN_BIAS) continue;
-        learnedByBand[band.key] = {
-          bias: Number(Math.max(-K_CAP, Math.min(K_CAP, shrunk)).toFixed(2)),
-          n: errs.length,
-          raw: Number(raw.toFixed(2))
-        };
+      const lines = fs.readFileSync(klog, "utf8").trim().split("\n");
+      // 2026-08-14: kprops_log.csv's columns were reordered/renamed/trimmed
+      // (43 -> 38 cols) to Lynold's exact spec. This reader used to address the
+      // file POSITIONALLY (r[5]=projection, r[6]=actual_k, r[10]=projection_raw)
+      // — a hardcoded index silently reads the wrong column the moment the file
+      // is reshaped, with no error, just wrong self-calibration going forward.
+      // Switched to a header-name lookup so any future reorder is safe.
+      const head = (lines[0] || "").split(",");
+      const iProj = head.indexOf("projection");
+      const iActual = head.indexOf("actual_k");
+      const iProjRaw = head.indexOf("projection_raw");
+      if (iProj === -1 || iActual === -1) {
+        console.warn(`K self-calibration skipped: kprops_log.csv header is missing "projection" or "actual_k" `
+          + `(found: ${head.join("|") || "no header"}). Not guessing a column position.`);
+      } else {
+        const rows = lines.slice(1).map(l => l.split(","))
+          .filter(r => r.length > Math.max(iProj, iActual) && r[iProj] !== "" && r[iActual] !== ""
+            && isFinite(Number(r[iProj])) && isFinite(Number(r[iActual])))
+          .slice(-K_WINDOW);
+        learnedN = rows.length;
+        const byBand = {};
+        for (const r of rows) {
+          const proj = Number(r[iProj]), actual = Number(r[iActual]);
+          // Band on the pre-correction projection when the row carries it.
+          // Banding on the corrected number measures the residual after last
+          // week's correction rather than the model's own error, which is how
+          // the <6 band looked unbiased at -0.09 when its true error was -0.48.
+          // Fall back to the corrected value for rows with no projection_raw.
+          const rawLogged = iProjRaw !== -1 && r.length > iProjRaw && r[iProjRaw] !== "" && isFinite(Number(r[iProjRaw]))
+            ? Number(r[iProjRaw]) : null;
+          const bandOn = rawLogged !== null ? rawLogged : proj;
+          const b = bandFor(bandOn);
+          // The error is always actual minus what was actually projected and
+          // graded, regardless of which value chose the band.
+          (byBand[b] = byBand[b] || []).push(actual - (rawLogged !== null ? rawLogged : proj));
+        }
+        for (const band of K_BANDS) {
+          const errs = byBand[band.key] || [];
+          if (errs.length < K_MIN_N) continue;
+          const raw = errs.reduce((a, e) => a + e, 0) / errs.length;
+          const shrunk = raw * (errs.length / (errs.length + K_SHRINK));
+          if (Math.abs(shrunk) < K_MIN_BIAS) continue;
+          learnedByBand[band.key] = {
+            bias: Number(Math.max(-K_CAP, Math.min(K_CAP, shrunk)).toFixed(2)),
+            n: errs.length,
+            raw: Number(raw.toFixed(2))
+          };
+        }
       }
     }
   } catch (e) { console.warn("K self-calibration skipped:", e.message); }
