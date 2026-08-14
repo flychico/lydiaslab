@@ -15,6 +15,14 @@
 */
 const fs = require("fs");
 const path = require("path");
+// 2026-08-14: this require was missing entirely in every version of this file
+// built this session (08-11 through 08-13) -- each one was built from a base
+// that predated the 08-09 xlsx work, so the data/k-props/<date>.xlsx refresh
+// below silently stopped running days ago with no error, no warning, nothing.
+// export-kprops-xlsx.js (prepare-slate.yml) still wrote the FIRST version of
+// that file pre-game; this script was supposed to overwrite it post-game with
+// real outcomes filled in, and hasn't been doing that.
+const { buildRow: buildKpropsXlsxRow, writeWorkbook: writeKpropsXlsx } = require("./lib/kprops-xlsx");
 
 const ROOT = path.join(__dirname, "..");
 const LOG = path.join(ROOT, "data", "calibration", "calibration_model_log.csv");
@@ -392,6 +400,11 @@ async function main() {
       }
       const kSeen = new Set(fs.readFileSync(KLOG, "utf8").split("\n").slice(1).map(l => l.split(",").slice(0, 2).join(",")).filter(Boolean));
       const kRows = [];
+      // Collected alongside kRows so the data/k-props/<date>.xlsx refresh
+      // below can include EVERY pitcher captured that day (graded or not),
+      // not just the ones newly graded this run — kSeen would otherwise
+      // silently drop already-graded pitchers from a re-run's xlsx.
+      const gradedByName = {};
       let kGraded = 0, kScratched = 0, kUnlinked = 0;
       for (const rec of Object.values(kp.pitchers)) {
         if (!rec || !rec.name || !Number.isFinite(rec.line)) continue;
@@ -452,10 +465,51 @@ async function main() {
           errRaw, absErrRaw, errCorr, absErrCorr,
           Number.isFinite(rec.projection) ? rec.projection : ""
         ].join(","));
+        gradedByName[rec.name] = { actual_k: actual, ou_result: ou, lean, lean_result: leanRes };
         kGraded++;
       }
       if (kRows.length) fs.appendFileSync(KLOG, kRows.join("\n") + "\n");
       console.log(`K-props: graded ${kGraded}, scratched ${kScratched}, unlinked-to-a-game ${kUnlinked}.`);
+
+      // Refresh data/k-props/<date>.xlsx with real outcomes now that grading
+      // has run. export-kprops-xlsx.js (prepare-slate.yml) already wrote this
+      // file pre-game with graded=null on every row; this is what fills in
+      // actual_k/ou_result/lean_result/the error columns. gradedByName only
+      // holds pitchers graded THIS run (kSeen skips already-graded ones on a
+      // re-run), so pull anything already in kprops_log.csv for this date too
+      // — the xlsx should always show every pitcher captured that day, graded
+      // or not, regardless of how many times this script has run for it.
+      // 2026-08-14: reads kprops_log.csv by HEADER NAME (via KLOG_COLUMNS),
+      // not by hardcoded position — the 08-09 version of this block read
+      // r[6]/r[8] against the old 12-column layout, which would have silently
+      // misread the wrong columns under the new 38-column order.
+      try {
+        const iDate = KLOG_COLUMNS.indexOf("date"), iPitcher = KLOG_COLUMNS.indexOf("pitcher");
+        const iActualK = KLOG_COLUMNS.indexOf("actual_k"), iOu = KLOG_COLUMNS.indexOf("ou_result");
+        const iLean = KLOG_COLUMNS.indexOf("lean"), iLeanRes = KLOG_COLUMNS.indexOf("lean_result");
+        const existingRows = fs.readFileSync(KLOG, "utf8").trim().split("\n").slice(1).map(l => l.split(","));
+        for (const r of existingRows) {
+          if (r.length <= Math.max(iDate, iPitcher, iActualK, iOu, iLean, iLeanRes)) continue;
+          if (r[iDate] !== DATE || !r[iPitcher]) continue;
+          if (gradedByName[r[iPitcher]]) continue; // this run's fresher value wins
+          if (r[iActualK] === "" || r[iActualK] === undefined) continue; // not graded (no actual_k)
+          gradedByName[r[iPitcher]] = {
+            actual_k: Number(r[iActualK]), ou_result: r[iOu] || "",
+            lean: r[iLean] === "" ? "" : Number(r[iLean]), lean_result: r[iLeanRes] || ""
+          };
+        }
+        const xlsxRows = Object.values(kp.pitchers)
+          .filter(rec => rec && rec.name)
+          .map(rec => buildKpropsXlsxRow(DATE, rec, gradedByName[rec.name] || null));
+        const xlsxPath = path.join(ROOT, "data", "k-props", `${DATE}.xlsx`);
+        await writeKpropsXlsx(xlsxPath, xlsxRows);
+        console.log(`K-props: refreshed data/k-props/${DATE}.xlsx (${xlsxRows.length} rows, ${Object.keys(gradedByName).length} graded).`);
+      } catch (e) {
+        // Never let the Excel export break the actual grading run — the CSV
+        // ledger above is the real learning data; the xlsx is a convenience
+        // export on top of it.
+        console.warn(`K-props: xlsx refresh failed (non-fatal): ${e.message}`);
+      }
       }
     }
   }
