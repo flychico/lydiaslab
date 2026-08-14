@@ -1,6 +1,6 @@
 {
   "date": "2026-08-14",
-  "generated_at": "2026-08-14T17:26:11.952Z",
+  "generated_at": "2026-08-14T17:39:50.901Z",
   "snapshot_type": "posted",
   "source_of_truth": "LyDia Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -117,7 +117,7 @@
       "run_model_probability": 0.9389,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.6527,
-      "edge": -0.054,
+      "edge": -0.037,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 64,
@@ -336,13 +336,13 @@
         "absolute_risk": "Normal"
       },
       "market": {
-        "no_vig_probability": 0.6296,
-        "best_price": -180,
-        "away_price": 170,
-        "home_price": -180,
-        "away_no_vig": 0.3704,
-        "home_no_vig": 0.6296,
-        "books": 9
+        "no_vig_probability": 0.6127,
+        "best_price": -170,
+        "away_price": 154,
+        "home_price": -170,
+        "away_no_vig": 0.3873,
+        "home_no_vig": 0.6127,
+        "books": 4
       }
     },
     {
@@ -448,7 +448,7 @@
       "run_model_probability": 0.6124,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.68,
-      "edge": 0.0533,
+      "edge": 0.0554,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 63,
@@ -667,12 +667,343 @@
         "absolute_risk": "Opponent high"
       },
       "market": {
-        "no_vig_probability": 0.5525,
+        "no_vig_probability": 0.5505,
         "best_price": -126,
         "away_price": 120,
         "home_price": -126,
-        "away_no_vig": 0.4475,
-        "home_no_vig": 0.5525,
+        "away_no_vig": 0.4495,
+        "home_no_vig": 0.5505,
+        "books": 9
+      }
+    },
+    {
+      "game_pk": 822942,
+      "game_id": "baltimore-orioles-tampa-bay-rays-2026-08-14",
+      "game": "Baltimore Orioles @ Tampa Bay Rays",
+      "time": "7:10 PM",
+      "game_time_iso": "2026-08-14T23:10:00Z",
+      "away_team": "Baltimore Orioles",
+      "home_team": "Tampa Bay Rays",
+      "away_record": "58-63",
+      "home_record": "74-46",
+      "away_l10": "4-6",
+      "home_l10": "9-1",
+      "pick_team": "Tampa Bay Rays",
+      "side": "home",
+      "model_probability": 0.6354,
+      "model_source": "leo",
+      "projected_runs": {
+        "away": 4.6,
+        "home": 3.6,
+        "total": 8.8
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "opener_bullpen",
+          "confidence": "low",
+          "reported": false,
+          "segments": [
+            {
+              "role": "opener",
+              "pitcher_id": null,
+              "pitcher": "TBD",
+              "expected_innings": 4.5,
+              "fip_lite": 4.2,
+              "pitcher_score": 50,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.5
+            }
+          ],
+          "expected_innings": 4.5,
+          "bullpen_innings": 4.5,
+          "effective_era": 4.94,
+          "pitcher_score": 50,
+          "bullpen_carries_game": false,
+          "description": "TBD 4.5 IP + remaining bullpen 4.5 IP",
+          "pitcher": "TBD",
+          "role": "unknown",
+          "label": "Role unknown",
+          "bullpen_game": true
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 571927,
+              "pitcher": "Steven Matz",
+              "expected_innings": 4.6,
+              "fip_lite": 4.88,
+              "pitcher_score": 53,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.4
+            }
+          ],
+          "expected_innings": 4.6,
+          "bullpen_innings": 4.4,
+          "effective_era": 4.32,
+          "pitcher_score": 53,
+          "bullpen_carries_game": false,
+          "description": "Steven Matz 4.6 IP + remaining bullpen 4.4 IP",
+          "pitcher": "Steven Matz",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
+      "bullpen_game": true,
+      "legacy_strength_probability": 0.7707,
+      "model_effective_era_away": 5.09,
+      "model_effective_era_home": 4.32,
+      "team_strength_blend_away": 0.4492,
+      "team_strength_blend_home": 0.6566,
+      "team_strength_probability": 0.7335,
+      "bullpen_log_odds_adjustment": 0.045,
+      "venue_split": {
+        "away_record": "26-33",
+        "home_record": "41-18",
+        "away_edge": -0.0076,
+        "home_edge": 0.0313,
+        "applied_away": -0.0038,
+        "applied_home": 0.0157,
+        "weight": 0.5
+      },
+      "run_model_probability": 0.3653,
+      "run_model_weight": 0,
+      "model_probability_pre_bullpen": 0.7627,
+      "edge": 0.0351,
+      "status": "pass",
+      "value_tag": "PASS",
+      "lab_score": 62,
+      "lab_score_breakdown": {
+        "score": 62,
+        "version": "lab-rating-v3-measured-components",
+        "conviction_points": 30.9,
+        "agreement_points": 0,
+        "pitching_plan_points": 0,
+        "bullpen_points": 13.33,
+        "offense_points": 17.66,
+        "completeness_points": 0,
+        "pitcher_edge_points": 0,
+        "model_agreement_gap": 0.4055,
+        "model_agreement_credit": 0,
+        "bullpen_innings_weight": 1,
+        "assigned_bullpen_innings": 4.4,
+        "offense_delta": 0.0248,
+        "offense_delta_15d": 0.0275,
+        "offense_delta_30d": 0.022,
+        "completeness_checks_passed": 5,
+        "completeness_checks_total": 5,
+        "data_complete": true,
+        "market_points": 0,
+        "model_edge_points": 0,
+        "base_points": 0,
+        "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
+      },
+      "official_pick_gate": {
+        "minimum_model_probability": 0.61,
+        "minimum_lab_score": 80,
+        "model_probability_passed": true,
+        "lab_score_passed": false
+      },
+      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
+      "read": "The combined Lab Rating did not clear the official threshold.",
+      "pitcher_edge": {
+        "team": "No clear SP edge",
+        "gap": 3,
+        "conflict": false,
+        "away_score": 50,
+        "home_score": 53,
+        "away_pitcher": "Chris Bassitt",
+        "home_pitcher": "Steven Matz",
+        "away_pitcher_id": 605135,
+        "home_pitcher_id": 571927,
+        "away_era": 5.27,
+        "home_era": 5.46,
+        "away_whip": 1.63,
+        "home_whip": 1.23,
+        "away_advanced": {
+          "w": 4,
+          "l": 4,
+          "kbb_pct": 0.0575,
+          "gb_pct": 0.5081,
+          "babip": 0.3404,
+          "hr9": 0.96,
+          "ip_per_start": 4.6,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 4.6,
+          "bullpen_innings": 4.4
+        },
+        "home_advanced": {
+          "w": 5,
+          "l": 4,
+          "kbb_pct": 0.1057,
+          "gb_pct": 0.4348,
+          "babip": 0.2459,
+          "hr9": 1.72,
+          "ip_per_start": 4.6,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 4.6,
+          "bullpen_innings": 4.4
+        }
+      },
+      "offense_form": {
+        "away": {
+          "ops_15d": 0.717,
+          "season_ops": 0.715,
+          "delta_ops": 0.002,
+          "woba_15d": 0.3172,
+          "woba_30d": 0.3067,
+          "woba_season": 0.3169,
+          "delta_woba": 0.0003,
+          "rpg_15d": 3.5,
+          "opp_hand": "L",
+          "ops_vs_opp_hand": 0.711
+        },
+        "home": {
+          "ops_15d": 0.794,
+          "season_ops": 0.739,
+          "delta_ops": 0.055,
+          "woba_15d": 0.3447,
+          "woba_30d": 0.3287,
+          "woba_season": 0.3258,
+          "delta_woba": 0.0189,
+          "rpg_15d": 5.46,
+          "opp_hand": "R",
+          "ops_vs_opp_hand": 0.763
+        },
+        "window_days": 15
+      },
+      "model_v3": {
+        "p_home": 0.7355,
+        "fip_away": 4.34,
+        "fip_home": 4.88,
+        "off_adj": 0.0733,
+        "woba_away": 0.3172,
+        "woba_home": 0.3447,
+        "bp_adj": 0.045,
+        "version": "v3.2-woba",
+        "p_home_v2": 0.6354,
+        "note": "shadow A/B — does not drive picks"
+      },
+      "bullpen": {
+        "pick_team": {
+          "score": 57,
+          "label": "Normal",
+          "last_game_bp_ip": 4,
+          "last7_bp_ip": 21,
+          "last7_bp_runs": 8,
+          "last_game_relievers": 3,
+          "last7_relievers": 19,
+          "back_to_back_arms": 6,
+          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
+          "score_reason": "Normal (5.7/10): 21 recent relief innings, recency-weighted — 4 in the last game (2 days since last game), 6 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 3,
+            "last7_relievers": 19,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 1.8,
+            "back_to_back_arms": 10.2,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 57.1
+          },
+          "efficiency_score": 60,
+          "efficiency_label": "Effective",
+          "efficiency_reason": "Effective (6.0/10): 3.43 ERA and 0.95 WHIP over 21 relief innings (8 ER, 18 H, 2 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": 4.6,
+            "whip_term": 5.2,
+            "confidence": 1,
+            "raw_score": 59.8
+          },
+          "era_7d": 3.43,
+          "whip_7d": 0.95,
+          "last15_bp_ip": 50.7,
+          "last15_bp_runs": 22,
+          "era_15d": 3.73,
+          "whip_15d": 1.01,
+          "recent15_games_tracked": 13,
+          "risk_index": 52,
+          "risk_label": "Normal",
+          "days_rest": 2,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "opponent": {
+          "score": 59,
+          "label": "Normal",
+          "last_game_bp_ip": 5,
+          "last7_bp_ip": 20,
+          "last7_bp_runs": 14,
+          "last_game_relievers": 4,
+          "last7_relievers": 17,
+          "back_to_back_arms": 4,
+          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
+          "score_reason": "Normal (5.9/10): 20 recent relief innings, recency-weighted — 5 in the last game (2 days since last game), 4 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 4,
+            "last7_relievers": 17,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 9,
+            "back_to_back_arms": 5.5,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 59.5
+          },
+          "efficiency_score": 35,
+          "efficiency_label": "Below average",
+          "efficiency_reason": "Below average (3.5/10): 6.3 ERA and 1.45 WHIP over 20 relief innings (14 ER, 21 H, 8 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": -12.6,
+            "whip_term": -2.2,
+            "confidence": 1,
+            "raw_score": 35.2
+          },
+          "era_7d": 6.3,
+          "whip_7d": 1.45,
+          "last15_bp_ip": 39.7,
+          "last15_bp_runs": 26,
+          "era_15d": 5.67,
+          "whip_15d": 1.51,
+          "recent15_games_tracked": 12,
+          "risk_index": 67,
+          "risk_label": "Tired",
+          "days_rest": 2,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "label": "Elevated volatility",
+        "major_caution": false,
+        "absolute_risk": "Elevated"
+      },
+      "market": {
+        "no_vig_probability": 0.6003,
+        "best_price": -154,
+        "away_price": 147,
+        "home_price": -154,
+        "away_no_vig": 0.3997,
+        "home_no_vig": 0.6003,
         "books": 9
       }
     },
@@ -779,7 +1110,7 @@
       "run_model_probability": 0.7956,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.6241,
-      "edge": 0.0282,
+      "edge": 0.0229,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 61,
@@ -998,332 +1329,13 @@
         "absolute_risk": "Normal"
       },
       "market": {
-        "no_vig_probability": 0.5307,
-        "best_price": -116,
-        "away_price": -116,
-        "home_price": 111,
-        "away_no_vig": 0.5307,
-        "home_no_vig": 0.4693,
-        "books": 9
-      }
-    },
-    {
-      "game_pk": 822942,
-      "game_id": "baltimore-orioles-tampa-bay-rays-2026-08-14",
-      "game": "Baltimore Orioles @ Tampa Bay Rays",
-      "time": "7:10 PM",
-      "game_time_iso": "2026-08-14T23:10:00Z",
-      "away_team": "Baltimore Orioles",
-      "home_team": "Tampa Bay Rays",
-      "away_record": "58-63",
-      "home_record": "74-46",
-      "away_l10": "4-6",
-      "home_l10": "9-1",
-      "pick_team": "Tampa Bay Rays",
-      "side": "home",
-      "model_probability": 0.6326,
-      "model_source": "leo",
-      "projected_runs": {
-        "away": 4.6,
-        "home": 3.6,
-        "total": 8.8
-      },
-      "pitching_plan": {
-        "away": {
-          "type": "opener_bullpen",
-          "confidence": "low",
-          "reported": false,
-          "segments": [
-            {
-              "role": "opener",
-              "pitcher_id": null,
-              "pitcher": "TBD",
-              "expected_innings": 4.5,
-              "fip_lite": 4.2,
-              "pitcher_score": 50,
-              "role_stats": null
-            },
-            {
-              "role": "bullpen",
-              "expected_innings": 4.5
-            }
-          ],
-          "expected_innings": 4.5,
-          "bullpen_innings": 4.5,
-          "effective_era": 4.94,
-          "pitcher_score": 50,
-          "bullpen_carries_game": false,
-          "description": "TBD 4.5 IP + remaining bullpen 4.5 IP",
-          "pitcher": "TBD",
-          "role": "unknown",
-          "label": "Role unknown",
-          "bullpen_game": true
-        },
-        "home": {
-          "type": "starter_bullpen",
-          "confidence": "high",
-          "reported": false,
-          "segments": [
-            {
-              "role": "starter",
-              "pitcher_id": 571927,
-              "pitcher": "Steven Matz",
-              "expected_innings": 4.6,
-              "fip_lite": 4.88,
-              "pitcher_score": 53,
-              "role_stats": null
-            },
-            {
-              "role": "bullpen",
-              "expected_innings": 4.4
-            }
-          ],
-          "expected_innings": 4.6,
-          "bullpen_innings": 4.4,
-          "effective_era": 4.32,
-          "pitcher_score": 53,
-          "bullpen_carries_game": false,
-          "description": "Steven Matz 4.6 IP + remaining bullpen 4.4 IP",
-          "pitcher": "Steven Matz",
-          "role": "traditional_starter",
-          "label": "Traditional starter",
-          "bullpen_game": false
-        }
-      },
-      "bullpen_game": true,
-      "legacy_strength_probability": 0.7652,
-      "model_effective_era_away": 4.94,
-      "model_effective_era_home": 4.32,
-      "team_strength_blend_away": 0.4492,
-      "team_strength_blend_home": 0.6566,
-      "team_strength_probability": 0.7335,
-      "bullpen_log_odds_adjustment": 0.045,
-      "venue_split": {
-        "away_record": "26-33",
-        "home_record": "41-18",
-        "away_edge": -0.0076,
-        "home_edge": 0.0313,
-        "applied_away": -0.0038,
-        "applied_home": 0.0157,
-        "weight": 0.5
-      },
-      "run_model_probability": 0.3653,
-      "run_model_weight": 0,
-      "model_probability_pre_bullpen": 0.757,
-      "edge": 0.0323,
-      "status": "pass",
-      "value_tag": "PASS",
-      "lab_score": 61,
-      "lab_score_breakdown": {
-        "score": 61,
-        "version": "lab-rating-v3-measured-components",
-        "conviction_points": 30.13,
-        "agreement_points": 0,
-        "pitching_plan_points": 0,
-        "bullpen_points": 13.33,
-        "offense_points": 17.66,
-        "completeness_points": 0,
-        "pitcher_edge_points": 0,
-        "model_agreement_gap": 0.3999,
-        "model_agreement_credit": 0,
-        "bullpen_innings_weight": 1,
-        "assigned_bullpen_innings": 4.4,
-        "offense_delta": 0.0248,
-        "offense_delta_15d": 0.0275,
-        "offense_delta_30d": 0.022,
-        "completeness_checks_passed": 4,
-        "completeness_checks_total": 5,
-        "data_complete": false,
-        "market_points": 0,
-        "model_edge_points": 0,
-        "base_points": 0,
-        "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
-      },
-      "official_pick_gate": {
-        "minimum_model_probability": 0.61,
-        "minimum_lab_score": 80,
-        "model_probability_passed": true,
-        "lab_score_passed": false
-      },
-      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
-      "read": "The combined Lab Rating did not clear the official threshold.",
-      "pitcher_edge": {
-        "team": "No clear SP edge",
-        "gap": 3,
-        "conflict": false,
-        "away_score": 50,
-        "home_score": 53,
-        "away_pitcher": "TBD",
-        "home_pitcher": "Steven Matz",
-        "away_pitcher_id": null,
-        "home_pitcher_id": 571927,
-        "away_era": null,
-        "home_era": 5.46,
-        "away_whip": null,
-        "home_whip": 1.23,
-        "away_advanced": null,
-        "home_advanced": {
-          "w": 5,
-          "l": 4,
-          "kbb_pct": 0.1057,
-          "gb_pct": 0.4348,
-          "babip": 0.2459,
-          "hr9": 1.72,
-          "ip_per_start": 4.6,
-          "role": "traditional_starter",
-          "role_label": "Traditional starter",
-          "expected_innings": 4.6,
-          "bullpen_innings": 4.4
-        }
-      },
-      "offense_form": {
-        "away": {
-          "ops_15d": 0.717,
-          "season_ops": 0.715,
-          "delta_ops": 0.002,
-          "woba_15d": 0.3172,
-          "woba_30d": 0.3067,
-          "woba_season": 0.3169,
-          "delta_woba": 0.0003,
-          "rpg_15d": 3.5,
-          "opp_hand": "L",
-          "ops_vs_opp_hand": 0.711
-        },
-        "home": {
-          "ops_15d": 0.794,
-          "season_ops": 0.739,
-          "delta_ops": 0.055,
-          "woba_15d": 0.3447,
-          "woba_30d": 0.3287,
-          "woba_season": 0.3258,
-          "delta_woba": 0.0189,
-          "rpg_15d": 5.46,
-          "opp_hand": null,
-          "ops_vs_opp_hand": null
-        },
-        "window_days": 15
-      },
-      "model_v3": {
-        "p_home": 0.7301,
-        "fip_away": 4.2,
-        "fip_home": 4.88,
-        "off_adj": 0.0733,
-        "woba_away": 0.3172,
-        "woba_home": 0.3447,
-        "bp_adj": 0.045,
-        "version": "v3.2-woba",
-        "p_home_v2": 0.6326,
-        "note": "shadow A/B — does not drive picks"
-      },
-      "bullpen": {
-        "pick_team": {
-          "score": 57,
-          "label": "Normal",
-          "last_game_bp_ip": 4,
-          "last7_bp_ip": 21,
-          "last7_bp_runs": 8,
-          "last_game_relievers": 3,
-          "last7_relievers": 19,
-          "back_to_back_arms": 6,
-          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
-          "score_reason": "Normal (5.7/10): 21 recent relief innings, recency-weighted — 4 in the last game (2 days since last game), 6 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
-          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
-          "context_only": {
-            "last_game_relievers": 3,
-            "last7_relievers": 19,
-            "note": "Reliever counts are displayed for context only and do not add score points."
-          },
-          "component_scores": {
-            "baseline": 45,
-            "weighted_bp_ip": 1.8,
-            "back_to_back_arms": 10.2,
-            "reliever_counts_context_only": 0,
-            "no_recent_games_credit": 0,
-            "raw_score": 57.1
-          },
-          "efficiency_score": 60,
-          "efficiency_label": "Effective",
-          "efficiency_reason": "Effective (6.0/10): 3.43 ERA and 0.95 WHIP over 21 relief innings (8 ER, 18 H, 2 BB) in the last 7 days.",
-          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
-          "efficiency_component_scores": {
-            "baseline": 50,
-            "era_term": 4.6,
-            "whip_term": 5.2,
-            "confidence": 1,
-            "raw_score": 59.8
-          },
-          "era_7d": 3.43,
-          "whip_7d": 0.95,
-          "last15_bp_ip": 50.7,
-          "last15_bp_runs": 22,
-          "era_15d": 3.73,
-          "whip_15d": 1.01,
-          "recent15_games_tracked": 13,
-          "risk_index": 52,
-          "risk_label": "Normal",
-          "days_rest": 2,
-          "source_version": "bullpen-fatigue-v5-recency-weighted"
-        },
-        "opponent": {
-          "score": 59,
-          "label": "Normal",
-          "last_game_bp_ip": 5,
-          "last7_bp_ip": 20,
-          "last7_bp_runs": 14,
-          "last_game_relievers": 4,
-          "last7_relievers": 17,
-          "back_to_back_arms": 4,
-          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
-          "score_reason": "Normal (5.9/10): 20 recent relief innings, recency-weighted — 5 in the last game (2 days since last game), 4 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
-          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
-          "context_only": {
-            "last_game_relievers": 4,
-            "last7_relievers": 17,
-            "note": "Reliever counts are displayed for context only and do not add score points."
-          },
-          "component_scores": {
-            "baseline": 45,
-            "weighted_bp_ip": 9,
-            "back_to_back_arms": 5.5,
-            "reliever_counts_context_only": 0,
-            "no_recent_games_credit": 0,
-            "raw_score": 59.5
-          },
-          "efficiency_score": 35,
-          "efficiency_label": "Below average",
-          "efficiency_reason": "Below average (3.5/10): 6.3 ERA and 1.45 WHIP over 20 relief innings (14 ER, 21 H, 8 BB) in the last 7 days.",
-          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
-          "efficiency_component_scores": {
-            "baseline": 50,
-            "era_term": -12.6,
-            "whip_term": -2.2,
-            "confidence": 1,
-            "raw_score": 35.2
-          },
-          "era_7d": 6.3,
-          "whip_7d": 1.45,
-          "last15_bp_ip": 39.7,
-          "last15_bp_runs": 26,
-          "era_15d": 5.67,
-          "whip_15d": 1.51,
-          "recent15_games_tracked": 12,
-          "risk_index": 67,
-          "risk_label": "Tired",
-          "days_rest": 2,
-          "source_version": "bullpen-fatigue-v5-recency-weighted"
-        },
-        "label": "Elevated volatility",
-        "major_caution": false,
-        "absolute_risk": "Elevated"
-      },
-      "market": {
-        "no_vig_probability": 0.6003,
-        "best_price": -154,
-        "away_price": 147,
-        "home_price": -154,
-        "away_no_vig": 0.3997,
-        "home_no_vig": 0.6003,
-        "books": 9
+        "no_vig_probability": 0.536,
+        "best_price": -120,
+        "away_price": -120,
+        "home_price": 113,
+        "away_no_vig": 0.536,
+        "home_no_vig": 0.464,
+        "books": 3
       }
     },
     {
@@ -1429,7 +1441,7 @@
       "run_model_probability": 0.5774,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.7085,
-      "edge": -0.0358,
+      "edge": -0.0357,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 57,
@@ -1648,12 +1660,12 @@
         "absolute_risk": "Normal"
       },
       "market": {
-        "no_vig_probability": 0.6357,
+        "no_vig_probability": 0.6356,
         "best_price": -184,
         "away_price": 173,
         "home_price": -184,
-        "away_no_vig": 0.3643,
-        "home_no_vig": 0.6357,
+        "away_no_vig": 0.3644,
+        "home_no_vig": 0.6356,
         "books": 9
       }
     },
@@ -2091,7 +2103,7 @@
       "run_model_probability": 0.8063,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.6891,
-      "edge": 0.068,
+      "edge": 0.0682,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 53,
@@ -2310,12 +2322,12 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": 0.5227,
+        "no_vig_probability": 0.5224,
         "best_price": -114,
         "away_price": 106,
         "home_price": -114,
-        "away_no_vig": 0.4773,
-        "home_no_vig": 0.5227,
+        "away_no_vig": 0.4776,
+        "home_no_vig": 0.5224,
         "books": 9
       }
     },
@@ -2422,7 +2434,7 @@
       "run_model_probability": 0.8591,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.5286,
-      "edge": 0.0371,
+      "edge": 0.0375,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 45,
@@ -2641,12 +2653,12 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": 0.4768,
+        "no_vig_probability": 0.4764,
         "best_price": 106,
         "away_price": 106,
         "home_price": -113,
-        "away_no_vig": 0.4768,
-        "home_no_vig": 0.5232,
+        "away_no_vig": 0.4764,
+        "home_no_vig": 0.5236,
         "books": 9
       }
     },
@@ -2753,7 +2765,7 @@
       "run_model_probability": 0.676,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.6251,
-      "edge": 0.1136,
+      "edge": 0.1135,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 42,
@@ -2972,12 +2984,12 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": 0.4517,
+        "no_vig_probability": 0.4518,
         "best_price": 119,
         "away_price": 119,
         "home_price": -126,
-        "away_no_vig": 0.4517,
-        "home_no_vig": 0.5483,
+        "away_no_vig": 0.4518,
+        "home_no_vig": 0.5482,
         "books": 9
       }
     },
@@ -3403,7 +3415,7 @@
       "run_model_probability": 0.2773,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.5896,
-      "edge": -0.0007,
+      "edge": -0.0766,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 34,
@@ -3622,13 +3634,13 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": 0.5444,
-        "best_price": -124,
-        "away_price": 118,
-        "home_price": -124,
-        "away_no_vig": 0.4556,
-        "home_no_vig": 0.5444,
-        "books": 9
+        "no_vig_probability": 0.6203,
+        "best_price": -170,
+        "away_price": 160,
+        "home_price": -170,
+        "away_no_vig": 0.3797,
+        "home_no_vig": 0.6203,
+        "books": 3
       }
     },
     {
@@ -4065,7 +4077,7 @@
       "run_model_probability": 0.6356,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.5285,
-      "edge": -0.0133,
+      "edge": -0.0052,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 23,
@@ -4284,13 +4296,13 @@
         "absolute_risk": "Pick side high"
       },
       "market": {
-        "no_vig_probability": 0.5171,
-        "best_price": -111,
-        "away_price": 104,
-        "home_price": -111,
-        "away_no_vig": 0.4829,
-        "home_no_vig": 0.5171,
-        "books": 9
+        "no_vig_probability": 0.5089,
+        "best_price": -112,
+        "away_price": -104,
+        "home_price": -112,
+        "away_no_vig": 0.4911,
+        "home_no_vig": 0.5089,
+        "books": 1
       }
     },
     {
