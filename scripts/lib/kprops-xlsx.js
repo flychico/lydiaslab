@@ -59,6 +59,7 @@ function buildRow(date, rec, graded) {
     num(rec.k_rate_season), num(rf.starts), num(rf.batters_faced), num(rec.bf_per_ip), num(rf.recent_k_rate), num(rf.weight),
     rec.opp_k_source || "", num(rec.opp_lineup_k), num(rec.opp_lineup_k_weighted), rec.opp_lineup_k_resolved ?? "",
     num(rec.opp_team_season_k), num(rec.league_lineup_k),
+    num(rec.whiff_leverage),
     actual, graded ? (graded.ou_result || "") : "", graded ? num(graded.lean) : null, graded ? (graded.lean_result || "") : "",
     projRaw, rec.calibration_band || "", num(rec.k_rate_used), num(rec.opp_k_adjustment), num(rec.calibration_bias),
     errRaw, absErrRaw, errCorr, absErrCorr, proj

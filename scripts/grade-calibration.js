@@ -336,6 +336,7 @@ async function main() {
     "game", "game_pk", "role", "expected_innings", "bullpen_game", "pitching_plan_reported", "books",
     "k_rate_season", "recent_form_starts", "recent_form_bf", "bf_per_ip", "recent_form_k_rate", "recent_form_weight",
     "opp_k_source", "opp_lineup_k", "opp_lineup_k_weighted", "opp_lineup_k_resolved", "opp_team_season_k", "league_lineup_k",
+    "whiff_leverage",
     "actual_k", "ou_result", "lean", "lean_result",
     "projection_raw", "calibration_band", "k_rate_used", "opp_k_adjustment", "calibration_bias",
     "error_raw", "abs_error_raw", "error_corrected", "abs_error_corrected", "projection"
@@ -459,6 +460,7 @@ async function main() {
           num(rec.k_rate_season), num(rf.starts), num(rf.batters_faced), num(rec.bf_per_ip), num(rf.recent_k_rate), num(rf.weight),
           csvField(rec.opp_k_source || ""), num(rec.opp_lineup_k), num(rec.opp_lineup_k_weighted), rec.opp_lineup_k_resolved ?? "",
           num(rec.opp_team_season_k), num(rec.league_lineup_k),
+          num(rec.whiff_leverage),
           actual, ou, lean, leanRes,
           Number.isFinite(rec.projection_raw) ? rec.projection_raw : "", rec.calibration_band || "",
           num(rec.k_rate_used), num(rec.opp_k_adjustment), num(rec.calibration_bias),
