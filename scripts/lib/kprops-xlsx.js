@@ -20,6 +20,7 @@ const HEADERS = [
   "game", "game_pk", "role", "expected_innings", "bullpen_game", "pitching_plan_reported", "books",
   "k_rate_season", "recent_form_starts", "recent_form_bf", "bf_per_ip", "recent_form_k_rate", "recent_form_weight",
   "opp_k_source", "opp_lineup_k", "opp_lineup_k_weighted", "opp_lineup_k_resolved", "opp_team_season_k", "league_lineup_k",
+  "whiff_leverage",
   "actual_k", "ou_result", "lean", "lean_result",
   "projection_raw", "calibration_band", "k_rate_used", "opp_k_adjustment", "calibration_bias",
   "error_raw", "abs_error_raw", "error_corrected", "abs_error_corrected", "projection"
