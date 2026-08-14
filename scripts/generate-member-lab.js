@@ -169,14 +169,21 @@ async function main() {
   const previousBrief = readJsonSafe(`data/member-brief/${DATE}.json`) || { games: [] };
   const previousRows = Array.isArray(previousBrief.games) ? previousBrief.games : [];
   const previousByPk = new Map(previousRows.map(row => [String(row.game_pk), row]));
-  const openGames = allGames.filter(g => g.status && g.status.abstractGameState === "Preview");
-  if (!openGames.length && !previousRows.length) {
-    throw new Error(`Closed slate guard: ${DATE} has ${allGames.length} game(s), but none are in Preview state. LyDia will not create or overwrite official picks after games start. Run Site maintenance cleanup or grade-results instead.`);
+
+  // 2026-08-14: REMOVED Preview-only filter. We regenerate decision-trace data
+  // for ALL games (Preview, Live, Final) to ensure complete model learning data.
+  // Pitcher info and team strength are available pre-game and don't change based
+  // on game state, so we can safely compute full analysis data even for games
+  // in progress or already completed. Official picks are still protected by
+  // separate gates in officialEligible() logic.
+  const gamesToProcess = allGames;
+  if (!gamesToProcess.length && !previousRows.length) {
+    throw new Error(`No games found for ${DATE}.`);
   }
 
   const generatedAt = new Date().toISOString();
   const strength = buildStrength(standings);
-  const pitchers = await fetchPitchers(openGames);
+  const pitchers = await fetchPitchers(gamesToProcess);
   const offense = await fetchOffenseForm(DATE);
   // A second publish pass must never erase a valid morning price because a
   // later odds request was rate-limited or temporarily empty. Current odds
@@ -218,12 +225,13 @@ async function main() {
 
   const totalsSource = readJsonSafe(`data/totals/${DATE}.json`) || { games: {} };
   const runProjections = totalsSource.games || {};
-  const freshRows = openGames.map(g => modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjections)).filter(Boolean);
+  const freshRows = gamesToProcess.map(g => modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjections)).filter(Boolean);
   const freshByPk = new Map(freshRows.map(row => [String(row.game_pk), row]));
 
-  // The Member Brief is the permanent full-day record. Recalculate games that
-  // have not started, but retain the posted pregame row for every live or final
-  // game. Never replace the daily file with a shrinking Preview-only subset.
+  // The Member Brief is the permanent full-day record. Decision-trace fields
+  // are now regenerated for all game states to ensure model learning has
+  // complete data. Fresh analysis always wins over previous for the same game.
+  // Official picks remain protected by separate gates in officialEligible().
   /*
     THE DAY'S RECORD ONLY EVER GROWS. (2026-08-03)
 
@@ -246,9 +254,10 @@ async function main() {
     unconditionally, and fresh rows are layered on top. A row that exists can
     never be dropped by a later run, whatever the schedule says.
 
-    Fresh always wins over previous for the same game — that is how a Preview
-    game gets its updated read — and `freshRows` only ever contains Preview
-    games, so a started game can never be recomputed from post-result standings.
+    Fresh always wins over previous for the same game — this ensures games
+    get their decision-trace data regenerated regardless of game state.
+    Analysis values (pitcher ERA, team strength, bullpen fatigue) don't depend
+    on final score, so they're safe to recompute at any point.
   */
   const merged = new Map();
   for (const [pk, row] of previousByPk) merged.set(pk, row);   // never lose a recorded row
