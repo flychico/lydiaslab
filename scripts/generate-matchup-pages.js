@@ -2138,9 +2138,13 @@ function buildArchive() {
 <div class="lead-box" style="border-color:var(--accent2);margin-top:22px"><h3 style="margin:0 0 4px">Get tomorrow's MLB model card free</h3><p class="dim small" style="margin:0">One email each morning with the featured game and the previous day's graded result.</p><p style="margin-top:10px"><a class="btn blue" href="/membership/#free">Get the free card &rarr;</a></p></div>
 </main><footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/recaps/");renderFooter();</script></body></html>`, "utf8");
 
-  // The Articles tab now shows LyDia's own matchup analyses instead of scraped
-  // outside content. This runs after the Research Desk step in the workflow, so
-  // it overwrites that page. External aggregation is dropped from what users see.
+  // The Articles tab shows LyDia's own matchup analyses. It used to be
+  // overwritten by a later "Research Desk" step that scraped outside betting
+  // headlines -- that step, scripts/generate-research-desk.js, and its
+  // data/research-desk.json cache were removed entirely on 2026-08-13
+  // (matches the same call already made for publish-picks.yml on 2026-08-03:
+  // "a content scraper with no relationship to picks"). This write is now the
+  // only thing that ever touches articles/index.html.
   const articlesDir = path.join(ROOT, "articles");
   fs.mkdirSync(articlesDir, { recursive: true });
   fs.writeFileSync(path.join(articlesDir, "index.html"),
