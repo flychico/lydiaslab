@@ -94,9 +94,6 @@ jobs:
       - name: Generate LyDia Coach
         run: node scripts/generate-coach.js
 
-      - name: Refresh LyDia Research Desk
-        run: node scripts/generate-research-desk.js
-
       - name: Normalize public shell and head tags
         run: |
           node scripts/normalize-public-shell.js
@@ -133,9 +130,6 @@ jobs:
             console.log('Coach:', x.coach.status, 'Days:', x.coach.current_model_days, 'Picks:', x.coach.current_model_picks);
             console.log('Matchup pages:', m.total_pages, 'Indexable:', m.indexable_pages, 'Noindex:', m.noindex_pages);
           "
-
-          test -f "articles/index.html" || { echo "ERROR: Research Desk page missing"; exit 1; }
-          test -f "data/research-desk.json" || { echo "ERROR: Research Desk data missing"; exit 1; }
 
       - name: Commit and push if changed
         shell: bash
