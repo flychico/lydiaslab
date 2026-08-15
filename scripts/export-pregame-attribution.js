@@ -78,7 +78,21 @@ const r4 = v => (typeof v === "number" && isFinite(v)) ? Number(v.toFixed(4)) : 
 const n2 = v => v === null || v === undefined ? "" : v;
 const odds = p => (p !== null && p > 0 && p < 1) ? r4(p / (1 - p)) : null;
 const bpRiskNum = t => { const v = t ? (t.risk_index ?? t.score) : null; return r4(typeof v === "number" ? v : NaN); };
+const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const ERA_K = 0.20;
+// 2026-08-15, Lynold's explicit instruction: pitcher_boost's input moves from
+// effective-ERA gap to pitcher_score gap (pScore - oScore, capped +/-20
+// before ERA_K), matching the not-yet-applied diff to
+// generate-member-lab.js (see ../generate-member-lab-pitcher-boost-score-gap.diff
+// in this folder). pScore/oScore below are pitcher_edge.home_score/
+// away_score -- the SAME starter-only pitcher_score field the live model's
+// scoreH/scoreA read, so once that diff (and the roleShare 5.5->5 diff) are
+// both applied, this reproduces exactly what the live moneyline used.
+// Until then, this pulls whatever pitcher_score the live model is currently
+// publishing (5.5-based, era still actually driving pricing) -- so
+// pitcher_boost in this file will NOT match model_prob's actual pricing
+// until both diffs are live. pick_era/opp_era columns are untouched and
+// still read model_effective_era_home/away for reference.
 
 function main() {
   const briefPath = path.join(ROOT, "data", "member-brief", `${DATE}.json`);
@@ -137,7 +151,8 @@ function main() {
     const bullpenGap = (pRisk !== null && oRisk !== null) ? r4(oRisk - pRisk) : null;
 
     const preBullpenOdds = odds(preBullpenProb);
-    const pitcherBoost = (pEra !== null && oEra !== null) ? r4(Math.exp(ERA_K * (oEra - pEra))) : null;
+    const scoreGap = (pScore !== null && oScore !== null) ? clamp(pScore - oScore, -20, 20) : null;
+    const pitcherBoost = scoreGap !== null ? r4(Math.exp(ERA_K * scoreGap)) : null;
     const moneyLineOdds = odds(legacyStrengthProb);
     const moneylineProp = legacyStrengthProb;
 
