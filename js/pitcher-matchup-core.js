@@ -236,7 +236,7 @@
     else if (score < 55) grade = "Below avg";
 
     const role = classifyPitcherRole(stat);
-    const roleShare = role.expectedInnings / 5.5;
+    const roleShare = role.expectedInnings / 5;
     const roleAdjustedScore = Math.round(clamp(50 + (score - 50) * roleShare, 20, 92));
     const note = role.bullpenGame
       ? role.reason
