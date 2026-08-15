@@ -52,6 +52,23 @@ function normDate(s) {
   return s;
 }
 
+// 2026-08-14, Lynold's explicit instruction: every ledger's date COLUMN
+// standardizes on MM/DD/YYYY going forward (was YYYY-MM-DD). DATE itself
+// stays ISO -- it's still what every internal lookup/comparison in this file
+// uses -- only what actually gets WRITTEN into a row changes. normDate()
+// above already reads either shape back to ISO, so every dedup Set below
+// that built its comparison key straight from raw file text (kSeen, tSeen,
+// sExisting, the K-props xlsx-refresh backfill, and voided_log's dedup) had
+// to be routed through normDate() too, not just the header-name lookups --
+// otherwise a re-run today would silently stop recognizing this run's own
+// rows as already-graded the moment the on-disk format flips, and start
+// duplicating them.
+function mmddyyyy(iso) {
+  const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[2]}/${m[3]}/${m[1]}` : iso;
+}
+const DATE_OUT = mmddyyyy(DATE);
+
 async function main() {
   const briefPath = path.join(ROOT, "data", "member-brief", `${DATE}.json`);
   if (!fs.existsSync(briefPath)) { console.log(`No member brief for ${DATE} — nothing to calibrate.`); return; }
@@ -103,8 +120,8 @@ async function main() {
     const pe = g.pitcher_edge || {};
     const actual = await actualStarters(g.game_pk);
     if (!actual) return false;
-    if (isScratched(pe.away_pitcher, actual.away)) { voidRows.push(`${DATE},${g.game_pk},away,${csvField(pe.away_pitcher)},${csvField(actual.away)}`); return true; }
-    if (isScratched(pe.home_pitcher, actual.home)) { voidRows.push(`${DATE},${g.game_pk},home,${csvField(pe.home_pitcher)},${csvField(actual.home)}`); return true; }
+    if (isScratched(pe.away_pitcher, actual.away)) { voidRows.push(`${DATE_OUT},${g.game_pk},away,${csvField(pe.away_pitcher)},${csvField(actual.away)}`); return true; }
+    if (isScratched(pe.home_pitcher, actual.home)) { voidRows.push(`${DATE_OUT},${g.game_pk},home,${csvField(pe.home_pitcher)},${csvField(actual.home)}`); return true; }
     return false;
   }
 
@@ -143,7 +160,7 @@ async function main() {
     const homeWon = f.homeScore > f.awayScore;
     const pickWon = g.side === "home" ? homeWon : !homeWon;
     rows.push([
-      DATE, g.game_pk, csvField(g.model_source || brief.model_version || "unknown"), csvField(g.game), csvField(g.pick_team),
+      DATE_OUT, g.game_pk, csvField(g.model_source || brief.model_version || "unknown"), csvField(g.game), csvField(g.pick_team),
       g.status || "", g.model_probability,
       (g.market && typeof g.market.no_vig_probability === "number") ? g.market.no_vig_probability : "",
       typeof g.lab_score === "number" ? g.lab_score : "",
@@ -317,7 +334,7 @@ async function main() {
     const moneylineProp = legacyStrengthProb;
 
     aRows.push([
-      DATE, g.game_pk, csvField(g.model_source || brief.model_version || "unknown"),
+      DATE_OUT, g.game_pk, csvField(g.model_source || brief.model_version || "unknown"),
       csvField(g.game), csvField(g.pick_team), csvField(opp_team), g.status || "", won ? "W" : "L",
       n2(modelProb), n2(pitcherGap), csvField(pPitcher || ""), n2(pScore), csvField(oPitcher || ""), n2(oScore),
       n2(pEra), n2(oEra), n2(pWhip), n2(oWhip), n2(pHr9), n2(oHr9),
@@ -412,7 +429,7 @@ async function main() {
         console.warn(`K-props ${DATE}: only ${withLine.length} of ${allRecs.length} pitchers carry a market line `
           + `(events_fetched: ${kp.events_fetched ?? "unknown"}) — partial odds capture, grading what exists.`);
       }
-      const kSeen = new Set(fs.readFileSync(KLOG, "utf8").split("\n").slice(1).map(l => l.split(",").slice(0, 2).join(",")).filter(Boolean));
+      const kSeen = new Set(fs.readFileSync(KLOG, "utf8").split("\n").slice(1).map(l => { const p = l.split(","); return p.length >= 2 ? `${normDate(p[0])},${p[1]}` : ""; }).filter(Boolean));
       const kRows = [];
       // Collected alongside kRows so the data/k-props/<date>.xlsx refresh
       // below can include EVERY pitcher captured that day (graded or not),
@@ -467,7 +484,7 @@ async function main() {
         const errCorr = Number.isFinite(rec.projection) ? Number((actual - rec.projection).toFixed(2)) : "";
         const absErrCorr = errCorr !== "" ? Math.abs(errCorr) : "";
         kRows.push([
-          DATE, csvField(rec.name), rec.line, rec.over ?? "", rec.under ?? "",
+          DATE_OUT, csvField(rec.name), rec.line, rec.over ?? "", rec.under ?? "",
           csvField(rec.game || ""), rec.game_pk ?? "", csvField(rec.pitcher_role_label || ""),
           num(rec.expected_innings), bool(rec.bullpen_game), bool(rec.pitching_plan_reported), rec.books ?? "",
           num(rec.k_rate_season), num(rf.starts), num(rf.batters_faced), num(rec.bf_per_ip), num(rf.recent_k_rate), num(rf.weight),
@@ -505,7 +522,7 @@ async function main() {
         const existingRows = fs.readFileSync(KLOG, "utf8").trim().split("\n").slice(1).map(l => l.split(","));
         for (const r of existingRows) {
           if (r.length <= Math.max(iDate, iPitcher, iActualK, iOu, iLean, iLeanRes)) continue;
-          if (r[iDate] !== DATE || !r[iPitcher]) continue;
+          if (normDate(r[iDate]) !== DATE || !r[iPitcher]) continue;
           if (gradedByName[r[iPitcher]]) continue; // this run's fresher value wins
           if (r[iActualK] === "" || r[iActualK] === undefined) continue; // not graded (no actual_k)
           gradedByName[r[iPitcher]] = {
@@ -515,7 +532,7 @@ async function main() {
         }
         const xlsxRows = Object.values(kp.pitchers)
           .filter(rec => rec && rec.name)
-          .map(rec => buildKpropsXlsxRow(DATE, rec, gradedByName[rec.name] || null));
+          .map(rec => buildKpropsXlsxRow(DATE_OUT, rec, gradedByName[rec.name] || null));
         const xlsxPath = path.join(ROOT, "data", "k-props", `${DATE}.xlsx`);
         await writeKpropsXlsx(xlsxPath, xlsxRows);
         console.log(`K-props: refreshed data/k-props/${DATE}.xlsx (${xlsxRows.length} rows, ${Object.keys(gradedByName).length} graded).`);
@@ -545,7 +562,7 @@ async function main() {
     // still graded and simply tagged "unknown".
     if (tp && tp.games) {
       if (!fs.existsSync(TLOG)) fs.writeFileSync(TLOG, THEAD);
-      const tSeen = new Set(fs.readFileSync(TLOG, "utf8").split("\n").slice(1).map(l => l.split(",").slice(0, 2).join(",")).filter(Boolean));
+      const tSeen = new Set(fs.readFileSync(TLOG, "utf8").split("\n").slice(1).map(l => { const p = l.split(","); return p.length >= 2 ? `${normDate(p[0])},${p[1]}` : ""; }).filter(Boolean));
       const tRows = [];
       const totalsPolicy = tp.policy || {};
       const minEdge = Number.isFinite(totalsPolicy.research_min_edge) ? totalsPolicy.research_min_edge : 0.7;
@@ -565,7 +582,7 @@ async function main() {
         let leanRes = "";
         const qualifies = lean !== "" && Math.abs(lean) >= minEdge && Number.isFinite(g.lab) && g.lab >= minSetup;
         if (qualifies && ou !== "P" && ou !== "") leanRes = (lean > 0) === (ou === "O") ? "W" : "L";
-        tRows.push([DATE, pk, csvField(totalsModelVersion), hasLine ? g.line : "", g.over ?? "", g.under ?? "", Number.isFinite(g.projection) ? g.projection : "", actual, ou, lean, leanRes, Number.isFinite(g.lab) ? g.lab : "", g.classification || (qualifies ? "research_lean" : "no_lean"), csvField(g.game || "")].join(","));
+        tRows.push([DATE_OUT, pk, csvField(totalsModelVersion), hasLine ? g.line : "", g.over ?? "", g.under ?? "", Number.isFinite(g.projection) ? g.projection : "", actual, ou, lean, leanRes, Number.isFinite(g.lab) ? g.lab : "", g.classification || (qualifies ? "research_lean" : "no_lean"), csvField(g.game || "")].join(","));
       }
       if (tRows.length) fs.appendFileSync(TLOG, tRows.join("\n") + "\n");
       console.log(`Totals: graded ${tRows.length}.`);
@@ -609,7 +626,7 @@ async function main() {
       console.log(`Shadow-model ledger header upgraded (+component columns).`);
     }
   }
-  const sExisting = new Set(fs.readFileSync(SLOG, "utf8").split("\n").slice(1).map(l => l.split(",").slice(0, 2).join(",")).filter(Boolean));
+  const sExisting = new Set(fs.readFileSync(SLOG, "utf8").split("\n").slice(1).map(l => { const p = l.split(","); return p.length >= 2 ? `${normDate(p[0])},${p[1]}` : ""; }).filter(Boolean));
   const sRows = [];
   // risk_index falls back to the older raw fatigue `score` for any bullpen
   // record generated before the efficiency/risk split existed — same fallback
@@ -638,7 +655,7 @@ async function main() {
     const bpRiskHome = pickIsHome ? riskIndexOf(bp.pick_team) : riskIndexOf(bp.opponent);
     const bpRiskAway = pickIsHome ? riskIndexOf(bp.opponent) : riskIndexOf(bp.pick_team);
     sRows.push([
-      DATE, g.game_pk, csvField(officialVersion), csvField(shadowVersion), pHomeOfficial, v3.p_home, f.homeScore > f.awayScore ? 1 : 0,
+      DATE_OUT, g.game_pk, csvField(officialVersion), csvField(shadowVersion), pHomeOfficial, v3.p_home, f.homeScore > f.awayScore ? 1 : 0,
       Number.isFinite(v3.fip_away) ? v3.fip_away : "", Number.isFinite(v3.fip_home) ? v3.fip_home : "",
       Number.isFinite(v3.off_adj) ? v3.off_adj : "", Number.isFinite(v3.bp_adj) ? v3.bp_adj : "",
       effEraAway, effEraHome, legacyHome, bpRiskAway, bpRiskHome
@@ -647,8 +664,20 @@ async function main() {
   if (sRows.length) fs.appendFileSync(SLOG, sRows.join("\n") + "\n");
   if (voidRows.length) {
     if (!fs.existsSync(VOIDLOG)) fs.writeFileSync(VOIDLOG, "date,gamePk,side,analyzed_starter,actual_starter\n");
-    const seen = new Set(fs.readFileSync(VOIDLOG, "utf8").split("\n"));
-    const fresh = [...new Set(voidRows)].filter(r => !seen.has(r));
+    // 2026-08-14: was a raw full-line Set (including the header line, which
+    // never collides with real data so that was harmless) -- switched to a
+    // normDate-based date,gamePk,side key, same pattern as every other ledger
+    // in this file, so a re-run recognizes today's own already-voided rows
+    // regardless of which date format they were written under.
+    const seen = new Set(
+      fs.readFileSync(VOIDLOG, "utf8").split("\n").slice(1)
+        .map(l => { const p = l.split(","); return p.length >= 3 ? `${normDate(p[0])},${p[1]},${p[2]}` : ""; })
+        .filter(Boolean)
+    );
+    const fresh = [...new Set(voidRows)].filter(r => {
+      const p = r.split(",");
+      return !seen.has(`${normDate(p[0])},${p[1]},${p[2]}`);
+    });
     if (fresh.length) fs.appendFileSync(VOIDLOG, fresh.join("\n") + "\n");
     console.log(`Voided ${new Set(voidRows).size} game(s) — starter scratched (see voided_log.csv).`);
   }

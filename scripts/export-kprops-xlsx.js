@@ -26,6 +26,16 @@ const DATE = (process.argv[2] || "").match(/^\d{4}-\d{2}-\d{2}$/)
   ? process.argv[2]
   : new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 
+// 2026-08-14, Lynold's explicit instruction: the date COLUMN written into
+// every ledger/export standardizes on MM/DD/YYYY. DATE itself stays ISO --
+// it's still what names the file (data/k-props/<date>.json/.xlsx) -- only
+// the date value written INTO the row via buildRow() below changes.
+function mmddyyyy(iso) {
+  const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[2]}/${m[3]}/${m[1]}` : iso;
+}
+const DATE_OUT = mmddyyyy(DATE);
+
 async function main() {
   const jsonPath = path.join(ROOT, "data", "k-props", `${DATE}.json`);
   if (!fs.existsSync(jsonPath)) {
@@ -46,7 +56,7 @@ async function main() {
 
   const rows = Object.values(kp.pitchers)
     .filter(rec => rec && rec.name)
-    .map(rec => buildRow(DATE, rec, null)); // null = not graded yet
+    .map(rec => buildRow(DATE_OUT, rec, null)); // null = not graded yet
 
   const xlsxPath = path.join(ROOT, "data", "k-props", `${DATE}.xlsx`);
   await writeWorkbook(xlsxPath, rows);

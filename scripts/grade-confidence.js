@@ -139,6 +139,22 @@ const csvField = s => {
 };
 const num = v => (typeof v === "number" && Number.isFinite(v)) ? v : null;
 
+// 2026-08-14: calibration_model_log.csv's date column now writes MM/DD/YYYY
+// (was YYYY-MM-DD). loadOutcomes() below builds its join key straight from
+// that raw column and matches it against collect()'s key, which is always
+// ISO (built from the member-brief FILENAME, data/member-brief/YYYY-MM-DD.json
+// -- untouched by this format change). Without normalizing here first, every
+// join would silently return zero matches the moment the ledger's format
+// flipped -- confidence grading would run, log nothing, and print no error.
+function normDate(s) {
+  s = String(s || "").trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return s;
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return `${m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`;
+  return s;
+}
+
 /* ---------- outcomes, from the graded moneyline ledger ---------- */
 function loadOutcomes() {
   const f = path.join(CAL_DIR, "calibration_model_log.csv");
@@ -156,7 +172,7 @@ function loadOutcomes() {
     const c = line.split(",");
     const res = c[c.length - 2];
     if (res !== "W" && res !== "L") continue;
-    out.set(`${c[iDate]}|${c[iPk]}`, res === "W" ? 1 : 0);
+    out.set(`${normDate(c[iDate])}|${c[iPk]}`, res === "W" ? 1 : 0);
   }
   return out;
 }
@@ -326,8 +342,17 @@ fs.mkdirSync(CAL_DIR, { recursive: true });
 // member-brief + the graded ledger, both of which are themselves append-only.
 // Nothing original lives here, so a rebuild cannot lose evidence.
 const blank = v => (v === null || v === undefined) ? "" : v;
+// 2026-08-14, Lynold's explicit instruction: the date COLUMN in every ledger
+// standardizes on MM/DD/YYYY. r.date itself stays ISO (it's also read into
+// confidence_report.json's coverage/focus fields below, which stay ISO like
+// every other JSON output in this pipeline) -- only the CSV body's own copy
+// of it is reformatted, at the point of writing.
+function mmddyyyy(iso) {
+  const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[2]}/${m[3]}/${m[1]}` : iso;
+}
 const body = rows.map(r => [
-  r.date, r.gamePk, csvField(r.lab_version), r.status, csvField(r.pick),
+  mmddyyyy(r.date), r.gamePk, csvField(r.lab_version), r.status, csvField(r.pick),
   csvField(r.pitcher_edge_team), blank(r.pitcher_gap),
   blank(r.pick_bullpen_risk_index), blank(r.opp_bullpen_risk_index), blank(r.pick_bullpen_innings),
   blank(r.pick_woba_15d), blank(r.opp_woba_15d), blank(r.pick_woba_30d), blank(r.opp_woba_30d),
