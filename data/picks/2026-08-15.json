@@ -240,6 +240,201 @@
           "valueTag": "OFFICIAL PICK"
         }
       ]
+    },
+    {
+      "gamePk": 822775,
+      "away": "New York Yankees",
+      "home": "Toronto Blue Jays",
+      "time": "2026-08-15T19:07:00Z",
+      "labScore": 34,
+      "labScoreBreakdown": {
+        "score": 34,
+        "version": "lab-rating-v3-measured-components",
+        "conviction_points": 0,
+        "agreement_points": 0,
+        "pitching_plan_points": 9,
+        "bullpen_points": 11.57,
+        "offense_points": 13.45,
+        "completeness_points": 0,
+        "pitcher_edge_points": 9,
+        "model_agreement_gap": null,
+        "model_agreement_credit": null,
+        "bullpen_innings_weight": 0.78,
+        "assigned_bullpen_innings": 3.1,
+        "offense_delta": 0.0046,
+        "offense_delta_15d": 0.0109,
+        "offense_delta_30d": -0.0018,
+        "completeness_checks_passed": 5,
+        "completeness_checks_total": 5,
+        "data_complete": true,
+        "market_points": 0,
+        "model_edge_points": 0,
+        "base_points": 0,
+        "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
+      },
+      "status": "official_pick",
+      "modelVersion": "multi-market-v1",
+      "pitcherEdge": {
+        "team": "New York Yankees",
+        "gap": 9,
+        "conflict": false,
+        "away_score": 86,
+        "home_score": 77,
+        "away_pitcher": "Cam Schlittler",
+        "home_pitcher": "Braydon Fisher",
+        "away_pitcher_id": 693645,
+        "home_pitcher_id": 680755,
+        "away_era": 2.21,
+        "home_era": 3.54,
+        "away_whip": 0.93,
+        "home_whip": 1.23,
+        "away_advanced": {
+          "w": 10,
+          "l": 6,
+          "kbb_pct": 0.2608,
+          "gb_pct": 0.4646,
+          "babip": 0.2653,
+          "hr9": 0.86,
+          "ip_per_start": 5.9,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 5.9,
+          "bullpen_innings": 3.1
+        },
+        "home_advanced": {
+          "w": 3,
+          "l": 3,
+          "kbb_pct": 0.0968,
+          "gb_pct": 0.4867,
+          "babip": 0.2466,
+          "hr9": 0.89,
+          "ip_per_start": 1.1,
+          "role": "opener",
+          "role_label": "Opener / bullpen game",
+          "expected_innings": 1.1,
+          "bullpen_innings": 7.9
+        }
+      },
+      "bullpen": {
+        "pick_team": {
+          "score": 70,
+          "label": "Tired",
+          "last_game_bp_ip": 2,
+          "last7_bp_ip": 19.3,
+          "last7_bp_runs": 4,
+          "last_game_relievers": 2,
+          "last7_relievers": 18,
+          "back_to_back_arms": 6,
+          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+          "score_reason": "Tired (7.0/10): 19.3 recent relief innings, recency-weighted (pitched yesterday), 6 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 2,
+            "last7_relievers": 18,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 3.6,
+            "back_to_back_arms": 21.7,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 70.4
+          },
+          "efficiency_score": 74,
+          "efficiency_label": "Effective",
+          "efficiency_reason": "Effective (7.4/10): 1.4 ERA and 0.83 WHIP over 19.3 relief innings (3 ER, 11 H, 5 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": 16.8,
+            "whip_term": 7.1,
+            "confidence": 1,
+            "raw_score": 73.9
+          },
+          "era_7d": 1.4,
+          "whip_7d": 0.83,
+          "last15_bp_ip": 44,
+          "last15_bp_runs": 19,
+          "era_15d": 3.68,
+          "whip_15d": 1.18,
+          "recent15_games_tracked": 13,
+          "risk_index": 58,
+          "risk_label": "Normal",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "opponent": {
+          "score": 66,
+          "label": "Tired",
+          "last_game_bp_ip": 3,
+          "last7_bp_ip": 30.3,
+          "last7_bp_runs": 15,
+          "last_game_relievers": 3,
+          "last7_relievers": 29,
+          "back_to_back_arms": 10,
+          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+          "score_reason": "Tired (6.6/10): 30.3 recent relief innings, recency-weighted (pitched yesterday), 10 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 3,
+            "last7_relievers": 29,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 11.8,
+            "back_to_back_arms": 9.4,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 66.2
+          },
+          "efficiency_score": 48,
+          "efficiency_label": "Average",
+          "efficiency_reason": "Average (4.8/10): 3.86 ERA and 1.55 WHIP over 30.3 relief innings (13 ER, 27 H, 20 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": 2.1,
+            "whip_term": -3.7,
+            "confidence": 1,
+            "raw_score": 48.3
+          },
+          "era_7d": 3.86,
+          "whip_7d": 1.55,
+          "last15_bp_ip": 64.7,
+          "last15_bp_runs": 32,
+          "era_15d": 3.34,
+          "whip_15d": 1.48,
+          "recent15_games_tracked": 15,
+          "risk_index": 67,
+          "risk_label": "Tired",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "label": "Elevated volatility",
+        "major_caution": false,
+        "absolute_risk": "Elevated"
+      },
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Cam Schlittler",
+          "pick": "Over",
+          "line": 6.5,
+          "bestAm": 120,
+          "projection": 8.81,
+          "edge": 2.31,
+          "books": 6,
+          "expectedInnings": 5.9,
+          "pitcherRole": "traditional_starter",
+          "lineupSource": "posted",
+          "modelVersion": "leo-kprop",
+          "valueTag": "OFFICIAL PICK"
+        }
+      ]
     }
-  ]
+  ],
+  "last_appended_at": "2026-08-15T16:44:23.479Z"
 }
