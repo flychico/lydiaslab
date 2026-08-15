@@ -135,6 +135,16 @@ jobs:
       - name: Export pregame attribution snapshot
         run: node scripts/export-pregame-attribution.js "${{ steps.publish_date.outputs.date }}"
 
+      # 2026-08-15, Lynold's explicit instruction: the same pitcher-level
+      # inputs behind pitcher_score (era/whip/ip/so/bb/gs/gp from MLB StatsAPI,
+      # plus the derived score components) for every probable in today's
+      # member brief -- captured same-day, before the recap. Also computes an
+      # independent roleShare-over-5 comparison column alongside the live
+      # (roleShare-over-5.5) published score; does not touch the live model.
+      # See scripts/export-pitcher-data.js.
+      - name: Export daily pitcher data
+        run: node scripts/export-pitcher-data.js "${{ steps.publish_date.outputs.date }}"
+
       - name: Generate canonical Pitcher Matchup Tool data
         run: node scripts/generate-pitcher-matchup-data.js "${{ steps.publish_date.outputs.date }}"
 
