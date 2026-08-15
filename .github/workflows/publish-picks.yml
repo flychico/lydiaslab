@@ -125,6 +125,16 @@ jobs:
             --date "${{ steps.publish_date.outputs.date }}" \
             --snapshot "${SNAPSHOT_INPUT:-posted}"
 
+      # 2026-08-15, Lynold's explicit instruction: the same pregame model
+      # inputs/derived-calc columns as attribution_model_log.csv, captured
+      # same-day from the member brief this step just wrote -- BEFORE
+      # daily-recap.yml grades anything tomorrow morning. Upserts by
+      # (date, gamePk), so later publish waves the same day (pitcher
+      # confirmations, line moves) overwrite this run's rows rather than
+      # duplicating them. See scripts/export-pregame-attribution.js.
+      - name: Export pregame attribution snapshot
+        run: node scripts/export-pregame-attribution.js "${{ steps.publish_date.outputs.date }}"
+
       - name: Generate canonical Pitcher Matchup Tool data
         run: node scripts/generate-pitcher-matchup-data.js "${{ steps.publish_date.outputs.date }}"
 
