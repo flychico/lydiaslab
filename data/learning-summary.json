@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-15T14:23:23.243Z",
+  "generated_at": "2026-08-15T15:13:10.196Z",
   "status": "ready",
   "latest_date": "2026-08-14",
   "days_reviewed": 13,
@@ -75,133 +75,112 @@
     },
     "attribution": {
       "status": "ready",
-      "games": 154,
+      "games": 168,
       "factors": [
+        {
+          "factor": "K-BB% gap (pick − opp)",
+          "tertiles": [
+            {
+              "band": "low",
+              "games": 57,
+              "win_rate": 0.719
+            },
+            {
+              "band": "mid",
+              "games": 53,
+              "win_rate": 0.491
+            },
+            {
+              "band": "high",
+              "games": 53,
+              "win_rate": 0.472
+            }
+          ],
+          "spread": -0.248
+        },
         {
           "factor": "Lab Rating",
           "tertiles": [
             {
               "band": "low",
-              "games": 52,
-              "win_rate": 0.635
+              "games": 59,
+              "win_rate": 0.644
             },
             {
               "band": "mid",
-              "games": 52,
-              "win_rate": 0.654
+              "games": 56,
+              "win_rate": 0.607
             },
             {
               "band": "high",
-              "games": 50,
-              "win_rate": 0.44
+              "games": 53,
+              "win_rate": 0.434
             }
           ],
-          "spread": -0.195
-        },
-        {
-          "factor": "Offense form gap (ΔOPS diff)",
-          "tertiles": [
-            {
-              "band": "low",
-              "games": 52,
-              "win_rate": 0.558
-            },
-            {
-              "band": "mid",
-              "games": 51,
-              "win_rate": 0.451
-            },
-            {
-              "band": "high",
-              "games": 51,
-              "win_rate": 0.725
-            }
-          ],
-          "spread": 0.168
-        },
-        {
-          "factor": "Bullpen fatigue gap (opp − pick)",
-          "tertiles": [
-            {
-              "band": "low",
-              "games": 52,
-              "win_rate": 0.558
-            },
-            {
-              "band": "mid",
-              "games": 51,
-              "win_rate": 0.451
-            },
-            {
-              "band": "high",
-              "games": 51,
-              "win_rate": 0.725
-            }
-          ],
-          "spread": 0.168
+          "spread": -0.21
         },
         {
           "factor": "Model probability",
           "tertiles": [
             {
               "band": "low",
-              "games": 52,
-              "win_rate": 0.481
+              "games": 57,
+              "win_rate": 0.491
             },
             {
               "band": "mid",
-              "games": 51,
-              "win_rate": 0.608
+              "games": 56,
+              "win_rate": 0.607
             },
             {
               "band": "high",
-              "games": 51,
-              "win_rate": 0.647
+              "games": 55,
+              "win_rate": 0.6
             }
           ],
-          "spread": 0.166
+          "spread": 0.109
         },
         {
-          "factor": "Pitcher score gap (pick − opp)",
+          "factor": "Bullpen fatigue gap (opp − pick)",
           "tertiles": [
             {
               "band": "low",
-              "games": 53,
-              "win_rate": 0.604
+              "games": 59,
+              "win_rate": 0.525
             },
             {
               "band": "mid",
-              "games": 53,
-              "win_rate": 0.623
+              "games": 54,
+              "win_rate": 0.648
             },
             {
               "band": "high",
-              "games": 48,
-              "win_rate": 0.5
+              "games": 55,
+              "win_rate": 0.527
             }
           ],
-          "spread": -0.104
+          "spread": 0.002
         },
         {
-          "factor": "K-BB% gap (pick − opp)",
+          "factor": "Offense form gap (ΔOPS diff)",
           "tertiles": [
             {
               "band": "low",
-              "games": 52,
-              "win_rate": 0.596
+              "games": 103,
+              "win_rate": 0.563
             },
             {
               "band": "mid",
-              "games": 49,
-              "win_rate": 0.592
+              "games": 10,
+              "win_rate": 0.6
             },
             {
               "band": "high",
-              "games": 49,
-              "win_rate": 0.531
+              "games": 55,
+              "win_rate": 0.564
             }
           ],
-          "spread": -0.066
+          "spread": 0.001
         }
       ],
       "note": "Win rate by input tertile, pick-side relative. |spread| = high-band win rate minus low-band — bigger magnitude = the metric separates winners from losers harder, and deserves weight. Read direction too: a NEGATIVE spread on a should-be-positive factor is a red flag."
@@ -209,14 +188,14 @@
     "kprops": {
       "status": "ready",
       "self_calibration": "no correction needed yet",
-      "graded": 253,
-      "with_projection": 253,
+      "graded": 263,
+      "with_projection": 262,
       "bias": -0.14,
-      "mae": 1.78,
-      "lean_record": "52-40",
-      "over_lean_record": "31-23",
-      "under_lean_record": "21-17",
-      "no_lean": 154,
+      "mae": 1.77,
+      "lean_record": "53-41",
+      "over_lean_record": "31-24",
+      "under_lean_record": "22-17",
+      "no_lean": 161,
       "note": "Bias = actual minus projection (positive means we under-project). Leans only counted at 0.7+ strikeout edges. Small samples early — a lean record means little before ~100 graded pitchers."
     },
     "note": "Shadow ledger for learning only — never part of the public record. Official picks stay the only published record.",
