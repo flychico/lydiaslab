@@ -1235,6 +1235,20 @@
           "lineupSource": "posted",
           "modelVersion": "leo-kprop",
           "valueTag": "OFFICIAL PICK"
+        },
+        {
+          "pitcher": "Tanner Bibee",
+          "pick": "Under",
+          "line": 4.5,
+          "bestAm": -113,
+          "projection": 3.57,
+          "edge": -0.93,
+          "books": 6,
+          "expectedInnings": 5.7,
+          "pitcherRole": "traditional_starter",
+          "lineupSource": "posted",
+          "modelVersion": "leo-kprop",
+          "valueTag": "OFFICIAL PICK"
         }
       ]
     },
@@ -2247,6 +2261,20 @@
           "lineupSource": "posted",
           "modelVersion": "leo-kprop",
           "valueTag": "OFFICIAL PICK"
+        },
+        {
+          "pitcher": "Cody Bradford",
+          "pick": "Under",
+          "line": 4.5,
+          "bestAm": -148,
+          "projection": 3.53,
+          "edge": -0.97,
+          "books": 6,
+          "expectedInnings": 5.1,
+          "pitcherRole": "traditional_starter",
+          "lineupSource": "posted",
+          "modelVersion": "leo-kprop",
+          "valueTag": "OFFICIAL PICK"
         }
       ]
     },
@@ -2651,7 +2679,201 @@
           "valueTag": "OFFICIAL PICK"
         }
       ]
+    },
+    {
+      "gamePk": 824156,
+      "away": "Seattle Mariners",
+      "home": "Houston Astros",
+      "time": "2026-08-16T23:20:00Z",
+      "labScore": 51,
+      "labScoreBreakdown": {
+        "score": 51,
+        "version": "lab-rating-v3-measured-components",
+        "conviction_points": 20,
+        "agreement_points": 0,
+        "pitching_plan_points": 8,
+        "bullpen_points": 10.54,
+        "offense_points": 12.48,
+        "completeness_points": 0,
+        "pitcher_edge_points": 8,
+        "model_agreement_gap": 0.6574,
+        "model_agreement_credit": 0,
+        "bullpen_innings_weight": 0.81,
+        "assigned_bullpen_innings": 3.2,
+        "offense_delta": -0.0225,
+        "offense_delta_15d": -0.0145,
+        "offense_delta_30d": -0.0306,
+        "completeness_checks_passed": 5,
+        "completeness_checks_total": 5,
+        "data_complete": true,
+        "market_points": 0,
+        "model_edge_points": 0,
+        "base_points": 0,
+        "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
+      },
+      "status": "official_pick",
+      "modelVersion": "multi-market-v1",
+      "pitcherEdge": {
+        "team": "Seattle Mariners",
+        "gap": 8,
+        "conflict": false,
+        "away_score": 72,
+        "home_score": 64,
+        "away_pitcher": "Bryan Woo",
+        "home_pitcher": "Hunter Brown",
+        "away_pitcher_id": 693433,
+        "home_pitcher_id": 686613,
+        "away_era": 4.15,
+        "home_era": 3.68,
+        "away_whip": 1.1,
+        "home_whip": 1.27,
+        "away_advanced": {
+          "w": 8,
+          "l": 8,
+          "kbb_pct": 0.1922,
+          "gb_pct": 0.4086,
+          "babip": 0.2901,
+          "hr9": 0.88,
+          "ip_per_start": 5.8,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 5.8,
+          "bullpen_innings": 3.2
+        },
+        "home_advanced": {
+          "w": 3,
+          "l": 2,
+          "kbb_pct": 0.119,
+          "gb_pct": 0.6239,
+          "babip": 0.2452,
+          "hr9": 1.13,
+          "ip_per_start": 5.3,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 5.3,
+          "bullpen_innings": 3.7
+        }
+      },
+      "bullpen": {
+        "pick_team": {
+          "score": 61,
+          "label": "Normal",
+          "last_game_bp_ip": 2,
+          "last7_bp_ip": 19.3,
+          "last7_bp_runs": 19,
+          "last_game_relievers": 2,
+          "last7_relievers": 20,
+          "back_to_back_arms": 4,
+          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
+          "score_reason": "Normal (6.1/10): 19.3 recent relief innings, recency-weighted (pitched yesterday), 4 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 2,
+            "last7_relievers": 20,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 1.1,
+            "back_to_back_arms": 15.1,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 61.3
+          },
+          "efficiency_score": 22,
+          "efficiency_label": "Struggling",
+          "efficiency_reason": "Struggling (2.2/10): 8.38 ERA and 1.5 WHIP over 19.3 relief innings (18 ER, 22 H, 7 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": -25,
+            "whip_term": -3,
+            "confidence": 1,
+            "raw_score": 22
+          },
+          "era_7d": 8.38,
+          "whip_7d": 1.5,
+          "last15_bp_ip": 38.7,
+          "last15_bp_runs": 40,
+          "era_15d": 8.15,
+          "whip_15d": 1.76,
+          "recent15_games_tracked": 13,
+          "risk_index": 75,
+          "risk_label": "Tired",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "opponent": {
+          "score": 76,
+          "label": "Tired",
+          "last_game_bp_ip": 5,
+          "last7_bp_ip": 28,
+          "last7_bp_runs": 15,
+          "last_game_relievers": 2,
+          "last7_relievers": 21,
+          "back_to_back_arms": 6,
+          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+          "score_reason": "Tired (7.6/10): 28 recent relief innings, recency-weighted — 5 in the last game (pitched yesterday), 6 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 2,
+            "last7_relievers": 21,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 23.8,
+            "back_to_back_arms": 7.1,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 75.9
+          },
+          "efficiency_score": 47,
+          "efficiency_label": "Average",
+          "efficiency_reason": "Average (4.7/10): 4.5 ERA and 1.36 WHIP over 28 relief innings (14 ER, 30 H, 8 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": -1.8,
+            "whip_term": -0.9,
+            "confidence": 1,
+            "raw_score": 47.3
+          },
+          "era_7d": 4.5,
+          "whip_7d": 1.36,
+          "last15_bp_ip": 53,
+          "last15_bp_runs": 19,
+          "era_15d": 2.89,
+          "whip_15d": 1.04,
+          "recent15_games_tracked": 13,
+          "risk_index": 78,
+          "risk_label": "Tired",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "label": "Elevated volatility",
+        "major_caution": false,
+        "absolute_risk": "Opponent high"
+      },
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Bryan Woo",
+          "pick": "Under",
+          "line": 5.5,
+          "bestAm": -104,
+          "projection": 3.96,
+          "edge": -1.54,
+          "books": 6,
+          "expectedInnings": 5.8,
+          "pitcherRole": "traditional_starter",
+          "lineupSource": "posted",
+          "modelVersion": "leo-kprop",
+          "valueTag": "OFFICIAL PICK"
+        }
+      ]
     }
   ],
-  "last_appended_at": "2026-08-16T18:57:11.427Z"
+  "last_appended_at": "2026-08-16T21:46:21.664Z"
 }
