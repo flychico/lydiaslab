@@ -701,6 +701,41 @@ function effectiveEraFor(g, side, pitchingPlan, pitchers) {
     + `Recomputing the moneyline effective ERA from the confirmed probable.`);
   return starterEff(g, side, pitchers);
 }
+
+// Pitcher score for the moneyline's pitcher term (replaces effective ERA as
+// of 2026-08-15, Lynold's explicit instruction). pitcher_score already
+// "tones" itself via scorePitcher's own clamps and role-share regression, so
+// no separate calibration coefficient was fit -- ERA_K is reused unchanged
+// and the gap itself is capped at +/-20 before the exponential, same role
+// ERA_CLAMP played for the era version. Starter-only, NOT bullpen-blended
+// (Lynold's explicit call -- effective_era blends with the bullpen because a
+// starter only covers part of the game; pitcher_score intentionally does
+// not).
+function starterScoreFor(g, side, pitchers) {
+  const p = g.teams[side].probablePitcher;
+  const st = p ? pitchers[p.id] : null;
+  return PitcherCore.scorePitcher(st || { name: "TBD", missing: true }).score;
+}
+
+// Prefer the totals capture's starter-only pitcher_score, but fall back to
+// the confirmed probable when that capture is stale -- identical staleness
+// check to effectiveEraFor, reusing planStarterIdentity().
+function pitcherScoreFor(g, side, pitchingPlan, pitchers) {
+  const sidePlan = pitchingPlan && pitchingPlan[side];
+  const cached = sidePlan && Number.isFinite(sidePlan.pitcher_score) ? sidePlan.pitcher_score : null;
+  if (cached === null) return starterScoreFor(g, side, pitchers);
+  const probable = g.teams[side].probablePitcher || null;
+  if (!probable) return cached;
+  const plan = planStarterIdentity(sidePlan);
+  const matches = (plan.id && String(probable.id) === plan.id)
+    || (plan.name && probable.fullName
+        && plan.name.trim().toLowerCase() === probable.fullName.trim().toLowerCase());
+  if (matches) return cached;
+  console.warn(`Stale totals starter for ${g.teams[side].team.name}: plan has `
+    + `"${plan.name || "TBD"}", schedule confirms "${probable.fullName}". `
+    + `Recomputing the moneyline pitcher score from the confirmed probable.`);
+  return starterScoreFor(g, side, pitchers);
+}
 function buildOddsMap(events) {
   const map = {};
   for (const ev of events || []) {
@@ -1009,6 +1044,17 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
   // pitcher even though the page already shows the real one.
   const spA = effectiveEraFor(g, "away", pitchingPlan, pitchers);
   const spH = effectiveEraFor(g, "home", pitchingPlan, pitchers);
+  // 2026-08-15: spA/spH (effective ERA) are DIAGNOSTIC ONLY as of today --
+  // still logged as model_effective_era_away/home below, but no longer feed
+  // the moneyline itself. scoreA/scoreH below are what actually prices the
+  // pitcher term now.
+  const scoreA = pitcherScoreFor(g, "away", pitchingPlan, pitchers);
+  const scoreH = pitcherScoreFor(g, "home", pitchingPlan, pitchers);
+  // Home-relative (positive when the home starter grades better), capped at
+  // +/-20 before the exponential. K is ERA_K unchanged -- Lynold's call after
+  // seeing the max-swing math: a maxed +/-20 gap now swings pre-bullpen odds
+  // up to ~54.6x, well beyond era's own ~1.92x ceiling at its clamp.
+  const scoreGap = clamp(scoreH - scoreA, -20, 20);
   // Bullpen risk adjusts the probability itself, not just Lab Rating and the
   // official-pick gate — a starter only covers part of the game. Uses the
   // combined risk index (fatigue blended with efficiency), not raw fatigue,
@@ -1018,7 +1064,7 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
   const bpAwayScoreForModel = bullpen[aT.name] ? (bullpen[aT.name].risk_index ?? bullpen[aT.name].score) : null;
   const bpHomeScoreForModel = bullpen[hT.name] ? (bullpen[hT.name].risk_index ?? bullpen[hT.name].score) : null;
   const bullpenAdj = bullpenProbAdjustment(bpAwayScoreForModel, bpHomeScoreForModel);
-  const preBullpenOdds = (pBase / (1 - pBase)) * Math.exp(ERA_K * (spA - spH));
+  const preBullpenOdds = (pBase / (1 - pBase)) * Math.exp(ERA_K * scoreGap);
   const preBullpenHomeProb = preBullpenOdds / (1 + preBullpenOdds);
   const modelOdds = preBullpenOdds * Math.exp(bullpenAdj);
   const legacyPHome = modelOdds / (1 + modelOdds);
@@ -1205,8 +1251,16 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
     // unclamped and un-blended toward league average for a thin sample).
     // attribution_model_log.csv's pick_era/opp_era previously read the raw
     // field, which is why they never matched what the model actually priced.
+    // 2026-08-15: DIAGNOSTIC ONLY -- era no longer drives the moneyline
+    // itself. See model_pitcher_score_away/home below for what actually
+    // prices the pitcher term now.
     model_effective_era_away: round(spA, 2),
     model_effective_era_home: round(spH, 2),
+    // model_pitcher_score_away/home are the EXACT scoreA/scoreH this game's
+    // exponential pitcher-score adjustment used -- starter-only (no bullpen
+    // blend), gap capped at +/-20 before ERA_K is applied.
+    model_pitcher_score_away: round(scoreA, 1),
+    model_pitcher_score_home: round(scoreH, 1),
     // Team-strength-only inputs, before any pitcher or bullpen adjustment.
     // away/home (not pick-relative) so both sides of log5Home's actual inputs
     // are visible -- a single pick-relative number can't be combined back into

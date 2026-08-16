@@ -236,6 +236,9 @@
     else if (score < 55) grade = "Below avg";
 
     const role = classifyPitcherRole(stat);
+    // 2026-08-15, Lynold's explicit instruction: divisor changed from 5.5 to
+    // 5. See pitcher-matchup-core-roleShare-5vs5.5.diff (this session,
+    // 2026-08-15-pregame-automation/) for the reasoning and effect size.
     const roleShare = role.expectedInnings / 5;
     const roleAdjustedScore = Math.round(clamp(50 + (score - 50) * roleShare, 20, 92));
     const note = role.bullpenGame
