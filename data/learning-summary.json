@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-17T01:22:46.532Z",
+  "generated_at": "2026-08-17T11:50:55.643Z",
   "status": "ready",
   "latest_date": "2026-08-16",
   "days_reviewed": 15,
@@ -12,9 +12,9 @@
   "day": {
     "date": "2026-08-16",
     "source": "published-picks",
-    "record_all_markets": "15-7",
-    "units_all_markets": 4.75,
-    "ungraded": 1,
+    "record_all_markets": "16-7",
+    "units_all_markets": 5.71,
+    "ungraded": 0,
     "moneyline_record": "3-1",
     "moneyline_win_rate": 0.75,
     "official_moneyline_picks": 4,
@@ -62,17 +62,17 @@
   "calibration": {
     "status": "ready",
     "model_version": "leo",
-    "games_graded": 52,
-    "wins": 23,
+    "games_graded": 53,
+    "wins": 24,
     "losses": 29,
-    "brier_score": 0.272,
+    "brier_score": 0.2689,
     "shadow_model": {
       "status": "ready",
-      "games": 121,
+      "games": 122,
       "official_model_version": "leo",
       "shadow_model_version": "v3.2-woba",
-      "brier_official": 0.2573,
-      "brier_shadow": 0.2677,
+      "brier_official": 0.2561,
+      "brier_shadow": 0.267,
       "leader": "official",
       "disagreements": 11,
       "shadow_wins_disagreements": 4,
@@ -80,7 +80,7 @@
     },
     "attribution": {
       "status": "ready",
-      "games": 197,
+      "games": 198,
       "factors": [
         {
           "factor": "K-BB% gap (pick − opp)",
@@ -97,11 +97,11 @@
             },
             {
               "band": "high",
-              "games": 63,
-              "win_rate": 0.492
+              "games": 64,
+              "win_rate": 0.5
             }
           ],
-          "spread": -0.169
+          "spread": -0.162
         },
         {
           "factor": "Lab Rating",
@@ -113,8 +113,8 @@
             },
             {
               "band": "mid",
-              "games": 63,
-              "win_rate": 0.571
+              "games": 64,
+              "win_rate": 0.578
             },
             {
               "band": "high",
@@ -129,13 +129,13 @@
           "tertiles": [
             {
               "band": "low",
-              "games": 66,
-              "win_rate": 0.515
+              "games": 67,
+              "win_rate": 0.507
             },
             {
               "band": "mid",
               "games": 66,
-              "win_rate": 0.53
+              "win_rate": 0.545
             },
             {
               "band": "high",
@@ -143,7 +143,7 @@
               "win_rate": 0.6
             }
           ],
-          "spread": 0.085
+          "spread": 0.093
         },
         {
           "factor": "Bullpen fatigue gap (opp − pick)",
@@ -155,8 +155,8 @@
             },
             {
               "band": "mid",
-              "games": 63,
-              "win_rate": 0.603
+              "games": 64,
+              "win_rate": 0.609
             },
             {
               "band": "high",
@@ -171,8 +171,8 @@
           "tertiles": [
             {
               "band": "low",
-              "games": 114,
-              "win_rate": 0.553
+              "games": 115,
+              "win_rate": 0.557
             },
             {
               "band": "mid",
@@ -185,7 +185,7 @@
               "win_rate": 0.554
             }
           ],
-          "spread": 0.001
+          "spread": -0.003
         }
       ],
       "note": "Win rate by input tertile, pick-side relative. |spread| = high-band win rate minus low-band — bigger magnitude = the metric separates winners from losers harder, and deserves weight. Read direction too: a NEGATIVE spread on a should-be-positive factor is a red flag."
@@ -228,10 +228,10 @@
       },
       {
         "range": "65-70%",
-        "games": 3,
-        "wins": 1,
-        "expected_win_rate": 0.683,
-        "actual_win_rate": 0.333
+        "games": 4,
+        "wins": 2,
+        "expected_win_rate": 0.68,
+        "actual_win_rate": 0.5
       },
       {
         "range": "70-75%",
@@ -243,9 +243,9 @@
     ],
     "shadow_by_status": {
       "pass": {
-        "games": 44,
-        "wins": 18,
-        "units": -5.44
+        "games": 45,
+        "wins": 19,
+        "units": -4.32
       },
       "watchlist": {
         "games": 4,
@@ -611,5 +611,17 @@
     "Watch whether official picks with model probability >= 72% beat low-probability value watches over a larger sample.",
     "Track closing price movement once market snapshots have enough data.",
     "Keep value watch separate from official picks."
-  ]
+  ],
+  "coach": {
+    "status": "collecting",
+    "title": "Collecting a trustworthy current-model sample",
+    "summary": "LyDia has 7 of 7 required current-model days and 11 of 20 required current-model official picks. Recommendations remain paused until both minimums are reached.",
+    "current_model_days": 7,
+    "current_model_picks": 11,
+    "minimum_days": 7,
+    "minimum_picks": 20,
+    "bullpen_model_owner": "bullpen-fatigue-v3-runs-aware",
+    "recommendations": [],
+    "hard_stop": "Coach findings are review prompts only. No automatic threshold, weight, formula, publishing, or betting change is permitted."
+  }
 }
