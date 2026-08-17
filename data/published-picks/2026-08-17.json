@@ -227,6 +227,200 @@
       "strikeouts": []
     },
     {
+      "gamePk": 822939,
+      "away": "Baltimore Orioles",
+      "home": "Tampa Bay Rays",
+      "time": "2026-08-17T22:05:00Z",
+      "labScore": 62,
+      "labScoreBreakdown": {
+        "score": 62,
+        "version": "lab-rating-v3-measured-components",
+        "conviction_points": 20,
+        "agreement_points": 0,
+        "pitching_plan_points": 5,
+        "bullpen_points": 10.44,
+        "offense_points": 26.17,
+        "completeness_points": 0,
+        "pitcher_edge_points": 5,
+        "model_agreement_gap": 0.5799,
+        "model_agreement_credit": 0,
+        "bullpen_innings_weight": 1,
+        "assigned_bullpen_innings": 4.1,
+        "offense_delta": 0.0185,
+        "offense_delta_15d": 0.0167,
+        "offense_delta_30d": 0.0203,
+        "completeness_checks_passed": 5,
+        "completeness_checks_total": 5,
+        "data_complete": true,
+        "market_points": 0,
+        "model_edge_points": 0,
+        "base_points": 0,
+        "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
+      },
+      "status": "official_pick",
+      "modelVersion": "multi-market-v1",
+      "pitcherEdge": {
+        "team": "Tampa Bay Rays",
+        "gap": 5,
+        "conflict": false,
+        "away_score": 69,
+        "home_score": 74,
+        "away_pitcher": "Brandon Young",
+        "home_pitcher": "Shane McClanahan",
+        "away_pitcher_id": 687064,
+        "home_pitcher_id": 663556,
+        "away_era": 3.33,
+        "home_era": 3.09,
+        "away_whip": 1.32,
+        "home_whip": 1.12,
+        "away_advanced": {
+          "w": 9,
+          "l": 3,
+          "kbb_pct": 0.1068,
+          "gb_pct": 0.475,
+          "babip": 0.2887,
+          "hr9": 0.95,
+          "ip_per_start": 5.7,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 5.7,
+          "bullpen_innings": 3.3
+        },
+        "home_advanced": {
+          "w": 9,
+          "l": 6,
+          "kbb_pct": 0.1369,
+          "gb_pct": 0.4901,
+          "babip": 0.2556,
+          "hr9": 0.64,
+          "ip_per_start": 5,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 5,
+          "bullpen_innings": 4
+        }
+      },
+      "bullpen": {
+        "pick_team": {
+          "score": 75,
+          "label": "Tired",
+          "last_game_bp_ip": 4.3,
+          "last7_bp_ip": 24.3,
+          "last7_bp_runs": 20,
+          "last_game_relievers": 3,
+          "last7_relievers": 19,
+          "back_to_back_arms": 6,
+          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+          "score_reason": "Tired (7.5/10): 24.3 recent relief innings, recency-weighted — 4.3 in the last game (pitched yesterday), 6 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 3,
+            "last7_relievers": 19,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 21.7,
+            "back_to_back_arms": 8.6,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 75.3
+          },
+          "efficiency_score": 28,
+          "efficiency_label": "Struggling",
+          "efficiency_reason": "Struggling (2.8/10): 7.03 ERA and 1.6 WHIP over 24.3 relief innings (19 ER, 30 H, 9 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": -17,
+            "whip_term": -4.5,
+            "confidence": 1,
+            "raw_score": 28.5
+          },
+          "era_7d": 7.03,
+          "whip_7d": 1.6,
+          "last15_bp_ip": 56,
+          "last15_bp_runs": 36,
+          "era_15d": 5.46,
+          "whip_15d": 1.27,
+          "recent15_games_tracked": 13,
+          "risk_index": 86,
+          "risk_label": "High risk",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "opponent": {
+          "score": 83,
+          "label": "High risk",
+          "last_game_bp_ip": 3,
+          "last7_bp_ip": 22.7,
+          "last7_bp_runs": 13,
+          "last_game_relievers": 3,
+          "last7_relievers": 24,
+          "back_to_back_arms": 6,
+          "workload_read": "Heavy recent workload. Late-game pitching condition could materially affect the read.",
+          "score_reason": "High risk (8.3/10): 22.7 recent relief innings, recency-weighted (pitched yesterday), 6 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 3,
+            "last7_relievers": 24,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 7.5,
+            "back_to_back_arms": 30.8,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 83.3
+          },
+          "efficiency_score": 41,
+          "efficiency_label": "Below average",
+          "efficiency_reason": "Below average (4.1/10): 5.16 ERA and 1.5 WHIP over 22.7 relief innings (13 ER, 26 H, 8 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": -5.8,
+            "whip_term": -3,
+            "confidence": 1,
+            "raw_score": 41.2
+          },
+          "era_7d": 5.16,
+          "whip_7d": 1.5,
+          "last15_bp_ip": 44.3,
+          "last15_bp_runs": 26,
+          "era_15d": 5.08,
+          "whip_15d": 1.47,
+          "recent15_games_tracked": 13,
+          "risk_index": 88,
+          "risk_label": "High risk",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "label": "Both bullpens stressed",
+        "major_caution": false,
+        "absolute_risk": "Both high"
+      },
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Shane McClanahan",
+          "pick": "Over",
+          "line": 4.5,
+          "bestAm": -115,
+          "projection": 5.44,
+          "edge": 0.94,
+          "books": 6,
+          "expectedInnings": 5,
+          "pitcherRole": "traditional_starter",
+          "lineupSource": "posted",
+          "modelVersion": "leo-kprop",
+          "valueTag": "OFFICIAL PICK"
+        }
+      ]
+    },
+    {
       "gamePk": 824478,
       "away": "St. Louis Cardinals",
       "home": "Cincinnati Reds",
@@ -417,7 +611,36 @@
         "modelVersion": "leo"
       },
       "total": null,
-      "strikeouts": []
+      "strikeouts": [
+        {
+          "pitcher": "Andre Pallante",
+          "pick": "Over",
+          "line": 4.5,
+          "bestAm": -108,
+          "projection": 5.38,
+          "edge": 0.88,
+          "books": 2,
+          "expectedInnings": 5.7,
+          "pitcherRole": "traditional_starter",
+          "lineupSource": "posted",
+          "modelVersion": "leo-kprop",
+          "valueTag": "OFFICIAL PICK"
+        },
+        {
+          "pitcher": "Rhett Lowder",
+          "pick": "Under",
+          "line": 4.5,
+          "bestAm": -156,
+          "projection": 3.4,
+          "edge": -1.1,
+          "books": 2,
+          "expectedInnings": 4.9,
+          "pitcherRole": "traditional_starter",
+          "lineupSource": "posted",
+          "modelVersion": "leo-kprop",
+          "valueTag": "OFFICIAL PICK"
+        }
+      ]
     },
     {
       "gamePk": 823589,
@@ -614,5 +837,5 @@
       ]
     }
   ],
-  "last_appended_at": "2026-08-17T19:08:37.538Z"
+  "last_appended_at": "2026-08-17T21:51:30.534Z"
 }
