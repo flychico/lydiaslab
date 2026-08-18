@@ -153,8 +153,8 @@ function main() {
     const preBullpenOdds = odds(preBullpenProb);
     const scoreGap = (pScore !== null && oScore !== null) ? clamp(pScore - oScore, -20, 20) : null;
     const pitcherBoost = scoreGap !== null ? r4(Math.exp(ERA_K * scoreGap)) : null;
-    const moneyLineOdds = odds(legacyStrengthProb);
-    const moneylineProp = legacyStrengthProb;
+    const moneyLineOdds = odds(modelProb);
+    const moneylineProp = modelProb;
 
     rows.push([
       DATE_OUT, g.game_pk, csvField(g.model_source || brief.model_version || "unknown"),
