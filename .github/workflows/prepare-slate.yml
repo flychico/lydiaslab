@@ -1,51 +1,19 @@
 name: Prepare slate (gather data)
 
-# Everything that reads a live API happens here, and is committed. Publish
-# reads what this leaves behind. Step 1 of the pipeline rebuild — see
-# 00 Dashboard/PIPELINE REBUILD PLAN in the vault.
-#
-# REPLACES refresh-lines.yml. Do not run both: this does everything that one
-# did, in an order that actually works.
-#
-# THE ORDERING BUG THIS FIXES
-# refresh-lines.yml ran update-totals.js at 10:50am ET, but nothing had written
-# data/bullpen/<date>.json for that day yet — publish-picks.yml wrote it at
-# 11:05am, fifteen minutes later. So update-totals' bullpen read
-# (update-totals.js line ~272) silently fell back to {} and every totals
-# projection was built with no bullpen input at all, every single day. The
-# generator that produces the bullpen file has to run FIRST.
-#
-# ORDER, and why each step is where it is:
-#   1. bullpen + provisional source data   (generate-member-lab --defer-publish)
-#      Writes data/bullpen/<date>.json and the provisional brief. Deferred so it
-#      does NOT lock a card — publishing is a separate workflow.
-#   2. strikeout props   needs ODDS_API_KEY
-#   3. totals            needs ODDS_API_KEY *and* step 1's bullpen file
-#   4. moneyline odds    needs ODDS_API_KEY
-#
 # DAILY RHYTHM
 #   Prepare slate  ->  (optional: Pitching plan, then Prepare slate again)  ->  Publish picks
 #
 # Scheduled ~15 minutes before each publish wave so publish always reads fresh
 # committed data rather than fetching it itself.
-#
-# 2026-08-05: ALL THREE ODDS STEPS NOW PASS --if-changed.
-# This workflow runs up to 5x/day and was calling update-k-props.js,
-# update-totals.js and update-moneyline-odds.js unconditionally every time —
-# a full paid odds fetch on every run, all day, whether or not the slate had
-# actually moved since the last one (~30 API credits per run). Each script's
-# --if-changed compares today's probable-pitcher signature (plus, for totals,
-# the reported pitching plan) against its last capture and skips the fetch
-# when nothing changed. A missing or stale prior capture — the day's first
-# run, or a manual dispatch for a date with no capture yet — always falls
-# through to a real fetch; it is never mistaken for "nothing to do."
+
 
 on:
   schedule:
     - cron: "50 14 * * *"   # 10:50am ET — before the 11:05 publish
     - cron: "5 16 * * *"    # 12:05pm ET — before the 12:20 publish
     - cron: "20 18 * * *"   # 2:20pm ET  — before the 2:35 publish
-    - cron: "15 21 * * *"   # 5:15pm ET  — before the 5:30 publish
+    - cron: "15 21 * * *"   # 5:45pm ET  — before the 6:00 publish
+    - cron: "15 23 * * *"   # 5:15pm ET  —
   workflow_dispatch:
     inputs:
       date:
