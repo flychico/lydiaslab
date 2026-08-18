@@ -1032,6 +1032,14 @@ function buildInsights(game, pitcherGame) {
     if (off.opp && typeof off.opp.delta_woba === "number" && off.opp.delta_woba >= WOBA_HOT) {
       caseAgainst.push({ title: `Their bats are hot: ${signedDecimal(off.opp.delta_woba, 3)} wOBA`, detail: `${oppName} is outhitting its own season form over the last 15 days.` });
     }
+    // 2026-08-16, Lynold's explicit instruction: the counter-case needed more
+    // weight -- team strength is a real, currently-unused signal here (it
+    // already drives the price itself; see moneyLineReasons above), so a raw
+    // team-strength edge for the OTHER side now gets its own entry instead of
+    // only ever surfacing implicitly through the final probability.
+    if (typeof game.team_strength_probability === "number" && game.team_strength_probability < 0.5) {
+      caseAgainst.push({ title: `Team strength favors ${oppName}`, detail: `Before any pitcher or bullpen adjustment, LyDia's own team-strength model has ${oppName} ahead (${pct(1 - game.team_strength_probability)} to ${pct(game.team_strength_probability)}). The pick still comes from ${game.pick_team} once the pitcher and bullpen terms are applied.` });
+    }
     if (!caseAgainst.length) {
       caseAgainst.push({ title: `The case is thin`, detail: `The model finds little going ${oppName}'s way — it trails on the pitching plan, bullpen, and recent form. The main path to a ${oppName} win is variance.` });
     }
@@ -1040,37 +1048,59 @@ function buildInsights(game, pitcherGame) {
   if (gate.model_probability_passed === false) {
     concerns.push({ title: `Below the ${pct(gate.minimum_model_probability)} official gate`, detail: `Win probability is ${pct(game.model_probability)}. LyDia does not make a game official below ${pct(gate.minimum_model_probability)}, no matter how good the price is. This is a value spot, not a high-confidence winner.` });
   }
-  let setupReasons = [];
+  // 2026-08-16, Lynold's explicit instruction: the Lab Rating breakdown now
+  // shows on every game, official picks included -- not just failing setups.
+  // labRatingBreakdown() (unlike labRatingReasons()) always returns all four
+  // buckets, strong or weak, so this is the same detail readers used to only
+  // see when a setup failed, now available everywhere.
+  const oppTeamName = game.pick_team === game.away_team ? game.home_team : game.pick_team === game.home_team ? game.away_team : null;
+  // Name the team, not the individual pitcher, on whichever side is a
+  // reported opener/bulk plan -- that side's score (and this gap) comes
+  // from the whole pitching plan's effective ERA, not from the named
+  // pitcher's own innings, so crediting him personally with "rating N
+  // points better" overstates his individual role in the number.
+  const betterPitcher = pitcher.edge_team === game.away_team
+    ? (pitcher.away && (pitcher.away.carriedByBullpen ? game.away_team : pitcher.away.name))
+    : pitcher.edge_team === game.home_team ? (pitcher.home && (pitcher.home.carriedByBullpen ? game.home_team : pitcher.home.name)) : null;
+  const worsePitcher = pitcher.edge_team === game.away_team
+    ? (pitcher.home && (pitcher.home.carriedByBullpen ? game.home_team : pitcher.home.name))
+    : pitcher.edge_team === game.home_team ? (pitcher.away && (pitcher.away.carriedByBullpen ? game.away_team : pitcher.away.name)) : null;
+  const setupReasons = MatchupCopy.labRatingBreakdown({
+    breakdown: game.lab_score_breakdown,
+    pickTeam: game.pick_team, oppTeam: oppTeamName,
+    modelProb: game.model_probability,
+    pitcherEdgeTeam: pitcher.edge_team, pitcherGap: pitcher.gap, betterPitcher, worsePitcher,
+    bullpenPickLabel: pens.pick && pens.pick.risk_label, bullpenOppLabel: pens.opp && pens.opp.risk_label
+  });
   if (gate.lab_score_passed === false) {
     // Keep the concerns grid exactly as it was before the Lab Rating breakdown
     // was added: one summary line, so it does not crowd out the other concern
     // types below (pitcher edge, bullpen risk, opponent form) when the shared
     // list gets truncated to 3. The full component-by-component breakdown is
-    // rendered separately, in its own "Why the setup score is what it is"
-    // section, so readers get the detail without other real risk signals
-    // getting silently dropped by the slice(0, 3) below.
+    // rendered separately, in its own always-on "Why the setup score is what
+    // it is" section above, so readers get the detail without other real risk
+    // signals getting silently dropped by the slice(0, 3) below.
     concerns.push({ title: `Setup quality below the bar`, detail: `Lab Rating is ${rating(game.lab_score)}, under the ${rating(gate.minimum_lab_score)} required for an official pick.` });
-    const oppTeamName = game.pick_team === game.away_team ? game.home_team : game.pick_team === game.home_team ? game.away_team : null;
-    // Name the team, not the individual pitcher, on whichever side is a
-    // reported opener/bulk plan -- that side's score (and this gap) comes
-    // from the whole pitching plan's effective ERA, not from the named
-    // pitcher's own innings, so crediting him personally with "rating N
-    // points better" overstates his individual role in the number.
-    const betterPitcher = pitcher.edge_team === game.away_team
-      ? (pitcher.away && (pitcher.away.carriedByBullpen ? game.away_team : pitcher.away.name))
-      : pitcher.edge_team === game.home_team ? (pitcher.home && (pitcher.home.carriedByBullpen ? game.home_team : pitcher.home.name)) : null;
-    const worsePitcher = pitcher.edge_team === game.away_team
-      ? (pitcher.home && (pitcher.home.carriedByBullpen ? game.home_team : pitcher.home.name))
-      : pitcher.edge_team === game.home_team ? (pitcher.away && (pitcher.away.carriedByBullpen ? game.away_team : pitcher.away.name)) : null;
-    setupReasons = MatchupCopy.labRatingReasons({
-      breakdown: game.lab_score_breakdown,
-      pickTeam: game.pick_team, oppTeam: oppTeamName,
-      modelProb: game.model_probability,
-      strengthProbPick: game.legacy_strength_probability, runProbPick: game.run_model_probability,
-      pitcherEdgeTeam: pitcher.edge_team, pitcherGap: pitcher.gap, betterPitcher, worsePitcher,
-      bullpenPickLabel: pens.pick && pens.pick.risk_label, bullpenOppLabel: pens.opp && pens.opp.risk_label
-    });
   }
+
+  // 2026-08-16, Lynold's explicit instruction: a separate breakdown of the
+  // MONEYLINE PRICE (team strength, pitcher-score gap, bullpen adjustment) --
+  // distinct from Lab Rating, which grades analysis quality, not the price.
+  // pitcherGapSigned is pick-relative (positive favors the pick); the brief's
+  // own model_pitcher_score_away/home are home/away-relative, so the sign
+  // flip happens here, once, the same way every other pick-relative field in
+  // this file already does it.
+  const pickIsHome = game.side === "home";
+  const pitcherGapSigned = (typeof game.model_pitcher_score_away === "number" && typeof game.model_pitcher_score_home === "number")
+    ? (pickIsHome ? game.model_pitcher_score_home - game.model_pitcher_score_away : game.model_pitcher_score_away - game.model_pitcher_score_home)
+    : null;
+  const moneyLineReasonsList = MatchupCopy.moneyLineReasons({
+    pickTeam: game.pick_team, oppTeam: oppTeamName,
+    teamStrengthProbPick: game.team_strength_probability,
+    pitcherGapSigned,
+    bullpenLogOddsAdj: game.bullpen_log_odds_adjustment,
+    finalProbPick: game.legacy_strength_probability
+  });
   if (gate.edge_passed === false) {
     concerns.push({ title: `Not enough market edge`, detail: `The model and the market are too close for the price to matter.` });
   }
@@ -1100,7 +1130,7 @@ function buildInsights(game, pitcherGame) {
     verdict = game.pass_reason ? `LyDia passes. ${game.pass_reason}` : `LyDia passes. Nothing about this matchup clears the bar, and passing is a position.`;
   }
 
-  return { caseFor: caseFor.slice(0, 3), caseAgainst: (typeof caseAgainst !== "undefined" ? caseAgainst : []).slice(0, 3), oppName: (typeof oppName !== "undefined" ? oppName : null), concerns: concerns.slice(0, 3), setupReasons, verdict };
+  return { caseFor: caseFor.slice(0, 3), caseAgainst: (typeof caseAgainst !== "undefined" ? caseAgainst : []).slice(0, 4), oppName: (typeof oppName !== "undefined" ? oppName : null), concerns: concerns.slice(0, 3), setupReasons, moneyLineReasons: moneyLineReasonsList, verdict };
 }
 
 function renderInsights(game, pitcherGame) {
@@ -1109,11 +1139,13 @@ function renderInsights(game, pitcherGame) {
   const conCards = insights.concerns.map(item => `<div class="callout against"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
   const againstCards = (insights.caseAgainst || []).map(item => `<div class="callout against"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
   const setupCards = (insights.setupReasons || []).map(item => `<div class="callout setup"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
+  const priceCards = (insights.moneyLineReasons || []).map(item => `<div class="callout price"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
   return `
     ${insights.caseFor.length ? `<h3 class="co-head for">The case for ${esc(game.pick_team || "this side")}</h3><div class="callout-grid">${forCards}</div>` : ""}
     ${insights.caseAgainst && insights.caseAgainst.length ? `<h3 class="co-head against">The case for ${esc(insights.oppName || "the other side")}</h3><div class="callout-grid">${againstCards}</div>` : ""}
     ${insights.concerns.length ? `<h3 class="co-head against">${game.status === "official_pick" ? "What to watch" : "Why it is not official"}</h3><div class="callout-grid">${conCards}</div>` : ""}
     ${insights.setupReasons && insights.setupReasons.length ? `<h3 class="co-head setup">Why the setup score is what it is</h3><div class="callout-grid">${setupCards}</div>` : ""}
+    ${insights.moneyLineReasons && insights.moneyLineReasons.length ? `<h3 class="co-head price">Why the price is what it is</h3><div class="callout-grid">${priceCards}</div>` : ""}
     <div class="verdict"><span class="v-label">The verdict</span> ${esc(insights.verdict)}</div>`;
 }
 
@@ -1347,7 +1379,7 @@ function renderMatchupPage(context) {
 <meta name="twitter:image" content="${SITE}/img/og-card.png">
 <link rel="stylesheet" href="/css/style.css">
 <style>
-.matchup-head{margin-bottom:18px}.matchup-head h1{margin-bottom:6px}.byline{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.byline img{width:42px;height:42px;border-radius:50%;object-fit:cover;border:1px solid var(--border)}.status-badge{display:inline-block;color:#fff;font-size:.76rem;font-weight:800;padding:4px 10px;border-radius:20px;background:var(--accent2)}.status-badge.official{background:var(--good)}.status-badge.pass{background:var(--text-dim)}.status-badge.watch{background:var(--accent2)}.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:14px 0}.metric{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.metric .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}.metric .value{font-size:1.15rem;font-weight:800;margin-top:2px}.matchup-table{width:100%;border-collapse:collapse;font-size:.88rem}.matchup-table th,.matchup-table td{padding:8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}.matchup-table th:not(:first-child),.matchup-table td:not(:first-child){text-align:right}.section-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}.decision-card{border-color:var(--accent2)}.decision-card.official{border-color:var(--good)}.quality-list{columns:2;column-gap:24px}.quality-list li{break-inside:avoid;margin-bottom:5px}.result-win{border-color:var(--good)}.result-loss{border-color:var(--bad)}.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}.sec-head h2{margin-bottom:6px}.tool-link{font-size:.82rem;font-weight:700;white-space:nowrap}.co-head{margin:16px 0 8px;font-size:.95rem}.co-head.for{color:var(--good)}.co-head.against{color:#e08726}.co-head.setup{color:var(--accent2)}.callout-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}.callout{border:1px solid var(--border);border-left:4px solid var(--border);border-radius:var(--radius);padding:12px;background:var(--bg-elev)}.callout.for{border-left-color:var(--good)}.callout.against{border-left-color:#e08726}.callout.setup{border-left-color:var(--accent2)}.co-title{font-weight:800;margin-bottom:4px}.co-detail{font-size:.86rem;color:var(--text);line-height:1.5}.verdict{margin-top:14px;padding:14px;border:1px solid var(--accent2);border-radius:var(--radius);background:var(--bg-elev);font-size:.95rem;line-height:1.55}.verdict .v-label{display:inline-block;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--accent2);margin-right:8px}.full-read summary{cursor:pointer;font-weight:700;color:var(--text-dim);font-size:.85rem;margin-top:12px}.full-read p{font-size:.86rem;color:var(--text-dim);line-height:1.55}.recap-review{margin-top:14px;padding:14px;border:1px solid var(--border);border-left:4px solid var(--accent2);border-radius:var(--radius);background:var(--bg-elev)}.recap-review h3{font-size:.9rem;margin-bottom:8px}.recap-review p{font-size:.88rem;line-height:1.55;margin-bottom:8px}.edgebar{margin:12px 0 4px}.eb-row{display:flex;align-items:center;gap:10px;margin:6px 0}.eb-name{width:92px;font-size:.78rem;color:var(--text-dim);text-align:right}.eb-track{flex:1;height:14px;background:var(--bg-elev);border:1px solid var(--border);border-radius:7px;overflow:hidden}.eb-fill{height:100%;border-radius:7px}.eb-fill.model{background:var(--accent2)}.eb-fill.mkt{background:var(--text-dim)}.eb-val{width:56px;font-size:.82rem;font-weight:800;font-variant-numeric:tabular-nums}.gauge-row{display:flex;align-items:center;gap:10px;margin:6px 0}.g-label{width:120px;font-size:.78rem;color:var(--text-dim);text-align:right}.g-track{flex:1;height:11px;background:var(--bg-elev);border:1px solid var(--border);border-radius:6px;overflow:hidden}.g-fill{height:100%;border-radius:6px}.g-val{width:110px;font-size:.8rem;font-weight:700;font-variant-numeric:tabular-nums}.pen-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:10px}.pen-side{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.pen-side b{display:block;margin-bottom:6px}.adv{color:var(--good);font-weight:800}.pcard-grid{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin:6px 0 12px}.pcard{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.pcard-top{display:flex;flex-direction:column;margin-bottom:8px}.pcard-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}.pc-num{display:block;font-size:1.15rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}.pc-lab{display:block;font-size:.62rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}.pcard-vs{font-weight:800;color:var(--text-dim);font-size:.85rem}.related-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}.related-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-elev);font-size:.9rem;font-weight:600}@media(max-width:640px){.pcard-grid{grid-template-columns:1fr;gap:6px}.pcard-vs{display:none}}.k-lean{font-size:.98rem;font-weight:800;margin:6px 0 4px;padding:5px 10px;border-radius:6px;display:inline-block}.k-lean.over{background:rgba(30,142,62,.12);color:var(--good)}.k-lean.under{background:rgba(207,34,46,.10);color:var(--bad)}.k-lean.flat{background:var(--bg-card);color:var(--text-dim);font-weight:700}@media(max-width:640px){.quality-list{columns:1}.matchup-table{font-size:.8rem}.matchup-table th,.matchup-table td{padding:6px 4px}}
+.matchup-head{margin-bottom:18px}.matchup-head h1{margin-bottom:6px}.byline{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.byline img{width:42px;height:42px;border-radius:50%;object-fit:cover;border:1px solid var(--border)}.status-badge{display:inline-block;color:#fff;font-size:.76rem;font-weight:800;padding:4px 10px;border-radius:20px;background:var(--accent2)}.status-badge.official{background:var(--good)}.status-badge.pass{background:var(--text-dim)}.status-badge.watch{background:var(--accent2)}.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:14px 0}.metric{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.metric .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}.metric .value{font-size:1.15rem;font-weight:800;margin-top:2px}.matchup-table{width:100%;border-collapse:collapse;font-size:.88rem}.matchup-table th,.matchup-table td{padding:8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}.matchup-table th:not(:first-child),.matchup-table td:not(:first-child){text-align:right}.section-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}.decision-card{border-color:var(--accent2)}.decision-card.official{border-color:var(--good)}.quality-list{columns:2;column-gap:24px}.quality-list li{break-inside:avoid;margin-bottom:5px}.result-win{border-color:var(--good)}.result-loss{border-color:var(--bad)}.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}.sec-head h2{margin-bottom:6px}.tool-link{font-size:.82rem;font-weight:700;white-space:nowrap}.co-head{margin:16px 0 8px;font-size:.95rem}.co-head.for{color:var(--good)}.co-head.against{color:#e08726}.co-head.setup{color:var(--accent2)}.co-head.price{color:#2f6fed}.callout-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}.callout{border:1px solid var(--border);border-left:4px solid var(--border);border-radius:var(--radius);padding:12px;background:var(--bg-elev)}.callout.for{border-left-color:var(--good)}.callout.against{border-left-color:#e08726}.callout.setup{border-left-color:var(--accent2)}.callout.price{border-left-color:#2f6fed}.co-title{font-weight:800;margin-bottom:4px}.co-detail{font-size:.86rem;color:var(--text);line-height:1.5}.verdict{margin-top:14px;padding:14px;border:1px solid var(--accent2);border-radius:var(--radius);background:var(--bg-elev);font-size:.95rem;line-height:1.55}.verdict .v-label{display:inline-block;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--accent2);margin-right:8px}.full-read summary{cursor:pointer;font-weight:700;color:var(--text-dim);font-size:.85rem;margin-top:12px}.full-read p{font-size:.86rem;color:var(--text-dim);line-height:1.55}.recap-review{margin-top:14px;padding:14px;border:1px solid var(--border);border-left:4px solid var(--accent2);border-radius:var(--radius);background:var(--bg-elev)}.recap-review h3{font-size:.9rem;margin-bottom:8px}.recap-review p{font-size:.88rem;line-height:1.55;margin-bottom:8px}.edgebar{margin:12px 0 4px}.eb-row{display:flex;align-items:center;gap:10px;margin:6px 0}.eb-name{width:92px;font-size:.78rem;color:var(--text-dim);text-align:right}.eb-track{flex:1;height:14px;background:var(--bg-elev);border:1px solid var(--border);border-radius:7px;overflow:hidden}.eb-fill{height:100%;border-radius:7px}.eb-fill.model{background:var(--accent2)}.eb-fill.mkt{background:var(--text-dim)}.eb-val{width:56px;font-size:.82rem;font-weight:800;font-variant-numeric:tabular-nums}.gauge-row{display:flex;align-items:center;gap:10px;margin:6px 0}.g-label{width:120px;font-size:.78rem;color:var(--text-dim);text-align:right}.g-track{flex:1;height:11px;background:var(--bg-elev);border:1px solid var(--border);border-radius:6px;overflow:hidden}.g-fill{height:100%;border-radius:6px}.g-val{width:110px;font-size:.8rem;font-weight:700;font-variant-numeric:tabular-nums}.pen-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:10px}.pen-side{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.pen-side b{display:block;margin-bottom:6px}.adv{color:var(--good);font-weight:800}.pcard-grid{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin:6px 0 12px}.pcard{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.pcard-top{display:flex;flex-direction:column;margin-bottom:8px}.pcard-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}.pc-num{display:block;font-size:1.15rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}.pc-lab{display:block;font-size:.62rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}.pcard-vs{font-weight:800;color:var(--text-dim);font-size:.85rem}.related-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}.related-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-elev);font-size:.9rem;font-weight:600}@media(max-width:640px){.pcard-grid{grid-template-columns:1fr;gap:6px}.pcard-vs{display:none}}.k-lean{font-size:.98rem;font-weight:800;margin:6px 0 4px;padding:5px 10px;border-radius:6px;display:inline-block}.k-lean.over{background:rgba(30,142,62,.12);color:var(--good)}.k-lean.under{background:rgba(207,34,46,.10);color:var(--bad)}.k-lean.flat{background:var(--bg-card);color:var(--text-dim);font-weight:700}@media(max-width:640px){.quality-list{columns:1}.matchup-table{font-size:.8rem}.matchup-table th,.matchup-table td{padding:6px 4px}}
 /* LyDia layout cleanup: center the analysis presentation without sacrificing the table structure. */
 .matchup-head{text-align:center}.byline{justify-content:center}.sec-head{justify-content:center;align-items:center;text-align:center}
 section.card{text-align:center}.metric,.pcard,.pcard-top,.pen-side,.callout{text-align:center}.pcard-top{align-items:center}

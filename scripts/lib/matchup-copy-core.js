@@ -341,6 +341,107 @@ function labRatingReasons({
   return reasons;
 }
 
+/*
+  2026-08-16, Lynold's explicit instruction: always show all four Lab Rating
+  buckets on every matchup page, not just the weak ones. labRatingReasons()
+  above is deliberately weakness-only (see its header comment) and stays that
+  way for wherever it is still useful; this is a separate, always-on sibling
+  used for the new un-gated "Why the setup score is what it is" section.
+  Every bucket gets a sentence -- strong buckets get credit, not silence.
+*/
+function labRatingBreakdown({
+  breakdown, pickTeam, oppTeam, modelProb,
+  pitcherEdgeTeam, pitcherGap, betterPitcher, worsePitcher,
+  bullpenPickLabel, bullpenOppLabel
+}) {
+  if (!breakdown) return [];
+  const strong = frac => frac >= LAB_WEAK_FRACTION;
+
+  const convFrac = breakdown.conviction_points / LAB_MAX.conviction;
+  const convDetail = strong(convFrac)
+    ? `LyDia's win probability for ${pickTeam} (${isNum(modelProb) ? pct(modelProb) : "n/a"}) is well clear of a coin flip -- this is a real, stated lean, not a guess.`
+    : (isNum(modelProb) && modelProb < CONVICTION_FLOOR
+        ? `LyDia's own win probability for ${pickTeam} (${pct(modelProb)}) is close enough to a coin flip that the rating credits little or no conviction -- credit only starts above ${pct(CONVICTION_FLOOR, 0)}.`
+        : `LyDia leans toward ${pickTeam}, but not strongly enough to earn full conviction credit.`);
+
+  const planFrac = breakdown.pitching_plan_points / LAB_MAX.pitching_plan;
+  const planDetail = (pitcherEdgeTeam && pitcherEdgeTeam === pickTeam && isNum(pitcherGap))
+    ? `${betterPitcher || pitcherEdgeTeam} rates ${pitcherGap} points better than ${worsePitcher || "the opposing starter"} on LyDia's pitcher score.`
+      + (strong(planFrac) ? " That is a real edge, and it earns most or all of the available credit here." : " A real edge, but well short of the gap that earns full credit here.")
+    : `No meaningful starting-pitcher edge favors ${pickTeam} in this matchup.`;
+
+  const bpFrac = breakdown.bullpen_points / LAB_MAX.bullpen;
+  const bpDetail = strong(bpFrac)
+    ? `${pickTeam}'s bullpen carries a real edge over ${oppTeam || "the opponent"}'s once assigned innings are weighted.`
+    : (bullpenPickLabel && bullpenOppLabel && bullpenPickLabel === bullpenOppLabel
+        ? `Both bullpens are rated ${String(bullpenPickLabel).toLowerCase()} -- this is close to a wash, not an advantage either way.`
+        : `LyDia does not see a meaningful bullpen edge for ${pickTeam} once assigned innings are weighted.`);
+
+  const offFrac = breakdown.offense_points / LAB_MAX.offense;
+  const offDetail = strong(offFrac)
+    ? `${pickTeam}'s recent offensive form clearly outpaces ${oppTeam || "the opponent"}'s over the tracked windows.`
+    : `${pickTeam}'s recent form does not clearly outpace ${oppTeam || "the opponent"}'s.`;
+
+  return [
+    { title: `Conviction: ${breakdown.conviction_points}/${LAB_MAX.conviction}`, detail: convDetail },
+    { title: `Pitching plan: ${breakdown.pitching_plan_points}/${LAB_MAX.pitching_plan}`, detail: planDetail },
+    { title: `Bullpen: ${breakdown.bullpen_points}/${LAB_MAX.bullpen}`, detail: bpDetail },
+    { title: `Offense: ${breakdown.offense_points}/${LAB_MAX.offense}`, detail: offDetail }
+  ];
+}
+
+/*
+  2026-08-16, Lynold's explicit instruction: a breakdown of the moneyline
+  price itself -- team strength, the pitcher-score gap driving pitcher_boost,
+  and the bullpen adjustment -- distinct from the Lab Rating breakdown above.
+  Lab Rating grades LyDia's analysis quality; this explains the PRICE, which
+  is a different question (see lab-rating-core.js's header: "It is NOT win
+  probability and it is NOT a price judgement"). All values are read directly
+  off fields generate-member-lab.js already writes to the brief -- nothing
+  here recomputes the moneyline formula, so this cannot drift out of sync
+  with what the model actually priced.
+*/
+function moneyLineReasons({
+  pickTeam, oppTeam, teamStrengthProbPick, pitcherGapSigned,
+  bullpenLogOddsAdj, finalProbPick
+}) {
+  const reasons = [];
+
+  if (isNum(teamStrengthProbPick)) {
+    reasons.push({
+      title: `Team strength: ${pct(teamStrengthProbPick)}`,
+      detail: `Before any pitcher or bullpen adjustment, LyDia's team-strength model alone makes ${pickTeam} ${pct(teamStrengthProbPick)} to win. Everything below moves the price from this starting point.`
+    });
+  }
+
+  if (isNum(pitcherGapSigned)) {
+    const favored = pitcherGapSigned > 0 ? pickTeam : (pitcherGapSigned < 0 ? oppTeam : null);
+    reasons.push({
+      title: `Pitcher score gap: ${Math.abs(pitcherGapSigned)} points`,
+      detail: favored
+        ? `The pitcher-score gap favors ${favored} by ${Math.abs(pitcherGapSigned)} points. This is the model's single largest lever on the price -- a capped exponential term, so a big gap moves the price hard.`
+        : `The two starters grade essentially even on pitcher score -- this term does little to move the price either way.`
+    });
+  }
+
+  if (isNum(bullpenLogOddsAdj) && Math.abs(bullpenLogOddsAdj) > 0.001) {
+    const favored = bullpenLogOddsAdj > 0 ? pickTeam : oppTeam;
+    reasons.push({
+      title: `Bullpen adjustment: ${bullpenLogOddsAdj > 0 ? "+" : ""}${bullpenLogOddsAdj}`,
+      detail: `The bullpen-fatigue gap between the two pens nudges the price toward ${favored}. Smaller than the pitcher term by design -- a starter only covers part of the game.`
+    });
+  }
+
+  if (isNum(teamStrengthProbPick) && isNum(finalProbPick)) {
+    reasons.push({
+      title: `Net effect: ${pct(teamStrengthProbPick)} -> ${pct(finalProbPick)}`,
+      detail: `Team strength alone had ${pickTeam} at ${pct(teamStrengthProbPick)}. After the pitcher and bullpen terms, the price is ${pct(finalProbPick)}.`
+    });
+  }
+
+  return reasons;
+}
+
 module.exports = {
   marketMispricingCase,
   bullpenCase,
@@ -348,5 +449,7 @@ module.exports = {
   rankPitcherDrivers,
   recentFormSentence,
   labRatingReasons,
+  labRatingBreakdown,
+  moneyLineReasons,
   LEAN_MIN
 };
