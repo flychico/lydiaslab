@@ -1099,7 +1099,12 @@ function buildInsights(game, pitcherGame) {
     teamStrengthProbPick: game.team_strength_probability,
     pitcherGapSigned,
     bullpenLogOddsAdj: game.bullpen_log_odds_adjustment,
-    finalProbPick: game.legacy_strength_probability
+    // 2026-08-16 fix: must be model_probability (post-calibration), the same
+    // number rendered as "Model Lean" elsewhere on this page. Using
+    // legacy_strength_probability (pre-calibration) here showed a second,
+    // different probability for the same game -- Lynold flagged this via a
+    // live screenshot (56.5% Model Lean vs 62.9% in this card).
+    finalProbPick: game.model_probability
   });
   if (gate.edge_passed === false) {
     concerns.push({ title: `Not enough market edge`, detail: `The model and the market are too close for the price to matter.` });

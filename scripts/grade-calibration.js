@@ -325,13 +325,15 @@ async function main() {
     // -- the 3 calc columns, built only from the already-rounded values above --
     const preBullpenOdds = odds(preBullpenProb);
     const pitcherBoost = (pEra !== null && oEra !== null) ? r4(Math.exp(ERA_K * (oEra - pEra))) : null;
-    // money_line_odds/moneyline_prop: the final pre-calibration read -- same
-    // legacy_strength_probability the model already carries, just named for
-    // what it is and moved to the end of the row so it sits next to
-    // model_prob (post-calibration) for an easy side-by-side comparison of
-    // how much the calibration shrink actually moved this game's number.
-    const moneyLineOdds = odds(legacyStrengthProb);
-    const moneylineProp = legacyStrengthProb;
+    // 2026-08-18, Lynold's explicit instruction: moneyline_prop/money_line_odds
+    // must use the SAME formula as model_prob. Previously these read
+    // legacy_strength_probability (pre-calibration) while model_prob read
+    // model_probability (post-calibration) -- two different numbers for the
+    // same game under two different column names, which is what caused the
+    // "two different probabilities" bug Lynold flagged on the public
+    // matchup pages. Both columns now read modelProb.
+    const moneyLineOdds = odds(modelProb);
+    const moneylineProp = modelProb;
 
     aRows.push([
       DATE_OUT, g.game_pk, csvField(g.model_source || brief.model_version || "unknown"),

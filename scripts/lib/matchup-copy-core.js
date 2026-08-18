@@ -372,10 +372,10 @@ function labRatingBreakdown({
 
   const bpFrac = breakdown.bullpen_points / LAB_MAX.bullpen;
   const bpDetail = strong(bpFrac)
-    ? `${pickTeam}'s bullpen carries a real edge over ${oppTeam || "the opponent"}'s once assigned innings are weighted.`
+    ? `${pickTeam}'s bullpen carries a real edge over ${oppTeam || "the opponent"}'s tonight.`
     : (bullpenPickLabel && bullpenOppLabel && bullpenPickLabel === bullpenOppLabel
         ? `Both bullpens are rated ${String(bullpenPickLabel).toLowerCase()} -- this is close to a wash, not an advantage either way.`
-        : `LyDia does not see a meaningful bullpen edge for ${pickTeam} once assigned innings are weighted.`);
+        : `LyDia does not see a meaningful bullpen edge for ${pickTeam} here.`);
 
   const offFrac = breakdown.offense_points / LAB_MAX.offense;
   const offDetail = strong(offFrac)
@@ -405,6 +405,12 @@ function moneyLineReasons({
   pickTeam, oppTeam, teamStrengthProbPick, pitcherGapSigned,
   bullpenLogOddsAdj, finalProbPick
 }) {
+  // 2026-08-16 fix: finalProbPick must be game.model_probability (the same,
+  // post-calibration number shown as "Model Lean" elsewhere on the page).
+  // It previously received game.legacy_strength_probability, a pre-calibration
+  // number -- that mismatch is what showed two different probabilities for
+  // the same game (e.g. 56.5% vs 62.9%). Do not pass legacy_strength_probability
+  // here again.
   const reasons = [];
 
   if (isNum(teamStrengthProbPick)) {
@@ -419,7 +425,7 @@ function moneyLineReasons({
     reasons.push({
       title: `Pitcher score gap: ${Math.abs(pitcherGapSigned)} points`,
       detail: favored
-        ? `The pitcher-score gap favors ${favored} by ${Math.abs(pitcherGapSigned)} points. This is the model's single largest lever on the price -- a capped exponential term, so a big gap moves the price hard.`
+        ? `The pitcher-score gap favors ${favored} by ${Math.abs(pitcherGapSigned)} points. This is the biggest single mover of the price -- a large gap moves it a lot, a small gap barely moves it.`
         : `The two starters grade essentially even on pitcher score -- this term does little to move the price either way.`
     });
   }
@@ -428,14 +434,14 @@ function moneyLineReasons({
     const favored = bullpenLogOddsAdj > 0 ? pickTeam : oppTeam;
     reasons.push({
       title: `Bullpen adjustment: ${bullpenLogOddsAdj > 0 ? "+" : ""}${bullpenLogOddsAdj}`,
-      detail: `The bullpen-fatigue gap between the two pens nudges the price toward ${favored}. Smaller than the pitcher term by design -- a starter only covers part of the game.`
+      detail: `The bullpen-fatigue gap between the two pens nudges the price toward ${favored}. This moves the price less than the starting pitchers do, since a starter covers more of the game than the bullpen.`
     });
   }
 
   if (isNum(teamStrengthProbPick) && isNum(finalProbPick)) {
     reasons.push({
       title: `Net effect: ${pct(teamStrengthProbPick)} -> ${pct(finalProbPick)}`,
-      detail: `Team strength alone had ${pickTeam} at ${pct(teamStrengthProbPick)}. After the pitcher and bullpen terms, the price is ${pct(finalProbPick)}.`
+      detail: `Team strength alone had ${pickTeam} at ${pct(teamStrengthProbPick)}. After the pitcher and bullpen terms, the price is ${pct(finalProbPick)} -- the same number shown as Model Lean above.`
     });
   }
 
