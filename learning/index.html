@@ -160,6 +160,33 @@ table.dash tbody tr.clickable.day-row td.date-cell{font-weight:700}
 <script>
 renderNav("/articles/"); renderFooter();
 function esc(v){ return escapeHtml(String(v ?? "")); }
+// 2026-08-19, Lynold's explicit instruction: ledgers write dates in two
+// formats depending on when the row was written (YYYY-MM-DD before
+// 2026-08-14, MM/DD/YYYY from 2026-08-15 on -- grade-calibration.js's
+// DATE_OUT standardized on MM/DD/YYYY going forward per Lynold's 08-14
+// instruction, but that never rewrites old rows, so both shapes coexist in
+// every CSV this script writes, forever). Every date-based sort on this page
+// was comparing those raw strings directly, which only sorts correctly
+// within one format -- across the switch, "08/18/2026" (starts with "0")
+// always sorted as less than "2026-08-14" (starts with "2") no matter which
+// one is chronologically newer, splitting every table into two
+// out-of-order blocks. dkey() normalizes either shape to a sortable
+// YYYY-MM-DD string before comparison; dfmt() normalizes either shape to
+// MM/DD/YYYY for display, so every row on this page reads the same way
+// regardless of which format it was written in.
+function dkey(s){
+  s = String(s || "").trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return s;
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return `${m[3]}-${m[1].padStart(2,"0")}-${m[2].padStart(2,"0")}`;
+  return s;
+}
+function dfmt(s){
+  const iso = dkey(s);
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[2]}/${m[3]}/${m[1]}` : String(s || "");
+}
 const S={ml:[],report:null,totals:[],kprops:[],recapByPk:{},learningSummary:null,win:"all",team:"",status:"",ver:"",dim:"status",drv:"pitcher_gap",tab:"summary",page:{games:0,totals:0,kprops:0},sort:{},detail:{date:"",games:[],game:null,briefCache:{}},shadowRaw:[],shadowRows:[],shadowDays:[]};
 const PAGE=20;
 
@@ -206,7 +233,7 @@ function buildMoneyline(att, cal){
 function filtered(){
   return S.ml.filter(r=>{
     if(r.won==null) return false;
-    if(S.win!=="all"){ const dates=S.ml.map(x=>x.date).sort(); const max=new Date(dates[dates.length-1]+"T00:00:00Z"); const cut=new Date(max); cut.setUTCDate(cut.getUTCDate()-(Number(S.win)-1)); if(new Date(r.date+"T00:00:00Z")<cut) return false; }
+    if(S.win!=="all"){ const dates=S.ml.map(x=>dkey(x.date)).sort(); const max=new Date(dates[dates.length-1]+"T00:00:00Z"); const cut=new Date(max); cut.setUTCDate(cut.getUTCDate()-(Number(S.win)-1)); if(new Date(dkey(r.date)+"T00:00:00Z")<cut) return false; }
     if(S.team && r.model_side!==S.team && homeOf(r.matchup)!==S.team && !(r.matchup||"").includes(S.team)) return false;
     if(S.status && r.status!==S.status) return false;
     if(S.ver && r.model_version!==S.ver) return false;
@@ -243,7 +270,7 @@ function renderOverview(){
 }
 function kpi(l,v,s){return `<div class="kpi"><div class="label">${esc(l)}</div><div class="value">${esc(v)}</div><div class="sub">${esc(s)}</div></div>`;}
 function renderTrend(rows){
-  const s=rows.slice().sort((a,b)=>a.date<b.date?-1:1); const pts=[];
+  const s=rows.slice().sort((a,b)=>dkey(a.date)<dkey(b.date)?-1:1); const pts=[];
   for(let i=0;i<s.length;i++){const from=Math.max(0,i-19);const w=s.slice(from,i+1);pts.push(w.filter(r=>r.won===1).length/w.length);}
   const el=document.getElementById("trend");
   if(pts.length<2){el.innerHTML=`<p class="dim">Not enough games in this window.</p>`;return;}
@@ -332,7 +359,7 @@ function renderBreakdown(){
   document.getElementById("bdDrill").innerHTML="";
   document.querySelectorAll("#bdTable tbody tr").forEach(tr=>tr.addEventListener("click",()=>{
     const g=groups[+tr.getAttribute("data-i")];
-    document.getElementById("bdDrill").innerHTML=`<h2 class="sec">${esc(g.value)} — ${g.w}-${g.l} (${pctStr(g.pct)})</h2>`+gameTable(g.rows.slice().sort((a,b)=>a.date<b.date?1:-1),"drill");
+    document.getElementById("bdDrill").innerHTML=`<h2 class="sec">${esc(g.value)} — ${g.w}-${g.l} (${pctStr(g.pct)})</h2>`+gameTable(g.rows.slice().sort((a,b)=>dkey(a.date)<dkey(b.date)?1:-1),"drill");
   }));
 }
 const DRIVER_INFO={
@@ -365,7 +392,7 @@ function renderDrivers(){
 function gameTable(rows,tag){
   const cols=[["date","Date"],["matchup","Matchup"],["model_side","Side"],["model_prob","Mdl%","num"],["market_prob","Mkt%","num"],["lab","Lab","num"],["result","Res"],["final_score","Final"]];
   const head=`<tr>${cols.map(c=>`<th class="${c[2]||''}">${esc(c[1])}</th>`).join("")}</tr>`;
-  const body=rows.map(r=>{const url=(S.recapByPk[r.gamePk]||{}).matchup_url;const mu=url?`<a href="${esc(url)}">${esc(r.matchup)}</a>`:esc(r.matchup);return `<tr><td>${esc(r.date)}</td><td>${mu}</td><td>${esc(r.model_side)}</td><td class="num">${r.model_prob==null?'—':(r.model_prob*100).toFixed(0)+'%'}</td><td class="num">${r.market_prob==null?'—':(r.market_prob*100).toFixed(0)+'%'}</td><td class="num">${r.lab??'—'}</td><td class="${r.won?'ok':'no'}">${esc(r.result)}</td><td>${esc(r.final_score||'—')}</td></tr>`;}).join("");
+  const body=rows.map(r=>{const url=(S.recapByPk[r.gamePk]||{}).matchup_url;const mu=url?`<a href="${esc(url)}">${esc(r.matchup)}</a>`:esc(r.matchup);return `<tr><td>${esc(dfmt(r.date))}</td><td>${mu}</td><td>${esc(r.model_side)}</td><td class="num">${r.model_prob==null?'—':(r.model_prob*100).toFixed(0)+'%'}</td><td class="num">${r.market_prob==null?'—':(r.market_prob*100).toFixed(0)+'%'}</td><td class="num">${r.lab??'—'}</td><td class="${r.won?'ok':'no'}">${esc(r.result)}</td><td>${esc(r.final_score||'—')}</td></tr>`;}).join("");
   return `<div style="overflow-x:auto"><table class="dash"><thead>${head}</thead><tbody>${body||`<tr><td colspan="8" class="dim">No games.</td></tr>`}</tbody></table></div>`;
 }
 function paginate(rows,pkey,render){
@@ -380,11 +407,15 @@ function wirePager(pkey,rerender){
   if(n)n.addEventListener("click",()=>{S.page[pkey]++;rerender();});
 }
 function renderGames(){
-  const rows=filtered().sort((a,b)=>a.date<b.date?1:-1);
+  const rows=filtered().sort((a,b)=>dkey(a.date)<dkey(b.date)?1:-1);
   document.getElementById("gamesWrap").innerHTML=`<p class="sec-note">${rows.length} graded moneyline games in view. Use the filters above.</p>`+paginate(rows,"games",gameTable);
   wirePager("games",renderGames);
 }
-function inWin(d){ if(S.win==="all")return true; const all=[...S.totals,...S.kprops].map(x=>x.date).filter(Boolean).sort(); if(!all.length)return true; const max=new Date(all[all.length-1]+"T00:00:00Z");const cut=new Date(max);cut.setUTCDate(cut.getUTCDate()-(Number(S.win)-1));return new Date(d+"T00:00:00Z")>=cut; }
+// dkey()'d before use for two reasons: the max-date lookup needs a correct
+// sort across the mixed-format rows (see dkey() note above), and new Date()
+// requires an ISO string -- a raw MM/DD/YYYY row would silently produce an
+// Invalid Date here, dropping that row out of every non-"all" window.
+function inWin(d){ if(S.win==="all")return true; const all=[...S.totals,...S.kprops].map(x=>dkey(x.date)).filter(Boolean).sort(); if(!all.length)return true; const max=new Date(all[all.length-1]+"T00:00:00Z");const cut=new Date(max);cut.setUTCDate(cut.getUTCDate()-(Number(S.win)-1));return new Date(dkey(d)+"T00:00:00Z")>=cut; }
 function renderTotals(){
   let rows=S.totals.filter(r=>inWin(r.date)); if(S.team)rows=rows.filter(r=>(r.matchup||"").includes(S.team));
   const graded=rows.filter(r=>r.ou_result==="O"||r.ou_result==="U");
@@ -401,8 +432,8 @@ function renderTotals(){
   const bs=setupBuckets.filter(b=>b.pct!=null);
   if(bs.length>=2){const spread=(bs[bs.length-1].pct-bs[0].pct)*100;
     setupVerdict=`<p class="sec-note ${spread>=7?'ok':(Math.abs(spread)<7?'dim':'no')}"><strong>Read:</strong> ${spread>=7?`the higher the setup rating, the better the over/under lean does (+${spread.toFixed(0)} points, top band vs bottom) — the rating is carrying signal`:(Math.abs(spread)<7?`lean accuracy is flat across setup-rating bands (${spread>0?'+':''}${spread.toFixed(0)} points) — the setup rating is close to noise, it is not telling good leans from bad`:`lean accuracy moves ${spread>0?'+':''}${spread.toFixed(0)} points but not with the rating — no clean relationship`)}.</p>`;}
-  const table=slice=>{const cols=["date","matchup","line","projection","actual_total","ou_result","lean","lean_result","setup_rating"];return `<div style="overflow-x:auto"><table class="dash"><thead><tr>${cols.map(c=>`<th class="${['line','projection','actual_total','setup_rating','lean'].includes(c)?'num':''}">${esc(c.replace(/_/g,' '))}</th>`).join("")}</tr></thead><tbody>${slice.map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.matchup)}</td><td class="num">${esc(r.line)}</td><td class="num">${esc(r.projection)}</td><td class="num">${esc(r.actual_total)}</td><td>${esc(r.ou_result)}</td><td class="num">${esc(r.lean)}</td><td class="${r.lean_result==='W'?'ok':(r.lean_result==='L'?'no':'')}">${esc(r.lean_result||'—')}</td><td class="num">${esc(r.setup_rating)}</td></tr>`).join("")||`<tr><td colspan="9" class="dim">No rows.</td></tr>`}</tbody></table></div>`;};
-  const rr=rows.slice().sort((a,b)=>a.date<b.date?1:-1);
+  const table=slice=>{const cols=["date","matchup","line","projection","actual_total","ou_result","lean","lean_result","setup_rating"];return `<div style="overflow-x:auto"><table class="dash"><thead><tr>${cols.map(c=>`<th class="${['line','projection','actual_total','setup_rating','lean'].includes(c)?'num':''}">${esc(c.replace(/_/g,' '))}</th>`).join("")}</tr></thead><tbody>${slice.map(r=>`<tr><td>${esc(dfmt(r.date))}</td><td>${esc(r.matchup)}</td><td class="num">${esc(r.line)}</td><td class="num">${esc(r.projection)}</td><td class="num">${esc(r.actual_total)}</td><td>${esc(r.ou_result)}</td><td class="num">${esc(r.lean)}</td><td class="${r.lean_result==='W'?'ok':(r.lean_result==='L'?'no':'')}">${esc(r.lean_result||'—')}</td><td class="num">${esc(r.setup_rating)}</td></tr>`).join("")||`<tr><td colspan="9" class="dim">No rows.</td></tr>`}</tbody></table></div>`;};
+  const rr=rows.slice().sort((a,b)=>dkey(a.date)<dkey(b.date)?1:-1);
   document.getElementById("totalsWrap").innerHTML=
     `<div class="kpis">${kpi("Model lean record",leans.length?`${lw}-${leans.length-lw}`:"—",leans.length?`${(lw/leans.length*100).toFixed(0)}% of ${leans.length} graded leans`:"no graded leans in view")}${kpi("Over/Under (all games)",`${o}-${u}`,graded.length+" graded")}${kpi("Projection MAE",mae==null?"—":mae.toFixed(2)+" runs",d.length+" games")}</div>`+
     `<h2 class="sec">Does the setup rating predict?</h2><p class="sec-note">Over/under lean win rate grouped by the setup rating that produced it. If the rating is real, higher bands should win more; if it is flat, the rating is noise.</p>`+dimTable(setupBuckets,"Setup rating")+setupVerdict+
@@ -416,8 +447,8 @@ function renderKprops(){
   const d=rows.map(r=>{const p=numOr(r.projection),a=numOr(r.actual_k);return p!=null&&a!=null?Math.abs(p-a):null;}).filter(x=>x!=null);
   const mae=d.length?(d.reduce((s,x)=>s+x,0)/d.length):null;
   const byBand=groupByKey(leans,"calibration_band",r=>r.lean_result==="W");
-  const table=slice=>{const cols=["date","pitcher","line","projection","actual_k","lean","lean_result","calibration_band"];return `<div style="overflow-x:auto"><table class="dash"><thead><tr>${cols.map(c=>`<th class="${['line','projection','actual_k'].includes(c)?'num':''}">${esc(c.replace(/_/g,' '))}</th>`).join("")}</tr></thead><tbody>${slice.map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.pitcher)}</td><td class="num">${esc(r.line)}</td><td class="num">${esc(r.projection)}</td><td class="num">${esc(r.actual_k)}</td><td>${esc(r.lean)}</td><td class="${r.lean_result==='W'?'ok':(r.lean_result==='L'?'no':'')}">${esc(r.lean_result||'—')}</td><td>${esc(r.calibration_band)}</td></tr>`).join("")||`<tr><td colspan="8" class="dim">No rows.</td></tr>`}</tbody></table></div>`;};
-  const rr=rows.slice().sort((a,b)=>a.date<b.date?1:-1);
+  const table=slice=>{const cols=["date","pitcher","line","projection","actual_k","lean","lean_result","calibration_band"];return `<div style="overflow-x:auto"><table class="dash"><thead><tr>${cols.map(c=>`<th class="${['line','projection','actual_k'].includes(c)?'num':''}">${esc(c.replace(/_/g,' '))}</th>`).join("")}</tr></thead><tbody>${slice.map(r=>`<tr><td>${esc(dfmt(r.date))}</td><td>${esc(r.pitcher)}</td><td class="num">${esc(r.line)}</td><td class="num">${esc(r.projection)}</td><td class="num">${esc(r.actual_k)}</td><td>${esc(r.lean)}</td><td class="${r.lean_result==='W'?'ok':(r.lean_result==='L'?'no':'')}">${esc(r.lean_result||'—')}</td><td>${esc(r.calibration_band)}</td></tr>`).join("")||`<tr><td colspan="8" class="dim">No rows.</td></tr>`}</tbody></table></div>`;};
+  const rr=rows.slice().sort((a,b)=>dkey(a.date)<dkey(b.date)?1:-1);
   document.getElementById("kpropsWrap").innerHTML=
     `<div class="kpis">${kpi("Lean record",`${w}-${leans.length-w}`,leans.length+" graded leans")}${kpi("Projection MAE",mae==null?"—":mae.toFixed(2)+" K",d.length+" starts")}</div>`+
     `<h2 class="sec">By calibration band</h2>`+dimTable(byBand,"Band")+
@@ -638,8 +669,12 @@ function renderGameDetail(g){
 function wireDetailTab(){
   const dateInput=document.getElementById("detDate"), sel=document.getElementById("detGame");
   // Default to most recent date we have graded moneyline data for, if any.
-  const dates=[...new Set(S.ml.map(r=>r.date))].sort();
-  if(dates.length) dateInput.value=dates[dates.length-1];
+  // Sorted/compared via dkey (see note above dkey()'s definition) and the
+  // input is set to the normalized ISO form -- <input type="date"> silently
+  // rejects MM/DD/YYYY values, so without this, rows written 08/15 on would
+  // fail to populate the picker.
+  const dates=[...new Set(S.ml.map(r=>r.date))].sort((a,b)=>dkey(a)<dkey(b)?-1:1);
+  if(dates.length) dateInput.value=dkey(dates[dates.length-1]);
   dateInput.addEventListener("change",()=>{ S.detail.date=dateInput.value; document.getElementById("detBody").innerHTML=""; if(dateInput.value) loadDetailDate(dateInput.value); });
   sel.addEventListener("change",()=>{
     const i=sel.value; document.getElementById("detBody").innerHTML="";
@@ -744,10 +779,10 @@ function renderShadowKpis(){
 function renderShadowDayTable(){
   const byDate = new Map();
   for(const r of S.shadowRows){ if(!byDate.has(r.date)) byDate.set(r.date, []); byDate.get(r.date).push(r); }
-  S.shadowDays = [...byDate.entries()].map(([date,rows])=>({date,...aggShadowDay(rows)})).sort((a,b)=>a.date<b.date?1:-1);
+  S.shadowDays = [...byDate.entries()].map(([date,rows])=>({date,...aggShadowDay(rows)})).sort((a,b)=>dkey(a.date)<dkey(b.date)?1:-1);
   const body = S.shadowDays.map((d,i)=>{
     const delta = (d.oBrier!=null && d.sBrier!=null) ? d.sBrier - d.oBrier : null; // negative = shadow better that night
-    return `<tr class="clickable day-row" data-i="${i}"><td class="date-cell">${esc(d.date)}</td><td class="num">${d.n}</td>`
+    return `<tr class="clickable day-row" data-i="${i}"><td class="date-cell">${esc(dfmt(d.date))}</td><td class="num">${d.n}</td>`
       + `<td class="num">${esc(d.oRecord)}</td><td class="num">${d.oBrier==null?'—':d.oBrier.toFixed(4)}</td>`
       + `<td class="num">${esc(d.sRecord)}</td><td class="num">${d.sBrier==null?'—':d.sBrier.toFixed(4)}</td>`
       + `<td class="num ${delta==null?'':(delta<0?'ok':'no')}">${delta==null?'—':(delta>0?'+':'')+delta.toFixed(4)}</td>`
@@ -769,7 +804,11 @@ function renderShadowDrill(d){
     const agreeTag = r.agree==null ? "—" : (r.agree ? `<span class="tag agree">agree</span>` : `<span class="tag disagree">disagree</span>`);
     const oRes = r.officialWon==null?"—":(r.officialWon?`<span class="ok">W</span>`:`<span class="no">L</span>`);
     const sRes = r.shadowWon==null?"—":(r.shadowWon?`<span class="ok">W</span>`:`<span class="no">L</span>`);
-    return `<tr class="clickable" data-date="${esc(r.date)}" data-pk="${esc(r.gamePk)}">`
+    // data-date must stay ISO (dkey, not dfmt) -- openGameDetail() below feeds it
+    // straight into <input type="date"> and a /data/member-brief/<date>.json
+    // fetch, both of which require YYYY-MM-DD. Before this fix, any row written
+    // in MM/DD/YYYY (08/15/2026 on) would silently fail to open in Game Detail.
+    return `<tr class="clickable" data-date="${esc(dkey(r.date))}" data-pk="${esc(r.gamePk)}">`
       + `<td>${esc(r.awayTeam)} @ ${esc(r.homeTeam)}</td>`
       + `<td>${esc(oTeam)}</td><td class="num">${r.pHomeOfficial==null?'—':(r.officialPicksHome?(r.pHomeOfficial*100).toFixed(0):((1-r.pHomeOfficial)*100).toFixed(0))+'%'}</td><td>${oRes}</td>`
       + `<td>${esc(sTeam)}</td><td class="num">${r.pHomeShadow==null?'—':(r.shadowPicksHome?(r.pHomeShadow*100).toFixed(0):((1-r.pHomeShadow)*100).toFixed(0))+'%'}</td><td>${sRes}</td>`
@@ -778,7 +817,7 @@ function renderShadowDrill(d){
       + `</tr>`;
   }).join("");
   const extraHead = hasComponents ? `<th class="num">Shadow off_adj</th><th class="num">Shadow bp_adj</th>` : "";
-  document.getElementById("shadowDrill").innerHTML = `<h2 class="sec">${esc(d.date)} — click a game to open it in Game Detail</h2>`
+  document.getElementById("shadowDrill").innerHTML = `<h2 class="sec">${esc(dfmt(d.date))} — click a game to open it in Game Detail</h2>`
     + `<div style="overflow-x:auto"><table class="dash" id="shadowGameTable"><thead><tr><th>Matchup</th><th>Leo picked</th><th class="num">Leo %</th><th>Result</th><th>Shadow leaned</th><th class="num">Shadow %</th><th>Result</th><th>Sides</th>${extraHead}</tr></thead><tbody>${body||`<tr><td colspan="9" class="dim">No games.</td></tr>`}</tbody></table></div>`;
   document.querySelectorAll("#shadowGameTable tbody tr").forEach(tr=>tr.addEventListener("click",()=>{
     openGameDetail(tr.getAttribute("data-date"), tr.getAttribute("data-pk"));
