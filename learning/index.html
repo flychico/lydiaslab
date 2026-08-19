@@ -96,7 +96,7 @@ table.dash tbody tr.clickable.day-row td.date-cell{font-weight:700}
       <button data-t="summary" class="on">Summary</button>
       <button data-t="overview">Overview</button>
       <button data-t="breakdown">Break down</button>
-      <button data-t="drivers">Drivers</button>
+      <button data-t="confidence">Confidence</button>
       <button data-t="games">Moneyline</button>
       <button data-t="totals">Totals</button>
       <button data-t="kprops">K-Props</button>
@@ -112,9 +112,7 @@ table.dash tbody tr.clickable.day-row td.date-cell{font-weight:700}
     <section class="tab" id="tab-overview">
       <div class="kpis" id="kpis"></div>
       <h2 class="sec">Are we improving?</h2><p class="sec-note">20-game rolling win rate on the model's side. Dashed = 50%.</p>
-      <div id="trend"></div><div id="calibration"></div>
-      <h2 class="sec">Which Lab Rating components earn their points</h2>
-      <div id="components"></div>
+      <div id="trend"></div>
     </section>
 
     <section class="tab" id="tab-breakdown">
@@ -124,12 +122,14 @@ table.dash tbody tr.clickable.day-row td.date-cell{font-weight:700}
       <div id="bdDrill"></div>
     </section>
 
-    <section class="tab" id="tab-drivers">
-      <div class="controls"><label>Driver <select id="drvF"></select></label></div>
-      <div id="drvDesc"></div>
-      <p class="sec-note">Games are split into five equal buckets by the driver, low to high. If the read predicts, win rate should climb steadily across the buckets.</p>
-      <div style="overflow-x:auto"><table class="dash" id="drvTable"></table></div>
-      <div id="drvVerdict"></div>
+    <section class="tab" id="tab-confidence">
+      <p class="sec-note">From <code>data/calibration/confidence_report.json</code>, written nightly by <code>scripts/grade-confidence.js</code> (the "Grade confidence" workflow step) — does the Lab Rating actually predict the outcome, and which of its components are earning their points?</p>
+      <div id="calibration"></div>
+      <h2 class="sec">Which Lab Rating components earn their points</h2>
+      <div id="components"></div>
+      <h2 class="sec">Worst-rated losses</h2>
+      <p class="sec-note">The highest Lab Rating scores that still lost, and the points breakdown that produced each score.</p>
+      <div style="overflow-x:auto"><table class="dash" id="worstTable"></table></div>
     </section>
 
     <section class="tab" id="tab-games"><div id="gamesWrap"></div></section>
@@ -187,7 +187,7 @@ function dfmt(s){
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   return m ? `${m[2]}/${m[3]}/${m[1]}` : String(s || "");
 }
-const S={ml:[],report:null,totals:[],kprops:[],recapByPk:{},learningSummary:null,win:"all",team:"",status:"",ver:"",dim:"status",drv:"pitcher_gap",tab:"summary",page:{games:0,totals:0,kprops:0},sort:{},detail:{date:"",games:[],game:null,briefCache:{}},shadowRaw:[],shadowRows:[],shadowDays:[]};
+const S={ml:[],report:null,totals:[],kprops:[],recapByPk:{},learningSummary:null,win:"all",team:"",status:"",ver:"",dim:"status",tab:"summary",page:{games:0,totals:0,kprops:0},sort:{},detail:{date:"",games:[],game:null,briefCache:{}},shadowRaw:[],shadowRows:[],shadowDays:[]};
 const PAGE=20;
 
 function splitCsv(l){const c=[];let cur="",q=false;for(const ch of l){if(ch==='"')q=!q;else if(ch===','&&!q){c.push(cur);cur="";}else cur+=ch;}c.push(cur);return c;}
@@ -246,15 +246,6 @@ function agg(rows){
   return {n,w,l:n-w,pct:n?w/n:null,brier:bn?b/bn:null,avgEdge:en?e/en:null};
 }
 function groupBy(rows,key){ const m=new Map(); for(const r of rows){ const k=r[key]??"—"; if(!m.has(k))m.set(k,[]); m.get(k).push(r);} return [...m.entries()].map(([v,rs])=>({value:v,...agg(rs),rows:rs})); }
-function quantileBuckets(rows,key){
-  const vals=rows.map(r=>r[key]).filter(v=>v!=null).sort((a,b)=>a-b);
-  if(vals.length<5) return null;
-  const cuts=[.2,.4,.6,.8].map(q=>vals[Math.floor(q*vals.length)]);
-  const label=i=>{ const lo=i===0?vals[0]:cuts[i-1], hi=i===4?vals[vals.length-1]:cuts[i]; return `${lo.toFixed(2)} – ${hi.toFixed(2)}`; };
-  const buckets=[[],[],[],[],[]];
-  for(const r of rows){ const v=r[key]; if(v==null)continue; let bi=0; while(bi<4&&v>=cuts[bi])bi++; buckets[bi].push(r); }
-  return buckets.map((rs,i)=>({label:label(i),...agg(rs)}));
-}
 function wrBar(pct){ if(pct==null)return`<div class="wrbar"></div>`; const c=pct>=0.5?"#2ecc71":"#e74c3c"; return `<div class="wrbar"><span style="width:${(pct*100).toFixed(0)}%;background:${c}"></span></div>`; }
 
 function renderOverview(){
@@ -266,7 +257,7 @@ function renderOverview(){
     kpi("Avg edge vs market", a.avgEdge==null?"—":(a.avgEdge*100).toFixed(1)+"%", "model minus market on our side"),
     kpi("Rating→win corr", corr==null?"—":(corr>0?"+":"")+corr.toFixed(3), "full history")
   ].join("");
-  renderTrend(rows); renderCalibration(); renderComponents();
+  renderTrend(rows);
 }
 function kpi(l,v,s){return `<div class="kpi"><div class="label">${esc(l)}</div><div class="value">${esc(v)}</div><div class="sub">${esc(s)}</div></div>`;}
 function renderTrend(rows){
@@ -297,11 +288,27 @@ function renderComponents(){
   const flat=sorted.filter(x=>x.constant).map(x=>x.component);
   const take=(help.length||hurt.length)?`<p class="sec-note"><strong>Takeaway:</strong> ${help.length?`<span class="ok">${esc(help.join(", "))}</span> carr${help.length>1?"y":"ies"} real signal`:""}${help.length&&hurt.length?"; ":""}${hurt.length?`<span class="no">${esc(hurt.join(", "))}</span> ${hurt.length>1?"are":"is"} donating points for free or hurting`:""}${flat.length?`; <span class="dim">${esc(flat.join(", "))}</span> ${flat.length>1?"haven't":"hasn't"} varied yet in this sample, so ${flat.length>1?"they":"it"} can't be judged`:""}. Re-weight the rating toward what helps.</p>`:"";
   el.innerHTML=`<p class="sec-note">The Lab Rating hands out points across these components. For each one, this compares games where it paid a <strong>lot</strong> of points ("heavy") against games where it paid <strong>little</strong> ("light"): if the component carries information, the heavy games should win more. <strong>Positive lift = real signal. Zero or negative = it is donating points for free, or actively hurting.</strong> A component that has scored identically on every graded game so far shows as <strong>constant</strong> — there's no split to compare yet, not a zero.</p>`
-    +`<table class="dash"><thead><tr><th>Component</th><th class="num">n</th><th class="num">Win% when heavy</th><th class="num">Win% when light</th><th class="num">Lift (heavy − light)</th></tr></thead><tbody>${sorted.map(x=>x.constant
-      ? `<tr><td>${esc(x.component)}</td><td class="num">${x.n}</td><td class="dim" colspan="3">constant so far — never varies in this sample</td></tr>`
-      : `<tr><td>${esc(x.component)}</td><td class="num">${x.n}</td><td class="num">${(x.win_rate_above*100).toFixed(0)}%</td><td class="num">${(x.win_rate_below*100).toFixed(0)}%</td><td class="num ${x.lift>=0?'ok':'no'}">${x.lift>0?'+':''}${(x.lift*100).toFixed(1)}%</td></tr>`
+    +`<table class="dash"><thead><tr><th>Component</th><th class="num">Max</th><th class="num">Mean</th><th class="num">n</th><th class="num">Win% when heavy</th><th class="num">Win% when light</th><th class="num">Lift (heavy − light)</th><th class="num">Corr</th></tr></thead><tbody>${sorted.map(x=>x.constant
+      ? `<tr><td>${esc(x.component)}</td><td class="num">${x.max_points??'—'}</td><td class="num">${x.mean_points??'—'}</td><td class="num">${x.n}</td><td class="dim" colspan="4">constant so far — never varies in this sample</td></tr>`
+      : `<tr><td>${esc(x.component)}</td><td class="num">${x.max_points??'—'}</td><td class="num">${x.mean_points??'—'}</td><td class="num">${x.n}</td><td class="num">${(x.win_rate_above*100).toFixed(0)}%</td><td class="num">${(x.win_rate_below*100).toFixed(0)}%</td><td class="num ${x.lift>=0?'ok':'no'}">${x.lift>0?'+':''}${(x.lift*100).toFixed(1)}%</td><td class="num">${x.corr_with_win==null?'—':(x.corr_with_win>0?'+':'')+x.corr_with_win.toFixed(3)}</td></tr>`
     ).join("")}</tbody></table>`+take;
 }
+// 2026-08-19, Lynold's explicit instruction: this replaces the Drivers tab
+// (quantile-bucket analysis on raw model inputs like pitcher_gap/bullpen_gap
+// -- a different question from the one below, which grades the Lab Rating's
+// own point-scoring components). "Worst-rated losses" is confidence_report.json's
+// worst_misses field -- computed by grade-confidence.js and previously never
+// rendered anywhere on the site, only visible in the workflow log.
+function renderWorstMisses(){
+  const m=S.report&&S.report.worst_misses; const el=document.getElementById("worstTable");
+  if(!el) return;
+  if(!m||!m.length){ el.innerHTML=`<tbody><tr><td class="dim">No losses in the graded set, or not enough data yet.</td></tr></tbody>`; return; }
+  const compKeys=[...new Set(m.flatMap(r=>Object.keys(r.points_from||{})))];
+  const head=`<tr><th>Date</th><th>Game</th><th>Pick</th><th class="num">Lab score</th><th class="num">Model %</th>${compKeys.map(k=>`<th class="num">${esc(k)}</th>`).join("")}</tr>`;
+  const body=m.map(r=>`<tr><td>${esc(dfmt(r.date))}</td><td>${esc(r.game)}</td><td>${esc(r.pick)}</td><td class="num">${r.lab_score}</td><td class="num">${(r.model_prob*100).toFixed(0)}%</td>${compKeys.map(k=>`<td class="num">${(r.points_from||{})[k]??'—'}</td>`).join("")}</tr>`).join("");
+  el.innerHTML=`<thead>${head}</thead><tbody>${body}</tbody>`;
+}
+function renderConfidence(){ renderCalibration(); renderComponents(); renderWorstMisses(); }
 
 /* ============================================================
    Learning Summary panel — added 2026-08-08. Renders
@@ -362,33 +369,6 @@ function renderBreakdown(){
     document.getElementById("bdDrill").innerHTML=`<h2 class="sec">${esc(g.value)} — ${g.w}-${g.l} (${pctStr(g.pct)})</h2>`+gameTable(g.rows.slice().sort((a,b)=>dkey(a.date)<dkey(b.date)?1:-1),"drill");
   }));
 }
-const DRIVER_INFO={
-  pitcher_gap:"The model's pitcher-score edge on the side it picked (positive = the pick has the better projected starter). If this read predicts, the pick should win more often as the edge grows.",
-  bullpen_gap:"The pick's bullpen edge — how much fresher / better its pen graded than the opponent's. Higher = a bigger late-game advantage for the pick.",
-  kbb_diff:"The strikeout-minus-walk skill difference favoring the pick's pitching. Higher = a cleaner K-BB edge.",
-  off_delta_diff:"The pick's recent-form offense edge over the opponent (last-15 OPS vs season). Higher = the pick's bats are hotter than the opponent's."
-};
-function driverVerdict(bk){
-  const pts=bk.filter(b=>b.pct!=null); if(pts.length<3) return {cls:"dim",text:"Not enough graded games to judge this read yet."};
-  const first=pts[0].pct, last=pts[pts.length-1].pct, spread=(last-first)*100;
-  let mono=true; for(let i=1;i<pts.length;i++) if(pts[i].pct<pts[i-1].pct-0.02){mono=false;break;}
-  let mi=0; for(let i=1;i<pts.length;i++) if(pts[i].pct>pts[mi].pct) mi=i;
-  const peaked = mi>0 && mi<pts.length-1 && (pts[mi].pct-first)*100>=7 && (pts[mi].pct-last)*100>=7;
-  if(spread>=7&&mono) return {cls:"ok",text:`Signal — win rate climbs ${spread.toFixed(0)} points from the lowest bucket to the highest. A bigger edge here really does mean the pick wins more.`};
-  if(peaked) return {cls:"no",text:`Peaked, not linear — the middle buckets win most (${(pts[mi].pct*100).toFixed(0)}%) while BOTH extremes underperform (${(first*100).toFixed(0)}% / ${(last*100).toFixed(0)}%). Moderate values of this read predict best; the biggest edges either way do not pay off.`};
-  if(Math.abs(spread)<7) return {cls:"dim",text:`Flat — win rate barely moves (${spread>0?"+":""}${spread.toFixed(0)} points low to high). This read is not separating winners in this window; it is close to noise.`};
-  return {cls:"no",text:`No clean trend — win rate swings ${spread>0?"+":""}${spread.toFixed(0)} points but not steadily across the buckets.`};
-}
-function renderDrivers(){
-  const rows=filtered(); const bk=quantileBuckets(rows,S.drv);
-  const el=document.getElementById("drvTable");
-  const desc=document.getElementById("drvDesc"); if(desc) desc.innerHTML=`<p class="sec-note">${esc(DRIVER_INFO[S.drv]||"")}</p>`;
-  const vd=document.getElementById("drvVerdict");
-  if(!bk){el.innerHTML=`<tbody><tr><td class="dim">Not enough games in this window.</td></tr></tbody>`;if(vd)vd.innerHTML="";return;}
-  el.innerHTML=`<thead><tr><th>Bucket (low → high)</th><th class="num">n</th><th class="num">Record</th><th class="num">Win%</th><th>&nbsp;</th></tr></thead><tbody>${bk.map(b=>`<tr><td>${esc(b.label)}</td><td class="num">${b.n}</td><td class="num">${b.w}-${b.l}</td><td class="num">${pctStr(b.pct)}</td><td>${wrBar(b.pct)}</td></tr>`).join("")}</tbody>`;
-  const v=driverVerdict(bk); if(vd) vd.innerHTML=`<p class="sec-note ${v.cls}"><strong>Read:</strong> ${esc(v.text)}</p>`;
-}
-
 function gameTable(rows,tag){
   const cols=[["date","Date"],["matchup","Matchup"],["model_side","Side"],["model_prob","Mdl%","num"],["market_prob","Mkt%","num"],["lab","Lab","num"],["result","Res"],["final_score","Final"]];
   const head=`<tr>${cols.map(c=>`<th class="${c[2]||''}">${esc(c[1])}</th>`).join("")}</tr>`;
@@ -840,12 +820,12 @@ async function openGameDetail(date, gamePk){
   }
 }
 
-function renderAll(){ renderLearningSummary(); renderOverview(); renderBreakdown(); renderDrivers(); renderGames(); renderTotals(); renderKprops(); renderShadowTab(); }
+function renderAll(){ renderLearningSummary(); renderOverview(); renderBreakdown(); renderConfidence(); renderGames(); renderTotals(); renderKprops(); renderShadowTab(); }
 function showTab(t){ S.tab=t; document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on")); document.getElementById("tab-"+t).classList.add("on"); document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.getAttribute("data-t")===t)); }
 
 document.getElementById("tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(b)showTab(b.getAttribute("data-t"));});
 document.getElementById("windowSeg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;S.win=b.getAttribute("data-w");document.querySelectorAll("#windowSeg button").forEach(x=>x.classList.toggle("on",x===b));S.page={games:0,totals:0,kprops:0};renderAll();});
-["teamF","statusF","verF","dimF","drvF"].forEach(id=>{});
+["teamF","statusF","verF","dimF"].forEach(id=>{});
 
 (async function(){
   const st=document.getElementById("status");
@@ -869,9 +849,8 @@ document.getElementById("windowSeg").addEventListener("click",e=>{const b=e.targ
   fill("statusF",[["","All statuses"],...[...new Set(S.ml.map(r=>r.status).filter(Boolean))].sort().map(s=>[s,s])]);
   fill("verF",[["","All models"],...[...new Set(S.ml.map(r=>r.model_version).filter(Boolean))].sort().map(v=>[v,v])]);
   fill("dimF",DIMS.map(d=>[d[0],d[1]]));
-  fill("drvF",[["pitcher_gap","Pitcher edge (pitcher_gap)"],["bullpen_gap","Bullpen edge (bullpen_gap)"],["kbb_diff","K-BB% diff"],["off_delta_diff","Offense delta"]]);
   bindSel("teamF",v=>S.team=v); bindSel("statusF",v=>S.status=v); bindSel("verF",v=>S.ver=v);
-  bindSel("dimF",v=>{S.dim=v;renderBreakdown();},false); bindSel("drvF",v=>{S.drv=v;renderDrivers();},false);
+  bindSel("dimF",v=>{S.dim=v;renderBreakdown();},false);
   const cov=S.report&&S.report.coverage; if(cov)document.getElementById("coverage").textContent=`${cov.from} → ${cov.to} · ${S.report.n_graded} graded`;
   st.style.display="none"; document.getElementById("dash").style.display="block";
   renderAll();
