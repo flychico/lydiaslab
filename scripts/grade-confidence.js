@@ -39,6 +39,16 @@
 
 const fs = require("fs");
 const path = require("path");
+// 2026-08-19, Lynold's explicit instruction (via bug report): COMPONENTS'
+// max values below used to be hand-typed literals, copied once from
+// lab-rating-core.js and never updated -- the 08-16 CONVICTION_MAX 35->20 /
+// OFFENSE_MAX 25->40 rebalance changed the real weights but not this file's
+// copy, so the Confidence tab kept showing Max 35/25 (conviction/offense)
+// for weeks after they were actually 20/40. Reading the live constants
+// instead of duplicating them means this can't drift out of sync again.
+const {
+  CONVICTION_MAX, AGREEMENT_MAX, PITCHER_MAX, BULLPEN_MAX, OFFENSE_MAX, COMPLETENESS_MAX
+} = require("./lib/lab-rating-core");
 
 /*
   This script measures; it must never block publishing.
@@ -99,12 +109,12 @@ const FOCUS_DATE = (process.argv[2] || "").match(/^\d{4}-\d{2}-\d{2}$/) ? proces
 // agreement 0, pitching plan 20 (pitcher-edge-only since 2026-08-12), bullpen
 // 20, offense 25, completeness 0.
 const COMPONENTS = [
-  { key: "conviction_points",    label: "conviction",    max: 35 },
-  { key: "agreement_points",     label: "agreement",     max: 0 },
-  { key: "pitching_plan_points", label: "pitching plan", max: 20 },
-  { key: "bullpen_points",       label: "bullpen",       max: 20 },
-  { key: "offense_points",       label: "offense",       max: 25 },
-  { key: "completeness_points",  label: "completeness",  max: 0 }
+  { key: "conviction_points",    label: "conviction",    max: CONVICTION_MAX },
+  { key: "agreement_points",     label: "agreement",     max: AGREEMENT_MAX },
+  { key: "pitching_plan_points", label: "pitching plan", max: PITCHER_MAX },
+  { key: "bullpen_points",       label: "bullpen",       max: BULLPEN_MAX },
+  { key: "offense_points",       label: "offense",       max: OFFENSE_MAX },
+  { key: "completeness_points",  label: "completeness",  max: COMPLETENESS_MAX }
 ];
 
 // 2026-08-13, Lynold's spec: confidence_log.csv's columns, exact order.
