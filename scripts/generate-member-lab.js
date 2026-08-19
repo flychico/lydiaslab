@@ -1174,11 +1174,20 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
     console.log(`Price gate: ${pickTeam} cleared every official moneyline gate but the best price is ${bestPrice} `
       + `(floor ${MIN_OFFICIAL_PRICE}). Not published as official.`);
   }
+  // 2026-08-19, Lynold's explicit instruction: bullpen games are excluded
+  // from the model -- no official pick goes out. bullpenGame was previously
+  // captured/exported for context only (Lab Rating's bullpen scoring, the
+  // brief's bullpen_game field) but never actually gated publishing; now it
+  // does, same pattern as pitcherConflict/priceTooShort below. value_watch
+  // and watchlist tiers are untouched by this -- only official_pick is
+  // blocked, so a bullpen game can still surface there if it clears those
+  // gates on its own.
   const officialEligible = edge !== null
     && modelProb >= OFFICIAL_MODEL_PROB
     && lab.score >= OFFICIAL_LAB_SCORE
     && !pitcherConflict
-    && !priceTooShort;
+    && !priceTooShort
+    && !bullpenGame;
 
   let status = "pass";
   if (officialEligible) status = "official_pick";
@@ -1186,7 +1195,7 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
   else if (lab.score >= WATCHLIST_LAB_SCORE) status = "watchlist";
 
   const passReason = status === "pass"
-    ? passReasonFor({ edge, modelProb, pitchEdgeTeam, pickTeam, pitcherConflict, labScore: lab.score, market: m, majorBullpenCaution })
+    ? passReasonFor({ edge, modelProb, pitchEdgeTeam, pickTeam, pitcherConflict, labScore: lab.score, market: m, majorBullpenCaution, bullpenGame })
     : null;
 
   const preBullpenModelProb = Number.isFinite(runPHome)
@@ -1395,8 +1404,12 @@ function absoluteBullpenRisk(pick, opp) {
   if (pickRisk >= 60 || oppRisk >= 60) return "Elevated";
   return "Normal";
 }
-function passReasonFor({ edge, modelProb, pitchEdgeTeam, pickTeam, pitcherConflict, labScore, market, majorBullpenCaution }) {
+function passReasonFor({ edge, modelProb, pitchEdgeTeam, pickTeam, pitcherConflict, labScore, market, majorBullpenCaution, bullpenGame }) {
   if (!market) return "No market data available, so this stays research-only until pricing is checked.";
+  // 2026-08-19, Lynold's explicit instruction: bullpen games are excluded
+  // from the model -- checked first/highest priority since it's a hard
+  // exclusion, not a marginal miss on any of the checks below.
+  if (bullpenGame) return "This is a bullpen game -- no confirmed traditional starter, so LyDia does not publish an official pick here.";
   // 2026-08-06: edge no longer gates the official pick, so the reasons below
   // are reordered -- prob/lab/pitcher-conflict are checked first because
   // those are what can actually keep a game out of official now. Edge is

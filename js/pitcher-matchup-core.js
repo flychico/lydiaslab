@@ -236,10 +236,18 @@
     else if (score < 55) grade = "Below avg";
 
     const role = classifyPitcherRole(stat);
-    // 2026-08-15, Lynold's explicit instruction: divisor changed from 5.5 to
-    // 5. See pitcher-matchup-core-roleShare-5vs5.5.diff (this session,
-    // 2026-08-15-pregame-automation/) for the reasoning and effect size.
-    const roleShare = role.expectedInnings / 5;
+    // 2026-08-19, Lynold's explicit instruction: pitcher_score no longer
+    // shrinks by role/expected innings at all, for any role (traditional
+    // starter, limited starter, or opener alike) -- every pitcher is scored
+    // on rawScore directly. This replaces the prior 2026-08-15 change (which
+    // moved the shrink divisor from 5.5 to 5); now there's no shrink at all.
+    // role/expectedInnings are still computed and exported below --
+    // bullpen-innings assignment, the pitching plan, and the bullpen_game
+    // flag all still need them -- they just no longer feed the SCORE.
+    // Games flagged bullpen_game are now excluded from the model entirely
+    // upstream (generate-member-lab.js's official_pick_gate), so there's no
+    // separate opener/limited-starter case left to shrink for here.
+    const roleShare = 1;
     const roleAdjustedScore = Math.round(clamp(50 + (score - 50) * roleShare, 20, 92));
     const note = role.bullpenGame
       ? role.reason
