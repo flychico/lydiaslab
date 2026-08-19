@@ -2402,7 +2402,201 @@
           "valueTag": "OFFICIAL PICK"
         }
       ]
+    },
+    {
+      "gamePk": 824318,
+      "away": "Los Angeles Dodgers",
+      "home": "Colorado Rockies",
+      "time": "2026-08-20T00:40:00Z",
+      "labScore": 64,
+      "labScoreBreakdown": {
+        "score": 64,
+        "version": "lab-rating-v3-measured-components",
+        "conviction_points": 20,
+        "agreement_points": 0,
+        "pitching_plan_points": 14,
+        "bullpen_points": 8.97,
+        "offense_points": 20.83,
+        "completeness_points": 0,
+        "pitcher_edge_points": 14,
+        "model_agreement_gap": 0.61,
+        "model_agreement_credit": 0,
+        "bullpen_innings_weight": 0.93,
+        "assigned_bullpen_innings": 3.7,
+        "offense_delta": 0.0025,
+        "offense_delta_15d": 0.0002,
+        "offense_delta_30d": 0.0048,
+        "completeness_checks_passed": 5,
+        "completeness_checks_total": 5,
+        "data_complete": true,
+        "market_points": 0,
+        "model_edge_points": 0,
+        "base_points": 0,
+        "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
+      },
+      "status": "official_pick",
+      "modelVersion": "multi-market-v1",
+      "pitcherEdge": {
+        "team": "Los Angeles Dodgers",
+        "gap": 14,
+        "conflict": false,
+        "away_score": 61,
+        "home_score": 47,
+        "away_pitcher": "Roki Sasaki",
+        "home_pitcher": "Kyle Freeland",
+        "away_pitcher_id": 808963,
+        "home_pitcher_id": 607536,
+        "away_era": 4.46,
+        "home_era": 6.27,
+        "away_whip": 1.29,
+        "home_whip": 1.44,
+        "away_advanced": {
+          "w": 5,
+          "l": 5,
+          "kbb_pct": 0.1338,
+          "gb_pct": 0.5116,
+          "babip": 0.2646,
+          "hr9": 1.7,
+          "ip_per_start": 5.3,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 5.3,
+          "bullpen_innings": 3.7
+        },
+        "home_advanced": {
+          "w": 4,
+          "l": 10,
+          "kbb_pct": 0.1325,
+          "gb_pct": 0.5078,
+          "babip": 0.3264,
+          "hr9": 1.64,
+          "ip_per_start": 5.5,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 5.5,
+          "bullpen_innings": 3.5
+        }
+      },
+      "bullpen": {
+        "pick_team": {
+          "score": 69,
+          "label": "Tired",
+          "last_game_bp_ip": 4,
+          "last7_bp_ip": 21.7,
+          "last7_bp_runs": 13,
+          "last_game_relievers": 4,
+          "last7_relievers": 21,
+          "back_to_back_arms": 6,
+          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+          "score_reason": "Tired (6.9/10): 21.7 recent relief innings, recency-weighted — 4 in the last game (pitched yesterday), 6 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 4,
+            "last7_relievers": 21,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 5.2,
+            "back_to_back_arms": 18.7,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 68.9
+          },
+          "efficiency_score": 48,
+          "efficiency_label": "Average",
+          "efficiency_reason": "Average (4.8/10): 4.15 ERA and 1.43 WHIP over 21.7 relief innings (10 ER, 22 H, 9 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": 0.3,
+            "whip_term": -2,
+            "confidence": 1,
+            "raw_score": 48.3
+          },
+          "era_7d": 4.15,
+          "whip_7d": 1.43,
+          "last15_bp_ip": 47,
+          "last15_bp_runs": 25,
+          "era_15d": 4.02,
+          "whip_15d": 1.4,
+          "recent15_games_tracked": 14,
+          "risk_index": 70,
+          "risk_label": "Tired",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "opponent": {
+          "score": 65,
+          "label": "Tired",
+          "last_game_bp_ip": 4,
+          "last7_bp_ip": 22.3,
+          "last7_bp_runs": 8,
+          "last_game_relievers": 4,
+          "last7_relievers": 19,
+          "back_to_back_arms": 5,
+          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+          "score_reason": "Tired (6.5/10): 22.3 recent relief innings, recency-weighted — 4 in the last game (pitched yesterday), 5 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 4,
+            "last7_relievers": 19,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 12.5,
+            "back_to_back_arms": 7.1,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 64.6
+          },
+          "efficiency_score": 51,
+          "efficiency_label": "Average",
+          "efficiency_reason": "Average (5.1/10): 3.22 ERA and 1.66 WHIP over 22.3 relief innings (8 ER, 25 H, 12 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": 5.9,
+            "whip_term": -5.4,
+            "confidence": 1,
+            "raw_score": 50.5
+          },
+          "era_7d": 3.22,
+          "whip_7d": 1.66,
+          "last15_bp_ip": 50,
+          "last15_bp_runs": 21,
+          "era_15d": 3.6,
+          "whip_15d": 1.44,
+          "recent15_games_tracked": 13,
+          "risk_index": 65,
+          "risk_label": "Tired",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "label": "Elevated volatility",
+        "major_caution": false,
+        "absolute_risk": "Elevated"
+      },
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Roki Sasaki",
+          "pick": "Over",
+          "line": 4.5,
+          "bestAm": -150,
+          "projection": 5.36,
+          "edge": 0.86,
+          "books": 6,
+          "expectedInnings": 5.3,
+          "pitcherRole": "traditional_starter",
+          "lineupSource": "posted",
+          "modelVersion": "leo-kprop",
+          "valueTag": "OFFICIAL PICK"
+        }
+      ]
     }
   ],
-  "last_appended_at": "2026-08-19T21:51:49.462Z"
+  "last_appended_at": "2026-08-19T23:50:07.695Z"
 }
