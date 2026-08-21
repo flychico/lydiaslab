@@ -68,7 +68,7 @@ const COLUMNS = [
   "model_prob", "pitcher_gap", "pick_pitcher", "pick_pitcher_score", "opp_pitcher", "opp_pitcher_score",
   "pick_era", "opp_era", "pick_whip", "opp_whip", "pick_hr9", "opp_hr9",
   "pick_woba", "opp_woba", "pick_bullpen_risk", "opp_bullpen_risk",
-  "pick_team_strength_blend", "opp_team_strength_blend", "woba_diff", "bullpen_gap",
+  "home_strength_blend", "away_strength_blend", "woba_diff", "bullpen_gap",
   "pitcher_boost", "pre_bullpen_odds", "pre_bullpen_prob", "bullpen_adj",
   "money_line_odds", "moneyline_prop"
 ];
@@ -138,8 +138,17 @@ function main() {
     const bp = g.bullpen || {};
     const pRisk = bpRiskNum(bp.pick_team), oRisk = bpRiskNum(bp.opponent);
     const oppTeam = pickHome ? g.away_team : g.home_team;
-    const pBlend = r4(pickHome ? g.team_strength_blend_home : g.team_strength_blend_away);
-    const oBlend = r4(pickHome ? g.team_strength_blend_away : g.team_strength_blend_home);
+    // 2026-08-19, Lynold's explicit instruction: renamed from pick/opp-relative
+    // to home/away-direct, no conditional needed. pBase in generate-member-lab.js
+    // is ALWAYS the home team's blend (team_strength_blend_home), regardless of
+    // which side is picked -- home_strength_blend IS the number that anchors
+    // the odds calc on every row; away_strength_blend never feeds the formula
+    // (it's each team's own independent rating, kept for reference only). The
+    // old pick_team_strength_blend column silently swapped which physical
+    // number it showed depending on home/away, which made an away pick's row
+    // look like its OWN blend anchored the price when it never did.
+    const homeBlend = r4(g.team_strength_blend_home);
+    const awayBlend = r4(g.team_strength_blend_away);
 
     const preBullpenProb = r4(g.model_probability_pre_bullpen);
     const legacyStrengthProb = r4(g.legacy_strength_probability);
@@ -162,7 +171,7 @@ function main() {
       n2(modelProb), n2(pitcherGap), csvField(pPitcher || ""), n2(pScore), csvField(oPitcher || ""), n2(oScore),
       n2(pEra), n2(oEra), n2(pWhip), n2(oWhip), n2(pHr9), n2(oHr9),
       n2(pWoba), n2(oWoba), n2(pRisk), n2(oRisk),
-      n2(pBlend), n2(oBlend), n2(wobaDiff), n2(bullpenGap),
+      n2(homeBlend), n2(awayBlend), n2(wobaDiff), n2(bullpenGap),
       n2(pitcherBoost), n2(preBullpenOdds), n2(preBullpenProb), n2(bullpenAdj),
       n2(moneyLineOdds), n2(moneylineProp)
     ].join(","));

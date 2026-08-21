@@ -182,10 +182,13 @@ async function main() {
   // 2026-08-13: full moneyline decision-trace chain, so a row can be walked
   // step by step -- team strength (both sides) -> team-strength-only prob ->
   // +starter ERA (pre_bullpen_prob) -> +bullpen (legacy_strength_prob) ->
-  // +calibration (model_prob, already existed). pick_team_strength_blend/
-  // opp_team_strength_blend are both sides' raw log5 inputs (not pick-relative
-  // like the probability checkpoints -- log5 needs both sides to reconstruct,
-  // the same reason pick_era/opp_era are both sides too). bullpen_log_odds_adj
+  // +calibration (model_prob, already existed). home_strength_blend/
+  // away_strength_blend (renamed 2026-08-19, were pick_team_strength_blend/
+  // opp_team_strength_blend) are each team's raw blend, reported home/away
+  // rather than pick/opp on purpose: pBase in generate-member-lab.js is
+  // always the HOME team's blend regardless of which side is picked, so
+  // home_strength_blend is always the number that anchored the odds calc --
+  // no conditional needed to know which column matters. bullpen_log_odds_adj
   // is what the bullpen risk gap actually did to the odds, pick-relative.
   // Also: pick_era/opp_era below now read the EXACT effective ERA leo used
   // (model_effective_era_away/home, clamped and workload-blended), not the
@@ -223,7 +226,7 @@ async function main() {
     "model_prob", "pitcher_gap", "pick_pitcher", "pick_pitcher_score", "opp_pitcher", "opp_pitcher_score",
     "pick_era", "opp_era", "pick_whip", "opp_whip", "pick_hr9", "opp_hr9",
     "pick_woba", "opp_woba", "pick_bullpen_risk", "opp_bullpen_risk",
-    "pick_team_strength_blend", "opp_team_strength_blend", "woba_diff", "bullpen_gap",
+    "home_strength_blend", "away_strength_blend", "woba_diff", "bullpen_gap",
     "pitcher_boost", "pre_bullpen_odds", "pre_bullpen_prob", "bullpen_adj",
     "money_line_odds", "moneyline_prop"
   ];
@@ -311,8 +314,18 @@ async function main() {
     const bp = g.bullpen || {};
     const pRisk = bpRiskNum(bp.pick_team), oRisk = bpRiskNum(bp.opponent);
     const opp_team = pickHome ? g.away_team : g.home_team;
-    const pBlend = r4(pickHome ? g.team_strength_blend_home : g.team_strength_blend_away);
-    const oBlend = r4(pickHome ? g.team_strength_blend_away : g.team_strength_blend_home);
+    // 2026-08-19, Lynold's explicit instruction: renamed from pick/opp-relative
+    // to home/away-direct, no conditional needed. pBase in generate-member-lab.js
+    // is ALWAYS the home team's blend (team_strength_blend_home), regardless of
+    // which side is picked -- home_strength_blend IS the number that anchors
+    // the odds calc on every row; away_strength_blend never feeds the formula
+    // (it's each team's own independent rating, kept for reference only). The
+    // old pick_team_strength_blend column silently swapped which physical
+    // number it showed depending on home/away, which made an away pick's row
+    // look like its OWN blend anchored the price when it never did -- see the
+    // Tigers @ Pirates / Yankees @ Orioles walkthroughs this session.
+    const homeBlend = r4(g.team_strength_blend_home);
+    const awayBlend = r4(g.team_strength_blend_away);
     const preBullpenProb = r4(g.model_probability_pre_bullpen);
     const legacyStrengthProb = r4(g.legacy_strength_probability);
     const bullpenAdj = r4(g.bullpen_log_odds_adjustment);
@@ -341,7 +354,7 @@ async function main() {
       n2(modelProb), n2(pitcherGap), csvField(pPitcher || ""), n2(pScore), csvField(oPitcher || ""), n2(oScore),
       n2(pEra), n2(oEra), n2(pWhip), n2(oWhip), n2(pHr9), n2(oHr9),
       n2(pWoba), n2(oWoba), n2(pRisk), n2(oRisk),
-      n2(pBlend), n2(oBlend), n2(wobaDiff), n2(bullpenGap),
+      n2(homeBlend), n2(awayBlend), n2(wobaDiff), n2(bullpenGap),
       n2(pitcherBoost), n2(preBullpenOdds), n2(preBullpenProb), n2(bullpenAdj),
       n2(moneyLineOdds), n2(moneylineProp)
     ].join(","));
