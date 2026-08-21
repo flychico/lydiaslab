@@ -230,9 +230,18 @@ function buildMoneyline(att, cal){
     };
   });
 }
+// 2026-08-21, Lynold's explicit instruction: a graded game only counts as a
+// real "model lean" if the model actually leaned -- under 55% is close enough
+// to a coin flip that it shouldn't move the record. model_prob here is
+// always the PICKED side's probability (>=50% by construction in
+// generate-member-lab.js), so this is a straight floor, not a two-sided
+// band. Rows with no model_prob at all (older, pre-decision-trace games)
+// are left in rather than silently dropped -- this gate is about
+// confidence, not data completeness.
 function filtered(){
   return S.ml.filter(r=>{
     if(r.won==null) return false;
+    if(r.model_prob!=null && r.model_prob<0.55) return false;
     if(S.win!=="all"){ const dates=S.ml.map(x=>dkey(x.date)).sort(); const max=new Date(dates[dates.length-1]+"T00:00:00Z"); const cut=new Date(max); cut.setUTCDate(cut.getUTCDate()-(Number(S.win)-1)); if(new Date(dkey(r.date)+"T00:00:00Z")<cut) return false; }
     if(S.team && r.model_side!==S.team && homeOf(r.matchup)!==S.team && !(r.matchup||"").includes(S.team)) return false;
     if(S.status && r.status!==S.status) return false;

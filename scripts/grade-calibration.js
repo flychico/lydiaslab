@@ -337,7 +337,20 @@ async function main() {
 
     // -- the 3 calc columns, built only from the already-rounded values above --
     const preBullpenOdds = odds(preBullpenProb);
-    const pitcherBoost = (pEra !== null && oEra !== null) ? r4(Math.exp(ERA_K * (oEra - pEra))) : null;
+    // 2026-08-21, bug fix: pitcherBoost here was still exp(ERA_K*(oEra-pEra)),
+    // the OLD ERA-based formula from before 2026-08-15 -- it never got the
+    // pitcher_score/scoreGap switch that generate-member-lab.js and
+    // export-pregame-attribution.js both received that day (see
+    // DEC-20260815-01). That left this column completely decoupled from its
+    // own pitcher_gap column above (which already reads pScore-oScore) and
+    // from what actually priced the game -- caught via gamePk 824324, where
+    // this column showed 1.4888 for a gap of 47, nowhere near the ~54.6 cap
+    // the live model and the pregame export both would have shown. Fixed to
+    // the same score-gap formula, clamped +/-20 before the exponential --
+    // matches export-pregame-attribution.js exactly. pEra/oEra are untouched
+    // (still logged as pick_era/opp_era, diagnostic-only since 08-15).
+    const scoreGap = (pScore !== null && oScore !== null) ? Math.max(-20, Math.min(20, pScore - oScore)) : null;
+    const pitcherBoost = scoreGap !== null ? r4(Math.exp(ERA_K * scoreGap)) : null;
     // 2026-08-18, Lynold's explicit instruction: moneyline_prop/money_line_odds
     // must use the SAME formula as model_prob. Previously these read
     // legacy_strength_probability (pre-calibration) while model_prob read
