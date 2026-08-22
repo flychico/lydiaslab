@@ -10,6 +10,13 @@ const path = require("path");
 const { buildBullpenSource } = require("./lib/bullpen-fatigue-core");
 const { calcLabRating, labRatingSentence, LAB_RATING_VERSION } = require("./lib/lab-rating-core");
 const PitcherCore = require("../js/pitcher-matchup-core.js");
+// 2026-08-22, Lynold's explicit instruction: OFFICIAL_MODEL_PROB and
+// OFFICIAL_LAB_SCORE moved out to their own module so generate-learning-summary.js
+// can import the real, live gate instead of carrying its own hardcoded copy --
+// that copy (0.72 / 80) traced back to before the 2026-08-05 calibration
+// remap and the 2026-08-22 lab-score gate change, and had drifted stale on
+// both counts. See scripts/lib/gate-constants.js.
+const { OFFICIAL_MODEL_PROB, OFFICIAL_LAB_SCORE } = require("./lib/gate-constants");
 
 const ROOT = path.join(__dirname, "..");
 // 2026-08-14, Lynold's explicit instruction: log5 (and the flat league-wide
@@ -32,13 +39,13 @@ const ERA_CLAMP = [2.75, 6.00];
 const MONEYLINE_MODEL_VERSION = "leo";
 
 const VALUE_EDGE = 0.03;
+// OFFICIAL_LAB_SCORE now lives in ./lib/gate-constants.js (imported above) --
 // 2026-08-22, Lynold's explicit instruction: 80 -> 72 (displayed as 8.0/10 ->
 // 7.2/10 everywhere this constant's value is shown). Same-day as the lab
 // rating v3.2 reweight (see lab-rating-core.js) -- lower conviction weight
 // pulled typical scores down across the board (see the 08-22 slate preview:
 // mostly -3 to -12 points per game under the new weights), so this gate move
 // is Lynold's response to that shift, not an independent decision.
-const OFFICIAL_LAB_SCORE = 72;
 /*
   MONEYLINE CALIBRATION (2026-08-05, measured on 266 graded games)
 
@@ -63,8 +70,8 @@ const OFFICIAL_LAB_SCORE = 72;
 */
 const MONEYLINE_CALIBRATION_K = 0.50;
 const calibrateProb = p => (Number.isFinite(p) ? 0.5 + MONEYLINE_CALIBRATION_K * (p - 0.5) : p);
+// OFFICIAL_MODEL_PROB now lives in ./lib/gate-constants.js (imported above) --
 // 0.72 raw, expressed on the calibrated scale. Same games, honest number.
-const OFFICIAL_MODEL_PROB = 0.61;
 const VALUE_WATCH_LAB_SCORE = 75;
 const WATCHLIST_LAB_SCORE = 65;
 const MAX_ABS_PRICE = 1000;

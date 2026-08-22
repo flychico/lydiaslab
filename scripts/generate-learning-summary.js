@@ -37,6 +37,12 @@
 
 const fs = require("fs");
 const path = require("path");
+// 2026-08-22, Lynold's explicit instruction: "everything needs to be traced
+// to the live gate" -- every 0.72/80 literal below used to be this script's
+// own hardcoded copy of the official-pick gate, stale since the 2026-08-05
+// calibration remap and again since the 2026-08-22 lab-score gate change.
+// Now reads the same two constants generate-member-lab.js actually enforces.
+const { OFFICIAL_MODEL_PROB, OFFICIAL_LAB_SCORE } = require("./lib/gate-constants");
 
 const ROOT = path.join(__dirname, "..");
 const RESULTS_PATH = path.join(ROOT, "data", "results.json");
@@ -119,8 +125,8 @@ function buildLearningSummary({ date, day, allDays, clvRows }) {
   // a 67% market read, edge = -0.02) as something other than what it is.
   const strongOfficial = allGradedMoneyline.filter(p =>
     p.status === "official_pick" &&
-    num(p.model_probability) >= 0.72 &&
-    num(p.lab_score) >= 80
+    num(p.model_probability) >= OFFICIAL_MODEL_PROB &&
+    num(p.lab_score) >= OFFICIAL_LAB_SCORE
   );
 
   const protectedByGate = (allDays || []).flatMap(d =>
@@ -130,8 +136,8 @@ function buildLearningSummary({ date, day, allDays, clvRows }) {
         p.market === "moneyline" &&
         p.pick &&
         (p.result === "W" || p.result === "L") &&
-        num(p.model_probability) < 0.72 &&
-        num(p.lab_score) >= 80
+        num(p.model_probability) < OFFICIAL_MODEL_PROB &&
+        num(p.lab_score) >= OFFICIAL_LAB_SCORE
       ).map(p => ({ ...p, date: d.date }))
   );
 
@@ -194,8 +200,8 @@ function buildLearningSummary({ date, day, allDays, clvRows }) {
       legacy_market_entries: legacyMarkets.length
     },
     gates: {
-      official_model_probability: 0.72,
-      official_lab_score: 80,
+      official_model_probability: OFFICIAL_MODEL_PROB,
+      official_lab_score: OFFICIAL_LAB_SCORE,
       note: "Official picks require high model probability and strong setup quality. A high Lab Rating alone is not enough. (Market edge is no longer a gate -- a picked side with a lower market-implied probability than the model's read can still qualify, as long as market data exists for the game at all.)"
     },
     process_metrics: {
@@ -276,9 +282,9 @@ function normalizePickForLearning(p, source) {
 
 function fallbackLessonTag({ result, modelProbability, labScore }) {
   if (result === "NG") return "not_graded";
-  if (num(modelProbability) < 0.72 && num(labScore) >= 80) return "high_lab_low_probability_watch_only";
-  if (num(modelProbability) >= 0.72 && num(labScore) >= 80 && result === "W") return "strict_gate_win";
-  if (num(modelProbability) >= 0.72 && num(labScore) >= 80 && result === "L") return "strict_gate_loss_review";
+  if (num(modelProbability) < OFFICIAL_MODEL_PROB && num(labScore) >= OFFICIAL_LAB_SCORE) return "high_lab_low_probability_watch_only";
+  if (num(modelProbability) >= OFFICIAL_MODEL_PROB && num(labScore) >= OFFICIAL_LAB_SCORE && result === "W") return "strict_gate_win";
+  if (num(modelProbability) >= OFFICIAL_MODEL_PROB && num(labScore) >= OFFICIAL_LAB_SCORE && result === "L") return "strict_gate_loss_review";
   return result === "W" ? "win_needs_more_sample" : "loss_needs_review";
 }
 
@@ -354,8 +360,8 @@ function buildMultiDayView(days) {
       // 2026-08-08 (Lynold): dropped the stale raw_edge >= 0.03 condition
       // here too -- see the matching note above strongOfficial. This count
       // now matches the real gate (probability + Lab only).
-      if (row.status === "official_pick" && num(row.model_probability) >= 0.72 && num(row.lab_score) >= 80) strictGateCandidates++;
-      if (num(row.model_probability) < 0.72 && num(row.lab_score) >= 80) lowProbHighLab++;
+      if (row.status === "official_pick" && num(row.model_probability) >= OFFICIAL_MODEL_PROB && num(row.lab_score) >= OFFICIAL_LAB_SCORE) strictGateCandidates++;
+      if (num(row.model_probability) < OFFICIAL_MODEL_PROB && num(row.lab_score) >= OFFICIAL_LAB_SCORE) lowProbHighLab++;
     }
   }
 
