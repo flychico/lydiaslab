@@ -147,6 +147,17 @@ jobs:
       - name: Export daily pitcher data
         run: node scripts/export-pitcher-data.js "${{ steps.publish_date.outputs.date }}"
 
+      # 2026-08-16, built same session as the Lab Rating rebalance, but never
+      # actually wired into this workflow until 2026-08-22 -- the script sat
+      # in scripts/ unused, so data/calibration/lab_rating_inputs_log.csv
+      # never existed. Same upsert-by-(date,gamePk) pattern as the two export
+      # steps above; captures calcLabRating()'s raw inputs (model_prob,
+      # pitch_gap, bullpen risk, assigned bullpen innings, pick-relative wOBA
+      # windows) one level upstream of the pre-computed point values already
+      # in the member brief. See scripts/export-lab-rating-inputs.js.
+      - name: Export daily Lab Rating inputs
+        run: node scripts/export-lab-rating-inputs.js "${{ steps.publish_date.outputs.date }}"
+
       - name: Generate canonical Pitcher Matchup Tool data
         run: node scripts/generate-pitcher-matchup-data.js "${{ steps.publish_date.outputs.date }}"
 
