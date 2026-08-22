@@ -75,11 +75,11 @@
   only signal that told us the run model had gone wrong on 2026-07-29, when
   agreement collapsed to 0 while conviction sat maxed at 30.
 
-  100 points (updated 2026-08-16, see version note below):
-     20  model conviction
+  100 points (updated 2026-08-22, see version note below):
+     10  model conviction
      20  pitching-plan support (pitcher edge only)
      20  bullpen support, weighted by assigned bullpen innings only
-     40  offensive matchup support
+     50  offensive matchup support
 
   ---------------------------------------------------------------------------
   2026-08-12: PLAN-COMPLETENESS SCORING REMOVED
@@ -134,6 +134,27 @@
   (model confidence) now carries less weight relative to offense (head-to-head
   wOBA) than it did under v3. Revisit against grade-confidence.js once enough
   games have been graded under v3.1 to say anything about it empirically.
+
+  ---------------------------------------------------------------------------
+  2026-08-22: WEIGHTS REBALANCED AGAIN, LYNOLD'S EXPLICIT INSTRUCTION
+
+  CONVICTION_MAX 20 -> 10, OFFENSE_MAX 40 -> 50. PITCHER_MAX and BULLPEN_MAX
+  unchanged at 20 each. Also, CONVICTION_FLOOR 0.525 -> 0.55 and
+  CONVICTION_CEIL 0.65 -> 0.75 -- both still on the calibrated probability
+  scale established 2026-08-05, this narrows/shifts the band a game earns
+  conviction credit across, independent of the point total it's worth. New
+  split still sums to 100:
+
+                        v3.1    v3.2 (this change)
+      conviction        20      10
+      pitching plan     20      20
+      bullpen           20      20
+      offense           40      50
+
+  No new backtest was run to justify this split, same as the 08-16 change --
+  a deliberate policy call. Conviction now carries the least weight of any
+  component; offense carries half the total score. Revisit against
+  grade-confidence.js once enough games have been graded under v3.2.
 */
 
 "use strict";
@@ -151,10 +172,15 @@ const LAB_RATING_VERSION = "lab-rating-v3-measured-components";
   game's conviction points EXACTLY as they were -- this is a units change, not a
   scoring change, and it is deliberately not dressed up as an improvement.
 */
-const CONVICTION_FLOOR = 0.525;
-const CONVICTION_CEIL = 0.65;
+// 2026-08-22, Lynold's explicit instruction: 0.525 -> 0.55, 0.65 -> 0.75.
+// Raised on the same calibrated probability scale as the 08-16 remap above --
+// this narrows and shifts the band a coin-flip-to-strong-lean game earns
+// conviction credit across, on top of (not instead of) that scale.
+const CONVICTION_FLOOR = 0.55;
+const CONVICTION_CEIL = 0.75;
 // 2026-08-16, Lynold's explicit instruction: 35 -> 20. See version note above.
-const CONVICTION_MAX = 20;
+// 2026-08-22, Lynold's explicit instruction: 20 -> 10.
+const CONVICTION_MAX = 10;
 
 // Retained at 0 so any consumer reading these still gets a number rather than
 // undefined, and so the arithmetic below stays readable. See the version note.
@@ -172,7 +198,8 @@ const PITCHER_MAX = 20;
 const PITCHER_FULL_GAP = 20; // pitcher-score gap that earns full credit
 const BULLPEN_MAX = 20;
 // 2026-08-16, Lynold's explicit instruction: 25 -> 40. See version note above.
-const OFFENSE_MAX = 40;
+// 2026-08-22, Lynold's explicit instruction: 40 -> 50.
+const OFFENSE_MAX = 50;
 // 2026-08-12: was OFFENSE_SPAN, a delta-OPS threshold. Now the cap on the
 // averaged head-to-head wOBA gap (15-day and 30-day) -- reused from the
 // shadow model's V3_OFF_WOBA_CAP. See the version note at the top of this file.

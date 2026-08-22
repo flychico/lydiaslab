@@ -32,7 +32,13 @@ const ERA_CLAMP = [2.75, 6.00];
 const MONEYLINE_MODEL_VERSION = "leo";
 
 const VALUE_EDGE = 0.03;
-const OFFICIAL_LAB_SCORE = 80;
+// 2026-08-22, Lynold's explicit instruction: 80 -> 72 (displayed as 8.0/10 ->
+// 7.2/10 everywhere this constant's value is shown). Same-day as the lab
+// rating v3.2 reweight (see lab-rating-core.js) -- lower conviction weight
+// pulled typical scores down across the board (see the 08-22 slate preview:
+// mostly -3 to -12 points per game under the new weights), so this gate move
+// is Lynold's response to that shift, not an independent decision.
+const OFFICIAL_LAB_SCORE = 72;
 /*
   MONEYLINE CALIBRATION (2026-08-05, measured on 266 graded games)
 
