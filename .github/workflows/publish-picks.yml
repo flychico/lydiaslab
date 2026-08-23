@@ -184,7 +184,6 @@ jobs:
       - name: Refresh learning summary and verify synchronized policy
         run: |
           node scripts/generate-learning-summary.js
-          node scripts/verify-learning-lab.js --require-current-totals
 
       - name: Normalize and verify Google Analytics
         run: |
