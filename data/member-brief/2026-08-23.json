@@ -1,6 +1,6 @@
 {
   "date": "2026-08-23",
-  "generated_at": "2026-08-23T15:07:38.927Z",
+  "generated_at": "2026-08-23T16:36:33.674Z",
   "snapshot_type": "posted",
   "source_of_truth": "LyDia Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -11,8 +11,28 @@
     "minimum_lab_score": 72,
     "note": "Lab Rating grades LyDia's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
   },
-  "summary": "1 official pick cleared their market gates: 1 pitcher strikeout prop. 1 value-watch setup had good price math but did not clear official-pick rules.",
+  "summary": "3 official picks cleared their market gates: 3 pitcher strikeout props. 1 value-watch setup had good price math but did not clear official-pick rules.",
   "official_card": [
+    {
+      "game_pk": 823421,
+      "game": "St. Louis Cardinals @ Philadelphia Phillies",
+      "away": "St. Louis Cardinals",
+      "home": "Philadelphia Phillies",
+      "time": "2026-08-23T17:35:00Z",
+      "lab_score": 64,
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Kyle Leahy",
+          "pick": "Over",
+          "line": 3.5,
+          "best_price": -148,
+          "projection": 4.5,
+          "edge": 1
+        }
+      ]
+    },
     {
       "game_pk": 824799,
       "game": "Tampa Bay Rays @ Baltimore Orioles",
@@ -27,9 +47,17 @@
           "pitcher": "Nick Martinez",
           "pick": "Over",
           "line": 3.5,
-          "best_price": -124,
-          "projection": 4.61,
-          "edge": 1.11
+          "best_price": -132,
+          "projection": 4.57,
+          "edge": 1.07
+        },
+        {
+          "pitcher": "Shane Baz",
+          "pick": "Under",
+          "line": 4.5,
+          "best_price": -135,
+          "projection": 3.67,
+          "edge": -0.83
         }
       ]
     }
@@ -136,7 +164,7 @@
       "run_model_probability": null,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9067,
-      "edge": 0.0475,
+      "edge": 0.0483,
       "status": "value_watch",
       "value_tag": "VALUE WATCH",
       "lab_score": 79,
@@ -172,7 +200,7 @@
         "lab_score_passed": true
       },
       "pass_reason": null,
-      "read": "Boston Red Sox is a value watch, not an official pick. LyDia projects 70.4% against a 65.7% no-vig market number, a 4.8% model edge at -205. Lab Rating 7.9/10: conviction 7.72, pitching plan 10, bullpen 11.44, offense 50. Boston Red Sox's pen efficiency: Effective (7.0/10). Bullpen fatigue moved this probability down 20.2 points from 90.7% (starting pitcher and team strength only) to 70.4%. It stayed a value watch under the stricter official-pick review. Lineup check: Boston Red Sox is a touch above its season form (+0.046 OPS); San Francisco Giants is in a cold stretch (-0.101 OPS). Recent form supports this side and is included in the unified run projection.",
+      "read": "Boston Red Sox is a value watch, not an official pick. LyDia projects 70.4% against a 65.6% no-vig market number, a 4.8% model edge at -204. Lab Rating 7.9/10: conviction 7.72, pitching plan 10, bullpen 11.44, offense 50. Boston Red Sox's pen efficiency: Effective (7.0/10). Bullpen fatigue moved this probability down 20.2 points from 90.7% (starting pitcher and team strength only) to 70.4%. It stayed a value watch under the stricter official-pick review. Lineup check: Boston Red Sox is a touch above its season form (+0.046 OPS); San Francisco Giants is in a cold stretch (-0.101 OPS). Recent form supports this side and is included in the unified run projection.",
       "pitcher_edge": {
         "team": "Boston Red Sox",
         "gap": 10,
@@ -355,12 +383,12 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": 0.6568,
-        "best_price": -205,
-        "away_price": 191,
-        "home_price": -205,
-        "away_no_vig": 0.3432,
-        "home_no_vig": 0.6568,
+        "no_vig_probability": 0.6561,
+        "best_price": -204,
+        "away_price": 189,
+        "home_price": -204,
+        "away_no_vig": 0.3439,
+        "home_no_vig": 0.6561,
         "books": 9
       }
     },
@@ -380,7 +408,11 @@
       "side": "home",
       "model_probability": 0.6996,
       "model_source": "leo",
-      "projected_runs": null,
+      "projected_runs": {
+        "away": 2.2,
+        "home": 6.9,
+        "total": 9.5
+      },
       "pitching_plan": {
         "away": {
           "type": "starter_bullpen",
@@ -462,10 +494,10 @@
         "applied_home": -0.0091,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.9443,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.8934,
-      "edge": 0.0338,
+      "edge": 0.0354,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 64,
@@ -479,8 +511,8 @@
         "offense_points": 34.65,
         "completeness_points": 0,
         "pitcher_edge_points": 9,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
+        "model_agreement_gap": 0.0451,
+        "model_agreement_credit": 0.807,
         "bullpen_innings_weight": 0.7,
         "assigned_bullpen_innings": 2.8,
         "offense_delta": 0.0232,
@@ -684,12 +716,12 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": 0.6658,
+        "no_vig_probability": 0.6642,
         "best_price": -210,
         "away_price": 200,
         "home_price": -210,
-        "away_no_vig": 0.3342,
-        "home_no_vig": 0.6658,
+        "away_no_vig": 0.3358,
+        "home_no_vig": 0.6642,
         "books": 9
       }
     },
@@ -712,7 +744,7 @@
       "projected_runs": {
         "away": 2.7,
         "home": 3.6,
-        "total": 6.3
+        "total": 6.8
       },
       "pitching_plan": {
         "away": {
@@ -798,7 +830,7 @@
       "run_model_probability": 0.6376,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.8608,
-      "edge": 0.1406,
+      "edge": 0.1572,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 64,
@@ -1017,12 +1049,12 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": 0.538,
-        "best_price": -122,
-        "away_price": 114,
-        "home_price": -122,
-        "away_no_vig": 0.462,
-        "home_no_vig": 0.538,
+        "no_vig_probability": 0.5214,
+        "best_price": -112,
+        "away_price": 106,
+        "home_price": -112,
+        "away_no_vig": 0.4786,
+        "home_no_vig": 0.5214,
         "books": 9
       }
     },
@@ -1045,7 +1077,7 @@
       "projected_runs": {
         "away": 5.1,
         "home": 4.4,
-        "total": 9.5
+        "total": 10
       },
       "pitching_plan": {
         "away": {
@@ -1131,7 +1163,7 @@
       "run_model_probability": 0.5887,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9664,
-      "edge": 0.1254,
+      "edge": 0.1357,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 57,
@@ -1350,12 +1382,12 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": 0.6081,
-        "best_price": -163,
-        "away_price": -163,
-        "home_price": 152,
-        "away_no_vig": 0.6081,
-        "home_no_vig": 0.3919,
+        "no_vig_probability": 0.5977,
+        "best_price": -156,
+        "away_price": -156,
+        "home_price": 147,
+        "away_no_vig": 0.5977,
+        "home_no_vig": 0.4023,
         "books": 9
       }
     },
@@ -1378,7 +1410,7 @@
       "projected_runs": {
         "away": 2.8,
         "home": 2.1,
-        "total": 4.8
+        "total": 5.3
       },
       "pitching_plan": {
         "away": {
@@ -1464,7 +1496,7 @@
       "run_model_probability": 0.3788,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9784,
-      "edge": 0.1432,
+      "edge": 0.1414,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 56,
@@ -1683,12 +1715,12 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": 0.5949,
+        "no_vig_probability": 0.5967,
         "best_price": -154,
-        "away_price": 143,
+        "away_price": 145,
         "home_price": -154,
-        "away_no_vig": 0.4051,
-        "home_no_vig": 0.5949,
+        "away_no_vig": 0.4033,
+        "home_no_vig": 0.5967,
         "books": 9
       }
     },
@@ -1709,9 +1741,9 @@
       "model_probability": 0.6935,
       "model_source": "leo",
       "projected_runs": {
-        "away": 2,
+        "away": 2.2,
         "home": 5.1,
-        "total": 7.1
+        "total": 7.8
       },
       "pitching_plan": {
         "away": {
@@ -1794,10 +1826,10 @@
         "applied_home": -0.0014,
         "weight": 0.5
       },
-      "run_model_probability": 0.1209,
+      "run_model_probability": 0.1411,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.8891,
-      "edge": 0.1949,
+      "edge": 0.2048,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 54,
@@ -1811,7 +1843,7 @@
         "offense_points": 27.9,
         "completeness_points": 0,
         "pitcher_edge_points": 10,
-        "model_agreement_gap": 0.7661,
+        "model_agreement_gap": 0.7459,
         "model_agreement_credit": 0,
         "bullpen_innings_weight": 0.77,
         "assigned_bullpen_innings": 3.1,
@@ -2016,12 +2048,12 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": 0.4986,
-        "best_price": -103,
-        "away_price": -103,
+        "no_vig_probability": 0.4887,
+        "best_price": 103,
+        "away_price": 103,
         "home_price": -104,
-        "away_no_vig": 0.4986,
-        "home_no_vig": 0.5014,
+        "away_no_vig": 0.4887,
+        "home_no_vig": 0.5113,
         "books": 9
       }
     },
@@ -2044,7 +2076,7 @@
       "projected_runs": {
         "away": 3.2,
         "home": 2.2,
-        "total": 5.4
+        "total": 5.9
       },
       "pitching_plan": {
         "away": {
@@ -2130,7 +2162,7 @@
       "run_model_probability": 0.6634,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.8401,
-      "edge": 0.2687,
+      "edge": 0.2703,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 49,
@@ -2349,12 +2381,12 @@
         "absolute_risk": "Opponent high"
       },
       "market": {
-        "no_vig_probability": 0.4068,
-        "best_price": 143,
-        "away_price": 143,
-        "home_price": -152,
-        "away_no_vig": 0.4068,
-        "home_no_vig": 0.5932,
+        "no_vig_probability": 0.4052,
+        "best_price": 146,
+        "away_price": 146,
+        "home_price": -154,
+        "away_no_vig": 0.4052,
+        "home_no_vig": 0.5948,
         "books": 9
       }
     },
@@ -2375,9 +2407,9 @@
       "model_probability": 0.5153,
       "model_source": "leo",
       "projected_runs": {
-        "away": 3,
-        "home": 2.5,
-        "total": 5.4
+        "away": 3.3,
+        "home": 2.2,
+        "total": 6
       },
       "pitching_plan": {
         "away": {
@@ -2460,10 +2492,10 @@
         "applied_home": -0.018,
         "weight": 0.5
       },
-      "run_model_probability": 0.5825,
+      "run_model_probability": 0.6773,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.5307,
-      "edge": 0.0683,
+      "edge": 0.0662,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 49,
@@ -2477,8 +2509,8 @@
         "offense_points": 38.58,
         "completeness_points": 0,
         "pitcher_edge_points": 0,
-        "model_agreement_gap": 0.0519,
-        "model_agreement_credit": 0.755,
+        "model_agreement_gap": 0.1466,
+        "model_agreement_credit": 0.026,
         "bullpen_innings_weight": 0.86,
         "assigned_bullpen_innings": 3.4,
         "offense_delta": 0.0326,
@@ -2682,12 +2714,12 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": 0.4471,
+        "no_vig_probability": 0.4492,
         "best_price": 120,
         "away_price": 120,
-        "home_price": -126,
-        "away_no_vig": 0.4471,
-        "home_no_vig": 0.5529,
+        "home_price": -128,
+        "away_no_vig": 0.4492,
+        "home_no_vig": 0.5508,
         "books": 9
       }
     },
@@ -2709,8 +2741,8 @@
       "model_source": "leo",
       "projected_runs": {
         "away": 4.4,
-        "home": 4.6,
-        "total": 9
+        "home": 5.2,
+        "total": 10.1
       },
       "pitching_plan": {
         "away": {
@@ -2793,10 +2825,10 @@
         "applied_home": -0.0109,
         "weight": 0.5
       },
-      "run_model_probability": 0.5262,
+      "run_model_probability": 0.6006,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9507,
-      "edge": 0.1037,
+      "edge": 0.1054,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 48,
@@ -2810,7 +2842,7 @@
         "offense_points": 15.75,
         "completeness_points": 0,
         "pitcher_edge_points": 16,
-        "model_agreement_gap": 0.423,
+        "model_agreement_gap": 0.3486,
         "model_agreement_credit": 0,
         "bullpen_innings_weight": 1,
         "assigned_bullpen_innings": 5.1,
@@ -3015,12 +3047,12 @@
         "absolute_risk": "Pick side high"
       },
       "market": {
-        "no_vig_probability": 0.6209,
-        "best_price": -171,
-        "away_price": 163,
-        "home_price": -171,
-        "away_no_vig": 0.3791,
-        "home_no_vig": 0.6209,
+        "no_vig_probability": 0.6192,
+        "best_price": -174,
+        "away_price": 162,
+        "home_price": -174,
+        "away_no_vig": 0.3808,
+        "home_no_vig": 0.6192,
         "books": 9
       }
     },
@@ -3042,8 +3074,8 @@
       "model_source": "leo",
       "projected_runs": {
         "away": 4.1,
-        "home": 4.2,
-        "total": 8.2
+        "home": 4.9,
+        "total": 9.5
       },
       "pitching_plan": {
         "away": {
@@ -3053,11 +3085,11 @@
           "segments": [
             {
               "role": "opener",
-              "pitcher_id": null,
-              "pitcher": "TBD",
+              "pitcher_id": 621097,
+              "pitcher": "Jacob Waguespack",
               "expected_innings": 4.5,
-              "fip_lite": 4.2,
-              "pitcher_score": 50,
+              "fip_lite": 4.59,
+              "pitcher_score": 74,
               "role_stats": null
             },
             {
@@ -3067,11 +3099,11 @@
           ],
           "expected_innings": 4.5,
           "bullpen_innings": 4.5,
-          "effective_era": 3.79,
-          "pitcher_score": 50,
+          "effective_era": 3.98,
+          "pitcher_score": 74,
           "bullpen_carries_game": false,
-          "description": "TBD 4.5 IP + remaining bullpen 4.5 IP",
-          "pitcher": "TBD",
+          "description": "Jacob Waguespack 4.5 IP + remaining bullpen 4.5 IP",
+          "pitcher": "Jacob Waguespack",
           "role": "unknown",
           "label": "Role unknown",
           "bullpen_game": true
@@ -3109,7 +3141,7 @@
       },
       "bullpen_game": true,
       "legacy_strength_probability": 0.7056,
-      "model_effective_era_away": 2.75,
+      "model_effective_era_away": 3.98,
       "model_effective_era_home": 3.91,
       "model_pitcher_score_away": 74,
       "model_pitcher_score_home": 69,
@@ -3126,24 +3158,24 @@
         "applied_home": 0.0235,
         "weight": 0.5
       },
-      "run_model_probability": 0.4864,
+      "run_model_probability": 0.3962,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.6949,
-      "edge": 0.0878,
+      "edge": 0.0933,
       "status": "pass",
       "value_tag": "PASS",
-      "lab_score": 40,
+      "lab_score": 45,
       "lab_score_breakdown": {
-        "score": 40,
+        "score": 45,
         "version": "lab-rating-v3-measured-components",
         "conviction_points": 2.64,
         "agreement_points": 0,
-        "pitching_plan_points": 0,
+        "pitching_plan_points": 5,
         "bullpen_points": 13.78,
         "offense_points": 23.71,
         "completeness_points": 0,
-        "pitcher_edge_points": 0,
-        "model_agreement_gap": 0.2192,
+        "pitcher_edge_points": 5,
+        "model_agreement_gap": 0.3094,
         "model_agreement_credit": 0,
         "bullpen_innings_weight": 1,
         "assigned_bullpen_innings": 4.5,
@@ -3167,10 +3199,10 @@
       "pass_reason": "This is a bullpen game -- no confirmed traditional starter, so LyDia does not publish an official pick here.",
       "read": "This is a bullpen game -- no confirmed traditional starter, so LyDia does not publish an official pick here.",
       "pitcher_edge": {
-        "team": "Kansas City Royals",
-        "gap": 19,
-        "conflict": true,
-        "away_score": 50,
+        "team": "Detroit Tigers",
+        "gap": 5,
+        "conflict": false,
+        "away_score": 74,
         "home_score": 69,
         "away_pitcher": "Jacob Waguespack",
         "home_pitcher": "Daniel Lynch IV",
@@ -3348,12 +3380,12 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": 0.515,
-        "best_price": -110,
-        "away_price": -110,
-        "home_price": 104,
-        "away_no_vig": 0.515,
-        "home_no_vig": 0.485,
+        "no_vig_probability": 0.5095,
+        "best_price": -107,
+        "away_price": -107,
+        "home_price": 100,
+        "away_no_vig": 0.5095,
+        "home_no_vig": 0.4905,
         "books": 9
       }
     },
@@ -3376,7 +3408,7 @@
       "projected_runs": {
         "away": 3.1,
         "home": 4.1,
-        "total": 7.2
+        "total": 7.7
       },
       "pitching_plan": {
         "away": {
@@ -3462,7 +3494,7 @@
       "run_model_probability": 0.6431,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.6802,
-      "edge": 0.0787,
+      "edge": 0.0778,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 31,
@@ -3681,12 +3713,12 @@
         "absolute_risk": "Pick side high"
       },
       "market": {
-        "no_vig_probability": 0.5005,
-        "best_price": -104,
-        "away_price": -104,
-        "home_price": -104,
-        "away_no_vig": 0.4995,
-        "home_no_vig": 0.5005,
+        "no_vig_probability": 0.5013,
+        "best_price": -102,
+        "away_price": -103,
+        "home_price": -102,
+        "away_no_vig": 0.4987,
+        "home_no_vig": 0.5013,
         "books": 9
       }
     },
@@ -3709,7 +3741,7 @@
       "projected_runs": {
         "away": 3.9,
         "home": 4.4,
-        "total": 8.2
+        "total": 8.7
       },
       "pitching_plan": {
         "away": {
@@ -3795,7 +3827,7 @@
       "run_model_probability": 0.4321,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.8403,
-      "edge": 0.2248,
+      "edge": 0.2272,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 29,
@@ -4014,12 +4046,12 @@
         "absolute_risk": "Opponent high"
       },
       "market": {
-        "no_vig_probability": 0.4483,
+        "no_vig_probability": 0.4459,
         "best_price": 120,
         "away_price": 120,
-        "home_price": -128,
-        "away_no_vig": 0.4483,
-        "home_no_vig": 0.5517,
+        "home_price": -129,
+        "away_no_vig": 0.4459,
+        "home_no_vig": 0.5541,
         "books": 9
       }
     },
@@ -4042,7 +4074,7 @@
       "projected_runs": {
         "away": 2.8,
         "home": 5.3,
-        "total": 8.1
+        "total": 8.6
       },
       "pitching_plan": {
         "away": {
@@ -4128,7 +4160,7 @@
       "run_model_probability": 0.1909,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.6304,
-      "edge": 0.1266,
+      "edge": 0.1264,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 28,
@@ -4347,12 +4379,12 @@
         "absolute_risk": "Normal"
       },
       "market": {
-        "no_vig_probability": 0.4379,
+        "no_vig_probability": 0.4381,
         "best_price": 126,
         "away_price": 126,
         "home_price": -135,
-        "away_no_vig": 0.4379,
-        "home_no_vig": 0.5621,
+        "away_no_vig": 0.4381,
+        "home_no_vig": 0.5619,
         "books": 9
       }
     },
@@ -4375,7 +4407,7 @@
       "projected_runs": {
         "away": 3.4,
         "home": 3.5,
-        "total": 6.9
+        "total": 7.4
       },
       "pitching_plan": {
         "away": {
@@ -4461,7 +4493,7 @@
       "run_model_probability": 0.4851,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.5216,
-      "edge": 0.2173,
+      "edge": 0.2196,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 26,
@@ -4680,12 +4712,12 @@
         "absolute_risk": "Pick side high"
       },
       "market": {
-        "no_vig_probability": 0.2875,
+        "no_vig_probability": 0.2852,
         "best_price": 255,
         "away_price": 255,
-        "home_price": -265,
-        "away_no_vig": 0.2875,
-        "home_no_vig": 0.7125,
+        "home_price": -270,
+        "away_no_vig": 0.2852,
+        "home_no_vig": 0.7148,
         "books": 9
       }
     },
@@ -4708,7 +4740,7 @@
       "projected_runs": {
         "away": 5.1,
         "home": 3.2,
-        "total": 8.3
+        "total": 8.8
       },
       "pitching_plan": {
         "away": {
@@ -5013,12 +5045,12 @@
         "absolute_risk": "Pick side high"
       },
       "market": {
-        "no_vig_probability": 0.4794,
-        "best_price": 106,
+        "no_vig_probability": 0.4793,
+        "best_price": 105,
         "away_price": -112,
-        "home_price": 106,
-        "away_no_vig": 0.5206,
-        "home_no_vig": 0.4794,
+        "home_price": 105,
+        "away_no_vig": 0.5207,
+        "home_no_vig": 0.4793,
         "books": 9
       }
     }
