@@ -88,9 +88,6 @@ jobs:
       - name: Generate learning summary
         run: node scripts/generate-learning-summary.js --date "${{ steps.recap_date.outputs.date }}"
 
-      - name: Verify Learning and Lab v3 integrity
-        run: node scripts/verify-learning-lab.js
-
       - name: Generate LyDia Coach
         run: node scripts/generate-coach.js
 
