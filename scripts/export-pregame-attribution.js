@@ -26,9 +26,7 @@
   up until the game goes final and grade-calibration.js takes over.
 
   FORMULA CHAIN -- kept in sync manually with grade-calibration.js's
-  attribution block (odds(), r4() below). The pitcher-boost coefficient
-  itself (2026-08-24 on) is no longer a manual-sync risk -- both files
-  import it from scripts/lib/pitcher-boost-constants.js.
+  attribution block (odds(), r4() below).
 
   Usage: node scripts/export-pregame-attribution.js [YYYY-MM-DD]  (defaults to today ET)
 */
@@ -80,15 +78,12 @@ const n2 = v => v === null || v === undefined ? "" : v;
 const odds = p => (p !== null && p > 0 && p < 1) ? r4(p / (1 - p)) : null;
 const bpRiskNum = t => { const v = t ? (t.risk_index ?? t.score) : null; return r4(typeof v === "number" ? v : NaN); };
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
-// 2026-08-24, Lynold's explicit instruction: PITCHER_SCORE_K/CLAMP moved to
-// a shared module -- this file used to carry its own hardcoded ERA_K=0.20
-// copy for pitcher_boost, "kept in sync manually" per this file's own header
-// comment above. Manual sync is exactly how grade-calibration.js's copy went
-// stale for three days after generate-member-lab.js's own formula changed
-// (see scripts/lib/pitcher-boost-constants.js for that history and the
-// 2026-08-24 recalibration itself -- 0.20 down to 0.03, a 6-point pitcher
-// gap was swinging model_prob ~27 points).
-const { PITCHER_SCORE_K, PITCHER_SCORE_GAP_CLAMP } = require("./lib/pitcher-boost-constants");
+// 2026-08-24, Lynold's explicit instruction: reverted back to this original
+// local constant. A same-day move to a shared PITCHER_SCORE_K=0.03 constant
+// (scripts/lib/pitcher-boost-constants.js) was tried and reverted per
+// Lynold's call -- back to a local ERA_K=0.20, kept in sync manually with
+// generate-member-lab.js and grade-calibration.js (see this file's header).
+const ERA_K = 0.20;
 // pScore/oScore below are pitcher_edge.home_score/away_score -- the SAME
 // starter-only pitcher_score field the live model's scoreH/scoreA read, so
 // this reproduces exactly what the live moneyline used.
@@ -159,8 +154,8 @@ function main() {
     const bullpenGap = (pRisk !== null && oRisk !== null) ? r4(oRisk - pRisk) : null;
 
     const preBullpenOdds = odds(preBullpenProb);
-    const scoreGap = (pScore !== null && oScore !== null) ? clamp(pScore - oScore, -PITCHER_SCORE_GAP_CLAMP, PITCHER_SCORE_GAP_CLAMP) : null;
-    const pitcherBoost = scoreGap !== null ? r4(Math.exp(PITCHER_SCORE_K * scoreGap)) : null;
+    const scoreGap = (pScore !== null && oScore !== null) ? clamp(pScore - oScore, -20, 20) : null;
+    const pitcherBoost = scoreGap !== null ? r4(Math.exp(ERA_K * scoreGap)) : null;
     const moneyLineOdds = odds(modelProb);
     const moneylineProp = modelProb;
 

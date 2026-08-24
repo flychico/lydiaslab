@@ -21,13 +21,6 @@ const { OFFICIAL_MODEL_PROB, OFFICIAL_LAB_SCORE } = require("./lib/gate-constant
 // coefficient moved out to its own module, same reasoning as gate-constants
 // above -- export-pregame-attribution.js and grade-calibration.js each
 // recompute pitcher_boost for their own ledgers and had their own hardcoded
-// copy of this number, which is exactly how grade-calibration.js's copy went
-// stale for three days on 2026-08-21. See scripts/lib/pitcher-boost-constants.js
-// for the full before/after math. This is NOT the same constant as ERA_K
-// below, which still prices the separate shadow model's (modelV3) FIP-lite
-// ERA gap -- a different, narrower-scale input that was not part of this fix.
-const { PITCHER_SCORE_K, PITCHER_SCORE_GAP_CLAMP } = require("./lib/pitcher-boost-constants");
-
 const ROOT = path.join(__dirname, "..");
 // 2026-08-14, Lynold's explicit instruction: log5 (and the flat league-wide
 // HFA it applied) removed from the moneyline model. team_strength_blend now
@@ -1074,16 +1067,12 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
   const scoreA = pitcherScoreFor(g, "away", pitchingPlan, pitchers);
   const scoreH = pitcherScoreFor(g, "home", pitchingPlan, pitchers);
   // Home-relative (positive when the home starter grades better), capped at
-  // +/-PITCHER_SCORE_GAP_CLAMP before the exponential.
-  // 2026-08-24 fix, Lynold's explicit instruction: this used to reuse
-  // ERA_K (0.20) unchanged for the exponential below, which produced a
-  // maxed +/-20 gap swinging pre-bullpen odds up to ~54.6x -- see
-  // scripts/lib/pitcher-boost-constants.js for the full before/after math
-  // and the concrete case (Athletics @ Astros, 2026-08-23) that surfaced it.
-  // Now uses its own coefficient (PITCHER_SCORE_K, 0.03), calibrated back
-  // down to roughly the ~1.92x ceiling this step was designed around before
-  // the pitcher term switched from an ERA gap to a pitcher-score gap.
-  const scoreGap = clamp(scoreH - scoreA, -PITCHER_SCORE_GAP_CLAMP, PITCHER_SCORE_GAP_CLAMP);
+  // +/-20 before the exponential.
+  // 2026-08-24, Lynold's explicit instruction: reverted back to this original
+  // form. A same-day PITCHER_SCORE_K=0.03 normalization (dedicated coefficient,
+  // shared module) was tried and reverted per Lynold's call -- back to reusing
+  // ERA_K (0.20) unchanged for this exponential, same as before that change.
+  const scoreGap = clamp(scoreH - scoreA, -20, 20);
   // Bullpen risk adjusts the probability itself, not just Lab Rating and the
   // official-pick gate — a starter only covers part of the game. Uses the
   // combined risk index (fatigue blended with efficiency), not raw fatigue,
@@ -1093,7 +1082,7 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
   const bpAwayScoreForModel = bullpen[aT.name] ? (bullpen[aT.name].risk_index ?? bullpen[aT.name].score) : null;
   const bpHomeScoreForModel = bullpen[hT.name] ? (bullpen[hT.name].risk_index ?? bullpen[hT.name].score) : null;
   const bullpenAdj = bullpenProbAdjustment(bpAwayScoreForModel, bpHomeScoreForModel);
-  const preBullpenOdds = (pBase / (1 - pBase)) * Math.exp(PITCHER_SCORE_K * scoreGap);
+  const preBullpenOdds = (pBase / (1 - pBase)) * Math.exp(ERA_K * scoreGap);
   const preBullpenHomeProb = preBullpenOdds / (1 + preBullpenOdds);
   const modelOdds = preBullpenOdds * Math.exp(bullpenAdj);
   const legacyPHome = modelOdds / (1 + modelOdds);
@@ -1296,8 +1285,7 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
     model_effective_era_home: round(spH, 2),
     // model_pitcher_score_away/home are the EXACT scoreA/scoreH this game's
     // exponential pitcher-score adjustment used -- starter-only (no bullpen
-    // blend), gap capped at +/-PITCHER_SCORE_GAP_CLAMP before PITCHER_SCORE_K
-    // is applied (see scripts/lib/pitcher-boost-constants.js).
+    // blend), gap capped at +/-20 before ERA_K is applied.
     model_pitcher_score_away: round(scoreA, 1),
     model_pitcher_score_home: round(scoreH, 1),
     // Team-strength-only inputs, before any pitcher or bullpen adjustment.
