@@ -55,6 +55,17 @@ td.team-cell { font-weight: 600; white-space: nowrap; }
 
   <div id="stories"></div>
 
+  <h2 style="margin-top:18px">LyDia's Own Record</h2>
+  <div class="notice legend">
+    <b>How to read this:</b> every graded model lean gets a row in LyDia's own ledger, win or lose — this is that
+    ledger, not a highlight reel. <b>Official picks only</b> is what actually went out on the card; <b>every graded
+    model lean</b> includes passes and watchlist reads the model evaluated but didn't publish. Tap a team for its
+    full breakdown.
+  </div>
+  <div id="own-filter" style="margin-bottom:8px"></div>
+  <div id="own-status" class="loading">Loading LyDia's record…</div>
+  <div id="own-record"></div>
+
   <h2 style="margin-top:18px">The Map — every team, two axes, your call</h2>
   <div class="card">
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:8px">
@@ -86,6 +97,16 @@ td.team-cell { font-weight: 600; white-space: nowrap; }
   <div id="off-status" class="loading">Loading offense trends…</div>
   <div id="offense"></div>
 
+  <h2 style="margin-top:26px">Pitching — hot & cold (last 15 days vs season)</h2>
+  <div class="notice legend">
+    <b>How to read this table:</b> the pitching line is each team's run prevention over the <b>last 15 days</b>,
+    alongside its full-season ERA for reference. <b>K/9</b>, <b>BB/9</b>, and <b>HR/9</b> are rates per nine innings.
+    Click any column header to sort. Lower ERA/WHIP/BB9/HR9 is better pitching; higher K/9 is better.
+  </div>
+  <div id="pitch-filter" style="margin-bottom:8px"></div>
+  <div id="pitch-status" class="loading">Loading pitching trends…</div>
+  <div id="pitching"></div>
+
   <h2 style="margin-top:26px">Standings & run environment</h2>
 
   <div class="notice legend">
@@ -99,6 +120,14 @@ td.team-cell { font-weight: 600; white-space: nowrap; }
 
   <div id="status" class="loading">Loading standings…</div>
   <div id="standings"></div>
+
+  <h2 style="margin-top:26px">Situational Trends — LyDia's Angles</h2>
+  <div class="notice legend">
+    <b>How to read this:</b> these splits come from LyDia's own graded-lean ledger (every model lean, official or
+    not) crossed against real team form from the standings above. It's a mirror on the model's own tendencies, not a
+    market trend claim.
+  </div>
+  <div id="situational"><div class="dim small">Waiting on LyDia's ledger and standings to finish loading…</div></div>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script>
@@ -334,7 +363,250 @@ function sortOffense(key) {
   renderOffense();
 }
 
+/* ================= LyDia's own record (calibration_model_log.csv) ================= */
+// Same ledger the Learning Dashboard reads (learning/index.html) -- this page
+// only needs date/matchup/model_side/status/model_prob/result, so it parses
+// the CSV itself rather than pulling in that page's larger buildMoneyline()
+// pipeline (drivers, shadow-model join, confidence report) which this page
+// has no use for.
+let ownRows = [], ownScope = "official"; // "official" = published picks only, "all" = every graded model lean
+let ownFetchedAt = null;
+function splitCsvLine(l) { const c = []; let cur = "", q = false; for (const ch of l) { if (ch === '"') q = !q; else if (ch === "," && !q) { c.push(cur); cur = ""; } else cur += ch; } c.push(cur); return c; }
+function parseOwnCSV(t) { if (!t) return []; const l = t.trim().split(/\r?\n/); if (l.length < 2) return []; const h = splitCsvLine(l[0]); return l.slice(1).map(x => { const c = splitCsvLine(x); const o = {}; h.forEach((k, i) => o[k] = c[i]); return o; }); }
+const homeOfMatchup = m => { const p = String(m || "").split(" @ "); return p.length === 2 ? p[1] : ""; };
+function dkeyOwn(d) { const m = String(d || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return m ? Number(m[3]) * 10000 + Number(m[1]) * 100 + Number(m[2]) : 0; }
+
+const OWN_CACHE_KEY = "lydia-own-record-v1";
+async function loadOwnRecord() {
+  const status = document.getElementById("own-status");
+  try {
+    const c = JSON.parse(localStorage.getItem(OWN_CACHE_KEY));
+    if (c && Array.isArray(c.rows) && c.rows.length) { ownRows = c.rows; ownFetchedAt = c.t || null; status.textContent = "Updating…"; renderOwnRecord(); }
+  } catch (e) {}
+  try {
+    const res = await fetch("/data/calibration/calibration_model_log.csv?v=" + Date.now(), { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const parsed = parseOwnCSV(await res.text());
+    ownRows = parsed.map(r => ({
+      date: r.date, gamePk: r.gamePk, matchup: r.matchup, side: r.model_side || "", status: r.status,
+      modelProb: r.model_prob === "" || r.model_prob == null ? null : Number(r.model_prob),
+      won: r.result === "W" ? 1 : (r.result === "L" ? 0 : null)
+    })).filter(r => r.won !== null && r.side); // only graded, resolved leans with a side
+    if (status.parentNode) status.remove();
+    ownFetchedAt = Date.now();
+    try { localStorage.setItem(OWN_CACHE_KEY, JSON.stringify({ t: ownFetchedAt, rows: ownRows })); } catch (e) {}
+    renderOwnRecord();
+    renderSituational();
+  } catch (e) {
+    if (ownRows.length) status.textContent = "LyDia's ledger didn\u2019t respond — showing your last saved copy.";
+    else status.textContent = "LyDia's own record isn't available right now.";
+  }
+}
+function ownPool() { return ownScope === "official" ? ownRows.filter(r => r.status === "official_pick") : ownRows; }
+function setOwnScope(s) { ownScope = s; renderOwnRecord(); }
+function renderOwnRecord() {
+  const el = document.getElementById("own-record");
+  const filterEl = document.getElementById("own-filter");
+  if (!el || !filterEl) return;
+  const pool = ownPool();
+  const w = pool.filter(r => r.won === 1).length, n = pool.length, l = n - w;
+  const byTeam = new Map();
+  for (const r of pool) { if (!byTeam.has(r.side)) byTeam.set(r.side, { team: r.side, w: 0, l: 0 }); const t = byTeam.get(r.side); if (r.won === 1) t.w++; else t.l++; }
+  const teamRows = [...byTeam.values()].map(t => ({ ...t, n: t.w + t.l, pct: t.w / (t.w + t.l) })).sort((a, b) => b.n - a.n || b.pct - a.pct);
+  const age = ownFetchedAt ? `<div class="small dim" style="margin:4px 2px 6px">Ledger as of ${new Date(ownFetchedAt).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}.</div>` : "";
+  filterEl.innerHTML = `<div style="display:flex;gap:6px;flex-wrap:wrap">
+    <span class="fpill ${ownScope === "official" ? "on" : ""}" onclick="setOwnScope('official')">Official picks only</span>
+    <span class="fpill ${ownScope === "all" ? "on" : ""}" onclick="setOwnScope('all')">Every graded model lean</span>
+  </div>`;
+  el.innerHTML = age + `<div class="card" style="display:flex;gap:22px;flex-wrap:wrap;align-items:baseline;margin-bottom:12px">
+    <div><div class="dim small">Record</div><div style="font-size:1.6rem;font-weight:800">${w}-${l}</div></div>
+    <div><div class="dim small">Win%</div><div style="font-size:1.6rem;font-weight:800" class="${n && w / n >= 0.5 ? "pos-text" : "neg-text"}">${n ? (w / n * 100).toFixed(1) + "%" : "—"}</div></div>
+    <div><div class="dim small">Graded picks</div><div style="font-size:1.6rem;font-weight:800">${n}</div></div>
+  </div>
+  <div class="card game-card"><table>
+    <thead><tr><th>Team</th><th class="num">n</th><th class="num">Record</th><th class="num">Win%</th></tr></thead>
+    <tbody>${teamRows.map(t => `<tr><td class="team-cell" onclick="teamPanel('${t.team.replace(/'/g, "\\'")}')">${escapeHtml(t.team)}</td><td class="num">${t.n}</td><td class="num">${t.w}-${t.l}</td><td class="num ${t.pct >= 0.5 ? "pos-text" : "neg-text"}">${(t.pct * 100).toFixed(0)}%</td></tr>`).join("") || `<tr><td colspan="4" class="dim">No graded picks in this scope yet.</td></tr>`}</tbody>
+  </table></div>`;
+}
+
+/* ---- Situational trends: LyDia's own angles, crossed with real team form ---- */
+function renderSituational() {
+  const el = document.getElementById("situational");
+  if (!el || !ownRows.length || !window._standRows) return; // needs both the ledger and standings loaded
+  const pool = ownRows; // every graded lean -- official-only is too thin a sample to split further
+  const rec = rs => { const w = rs.filter(r => r.won === 1).length, n = rs.length; return { w, l: n - w, n, pct: n ? w / n : null }; };
+  const home = pool.filter(r => r.matchup && r.side === homeOfMatchup(r.matchup));
+  const road = pool.filter(r => r.matchup && homeOfMatchup(r.matchup) && r.side !== homeOfMatchup(r.matchup));
+  const highConf = pool.filter(r => r.modelProb !== null && r.modelProb >= 0.60);
+  const closeCall = pool.filter(r => r.modelProb !== null && r.modelProb < 0.60);
+  const rHome = rec(home), rRoad = rec(road), rHigh = rec(highConf), rClose = rec(closeCall);
+
+  const sorted = [...pool].sort((a, b) => dkeyOwn(b.date) - dkeyOwn(a.date));
+  let streak = 0, streakType = null;
+  for (const r of sorted) { if (streakType === null) { streakType = r.won; streak = 1; } else if (r.won === streakType) streak++; else break; }
+  const streakLine = streak >= 3 ? `<div class="notice ${streakType === 1 ? "" : "warn"}" style="margin-bottom:12px">LyDia's model is on a <b>${streak}-${streakType === 1 ? "win" : "loss"} streak</b> across its most recent graded leans.</div>` : "";
+
+  const angle = (label, r, note) => `<tr><td>${label}</td><td class="num">${r.n}</td><td class="num">${r.w}-${r.l}</td><td class="num ${r.pct != null && r.pct >= 0.5 ? "pos-text" : r.pct != null ? "neg-text" : ""}">${r.pct != null ? (r.pct * 100).toFixed(0) + "%" : "—"}</td><td class="dim small">${note}</td></tr>`;
+
+  const byTeam = new Map();
+  for (const r of pool) { if (!byTeam.has(r.side)) byTeam.set(r.side, []); byTeam.get(r.side).push(r); }
+  const teamAngles = [...byTeam.entries()].map(([team, rs]) => {
+    const rr = rec(rs);
+    const real = window._standRows.find(x => x.name === team) || {};
+    return { team, ...rr, streak: real.streak || "—", l10: real.l10 || "—" };
+  }).filter(t => t.n >= 3).sort((a, b) => b.n - a.n);
+
+  el.innerHTML = `${streakLine}
+    <div class="card game-card"><table>
+      <thead><tr><th>Angle</th><th class="num">n</th><th class="num">Record</th><th class="num">Win%</th><th>Note</th></tr></thead>
+      <tbody>
+        ${angle("Backing the home team", rHome, "LyDia's lean was the home side")}
+        ${angle("Backing the road team", rRoad, "LyDia's lean was the away side")}
+        ${angle("High-confidence leans (≥60% model)", rHigh, "")}
+        ${angle("Closer calls (50–60% model)", rClose, "")}
+      </tbody>
+    </table></div>
+    <h3 style="margin-top:16px">Teams LyDia leans on most, real form alongside</h3>
+    <div class="card game-card"><table>
+      <thead><tr><th>Team</th><th class="num">LyDia n</th><th class="num">LyDia record</th><th class="num">LyDia win%</th><th>Real streak</th><th>Real L10</th></tr></thead>
+      <tbody>${teamAngles.map(t => `<tr><td class="team-cell" onclick="teamPanel('${t.team.replace(/'/g, "\\'")}')">${escapeHtml(t.team)}</td><td class="num">${t.n}</td><td class="num">${t.w}-${t.l}</td><td class="num ${t.pct >= 0.5 ? "pos-text" : "neg-text"}">${(t.pct * 100).toFixed(0)}%</td><td>${escapeHtml(t.streak)}</td><td>${escapeHtml(t.l10)}</td></tr>`).join("") || `<tr><td colspan="6" class="dim">Not enough data yet.</td></tr>`}</tbody>
+    </table></div>`;
+}
+
+/* ================= Pitching trends (mirrors offense, group=pitching) ================= */
+function fERA(v) { return isFinite(v) ? v.toFixed(2) : "—"; }
+function fWHIP(v) { return isFinite(v) ? v.toFixed(2) : "—"; }
+function ipToNumStat(ip) { if (!ip || ip === "-.--") return 0; const [w, f] = String(ip).split("."); return Number(w || 0) + Number(f || 0) / 3; }
+let pitchRows = [], pitchSort = { key: "era", dir: 1 }; // ERA ascending by default -- lowest (best) first
+let pitchFilter = new Set();
+let pitchFetchedAt = null;
+
+function renderPitchFilter() {
+  const el = document.getElementById("pitch-filter");
+  if (!el || !pitchRows.length) return;
+  const teams = [...pitchRows].sort((a, b) => shortTeam(a.team).localeCompare(shortTeam(b.team)));
+  el.innerHTML = `<div class="small dim" style="margin-bottom:4px">Compare teams — tap as many as you want${pitchFilter.size ? ` · showing ${pitchFilter.size} · ` : ""}${pitchFilter.size ? '<a style="cursor:pointer;color:var(--accent2);font-weight:700" onclick="pitchFilter.clear();renderPitchFilter();renderPitching()">clear</a>' : ""}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:5px">
+      <span class="fpill ${pitchFilter.size ? "" : "on"}" onclick="pitchFilter.clear();renderPitchFilter();renderPitching()">All</span>
+      ${teams.map((t, i) => `<span class="fpill ${pitchFilter.has(t.team) ? "on" : ""}" onclick="togglePitchTeam(${i})" data-team="${escapeHtml(t.team)}">${escapeHtml(shortTeam(t.team))}</span>`).join("")}
+    </div>`;
+}
+function togglePitchTeam(i) {
+  const pills = document.querySelectorAll("#pitch-filter .fpill[data-team]");
+  const name = pills[i] && pills[i].dataset.team;
+  if (!name) return;
+  if (pitchFilter.has(name)) pitchFilter.delete(name); else pitchFilter.add(name);
+  renderPitchFilter(); renderPitching();
+}
+
+const PITCH_CACHE_KEY = "lydia-pitching-v1";
+async function loadPitching() {
+  const status = document.getElementById("pitch-status");
+  try {
+    const c = JSON.parse(localStorage.getItem(PITCH_CACHE_KEY));
+    if (c && Array.isArray(c.rows) && c.rows.length) { pitchRows = c.rows; pitchFetchedAt = c.t || null; status.textContent = "Updating…"; renderPitchFilter(); renderPitching(); }
+  } catch (e) {}
+  try {
+    const end = new Date(), start = new Date(Date.now() - OFF_DAYS * 86400000);
+    const fmt = d => d.toISOString().slice(0, 10);
+    const base = "https://statsapi.mlb.com/api/v1/teams/stats?sportId=1&group=pitching&season=" + season;
+    const [seasonRes, rangeRes] = await Promise.all([
+      fetch(base + "&stats=season"),
+      fetch(base + "&stats=byDateRange&startDate=" + fmt(start) + "&endDate=" + fmt(end))
+    ]);
+    if (!seasonRes.ok || !rangeRes.ok) throw new Error("MLB API unavailable");
+    const seasonSplits = (await seasonRes.json()).stats[0].splits;
+    const rangeSplits = (await rangeRes.json()).stats[0].splits;
+    const seasonBy = {};
+    for (const t of seasonSplits) seasonBy[t.team.id] = t.stat;
+
+    pitchRows = rangeSplits.map(t => {
+      const r = t.stat, sn = seasonBy[t.team.id] || {};
+      const ip = ipToNumStat(r.inningsPitched);
+      const k9 = ip ? (Number(r.strikeOuts) || 0) / ip * 9 : null;
+      const bb9 = ip ? (Number(r.baseOnBalls) || 0) / ip * 9 : null;
+      const hr9 = ip ? (Number(r.homeRuns) || 0) / ip * 9 : null;
+      const era = Number(r.era), seasonEra = Number(sn.era);
+      return {
+        team: t.team.name,
+        g: Number(r.gamesPlayed) || 0,
+        era, whip: Number(r.whip),
+        seasonEra, seasonWhip: Number(sn.whip),
+        deltaEra: (Number.isFinite(era) && Number.isFinite(seasonEra)) ? (era - seasonEra) : null,
+        k9, bb9, hr9
+      };
+    }).filter(r => r.g > 0 && isFinite(r.era));
+
+    if (status.parentNode) status.remove();
+    pitchFetchedAt = Date.now();
+    try { localStorage.setItem(PITCH_CACHE_KEY, JSON.stringify({ t: pitchFetchedAt, rows: pitchRows })); } catch (e) {}
+    renderPitchFilter();
+    renderPitching();
+  } catch (e) {
+    if (pitchRows.length) status.textContent = "MLB stats feed didn\u2019t respond — showing your last saved copy.";
+    else status.textContent = "Pitching trends unavailable right now — MLB stats API did not respond.";
+  }
+}
+// 2026-08-24, flagged for Lynold to tune (not his number): ERA-delta hot/cold
+// threshold. A team's ERA over a 15-day window swings more than a single
+// wOBA-based hitting stat does, so 0.60 runs of movement (recent vs season)
+// is used here as "meaningfully different" -- lower recent ERA = hot pitching
+// (🔥), higher = cold (🧊). Same idea as WOBA_HOT above, different scale.
+const ERA_HOT = 0.60;
+function eraTier(v) { if (!Number.isFinite(v)) return null;
+  if (v < 3.30) return { t: "elite", cls: "pos-text" }; if (v < 3.80) return { t: "great", cls: "pos-text" }; if (v < 4.30) return { t: "good", cls: "pos-text" };
+  if (v < 4.80) return { t: "average", cls: "" }; if (v < 5.40) return { t: "below avg", cls: "neg-text" }; return { t: "poor", cls: "neg-text" }; }
+function whipTier(v) { if (!Number.isFinite(v)) return null;
+  if (v < 1.10) return { t: "elite", cls: "pos-text" }; if (v < 1.22) return { t: "great", cls: "pos-text" }; if (v < 1.32) return { t: "good", cls: "pos-text" };
+  if (v < 1.42) return { t: "average", cls: "" }; return { t: "below avg", cls: "neg-text" }; }
+function k9Tier(v) { if (!Number.isFinite(v)) return null;
+  if (v >= 10) return { t: "elite Ks", cls: "pos-text" }; if (v >= 9) return { t: "great Ks", cls: "pos-text" }; if (v >= 8) return { t: "good", cls: "pos-text" };
+  if (v >= 7) return { t: "average", cls: "" }; return { t: "low Ks", cls: "neg-text" }; }
+
+function renderPitching() {
+  const el = document.getElementById("pitching");
+  const pool = pitchFilter.size ? pitchRows.filter(r => pitchFilter.has(r.team)) : pitchRows;
+  const rows = [...pool].sort((a, b) => (a[pitchSort.key] < b[pitchSort.key] ? 1 : -1) * pitchSort.dir * -1);
+  const cols = [
+    ["team", "Team", "Team name"],
+    ["g", "G", "Games in the last " + OFF_DAYS + " days"],
+    ["era", "ERA", "Earned run average, last " + OFF_DAYS + " days -- lower is better"],
+    ["seasonEra", "Season ERA", "Full-season ERA baseline"],
+    ["deltaEra", "ERA Δ", "Last " + OFF_DAYS + " days minus season ERA -- negative means pitching better than usual"],
+    ["whip", "WHIP", "Walks + hits per inning, last " + OFF_DAYS + " days"],
+    ["seasonWhip", "Season WHIP", "Full-season WHIP baseline"],
+    ["k9", "K/9", "Strikeouts per 9 innings over the window"],
+    ["bb9", "BB/9", "Walks per 9 innings over the window (lower is better)"],
+    ["hr9", "HR/9", "Home runs allowed per 9 innings over the window (lower is better)"]
+  ];
+  const body = rows.map(r => `<tr>
+      <td class="team-cell" onclick="teamPanel('${r.team.replace(/'/g, "\\'")}')">${escapeHtml(r.team)}</td>
+      <td class="num">${r.g}</td>
+      <td class="num"><b>${fERA(r.era)}</b>${tierChip(eraTier(r.era))}</td>
+      <td class="num dim">${fERA(r.seasonEra)}</td>
+      <td class="num ${Number.isFinite(r.deltaEra) ? (r.deltaEra <= -ERA_HOT ? "pos-text" : r.deltaEra >= ERA_HOT ? "neg-text" : "") : ""}">${Number.isFinite(r.deltaEra) ? (r.deltaEra >= 0 ? "+" : "") + r.deltaEra.toFixed(2) : "—"}${Number.isFinite(r.deltaEra) ? (r.deltaEra <= -ERA_HOT ? " 🔥" : r.deltaEra >= ERA_HOT ? " 🧊" : "") : ""}</td>
+      <td class="num"><b>${fWHIP(r.whip)}</b>${tierChip(whipTier(r.whip))}</td>
+      <td class="num dim">${fWHIP(r.seasonWhip)}</td>
+      <td class="num">${isFinite(r.k9) ? r.k9.toFixed(1) : "—"}${tierChip(k9Tier(r.k9))}</td>
+      <td class="num">${isFinite(r.bb9) ? r.bb9.toFixed(1) : "—"}</td>
+      <td class="num">${isFinite(r.hr9) ? r.hr9.toFixed(1) : "—"}</td>
+    </tr>`).join("");
+  const age = pitchFetchedAt ? `<div class="small dim" style="margin:4px 2px 6px">Pitching data as of ${new Date(pitchFetchedAt).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} — reload to refresh.</div>` : "";
+  el.innerHTML = age + `<div class="card game-card"><table>
+    <thead><tr>${cols.map(c =>
+      `<th class="${c[0] === "team" ? "" : "num"}" style="cursor:pointer" title="${c[2]}" onclick="sortPitching('${c[0]}')">${c[1]}${pitchSort.key === c[0] ? (pitchSort.dir === -1 ? " ▾" : " ▴") : ""}</th>`
+    ).join("")}</tr></thead>
+    <tbody>${body}</tbody>
+  </table></div>`;
+}
+function sortPitching(key) {
+  pitchSort = { key, dir: pitchSort.key === key ? -pitchSort.dir : -1 };
+  renderPitching();
+}
+
 loadOffense();
+loadOwnRecord();
+loadPitching();
 const PYTH_EXP = 1.83;
 let rsCut = { hi: 0, lo: 0 }, raCut = { hi: 0, lo: 0 };
 
@@ -393,6 +665,7 @@ function renderStandings(data) {
   }
   setTimeout(buildStories, 0); // after the table paints — a stories hiccup can never blank the standings
   setTimeout(() => { if (typeof initMapControls === "function" && offRows.length) drawMap(); }, 50);
+  setTimeout(() => { try { renderSituational(); } catch (e) { console.warn("situational skipped:", e.message); } }, 0);
 
   // league-wide RS/G and RA/G cutoffs for top/bottom-10 coloring
   const all = [];
