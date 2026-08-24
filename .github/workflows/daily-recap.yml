@@ -2,6 +2,12 @@ name: Daily recap and grading
 
 on:
   schedule:
+    # 7:35am ET. 2026-08-23: backfill-recaps.yml runs at 8:20am ET,
+    # deliberately ~45min after this -- both workflows end with a commit
+    # and push to main, and that gap matters (see the note in
+    # backfill-recaps.yml for the collision this drifted into once already).
+    # If this schedule ever moves again, move backfill-recaps.yml's to stay
+    # at least 30-45 minutes after it.
     - cron: "35 11 * * *"
 
   workflow_dispatch:

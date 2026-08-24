@@ -14,7 +14,16 @@ name: Backfill recaps
 
 on:
   schedule:
-    - cron: "30 11 * * *"   # 7:30am ET -- after daily-recap (6:25am), yesterday is final
+    # 2026-08-23, fix: this used to read "7:30am ET -- after daily-recap
+    # (6:25am)". daily-recap.yml's own schedule moved to 11:35 UTC (7:35am ET)
+    # at some point and this comment/cron never got updated to match -- so
+    # backfill-recaps was actually starting 5 minutes BEFORE daily-recap, not
+    # after it. Both jobs end with a commit-and-push to main; running that
+    # close together let daily-recap's push land in between backfill-recaps'
+    # own pull-rebase and push, which git correctly rejected (cannot lock
+    # ref, remote had moved) rather than silently overwriting it. Moved to a
+    # real ~45-minute buffer after daily-recap's 7:35am ET start.
+    - cron: "20 12 * * *"   # 8:20am ET -- after daily-recap (7:35am ET), yesterday is final
   workflow_dispatch:
     inputs:
       date:
