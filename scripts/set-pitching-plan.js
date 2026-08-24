@@ -114,8 +114,22 @@ async function main() {
       if (!data.games[gamePk].away && !data.games[gamePk].home) delete data.games[gamePk];
     }
   } else {
-    const opener = await resolvePlayer(option("opener"));
-    const openerInnings = innings(option("opener-innings"), "Opener innings");
+    // 2026-08-24, Lynold's explicit instruction: this tool used to hardcode
+    // every manual plan's primary pitcher as role "opener" and the plan's
+    // type as "opener_bulk"/"opener_bullpen" -- there was no way to say "this
+    // is a normal starter, just going a known number of innings." That's not
+    // cosmetic: update-totals.js reads plan.type.startsWith("opener") to set
+    // bullpen_game, and generate-member-lab.js's official-pick gate refuses
+    // to publish a pick at all when bullpen_game is true. A confirmed starter
+    // (e.g. Jose Urquidy, 5 IP known in advance) entered through this tool
+    // was silently getting the game treated as a bullpen game -- suppressing
+    // real official picks. --role now makes the call explicit instead of
+    // assuming "opener" every time.
+    const role = option("role", "starter");
+    if (!["starter", "opener"].includes(role)) throw new Error("--role must be starter or opener.");
+
+    const primary = await resolvePlayer(option("opener") || option("starter"));
+    const primaryInnings = innings(option("opener-innings") || option("starter-innings"), "Primary pitcher innings");
     const bulkName = option("bulk");
     const bulkInningsRaw = option("bulk-innings");
     if (Boolean(bulkName) !== Boolean(bulkInningsRaw)) {
@@ -123,12 +137,12 @@ async function main() {
     }
     const bulk = bulkName ? await resolvePlayer(bulkName) : null;
     const bulkInnings = bulk ? innings(bulkInningsRaw, "Bulk innings") : 0;
-    const bullpenInnings = Number((9 - openerInnings - bulkInnings).toFixed(1));
-    if (!(bullpenInnings > 0)) throw new Error("Opener plus bulk innings must leave at least one bullpen inning.");
+    const bullpenInnings = Number((9 - primaryInnings - bulkInnings).toFixed(1));
+    if (!(bullpenInnings > 0)) throw new Error("Primary pitcher plus bulk innings must leave at least one bullpen inning.");
 
     const team = game.teams[side].team.name;
     const segments = [
-      { role: "opener", ...opener, expected_innings: openerInnings },
+      { role, ...primary, expected_innings: primaryInnings },
       ...(bulk ? [{ role: "bulk", ...bulk, expected_innings: bulkInnings }] : []),
       { role: "bullpen", expected_innings: bullpenInnings }
     ];
@@ -137,7 +151,7 @@ async function main() {
     };
     data.games[gamePk][side] = {
       team,
-      type: bulk ? "opener_bulk" : "opener_bullpen",
+      type: bulk ? `${role}_bulk` : `${role}_bullpen`,
       confidence: "manual",
       source_note: `Manual pitching update: ${segments.map(segment => `${segment.pitcher || "bullpen"} ${segment.expected_innings} IP`).join(", ")}.`,
       segments
