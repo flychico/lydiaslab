@@ -369,11 +369,12 @@ const BARBELL = new Set(["bb-squat","bb-deadlift","rdl","sumo-dl","hip-thrust","
 function platesFor(w) {
   w = Number(w);
   if (!isFinite(w) || w < 45) return null;
-  if (w === 45) return "empty bar";
+  if (w === 45) return "just the 45 lb bar";
   let side = (w - 45) / 2;
-  const out = [];
-  for (const p of [45, 35, 25, 10, 5, 2.5]) { while (side >= p - 0.01) { out.push(p); side -= p; } }
-  return out.length ? out.join(" + ") + " per side" + (side > 0.01 ? " (+" + side.toFixed(1) + ")" : "") : "collars only";
+  const parts = [];
+  for (const p of [45, 35, 25, 10, 5, 2.5]) { let c = 0; while (side >= p - 0.01) { c++; side -= p; } if (c) parts.push(c + "×" + p); }
+  if (!parts.length) return null;
+  return parts.join(" + ") + " per side + 45 lb bar" + (side > 0.01 ? " (+" + side.toFixed(1) + " more/side)" : "");
 }
 function hydrateCustom(){ (S.customEx || []).forEach(c => { if (!EXBY[c.id]) { EX.push(c); } EXBY[c.id] = c; }); }
 function addCustomExercise(name, unit){
@@ -432,17 +433,16 @@ const SPLITS = {
     6:["Push A","Pull A","Upper A","Push B","Pull B","Lower"]
   }
 };
+// Ordered by priority (compound first); core placed early enough to survive the duration cut.
 const DAY_PATTERNS = {
-  "Full":  ["squat","pushH","pullH","hinge","pushV","pullV","glute","core"],
-  "Upper": ["pushH","pullH","pushV","pullV","shoulders","arms","arms","core"],
-  "Lower": ["squat","hinge","glute","lunge","calves","core","hinge","glute"],
-  "Push":  ["pushH","pushV","pushH","shoulders","arms","arms","core","pushV"],
-  "Pull":  ["pullH","pullV","pullH","shoulders","arms","arms","core","pullV"],
-  "Legs":  ["squat","hinge","lunge","glute","calves","core","squat","hinge"],
-  "Glutes":["glute","hinge","squat","lunge","glute","hip","calves","core"]
+  "Full":  ["squat","pushH","pullH","hinge","core","pushV","pullV","glute"],
+  "Upper": ["pushH","pullH","pushV","pullV","core","arms","shoulders","arms"],
+  "Lower": ["squat","hinge","glute","lunge","core","calves","hinge","glute"],
+  "Push":  ["pushH","pushV","shoulders","arms","core","pushH","shoulders","arms"],
+  "Pull":  ["pullH","pullV","pullH","arms","core","shoulders","pullV","arms"],
+  "Legs":  ["squat","hinge","lunge","glute","core","calves","squat","hinge"],
+  "Glutes":["glute","hinge","lunge","squat","core","glute","calves","glute"]
 };
-// glute-focus day: glute pattern first (priority when fresh), extra hinge/lunge volume
-DAY_PATTERNS["Glutes"] = ["glute","hinge","lunge","squat","glute","core","calves","glute"];
 const DUR_COUNT = {20:3, 30:4, 45:5, 60:6, 75:7, 90:8};
 const GOALS = {
   strength:{compound:[4,3,6],  accessory:[3,6,10]},
@@ -476,11 +476,18 @@ function generatePlan(p){
   const goal = GOALS[p.goal];
   const usedByDay = {};
   const days = names.map(name => {
-    const pats = DAY_PATTERNS[dayType(name)].filter(x => x !== "hip").slice(0, count);
+    const dt = dayType(name);
+    const pats = DAY_PATTERNS[dt].filter(x => x !== "hip").slice(0, count);
     const used = new Set();
     const exercises = [];
     for (const pat of pats) {
-      const opts = pool.filter(e => e.p === pat && !used.has(e.id));
+      let opts = pool.filter(e => e.p === pat && !used.has(e.id));
+      // on push/leg days train triceps; on pull days train biceps — so arms complement the day
+      if (pat === "arms") {
+        const tri = opts.filter(e => /Tri/i.test(e.m)), bi = opts.filter(e => /Bicep/i.test(e.m));
+        if ((dt === "Push" || dt === "Legs") && tri.length) opts = tri;
+        else if (dt === "Pull" && bi.length) opts = bi;
+      }
       if (!opts.length) continue;
       const seen = usedByDay[pat] || 0;
       const pick = opts[seen % opts.length];
@@ -508,6 +515,14 @@ function generatePlan(p){
       }
     }
     return { name, exercises };
+  });
+  // Guarantee core/ab work exists in the plan (short sessions can cut it from a day)
+  const coreOpts = pool.filter(e => e.p === "core");
+  if (coreOpts.length) days.forEach((d, i) => {
+    if (d.exercises.some(e => EXBY[e.ex] && EXBY[e.ex].p === "core")) return;
+    if (i % 2 !== 0) return; // add to roughly every other day, not all
+    const pick = coreOpts[i % coreOpts.length];
+    d.exercises.push({ ex: pick.id, sets: goal.accessory[0], lo: goal.accessory[1], hi: goal.accessory[2], rest: REST.accessory });
   });
   return { created: today(), days, nextDay: 0 };
 }
@@ -674,6 +689,14 @@ function plannedSetsByMuscle(){
   for (const d of S.plan.days) for (const s of d.exercises) { const ex = EXBY[s.ex]; if (!ex || ex.u === "time") continue; for (const [m, w] of musclesFor(s.ex)) acc[m] = (acc[m] || 0) + (s.sets || 0) * w; }
   return acc;
 }
+// Primary vs secondary muscles a day targets (for the "Targets:" line)
+function dayMuscles(day){
+  const prim = {}, sec = {};
+  for (const s of day.exercises) { const ex = EXBY[s.ex]; if (!ex || ex.u === "time") continue; musclesFor(s.ex).forEach(([m, w]) => { if (w >= 1) prim[m] = (prim[m] || 0) + (s.sets || 1); else sec[m] = (sec[m] || 0) + (s.sets || 1); }); }
+  const primary = Object.keys(prim).sort((a, b) => prim[b] - prim[a]);
+  const secondary = Object.keys(sec).filter(m => !prim[m]).sort((a, b) => sec[b] - sec[a]);
+  return { primary, secondary };
+}
 // 4-week mesocycle; the 4th week is a deload
 function currentPhase(){
   if (!S.plan || !S.plan.created) return { week: 1, cycle: 4, deload: false };
@@ -764,6 +787,9 @@ function insights(){
     if (avgP < t.protein * 0.85) add("warn", "Protein low: averaging " + Math.round(avgP) + "g/day vs your " + t.protein + "g target. Protein protects muscle in a cut and drives growth — bump it up.");
     else add("good", "Protein dialed in: ~" + Math.round(avgP) + "g/day. That's what holds muscle while you lean out.");
   }
+  const shouldTrain = ["Chest", "Back", "Shoulders", "Quads", "Hamstrings", "Glutes", "Core"];
+  const missing = shouldTrain.filter(m => !(planned[m] > 0));
+  if (missing.length) add("warn", "Not in your plan: " + missing.join(", ") + ". Add an exercise for each (Plan → add exercise) or hit Regenerate so nothing gets neglected.");
   const dups = detectDuplicates();
   if (dups.length) add("info", "Duplicate exercises found (" + dups.slice(0, 2).map(g => g.map(id => EXBY[id] ? EXBY[id].n : id).join("/")).join("; ") + "). Merge them in Settings so progress isn't split.");
   const pr = { warn: 0, good: 1, info: 2 };
@@ -820,6 +846,7 @@ function renderDash(){
     ${insightsPanel("dashwide")}
     <div class="card dashwide">
       <div class="exhead"><h3>Today · ${esc(day.name)}</h3><span class="dim small">${day.exercises.length} exercises${doneToday ? ' · <span class="green">logged ✓</span>' : ""}</span></div>
+      ${(() => { const dm = dayMuscles(day); return dm.primary.length ? `<div class="dim small" style="margin-bottom:8px"><b>Targets:</b> ${dm.primary.join(", ")}${dm.secondary.length ? ` · also ${dm.secondary.join(", ")}` : ""}</div>` : ""; })()}
       ${day.exercises.length ? day.exercises.map(s => { const ex = EXBY[s.ex] || { n: s.ex, u: null }; return `<div class="exline"><span>${esc(ex.n)}${ex.m ? ` <span class="dim small">· ${esc(ex.m)}</span>` : ""}</span><span class="dim">${ex.u === "time" ? s.lo + "–" + s.hi + "m" : s.sets + "×" + s.lo + "–" + s.hi}</span></div>`; }).join("") : '<p class="dim small">This day has no exercises yet — add some in Plan.</p>'}
       <button class="btn full blue-btn" style="margin-top:12px" onclick="startWorkout(${dayIdx})">Start workout</button>
       ${plan.days.length > 1 ? `<div class="small dim" style="margin-top:10px">Jump to: ${plan.days.map((d, i) => i === dayIdx ? "" : `<span class="blue" style="cursor:pointer;margin-right:12px" onclick="startWorkout(${i})">${esc(d.name)}</span>`).join("")}</div>` : ""}
@@ -940,6 +967,7 @@ function renderToday(){
   ${(() => { const stalled = [...new Set(S.plan.days.flatMap(d => d.exercises.map(e => e.ex)))].filter(id => EXBY[id] && EXBY[id].inc > 0 && plateaued(id)); return stalled.length >= 3 ? `<div class="card" style="border-color:var(--gold)"><b class="gold">Time to back off a week</b><div class="dim small">${stalled.length} lifts have stalled for 3 straight sessions (${stalled.slice(0, 3).map(id => EXBY[id].n).join(", ")}${stalled.length > 3 ? "…" : ""}). Run them ~15% lighter this week so your body recovers — then build back up. Each shows its lighter target already.</div></div>` : ""; })()}
   <div class="card">
     <div class="exhead"><h3>${esc(day.name)}</h3><span class="dim small">${day.exercises.length} exercises</span></div>
+    ${(() => { const dm = dayMuscles(day); return dm.primary.length ? `<div class="dim small" style="margin-bottom:8px"><b>Targets:</b> ${dm.primary.join(", ")}${dm.secondary.length ? ` · also ${dm.secondary.join(", ")}` : ""}</div>` : ""; })()}
     ${day.exercises.map(s => { const ex = EXBY[s.ex] || { n: s.ex }; return `<div class="exline"><span>${esc(ex.n)}${ex.m ? ` <span class="dim small">· ${esc(ex.m)}</span>` : ""}</span><span class="dim">${s.sets}×${s.lo}–${s.hi}</span></div>`; }).join("")}
     <button class="btn full blue-btn" style="margin-top:12px" onclick="startWorkout(${dayIdx})">Start workout</button>
   </div>
@@ -1200,6 +1228,7 @@ function renderPlan(){
   <p class="dim small">${esc(planLabel())} · created ${S.plan.created}</p>
   ${S.plan.days.map((d, di) => `<div class="card">
     <div class="exhead"><h3>${esc(d.name)}</h3><span class="small"><span class="blue" style="cursor:pointer" onclick="planRenameDay(${di})">rename</span> · <span class="red" style="cursor:pointer" onclick="planDeleteDay(${di})">delete</span></span></div>
+    ${(() => { const dm = dayMuscles(d); return dm.primary.length ? `<div class="dim small" style="margin:-2px 0 8px"><b>Targets:</b> ${dm.primary.join(", ")}${dm.secondary.length ? ` <span style="opacity:.8">· also ${dm.secondary.join(", ")}</span>` : ""}</div>` : ""; })()}
     ${d.exercises.length ? d.exercises.map((s, si) => { const ex = EXBY[s.ex] || { n: s.ex, u: null }; return `<div class="exline"><span>${s.ss ? '<span style="color:var(--blue);font-weight:800">⇄</span> ' : ""}${esc(ex.n)}${ex.m ? ` <span class="dim small">· ${esc(ex.m)}</span>` : ""}${s.ss ? ' <span class="dim small">(superset)</span>' : ""}</span>
       <span class="dim">${ex.u === "time" ? s.lo + "–" + s.hi + "m" : s.sets + "×" + s.lo + "–" + s.hi}
       <span class="blue" style="cursor:pointer;margin-left:8px" onclick="planSwap(${di},${si})">swap</span>
