@@ -34,6 +34,188 @@
   },
   "picks": [
     {
+      "gamePk": 824557,
+      "away": "Texas Rangers",
+      "home": "Chicago White Sox",
+      "time": "2026-08-24T23:40:00Z",
+      "labScore": 25,
+      "labScoreBreakdown": {
+        "score": 25,
+        "version": "lab-rating-v3-measured-components",
+        "conviction_points": 1.72,
+        "agreement_points": 0,
+        "pitching_plan_points": 6,
+        "bullpen_points": 14.67,
+        "offense_points": 2.81,
+        "completeness_points": 0,
+        "pitcher_edge_points": 6,
+        "model_agreement_gap": 0.5138,
+        "model_agreement_credit": 0,
+        "bullpen_innings_weight": 1,
+        "assigned_bullpen_innings": 4.1,
+        "offense_delta": -0.0532,
+        "offense_delta_15d": -0.0706,
+        "offense_delta_30d": -0.0359,
+        "completeness_checks_passed": 5,
+        "completeness_checks_total": 5,
+        "data_complete": true,
+        "market_points": 0,
+        "model_edge_points": 0,
+        "base_points": 0,
+        "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
+      },
+      "status": "official_pick",
+      "modelVersion": "multi-market-v1",
+      "pitcherEdge": {
+        "team": "Texas Rangers",
+        "gap": 6,
+        "conflict": false,
+        "away_score": 58,
+        "home_score": 52,
+        "away_pitcher": "Kumar Rocker",
+        "home_pitcher": "José Urquidy",
+        "away_pitcher_id": 677958,
+        "home_pitcher_id": 664353,
+        "away_era": 4.46,
+        "home_era": null,
+        "away_whip": 1.4,
+        "home_whip": null,
+        "away_advanced": {
+          "w": 4,
+          "l": 10,
+          "kbb_pct": 0.1155,
+          "gb_pct": 0.4675,
+          "babip": 0.2971,
+          "hr9": 1.26,
+          "ip_per_start": 4.9,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 4.9,
+          "bullpen_innings": 4.1
+        },
+        "home_advanced": null
+      },
+      "bullpen": {
+        "pick_team": {
+          "score": 74,
+          "label": "Tired",
+          "last_game_bp_ip": 3,
+          "last7_bp_ip": 19.7,
+          "last7_bp_runs": 9,
+          "last_game_relievers": 4,
+          "last7_relievers": 20,
+          "back_to_back_arms": 7,
+          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+          "score_reason": "Tired (7.4/10): 19.7 recent relief innings, recency-weighted (pitched yesterday), 7 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 4,
+            "last7_relievers": 20,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 5.6,
+            "back_to_back_arms": 23,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 73.5
+          },
+          "efficiency_score": 53,
+          "efficiency_label": "Average",
+          "efficiency_reason": "Average (5.3/10): 3.66 ERA and 1.32 WHIP over 19.7 relief innings (8 ER, 16 H, 10 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": 3.2,
+            "whip_term": -0.3,
+            "confidence": 1,
+            "raw_score": 52.9
+          },
+          "era_7d": 3.66,
+          "whip_7d": 1.32,
+          "last15_bp_ip": 52.7,
+          "last15_bp_runs": 32,
+          "era_15d": 5.13,
+          "whip_15d": 1.54,
+          "recent15_games_tracked": 14,
+          "risk_index": 73,
+          "risk_label": "Tired",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "opponent": {
+          "score": 99,
+          "label": "High risk",
+          "last_game_bp_ip": 9,
+          "last7_bp_ip": 43.3,
+          "last7_bp_runs": 14,
+          "last_game_relievers": 4,
+          "last7_relievers": 25,
+          "back_to_back_arms": 6,
+          "workload_read": "Heavy recent workload. Late-game pitching condition could materially affect the read.",
+          "score_reason": "High risk (9.9/10): 43.3 recent relief innings, recency-weighted — 9 in the last game (pitched yesterday), 6 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 4,
+            "last7_relievers": 25,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 49.2,
+            "back_to_back_arms": 5,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 99.2
+          },
+          "efficiency_score": 61,
+          "efficiency_label": "Effective",
+          "efficiency_reason": "Effective (6.1/10): 2.7 ERA and 1.2 WHIP over 43.3 relief innings (13 ER, 35 H, 17 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": 9,
+            "whip_term": 1.5,
+            "confidence": 1,
+            "raw_score": 60.5
+          },
+          "era_7d": 2.7,
+          "whip_7d": 1.2,
+          "last15_bp_ip": 83.7,
+          "last15_bp_runs": 36,
+          "era_15d": 3.44,
+          "whip_15d": 1.22,
+          "recent15_games_tracked": 14,
+          "risk_index": 94,
+          "risk_label": "High risk",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "label": "Supports LyDia side",
+        "major_caution": false,
+        "absolute_risk": "Opponent high"
+      },
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Kumar Rocker",
+          "pick": "Over",
+          "line": 4.5,
+          "bestAm": -128,
+          "projection": 5.38,
+          "edge": 0.88,
+          "books": 6,
+          "expectedInnings": 4.9,
+          "pitcherRole": "traditional_starter",
+          "lineupSource": "posted",
+          "modelVersion": "leo-kprop",
+          "valueTag": "OFFICIAL PICK"
+        }
+      ]
+    },
+    {
       "gamePk": 823992,
       "away": "Cleveland Guardians",
       "home": "Los Angeles Angels",
@@ -226,5 +408,6 @@
       "total": null,
       "strikeouts": []
     }
-  ]
+  ],
+  "last_appended_at": "2026-08-24T19:45:56.321Z"
 }

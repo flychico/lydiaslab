@@ -1,6 +1,6 @@
 {
   "date": "2026-08-24",
-  "generated_at": "2026-08-24T17:21:47.825Z",
+  "generated_at": "2026-08-24T19:45:57.074Z",
   "source_of_truth": "LyDia Pitcher Matchup Tool",
   "source_version": "pitcher-matchup-core-v2-role-aware",
   "method": "Role-aware pitcher model using starter-only game logs. Traditional starters, limited starters, openers, and unknown roles receive workload-appropriate innings; the remainder belongs to the bullpen.",
@@ -1443,7 +1443,7 @@
         "rawScore": 52,
         "score": 52,
         "grade": "Below avg",
-        "note": "Starter-only innings are unavailable.",
+        "note": "José Urquidy is the reported opener; see the full pitching plan below.",
         "role": {
           "key": "unknown",
           "label": "Role unknown",
@@ -1453,11 +1453,11 @@
           "bullpenGame": true,
           "reason": "Starter-only innings are unavailable."
         },
-        "roleKey": "unknown",
-        "roleLabel": "Role unknown",
-        "expectedInnings": 4.5,
-        "bullpenInnings": 4.5,
-        "roleConfidence": "low",
+        "roleKey": "opener",
+        "roleLabel": "Reported opener",
+        "expectedInnings": 5,
+        "bullpenInnings": 4,
+        "roleConfidence": "manual",
         "bullpenGame": true,
         "k9": 9.5625,
         "bb9": 1.125,
@@ -1469,14 +1469,68 @@
         "babip": 0.4,
         "hr9": 1.125,
         "ipStart": null,
-        "effectiveEra": 3.7,
+        "effectiveEra": 3.73,
         "carriedByBullpen": false
       },
       "gap": 6,
       "strength": "Slight",
       "edge_team": "Texas Rangers",
       "bullpen_game": true,
-      "pitching_plan_confidence": "low",
+      "pitching_plan_confidence": "manual",
+      "schedule_probable": {
+        "home": {
+          "id": 664353,
+          "name": "José Urquidy"
+        }
+      },
+      "pitching_plan": {
+        "home": {
+          "team": "Chicago White Sox",
+          "type": "opener_bullpen",
+          "confidence": "manual",
+          "source_note": "Manual pitching update: José Urquidy 5 IP, bullpen 4 IP.",
+          "segments": [
+            {
+              "role": "opener",
+              "pitcher_id": 664353,
+              "pitcher": "José Urquidy",
+              "expected_innings": 5,
+              "stats": {
+                "id": 664353,
+                "name": "José Urquidy",
+                "hand": "R",
+                "era": 5.06,
+                "whip": 1.5,
+                "ip": 16,
+                "so": 17,
+                "bb": 2,
+                "hr": 2,
+                "gs": 0,
+                "gp": 7,
+                "w": 2,
+                "l": 1,
+                "bf": 71,
+                "go": 12,
+                "ao": 18,
+                "h": 22,
+                "ab": 69,
+                "sf": 0,
+                "starterIp": null,
+                "starterGames": null
+              },
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4,
+              "stats": null,
+              "role_stats": null
+            }
+          ],
+          "reported": true,
+          "description": "José Urquidy 5.0 IP + remaining bullpen 4.0 IP"
+        }
+      },
       "away_plan_score": 58,
       "home_plan_score": 52
     },
