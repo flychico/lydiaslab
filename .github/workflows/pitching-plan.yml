@@ -45,12 +45,18 @@ on:
         default: "away"
         type: choice
         options: [away, home]
+      role:
+        description: "Is the pitcher below a normal starter (known IP count) or a true opener/bullpen-day arm? This decides whether the model treats the game as a bullpen game."
+        required: true
+        default: "starter"
+        type: choice
+        options: [starter, opener]
       opener:
-        description: "Opener full name, e.g. Beck Way. Ignored when action=clear."
+        description: "Pitcher full name, e.g. Beck Way. Works for either role above. Ignored when action=clear."
         required: false
         type: string
       opener_innings:
-        description: "Expected opener innings, e.g. 2"
+        description: "Expected innings for the pitcher above, e.g. 5"
         required: false
         type: string
       bulk:
@@ -106,6 +112,7 @@ jobs:
             --action "${{ github.event.inputs.action }}" \
             --game-pk "${{ github.event.inputs.game }}" \
             --side "${{ github.event.inputs.side }}" \
+            --role "${{ github.event.inputs.role }}" \
             --opener "${{ github.event.inputs.opener }}" \
             --opener-innings "${{ github.event.inputs.opener_innings }}" \
             --bulk "${{ github.event.inputs.bulk }}" \
