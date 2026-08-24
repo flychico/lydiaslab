@@ -1,6 +1,6 @@
 {
   "date": "2026-08-24",
-  "generated_at": "2026-08-24T19:45:57.074Z",
+  "generated_at": "2026-08-24T21:16:31.609Z",
   "source_of_truth": "LyDia Pitcher Matchup Tool",
   "source_version": "pitcher-matchup-core-v2-role-aware",
   "method": "Role-aware pitcher model using starter-only game logs. Traditional starters, limited starters, openers, and unknown roles receive workload-appropriate innings; the remainder belongs to the bullpen.",
@@ -1443,7 +1443,7 @@
         "rawScore": 52,
         "score": 52,
         "grade": "Below avg",
-        "note": "José Urquidy is the reported opener; see the full pitching plan below.",
+        "note": "Starter-only innings are unavailable.",
         "role": {
           "key": "unknown",
           "label": "Role unknown",
@@ -1453,11 +1453,11 @@
           "bullpenGame": true,
           "reason": "Starter-only innings are unavailable."
         },
-        "roleKey": "opener",
-        "roleLabel": "Reported opener",
-        "expectedInnings": 5,
-        "bullpenInnings": 4,
-        "roleConfidence": "manual",
+        "roleKey": "unknown",
+        "roleLabel": "Role unknown",
+        "expectedInnings": 4.5,
+        "bullpenInnings": 4.5,
+        "roleConfidence": "low",
         "bullpenGame": true,
         "k9": 9.5625,
         "bb9": 1.125,
@@ -1486,12 +1486,12 @@
       "pitching_plan": {
         "home": {
           "team": "Chicago White Sox",
-          "type": "opener_bullpen",
+          "type": "starter_bullpen",
           "confidence": "manual",
           "source_note": "Manual pitching update: José Urquidy 5 IP, bullpen 4 IP.",
           "segments": [
             {
-              "role": "opener",
+              "role": "starter",
               "pitcher_id": 664353,
               "pitcher": "José Urquidy",
               "expected_innings": 5,
