@@ -17,6 +17,16 @@ const PitcherCore = require("../js/pitcher-matchup-core.js");
 // remap and the 2026-08-22 lab-score gate change, and had drifted stale on
 // both counts. See scripts/lib/gate-constants.js.
 const { OFFICIAL_MODEL_PROB, OFFICIAL_LAB_SCORE } = require("./lib/gate-constants");
+// 2026-08-24, Lynold's explicit instruction: the pitcher-score-gap boost
+// coefficient moved out to its own module, same reasoning as gate-constants
+// above -- export-pregame-attribution.js and grade-calibration.js each
+// recompute pitcher_boost for their own ledgers and had their own hardcoded
+// copy of this number, which is exactly how grade-calibration.js's copy went
+// stale for three days on 2026-08-21. See scripts/lib/pitcher-boost-constants.js
+// for the full before/after math. This is NOT the same constant as ERA_K
+// below, which still prices the separate shadow model's (modelV3) FIP-lite
+// ERA gap -- a different, narrower-scale input that was not part of this fix.
+const { PITCHER_SCORE_K, PITCHER_SCORE_GAP_CLAMP } = require("./lib/pitcher-boost-constants");
 
 const ROOT = path.join(__dirname, "..");
 // 2026-08-14, Lynold's explicit instruction: log5 (and the flat league-wide
@@ -1064,10 +1074,16 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
   const scoreA = pitcherScoreFor(g, "away", pitchingPlan, pitchers);
   const scoreH = pitcherScoreFor(g, "home", pitchingPlan, pitchers);
   // Home-relative (positive when the home starter grades better), capped at
-  // +/-20 before the exponential. K is ERA_K unchanged -- Lynold's call after
-  // seeing the max-swing math: a maxed +/-20 gap now swings pre-bullpen odds
-  // up to ~54.6x, well beyond era's own ~1.92x ceiling at its clamp.
-  const scoreGap = clamp(scoreH - scoreA, -20, 20);
+  // +/-PITCHER_SCORE_GAP_CLAMP before the exponential.
+  // 2026-08-24 fix, Lynold's explicit instruction: this used to reuse
+  // ERA_K (0.20) unchanged for the exponential below, which produced a
+  // maxed +/-20 gap swinging pre-bullpen odds up to ~54.6x -- see
+  // scripts/lib/pitcher-boost-constants.js for the full before/after math
+  // and the concrete case (Athletics @ Astros, 2026-08-23) that surfaced it.
+  // Now uses its own coefficient (PITCHER_SCORE_K, 0.03), calibrated back
+  // down to roughly the ~1.92x ceiling this step was designed around before
+  // the pitcher term switched from an ERA gap to a pitcher-score gap.
+  const scoreGap = clamp(scoreH - scoreA, -PITCHER_SCORE_GAP_CLAMP, PITCHER_SCORE_GAP_CLAMP);
   // Bullpen risk adjusts the probability itself, not just Lab Rating and the
   // official-pick gate — a starter only covers part of the game. Uses the
   // combined risk index (fatigue blended with efficiency), not raw fatigue,
@@ -1077,7 +1093,7 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
   const bpAwayScoreForModel = bullpen[aT.name] ? (bullpen[aT.name].risk_index ?? bullpen[aT.name].score) : null;
   const bpHomeScoreForModel = bullpen[hT.name] ? (bullpen[hT.name].risk_index ?? bullpen[hT.name].score) : null;
   const bullpenAdj = bullpenProbAdjustment(bpAwayScoreForModel, bpHomeScoreForModel);
-  const preBullpenOdds = (pBase / (1 - pBase)) * Math.exp(ERA_K * scoreGap);
+  const preBullpenOdds = (pBase / (1 - pBase)) * Math.exp(PITCHER_SCORE_K * scoreGap);
   const preBullpenHomeProb = preBullpenOdds / (1 + preBullpenOdds);
   const modelOdds = preBullpenOdds * Math.exp(bullpenAdj);
   const legacyPHome = modelOdds / (1 + modelOdds);
@@ -1280,18 +1296,33 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
     model_effective_era_home: round(spH, 2),
     // model_pitcher_score_away/home are the EXACT scoreA/scoreH this game's
     // exponential pitcher-score adjustment used -- starter-only (no bullpen
-    // blend), gap capped at +/-20 before ERA_K is applied.
+    // blend), gap capped at +/-PITCHER_SCORE_GAP_CLAMP before PITCHER_SCORE_K
+    // is applied (see scripts/lib/pitcher-boost-constants.js).
     model_pitcher_score_away: round(scoreA, 1),
     model_pitcher_score_home: round(scoreH, 1),
     // Team-strength-only inputs, before any pitcher or bullpen adjustment.
     // away/home (not pick-relative) so both sides of log5Home's actual inputs
     // are visible -- a single pick-relative number can't be combined back into
-    // the joint log5 result the way away_era/home_era can be. team_strength_probability
-    // is pBase run through log5Home, pick-relative -- same convention as
-    // model_probability below, since that IS the joint result already.
+    // the joint log5 result the way away_era/home_era can be.
     team_strength_blend_away: round(blendA, 4),
     team_strength_blend_home: round(blendH, 4),
-    team_strength_probability: round(pickHome ? pBase : 1 - pBase, 4),
+    // 2026-08-24 fix, Lynold: this used to be `pickHome ? pBase : 1 - pBase`.
+    // That was correct back when log5Home() produced pBase as one shared,
+    // complementary probability (home + away summed to 1 by construction).
+    // The 2026-08-14 change (see the log5Home removal note above) made
+    // blendA and blendH two INDEPENDENT numbers -- each team's own clamped
+    // strength rating, no longer complements of each other. `1 - pBase`
+    // stopped meaning "the away team's strength" the moment that shipped;
+    // it silently became "one minus the home team's strength," a different,
+    // wrong number for every away-team pick from that point on. Concrete
+    // case that surfaced it: Athletics @ Astros, 2026-08-23 (gamePk 824150)
+    // -- home_strength_blend (Astros) 0.4382, away_strength_blend
+    // (Athletics) 0.3956; a display reading `1 - 0.4382 = 0.5618` for the
+    // Athletics was 16.7 points off their real, independently-computed
+    // number. Fixed to read the pick's own real blend directly -- both are
+    // already computed and logged right above, this just points at the
+    // correct one instead of deriving a stale complement.
+    team_strength_probability: round(pickHome ? blendH : blendA, 4),
     // The bullpen risk gap's actual effect on the odds, in log-odds units,
     // pick-relative (positive = favored this pick). bullpen.pick_team/opponent
     // already show the raw risk_index gap; this is what that gap DID.

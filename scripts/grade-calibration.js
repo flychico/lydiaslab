@@ -15,6 +15,15 @@
 */
 const fs = require("fs");
 const path = require("path");
+// 2026-08-24, Lynold's explicit instruction: shared pitcher-boost coefficient
+// -- this file used to carry its own hardcoded ERA_K=0.20 copy for
+// pitcher_boost (see the note where it used to be declared, ~line 280),
+// "kept in sync manually" with generate-member-lab.js. That manual-sync
+// promise is exactly what failed on 2026-08-21: this file's pitcherBoost was
+// still computing the OLD era-based formula three days after the live model
+// switched to a pitcher-score-based one. See scripts/lib/pitcher-boost-constants.js
+// for the fix history and the 2026-08-24 recalibration (0.20 -> 0.03).
+const { PITCHER_SCORE_K, PITCHER_SCORE_GAP_CLAMP } = require("./lib/pitcher-boost-constants");
 // 2026-08-14: this require was missing entirely in every version of this file
 // built this session (08-11 through 08-13) -- each one was built from a base
 // that predated the 08-09 xlsx work, so the data/k-props/<date>.xlsx refresh
@@ -274,10 +283,11 @@ async function main() {
   const bpRiskNum = t => { const v = t ? (t.risk_index ?? t.score) : null; return r4(typeof v === "number" ? v : NaN); };
   // odds(p) = p / (1-p). Guarded against p<=0 or p>=1 (division by zero / negative odds).
   const odds = p => (p !== null && p > 0 && p < 1) ? r4(p / (1 - p)) : null;
-  // ERA_K and MONEYLINE_CALIBRATION_K are not exported from generate-member-lab.js
-  // (module.exports = { summarize, officialMarketCounts } only) -- hardcoded here,
-  // kept in sync manually with the constants of the same name in that file.
-  const ERA_K = 0.20;
+  // MONEYLINE_CALIBRATION_K is not exported from generate-member-lab.js
+  // (module.exports = { summarize, officialMarketCounts } only) -- hardcoded
+  // here, kept in sync manually with the constant of the same name in that
+  // file. (PITCHER_SCORE_K, the other constant this block used to hardcode
+  // the same way, now comes from the shared module imported above.)
   const MONEYLINE_CALIBRATION_K = 0.50;
   if (alogHeaderOk) for (const g of games) {
     const key = `${DATE},${g.game_pk}`;
@@ -349,8 +359,8 @@ async function main() {
     // the same score-gap formula, clamped +/-20 before the exponential --
     // matches export-pregame-attribution.js exactly. pEra/oEra are untouched
     // (still logged as pick_era/opp_era, diagnostic-only since 08-15).
-    const scoreGap = (pScore !== null && oScore !== null) ? Math.max(-20, Math.min(20, pScore - oScore)) : null;
-    const pitcherBoost = scoreGap !== null ? r4(Math.exp(ERA_K * scoreGap)) : null;
+    const scoreGap = (pScore !== null && oScore !== null) ? Math.max(-PITCHER_SCORE_GAP_CLAMP, Math.min(PITCHER_SCORE_GAP_CLAMP, pScore - oScore)) : null;
+    const pitcherBoost = scoreGap !== null ? r4(Math.exp(PITCHER_SCORE_K * scoreGap)) : null;
     // 2026-08-18, Lynold's explicit instruction: moneyline_prop/money_line_odds
     // must use the SAME formula as model_prob. Previously these read
     // legacy_strength_probability (pre-calibration) while model_prob read

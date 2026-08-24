@@ -1037,8 +1037,33 @@ function buildInsights(game, pitcherGame) {
     // already drives the price itself; see moneyLineReasons above), so a raw
     // team-strength edge for the OTHER side now gets its own entry instead of
     // only ever surfacing implicitly through the final probability.
-    if (typeof game.team_strength_probability === "number" && game.team_strength_probability < 0.5) {
-      caseAgainst.push({ title: `Team strength favors ${oppName}`, detail: `Before any pitcher or bullpen adjustment, LyDia's own team-strength model has ${oppName} ahead (${pct(1 - game.team_strength_probability)} to ${pct(game.team_strength_probability)}). The pick still comes from ${game.pick_team} once the pitcher and bullpen terms are applied.` });
+    //
+    // 2026-08-24 fix, Lynold: oppName's number used to be computed as
+    // `1 - game.team_strength_probability` -- the pick's own number flipped.
+    // That was correct only while team_strength_probability and its
+    // complement described one shared, joint probability (true before the
+    // 2026-08-14 log5Home removal). Since then, home and away strength are
+    // two INDEPENDENT numbers that don't sum to 1 -- flipping the pick's
+    // number no longer gives the opponent's real one. Concrete case:
+    // Athletics @ Astros, 2026-08-23 (gamePk 824150) -- this page showed the
+    // Athletics at 56.2% (1 - Astros' 0.4382), while the Athletics' actual,
+    // independently-computed blend that game was 0.3956 -- 16.7 points off.
+    // team_strength_blend_away/home (the real, independent numbers for both
+    // sides) were already being logged right alongside team_strength_probability
+    // the whole time; this just reads the opponent's real one instead of
+    // deriving a stale complement of the pick's.
+    //
+    // The trigger condition had the same disease: `team_strength_probability
+    // < 0.5` used to correctly imply "the opponent is ahead" only because the
+    // two numbers summed to 1. They don't anymore -- in the Athletics @
+    // Astros example above, Astros were the pick at 0.4382 (under 0.5) while
+    // Athletics sat at 0.3956, LOWER than the pick, not ahead of it. The old
+    // condition would have fired "team strength favors Athletics" while the
+    // real numbers show Astros ahead. Now compares the two real numbers
+    // directly instead of checking the pick's against a fixed 0.5 midpoint.
+    const oppTeamStrength = game.pick_team === game.home_team ? game.team_strength_blend_away : game.team_strength_blend_home;
+    if (typeof game.team_strength_probability === "number" && typeof oppTeamStrength === "number" && oppTeamStrength > game.team_strength_probability) {
+      caseAgainst.push({ title: `Team strength favors ${oppName}`, detail: `Before any pitcher or bullpen adjustment, LyDia's own team-strength model has ${oppName} ahead (${pct(oppTeamStrength)} to ${pct(game.team_strength_probability)}). The pick still comes from ${game.pick_team} once the pitcher and bullpen terms are applied.` });
     }
     if (!caseAgainst.length) {
       caseAgainst.push({ title: `The case is thin`, detail: `The model finds little going ${oppName}'s way — it trails on the pitching plan, bullpen, and recent form. The main path to a ${oppName} win is variance.` });
@@ -1480,8 +1505,9 @@ section.card>h2{text-align:center}
   <div class="lead-box" style="margin-top:8px">
     <h3 style="margin:0 0 4px">Every LyDia pick, graded in public</h3>
     <p class="dim small" style="margin:0">Free daily model card by email, or open today's full slate. Membership adds delivery before first pitch.</p>
-    <form class="lydia-signup-form" data-list="newsletter" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <input type="hidden" name="bot-field">
+    <form name="newsletter" method="POST" data-netlify="true" netlify-honeypot="bot-field" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <p style="display:none"><input name="bot-field"></p>
+      <input type="hidden" name="form-name" value="newsletter">
       <input type="email" name="email" required placeholder="you@example.com" style="flex:1;min-width:200px">
       <button type="submit" class="secondary">Get the free card</button>
     </form>

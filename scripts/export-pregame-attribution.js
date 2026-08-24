@@ -26,8 +26,9 @@
   up until the game goes final and grade-calibration.js takes over.
 
   FORMULA CHAIN -- kept in sync manually with grade-calibration.js's
-  attribution block (ERA_K, odds(), r4() below). If that block's constants
-  change, change them here too.
+  attribution block (odds(), r4() below). The pitcher-boost coefficient
+  itself (2026-08-24 on) is no longer a manual-sync risk -- both files
+  import it from scripts/lib/pitcher-boost-constants.js.
 
   Usage: node scripts/export-pregame-attribution.js [YYYY-MM-DD]  (defaults to today ET)
 */
@@ -79,20 +80,18 @@ const n2 = v => v === null || v === undefined ? "" : v;
 const odds = p => (p !== null && p > 0 && p < 1) ? r4(p / (1 - p)) : null;
 const bpRiskNum = t => { const v = t ? (t.risk_index ?? t.score) : null; return r4(typeof v === "number" ? v : NaN); };
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
-const ERA_K = 0.20;
-// 2026-08-15, Lynold's explicit instruction: pitcher_boost's input moves from
-// effective-ERA gap to pitcher_score gap (pScore - oScore, capped +/-20
-// before ERA_K), matching the not-yet-applied diff to
-// generate-member-lab.js (see ../generate-member-lab-pitcher-boost-score-gap.diff
-// in this folder). pScore/oScore below are pitcher_edge.home_score/
-// away_score -- the SAME starter-only pitcher_score field the live model's
-// scoreH/scoreA read, so once that diff (and the roleShare 5.5->5 diff) are
-// both applied, this reproduces exactly what the live moneyline used.
-// Until then, this pulls whatever pitcher_score the live model is currently
-// publishing (5.5-based, era still actually driving pricing) -- so
-// pitcher_boost in this file will NOT match model_prob's actual pricing
-// until both diffs are live. pick_era/opp_era columns are untouched and
-// still read model_effective_era_home/away for reference.
+// 2026-08-24, Lynold's explicit instruction: PITCHER_SCORE_K/CLAMP moved to
+// a shared module -- this file used to carry its own hardcoded ERA_K=0.20
+// copy for pitcher_boost, "kept in sync manually" per this file's own header
+// comment above. Manual sync is exactly how grade-calibration.js's copy went
+// stale for three days after generate-member-lab.js's own formula changed
+// (see scripts/lib/pitcher-boost-constants.js for that history and the
+// 2026-08-24 recalibration itself -- 0.20 down to 0.03, a 6-point pitcher
+// gap was swinging model_prob ~27 points).
+const { PITCHER_SCORE_K, PITCHER_SCORE_GAP_CLAMP } = require("./lib/pitcher-boost-constants");
+// pScore/oScore below are pitcher_edge.home_score/away_score -- the SAME
+// starter-only pitcher_score field the live model's scoreH/scoreA read, so
+// this reproduces exactly what the live moneyline used.
 
 function main() {
   const briefPath = path.join(ROOT, "data", "member-brief", `${DATE}.json`);
@@ -160,8 +159,8 @@ function main() {
     const bullpenGap = (pRisk !== null && oRisk !== null) ? r4(oRisk - pRisk) : null;
 
     const preBullpenOdds = odds(preBullpenProb);
-    const scoreGap = (pScore !== null && oScore !== null) ? clamp(pScore - oScore, -20, 20) : null;
-    const pitcherBoost = scoreGap !== null ? r4(Math.exp(ERA_K * scoreGap)) : null;
+    const scoreGap = (pScore !== null && oScore !== null) ? clamp(pScore - oScore, -PITCHER_SCORE_GAP_CLAMP, PITCHER_SCORE_GAP_CLAMP) : null;
+    const pitcherBoost = scoreGap !== null ? r4(Math.exp(PITCHER_SCORE_K * scoreGap)) : null;
     const moneyLineOdds = odds(modelProb);
     const moneylineProp = modelProb;
 
