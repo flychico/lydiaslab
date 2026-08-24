@@ -131,12 +131,102 @@ function renderNav(active) {
   }
 }
 
+// ---------- Signup forms (Cloudflare Worker — replaces Netlify Forms) ----------
+// 2026-08-24: GitHub Pages has no server-side form processing, so the old
+// data-netlify="true" forms (footer, matchup pages, previews, membership page)
+// stopped working the moment DNS cut over from Netlify. This Worker receives
+// the POST instead and appends the signup to a CSV file on the repo's
+// "signups" branch — see cloudflare-worker/signup-worker.js and DEPLOY.md in
+// this same delivery folder for the full design and why it's a separate branch.
+//
+// If you deploy the Worker at a different URL than the one below (e.g. you
+// skip the custom-domain step in DEPLOY.md and use the default *.workers.dev
+// address instead), this is the one line to change.
+const SIGNUP_ENDPOINT = "https://signup.lydiaslab.com/";
+
+// Wires every <form class="lydia-signup-form"> on the page (static ones already
+// in the HTML, e.g. matchup pages, previews, membership — plus any injected
+// later, e.g. the footer form built by renderFooter() below). Safe to call more
+// than once: already-wired forms are skipped via a data attribute flag.
+//
+// Expected markup on the form:
+//   <form class="lydia-signup-form" data-list="newsletter" data-thanks="...">
+//     <input type="email" name="email" required>
+//     <input type="hidden" name="bot-field">      (optional honeypot, left empty by humans)
+//     <input type="hidden" name="subscription-id"> (optional, membership page only)
+//     <button type="submit">...</button>
+//   </form>
+function wireAllSignupForms(root) {
+  const scope = root || document;
+  const forms = scope.querySelectorAll("form.lydia-signup-form:not([data-signup-wired])");
+  forms.forEach(function (form) {
+    form.setAttribute("data-signup-wired", "1");
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const emailEl = form.querySelector('[name="email"]');
+      const email = emailEl ? emailEl.value.trim() : "";
+      if (!email) return;
+
+      const botEl = form.querySelector('[name="bot-field"]');
+      const subIdEl = form.querySelector('[name="subscription-id"]');
+      const list = form.getAttribute("data-list") || "newsletter";
+      const thanks = form.getAttribute("data-thanks")
+        || "You’re on the list — first card arrives tomorrow morning. ⚾";
+      const errorEl = form.querySelector(".signup-error");
+      const submitBtn = form.querySelector('button[type="submit"]');
+
+      if (errorEl) errorEl.textContent = "";
+      if (submitBtn) submitBtn.disabled = true;
+
+      try {
+        const res = await fetch(SIGNUP_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
+          body: new URLSearchParams({
+            email: email,
+            list: list,
+            "bot-field": botEl ? botEl.value : "",
+            "subscription-id": subIdEl ? subIdEl.value : ""
+          }).toString()
+        });
+
+        if (res.ok) {
+          form.outerHTML = '<div class="small" style="color:#2f9e44;font-weight:600">' + thanks + '</div>';
+          return;
+        }
+
+        let message = "Signup failed — try again shortly.";
+        try {
+          const body = await res.json();
+          if (body && body.error) message = body.error;
+        } catch (_) { /* non-JSON error response, keep default message */ }
+
+        if (errorEl) {
+          errorEl.textContent = message;
+        } else {
+          form.insertAdjacentHTML("beforeend", '<div class="signup-error small" style="color:#c0392b;margin-top:6px">' + message + '</div>');
+        }
+      } catch (err) {
+        const message = "Signup hiccup — check your connection and try again.";
+        if (errorEl) {
+          errorEl.textContent = message;
+        } else {
+          form.insertAdjacentHTML("beforeend", '<div class="signup-error small" style="color:#c0392b;margin-top:6px">' + message + '</div>');
+        }
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+      }
+    });
+  });
+}
+
 function renderFooter() {
   const el = document.getElementById("footer");
   if (!el) return;
   el.innerHTML = '<div style="max-width:420px;margin:0 auto 14px">'
-    + '<form id="footer-free-form" style="display:flex;gap:8px">'
-    + '<input type="email" id="footer-free-email" required placeholder="you@email.com" style="flex:1;min-width:0">'
+    + '<form class="lydia-signup-form" data-list="free-preview" style="display:flex;gap:8px">'
+    + '<input type="email" name="email" required placeholder="you@email.com" style="flex:1;min-width:0">'
+    + '<input type="hidden" name="bot-field">'
     + '<button class="btn blue" type="submit">Free daily card</button>'
     + '</form>'
     + '<div class="dim small" style="margin-top:5px">The morning slate and model reads, free by email. Unsubscribe anytime.</div>'
@@ -144,22 +234,7 @@ function renderFooter() {
     + "LyDia — analysis and education only, not betting advice. "
     + "Odds and stats can change quickly; always verify with your sportsbook. "
     + "Please bet responsibly. If gambling stops being fun, call 1-800-GAMBLER.";
-  const form = document.getElementById("footer-free-form");
-  form.addEventListener("submit", async function (e) {
-    e.preventDefault();
-    const email = document.getElementById("footer-free-email").value.trim();
-    if (!email) return;
-    try {
-      await fetch("/", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ "form-name": "free-preview", email: email }).toString()
-      });
-      form.outerHTML = '<div class="small" style="color:#2f9e44;font-weight:600">You’re on the list — first card arrives tomorrow morning. ⚾</div>';
-    } catch (err) {
-      form.outerHTML = '<div class="small dim">Signup hiccup — try the form on the homepage.</div>';
-    }
-  });
+  wireAllSignupForms(el);
 }
 
 function escapeHtml(s) {
@@ -300,3 +375,9 @@ async function gameWeather(homeTeam, gameIso) {
     };
   } catch (e) { return null; }
 }
+
+// Wire any signup forms already present in the static HTML (matchup pages,
+// preview pages, membership page). Safe no-op if none exist on this page.
+// This script tag is placed at the end of <body>, after the page's own HTML,
+// so the forms are already in the DOM by the time this line runs.
+wireAllSignupForms();

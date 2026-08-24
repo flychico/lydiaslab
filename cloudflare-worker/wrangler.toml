@@ -1,0 +1,17 @@
+name = "lydia-signup-worker"
+main = "signup-worker.js"
+compatibility_date = "2026-08-24"
+
+# Non-secret config (ALLOWED_ORIGIN) can live here as a var, or you can hardcode it
+# in signup-worker.js -- both work. Left here so it's one place to change if you
+# ever serve the site from a different origin (e.g. testing on a *.pages.dev preview).
+[vars]
+ALLOWED_ORIGIN = "https://lydiaslab.com"
+
+# Route the Worker at signup.lydiaslab.com instead of the default *.workers.dev URL.
+# Requires the DNS step in DEPLOY.md (a proxied CNAME for "signup"). If you'd rather
+# skip that and just use the workers.dev URL, delete this block and update
+# SIGNUP_ENDPOINT in js/app.js to match whatever URL `wrangler deploy` prints.
+[[routes]]
+pattern = "signup.lydiaslab.com/*"
+custom_domain = true

@@ -2,15 +2,19 @@
 /*
   LyDia — send the FREE daily preview email to the free list.
 
-  - Recipients: Netlify Forms form name "free-preview" (footer + homepage signup).
+  - Recipients: signups collected by the Cloudflare Worker form receiver
+    (replaces Netlify Forms as of 2026-08-24 — see
+    cloudflare-worker/signup-worker.js and DEPLOY.md in this same delivery
+    folder for why). The Worker appends rows to CSV files on a dedicated
+    "signups" branch of this repo; this script reads that branch's raw CSV
+    content over HTTPS, no GitHub token required (public repo, public branch).
   - Content: today's slate summary + official-pick count + link to the full preview.
     Intentionally lighter than the paid member brief (no locked card, no movement notes).
-  - Skips paid members (form "member-email") so nobody gets two emails.
+  - Skips paid members (signups/member-email.csv) so nobody gets two emails.
   - If secrets are missing, or nothing exists to send, logs and exits 0 —
     the daily workflow is never blocked by this step.
 
-  Env: RESEND_API_KEY, EMAIL_FROM, EMAIL_REPLY_TO (optional),
-       NETLIFY_API_TOKEN, NETLIFY_SITE_ID
+  Env: RESEND_API_KEY, EMAIL_FROM, EMAIL_REPLY_TO (optional)
   Usage: node scripts/send-free-preview-emails.js [YYYY-MM-DD]
 */
 const fs = require("fs");
@@ -21,8 +25,15 @@ const ROOT = path.join(__dirname, "..");
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const EMAIL_FROM = process.env.EMAIL_FROM || "";
 const EMAIL_REPLY_TO = process.env.EMAIL_REPLY_TO || "";
-const NETLIFY_API_TOKEN = process.env.NETLIFY_API_TOKEN || "";
-const NETLIFY_SITE_ID = process.env.NETLIFY_SITE_ID || "";
+
+// 2026-08-24: replaces NETLIFY_API_TOKEN / NETLIFY_SITE_ID + api.netlify.com lookups.
+const GITHUB_OWNER = "flychico";
+const GITHUB_REPO = "lydiaslab";
+const SIGNUPS_BRANCH = "signups";
+const SIGNUP_CSV_PATHS = {
+  "free-preview": "data/signups/free-preview.csv",
+  "member-email": "data/signups/member-email.csv"
+};
 
 const DATE = (process.argv[2] || "").match(/^\d{4}-\d{2}-\d{2}$/)
   ? process.argv[2]
@@ -30,21 +41,24 @@ const DATE = (process.argv[2] || "").match(/^\d{4}-\d{2}-\d{2}$/)
 
 function isValidEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || "").trim()); }
 
-async function getFormEmails(formName) {
-  if (!NETLIFY_API_TOKEN || !NETLIFY_SITE_ID) return null;
-  const headers = { Authorization: `Bearer ${NETLIFY_API_TOKEN}` };
-  const formsRes = await fetch(`https://api.netlify.com/api/v1/sites/${NETLIFY_SITE_ID}/forms`, { headers });
-  if (!formsRes.ok) { console.warn("Netlify forms lookup failed: HTTP", formsRes.status); return []; }
-  const forms = await formsRes.json();
-  const form = forms.find(f => f.name === formName);
-  if (!form) { console.log(`No "${formName}" form found yet on Netlify.`); return []; }
-  const subsRes = await fetch(`https://api.netlify.com/api/v1/forms/${form.id}/submissions`, { headers });
-  if (!subsRes.ok) { console.warn("Netlify submissions lookup failed: HTTP", subsRes.status); return []; }
-  const subs = await subsRes.json();
+// Reads data/signups/<list>.csv off the dedicated "signups" branch via raw.githubusercontent.com
+// (no auth needed for a public repo/branch). Cache-busted with a timestamp query param since
+// raw.githubusercontent.com sits behind a short-lived CDN cache. Returns [] if the file/branch
+// doesn't exist yet (nobody has signed up through the new form yet) rather than treating that
+// as an error — same "never block the daily pipeline" contract the old Netlify lookup had.
+async function getSignupEmails(listName) {
+  const csvPath = SIGNUP_CSV_PATHS[listName];
+  const url = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${SIGNUPS_BRANCH}/${csvPath}?_=${Date.now()}`;
+  const res = await fetch(url);
+  if (res.status === 404) { console.log(`No "${listName}" signups yet (${csvPath} not found on ${SIGNUPS_BRANCH}).`); return []; }
+  if (!res.ok) { console.warn(`Signup CSV lookup failed for "${listName}": HTTP ${res.status}`); return []; }
+  const text = await res.text();
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
   const emails = new Set();
-  for (const s of subs) {
-    const email = (s.data && (s.data.email || s.data.Email)) || "";
-    if (isValidEmail(email)) emails.add(email.trim().toLowerCase());
+  // First line is the header (email,submitted_at) — skip it.
+  for (const line of lines.slice(1)) {
+    const email = (line.split(",")[0] || "").trim();
+    if (isValidEmail(email)) emails.add(email.toLowerCase());
   }
   return [...emails];
 }
@@ -92,9 +106,8 @@ async function main() {
   const day = loadDay();
   if (!day.brief && !day.picks) { console.log(`No data for ${DATE} — nothing to send.`); return; }
 
-  const free = await getFormEmails("free-preview");
-  if (free === null) { console.log("NETLIFY_API_TOKEN / NETLIFY_SITE_ID not set — skipping free list lookup."); return; }
-  const paid = new Set((await getFormEmails("member-email")) || []);
+  const free = await getSignupEmails("free-preview");
+  const paid = new Set(await getSignupEmails("member-email"));
   const recipients = free.filter(e => !paid.has(e));
   if (!recipients.length) { console.log("Free list is empty (or all free subscribers are already members)."); return; }
 

@@ -1480,9 +1480,8 @@ section.card>h2{text-align:center}
   <div class="lead-box" style="margin-top:8px">
     <h3 style="margin:0 0 4px">Every LyDia pick, graded in public</h3>
     <p class="dim small" style="margin:0">Free daily model card by email, or open today's full slate. Membership adds delivery before first pitch.</p>
-    <form name="newsletter" method="POST" data-netlify="true" netlify-honeypot="bot-field" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <p style="display:none"><input name="bot-field"></p>
-      <input type="hidden" name="form-name" value="newsletter">
+    <form class="lydia-signup-form" data-list="newsletter" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input type="hidden" name="bot-field">
       <input type="email" name="email" required placeholder="you@example.com" style="flex:1;min-width:200px">
       <button type="submit" class="secondary">Get the free card</button>
     </form>

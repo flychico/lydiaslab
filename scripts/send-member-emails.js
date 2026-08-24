@@ -7,8 +7,12 @@
   - Fallback to data/picks/<date>.json only if the member brief file is missing
 
   Member list:
-  - Pulled live from Netlify Forms form name "member-email"
-  - Requires NETLIFY_API_TOKEN + NETLIFY_SITE_ID
+  - 2026-08-24: pulled from data/signups/member-email.csv on the dedicated
+    "signups" branch, fetched over raw.githubusercontent.com — replaces the
+    old Netlify Forms "member-email" form lookup (dead since the DNS cutover
+    off Netlify; GitHub Pages has no server-side form processing). Rows are
+    appended to that CSV by the Cloudflare Worker in cloudflare-worker/
+    signup-worker.js. No token needed to read a public repo's raw content.
 
   Sending:
   - Uses Resend with RESEND_API_KEY
@@ -24,10 +28,14 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..");
 
 const RESEND_API_KEY = (process.env.RESEND_API_KEY || "").trim();
-const NETLIFY_API_TOKEN = (process.env.NETLIFY_API_TOKEN || "").trim();
-const NETLIFY_SITE_ID = (process.env.NETLIFY_SITE_ID || "").trim();
 const EMAIL_FROM = (process.env.EMAIL_FROM || "LyDia Picks <picks@lydiaslab.com>").trim();
 const EMAIL_REPLY_TO = (process.env.EMAIL_REPLY_TO || "").trim();
+
+// 2026-08-24: replaces NETLIFY_API_TOKEN / NETLIFY_SITE_ID.
+const GITHUB_OWNER = "flychico";
+const GITHUB_REPO = "lydiaslab";
+const SIGNUPS_BRANCH = "signups";
+const MEMBER_EMAIL_CSV_PATH = "data/signups/member-email.csv";
 
 // Important:
 // GitHub Actions turns missing secrets into empty strings.
@@ -265,40 +273,22 @@ function buildFromLegacyPicks(dateStr, picksFile, isPreview) {
   return { subject, html, text };
 }
 
+// Reads data/signups/member-email.csv off the dedicated "signups" branch. See the file-header
+// comment for why this replaces the old Netlify Forms API lookup. Cache-busted since
+// raw.githubusercontent.com sits behind a short-lived CDN cache. Missing file/branch (nobody
+// has signed up through the new form yet) is not an error — same contract as the old lookup.
 async function getMemberEmails() {
-  if (!NETLIFY_API_TOKEN || !NETLIFY_SITE_ID) {
-    console.log("NETLIFY_API_TOKEN / NETLIFY_SITE_ID not set — skipping member lookup.");
-    return [];
-  }
-
-  const headers = { Authorization: `Bearer ${NETLIFY_API_TOKEN}` };
-  const formsRes = await fetch(`https://api.netlify.com/api/v1/sites/${NETLIFY_SITE_ID}/forms`, { headers });
-  if (!formsRes.ok) {
-    console.warn("Netlify forms lookup failed: HTTP", formsRes.status);
-    return [];
-  }
-
-  const forms = await formsRes.json();
-  const form = forms.find(f => f.name === "member-email");
-  if (!form) {
-    console.log('No "member-email" form found yet on Netlify.');
-    return [];
-  }
-
-  const subsRes = await fetch(`https://api.netlify.com/api/v1/forms/${form.id}/submissions`, { headers });
-  if (!subsRes.ok) {
-    console.warn("Netlify submissions lookup failed: HTTP", subsRes.status);
-    return [];
-  }
-
-  const subs = await subsRes.json();
+  const url = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${SIGNUPS_BRANCH}/${MEMBER_EMAIL_CSV_PATH}?_=${Date.now()}`;
+  const res = await fetch(url);
+  if (res.status === 404) { console.log(`No member signups yet (${MEMBER_EMAIL_CSV_PATH} not found on ${SIGNUPS_BRANCH}).`); return []; }
+  if (!res.ok) { console.warn("Member signup CSV lookup failed: HTTP", res.status); return []; }
+  const text = await res.text();
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
   const emails = new Set();
-
-  for (const s of subs) {
-    const email = (s.data && (s.data.email || s.data.Email)) || "";
-    if (isValidEmail(email)) emails.add(email.trim().toLowerCase());
+  for (const line of lines.slice(1)) { // skip header row
+    const email = (line.split(",")[0] || "").trim();
+    if (isValidEmail(email)) emails.add(email.toLowerCase());
   }
-
   return [...emails];
 }
 
@@ -327,8 +317,6 @@ async function main() {
   console.log(`EMAIL_REPLY_TO set: ${EMAIL_REPLY_TO ? "yes" : "no"}`);
   console.log(`OWNER_EMAIL resolved: ${OWNER_EMAIL || "(disabled)"}`);
   console.log(`RESEND_API_KEY set: ${RESEND_API_KEY ? "yes" : "no"}`);
-  console.log(`NETLIFY_API_TOKEN set: ${NETLIFY_API_TOKEN ? "yes" : "no"}`);
-  console.log(`NETLIFY_SITE_ID set: ${NETLIFY_SITE_ID ? "yes" : "no"}`);
 
   if (!RESEND_API_KEY) {
     console.log("RESEND_API_KEY not set — email step skipped.");
@@ -344,7 +332,7 @@ async function main() {
   console.log(`Loaded email data source: ${data.type} (${data.file})`);
 
   const realMembers = await getMemberEmails();
-  console.log(`Member emails found from Netlify: ${realMembers.length}`);
+  console.log(`Member emails found from signups branch: ${realMembers.length}`);
 
   const isPreview = realMembers.length === 0;
   const sendSet = new Set(realMembers);
