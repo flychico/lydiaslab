@@ -29,7 +29,7 @@ const ROOT = path.join(__dirname, "..");
 // log5Home() call site (search "log5 REMOVED") for what this drops.
 const PYTH_EXP = 1.83;
 const FORM_WEIGHT = 0.25;
-const ERA_K = 0.20;
+const ERA_K = 0.15;
 const LEAGUE_ERA = 4.20;
 const MIN_IP = 20;
 const ERA_CLAMP = [2.75, 6.00];
