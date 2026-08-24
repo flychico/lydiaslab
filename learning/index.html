@@ -75,6 +75,12 @@ table.dash tbody tr.clickable{cursor:pointer}table.dash tbody tr.clickable:hover
 .tag.agree{background:rgba(46,204,113,.12);color:#2ecc71}
 .tag.disagree{background:rgba(230,126,34,.14);color:#e67e22}
 table.dash tbody tr.clickable.day-row td.date-cell{font-weight:700}
+/* 2026-08-24: per-column filters on the Games, Totals, K-props, and
+   Breakdown drill-down tables -- a dropdown for columns with a small,
+   known set of values, a text/substring search for everything else
+   (dates, matchups, pitcher names, numeric columns). */
+tr.filter-row th{padding:4px 9px 8px;white-space:nowrap}
+tr.filter-row select.col-filter,tr.filter-row input.col-filter{width:100%;min-width:70px;box-sizing:border-box;font-size:.76rem;padding:4px 6px;background:var(--bg-elev);border:1px solid var(--border);border-radius:6px;color:inherit}
 </style>
 </head>
 <body>
@@ -117,6 +123,7 @@ table.dash tbody tr.clickable.day-row td.date-cell{font-weight:700}
 
     <section class="tab" id="tab-breakdown">
       <div class="controls"><label>Break down by <select id="dimF"></select></label></div>
+      <div class="controls" id="bdFilters"></div>
       <p class="sec-note">Win rate, record, Brier and average edge for each value. Click a row to see the games behind it.</p>
       <div style="overflow-x:auto"><table class="dash" id="bdTable"></table></div>
       <div id="bdDrill"></div>
@@ -187,7 +194,7 @@ function dfmt(s){
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   return m ? `${m[2]}/${m[3]}/${m[1]}` : String(s || "");
 }
-const S={ml:[],report:null,totals:[],kprops:[],recapByPk:{},learningSummary:null,win:"all",team:"",status:"",ver:"",dim:"status",tab:"summary",page:{games:0,totals:0,kprops:0},sort:{},detail:{date:"",games:[],game:null,briefCache:{}},shadowRaw:[],shadowRows:[],shadowDays:[]};
+const S={ml:[],report:null,totals:[],kprops:[],recapByPk:{},learningSummary:null,win:"all",team:"",status:"",ver:"",dim:"status",tab:"summary",page:{games:0,totals:0,kprops:0},sort:{},detail:{date:"",games:[],game:null,briefCache:{}},shadowRaw:[],shadowRows:[],shadowDays:[],colFilters:{},bdFilters:{}};
 const PAGE=20;
 
 function splitCsv(l){const c=[];let cur="",q=false;for(const ch of l){if(ch==='"')q=!q;else if(ch===','&&!q){c.push(cur);cur="";}else cur+=ch;}c.push(cur);return c;}
@@ -220,12 +227,22 @@ function buildMoneyline(att, cal){
     const edge=(mp!=null&&kp!=null)?mp-kp:null;
     const matchup=c.matchup||"", side=c.model_side||"";
     const lab=numOr(c.lab_score);
+    // 2026-08-24: weekday/month give the Breakdown tab two more free
+    // dimensions -- no new pipeline data needed, just read off the date
+    // already on every row. dkey() normalizes the mixed date formats first
+    // (see its own note above); an unparseable date falls back to "—"
+    // rather than an Invalid Date leaking into a group label.
+    const iso=dkey(c.date);
+    const dObj=/^\d{4}-\d{2}-\d{2}$/.test(iso)?new Date(iso+"T12:00:00Z"):null;
     return {
       date:c.date, gamePk:c.gamePk, matchup, model_side:side, status:c.status, model_version:c.model_version,
       result:c.result, won:c.result==="W"?1:(c.result==="L"?0:null),
       model_prob:mp, market_prob:kp, edge, lab, final_score:c.final_score,
       band:bandOf(lab), market:kp==null?"—":(kp>=0.5?"Follow market":"Fade market"),
       venue:(side&&matchup)?(side===homeOf(matchup)?"Home":"Road"):"—",
+      edge_band:edgeBucket(edge),
+      weekday:dObj?dObj.toLocaleDateString("en-US",{weekday:"long",timeZone:"UTC"}):"—",
+      month:dObj?dObj.toLocaleDateString("en-US",{month:"long",year:"numeric",timeZone:"UTC"}):"—",
       pitcher_gap:numOr(a.pitcher_gap), bullpen_gap:numOr(a.bullpen_gap), kbb_diff:numOr(a.kbb_diff), off_delta_diff:numOr(a.off_delta_diff)
     };
   });
@@ -282,6 +299,11 @@ function renderCalibration(){
   const b=S.report&&S.report.rating_bands; const el=document.getElementById("calibration"); if(!b){el.innerHTML="";return;}
   el.innerHTML=`<p class="sec-note" style="margin-top:14px"><strong>Confidence calibration</strong> (full history) — do more confident games win more?</p><table class="dash"><thead><tr><th>Band</th><th class="num">n</th><th class="num">Predicted</th><th class="num">Actual</th><th class="num">Gap</th></tr></thead><tbody>${b.map(x=>{const g=(x.actual_win_rate-x.mean_model_prob)*100;return `<tr><td>${esc(x.band)}</td><td class="num">${x.n}</td><td class="num">${(x.mean_model_prob*100).toFixed(0)}%</td><td class="num">${(x.actual_win_rate*100).toFixed(0)}%</td><td class="num ${g<=-8?'no':(g>=8?'ok':'')}">${g>0?'+':''}${g.toFixed(0)}%</td></tr>`;}).join("")}</tbody></table>`;
 }
+// 2026-08-24, Lynold: drop "agreement" and "completeness" from the Confidence
+// tab -- display only, grade-confidence.js still computes both same as
+// before. Shared by renderComponents() and renderWorstMisses() so a hidden
+// component doesn't quietly reappear as a column in the worst-misses table.
+const HIDDEN_COMPONENTS=["agreement","completeness"];
 function renderComponents(){
   // 2026-08-09: grade-confidence.js deliberately omits win_rate_above /
   // win_rate_below / lift for a component that never varies in the sample
@@ -291,7 +313,8 @@ function renderComponents(){
   // for every constant component (agreement, completeness) instead of
   // saying what's actually true: there's nothing to measure yet because
   // every graded game scored identically on that component.
-  const c=S.report&&S.report.components; const el=document.getElementById("components"); if(!c||!c.length){el.innerHTML="";return;}
+  const c=(S.report&&S.report.components||[]).filter(x=>!HIDDEN_COMPONENTS.includes(x.component));
+  const el=document.getElementById("components"); if(!c||!c.length){el.innerHTML="";return;}
   const sorted=c.slice().sort((a,b)=>(b.constant?-1:b.lift)-(a.constant?-1:a.lift));
   const help=sorted.filter(x=>!x.constant&&x.lift>=0.02).map(x=>x.component), hurt=sorted.filter(x=>!x.constant&&x.lift<=-0.02).map(x=>x.component);
   const flat=sorted.filter(x=>x.constant).map(x=>x.component);
@@ -312,7 +335,7 @@ function renderWorstMisses(){
   const m=S.report&&S.report.worst_misses; const el=document.getElementById("worstTable");
   if(!el) return;
   if(!m||!m.length){ el.innerHTML=`<tbody><tr><td class="dim">No losses in the graded set, or not enough data yet.</td></tr></tbody>`; return; }
-  const compKeys=[...new Set(m.flatMap(r=>Object.keys(r.points_from||{})))];
+  const compKeys=[...new Set(m.flatMap(r=>Object.keys(r.points_from||{})))].filter(k=>!HIDDEN_COMPONENTS.includes(k));
   const head=`<tr><th>Date</th><th>Game</th><th>Pick</th><th class="num">Lab score</th><th class="num">Model %</th>${compKeys.map(k=>`<th class="num">${esc(k)}</th>`).join("")}</tr>`;
   const body=m.map(r=>`<tr><td>${esc(dfmt(r.date))}</td><td>${esc(r.game)}</td><td>${esc(r.pick)}</td><td class="num">${r.lab_score}</td><td class="num">${(r.model_prob*100).toFixed(0)}%</td>${compKeys.map(k=>`<td class="num">${(r.points_from||{})[k]??'—'}</td>`).join("")}</tr>`).join("");
   el.innerHTML=`<thead>${head}</thead><tbody>${body}</tbody>`;
@@ -367,22 +390,117 @@ function renderLearningSummary(){
   `;
 }
 
-const DIMS=[["status","Status"],["model_version","Model version"],["market","Market (follow / fade)"],["band","Rating band"],["venue","Home / Road"],["model_side","Team"]];
+// 2026-08-24, Lynold: three more dimensions (edge size, day of week, month)
+// -- all free, derived from fields every row already has in buildMoneyline()
+// above, no new pipeline data needed.
+const DIMS=[["status","Status"],["model_version","Model version"],["market","Market (follow / fade)"],["band","Rating band"],["venue","Home / Road"],["model_side","Team"],["edge_band","Edge size"],["weekday","Day of week"],["month","Month"]];
+// 2026-08-24: independent filters, alongside whichever dimension the table
+// is currently grouped by (S.dim) -- e.g. group by "Rating band" while
+// narrowed to Home games only. Reuses the same DIMS list as the group-by
+// selector, just applied as narrowing filters instead. Filtering by the
+// same dimension you're grouping by is a harmless no-op (each group would
+// just collapse to the one value you picked), not worth special-casing out.
+function renderBdFilters(baseRows){
+  const el=document.getElementById("bdFilters"); if(!el) return;
+  el.innerHTML=`<label style="font-size:.78rem;color:var(--text-dim)">Narrow by:</label>`+DIMS.map(([key,label])=>{
+    const values=[...new Set(baseRows.map(r=>r[key]).filter(v=>v!=null&&v!=="—"))].sort();
+    const current=S.bdFilters[key]||"";
+    return `<label style="font-size:.78rem;color:var(--text-dim)">${esc(label)} <select class="bd-filter" data-key="${esc(key)}"><option value="">All</option>${values.map(v=>`<option value="${esc(v)}" ${current===v?"selected":""}>${esc(v)}</option>`).join("")}</select></label>`;
+  }).join("");
+  el.querySelectorAll(".bd-filter").forEach(sel=>sel.addEventListener("change",()=>{
+    const key=sel.getAttribute("data-key");
+    if(sel.value) S.bdFilters[key]=sel.value; else delete S.bdFilters[key];
+    renderBreakdown();
+  }));
+}
 function renderBreakdown(){
-  const rows=filtered(); const groups=groupBy(rows,S.dim).sort((a,b)=>b.n-a.n);
+  const baseRows=filtered();
+  renderBdFilters(baseRows);
+  const rows=baseRows.filter(r=>Object.entries(S.bdFilters).every(([key,v])=>!v||String(r[key])===v));
+  const groups=groupBy(rows,S.dim).sort((a,b)=>b.n-a.n);
   const body=groups.map((g,i)=>`<tr class="clickable" data-i="${i}"><td>${esc(g.value)}</td><td class="num">${g.n}</td><td class="num">${g.w}-${g.l}</td><td class="num">${pctStr(g.pct)}</td><td>${wrBar(g.pct)}</td><td class="num">${g.brier==null?'—':g.brier.toFixed(3)}</td><td class="num">${g.avgEdge==null?'—':(g.avgEdge*100).toFixed(1)+'%'}</td></tr>`).join("");
-  document.getElementById("bdTable").innerHTML=`<thead><tr><th>${esc((DIMS.find(d=>d[0]===S.dim)||[])[1]||S.dim)}</th><th class="num">n</th><th class="num">Record</th><th class="num">Win%</th><th>&nbsp;</th><th class="num">Brier</th><th class="num">Avg edge</th></tr></thead><tbody>${body}</tbody>`;
+  document.getElementById("bdTable").innerHTML=`<thead><tr><th>${esc((DIMS.find(d=>d[0]===S.dim)||[])[1]||S.dim)}</th><th class="num">n</th><th class="num">Record</th><th class="num">Win%</th><th>&nbsp;</th><th class="num">Brier</th><th class="num">Avg edge</th></tr></thead><tbody>${body||`<tr><td colspan="7" class="dim">No games match these filters.</td></tr>`}</tbody>`;
   document.getElementById("bdDrill").innerHTML="";
   document.querySelectorAll("#bdTable tbody tr").forEach(tr=>tr.addEventListener("click",()=>{
     const g=groups[+tr.getAttribute("data-i")];
-    document.getElementById("bdDrill").innerHTML=`<h2 class="sec">${esc(g.value)} — ${g.w}-${g.l} (${pctStr(g.pct)})</h2>`+gameTable(g.rows.slice().sort((a,b)=>dkey(a.date)<dkey(b.date)?1:-1),"drill");
+    const renderDrill=()=>{
+      const el=document.getElementById("bdDrill");
+      el.innerHTML=`<h2 class="sec">${esc(g.value)} — ${g.w}-${g.l} (${pctStr(g.pct)})</h2>`+gameTable(g.rows.slice().sort((a,b)=>dkey(a.date)<dkey(b.date)?1:-1),"drill");
+      wireColFilters(el,renderDrill);
+    };
+    renderDrill();
   }));
 }
+const GAME_COLS=[["date","Date"],["matchup","Matchup"],["model_side","Side"],["model_prob","Mdl%","num"],["market_prob","Mkt%","num"],["lab","Lab","num"],["result","Res"],["final_score","Final"]];
+function gameRowHtml(r){
+  const url=(S.recapByPk[r.gamePk]||{}).matchup_url;const mu=url?`<a href="${esc(url)}">${esc(r.matchup)}</a>`:esc(r.matchup);
+  return `<tr><td>${esc(dfmt(r.date))}</td><td>${mu}</td><td>${esc(r.model_side)}</td><td class="num">${r.model_prob==null?'—':(r.model_prob*100).toFixed(0)+'%'}</td><td class="num">${r.market_prob==null?'—':(r.market_prob*100).toFixed(0)+'%'}</td><td class="num">${r.lab??'—'}</td><td class="${r.won?'ok':'no'}">${esc(r.result)}</td><td>${esc(r.final_score||'—')}</td></tr>`;
+}
+// tag, when given, turns on that instance's own per-column filter row and
+// state (see "Per-column filters" above) -- used by the Breakdown
+// drill-down. Called without a tag it just renders the rows as-is (kept for
+// any future caller that wants a plain table with no filter UI).
 function gameTable(rows,tag){
-  const cols=[["date","Date"],["matchup","Matchup"],["model_side","Side"],["model_prob","Mdl%","num"],["market_prob","Mkt%","num"],["lab","Lab","num"],["result","Res"],["final_score","Final"]];
-  const head=`<tr>${cols.map(c=>`<th class="${c[2]||''}">${esc(c[1])}</th>`).join("")}</tr>`;
-  const body=rows.map(r=>{const url=(S.recapByPk[r.gamePk]||{}).matchup_url;const mu=url?`<a href="${esc(url)}">${esc(r.matchup)}</a>`:esc(r.matchup);return `<tr><td>${esc(dfmt(r.date))}</td><td>${mu}</td><td>${esc(r.model_side)}</td><td class="num">${r.model_prob==null?'—':(r.model_prob*100).toFixed(0)+'%'}</td><td class="num">${r.market_prob==null?'—':(r.market_prob*100).toFixed(0)+'%'}</td><td class="num">${r.lab??'—'}</td><td class="${r.won?'ok':'no'}">${esc(r.result)}</td><td>${esc(r.final_score||'—')}</td></tr>`;}).join("");
-  return `<div style="overflow-x:auto"><table class="dash"><thead>${head}</thead><tbody>${body||`<tr><td colspan="8" class="dim">No games.</td></tr>`}</tbody></table></div>`;
+  const filteredRows = tag ? applyColFilters(tag, GAME_COLS, rows) : rows;
+  const head=`<tr>${GAME_COLS.map(c=>`<th class="${c[2]||''}">${esc(c[1])}</th>`).join("")}</tr>`;
+  const filterRow = tag ? colFilterRow(tag, GAME_COLS, rows) : "";
+  const body=filteredRows.map(gameRowHtml).join("");
+  return `<div style="overflow-x:auto"><table class="dash"><thead>${head}${filterRow}</thead><tbody>${body||`<tr><td colspan="8" class="dim">No games.</td></tr>`}</tbody></table></div>`;
+}
+// ---------- Per-column filters (2026-08-24) ----------
+// Every raw-row table (Games, Totals, K-props, a Breakdown drill-down) gets
+// one filter control per header: a dropdown when the column has a small,
+// known set of values (<=15 distinct values across the table's full row
+// set), a free-text substring search otherwise (dates, matchups, pitcher
+// names, and numeric columns all fall through to text search rather than a
+// 200-option dropdown). State is kept per `tag` so filtering the Games tab
+// doesn't touch a Breakdown drill-down's filters, and vice versa. Dropdown
+// options are computed from the table's full row set (before any column
+// filter is applied), not the currently-filtered subset -- so options never
+// disappear out from under you while you're narrowing down.
+const COL_FILTER_SELECT_MAX = 15;
+function colFilterState(tag){ return S.colFilters[tag] || (S.colFilters[tag] = {}); }
+function normCols(cols){ return cols.map(c => Array.isArray(c) ? { key: c[0], label: c[1], num: c[2] === "num" } : { key: c, label: String(c).replace(/_/g, " "), num: false }); }
+function applyColFilters(tag, cols, rows){
+  const f = colFilterState(tag);
+  const active = Object.entries(f).filter(([, v]) => v);
+  if (!active.length) return rows;
+  return rows.filter(r => active.every(([col, v]) => String(r[col] ?? "—").toLowerCase().includes(String(v).toLowerCase())));
+}
+function colFilterRow(tag, cols, baseRows){
+  const norm = normCols(cols);
+  const f = colFilterState(tag);
+  return `<tr class="filter-row">${norm.map(c => {
+    const values = [...new Set(baseRows.map(r => r[c.key]).filter(v => v !== null && v !== undefined && v !== ""))].map(String).sort();
+    const current = f[c.key] || "";
+    if (values.length && values.length <= COL_FILTER_SELECT_MAX) {
+      return `<th><select class="col-filter" data-tag="${esc(tag)}" data-col="${esc(c.key)}"><option value="">All</option>${values.map(v => `<option value="${esc(v)}" ${current === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select></th>`;
+    }
+    return `<th><input class="col-filter" data-tag="${esc(tag)}" data-col="${esc(c.key)}" type="text" placeholder="Filter…" value="${esc(current)}"></th>`;
+  }).join("")}</tr>`;
+}
+// Re-renders on every change. A dropdown loses nothing by that; a text input
+// would lose focus and cursor position on each keystroke since render()
+// replaces the whole table's innerHTML -- so this captures the caret
+// position before re-rendering and restores focus to the matching input
+// (looked up by tag+col, since it's a freshly-built DOM node afterward) once
+// the new HTML is in place.
+function wireColFilters(container, rerender){
+  container.querySelectorAll(".col-filter").forEach(el => {
+    const evt = el.tagName === "SELECT" ? "change" : "input";
+    el.addEventListener(evt, () => {
+      const tag = el.getAttribute("data-tag"), col = el.getAttribute("data-col");
+      const state = colFilterState(tag);
+      if (el.value) state[col] = el.value; else delete state[col];
+      if (S.page[tag] !== undefined) S.page[tag] = 0;
+      const restore = el.tagName === "SELECT" ? null : { tag, col, pos: el.selectionStart };
+      rerender();
+      if (restore) {
+        const again = document.querySelector(`.col-filter[data-tag="${restore.tag}"][data-col="${restore.col}"]`);
+        if (again) { again.focus(); try { again.setSelectionRange(restore.pos, restore.pos); } catch (e) {} }
+      }
+    });
+  });
 }
 function paginate(rows,pkey,render){
   const total=Math.ceil(rows.length/PAGE)||1; if(S.page[pkey]>=total)S.page[pkey]=total-1;
@@ -396,9 +514,18 @@ function wirePager(pkey,rerender){
   if(n)n.addEventListener("click",()=>{S.page[pkey]++;rerender();});
 }
 function renderGames(){
-  const rows=filtered().sort((a,b)=>dkey(a.date)<dkey(b.date)?1:-1);
-  document.getElementById("gamesWrap").innerHTML=`<p class="sec-note">${rows.length} graded moneyline games in view. Use the filters above.</p>`+paginate(rows,"games",gameTable);
+  const allRows=filtered().sort((a,b)=>dkey(a.date)<dkey(b.date)?1:-1);
+  const rows=applyColFilters("games",GAME_COLS,allRows);
+  const renderPage=slice=>{
+    const head=`<tr>${GAME_COLS.map(c=>`<th class="${c[2]||''}">${esc(c[1])}</th>`).join("")}</tr>`;
+    const filterRow=colFilterRow("games",GAME_COLS,allRows);
+    const body=slice.map(gameRowHtml).join("")||`<tr><td colspan="8" class="dim">No games.</td></tr>`;
+    return `<div style="overflow-x:auto"><table class="dash"><thead>${head}${filterRow}</thead><tbody>${body}</tbody></table></div>`;
+  };
+  const wrap=document.getElementById("gamesWrap");
+  wrap.innerHTML=`<p class="sec-note">${rows.length} of ${allRows.length} graded moneyline games in view. Use the filters above, or per-column below.</p>`+paginate(rows,"games",renderPage);
   wirePager("games",renderGames);
+  wireColFilters(wrap,renderGames);
 }
 // dkey()'d before use for two reasons: the max-date lookup needs a correct
 // sort across the mixed-format rows (see dkey() note above), and new Date()
@@ -421,13 +548,22 @@ function renderTotals(){
   const bs=setupBuckets.filter(b=>b.pct!=null);
   if(bs.length>=2){const spread=(bs[bs.length-1].pct-bs[0].pct)*100;
     setupVerdict=`<p class="sec-note ${spread>=7?'ok':(Math.abs(spread)<7?'dim':'no')}"><strong>Read:</strong> ${spread>=7?`the higher the setup rating, the better the over/under lean does (+${spread.toFixed(0)} points, top band vs bottom) — the rating is carrying signal`:(Math.abs(spread)<7?`lean accuracy is flat across setup-rating bands (${spread>0?'+':''}${spread.toFixed(0)} points) — the setup rating is close to noise, it is not telling good leans from bad`:`lean accuracy moves ${spread>0?'+':''}${spread.toFixed(0)} points but not with the rating — no clean relationship`)}.</p>`;}
-  const table=slice=>{const cols=["date","matchup","line","projection","actual_total","ou_result","lean","lean_result","setup_rating"];return `<div style="overflow-x:auto"><table class="dash"><thead><tr>${cols.map(c=>`<th class="${['line','projection','actual_total','setup_rating','lean'].includes(c)?'num':''}">${esc(c.replace(/_/g,' '))}</th>`).join("")}</tr></thead><tbody>${slice.map(r=>`<tr><td>${esc(dfmt(r.date))}</td><td>${esc(r.matchup)}</td><td class="num">${esc(r.line)}</td><td class="num">${esc(r.projection)}</td><td class="num">${esc(r.actual_total)}</td><td>${esc(r.ou_result)}</td><td class="num">${esc(r.lean)}</td><td class="${r.lean_result==='W'?'ok':(r.lean_result==='L'?'no':'')}">${esc(r.lean_result||'—')}</td><td class="num">${esc(r.setup_rating)}</td></tr>`).join("")||`<tr><td colspan="9" class="dim">No rows.</td></tr>`}</tbody></table></div>`;};
-  const rr=rows.slice().sort((a,b)=>dkey(a.date)<dkey(b.date)?1:-1);
-  document.getElementById("totalsWrap").innerHTML=
+  const TOTALS_COLS=[["date","date"],["matchup","matchup"],["line","line","num"],["projection","projection","num"],["actual_total","actual total","num"],["ou_result","ou result"],["lean","lean","num"],["lean_result","lean result"],["setup_rating","setup rating","num"]];
+  const totalRowHtml=r=>`<tr><td>${esc(dfmt(r.date))}</td><td>${esc(r.matchup)}</td><td class="num">${esc(r.line)}</td><td class="num">${esc(r.projection)}</td><td class="num">${esc(r.actual_total)}</td><td>${esc(r.ou_result)}</td><td class="num">${esc(r.lean)}</td><td class="${r.lean_result==='W'?'ok':(r.lean_result==='L'?'no':'')}">${esc(r.lean_result||'—')}</td><td class="num">${esc(r.setup_rating)}</td></tr>`;
+  const allRr=rows.slice().sort((a,b)=>dkey(a.date)<dkey(b.date)?1:-1);
+  const rr=applyColFilters("totals",TOTALS_COLS,allRr);
+  const table=slice=>{
+    const head=`<tr>${TOTALS_COLS.map(c=>`<th class="${c[2]||''}">${esc(c[1])}</th>`).join("")}</tr>`;
+    const filterRow=colFilterRow("totals",TOTALS_COLS,allRr);
+    return `<div style="overflow-x:auto"><table class="dash"><thead>${head}${filterRow}</thead><tbody>${slice.map(totalRowHtml).join("")||`<tr><td colspan="9" class="dim">No rows.</td></tr>`}</tbody></table></div>`;
+  };
+  const wrap=document.getElementById("totalsWrap");
+  wrap.innerHTML=
     `<div class="kpis">${kpi("Model lean record",leans.length?`${lw}-${leans.length-lw}`:"—",leans.length?`${(lw/leans.length*100).toFixed(0)}% of ${leans.length} graded leans`:"no graded leans in view")}${kpi("Over/Under (all games)",`${o}-${u}`,graded.length+" graded")}${kpi("Projection MAE",mae==null?"—":mae.toFixed(2)+" runs",d.length+" games")}</div>`+
     `<h2 class="sec">Does the setup rating predict?</h2><p class="sec-note">Over/under lean win rate grouped by the setup rating that produced it. If the rating is real, higher bands should win more; if it is flat, the rating is noise.</p>`+dimTable(setupBuckets,"Setup rating")+setupVerdict+
-    `<h2 class="sec">Every totals game</h2><p class="sec-note">"lean" is the model's over/under edge (projection minus line). "lean result" is W/L only when the game qualified — the edge and the setup rating both cleared the bar.</p>`+paginate(rr,"totals",table);
+    `<h2 class="sec">Every totals game</h2><p class="sec-note">"lean" is the model's over/under edge (projection minus line). "lean result" is W/L only when the game qualified — the edge and the setup rating both cleared the bar. ${rr.length} of ${allRr.length} in view.</p>`+paginate(rr,"totals",table);
   wirePager("totals",renderTotals);
+  wireColFilters(wrap,renderTotals);
 }
 function renderKprops(){
   let rows=S.kprops.filter(r=>inWin(r.date)); if(S.team)rows=rows; // kprops has no team; keep
@@ -436,13 +572,28 @@ function renderKprops(){
   const d=rows.map(r=>{const p=numOr(r.projection),a=numOr(r.actual_k);return p!=null&&a!=null?Math.abs(p-a):null;}).filter(x=>x!=null);
   const mae=d.length?(d.reduce((s,x)=>s+x,0)/d.length):null;
   const byBand=groupByKey(leans,"calibration_band",r=>r.lean_result==="W");
-  const table=slice=>{const cols=["date","pitcher","line","projection","actual_k","lean","lean_result","calibration_band"];return `<div style="overflow-x:auto"><table class="dash"><thead><tr>${cols.map(c=>`<th class="${['line','projection','actual_k'].includes(c)?'num':''}">${esc(c.replace(/_/g,' '))}</th>`).join("")}</tr></thead><tbody>${slice.map(r=>`<tr><td>${esc(dfmt(r.date))}</td><td>${esc(r.pitcher)}</td><td class="num">${esc(r.line)}</td><td class="num">${esc(r.projection)}</td><td class="num">${esc(r.actual_k)}</td><td>${esc(r.lean)}</td><td class="${r.lean_result==='W'?'ok':(r.lean_result==='L'?'no':'')}">${esc(r.lean_result||'—')}</td><td>${esc(r.calibration_band)}</td></tr>`).join("")||`<tr><td colspan="8" class="dim">No rows.</td></tr>`}</tbody></table></div>`;};
-  const rr=rows.slice().sort((a,b)=>dkey(a.date)<dkey(b.date)?1:-1);
-  document.getElementById("kpropsWrap").innerHTML=
+  const KPROPS_COLS=[["date","date"],["pitcher","pitcher"],["line","line","num"],["projection","projection","num"],["actual_k","actual k","num"],["lean","lean"],["lean_result","lean result"],["calibration_band","calibration band"]];
+  const kpropRowHtml=r=>`<tr><td>${esc(dfmt(r.date))}</td><td>${esc(r.pitcher)}</td><td class="num">${esc(r.line)}</td><td class="num">${esc(r.projection)}</td><td class="num">${esc(r.actual_k)}</td><td>${esc(r.lean)}</td><td class="${r.lean_result==='W'?'ok':(r.lean_result==='L'?'no':'')}">${esc(r.lean_result||'—')}</td><td>${esc(r.calibration_band)}</td></tr>`;
+  // 2026-08-24, Lynold: "Every K-prop" should only show pitchers with a
+  // graded lean (W or L) -- a line that never resolved (game postponed,
+  // pitcher scratched before throwing a pitch, etc.) isn't a result, it's
+  // noise in a table meant to show how the leans actually did. The KPIs and
+  // "by calibration band" section above already only ever used `leans` for
+  // this same reason; this just brings the row table in line with them.
+  const allRr=leans.slice().sort((a,b)=>dkey(a.date)<dkey(b.date)?1:-1);
+  const rr=applyColFilters("kprops",KPROPS_COLS,allRr);
+  const table=slice=>{
+    const head=`<tr>${KPROPS_COLS.map(c=>`<th class="${c[2]||''}">${esc(c[1])}</th>`).join("")}</tr>`;
+    const filterRow=colFilterRow("kprops",KPROPS_COLS,allRr);
+    return `<div style="overflow-x:auto"><table class="dash"><thead>${head}${filterRow}</thead><tbody>${slice.map(kpropRowHtml).join("")||`<tr><td colspan="8" class="dim">No rows.</td></tr>`}</tbody></table></div>`;
+  };
+  const wrap=document.getElementById("kpropsWrap");
+  wrap.innerHTML=
     `<div class="kpis">${kpi("Lean record",`${w}-${leans.length-w}`,leans.length+" graded leans")}${kpi("Projection MAE",mae==null?"—":mae.toFixed(2)+" K",d.length+" starts")}</div>`+
     `<h2 class="sec">By calibration band</h2>`+dimTable(byBand,"Band")+
-    `<h2 class="sec">Every K-prop</h2>`+paginate(rr,"kprops",table);
+    `<h2 class="sec">Every graded K-prop</h2><p class="sec-note">Only pitchers with a graded lean (W or L) — ungraded/void lines are left out. ${rr.length} of ${allRr.length} in view.</p>`+paginate(rr,"kprops",table);
   wirePager("kprops",renderKprops);
+  wireColFilters(wrap,renderKprops);
 }
 function groupByKey(rows,key,winFn){ const m=new Map(); for(const r of rows){const k=r[key]||"—";if(!m.has(k))m.set(k,{n:0,w:0});const o=m.get(k);o.n++;if(winFn(r))o.w++;} return [...m.entries()].map(([value,o])=>({value,n:o.n,w:o.w,l:o.n-o.w,pct:o.n?o.w/o.n:null})).sort((a,b)=>b.n-a.n); }
 function dimTable(groups,label){ return `<table class="dash"><thead><tr><th>${esc(label)}</th><th class="num">n</th><th class="num">Record</th><th class="num">Win%</th><th>&nbsp;</th></tr></thead><tbody>${groups.map(g=>`<tr><td>${esc(g.value)}</td><td class="num">${g.n}</td><td class="num">${g.w}-${g.l}</td><td class="num">${pctStr(g.pct)}</td><td>${wrBar(g.pct)}</td></tr>`).join("")}</tbody></table>`; }

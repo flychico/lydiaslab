@@ -44,10 +44,61 @@
     return plays;
   }
 
+  // Pulls the current strikeout count for a pitcher out of a boxscore payload.
+  // Returns null if that pitcher hasn't thrown a pitch yet (or the box has no
+  // data for him at all) — distinct from 0 K's, which is a real, known count.
+  function currentKs(box, pitcherName) {
+    if (!box) return null;
+    for (const side of ["away", "home"]) {
+      const players = (box.teams && box.teams[side] && box.teams[side].players) || {};
+      for (const player of Object.values(players)) {
+        if (player.person && player.person.fullName === pitcherName
+          && player.stats && player.stats.pitching && player.stats.pitching.inningsPitched !== undefined) {
+          return Number(player.stats.pitching.strikeOuts) || 0;
+        }
+      }
+    }
+    return null;
+  }
+
   function gradePlay(play, pick, game) {
     const awayScore = game && game.teams && game.teams.away ? game.teams.away.score : undefined;
     const homeScore = game && game.teams && game.teams.home ? game.teams.home.score : undefined;
     const state = game && game.status ? game.status.abstractGameState : "Preview";
+
+    // 2026-08-24: K props used to be gated behind "state === Final" just like
+    // every other market, so a live game showed nothing for a strikeout prop
+    // until it ended — even once the pitcher had already blown past the line
+    // and the bet was mathematically decided. A strikeout count only ever
+    // goes up during a start, so once it clears the line, that side is
+    // locked in early: Over is a lock win, Under is a lock loss. This branch
+    // runs for K Prop regardless of game state (Preview/Live/Final) so that
+    // locked-in read shows immediately; every other market keeps requiring
+    // Final, since a moneyline/total/run-line result can still flip until
+    // the last out.
+    if (play.market === "K Prop") {
+      const actual = currentKs(game && game._box, play.pitcher);
+      if (actual === null) {
+        // No box data yet for this pitcher (game hasn't started, or he hasn't
+        // been fetched/thrown a pitch). Final with still nothing on file for
+        // him is a real VOID (e.g. scratched); anything before Final is just
+        // "nothing to show yet," not a graded result.
+        return state === "Final" ? { result: "VOID", cls: "", actual: null } : { result: "", cls: "", actual: null };
+      }
+      const clinched = actual > play.line; // can only grow from here, so this is final regardless of game state
+      if (clinched) {
+        const won = play.side === "Over";
+        return { result: won ? "W" : "L", cls: won ? "pos-text" : "neg-text", actual, live: state !== "Final" };
+      }
+      if (state === "Final") {
+        if (actual === play.line) return { result: "PUSH", cls: "", actual };
+        const won = play.side === "Over" ? actual > play.line : actual < play.line;
+        return { result: won ? "W" : "L", cls: won ? "pos-text" : "neg-text", actual };
+      }
+      // Still live, not yet clinched either way — show the running count with
+      // no letter grade rather than pretending it's decided.
+      return { result: "", cls: "", actual, live: true };
+    }
 
     if (state !== "Final" || awayScore === undefined || homeScore === undefined) return { result: "", cls: "" };
 
@@ -62,23 +113,6 @@
     if (play.market === "Total") {
       if (totalRuns === play.line) return { result: "PUSH", cls: "" };
       const won = play.side === "Over" ? totalRuns > play.line : totalRuns < play.line;
-      return { result: won ? "W" : "L", cls: won ? "pos-text" : "neg-text" };
-    }
-    if (play.market === "K Prop") {
-      let actual = null;
-      const box = game && game._box;
-      if (!box) return { result: "", cls: "" };
-      if (box) for (const side of ["away", "home"]) {
-        const players = (box.teams && box.teams[side] && box.teams[side].players) || {};
-        for (const player of Object.values(players)) {
-          if (player.person && player.person.fullName === play.pitcher && player.stats && player.stats.pitching && player.stats.pitching.inningsPitched !== undefined) {
-            actual = Number(player.stats.pitching.strikeOuts) || 0;
-          }
-        }
-      }
-      if (actual === null) return { result: "VOID", cls: "" };
-      if (actual === play.line) return { result: "PUSH", cls: "" };
-      const won = play.side === "Over" ? actual > play.line : actual < play.line;
       return { result: won ? "W" : "L", cls: won ? "pos-text" : "neg-text" };
     }
     if (play.market === "RL") {
@@ -114,11 +148,26 @@
       const plays = playList(pick);
       const playHtml = plays.length ? plays.map(play => {
         const grade = gradePlay(play, pick, game);
-        if (grade.result === "W") wins++;
-        if (grade.result === "L") losses++;
-        if (grade.result === "PUSH") pushes++;
+        // Only count toward the FINALED PLAYS tally once it's truly Final —
+        // a live-clinched K prop shows its W/L inline below but doesn't
+        // inflate a KPI card labeled "finaled."
+        if (!grade.live) {
+          if (grade.result === "W") wins++;
+          if (grade.result === "L") losses++;
+          if (grade.result === "PUSH") pushes++;
+        }
         const price = fmtAm(play.price);
-        return `<div><b>${esc(play.market)}</b> ${esc(play.pick)}${price ? ` (${esc(price)})` : ""}${grade.result ? ` · <span class="${grade.cls}">${grade.result}</span>` : ""}</div>`;
+        // K props get a running strikeout count once the game's live, shown
+        // alongside the line so "6 K (line 5.5)" is visible before any
+        // letter grade is decided, and a live-clinched W/L is visibly
+        // tagged "(live)" since the game itself isn't over yet.
+        const kCount = play.market === "K Prop" && grade.actual !== null && grade.actual !== undefined
+          ? ` · <span class="${grade.live && !grade.result ? 'dim' : (grade.cls || '')}">${grade.actual} K</span>`
+          : "";
+        const resultTag = grade.result
+          ? ` · <span class="${grade.cls}">${grade.result}${grade.live ? " (live)" : ""}</span>`
+          : "";
+        return `<div><b>${esc(play.market)}</b> ${esc(play.pick)}${price ? ` (${esc(price)})` : ""}${kCount}${resultTag}</div>`;
       }).join("") : `<span class="dim small">No official play</span>`;
       const statusClass = status.bucket === "final" ? "pos-text" : status.bucket === "live" ? "neg-text" : "dim";
       return `<tr>
@@ -194,9 +243,14 @@
     if (!schedRes.ok) throw new Error(`Could not load MLB scoreboard: HTTP ${schedRes.status}`);
     const schedule = await schedRes.json();
     const games = ((((schedule.dates || [])[0]) || {}).games || []);
+    // 2026-08-24: was Final-only, so a K prop showed nothing while its game
+    // was still being played — the whole point of a live strikeout read.
+    // Now also fetches for Live games; Preview/Scheduled games still skip
+    // the fetch since there's no boxscore data worth pulling yet.
     await Promise.all(games.map(async game => {
       const pick = picks.find(p => Number(p.gamePk) === Number(game.gamePk));
-      if (!pick || !(pick.strikeouts || []).length || !game.status || game.status.abstractGameState !== "Final") return;
+      const state = game.status && game.status.abstractGameState;
+      if (!pick || !(pick.strikeouts || []).length || (state !== "Final" && state !== "Live")) return;
       try {
         const res = await fetch(`https://statsapi.mlb.com/api/v1/game/${game.gamePk}/boxscore?v=${Date.now()}`, { cache: "no-store" });
         if (res.ok) game._box = await res.json();

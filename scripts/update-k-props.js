@@ -83,6 +83,24 @@ const DATE = (process.argv[2] || "").match(/^\d{4}-\d{2}-\d{2}$/)
   : new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 
 async function j(url) { const r = await fetch(url); if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }
+
+// 2026-08-24, Lynold: pitchers with accented names (e.g. "José Urquidy") were
+// silently splitting into two dead records instead of one real one. MLB's own
+// probable-pitcher feed keeps the accent; the sportsbook feed usually doesn't
+// ("Jose Urquidy"). Both sides of the merge below key off name.toLowerCase(),
+// and .toLowerCase() does not strip diacritics -- "josé urquidy" !==
+// "jose urquidy" -- so the odds-book loop (~line 259) and the projection loop
+// (~line 660) created two separate pitchers[] entries for the same real
+// person: one with real market odds but no projection/game_pk, one with a
+// real projection but line: null. Neither one was usable. normalizeName()
+// strips diacritics (NFD decompose, drop combining marks) before lowercasing
+// so both loops land on the same key regardless of which spelling either
+// feed used. Display name (rec.name) still comes from whichever loop wrote
+// the record first, unchanged by this fix.
+function normalizeName(name) {
+  return String(name || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+}
+
 // consensus = the most common posted line (a median can invent a line no book offers)
 const consensus = a => {
   const counts = {};
@@ -256,7 +274,7 @@ async function main() {
         const atLine = arr.filter(r => Math.abs(r.point - line) < 0.01);
         const bestOver = atLine.filter(r => r.over !== null).sort((a, b) => b.over - a.over)[0] || null;
         const bestUnder = atLine.filter(r => r.under !== null).sort((a, b) => b.under - a.under)[0] || null;
-        pitchers[name.toLowerCase()] = {
+        pitchers[normalizeName(name)] = {
           name, line,
           over: bestOver ? bestOver.over : null,
           under: bestUnder ? bestUnder.under : null,
@@ -657,7 +675,7 @@ async function main() {
             const projBand = bandFor(projRaw);
             const projBias = biasFor(projRaw);
             const proj = Number((projRaw + projBias).toFixed(2));
-            const key = pit.name.toLowerCase();
+            const key = normalizeName(pit.name);
             const rec = pitchers[key] || (pitchers[key] = { name: pit.name, line: null, over: null, under: null, books: 0, game: `${g.teams.away.team.name} @ ${g.teams.home.team.name}` });
             rec.projection = proj;
             rec.projection_raw = projRaw;
