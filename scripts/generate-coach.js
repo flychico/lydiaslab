@@ -17,6 +17,31 @@ const SUMMARY = path.join(ROOT, "data", "learning-summary.json");
 const MIN_DAYS = 7;
 const MIN_PICKS = 20;
 
+// 2026-08-25, Lynold's explicit instruction: this file's probability/rating
+// split boundaries (0.72/0.78 probability, 85 lab rating) were never wired to
+// the real official-pick gate -- they were copied once and then went stale
+// when the live gate moved to 0.61 / 72 (see scripts/lib/gate-constants.js,
+// which generate-member-lab.js and generate-learning-summary.js already both
+// use as their single source of truth; this file was the one place still
+// carrying its own disconnected copy). Importing here so Coach's own
+// "official_gate" reference values can never drift from the live gate again.
+const { OFFICIAL_MODEL_PROB, OFFICIAL_LAB_SCORE } = require("./lib/gate-constants");
+// 2026-08-25, Lynold's explicit instruction: probability bucket split moves
+// from a fixed 0.78 threshold to the median of the current-model sample's own
+// model_probability values, recomputed every run. A fixed threshold sitting
+// outside the model's actual output range silently starves one bucket -- a
+// median split guarantees both halves stay populated as the sample grows.
+// Lab Rating instead moves to fixed three-tier bands (under 67 / 67-69.9 /
+// 70+), Lynold's explicit choice over a median split for this dimension.
+function median(nums) {
+  if (!nums.length) return null;
+  const sorted = [...nums].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+const LAB_TIER_LOW_MAX = 67;
+const LAB_TIER_MID_MAX = 70;
+
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, "utf8"));
 }
@@ -70,12 +95,16 @@ function pct(v) { return typeof v === "number" ? `${(v * 100).toFixed(1)}%` : "-
 // both sides of the same split so a downstream reader can ask "is THIS
 // pick's bucket the weaker one" without re-deriving the complement itself.
 function computeSplits(rows) {
+  const probValues = rows.map(x => num(x.model_probability)).filter(v => v !== null);
+  const probMedian = median(probValues);
   return {
     overall: record(rows),
-    highProb: record(rows.filter(x => num(x.model_probability) !== null && x.model_probability >= 0.78)),
-    baseProb: record(rows.filter(x => num(x.model_probability) !== null && x.model_probability >= 0.72 && x.model_probability < 0.78)),
-    highRating: record(rows.filter(x => num(x.lab_score) !== null && x.lab_score >= 85)),
-    lowRating: record(rows.filter(x => num(x.lab_score) !== null && x.lab_score < 85)),
+    probMedian,
+    highProb: probMedian === null ? record([]) : record(rows.filter(x => num(x.model_probability) !== null && x.model_probability >= probMedian)),
+    baseProb: probMedian === null ? record([]) : record(rows.filter(x => num(x.model_probability) !== null && x.model_probability < probMedian)),
+    lowRating: record(rows.filter(x => num(x.lab_score) !== null && x.lab_score < LAB_TIER_LOW_MAX)),
+    midRating: record(rows.filter(x => num(x.lab_score) !== null && x.lab_score >= LAB_TIER_LOW_MAX && x.lab_score < LAB_TIER_MID_MAX)),
+    highRating: record(rows.filter(x => num(x.lab_score) !== null && x.lab_score >= LAB_TIER_MID_MAX)),
     pitcherSupported: record(rows.filter(x => x.pitcher_edge_team && x.pitcher_edge_team === x.pick)),
     pitcherUnsupported: record(rows.filter(x => x.pitcher_edge_team && x.pitcher_edge_team !== x.pick)),
     bullpenCaution: record(rows.filter(x => x.bullpen_label === "Adds caution" || x.bullpen_label === "Both bullpens stressed")),
@@ -88,21 +117,26 @@ function computeSplits(rows) {
 function buildRecommendations(rows) {
   const recs = [];
   const {
-    overall, highProb, baseProb, highRating, pitcherSupported, bullpenCaution, beatClose, lostClose
+    overall, probMedian, highProb, baseProb, lowRating, midRating, highRating, pitcherSupported, bullpenCaution, beatClose, lostClose
   } = computeSplits(rows);
 
   recs.push(`Current-model official record: ${overall.wins}-${overall.losses}${overall.rate !== null ? ` (${pct(overall.rate)})` : ""}.`);
 
-  if (highProb.total >= 5 && baseProb.total >= 5) {
-    recs.push(`Probability review: 78%+ picks are ${highProb.wins}-${highProb.losses}; 72% to 77.9% picks are ${baseProb.wins}-${baseProb.losses}. Review the gap, but do not change the 72% gate from this report alone.`);
+  if (probMedian !== null && highProb.total >= 5 && baseProb.total >= 5) {
+    recs.push(`Probability review: this sample's median win probability is ${pct(probMedian)}. At-or-above-median picks are ${highProb.wins}-${highProb.losses}; below-median picks are ${baseProb.wins}-${baseProb.losses}. This is a self-adjusting split of the current sample, not the official ${pct(OFFICIAL_MODEL_PROB)} gate -- review the gap, but do not change the gate from this report alone.`);
   } else {
-    recs.push("Probability review: the 72% versus 78% buckets still need more samples before a threshold recommendation.");
+    recs.push("Probability review: the above/below-median split still needs more samples before a comparison is meaningful.");
   }
 
-  if (highRating.total >= 5) {
-    recs.push(`Lab Rating review: 8.5+ official picks are ${highRating.wins}-${highRating.losses}. Compare this with the complete official set before considering a rating-gate change.`);
+  if (lowRating.total >= 5 || midRating.total >= 5 || highRating.total >= 5) {
+    const parts = [
+      `under 67 picks are ${lowRating.wins}-${lowRating.losses}`,
+      `67 to 69.9 picks are ${midRating.wins}-${midRating.losses}`,
+      `70+ picks are ${highRating.wins}-${highRating.losses}`
+    ];
+    recs.push(`Lab Rating review: ${parts.join("; ")}. The official gate is ${OFFICIAL_LAB_SCORE / 10}/10. Compare tiers before considering a rating-gate change.`);
   } else {
-    recs.push("Lab Rating review: fewer than five 8.5+ official picks are graded, so the 8.0 gate remains unchanged.");
+    recs.push("Lab Rating review: none of the three tiers (under 67 / 67-69.9 / 70+) has enough graded picks yet for a comparison.");
   }
 
   if (pitcherSupported.total >= 5) {
@@ -129,16 +163,42 @@ function buildRecommendations(rows) {
 // buildRecommendations' prose, meant for a not-yet-played game to be checked
 // against -- e.g. generate-matchup-pages.js can ask "does today's pick fall
 // in the weaker side of any of these splits" without parsing English
-// sentences. split_at values are the same constants already used above
-// (0.72/0.78 probability, 85 Lab Rating) -- not new thresholds, just made
-// machine-readable. Only populated when `ready` (same MIN_DAYS/MIN_PICKS gate
-// recommendations already uses) -- an under-sample bucket comparison would be
-// noise, not signal.
+// sentences.
+//
+// 2026-08-25 revision, Lynold's explicit instruction: the probability and
+// lab_rating splits below used to be fixed thresholds (0.78 probability,
+// 85 lab rating) copied once from an old gate and left to go stale --
+// generate-member-lab.js's and generate-learning-summary.js's real gate had
+// already moved to 0.61 / 72 (scripts/lib/gate-constants.js) while this file
+// kept its own disconnected numbers. Fixed:
+// - probability.split_at is now the current sample's own median
+//   (method: "median_of_current_sample"), recomputed every run.
+// - lab_rating is now three fixed tiers (under 67 / 67-69.9 / 70+),
+//   Lynold's explicit choice over a median split for this dimension.
+// - official_gate on both now reads from gate-constants.js so it can never
+//   drift from the live gate again.
+// Only populated when `ready` (same MIN_DAYS/MIN_PICKS gate recommendations
+// already uses) -- an under-sample bucket comparison would be noise, not
+// signal.
 function buildBuckets(rows) {
   const s = computeSplits(rows);
   return {
-    probability: { split_at: 0.78, official_gate: 0.72, above: { label: "78%+", ...s.highProb }, below: { label: "72% to 77.9%", ...s.baseProb } },
-    lab_rating: { split_at: 85, above: { label: "85+", ...s.highRating }, below: { label: "under 85", ...s.lowRating } },
+    probability: {
+      method: "median_of_current_sample",
+      split_at: s.probMedian,
+      official_gate: OFFICIAL_MODEL_PROB,
+      above: { label: s.probMedian === null ? "at or above sample median" : `${pct(s.probMedian)}+ (sample median or above)`, ...s.highProb },
+      below: { label: s.probMedian === null ? "below sample median" : `below ${pct(s.probMedian)} (sample median)`, ...s.baseProb }
+    },
+    lab_rating: {
+      method: "fixed_tiers",
+      official_gate: OFFICIAL_LAB_SCORE,
+      tiers: [
+        { key: "low", label: "under 67", ...s.lowRating },
+        { key: "mid", label: "67 to 69.9", ...s.midRating },
+        { key: "high", label: "70+", ...s.highRating }
+      ]
+    },
     pitcher_support: { supported: { label: "pitcher edge favors the pick", ...s.pitcherSupported }, unsupported: { label: "pitcher edge favors the opponent", ...s.pitcherUnsupported } },
     bullpen_caution: { flagged: { label: "flagged bullpen caution", ...s.bullpenCaution }, clear: { label: "no bullpen caution", ...s.bullpenNoCaution } }
   };

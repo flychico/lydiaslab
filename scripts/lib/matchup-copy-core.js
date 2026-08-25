@@ -333,8 +333,9 @@ function labRatingReasons({
   pitcher-edge agreement, bullpen caution)? That is a real, checkable
   consistency question against LyDia's own past analysis, without inventing
   a verdict about a game that hasn't happened. Reuses Coach's own thresholds
-  (72%/78% probability, 85 Lab Rating) and its n>=5 sample-size floor --
-  no new numbers invented here.
+  and its n>=5 sample-size floor -- as of 2026-08-25 that's a median split of
+  the current sample for win probability, and three fixed tiers (under 67 /
+  67-69.9 / 70+) for Lab Rating -- no new numbers invented here.
 */
 // Minimum win-rate gap (percentage points, as a fraction) between a pick's
 // own bucket and its complement before the gap is worth surfacing on an
@@ -353,6 +354,33 @@ function coachBucketNote({ dimension, pickSide, oppositeSide, pickLabel, opposit
   return {
     title: `Coach: ${dimension} is LyDia's weaker bucket`,
     detail: `This pick falls in "${pickLabel}" (${pickSide.wins}-${pickSide.losses}, ${pct(pickSide.rate)}) in LyDia's current-model sample, versus "${oppositeLabel}" (${oppositeSide.wins}-${oppositeSide.losses}, ${pct(oppositeSide.rate)}). A review prompt only, per Coach's own rule -- not a reason to skip or fade this pick.`
+  };
+}
+
+/*
+  2026-08-25, Lynold's explicit instruction: Lab Rating's bucket moved from a
+  two-sided above/below split to three fixed tiers (under 67 / 67-69.9 / 70+),
+  so the consistency check needs a version that compares the pick's own tier
+  against the single best-performing OTHER tier (both requiring n>=5), rather
+  than a fixed complement. Same gap and sample-size rules as coachBucketNote --
+  this is the same check, just generalized past two groups.
+*/
+function coachTierNote({ dimension, tiers, pickIndex }) {
+  if (!Array.isArray(tiers) || pickIndex < 0 || pickIndex >= tiers.length) return null;
+  const pick = tiers[pickIndex];
+  if (!pick || pick.total < COACH_NOTE_MIN_N || pick.rate === null) return null;
+
+  let best = null;
+  tiers.forEach((t, i) => {
+    if (i === pickIndex || !t || t.total < COACH_NOTE_MIN_N || t.rate === null) return;
+    if (!best || t.rate > best.rate) best = t;
+  });
+  if (!best) return null;
+  if (best.rate - pick.rate < COACH_NOTE_GAP) return null;
+
+  return {
+    title: `Coach: ${dimension} is LyDia's weaker bucket`,
+    detail: `This pick falls in "${pick.label}" (${pick.wins}-${pick.losses}, ${pct(pick.rate)}) in LyDia's current-model sample, versus "${best.label}" (${best.wins}-${best.losses}, ${pct(best.rate)}), its best-performing tier. A review prompt only, per Coach's own rule -- not a reason to skip or fade this pick.`
   };
 }
 
@@ -381,16 +409,17 @@ function coachConsistencyNotes({ modelProb, labScore, pickTeam, pitcherEdgeTeam,
     if (note) notes.push(note);
   }
 
-  if (isNum(labScore) && coachBuckets.lab_rating) {
-    const b = coachBuckets.lab_rating;
-    const inAbove = labScore >= b.split_at;
-    const note = coachBucketNote({
-      dimension: "Lab Rating bucket",
-      pickSide: inAbove ? b.above : b.below,
-      oppositeSide: inAbove ? b.below : b.above,
-      pickLabel: inAbove ? b.above.label : b.below.label,
-      oppositeLabel: inAbove ? b.below.label : b.above.label
-    });
+  if (isNum(labScore) && coachBuckets.lab_rating && Array.isArray(coachBuckets.lab_rating.tiers)) {
+    const tiers = coachBuckets.lab_rating.tiers;
+    // Tier boundaries (under 67 / 67-69.9 / 70+) are generate-coach.js's own
+    // LAB_TIER_LOW_MAX/LAB_TIER_MID_MAX -- matched here by key rather than
+    // re-deriving the cutoffs, so a future boundary change only has to happen
+    // in one place.
+    let pickKey = "low";
+    if (labScore >= 70) pickKey = "high";
+    else if (labScore >= 67) pickKey = "mid";
+    const pickIndex = tiers.findIndex(t => t.key === pickKey);
+    const note = coachTierNote({ dimension: "Lab Rating bucket", tiers, pickIndex });
     if (note) notes.push(note);
   }
 
