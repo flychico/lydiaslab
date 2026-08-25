@@ -155,6 +155,24 @@
   a deliberate policy call. Conviction now carries the least weight of any
   component; offense carries half the total score. Revisit against
   grade-confidence.js once enough games have been graded under v3.2.
+
+  ---------------------------------------------------------------------------
+  2026-08-25: WEIGHTS REBALANCED AGAIN, LYNOLD'S EXPLICIT INSTRUCTION
+
+  PITCHER_MAX 20 -> 30, BULLPEN_MAX 20 -> 10. CONVICTION_MAX and OFFENSE_MAX
+  unchanged at 10 and 50. New split still sums to 100:
+
+                        v3.2    v3.3 (this change)
+      conviction        10      10
+      pitching plan     20      30
+      bullpen           20      10
+      offense           50      50
+
+  No new backtest was run to justify this split, same as the two prior
+  rebalances -- a deliberate policy call. Pitching-plan support now carries
+  three times the weight of bullpen support, versus an even split before.
+  Revisit against grade-confidence.js once enough games have been graded
+  under v3.3.
 */
 
 "use strict";
@@ -192,11 +210,14 @@ const AGREEMENT_FREE = 0.02;
 const AGREEMENT_ZERO = 0.15;
 
 // 2026-08-12: absorbed the old 6-pt plan-completeness bonus (see version note
-// above) -- was 14. PITCHER_FULL_GAP is unchanged, so a maxed-out gap now
-// earns 20 instead of 14; nothing else about how the gap is read changed.
-const PITCHER_MAX = 20;
+// above) -- was 14, then 20. PITCHER_FULL_GAP is unchanged, so a maxed-out
+// gap now earns whatever PITCHER_MAX currently is; nothing else about how
+// the gap is read changed.
+// 2026-08-25, Lynold's explicit instruction: 20 -> 30. See version note above.
+const PITCHER_MAX = 30;
 const PITCHER_FULL_GAP = 20; // pitcher-score gap that earns full credit
-const BULLPEN_MAX = 20;
+// 2026-08-25, Lynold's explicit instruction: 20 -> 10. See version note above.
+const BULLPEN_MAX = 10;
 // 2026-08-16, Lynold's explicit instruction: 25 -> 40. See version note above.
 // 2026-08-22, Lynold's explicit instruction: 40 -> 50.
 const OFFENSE_MAX = 50;

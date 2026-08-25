@@ -230,9 +230,18 @@ function recentFormSentence({ awayTeam, homeTeam, awayL10, homeL10, awayRunDiff,
    page reads as a list of actual gaps, not a recap of everything that went
    fine.
 --------------------------------------------------------------------------- */
+// 2026-08-25, Lynold's explicit instruction: this used to read
+// `PITCHER_MAX + 6` -- a leftover from before 2026-08-12, when pitching-plan
+// support really did split into 14 pts pitcher-edge + 6 pts plan-completeness
+// (see lab-rating-core.js's version note). That 6-pt piece was folded into
+// PITCHER_MAX itself that day (14 -> 20) and PITCHER_MAX is the WHOLE
+// pitching-plan max on its own since then -- but this file's own copy of the
+// max was never updated to match, so every matchup page has been displaying
+// "20/26" (and now would have shown "30/36") instead of the real max ever
+// since. Caught when Lynold flagged the wrong number on a live page.
 const LAB_MAX = {
   conviction: CONVICTION_MAX,
-  pitching_plan: PITCHER_MAX + 6, // pitcher-edge (PITCHER_MAX) + plan completeness (6, not separately exported)
+  pitching_plan: PITCHER_MAX,
   bullpen: BULLPEN_MAX,
   offense: OFFENSE_MAX
 };
