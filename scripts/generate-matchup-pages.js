@@ -22,6 +22,10 @@
 const fs = require("fs");
 const path = require("path");
 const MatchupCopy = require("./lib/matchup-copy-core");
+// Set once in main() (module-level, read by buildInsights() below) -- see
+// the LEARNING_SUMMARY_PATH comment for why it's safe to treat as fresh,
+// same-day data by the time this script runs.
+let COACH_BUCKETS = null;
 const RecapReview = require("./lib/recap-review-core");
 const RecapBuild = require("./lib/recap-build-core");
 
@@ -42,6 +46,13 @@ const MEMBER_BRIEF_PATH = path.join(ROOT, "data", "member-brief", `${DATE}.json`
 const TOTALS_PATH = path.join(ROOT, "data", "totals", `${DATE}.json`);
 const PITCHER_PATH = path.join(ROOT, "data", "pitcher-matchups", `${DATE}.json`);
 const RESULTS_PATH = path.join(ROOT, "data", "results.json");
+// 2026-08-24, Lynold's explicit instruction: Coach on the matchup pages.
+// data/learning-summary.json is written by the daily-recap.yml workflow
+// (scripts/generate-coach.js, among other steps), which runs once each
+// morning before publish-picks.yml's first wave -- so by the time this
+// script runs for today's slate, today's coach.buckets are already fresh,
+// same-day data, not stale from days ago.
+const LEARNING_SUMMARY_PATH = path.join(ROOT, "data", "learning-summary.json");
 const MANIFEST_DIR = path.join(ROOT, "data", "matchup-pages");
 const MANIFEST_PATH = path.join(MANIFEST_DIR, `${DATE}.json`);
 const RECAP_DIR = path.join(ROOT, "data", "recap-reviews");
@@ -222,6 +233,13 @@ async function main() {
     throw new Error(`Missing canonical pitcher source ${relative(PITCHER_PATH)}. Run generate-pitcher-matchup-data.js first.`);
   }
   const results = readJsonSafe(RESULTS_PATH) || { days: {} };
+  // 2026-08-24: coach.buckets, set once here, read from buildInsights() below
+  // via the module-level COACH_BUCKETS var declared near MatchupCopy's other
+  // top-level constants -- missing or not-yet-ready (Coach's own
+  // MIN_DAYS/MIN_PICKS gate) both just mean coachConsistencyNotes() returns
+  // no notes, same as any other optional input in this file.
+  const learningSummary = readJsonSafe(LEARNING_SUMMARY_PATH);
+  COACH_BUCKETS = (learningSummary && learningSummary.coach && learningSummary.coach.buckets) || null;
   const kprops = readJsonSafe(path.join(ROOT, "data", "k-props", `${DATE}.json`));
   // Official picks come from the locked published card, never a gate recomputed
   // at render time. Re-deriving it here invented phantom "Official pick" labels
@@ -1160,7 +1178,27 @@ function buildInsights(game, pitcherGame) {
     verdict = game.pass_reason ? `LyDia passes. ${game.pass_reason}` : `LyDia passes. Nothing about this matchup clears the bar, and passing is a position.`;
   }
 
-  return { caseFor: caseFor.slice(0, 3), caseAgainst: (typeof caseAgainst !== "undefined" ? caseAgainst : []).slice(0, 4), oppName: (typeof oppName !== "undefined" ? oppName : null), concerns: concerns.slice(0, 3), setupReasons, moneyLineReasons: moneyLineReasonsList, verdict };
+  // 2026-08-24, Lynold's explicit instruction: Coach's own consistency check
+  // against this pick's numbers. bullpenCautionNow mirrors
+  // generate-member-lab.js's bullpenLabel() exactly (its two caution-firing
+  // branches only -- "Both bullpens stressed" and "Adds caution") rather than
+  // trying to read a label off pens.pick.risk_label, which is a DIFFERENT
+  // vocabulary (a single bullpen's own risk tier, not this pick's
+  // caution verdict). Recomputed here instead of imported because
+  // bullpenLabel() isn't exported from generate-member-lab.js; kept in sync
+  // manually with those two conditions only.
+  const bullpenCautionNow = pickRisk !== null && oppRisk !== null
+    && ((pickRisk >= 78 && oppRisk >= 78) || (pickRisk > oppRisk + 15));
+  const coachNotes = MatchupCopy.coachConsistencyNotes({
+    modelProb: game.model_probability,
+    labScore: game.lab_score,
+    pickTeam: game.pick_team,
+    pitcherEdgeTeam: pitcher.edge_team,
+    bullpenCautionNow,
+    coachBuckets: COACH_BUCKETS
+  });
+
+  return { caseFor: caseFor.slice(0, 3), caseAgainst: (typeof caseAgainst !== "undefined" ? caseAgainst : []).slice(0, 4), oppName: (typeof oppName !== "undefined" ? oppName : null), concerns: concerns.slice(0, 3), setupReasons, moneyLineReasons: moneyLineReasonsList, coachNotes, verdict };
 }
 
 function renderInsights(game, pitcherGame) {
@@ -1170,12 +1208,20 @@ function renderInsights(game, pitcherGame) {
   const againstCards = (insights.caseAgainst || []).map(item => `<div class="callout against"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
   const setupCards = (insights.setupReasons || []).map(item => `<div class="callout setup"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
   const priceCards = (insights.moneyLineReasons || []).map(item => `<div class="callout price"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
+  // 2026-08-24, Lynold's explicit instruction: LyDia Coach on the matchup
+  // page. Only appears when coachConsistencyNotes() actually found something
+  // (Coach not ready yet, or nothing to flag, both render nothing here --
+  // same "say nothing rather than pad the page" rule every other section on
+  // this page follows). See scripts/lib/matchup-copy-core.js for what counts
+  // as a note.
+  const coachCards = (insights.coachNotes || []).map(item => `<div class="callout coach"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
   return `
     ${insights.caseFor.length ? `<h3 class="co-head for">The case for ${esc(game.pick_team || "this side")}</h3><div class="callout-grid">${forCards}</div>` : ""}
     ${insights.caseAgainst && insights.caseAgainst.length ? `<h3 class="co-head against">The case for ${esc(insights.oppName || "the other side")}</h3><div class="callout-grid">${againstCards}</div>` : ""}
     ${insights.concerns.length ? `<h3 class="co-head against">${game.status === "official_pick" ? "What to watch" : "Why it is not official"}</h3><div class="callout-grid">${conCards}</div>` : ""}
     ${insights.setupReasons && insights.setupReasons.length ? `<h3 class="co-head setup">Why the setup score is what it is</h3><div class="callout-grid">${setupCards}</div>` : ""}
     ${insights.moneyLineReasons && insights.moneyLineReasons.length ? `<h3 class="co-head price">Why the price is what it is</h3><div class="callout-grid">${priceCards}</div>` : ""}
+    ${insights.coachNotes && insights.coachNotes.length ? `<h3 class="co-head coach">LyDia Coach — consistency check</h3><div class="callout-grid">${coachCards}</div><p class="dim small" style="margin-top:-4px">Review prompts only, from LyDia's own official-pick history. Not a signal to skip or fade this pick.</p>` : ""}
     <div class="verdict"><span class="v-label">The verdict</span> ${esc(insights.verdict)}</div>`;
 }
 
@@ -1409,7 +1455,7 @@ function renderMatchupPage(context) {
 <meta name="twitter:image" content="${SITE}/img/og-card.png">
 <link rel="stylesheet" href="/css/style.css">
 <style>
-.matchup-head{margin-bottom:18px}.matchup-head h1{margin-bottom:6px}.byline{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.byline img{width:42px;height:42px;border-radius:50%;object-fit:cover;border:1px solid var(--border)}.status-badge{display:inline-block;color:#fff;font-size:.76rem;font-weight:800;padding:4px 10px;border-radius:20px;background:var(--accent2)}.status-badge.official{background:var(--good)}.status-badge.pass{background:var(--text-dim)}.status-badge.watch{background:var(--accent2)}.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:14px 0}.metric{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.metric .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}.metric .value{font-size:1.15rem;font-weight:800;margin-top:2px}.matchup-table{width:100%;border-collapse:collapse;font-size:.88rem}.matchup-table th,.matchup-table td{padding:8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}.matchup-table th:not(:first-child),.matchup-table td:not(:first-child){text-align:right}.section-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}.decision-card{border-color:var(--accent2)}.decision-card.official{border-color:var(--good)}.quality-list{columns:2;column-gap:24px}.quality-list li{break-inside:avoid;margin-bottom:5px}.result-win{border-color:var(--good)}.result-loss{border-color:var(--bad)}.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}.sec-head h2{margin-bottom:6px}.tool-link{font-size:.82rem;font-weight:700;white-space:nowrap}.co-head{margin:16px 0 8px;font-size:.95rem}.co-head.for{color:var(--good)}.co-head.against{color:#e08726}.co-head.setup{color:var(--accent2)}.co-head.price{color:#2f6fed}.callout-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}.callout{border:1px solid var(--border);border-left:4px solid var(--border);border-radius:var(--radius);padding:12px;background:var(--bg-elev)}.callout.for{border-left-color:var(--good)}.callout.against{border-left-color:#e08726}.callout.setup{border-left-color:var(--accent2)}.callout.price{border-left-color:#2f6fed}.co-title{font-weight:800;margin-bottom:4px}.co-detail{font-size:.86rem;color:var(--text);line-height:1.5}.verdict{margin-top:14px;padding:14px;border:1px solid var(--accent2);border-radius:var(--radius);background:var(--bg-elev);font-size:.95rem;line-height:1.55}.verdict .v-label{display:inline-block;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--accent2);margin-right:8px}.full-read summary{cursor:pointer;font-weight:700;color:var(--text-dim);font-size:.85rem;margin-top:12px}.full-read p{font-size:.86rem;color:var(--text-dim);line-height:1.55}.recap-review{margin-top:14px;padding:14px;border:1px solid var(--border);border-left:4px solid var(--accent2);border-radius:var(--radius);background:var(--bg-elev)}.recap-review h3{font-size:.9rem;margin-bottom:8px}.recap-review p{font-size:.88rem;line-height:1.55;margin-bottom:8px}.edgebar{margin:12px 0 4px}.eb-row{display:flex;align-items:center;gap:10px;margin:6px 0}.eb-name{width:92px;font-size:.78rem;color:var(--text-dim);text-align:right}.eb-track{flex:1;height:14px;background:var(--bg-elev);border:1px solid var(--border);border-radius:7px;overflow:hidden}.eb-fill{height:100%;border-radius:7px}.eb-fill.model{background:var(--accent2)}.eb-fill.mkt{background:var(--text-dim)}.eb-val{width:56px;font-size:.82rem;font-weight:800;font-variant-numeric:tabular-nums}.gauge-row{display:flex;align-items:center;gap:10px;margin:6px 0}.g-label{width:120px;font-size:.78rem;color:var(--text-dim);text-align:right}.g-track{flex:1;height:11px;background:var(--bg-elev);border:1px solid var(--border);border-radius:6px;overflow:hidden}.g-fill{height:100%;border-radius:6px}.g-val{width:110px;font-size:.8rem;font-weight:700;font-variant-numeric:tabular-nums}.pen-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:10px}.pen-side{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.pen-side b{display:block;margin-bottom:6px}.adv{color:var(--good);font-weight:800}.pcard-grid{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin:6px 0 12px}.pcard{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.pcard-top{display:flex;flex-direction:column;margin-bottom:8px}.pcard-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}.pc-num{display:block;font-size:1.15rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}.pc-lab{display:block;font-size:.62rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}.pcard-vs{font-weight:800;color:var(--text-dim);font-size:.85rem}.related-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}.related-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-elev);font-size:.9rem;font-weight:600}@media(max-width:640px){.pcard-grid{grid-template-columns:1fr;gap:6px}.pcard-vs{display:none}}.k-lean{font-size:.98rem;font-weight:800;margin:6px 0 4px;padding:5px 10px;border-radius:6px;display:inline-block}.k-lean.over{background:rgba(30,142,62,.12);color:var(--good)}.k-lean.under{background:rgba(207,34,46,.10);color:var(--bad)}.k-lean.flat{background:var(--bg-card);color:var(--text-dim);font-weight:700}@media(max-width:640px){.quality-list{columns:1}.matchup-table{font-size:.8rem}.matchup-table th,.matchup-table td{padding:6px 4px}}
+.matchup-head{margin-bottom:18px}.matchup-head h1{margin-bottom:6px}.byline{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.byline img{width:42px;height:42px;border-radius:50%;object-fit:cover;border:1px solid var(--border)}.status-badge{display:inline-block;color:#fff;font-size:.76rem;font-weight:800;padding:4px 10px;border-radius:20px;background:var(--accent2)}.status-badge.official{background:var(--good)}.status-badge.pass{background:var(--text-dim)}.status-badge.watch{background:var(--accent2)}.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:14px 0}.metric{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.metric .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}.metric .value{font-size:1.15rem;font-weight:800;margin-top:2px}.matchup-table{width:100%;border-collapse:collapse;font-size:.88rem}.matchup-table th,.matchup-table td{padding:8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}.matchup-table th:not(:first-child),.matchup-table td:not(:first-child){text-align:right}.section-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}.decision-card{border-color:var(--accent2)}.decision-card.official{border-color:var(--good)}.quality-list{columns:2;column-gap:24px}.quality-list li{break-inside:avoid;margin-bottom:5px}.result-win{border-color:var(--good)}.result-loss{border-color:var(--bad)}.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}.sec-head h2{margin-bottom:6px}.tool-link{font-size:.82rem;font-weight:700;white-space:nowrap}.co-head{margin:16px 0 8px;font-size:.95rem}.co-head.for{color:var(--good)}.co-head.against{color:#e08726}.co-head.setup{color:var(--accent2)}.co-head.price{color:#2f6fed}.co-head.coach{color:var(--accent3)}.callout-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}.callout{border:1px solid var(--border);border-left:4px solid var(--border);border-radius:var(--radius);padding:12px;background:var(--bg-elev)}.callout.for{border-left-color:var(--good)}.callout.against{border-left-color:#e08726}.callout.setup{border-left-color:var(--accent2)}.callout.price{border-left-color:#2f6fed}.callout.coach{border-left-color:var(--accent3)}.co-title{font-weight:800;margin-bottom:4px}.co-detail{font-size:.86rem;color:var(--text);line-height:1.5}.verdict{margin-top:14px;padding:14px;border:1px solid var(--accent2);border-radius:var(--radius);background:var(--bg-elev);font-size:.95rem;line-height:1.55}.verdict .v-label{display:inline-block;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--accent2);margin-right:8px}.full-read summary{cursor:pointer;font-weight:700;color:var(--text-dim);font-size:.85rem;margin-top:12px}.full-read p{font-size:.86rem;color:var(--text-dim);line-height:1.55}.recap-review{margin-top:14px;padding:14px;border:1px solid var(--border);border-left:4px solid var(--accent2);border-radius:var(--radius);background:var(--bg-elev)}.recap-review h3{font-size:.9rem;margin-bottom:8px}.recap-review p{font-size:.88rem;line-height:1.55;margin-bottom:8px}.edgebar{margin:12px 0 4px}.eb-row{display:flex;align-items:center;gap:10px;margin:6px 0}.eb-name{width:92px;font-size:.78rem;color:var(--text-dim);text-align:right}.eb-track{flex:1;height:14px;background:var(--bg-elev);border:1px solid var(--border);border-radius:7px;overflow:hidden}.eb-fill{height:100%;border-radius:7px}.eb-fill.model{background:var(--accent2)}.eb-fill.mkt{background:var(--text-dim)}.eb-val{width:56px;font-size:.82rem;font-weight:800;font-variant-numeric:tabular-nums}.gauge-row{display:flex;align-items:center;gap:10px;margin:6px 0}.g-label{width:120px;font-size:.78rem;color:var(--text-dim);text-align:right}.g-track{flex:1;height:11px;background:var(--bg-elev);border:1px solid var(--border);border-radius:6px;overflow:hidden}.g-fill{height:100%;border-radius:6px}.g-val{width:110px;font-size:.8rem;font-weight:700;font-variant-numeric:tabular-nums}.pen-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:10px}.pen-side{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.pen-side b{display:block;margin-bottom:6px}.adv{color:var(--good);font-weight:800}.pcard-grid{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin:6px 0 12px}.pcard{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.pcard-top{display:flex;flex-direction:column;margin-bottom:8px}.pcard-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}.pc-num{display:block;font-size:1.15rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}.pc-lab{display:block;font-size:.62rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}.pcard-vs{font-weight:800;color:var(--text-dim);font-size:.85rem}.related-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}.related-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-elev);font-size:.9rem;font-weight:600}@media(max-width:640px){.pcard-grid{grid-template-columns:1fr;gap:6px}.pcard-vs{display:none}}.k-lean{font-size:.98rem;font-weight:800;margin:6px 0 4px;padding:5px 10px;border-radius:6px;display:inline-block}.k-lean.over{background:rgba(30,142,62,.12);color:var(--good)}.k-lean.under{background:rgba(207,34,46,.10);color:var(--bad)}.k-lean.flat{background:var(--bg-card);color:var(--text-dim);font-weight:700}@media(max-width:640px){.quality-list{columns:1}.matchup-table{font-size:.8rem}.matchup-table th,.matchup-table td{padding:6px 4px}}
 /* LyDia layout cleanup: center the analysis presentation without sacrificing the table structure. */
 .matchup-head{text-align:center}.byline{justify-content:center}.sec-head{justify-content:center;align-items:center;text-align:center}
 section.card{text-align:center}.metric,.pcard,.pcard-top,.pen-side,.callout{text-align:center}.pcard-top{align-items:center}
@@ -1505,9 +1551,8 @@ section.card>h2{text-align:center}
   <div class="lead-box" style="margin-top:8px">
     <h3 style="margin:0 0 4px">Every LyDia pick, graded in public</h3>
     <p class="dim small" style="margin:0">Free daily model card by email, or open today's full slate. Membership adds delivery before first pitch.</p>
-    <form name="newsletter" method="POST" data-netlify="true" netlify-honeypot="bot-field" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <p style="display:none"><input name="bot-field"></p>
-      <input type="hidden" name="form-name" value="newsletter">
+    <form class="lydia-signup-form" data-list="newsletter" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input type="hidden" name="bot-field">
       <input type="email" name="email" required placeholder="you@example.com" style="flex:1;min-width:200px">
       <button type="submit" class="secondary">Get the free card</button>
     </form>

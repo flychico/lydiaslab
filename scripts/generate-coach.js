@@ -58,16 +58,38 @@ function record(rows) {
 }
 function pct(v) { return typeof v === "number" ? `${(v * 100).toFixed(1)}%` : "-"; }
 
+// 2026-08-24, Lynold's explicit instruction: split out of buildRecommendations
+// so both the prose recommendations AND the new structured coach.buckets
+// (below, for matchup-page consumption) come from the exact same numbers --
+// two functions independently re-filtering the same rows was exactly the
+// "one place changed, the other went stale" bug pattern this project's own
+// ERRORS.md already documents more than once elsewhere in this codebase.
+// lowRating/pitcherUnsupported/bullpenNoCaution are the complement side of
+// splits that used to only compute one side, because the only consumer was
+// prose ("8.5+ official picks are W-L"). A machine-readable comparison needs
+// both sides of the same split so a downstream reader can ask "is THIS
+// pick's bucket the weaker one" without re-deriving the complement itself.
+function computeSplits(rows) {
+  return {
+    overall: record(rows),
+    highProb: record(rows.filter(x => num(x.model_probability) !== null && x.model_probability >= 0.78)),
+    baseProb: record(rows.filter(x => num(x.model_probability) !== null && x.model_probability >= 0.72 && x.model_probability < 0.78)),
+    highRating: record(rows.filter(x => num(x.lab_score) !== null && x.lab_score >= 85)),
+    lowRating: record(rows.filter(x => num(x.lab_score) !== null && x.lab_score < 85)),
+    pitcherSupported: record(rows.filter(x => x.pitcher_edge_team && x.pitcher_edge_team === x.pick)),
+    pitcherUnsupported: record(rows.filter(x => x.pitcher_edge_team && x.pitcher_edge_team !== x.pick)),
+    bullpenCaution: record(rows.filter(x => x.bullpen_label === "Adds caution" || x.bullpen_label === "Both bullpens stressed")),
+    bullpenNoCaution: record(rows.filter(x => !(x.bullpen_label === "Adds caution" || x.bullpen_label === "Both bullpens stressed"))),
+    beatClose: rows.filter(x => x.clv_result === "beat_close").length,
+    lostClose: rows.filter(x => x.clv_result === "lost_close").length
+  };
+}
+
 function buildRecommendations(rows) {
   const recs = [];
-  const overall = record(rows);
-  const highProb = record(rows.filter(x => num(x.model_probability) !== null && x.model_probability >= 0.78));
-  const baseProb = record(rows.filter(x => num(x.model_probability) !== null && x.model_probability >= 0.72 && x.model_probability < 0.78));
-  const highRating = record(rows.filter(x => num(x.lab_score) !== null && x.lab_score >= 85));
-  const pitcherSupported = record(rows.filter(x => x.pitcher_edge_team && x.pitcher_edge_team === x.pick));
-  const bullpenCaution = record(rows.filter(x => x.bullpen_label === "Adds caution" || x.bullpen_label === "Both bullpens stressed"));
-  const beatClose = rows.filter(x => x.clv_result === "beat_close").length;
-  const lostClose = rows.filter(x => x.clv_result === "lost_close").length;
+  const {
+    overall, highProb, baseProb, highRating, pitcherSupported, bullpenCaution, beatClose, lostClose
+  } = computeSplits(rows);
 
   recs.push(`Current-model official record: ${overall.wins}-${overall.losses}${overall.rate !== null ? ` (${pct(overall.rate)})` : ""}.`);
 
@@ -101,6 +123,25 @@ function buildRecommendations(rows) {
 
   recs.push("Human approval remains required for every model or threshold change.");
   return recs;
+}
+
+// 2026-08-24, Lynold's explicit instruction: structured counterpart to
+// buildRecommendations' prose, meant for a not-yet-played game to be checked
+// against -- e.g. generate-matchup-pages.js can ask "does today's pick fall
+// in the weaker side of any of these splits" without parsing English
+// sentences. split_at values are the same constants already used above
+// (0.72/0.78 probability, 85 Lab Rating) -- not new thresholds, just made
+// machine-readable. Only populated when `ready` (same MIN_DAYS/MIN_PICKS gate
+// recommendations already uses) -- an under-sample bucket comparison would be
+// noise, not signal.
+function buildBuckets(rows) {
+  const s = computeSplits(rows);
+  return {
+    probability: { split_at: 0.78, official_gate: 0.72, above: { label: "78%+", ...s.highProb }, below: { label: "72% to 77.9%", ...s.baseProb } },
+    lab_rating: { split_at: 85, above: { label: "85+", ...s.highRating }, below: { label: "under 85", ...s.lowRating } },
+    pitcher_support: { supported: { label: "pitcher edge favors the pick", ...s.pitcherSupported }, unsupported: { label: "pitcher edge favors the opponent", ...s.pitcherUnsupported } },
+    bullpen_caution: { flagged: { label: "flagged bullpen caution", ...s.bullpenCaution }, clear: { label: "no bullpen caution", ...s.bullpenNoCaution } }
+  };
 }
 
 function main() {
@@ -143,6 +184,7 @@ function main() {
     minimum_picks: MIN_PICKS,
     bullpen_model_owner: "bullpen-fatigue-v3-runs-aware",
     recommendations: ready ? buildRecommendations(currentRows) : [],
+    buckets: ready ? buildBuckets(currentRows) : null,
     hard_stop: "Coach findings are review prompts only. No automatic threshold, weight, formula, publishing, or betting change is permitted."
   };
 

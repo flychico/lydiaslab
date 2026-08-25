@@ -34,21 +34,8 @@ const {
 const LEAN_MIN = CONVICTION_FLOOR;
 // A team-quality gap in runs per game worth calling out.
 const RUNDIFF_NOTABLE = 0.35;
-/*
-  2026-08-08: recent-form "hot/cold" swing switched from OPS to wOBA
-  (Lynold's call — system-wide, DEC-20260808-05). Was OPS_HOT = 0.030.
-
-  wOBA's team-to-team and window-to-season spread runs roughly a third of
-  OPS's (OPS mixes on-base and slugging with equal, unweighted importance;
-  wOBA uses linear weights sized to each event's actual run value, so it
-  compresses the same real difference into a smaller number). 0.030 OPS
-  scales to ~0.010 wOBA at that ratio; using 0.008 instead to match the
-  wOBA hot/cold threshold already established elsewhere on the matchup page
-  (generate-matchup-pages.js's 30-day offense section), so the same swing
-  reads as "hot" consistently across the site rather than at two different
-  bars depending on which section a reader is looking at.
-*/
-const WOBA_HOT = 0.008;
+// Recent-vs-season OPS swing that counts as genuinely hot or cold.
+const OPS_HOT = 0.030;
 
 function isNum(n) { return typeof n === "number" && Number.isFinite(n); }
 function pct(v, dp = 1) { return (v * 100).toFixed(dp) + "%"; }
@@ -190,22 +177,22 @@ function joinClauses(list) {
   return list.slice(0, -1).join(", ") + ", and " + list[list.length - 1];
 }
 
-function describeForm(team, l10, rpg15, deltaWoba) {
+function describeForm(team, l10, rpg15, deltaOps) {
   const rec = wins(l10);
   const bits = [];
   if (rec) bits.push(`${rec.w}-${rec.l} in their last 10`);
   if (isNum(rpg15)) bits.push(`averaging ${one(rpg15)} runs per game over the last 15 days`);
-  if (isNum(deltaWoba)) {
-    if (deltaWoba >= WOBA_HOT) bits.push("swinging above their season form");
-    else if (deltaWoba <= -WOBA_HOT) bits.push("hitting below their season form");
+  if (isNum(deltaOps)) {
+    if (deltaOps >= OPS_HOT) bits.push("swinging above their season form");
+    else if (deltaOps <= -OPS_HOT) bits.push("hitting below their season form");
   }
   if (!bits.length) return null;
   return `${team} are ${joinClauses(bits)}`;
 }
 
-function recentFormSentence({ awayTeam, homeTeam, awayL10, homeL10, awayRunDiff, homeRunDiff, awayRpg15, homeRpg15, awayDeltaWoba, homeDeltaWoba }) {
-  const a = describeForm(awayTeam, awayL10, awayRpg15, awayDeltaWoba);
-  const h = describeForm(homeTeam, homeL10, homeRpg15, homeDeltaWoba);
+function recentFormSentence({ awayTeam, homeTeam, awayL10, homeL10, awayRunDiff, homeRunDiff, awayRpg15, homeRpg15, awayDeltaOps, homeDeltaOps }) {
+  const a = describeForm(awayTeam, awayL10, awayRpg15, awayDeltaOps);
+  const h = describeForm(homeTeam, homeL10, homeRpg15, homeDeltaOps);
   if (!a && !h) return "";
 
   let lead = "";
@@ -245,13 +232,7 @@ function recentFormSentence({ awayTeam, homeTeam, awayL10, homeL10, awayRunDiff,
 --------------------------------------------------------------------------- */
 const LAB_MAX = {
   conviction: CONVICTION_MAX,
-  // 2026-08-12: pitching-plan support absorbed its old 6-pt plan-completeness
-  // bonus into PITCHER_MAX itself (14 -> 20; see lab-rating-core.js's version
-  // note). PITCHER_MAX is now the WHOLE pitching-plan max on its own -- the
-  // "+6" here was left over from when it was two separate pieces, and after
-  // that change it made this read 26 instead of 20, so a fully-earned 20/20
-  // rendered as "0/26" (looked broken; the input was actually just weak).
-  pitching_plan: PITCHER_MAX,
+  pitching_plan: PITCHER_MAX + 6, // pitcher-edge (PITCHER_MAX) + plan completeness (6, not separately exported)
   bullpen: BULLPEN_MAX,
   offense: OFFENSE_MAX
 };
@@ -342,110 +323,103 @@ function labRatingReasons({
 }
 
 /*
-  2026-08-16, Lynold's explicit instruction: always show all four Lab Rating
-  buckets on every matchup page, not just the weak ones. labRatingReasons()
-  above is deliberately weakness-only (see its header comment) and stays that
-  way for wherever it is still useful; this is a separate, always-on sibling
-  used for the new un-gated "Why the setup score is what it is" section.
-  Every bucket gets a sentence -- strong buckets get credit, not silence.
+  2026-08-24, Lynold's explicit instruction: "the coach should be reviewing
+  past analyses and current/today's analyse. it should be present in the
+  match up pages." Coach itself (scripts/generate-coach.js) only reviews
+  GRADED picks -- a not-yet-played game has no result to grade, so there is
+  no "did this pick win" question to ask about it yet. What IS answerable
+  before the game: does today's pick fall on the historically weaker side of
+  one of Coach's own splits (win-probability bucket, Lab Rating bucket,
+  pitcher-edge agreement, bullpen caution)? That is a real, checkable
+  consistency question against LyDia's own past analysis, without inventing
+  a verdict about a game that hasn't happened. Reuses Coach's own thresholds
+  (72%/78% probability, 85 Lab Rating) and its n>=5 sample-size floor --
+  no new numbers invented here.
 */
-function labRatingBreakdown({
-  breakdown, pickTeam, oppTeam, modelProb,
-  pitcherEdgeTeam, pitcherGap, betterPitcher, worsePitcher,
-  bullpenPickLabel, bullpenOppLabel
-}) {
-  if (!breakdown) return [];
-  const strong = frac => frac >= LAB_WEAK_FRACTION;
+// Minimum win-rate gap (percentage points, as a fraction) between a pick's
+// own bucket and its complement before the gap is worth surfacing on an
+// unplayed game -- below this, the "difference" is plausibly noise on top of
+// an already-small current-model sample.
+const COACH_NOTE_GAP = 0.10;
+// Same n>=5 floor generate-coach.js's own buildRecommendations() requires
+// before it will write a recommendation about a bucket at all.
+const COACH_NOTE_MIN_N = 5;
 
-  const convFrac = breakdown.conviction_points / LAB_MAX.conviction;
-  const convDetail = strong(convFrac)
-    ? `LyDia's win probability for ${pickTeam} (${isNum(modelProb) ? pct(modelProb) : "n/a"}) is well clear of a coin flip -- this is a real, stated lean, not a guess.`
-    : (isNum(modelProb) && modelProb < CONVICTION_FLOOR
-        ? `LyDia's own win probability for ${pickTeam} (${pct(modelProb)}) is close enough to a coin flip that the rating credits little or no conviction -- credit only starts above ${pct(CONVICTION_FLOOR, 0)}.`
-        : `LyDia leans toward ${pickTeam}, but not strongly enough to earn full conviction credit.`);
-
-  const planFrac = breakdown.pitching_plan_points / LAB_MAX.pitching_plan;
-  const planDetail = (pitcherEdgeTeam && pitcherEdgeTeam === pickTeam && isNum(pitcherGap))
-    ? `${betterPitcher || pitcherEdgeTeam} rates ${pitcherGap} points better than ${worsePitcher || "the opposing starter"} on LyDia's pitcher score.`
-      + (strong(planFrac) ? " That is a real edge, and it earns most or all of the available credit here." : " A real edge, but well short of the gap that earns full credit here.")
-    : `No meaningful starting-pitcher edge favors ${pickTeam} in this matchup.`;
-
-  const bpFrac = breakdown.bullpen_points / LAB_MAX.bullpen;
-  const bpDetail = strong(bpFrac)
-    ? `${pickTeam}'s bullpen carries a real edge over ${oppTeam || "the opponent"}'s tonight.`
-    : (bullpenPickLabel && bullpenOppLabel && bullpenPickLabel === bullpenOppLabel
-        ? `Both bullpens are rated ${String(bullpenPickLabel).toLowerCase()} -- this is close to a wash, not an advantage either way.`
-        : `LyDia does not see a meaningful bullpen edge for ${pickTeam} here.`);
-
-  const offFrac = breakdown.offense_points / LAB_MAX.offense;
-  const offDetail = strong(offFrac)
-    ? `${pickTeam}'s recent offensive form clearly outpaces ${oppTeam || "the opponent"}'s over the tracked windows.`
-    : `${pickTeam}'s recent form does not clearly outpace ${oppTeam || "the opponent"}'s.`;
-
-  return [
-    { title: `Conviction: ${breakdown.conviction_points}/${LAB_MAX.conviction}`, detail: convDetail },
-    { title: `Pitching plan: ${breakdown.pitching_plan_points}/${LAB_MAX.pitching_plan}`, detail: planDetail },
-    { title: `Bullpen: ${breakdown.bullpen_points}/${LAB_MAX.bullpen}`, detail: bpDetail },
-    { title: `Offense: ${breakdown.offense_points}/${LAB_MAX.offense}`, detail: offDetail }
-  ];
+function coachBucketNote({ dimension, pickSide, oppositeSide, pickLabel, oppositeLabel }) {
+  if (!pickSide || !oppositeSide) return null;
+  if (pickSide.total < COACH_NOTE_MIN_N || oppositeSide.total < COACH_NOTE_MIN_N) return null;
+  if (pickSide.rate === null || oppositeSide.rate === null) return null;
+  if (oppositeSide.rate - pickSide.rate < COACH_NOTE_GAP) return null;
+  return {
+    title: `Coach: ${dimension} is LyDia's weaker bucket`,
+    detail: `This pick falls in "${pickLabel}" (${pickSide.wins}-${pickSide.losses}, ${pct(pickSide.rate)}) in LyDia's current-model sample, versus "${oppositeLabel}" (${oppositeSide.wins}-${oppositeSide.losses}, ${pct(oppositeSide.rate)}). A review prompt only, per Coach's own rule -- not a reason to skip or fade this pick.`
+  };
 }
 
 /*
-  2026-08-16, Lynold's explicit instruction: a breakdown of the moneyline
-  price itself -- team strength, the pitcher-score gap driving pitcher_boost,
-  and the bullpen adjustment -- distinct from the Lab Rating breakdown above.
-  Lab Rating grades LyDia's analysis quality; this explains the PRICE, which
-  is a different question (see lab-rating-core.js's header: "It is NOT win
-  probability and it is NOT a price judgement"). All values are read directly
-  off fields generate-member-lab.js already writes to the brief -- nothing
-  here recomputes the moneyline formula, so this cannot drift out of sync
-  with what the model actually priced.
+  coachBuckets is data/learning-summary.json's coach.buckets (null until
+  Coach has enough sample -- see generate-coach.js's MIN_DAYS/MIN_PICKS). Any
+  input this needs that is missing (no bullpen risk numbers yet, no pitcher
+  edge resolved, Coach not ready) just skips that one check rather than
+  guessing -- same "say nothing rather than invent a narrative" rule this
+  whole file follows.
 */
-function moneyLineReasons({
-  pickTeam, oppTeam, teamStrengthProbPick, pitcherGapSigned,
-  bullpenLogOddsAdj, finalProbPick
-}) {
-  // 2026-08-16 fix: finalProbPick must be game.model_probability (the same,
-  // post-calibration number shown as "Model Lean" elsewhere on the page).
-  // It previously received game.legacy_strength_probability, a pre-calibration
-  // number -- that mismatch is what showed two different probabilities for
-  // the same game (e.g. 56.5% vs 62.9%). Do not pass legacy_strength_probability
-  // here again.
-  const reasons = [];
+function coachConsistencyNotes({ modelProb, labScore, pickTeam, pitcherEdgeTeam, bullpenCautionNow, coachBuckets }) {
+  if (!coachBuckets) return [];
+  const notes = [];
 
-  if (isNum(teamStrengthProbPick)) {
-    reasons.push({
-      title: `Team strength: ${pct(teamStrengthProbPick)}`,
-      detail: `Before any pitcher or bullpen adjustment, LyDia's team-strength model alone makes ${pickTeam} ${pct(teamStrengthProbPick)} to win. Everything below moves the price from this starting point.`
+  if (isNum(modelProb) && coachBuckets.probability) {
+    const b = coachBuckets.probability;
+    const inAbove = modelProb >= b.split_at;
+    const note = coachBucketNote({
+      dimension: "win-probability bucket",
+      pickSide: inAbove ? b.above : b.below,
+      oppositeSide: inAbove ? b.below : b.above,
+      pickLabel: inAbove ? b.above.label : b.below.label,
+      oppositeLabel: inAbove ? b.below.label : b.above.label
     });
+    if (note) notes.push(note);
   }
 
-  if (isNum(pitcherGapSigned)) {
-    const favored = pitcherGapSigned > 0 ? pickTeam : (pitcherGapSigned < 0 ? oppTeam : null);
-    reasons.push({
-      title: `Pitcher score gap: ${Math.abs(pitcherGapSigned)} points`,
-      detail: favored
-        ? `The pitcher-score gap favors ${favored} by ${Math.abs(pitcherGapSigned)} points. This is the biggest single mover of the price -- a large gap moves it a lot, a small gap barely moves it.`
-        : `The two starters grade essentially even on pitcher score -- this term does little to move the price either way.`
+  if (isNum(labScore) && coachBuckets.lab_rating) {
+    const b = coachBuckets.lab_rating;
+    const inAbove = labScore >= b.split_at;
+    const note = coachBucketNote({
+      dimension: "Lab Rating bucket",
+      pickSide: inAbove ? b.above : b.below,
+      oppositeSide: inAbove ? b.below : b.above,
+      pickLabel: inAbove ? b.above.label : b.below.label,
+      oppositeLabel: inAbove ? b.below.label : b.above.label
     });
+    if (note) notes.push(note);
   }
 
-  if (isNum(bullpenLogOddsAdj) && Math.abs(bullpenLogOddsAdj) > 0.001) {
-    const favored = bullpenLogOddsAdj > 0 ? pickTeam : oppTeam;
-    reasons.push({
-      title: `Bullpen adjustment: ${bullpenLogOddsAdj > 0 ? "+" : ""}${bullpenLogOddsAdj}`,
-      detail: `The bullpen-fatigue gap between the two pens nudges the price toward ${favored}. This moves the price less than the starting pitchers do, since a starter covers more of the game than the bullpen.`
+  if (pitcherEdgeTeam && pitcherEdgeTeam !== "No clear SP edge" && coachBuckets.pitcher_support) {
+    const b = coachBuckets.pitcher_support;
+    const supported = pitcherEdgeTeam === pickTeam;
+    const note = coachBucketNote({
+      dimension: "pitcher-edge agreement",
+      pickSide: supported ? b.supported : b.unsupported,
+      oppositeSide: supported ? b.unsupported : b.supported,
+      pickLabel: supported ? b.supported.label : b.unsupported.label,
+      oppositeLabel: supported ? b.unsupported.label : b.supported.label
     });
+    if (note) notes.push(note);
   }
 
-  if (isNum(teamStrengthProbPick) && isNum(finalProbPick)) {
-    reasons.push({
-      title: `Net effect: ${pct(teamStrengthProbPick)} -> ${pct(finalProbPick)}`,
-      detail: `Team strength alone had ${pickTeam} at ${pct(teamStrengthProbPick)}. After the pitcher and bullpen terms, the price is ${pct(finalProbPick)} -- the same number shown as Model Lean above.`
+  if (typeof bullpenCautionNow === "boolean" && coachBuckets.bullpen_caution) {
+    const b = coachBuckets.bullpen_caution;
+    const note = coachBucketNote({
+      dimension: "bullpen caution",
+      pickSide: bullpenCautionNow ? b.flagged : b.clear,
+      oppositeSide: bullpenCautionNow ? b.clear : b.flagged,
+      pickLabel: bullpenCautionNow ? b.flagged.label : b.clear.label,
+      oppositeLabel: bullpenCautionNow ? b.clear.label : b.flagged.label
     });
+    if (note) notes.push(note);
   }
 
-  return reasons;
+  return notes;
 }
 
 module.exports = {
@@ -455,7 +429,6 @@ module.exports = {
   rankPitcherDrivers,
   recentFormSentence,
   labRatingReasons,
-  labRatingBreakdown,
-  moneyLineReasons,
+  coachConsistencyNotes,
   LEAN_MIN
 };
