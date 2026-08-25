@@ -2,15 +2,38 @@
 /*
   LyDia — pregame attribution snapshot.
 
-  Writes data/calibration/pregame_attribution_log.csv: the same 33 model
+  Writes data/calibration/pregame_attribution_log.csv: the same 30 model
   inputs/derived-calc columns as attribution_model_log.csv (Lynold's
-  34-column spec, minus a filled-in `result` -- that column stays blank
-  here, since these games haven't been played), captured from
-  data/member-brief/<date>.json BEFORE the game is final, not after.
+  31-column, home/away-relative spec, minus a filled-in `winner` -- that
+  column stays blank here, since these games haven't been played), captured
+  from data/member-brief/<date>.json BEFORE the game is final, not after.
+
+  2026-08-25, Lynold's explicit instruction: full schema rewrite from
+  pick/opp-relative to home/away-relative, to make the log trackable in
+  Excel without a pick-side lookup on every column. Specifically:
+    - added away_team, home_team (were previously only inferrable from the
+      `matchup` "AWAY @ HOME" string)
+    - pick_team now holds the literal string "home team" or "away team"
+      (which side LyDia picked), not the team name -- the team name is
+      already in away_team/home_team
+    - dropped opp_team (redundant with away_team/home_team + pick_team),
+      pick_whip/opp_whip, pick_hr9/opp_hr9 (both pairs logged but never
+      read by anything downstream -- confirmed via the 2026-08-25 unused-
+      column audit)
+    - every remaining pick/opp-relative column converted to a direct
+      home_X/away_X pair (pitcher, pitcher_score, era, woba, bullpen_risk)
+    - model_prob -> home_model_prob, result -> winner (both were pick-
+      relative facts; home_model_prob/winner are the same raw facts stated
+      relative to home instead, away is the complement)
+    - the 6 "show your work" gap/calc columns (pitcher_gap, woba_diff,
+      bullpen_gap, pitcher_boost, pre_bullpen_odds/prob, bullpen_adj,
+      money_line_odds, moneyline_prop) converted from pick-relative to
+      home-relative and KEPT, per Lynold's explicit answer that these stay
+      rather than get dropped.
 
   WHY THIS IS SEPARATE FROM attribution_model_log.csv
   attribution_model_log.csv (grade-calibration.js) only gets a row once a
-  game is Final -- it reads the boxscore to fill `result`. That means the
+  game is Final -- it reads the boxscore to fill `winner`. That means the
   pregame reasoning for today's games isn't visible anywhere until
   daily-recap.yml runs the next morning. This script captures the exact
   same reasoning same-day, before the recap, so it's on hand right after
@@ -63,13 +86,14 @@ function csvField(s) {
 }
 
 const COLUMNS = [
-  "date", "gamePk", "model_version", "matchup", "pick_team", "opp_team", "status", "result",
-  "model_prob", "pitcher_gap", "pick_pitcher", "pick_pitcher_score", "opp_pitcher", "opp_pitcher_score",
-  "pick_era", "opp_era", "pick_whip", "opp_whip", "pick_hr9", "opp_hr9",
-  "pick_woba", "opp_woba", "pick_bullpen_risk", "opp_bullpen_risk",
-  "home_strength_blend", "away_strength_blend", "woba_diff", "bullpen_gap",
-  "pitcher_boost", "pre_bullpen_odds", "pre_bullpen_prob", "bullpen_adj",
-  "money_line_odds", "moneyline_prop"
+  "date", "gamePk", "model_version", "matchup", "away_team", "home_team",
+  "pick_team", "status", "winner",
+  "home_model_prob", "home_pitcher_gap", "home_pitcher", "home_pitcher_score",
+  "away_pitcher", "away_pitcher_score", "home_era", "away_era",
+  "home_woba", "away_woba", "home_bullpen_risk", "away_bullpen_risk",
+  "home_strength_blend", "away_strength_blend", "home_woba_gap", "home_bullpen_gap",
+  "home_pitcher_boost", "home_pre_bullpen_odds", "home_pre_bullpen_prob", "home_bullpen_adj",
+  "home_money_line_odds", "home_moneyline_prop"
 ];
 const HEADER = COLUMNS.join(",") + "\n";
 
@@ -84,9 +108,9 @@ const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 // Lynold's call -- back to a local ERA_K=0.20, kept in sync manually with
 // generate-member-lab.js and grade-calibration.js (see this file's header).
 const ERA_K = 0.20;
-// pScore/oScore below are pitcher_edge.home_score/away_score -- the SAME
-// starter-only pitcher_score field the live model's scoreH/scoreA read, so
-// this reproduces exactly what the live moneyline used.
+// homeScore/awayScore below are pitcher_edge.home_score/away_score -- the
+// SAME starter-only pitcher_score field the live model's scoreH/scoreA read,
+// so this reproduces exactly what the live moneyline used.
 
 function main() {
   const briefPath = path.join(ROOT, "data", "member-brief", `${DATE}.json`);
@@ -109,65 +133,74 @@ function main() {
 
   const rows = [];
   for (const g of games) {
-    if (!g.side) continue; // no pick side resolved yet -- nothing to orient pick/opp by
+    if (!g.side) continue; // no pick side resolved yet -- nothing to orient home/away model-relative fields by
     const pickHome = g.side === "home";
     const pe = g.pitcher_edge || {};
-    const pAdv = pickHome ? pe.home_advanced : pe.away_advanced;
-    const oAdv = pickHome ? pe.away_advanced : pe.home_advanced;
-    const pPitcher = pickHome ? pe.home_pitcher : pe.away_pitcher;
-    const oPitcher = pickHome ? pe.away_pitcher : pe.home_pitcher;
-    const pScore = r4(pickHome ? pe.home_score : pe.away_score);
-    const oScore = r4(pickHome ? pe.away_score : pe.home_score);
-    const pWhip = r4(pickHome ? pe.home_whip : pe.away_whip);
-    const oWhip = r4(pickHome ? pe.away_whip : pe.home_whip);
-    const pHr9 = r4(pAdv ? pAdv.hr9 : NaN);
-    const oHr9 = r4(oAdv ? oAdv.hr9 : NaN);
-    const pEra = r4(pickHome ? g.model_effective_era_home : g.model_effective_era_away);
-    const oEra = r4(pickHome ? g.model_effective_era_away : g.model_effective_era_home);
+    const homePitcher = pe.home_pitcher;
+    const awayPitcher = pe.away_pitcher;
+    const homeScore = r4(pe.home_score);
+    const awayScore = r4(pe.away_score);
+    const homeEra = r4(g.model_effective_era_home);
+    const awayEra = r4(g.model_effective_era_away);
     const of_ = g.offense_form || {};
-    const pOff = pickHome ? of_.home : of_.away;
-    const oOff = pickHome ? of_.away : of_.home;
-    const pWoba = r4(pOff ? pOff.woba_15d : NaN);
-    const oWoba = r4(oOff ? oOff.woba_15d : NaN);
+    const homeWoba = r4(of_.home ? of_.home.woba_15d : NaN);
+    const awayWoba = r4(of_.away ? of_.away.woba_15d : NaN);
     const bp = g.bullpen || {};
-    const pRisk = bpRiskNum(bp.pick_team), oRisk = bpRiskNum(bp.opponent);
-    const oppTeam = pickHome ? g.away_team : g.home_team;
-    // 2026-08-19, Lynold's explicit instruction: renamed from pick/opp-relative
-    // to home/away-direct, no conditional needed. pBase in generate-member-lab.js
-    // is ALWAYS the home team's blend (team_strength_blend_home), regardless of
-    // which side is picked -- home_strength_blend IS the number that anchors
-    // the odds calc on every row; away_strength_blend never feeds the formula
-    // (it's each team's own independent rating, kept for reference only). The
-    // old pick_team_strength_blend column silently swapped which physical
-    // number it showed depending on home/away, which made an away pick's row
-    // look like its OWN blend anchored the price when it never did.
+    // bp only stores pick_team/opponent (no home/away split at the source),
+    // so this is the one pair that still needs the pickHome flip to land on
+    // the correct physical side.
+    const homeRisk = bpRiskNum(pickHome ? bp.pick_team : bp.opponent);
+    const awayRisk = bpRiskNum(pickHome ? bp.opponent : bp.pick_team);
+
+    // 2026-08-19, Lynold's explicit instruction (carried forward): pBase in
+    // generate-member-lab.js is ALWAYS the home team's blend
+    // (team_strength_blend_home), regardless of which side is picked --
+    // home_strength_blend IS the number that anchors the odds calc on every
+    // row; away_strength_blend never feeds the formula (kept for reference
+    // only). Already home/away-direct, unchanged by this rewrite.
     const homeBlend = r4(g.team_strength_blend_home);
     const awayBlend = r4(g.team_strength_blend_away);
 
-    const preBullpenProb = r4(g.model_probability_pre_bullpen);
-    const legacyStrengthProb = r4(g.legacy_strength_probability);
-    const bullpenAdj = r4(g.bullpen_log_odds_adjustment);
-    const modelProb = r4(g.model_probability);
+    // 2026-08-25: model_probability, model_probability_pre_bullpen, and
+    // bullpen_log_odds_adjustment are all stored PICK-relative on the member
+    // brief game object (pickHome ? X : 1-X, or pickHome ? X : -X --
+    // confirmed by reading generate-member-lab.js directly, lines
+    // 1125/1272/1317/1344). To make these home-relative: when the pick IS
+    // home the stored value already reads home-relative; when the pick is
+    // away, undo the flip.
+    const pickProb = r4(g.model_probability);
+    const homeModelProb = pickHome ? pickProb : (pickProb !== null ? r4(1 - pickProb) : null);
+    const pickPreBullpenProb = r4(g.model_probability_pre_bullpen);
+    const homePreBullpenProb = pickHome ? pickPreBullpenProb : (pickPreBullpenProb !== null ? r4(1 - pickPreBullpenProb) : null);
+    const pickBullpenAdj = r4(g.bullpen_log_odds_adjustment);
+    const homeBullpenAdj = pickHome ? pickBullpenAdj : (pickBullpenAdj !== null ? r4(-pickBullpenAdj) : null);
 
-    const pitcherGap = (pScore !== null && oScore !== null) ? r4(pScore - oScore) : null;
-    const wobaDiff = (pWoba !== null && oWoba !== null) ? r4(pWoba - oWoba) : null;
-    const bullpenGap = (pRisk !== null && oRisk !== null) ? r4(oRisk - pRisk) : null;
+    const homePitcherGap = (homeScore !== null && awayScore !== null) ? r4(homeScore - awayScore) : null;
+    const homeWobaGap = (homeWoba !== null && awayWoba !== null) ? r4(homeWoba - awayWoba) : null;
+    // Mirrors the old bullpen_gap convention (opponent risk minus the
+    // favored side's risk, so positive = the favored side is safer) just
+    // restated home-relative: away risk minus home risk.
+    const homeBullpenGap = (homeRisk !== null && awayRisk !== null) ? r4(awayRisk - homeRisk) : null;
 
-    const preBullpenOdds = odds(preBullpenProb);
-    const scoreGap = (pScore !== null && oScore !== null) ? clamp(pScore - oScore, -20, 20) : null;
-    const pitcherBoost = scoreGap !== null ? r4(Math.exp(ERA_K * scoreGap)) : null;
-    const moneyLineOdds = odds(modelProb);
-    const moneylineProp = modelProb;
+    const homePreBullpenOdds = odds(homePreBullpenProb);
+    const homeScoreGap = (homeScore !== null && awayScore !== null) ? clamp(homeScore - awayScore, -20, 20) : null;
+    const homePitcherBoost = homeScoreGap !== null ? r4(Math.exp(ERA_K * homeScoreGap)) : null;
+    const homeMoneyLineOdds = odds(homeModelProb);
+    const homeMoneylineProp = homeModelProb;
+
+    const pickTeamSide = g.side === "home" ? "home team" : "away team";
 
     rows.push([
       DATE_OUT, g.game_pk, csvField(g.model_source || brief.model_version || "unknown"),
-      csvField(g.game), csvField(g.pick_team), csvField(oppTeam), g.status || "", "",
-      n2(modelProb), n2(pitcherGap), csvField(pPitcher || ""), n2(pScore), csvField(oPitcher || ""), n2(oScore),
-      n2(pEra), n2(oEra), n2(pWhip), n2(oWhip), n2(pHr9), n2(oHr9),
-      n2(pWoba), n2(oWoba), n2(pRisk), n2(oRisk),
-      n2(homeBlend), n2(awayBlend), n2(wobaDiff), n2(bullpenGap),
-      n2(pitcherBoost), n2(preBullpenOdds), n2(preBullpenProb), n2(bullpenAdj),
-      n2(moneyLineOdds), n2(moneylineProp)
+      csvField(g.game), csvField(g.away_team), csvField(g.home_team),
+      csvField(pickTeamSide), g.status || "", "",
+      n2(homeModelProb), n2(homePitcherGap), csvField(homePitcher || ""), n2(homeScore),
+      csvField(awayPitcher || ""), n2(awayScore),
+      n2(homeEra), n2(awayEra),
+      n2(homeWoba), n2(awayWoba), n2(homeRisk), n2(awayRisk),
+      n2(homeBlend), n2(awayBlend), n2(homeWobaGap), n2(homeBullpenGap),
+      n2(homePitcherBoost), n2(homePreBullpenOdds), n2(homePreBullpenProb), n2(homeBullpenAdj),
+      n2(homeMoneyLineOdds), n2(homeMoneylineProp)
     ].join(","));
   }
 

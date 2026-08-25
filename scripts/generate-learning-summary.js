@@ -755,15 +755,52 @@ function buildCalibration() {
   let attribution = { status: "collecting", games: 0, needed: 150 };
   const aPath = path.join(ROOT, "data", "calibration", "attribution_model_log.csv");
   if (fs.existsSync(aPath)) {
-    // Schema widened 2026-08-11: matchup/pick_team/opp_team + pick-side/opp-side
-    // pairs for every input, not just pre-computed diffs. Indices below match
-    // the new 34-column header (see grade-calibration.js's AHEAD constant) --
-    // result moved from old index 4 to 7, model_prob 5->8, lab 6->9, etc.
-    const aRows = fs.readFileSync(aPath, "utf8").trim().split("\n").slice(1).map(splitCsvLine).filter(r => r.length >= 34 && r[2] === latestModelVersion && (r[7] === "W" || r[7] === "L"));
+    // 2026-08-25, Lynold's explicit instruction: attribution_model_log.csv
+    // was rewritten from a 34-column pick/opp-relative schema to a 31-column
+    // home/away-relative schema (see grade-calibration.js's ALOG_COLUMNS).
+    // This reader used to address columns POSITIONALLY (r[7], r[9], r[10]...)
+    // -- switched to header-name lookups, same fix already applied to the
+    // kprops_log.csv reader below on 2026-08-14, so a future reorder can't
+    // silently break this section again.
+    //
+    // Also fixed while here (pre-existing, not caused by today's rewrite):
+    // the old idx-10 "Pitcher score gap" factor actually pointed at
+    // pick_pitcher (a NAME string, not a number) -- isFinite() silently
+    // filtered every row, so that factor had been permanently empty.
+    // idx-9 "Lab Rating" pointed at pitcher_gap -- this file has never
+    // logged a lab_rating column at all, so that factor was mislabeled data
+    // duplication, not a real Lab Rating read. "K-BB% gap" (idx 17) and
+    // "Offense form gap (ΔOPS diff)" (idx 26) referenced columns from an
+    // even older pre-2026-08-13 schema (K-BB%/OPS-delta) that no longer
+    // exist in any version of this file since that reorder -- both were
+    // already permanently empty. Dropped both rather than re-map them to
+    // unrelated data. Offense form is now covered by home_woba_gap (the
+    // real, currently-logged offense-form gap column, wOBA-based).
+    const aHead = fs.readFileSync(aPath, "utf8").split("\n")[0].split(",");
+    const aIdx = name => aHead.indexOf(name);
+    const iModelVer = aIdx("model_version"), iPickTeam = aIdx("pick_team"), iWinner = aIdx("winner");
+    const iHomeProb = aIdx("home_model_prob"), iHomePitcherGap = aIdx("home_pitcher_gap");
+    const iHomeWobaGap = aIdx("home_woba_gap"), iHomeBullpenGap = aIdx("home_bullpen_gap");
+    const aRows = iModelVer === -1 ? [] : fs.readFileSync(aPath, "utf8").trim().split("\n").slice(1).map(splitCsvLine)
+      .filter(r => r.length === aHead.length && r[iModelVer] === latestModelVersion && (r[iWinner] === "home" || r[iWinner] === "away"))
+      .map(r => ({ r, pickIsHome: r[iPickTeam] === "home team", won: (r[iPickTeam] === "home team") === (r[iWinner] === "home") }));
     attribution.games = aRows.length;
     if (aRows.length >= 150) {
-      const factor = (label, idx, fmt) => {
-        const have = aRows.filter(r => r[idx] !== "" && isFinite(Number(r[idx]))).map(r => ({ v: Number(r[idx]), won: r[7] === "W" }));
+      // Every source column below is home-relative; flipped back to
+      // pick-relative here (negated for away picks) so "high tertile" means
+      // the same thing — favorable to whoever was picked — on every row,
+      // regardless of which side LyDia picked.
+      // toPickRelative: gap-type columns (additive, symmetric around 0) just
+      // negate for an away pick; home_model_prob is a bounded 0-1
+      // probability, so an away pick needs the complement (1-v), not -v.
+      const negateForAway = (v, pickIsHome) => pickIsHome ? v : -v;
+      const complementForAway = (v, pickIsHome) => pickIsHome ? v : (1 - v);
+      const factor = (label, idx, toPickRelative) => {
+        if (idx === -1) return null;
+        const have = aRows.filter(x => x.r[idx] !== "" && isFinite(Number(x.r[idx]))).map(x => ({
+          v: toPickRelative(Number(x.r[idx]), x.pickIsHome),
+          won: x.won
+        }));
         if (have.length < 100) return null;
         const sorted = [...have].sort((a, b) => a.v - b.v);
         const cut = n => sorted[Math.floor(sorted.length * n)].v;
@@ -772,12 +809,10 @@ function buildCalibration() {
         return { factor: label, tertiles: tert.map((t, i) => ({ band: i === 0 ? "low" : i === 1 ? "mid" : "high", games: t.length, win_rate: Number((t.filter(x => x.won).length / t.length).toFixed(3)) })), spread: Number((tert[2].filter(x => x.won).length / tert[2].length - tert[0].filter(x => x.won).length / tert[0].length).toFixed(3)) };
       };
       const factors = [
-        factor("Pitcher score gap (pick − opp)", 10),
-        factor("K-BB% gap (pick − opp)", 17),
-        factor("Offense form gap (ΔOPS diff)", 26),
-        factor("Bullpen fatigue gap (opp − pick)", 31),
-        factor("Lab Rating", 9),
-        factor("Model probability", 8)
+        factor("Pitcher score gap (pick − opp)", iHomePitcherGap, negateForAway),
+        factor("Offense form gap (pick − opp, wOBA)", iHomeWobaGap, negateForAway),
+        factor("Bullpen fatigue gap (opp − pick)", iHomeBullpenGap, negateForAway),
+        factor("Model probability", iHomeProb, complementForAway)
       ].filter(Boolean).sort((a, b) => Math.abs(b.spread) - Math.abs(a.spread));
       attribution = { status: "ready", games: aRows.length, factors,
         note: "Win rate by input tertile, pick-side relative. |spread| = high-band win rate minus low-band — bigger magnitude = the metric separates winners from losers harder, and deserves weight. Read direction too: a NEGATIVE spread on a should-be-positive factor is a red flag." };
