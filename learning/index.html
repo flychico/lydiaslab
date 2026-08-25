@@ -364,6 +364,35 @@ function renderLearningSummary(){
   const nextReview = (s.next_review || []).map(n => `<li class="sec-note">${esc(n)}</li>`).join("");
   const cal = s.calibration || {};
   const kp = cal.kprops || {};
+  // 2026-08-24, Lynold's explicit instruction: surface data/learning-summary.json's
+  // "coach" object -- generate-coach.js (scripts/generate-coach.js) already
+  // writes it every run, but nothing on the site read it before this. Coach
+  // is a backward-looking, aggregate self-audit only (does the 72% prob gate
+  // hold up, does the 8.0 Lab Rating gate hold up, is bullpen v3 causing bad
+  // picks, are we beating or losing the closing line) -- it never touches
+  // today's specific games or any model weight/threshold itself (see its own
+  // hard_stop line below). Gated behind MIN_DAYS=7/MIN_PICKS=20 current-model
+  // samples in generate-coach.js; before that it just reports collection
+  // progress with no recommendations yet.
+  const coach = s.coach || null;
+  const coachHtml = coach ? `
+    <h2 class="sec">LyDia Coach</h2>
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:4px">
+        <h3 style="margin:0">${esc(coach.title || "")}</h3>
+        <span class="${coach.status === "review_ready" ? "pos-text" : "dim"} small" style="font-weight:700;text-transform:uppercase;letter-spacing:.03em">${coach.status === "review_ready" ? "Review ready" : "Collecting sample"}</span>
+      </div>
+      <p class="sec-note" style="margin:0 0 10px">${esc(coach.summary || "")}</p>
+      <div class="kpis" style="margin-bottom:10px">
+        ${kpi("Current-model graded days", `${coach.current_model_days ?? 0}/${coach.minimum_days ?? "—"}`, (coach.current_model_days ?? 0) >= (coach.minimum_days ?? Infinity) ? "minimum met" : "below minimum")}
+        ${kpi("Current-model official picks", `${coach.current_model_picks ?? 0}/${coach.minimum_picks ?? "—"}`, (coach.current_model_picks ?? 0) >= (coach.minimum_picks ?? Infinity) ? "minimum met" : "below minimum")}
+      </div>
+      ${(coach.recommendations && coach.recommendations.length)
+        ? `<ul style="margin:0 0 10px;padding-left:18px">${coach.recommendations.map(r => `<li class="sec-note" style="margin-bottom:4px">${esc(r)}</li>`).join("")}</ul>`
+        : `<p class="dim small" style="margin:0 0 10px">No review recommendations yet -- still collecting a big enough current-model sample.</p>`}
+      <div class="notice warn" style="margin:0">${esc(coach.hard_stop || "")}</div>
+    </div>
+  ` : "";
   el.innerHTML = `
     <div class="card" style="margin-bottom:16px">
       <h3 style="margin:0 0 6px">${esc(s.headline || "")}</h3>
@@ -375,6 +404,7 @@ function renderLearningSummary(){
       ${kpi("Strong official (prob + Lab)", pm.strong_official_count ?? "—", "qualifies both gates")}
       ${kpi("Protected by prob gate", pm.protected_by_probability_gate_count ?? "—", "high Lab, model prob < 72%")}
     </div>
+    ${coachHtml}
     <h2 class="sec">Official-pick gates</h2>
     <p class="sec-note">${esc(gates.note || "")}</p>
     <table class="dash"><tbody>
