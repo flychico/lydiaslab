@@ -17,10 +17,13 @@ const PitcherCore = require("../js/pitcher-matchup-core.js");
 // remap and the 2026-08-22 lab-score gate change, and had drifted stale on
 // both counts. See scripts/lib/gate-constants.js.
 const { OFFICIAL_MODEL_PROB, OFFICIAL_LAB_SCORE } = require("./lib/gate-constants");
-// 2026-08-24, Lynold's explicit instruction: the pitcher-score-gap boost
-// coefficient moved out to its own module, same reasoning as gate-constants
-// above -- export-pregame-attribution.js and grade-calibration.js each
-// recompute pitcher_boost for their own ledgers and had their own hardcoded
+// 2026-08-25, Lynold's explicit instruction: ERA_K (the pitcher-score-gap
+// boost coefficient) moved out to its own module, same reasoning as
+// gate-constants above -- export-pregame-attribution.js and
+// grade-calibration.js each recompute the same pitcher boost for their own
+// ledgers and had drifted to a stale hardcoded 0.20 while this file's own
+// live copy was retuned to 0.15. See scripts/lib/pitcher-boost-constants.js.
+const { ERA_K, PITCHER_SCORE_GAP_CLAMP } = require("./lib/pitcher-boost-constants");
 const ROOT = path.join(__dirname, "..");
 // 2026-08-14, Lynold's explicit instruction: log5 (and the flat league-wide
 // HFA it applied) removed from the moneyline model. team_strength_blend now
@@ -29,7 +32,6 @@ const ROOT = path.join(__dirname, "..");
 // log5Home() call site (search "log5 REMOVED") for what this drops.
 const PYTH_EXP = 1.83;
 const FORM_WEIGHT = 0.25;
-const ERA_K = 0.15;
 const LEAGUE_ERA = 4.20;
 const MIN_IP = 20;
 const ERA_CLAMP = [2.75, 6.00];
@@ -1068,11 +1070,13 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
   const scoreH = pitcherScoreFor(g, "home", pitchingPlan, pitchers);
   // Home-relative (positive when the home starter grades better), capped at
   // +/-20 before the exponential.
-  // 2026-08-24, Lynold's explicit instruction: reverted back to this original
-  // form. A same-day PITCHER_SCORE_K=0.03 normalization (dedicated coefficient,
-  // shared module) was tried and reverted per Lynold's call -- back to reusing
-  // ERA_K (0.20) unchanged for this exponential, same as before that change.
-  const scoreGap = clamp(scoreH - scoreA, -20, 20);
+  // 2026-08-25, Lynold's explicit instruction: ERA_K now imported from
+  // scripts/lib/pitcher-boost-constants.js (currently 0.15) instead of a
+  // local declaration -- this comment previously claimed "(0.20) unchanged",
+  // which was stale; the live value here had already been retuned to 0.15
+  // without this comment or the two ledger scripts' local copies being
+  // updated to match. See that module for the full history.
+  const scoreGap = clamp(scoreH - scoreA, -PITCHER_SCORE_GAP_CLAMP, PITCHER_SCORE_GAP_CLAMP);
   // Bullpen risk adjusts the probability itself, not just Lab Rating and the
   // official-pick gate — a starter only covers part of the game. Uses the
   // combined risk index (fatigue blended with efficiency), not raw fatigue,

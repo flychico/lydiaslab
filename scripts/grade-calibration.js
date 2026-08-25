@@ -23,6 +23,8 @@ const path = require("path");
 // that file pre-game; this script was supposed to overwrite it post-game with
 // real outcomes filled in, and hasn't been doing that.
 const { buildRow: buildKpropsXlsxRow, writeWorkbook: writeKpropsXlsx } = require("./lib/kprops-xlsx");
+// 2026-08-25, Lynold's explicit instruction: ERA_K imported here now too (see the block below where it used to be a local hardcoded 0.20) -- single source of truth shared with generate-member-lab.js and export-pregame-attribution.js.
+const { ERA_K, PITCHER_SCORE_GAP_CLAMP } = require("./lib/pitcher-boost-constants");
 
 const ROOT = path.join(__dirname, "..");
 const LOG = path.join(ROOT, "data", "calibration", "calibration_model_log.csv");
@@ -287,14 +289,19 @@ async function main() {
   const odds = p => (p !== null && p > 0 && p < 1) ? r4(p / (1 - p)) : null;
   // MONEYLINE_CALIBRATION_K and ERA_K are not exported from
   // generate-member-lab.js (module.exports = { summarize, officialMarketCounts }
-  // only) -- both hardcoded here, kept in sync manually with the constants of
+  // only) -- hardcoded here, kept in sync manually with the constant of
   // the same name in that file.
-  // 2026-08-24, Lynold's explicit instruction: reverted back to this local
-  // ERA_K=0.20 declaration. A same-day move to a shared PITCHER_SCORE_K=0.03
-  // constant (scripts/lib/pitcher-boost-constants.js) was tried and reverted
-  // per Lynold's call.
+  // 2026-08-25, Lynold's explicit instruction: ERA_K now imported from
+  // scripts/lib/pitcher-boost-constants.js instead of a local hardcoded
+  // copy. That local copy (0.20) had drifted stale -- generate-member-lab.js's
+  // live value had been retuned to 0.15 and this file was never updated to
+  // match, so home_pitcher_boost/home_pre_bullpen_odds in this ledger
+  // silently stopped matching what the live model actually priced. (A
+  // same-day 2026-08-24 attempt to centralize this via a shared
+  // PITCHER_SCORE_K=0.03 constant in that same module was reverted back to
+  // local copies per Lynold's call that day -- this is that centralization
+  // done for real, at the current correct value.)
   const MONEYLINE_CALIBRATION_K = 0.50;
-  const ERA_K = 0.20;
   if (alogHeaderOk) for (const g of games) {
     const key = `${DATE},${g.game_pk}`;
     if (aSeen.has(key)) continue;
@@ -363,7 +370,7 @@ async function main() {
     // 2026-08-21, bug fix (carried forward): pitcher_boost must use the same
     // score-gap formula as pitcher_gap above, clamped +/-20 before the
     // exponential -- matches export-pregame-attribution.js exactly.
-    const homeScoreGap = (homeScore !== null && awayScore !== null) ? Math.max(-20, Math.min(20, homeScore - awayScore)) : null;
+    const homeScoreGap = (homeScore !== null && awayScore !== null) ? Math.max(-PITCHER_SCORE_GAP_CLAMP, Math.min(PITCHER_SCORE_GAP_CLAMP, homeScore - awayScore)) : null;
     const homePitcherBoost = homeScoreGap !== null ? r4(Math.exp(ERA_K * homeScoreGap)) : null;
     // 2026-08-18, Lynold's explicit instruction (carried forward):
     // moneyline_prop/money_line_odds must use the SAME formula as model_prob

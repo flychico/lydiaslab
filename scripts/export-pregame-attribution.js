@@ -102,12 +102,17 @@ const n2 = v => v === null || v === undefined ? "" : v;
 const odds = p => (p !== null && p > 0 && p < 1) ? r4(p / (1 - p)) : null;
 const bpRiskNum = t => { const v = t ? (t.risk_index ?? t.score) : null; return r4(typeof v === "number" ? v : NaN); };
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
-// 2026-08-24, Lynold's explicit instruction: reverted back to this original
-// local constant. A same-day move to a shared PITCHER_SCORE_K=0.03 constant
-// (scripts/lib/pitcher-boost-constants.js) was tried and reverted per
-// Lynold's call -- back to a local ERA_K=0.20, kept in sync manually with
-// generate-member-lab.js and grade-calibration.js (see this file's header).
-const ERA_K = 0.20;
+// 2026-08-25, Lynold's explicit instruction: ERA_K now imported from
+// scripts/lib/pitcher-boost-constants.js instead of a local hardcoded copy.
+// That local copy (0.20) had drifted stale -- generate-member-lab.js's live
+// value had been retuned to 0.15 and this file was never updated to match,
+// so home_pitcher_boost/home_pre_bullpen_odds in this pregame snapshot
+// silently stopped matching what the live model actually priced. (A
+// same-day 2026-08-24 attempt to centralize this via a shared
+// PITCHER_SCORE_K=0.03 constant in that same module was reverted back to a
+// local copy per Lynold's call that day -- this is that centralization done
+// for real, at the current correct value.)
+const { ERA_K, PITCHER_SCORE_GAP_CLAMP } = require("./lib/pitcher-boost-constants");
 // homeScore/awayScore below are pitcher_edge.home_score/away_score -- the
 // SAME starter-only pitcher_score field the live model's scoreH/scoreA read,
 // so this reproduces exactly what the live moneyline used.
@@ -183,7 +188,7 @@ function main() {
     const homeBullpenGap = (homeRisk !== null && awayRisk !== null) ? r4(awayRisk - homeRisk) : null;
 
     const homePreBullpenOdds = odds(homePreBullpenProb);
-    const homeScoreGap = (homeScore !== null && awayScore !== null) ? clamp(homeScore - awayScore, -20, 20) : null;
+    const homeScoreGap = (homeScore !== null && awayScore !== null) ? clamp(homeScore - awayScore, -PITCHER_SCORE_GAP_CLAMP, PITCHER_SCORE_GAP_CLAMP) : null;
     const homePitcherBoost = homeScoreGap !== null ? r4(Math.exp(ERA_K * homeScoreGap)) : null;
     const homeMoneyLineOdds = odds(homeModelProb);
     const homeMoneylineProp = homeModelProb;

@@ -1,51 +1,49 @@
 /*
-  LyDia -- pitcher-score-gap boost coefficient.
+  LyDia -- pitcher-score-gap boost coefficient (ERA_K).
 
   Single source of truth for the coefficient used in every place that prices
-  a starting-pitcher score gap into odds: exp(PITCHER_SCORE_K * scoreGap).
-  Shared by scripts/generate-member-lab.js (the live moneyline model that
-  actually prices picks), scripts/export-pregame-attribution.js, and
-  scripts/grade-calibration.js (both ledgers that recompute the same number
-  for logging/grading). All three used to carry their own hardcoded local
-  copy of this constant -- exactly the "one file changed, the others went
-  stale" bug pattern already logged more than once in this project's own
-  ERRORS.md (most recently: grade-calibration.js's pitcherBoost was still on
-  the OLD era-based formula on 2026-08-21, three days after
-  generate-member-lab.js switched to the pitcher-score-based one). A leaf
-  module here means there is exactly one place left to go stale.
+  a starting-pitcher score gap into odds: exp(ERA_K * scoreGap), scoreGap
+  clamped to +/-PITCHER_SCORE_GAP_CLAMP before the exponential. Shared by:
+    - scripts/generate-member-lab.js -- the live moneyline model that
+      actually prices picks (the scoreGap-based pitcher boost only; modelV3,
+      the dormant shadow A/B model in the same file, uses this same shared
+      constant for its own ERA-gap term too -- that was already true before
+      this file existed, since both call sites read the same top-level
+      variable; not a new coupling introduced by this centralization).
+    - scripts/export-pregame-attribution.js and scripts/grade-calibration.js
+      -- both ledgers that recompute the same number for logging/grading,
+      feeding the home_pitcher_boost / home_pre_bullpen_odds columns.
 
-  2026-08-24, Lynold's explicit instruction: a 6-point pitcher_score gap was
-  swinging model_prob by roughly +27 percentage points -- far too much for
-  what is really a modest gap between two starters on the shared 20-92
-  pitcher_score scale. Root cause: this coefficient used to just BE
-  generate-member-lab.js's ERA_K (0.20), reused unchanged when the model
-  switched from an ERA-gap input to a pitcher-score-gap input on 2026-08-15.
-  Those two inputs are on very different scales -- ERA_K=0.20 was tuned
-  against ERA_CLAMP = [2.75, 6.00], a 3.25-point range, where its max clamped
-  swing produced a sane ~1.92x pre-bullpen-odds ceiling. Applied unchanged to
-  the pitcher-score gap (clamped at +/-20, a ~6x wider range), that same 0.20
-  produces up to ~54.6x -- wildly beyond what the coefficient was ever
-  calibrated for. Concrete case that surfaced it: Athletics @ Astros,
-  2026-08-23 (gamePk 824150) -- a 19-point score gap alone dragged team
-  strength from 43.8% up to 97.2% pre-bullpen, functionally overriding the
-  team-strength signal entirely.
+  2026-08-25, Lynold's explicit instruction: fix a real drift this file's
+  own history had already warned about. All three consumers above used to
+  carry their own hardcoded local copy of this coefficient. At some point
+  after the 2026-08-24 rebalance below, generate-member-lab.js's live copy
+  was retuned to 0.15 -- but export-pregame-attribution.js and
+  grade-calibration.js were never updated to match and stayed hardcoded at
+  the older 0.20, so the attribution log's home_pitcher_boost/
+  home_pre_bullpen_odds columns silently stopped matching what the live
+  model actually priced. Caught 2026-08-25 while building an Excel replica
+  of home_pre_bullpen_odds and finding the two numbers didn't agree.
+  Centralizing here for real this time (a same-day attempt to do exactly
+  this on 2026-08-24, then named PITCHER_SCORE_K=0.03, was reverted back to
+  local copies per Lynold's call that day -- this file was left orphaned,
+  imported by nothing, after that revert) at the current correct value: 0.15.
 
-  New value, chosen 2026-08-24: 0.03, matching that original ERA-based design
-  ceiling. At the max clamped gap (20), exp(0.03*20) = 1.82x -- a maxed-out
-  pitcher edge now moves team strength from 50% to about 64.6%, not 97%+. At
-  the concrete 6-point case Lynold flagged (two starters "in the same
-  playing field"), the swing is now about +4.5 percentage points instead of
-  +27.
+  2026-08-24 background (why this coefficient is NOT just the old ERA-gap
+  ERA_K=0.20 reused unchanged): a 6-point pitcher_score gap was swinging
+  model_prob by roughly +27 percentage points -- far too much for a modest
+  gap on the shared 20-92 pitcher_score scale. ERA_K=0.20 was tuned against
+  ERA_CLAMP=[2.75,6.00], a 3.25-point range; applied unchanged to a
+  pitcher-score gap (clamped +/-20, a ~6x wider range) it produced up to
+  ~54.6x -- wildly beyond calibration. Concrete case: Athletics @ Astros,
+  2026-08-23 (gamePk 824150), a 19-point score gap alone dragged team
+  strength from 43.8% to 97.2% pre-bullpen. 0.15 is the current live-tuned
+  replacement -- at the max clamped gap (20), exp(0.15*20) = 20.1x.
 
-  ERA_K itself (0.20) is UNCHANGED and still lives locally in
-  generate-member-lab.js -- it still correctly prices the separate shadow
-  model's (modelV3) FIP-lite ERA gap, which is a genuinely different,
-  narrower-scale input. Do not point that usage at this constant; they are
-  deliberately different numbers for deliberately different scales. Do not
-  add unrelated thresholds to this file -- scoped to this one coefficient
+  Do not add unrelated thresholds here -- scoped to this one coefficient
   (and its clamp) only, same convention as gate-constants.js.
 */
-const PITCHER_SCORE_K = 0.03;
+const ERA_K = 0.15;
 const PITCHER_SCORE_GAP_CLAMP = 20;
 
-module.exports = { PITCHER_SCORE_K, PITCHER_SCORE_GAP_CLAMP };
+module.exports = { ERA_K, PITCHER_SCORE_GAP_CLAMP };
