@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-25T17:02:06.569Z",
+  "generated_at": "2026-08-25T17:02:52.241Z",
   "status": "ready",
   "latest_date": "2026-08-24",
   "days_reviewed": 23,
@@ -742,108 +742,5 @@
     "Watch whether official picks with model probability >= 72% beat low-probability value watches over a larger sample.",
     "Track closing price movement once market snapshots have enough data.",
     "Keep value watch separate from official picks."
-  ],
-  "coach": {
-    "status": "review_ready",
-    "title": "First evidence-based model review is ready",
-    "summary": "LyDia has 14 current-model graded days and 20 current-model official picks. The coach can now identify review questions, but it cannot change the model automatically.",
-    "current_model_days": 14,
-    "current_model_picks": 20,
-    "minimum_days": 7,
-    "minimum_picks": 20,
-    "bullpen_model_owner": "bullpen-fatigue-v3-runs-aware",
-    "recommendations": [
-      "Current-model official record: 14-6 (70.0%).",
-      "Probability review: this sample's median win probability is 73.7%. At-or-above-median picks are 7-3; below-median picks are 7-3. This is a self-adjusting split of the current sample, not the official 61.0% gate -- review the gap, but do not change the gate from this report alone.",
-      "Lab Rating review: under 67 picks are 0-0; 67 to 69.9 picks are 0-0; 70+ picks are 14-6. The official gate is 7.2/10. Compare tiers before considering a rating-gate change.",
-      "Pitcher support review: pitcher-supported official picks are 14-6.",
-      "Bullpen v3 review: no current-model official picks with major bullpen caution are in the graded sample.",
-      "Market review: closing-price coverage is still too small for a useful CLV conclusion.",
-      "Human approval remains required for every model or threshold change."
-    ],
-    "buckets": {
-      "probability": {
-        "method": "median_of_current_sample",
-        "split_at": 0.7365999999999999,
-        "official_gate": 0.61,
-        "above": {
-          "label": "73.7%+ (sample median or above)",
-          "wins": 7,
-          "losses": 3,
-          "total": 10,
-          "rate": 0.7
-        },
-        "below": {
-          "label": "below 73.7% (sample median)",
-          "wins": 7,
-          "losses": 3,
-          "total": 10,
-          "rate": 0.7
-        }
-      },
-      "lab_rating": {
-        "method": "fixed_tiers",
-        "official_gate": 72,
-        "tiers": [
-          {
-            "key": "low",
-            "label": "under 67",
-            "wins": 0,
-            "losses": 0,
-            "total": 0,
-            "rate": null
-          },
-          {
-            "key": "mid",
-            "label": "67 to 69.9",
-            "wins": 0,
-            "losses": 0,
-            "total": 0,
-            "rate": null
-          },
-          {
-            "key": "high",
-            "label": "70+",
-            "wins": 14,
-            "losses": 6,
-            "total": 20,
-            "rate": 0.7
-          }
-        ]
-      },
-      "pitcher_support": {
-        "supported": {
-          "label": "pitcher edge favors the pick",
-          "wins": 14,
-          "losses": 6,
-          "total": 20,
-          "rate": 0.7
-        },
-        "unsupported": {
-          "label": "pitcher edge favors the opponent",
-          "wins": 0,
-          "losses": 0,
-          "total": 0,
-          "rate": null
-        }
-      },
-      "bullpen_caution": {
-        "flagged": {
-          "label": "flagged bullpen caution",
-          "wins": 0,
-          "losses": 0,
-          "total": 0,
-          "rate": null
-        },
-        "clear": {
-          "label": "no bullpen caution",
-          "wins": 14,
-          "losses": 6,
-          "total": 20,
-          "rate": 0.7
-        }
-      }
-    },
-    "hard_stop": "Coach findings are review prompts only. No automatic threshold, weight, formula, publishing, or betting change is permitted."
-  }
+  ]
 }
