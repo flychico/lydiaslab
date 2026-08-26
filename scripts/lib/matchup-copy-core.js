@@ -482,7 +482,11 @@ function moneyLineReasons({
 */
 function coachEvidenceNotes({ gameFeatures, coachHistory }) {
   if (!gameFeatures || !coachHistory || !coachHistory.ready || !coachHistory.correlations) return [];
-  return Correlation.evidenceForGame(gameFeatures, coachHistory.correlations, { topK: 3 });
+  // 2026-08-26: no topK cap passed -- evidenceForGame()'s own default now
+  // shows every computed feature with a value for this game (ranked
+  // strongest-first, honestly banded), not just the top 3. See that
+  // function's header comment for why.
+  return Correlation.evidenceForGame(gameFeatures, coachHistory.correlations);
 }
 
 module.exports = {

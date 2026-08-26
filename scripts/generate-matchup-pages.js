@@ -1193,6 +1193,16 @@ function buildInsights(game, pitcherGame) {
   // feature's correlation has never cleared the evidence floor anyway (see
   // coach-correlation-core.js's MIN_R_FOR_EVIDENCE), so nothing is lost by
   // leaving it null here rather than guessing at a field name.
+  // 2026-08-26 additions, Lynold's direct follow-up ("why not analyze the
+  // pitching gap, the team strength comparison, offense points from the lab
+  // rating..."): team strength edge uses the exact same independent-blend
+  // read as the caseAgainst block above (not that block's own const, which
+  // is scoped to its own if -- recomputed here the same way to stay in
+  // scope). Lab Rating sub-components read straight off game.lab_score_breakdown,
+  // the same object already passed into MatchupCopy.labRatingBreakdown()
+  // above, so no new data source.
+  const oppTeamStrengthForEvidence = game.pick_team === game.home_team ? game.team_strength_blend_away : game.team_strength_blend_home;
+  const lsb = game.lab_score_breakdown || null;
   const gameFeaturesForEvidence = {
     pick_model_prob: typeof game.model_probability === "number" ? game.model_probability : null,
     edge_vs_market: (typeof game.model_probability === "number" && typeof market.no_vig_probability === "number")
@@ -1205,7 +1215,14 @@ function buildInsights(game, pitcherGame) {
     pick_bullpen_adj: typeof game.bullpen_log_odds_adjustment === "number" ? game.bullpen_log_odds_adjustment : null,
     pick_own_bullpen_risk: pickRisk,
     pick_lab_score: typeof game.lab_score === "number" ? game.lab_score : null,
-    best_price_abs: typeof market.best_price === "number" ? Math.abs(market.best_price) : null
+    best_price_abs: typeof market.best_price === "number" ? Math.abs(market.best_price) : null,
+    pick_team_strength_edge: (typeof game.team_strength_probability === "number" && typeof oppTeamStrengthForEvidence === "number")
+      ? game.team_strength_probability - oppTeamStrengthForEvidence : null,
+    lab_offense_points: lsb && typeof lsb.offense_points === "number" ? lsb.offense_points : null,
+    lab_pitching_plan_points: lsb && typeof lsb.pitching_plan_points === "number" ? lsb.pitching_plan_points : null,
+    lab_bullpen_points: lsb && typeof lsb.bullpen_points === "number" ? lsb.bullpen_points : null,
+    lab_conviction_points: lsb && typeof lsb.conviction_points === "number" ? lsb.conviction_points : null,
+    lab_pitcher_edge_points: lsb && typeof lsb.pitcher_edge_points === "number" ? lsb.pitcher_edge_points : null
   };
   const coachNotes = MatchupCopy.coachEvidenceNotes({
     gameFeatures: gameFeaturesForEvidence,

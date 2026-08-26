@@ -56,6 +56,24 @@
 const fs = require("fs");
 const path = require("path");
 
+// 2026-08-26, Lynold's direct follow-up after seeing this in production:
+// "why not analyze the pitching gap, the team strength comparison, offense
+// points from the lab rating to determine if these individual inputs help
+// us make the correct decision." Two real gaps, both fixed below:
+//   1. Team strength (home_strength_blend/away_strength_blend) was never a
+//      feature at all -- added as pick_team_strength_edge.
+//   2. Lab Rating's own component scores (offense_points,
+//      pitching_plan_points, bullpen_points, conviction_points,
+//      pitcher_edge_points) aren't in attribution_model_log.csv -- only the
+//      final composite lab_score is. They live in each day's
+//      data/member-brief/<date>.json (game.lab_score_breakdown), which is
+//      archived per-date and never deleted, so loadHistoricalRows() now
+//      also scans every dated member-brief file and merges those component
+//      scores in by (date, game_pk), same join key as everything else.
+//      A missing member-brief file for a given date just means those 5
+//      features are null for that row -- same "no guess" rule as
+//      everything else here.
+
 function splitCsvLine(l) {
   const c = []; let cur = "", q = false;
   for (const ch of l) {
@@ -109,7 +127,14 @@ const FEATURES = [
   { key: "pick_bullpen_adj", label: "Probability points bullpen risk moved this pick's number" },
   { key: "pick_own_bullpen_risk", label: "Picked team's own bullpen fatigue score (regardless of the opponent's)" },
   { key: "pick_lab_score", label: "Lab Rating (LyDia's own analysis-quality score for this pick)" },
-  { key: "best_price_abs", label: "Size of the price (how big a favorite or underdog this pick was)" }
+  { key: "best_price_abs", label: "Size of the price (how big a favorite or underdog this pick was)" },
+  // 2026-08-26 additions, direct follow-up (see header comment):
+  { key: "pick_team_strength_edge", label: "Team strength blend edge, before any pitcher/bullpen adjustment (picked side minus opponent)" },
+  { key: "lab_offense_points", label: "Lab Rating's offense component score" },
+  { key: "lab_pitching_plan_points", label: "Lab Rating's pitching-plan component score" },
+  { key: "lab_bullpen_points", label: "Lab Rating's bullpen component score" },
+  { key: "lab_conviction_points", label: "Lab Rating's conviction component score" },
+  { key: "lab_pitcher_edge_points", label: "Lab Rating's pitcher-edge component score" }
 ];
 
 /*
@@ -117,10 +142,33 @@ const FEATURES = [
   Returns an array of row objects: { date, gamePk, matchup, pickTeam, status,
   isHome, pickWon, features: { <FEATURES key>: number|null } }.
 */
+// Scans every dated data/member-brief/<date>.json (archived, never deleted)
+// for lab_score_breakdown component scores, keyed by "date,game_pk" -- same
+// join key attribution_model_log.csv/calibration_model_log.csv already use.
+// A game with no breakdown recorded (or a date with no member-brief file at
+// all) just means those 5 features are null for that row.
+function loadLabBreakdownByKey(ROOT) {
+  const dir = path.join(ROOT, "data", "member-brief");
+  const byKey = new Map();
+  if (!fs.existsSync(dir)) return byKey;
+  const files = fs.readdirSync(dir).filter(f => /^\d{4}-\d{2}-\d{2}\.json$/.test(f));
+  for (const f of files) {
+    const date = f.replace(".json", "");
+    let brief;
+    try { brief = JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")); } catch (e) { continue; }
+    for (const g of brief.games || []) {
+      if (!g.lab_score_breakdown || !g.game_pk) continue;
+      byKey.set(`${date},${g.game_pk}`, g.lab_score_breakdown);
+    }
+  }
+  return byKey;
+}
+
 function loadHistoricalRows(ROOT) {
   const alog = loadCsv(path.join(ROOT, "data", "calibration", "attribution_model_log.csv"));
   const cal = loadCsv(path.join(ROOT, "data", "calibration", "calibration_model_log.csv"));
   const calByKey = new Map(cal.map(r => [`${normDate(r.date)},${r.gamePk}`, r]));
+  const labByKey = loadLabBreakdownByKey(ROOT);
 
   const rows = [];
   for (const a of alog) {
@@ -172,6 +220,16 @@ function loadHistoricalRows(ROOT) {
     const bestPrice = num(c.best_price);
     const bestPriceAbs = bestPrice !== null ? Math.abs(bestPrice) : null;
 
+    const homeBlend = num(a.home_strength_blend), awayBlend = num(a.away_strength_blend);
+    const pickTeamStrengthEdge = (homeBlend !== null && awayBlend !== null)
+      ? (pickHome ? homeBlend - awayBlend : awayBlend - homeBlend) : null;
+
+    // Lab Rating sub-components -- not in either CSV, only in member-brief
+    // (see header comment). Missing brief for this date/game just means
+    // these 5 stay null for this row, same "no guess" rule as everywhere
+    // else in this loader.
+    const lab = labByKey.get(`${normDate(a.date)},${a.gamePk}`) || null;
+
     rows.push({
       date: a.date,
       gamePk: a.gamePk,
@@ -190,7 +248,13 @@ function loadHistoricalRows(ROOT) {
         pick_bullpen_adj: pickBullpenAdj,
         pick_own_bullpen_risk: pickOwnBullpenRisk,
         pick_lab_score: labScore,
-        best_price_abs: bestPriceAbs
+        best_price_abs: bestPriceAbs,
+        pick_team_strength_edge: pickTeamStrengthEdge,
+        lab_offense_points: lab ? num(lab.offense_points) : null,
+        lab_pitching_plan_points: lab ? num(lab.pitching_plan_points) : null,
+        lab_bullpen_points: lab ? num(lab.bullpen_points) : null,
+        lab_conviction_points: lab ? num(lab.conviction_points) : null,
+        lab_pitcher_edge_points: lab ? num(lab.pitcher_edge_points) : null
       }
     });
   }
@@ -343,17 +407,28 @@ function buildProseRecommendations(correlations, overallRecord) {
   built by the matchup-page generator from that game's live inputs) and the
   correlation findings, returns real evidence notes -- which historical
   quartile this game's numbers fall into, and what that quartile's record
-  actually is. Returns [] if correlations aren't ready or nothing rises
-  above MIN_R (weak features are omitted rather than forced into a note).
+  actually is.
+
+  2026-08-26, Lynold's direct follow-up: the first version of this only
+  ever showed the single strongest feature (pick_model_prob) because of a
+  MIN_R_FOR_EVIDENCE=0.08 floor plus topK=3 -- pitching gap, team strength,
+  and Lab Rating's offense points all got silently hidden below that floor
+  even though they were being computed. His words: "why not analyze the
+  pitching gap, the team strength comparison, offense points from the lab
+  rating to determine if these individual inputs help us make the correct
+  decision." The floor is removed -- every computed feature with a value
+  for today's game gets a note now, ranked strongest-first. What replaces
+  the floor is honesty in the text itself: each note states its band
+  (CORR_BANDS -- "a real relationship" / "a modest relationship" / "little
+  to no relationship") so a weak input still shows its number and quartile
+  record, but reads as weak instead of being dressed up or hidden.
 */
-const MIN_R_FOR_EVIDENCE = 0.08; // below this, a note would be evidence-shaped noise, not evidence
 function evidenceForGame(gameFeatures, correlations, opts) {
-  const topK = (opts && opts.topK) || 3;
+  const topK = (opts && opts.topK) || FEATURES.length; // default: show every computed feature, not just the strongest few
   if (!correlations || !Array.isArray(correlations.numeric)) return [];
   const notes = [];
   for (const f of correlations.numeric) {
     if (notes.length >= topK) break;
-    if (Math.abs(f.r) < MIN_R_FOR_EVIDENCE) continue;
     const val = gameFeatures[f.key];
     if (val === null || val === undefined || !Number.isFinite(val) || !f.quartiles) continue;
     const q = f.quartiles;
@@ -366,9 +441,10 @@ function evidenceForGame(gameFeatures, correlations, opts) {
     const direction = f.r > 0
       ? (bucketIdx >= 2 ? "the stronger end" : "the weaker end")
       : (bucketIdx <= 1 ? "the stronger end" : "the weaker end");
+    const band = bandFor(Math.abs(f.r));
     notes.push({
       title: `Evidence check: ${f.label}`,
-      detail: `Today's number here (${fmtNum(val)}) falls in the ${position} of LyDia's historical range -- ${direction} of this angle. In that quarter, LyDia's record is ${bucket.w}-${bucket.l} (${pct(bucket.rate)}, n=${bucket.n}). A review note only, from ${f.n} analyzed games -- not a reason to skip or fade this pick.`
+      detail: `Today's number here (${fmtNum(val)}) falls in the ${position} of LyDia's historical range -- ${direction} of this angle. Across ${f.n} analyzed games, this input has shown ${band} to winning (r=${fmtNum(f.r, 3)}). In that quarter, LyDia's record is ${bucket.w}-${bucket.l} (${pct(bucket.rate)}, n=${bucket.n}). A review note only -- not a reason to skip or fade this pick on its own.`
     });
   }
   return notes;
