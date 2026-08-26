@@ -375,6 +375,23 @@ function splitCsvLine(l) { const c = []; let cur = "", q = false; for (const ch 
 function parseOwnCSV(t) { if (!t) return []; const l = t.trim().split(/\r?\n/); if (l.length < 2) return []; const h = splitCsvLine(l[0]); return l.slice(1).map(x => { const c = splitCsvLine(x); const o = {}; h.forEach((k, i) => o[k] = c[i]); return o; }); }
 const homeOfMatchup = m => { const p = String(m || "").split(" @ "); return p.length === 2 ? p[1] : ""; };
 function dkeyOwn(d) { const m = String(d || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return m ? Number(m[3]) * 10000 + Number(m[1]) * 100 + Number(m[2]) : 0; }
+// Same slug scheme as scripts/generate-matchup-pages.js's matchupSlug() --
+// away-vs-home-prediction-odds-YYYY-MM-DD -- so links land on the real page.
+function slugify(v) { return String(v || "").toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""); }
+function ownMatchupUrl(r) {
+  const parts = String(r.matchup || "").split(" @ ");
+  if (parts.length !== 2) return null;
+  const dm = String(r.date || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!dm) return null;
+  const iso = `${dm[3]}-${dm[1].padStart(2, "0")}-${dm[2].padStart(2, "0")}`;
+  return `/mlb/${slugify(shortTeam(parts[0]))}-vs-${slugify(shortTeam(parts[1]))}-prediction-odds-${iso}/`;
+}
+// The specific games behind a team's LyDia record -- used by teamPanel() so
+// clicking a team from "LyDia's own record" or "Teams LyDia leans on most"
+// shows the actual picks, not just the tally. Newest first.
+function ownGamesFor(name) {
+  return (ownRows || []).filter(r => r.side === name).sort((a, b) => dkeyOwn(b.date) - dkeyOwn(a.date));
+}
 
 const OWN_CACHE_KEY = "lydia-own-record-v1";
 async function loadOwnRecord() {
@@ -817,6 +834,23 @@ async function teamPanel(name) {
       <div style="display:flex;justify-content:space-between;align-items:baseline"><h2 style="margin:0">${escapeHtml(name)}</h2><span class="dim" style="cursor:pointer;font-size:1.3rem" onclick="closePanel()">✕</span></div>
       <p class="dim small" style="margin:4px 0 10px">${st.w ?? "?"}-${st.l ?? "?"} · ${st.l10 ? "L10 " + st.l10 : ""} ${st.streak ? "· streak " + st.streak : ""} · ${Number.isFinite(st.rsg) ? st.rsg + " RS/G, " + st.rag + " RA/G" : ""}</p>
       ${luckLine ? `<div class="notice" style="margin-bottom:10px">${luckLine}</div>` : ""}
+      ${(() => {
+        const games = ownGamesFor(name);
+        if (!games.length) return "";
+        const rec = rs => { const w = rs.filter(r => r.won === 1).length, n = rs.length; return { w, l: n - w, n }; };
+        const official = games.filter(r => r.status === "official_pick");
+        const ro = rec(official), ra = rec(games);
+        return `<h3 style="margin-top:0">LyDia's own record on ${escapeHtml(shortTeam(name))}</h3>
+        <p class="dim small" style="margin:2px 0 8px">Official picks: <b class="${ro.n && ro.w >= ro.l ? "pos-text" : ro.n ? "neg-text" : ""}">${ro.w}-${ro.l}</b> (${ro.n})&nbsp;&nbsp;·&nbsp;&nbsp;All graded leans: <b class="${ra.n && ra.w >= ra.l ? "pos-text" : "neg-text"}">${ra.w}-${ra.l}</b> (${ra.n})</p>
+        <table style="margin-bottom:12px"><thead><tr><th>Date</th><th>Matchup</th><th>Side</th><th class="num">Model</th><th>Result</th><th></th></tr></thead><tbody>
+          ${games.map(r => {
+            const url = ownMatchupUrl(r);
+            const home = homeOfMatchup(r.matchup) === name;
+            const badge = r.status === "official_pick" ? ` <span class="fpill on" style="padding:1px 6px;font-size:.65rem;cursor:default">official</span>` : "";
+            return `<tr><td>${escapeHtml(r.date)}</td><td>${escapeHtml(r.matchup)}${badge}</td><td>${home ? "Home" : "Away"}</td><td class="num">${r.modelProb != null ? (r.modelProb * 100).toFixed(0) + "%" : "—"}</td><td class="${r.won === 1 ? "pos-text" : "neg-text"}">${r.won === 1 ? "W" : "L"}</td><td>${url ? `<a href="${url}">Analysis →</a>` : ""}</td></tr>`;
+          }).join("")}
+        </tbody></table>`;
+      })()}
       <h3>Offense by window</h3>
       <table><thead><tr><th>Window</th><th class="num">G</th><th class="num">AVG</th><th class="num">OPS</th><th class="num">wOBA</th><th class="num">R/G</th><th class="num">K%</th></tr></thead><tbody>
         ${trendRow("Last 7 days", w7)}${trendRow("Last 15 days", w15)}${trendRow("Last 30 days", w30)}
