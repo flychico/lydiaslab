@@ -62,6 +62,8 @@ function normalizePick(p, day) {
   const learning = p.learning || {};
   const result = p.mlResult || p.result || learning.result || "NG";
   return {
+    gamePk: p.gamePk || null,
+    matchup: (p.away && p.home) ? `${p.away} @ ${p.home}` : null,
     pick: ml.pick || p.pick || null,
     result,
     model_probability: first(learning.model_probability, ml.prob, p.model_probability),
@@ -245,6 +247,16 @@ function main() {
     bullpen_model_owner: "bullpen-fatigue-v3-runs-aware",
     recommendations: ready ? buildRecommendations(currentRows) : [],
     buckets: ready ? buildBuckets(currentRows) : null,
+    // 2026-08-26, Lynold's explicit instruction: the record shown here
+    // (current_model_days/current_model_picks and every W-L number in
+    // recommendations/buckets) previously had no way to be checked --
+    // see ERR-20260826-01/02, where this exact number (16-6) didn't match
+    // the stats page's own-record ledger (14-4) and there was nothing to
+    // compare game-by-game. Newest first.
+    game_log: [...currentRows].sort((a, b) => String(b.date).localeCompare(String(a.date))).map(r => ({
+      date: r.date, gamePk: r.gamePk, matchup: r.matchup, pick: r.pick, result: r.result,
+      model_probability: r.model_probability, lab_score: r.lab_score
+    })),
     hard_stop: "Coach findings are review prompts only. No automatic threshold, weight, formula, publishing, or betting change is permitted."
   };
 

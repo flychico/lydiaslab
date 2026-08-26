@@ -78,6 +78,29 @@ async function main() {
   const games = Array.isArray(brief.games) ? brief.games : [];
   if (!games.length) { console.log(`Member brief for ${DATE} has no games.`); return; }
 
+  // 2026-08-26, Lynold's explicit instruction: this ledger's status/pick used
+  // to come ONLY from the member-brief snapshot for each game, which is not
+  // guaranteed to match what was actually published -- a game can clear the
+  // official gate on a run AFTER member-brief's last capture for the day, or
+  // (rarer) clear it in member-brief but never get a moneyline attached to
+  // the published card at all. Concretely: on 08-16 three games logged here
+  // as watchlist/value_watch had gone out as real official picks, and on
+  // 08-22 one game logged here as official_pick never got a published
+  // moneyline (moneyline: null in the real file) -- see ERR-20260826-01/02.
+  // data/published-picks/<date>.json is the actual public record members
+  // saw, so it now overrides member-brief's snapshot in both directions
+  // whenever it has an opinion about a game.
+  const publishedByPk = new Map();
+  {
+    const pubPath = path.join(ROOT, "data", "published-picks", `${DATE}.json`);
+    if (fs.existsSync(pubPath)) {
+      try {
+        const pub = JSON.parse(fs.readFileSync(pubPath, "utf8"));
+        for (const p of pub.picks || []) publishedByPk.set(String(p.gamePk), p);
+      } catch (e) { console.warn(`Could not read ${pubPath}: ${e.message}`); }
+    }
+  }
+
   const res = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${DATE}`);
   if (!res.ok) { console.warn(`MLB schedule lookup failed: HTTP ${res.status}`); return; }
   const sched = await res.json();
@@ -159,14 +182,37 @@ async function main() {
     if (!f || f.awayScore == null || f.homeScore == null) { notFinal++; continue; }
     if (!g.side || typeof g.model_probability !== "number") continue;
     if (await gameVoided(g)) continue;
+
+    const pub = publishedByPk.get(String(g.game_pk));
+    const pubMl = pub && pub.moneyline;
+    let status = g.status || "", pickTeam = g.pick_team, side = g.side;
+    let modelProb = g.model_probability;
+    let marketProb = (g.market && typeof g.market.no_vig_probability === "number") ? g.market.no_vig_probability : "";
+    let labScore = typeof g.lab_score === "number" ? g.lab_score : "";
+    let bestPrice = (g.market && g.market.best_price != null) ? g.market.best_price : "";
+    if (pubMl) {
+      // The real public record has an official moneyline for this game --
+      // its numbers are what actually went out, so they win outright.
+      status = "official_pick";
+      pickTeam = pubMl.pick;
+      side = pubMl.side;
+      if (typeof pubMl.prob === "number") modelProb = pubMl.prob;
+      if (typeof pubMl.mktProb === "number") marketProb = pubMl.mktProb;
+      if (typeof pubMl.edgeScore === "number") labScore = pubMl.edgeScore;
+      if (pubMl.bestAm != null) bestPrice = pubMl.bestAm;
+    } else if (pub && status === "official_pick") {
+      // member-brief thought this cleared the gate, but the published-picks
+      // file tracked this game today and never attached a moneyline to it --
+      // it was not actually published as official. Downgrade rather than
+      // trust the stale snapshot.
+      status = "watchlist";
+    }
+
     const homeWon = f.homeScore > f.awayScore;
-    const pickWon = g.side === "home" ? homeWon : !homeWon;
+    const pickWon = side === "home" ? homeWon : !homeWon;
     rows.push([
-      DATE_OUT, g.game_pk, csvField(g.model_source || brief.model_version || "unknown"), csvField(g.game), csvField(g.pick_team),
-      g.status || "", g.model_probability,
-      (g.market && typeof g.market.no_vig_probability === "number") ? g.market.no_vig_probability : "",
-      typeof g.lab_score === "number" ? g.lab_score : "",
-      (g.market && g.market.best_price != null) ? g.market.best_price : "",
+      DATE_OUT, g.game_pk, csvField(g.model_source || brief.model_version || "unknown"), csvField(g.game), csvField(pickTeam),
+      status, modelProb, marketProb, labScore, bestPrice,
       pickWon ? "W" : "L", `${f.awayScore}-${f.homeScore}`
     ].join(","));
     added++;

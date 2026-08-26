@@ -390,6 +390,13 @@ function renderLearningSummary(){
       ${(coach.recommendations && coach.recommendations.length)
         ? `<ul style="margin:0 0 10px;padding-left:18px">${coach.recommendations.map(r => `<li class="sec-note" style="margin-bottom:4px">${esc(r)}</li>`).join("")}</ul>`
         : `<p class="dim small" style="margin:0 0 10px">No review recommendations yet -- still collecting a big enough current-model sample.</p>`}
+      ${(coach.game_log && coach.game_log.length) ? `
+      <details style="margin:0 0 10px">
+        <summary class="small dim" style="cursor:pointer">Show the ${coach.game_log.length} game${coach.game_log.length === 1 ? "" : "s"} behind this record</summary>
+        <table style="margin-top:8px"><thead><tr><th>Date</th><th>Matchup</th><th>Pick</th><th class="num">Model</th><th class="num">Lab</th><th>Result</th></tr></thead><tbody>
+          ${coach.game_log.map(g => `<tr><td>${esc(g.date || "")}</td><td>${esc(g.matchup || "")}</td><td>${esc(g.pick || "")}</td><td class="num">${g.model_probability != null ? (g.model_probability * 100).toFixed(1) + "%" : "—"}</td><td class="num">${g.lab_score ?? "—"}</td><td class="${g.result === "W" ? "pos-text" : g.result === "L" ? "neg-text" : ""}">${esc(g.result || "")}</td></tr>`).join("")}
+        </tbody></table>
+      </details>` : ""}
       <div class="notice warn" style="margin:0">${esc(coach.hard_stop || "")}</div>
     </div>
   ` : "";
