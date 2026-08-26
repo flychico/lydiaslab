@@ -15,8 +15,6 @@
 
   Usage
     node scripts/generate-matchup-pages.js [YYYY-MM-DD]
-    node scripts/generate-matchup-pages.js 2026-07-21 --skip-weather
-    node scripts/generate-matchup-pages.js 2026-07-21 --root /tmp/test-repo --offline
 */
 
 const fs = require("fs");
@@ -144,8 +142,6 @@ function venueLastTen(games, teamId, venue) {
 // team's last 10 HOME games -- what Lynold asked for, and distinct from the
 // standings' venue-blind overall last-10 (away_l10/home_l10) and from the
 // full-season home/road split. Display only; the strength model is unchanged.
-// Fail-soft: a team whose game log cannot be fetched renders "Not available",
-// and the fallback is logged, never silent (per ERR-20260803-01).
 async function fetchVenueForm(games, date) {
   const season = Number(String(date).slice(0, 4));
   const teamIds = new Set();
@@ -243,8 +239,6 @@ async function main() {
   const kprops = readJsonSafe(path.join(ROOT, "data", "k-props", `${DATE}.json`));
   // Official picks come from the locked published card, never a gate recomputed
   // at render time. Re-deriving it here invented phantom "Official pick" labels
-  // (Aaron Nola 2026-08-03, Chase Burns 2026-07-28) for plays never on the card.
-  // Anything not on the card is at most a "qualifying projection".
   const publishedCard = readJsonSafe(path.join(ROOT, "data", "published-picks", `${DATE}.json`));
   const officialKIndex = buildOfficialKIndex(publishedCard);
   const teamHitting = args.offline ? { season: {}, recent: {} } : await fetchTeamHitting(DATE);
@@ -278,10 +272,6 @@ async function main() {
   fs.mkdirSync(MANIFEST_DIR, { recursive: true });
   fs.mkdirSync(RECAP_DIR, { recursive: true });
 
-  // Doubleheaders: two games, same teams, same date, collide on one slug and
-  // the second page silently overwrites the first. The 2026-07-22 Orioles at
-  // Red Sox split doubleheader proved it. Number games by start time and
-  // suffix every game after the first.
   const slugGroups = new Map();
   for (const game of fullDayGames) {
     const base = matchupSlug(game);
