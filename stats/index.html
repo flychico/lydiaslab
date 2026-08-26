@@ -375,7 +375,7 @@ function splitCsvLine(l) { const c = []; let cur = "", q = false; for (const ch 
 function parseOwnCSV(t) { if (!t) return []; const l = t.trim().split(/\r?\n/); if (l.length < 2) return []; const h = splitCsvLine(l[0]); return l.slice(1).map(x => { const c = splitCsvLine(x); const o = {}; h.forEach((k, i) => o[k] = c[i]); return o; }); }
 const homeOfMatchup = m => { const p = String(m || "").split(" @ "); return p.length === 2 ? p[1] : ""; };
 function dkeyOwn(d) { const m = String(d || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return m ? Number(m[3]) * 10000 + Number(m[1]) * 100 + Number(m[2]) : 0; }
-// Same slug scheme as scripts/generate-matchup-pages.js's matchupSlug() --
+// Same slug scheme as LyDia daily engine's matchupSlug() --
 // away-vs-home-prediction-odds-YYYY-MM-DD -- so links land on the real page.
 function slugify(v) { return String(v || "").toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""); }
 function ownMatchupUrl(r) {
