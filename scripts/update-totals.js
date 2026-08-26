@@ -160,6 +160,19 @@ async function main() {
   const reportedPlans = PitchingPlan.load(ROOT, DATE);
   const pitchingPlanSignature = JSON.stringify(reportedPlans.games || {});
 
+  // 2026-08-26, Lynold's explicit instruction: same fix as update-k-props.js
+  // -- track WHICH game(s) actually changed, not just that something did, so
+  // the team_totals fetch below (one paid call per event) can target only
+  // those games instead of the whole slate. null keeps the original "fetch
+  // everything" behavior, used when there's no prior capture or the plan
+  // changed (untargetable -- could touch any pitcher's expected innings).
+  // Note: unlike update-k-props.js, a lineup-only change here still triggers
+  // a full paid re-capture (it always has -- that's a separate, pre-existing
+  // question of whether the market line itself needs refreshing on a lineup
+  // post, not the one this fix addresses); this only narrows WHICH games get
+  // re-pulled once a re-capture is already happening.
+  let changedTeamKeys = null;
+  const pkToTeams = new Map(games.map(g => [String(g.gamePk), { away: g.teams.away.team.name, home: g.teams.home.team.name }]));
   if (IF_CHANGED) {
     // 2026-08-05: a missing/stale prior capture used to be treated the same
     // as "nothing changed" (return early, no fetch) -- correct once something
@@ -175,13 +188,15 @@ async function main() {
       console.log("Totals: no comparable capture for today yet — running a full capture.");
     } else {
       const changes = [];
-      if (prev.pitching_plan_signature !== pitchingPlanSignature) changes.push("reported pitching plan updated");
+      const changedPks = new Set();
+      let planChanged = false;
+      if (prev.pitching_plan_signature !== pitchingPlanSignature) { changes.push("reported pitching plan updated"); planChanged = true; }
       for (const [pk, cur] of Object.entries(probables)) {
         const was = prev.probables[pk];
         if (!was) continue;
         for (const side of ["away", "home"]) {
-          if (was[side] !== "TBD" && cur[side] !== was[side]) changes.push(`${was[side]} → ${cur[side]}`);
-          if (was[side] === "TBD" && cur[side] !== "TBD") changes.push(`TBD → ${cur[side]}`);
+          if (was[side] !== "TBD" && cur[side] !== was[side]) { changes.push(`${was[side]} → ${cur[side]}`); changedPks.add(pk); }
+          if (was[side] === "TBD" && cur[side] !== "TBD") { changes.push(`TBD → ${cur[side]}`); changedPks.add(pk); }
         }
       }
       // 2026-08-08 (ERR-20260808-02): a game whose pitcher was locked in
@@ -196,11 +211,18 @@ async function main() {
       for (const [pk, cur] of Object.entries(lineupsPosted)) {
         const was = prevLineups[pk];
         if (!was) continue;
-        if (was.away === false && cur.away) changes.push(`game ${pk}: away lineup now posted`);
-        if (was.home === false && cur.home) changes.push(`game ${pk}: home lineup now posted`);
+        if (was.away === false && cur.away) { changes.push(`game ${pk}: away lineup now posted`); changedPks.add(pk); }
+        if (was.home === false && cur.home) { changes.push(`game ${pk}: home lineup now posted`); changedPks.add(pk); }
       }
       if (!changes.length) { console.log("Totals: probables and lineups unchanged — keeping the morning capture, no API call."); return; }
-      console.log(`Totals: change (${changes.join("; ")}) — re-capturing.`);
+      if (!planChanged && changedPks.size) {
+        changedTeamKeys = new Set();
+        for (const pk of changedPks) {
+          const t = pkToTeams.get(pk);
+          if (t) changedTeamKeys.add(`${t.away} @ ${t.home}`);
+        }
+      }
+      console.log(`Totals: change (${changes.join("; ")}) — re-capturing${changedTeamKeys ? ` for ${changedTeamKeys.size} game(s), not the full slate` : ""}.`);
     }
   }
 
@@ -378,7 +400,16 @@ async function main() {
   // by book, so missing team totals never block the daily publish.
   const teamTotalLines = {};
   if (KEY) {
-    for (const [gameName, eventId] of Object.entries(eventIds)) {
+    // 2026-08-26: only the game(s) that actually changed, when known -- see
+    // changedTeamKeys above. Games skipped here are restored from the prior
+    // capture by the "temporary Odds API failure must not erase a market"
+    // block further down, same mechanism that already covers a real fetch
+    // failure, so no separate carry-forward logic is needed for this.
+    const eventEntries = changedTeamKeys
+      ? Object.entries(eventIds).filter(([gameName]) => changedTeamKeys.has(gameName))
+      : Object.entries(eventIds);
+    if (changedTeamKeys) console.log(`Totals: targeting team-totals for ${eventEntries.length}/${Object.keys(eventIds).length} game(s).`);
+    for (const [gameName, eventId] of eventEntries) {
       let data = null;
       try {
         data = await j(`https://api.the-odds-api.com/v4/sports/baseball_mlb/events/${eventId}/odds?apiKey=${KEY}&regions=us&markets=team_totals&oddsFormat=american`);

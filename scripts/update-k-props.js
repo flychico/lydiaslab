@@ -118,7 +118,12 @@ async function currentProbables() {
     if (!g.status || g.status.abstractGameState !== "Preview") continue;
     out[g.gamePk] = {
       away: (g.teams.away.probablePitcher || {}).fullName || "TBD",
-      home: (g.teams.home.probablePitcher || {}).fullName || "TBD"
+      home: (g.teams.home.probablePitcher || {}).fullName || "TBD",
+      // 2026-08-26: team names, from the same free schedule response --
+      // added so a targeted re-fetch (below) can match a specific changed
+      // game to its the-odds-api event without an extra call.
+      awayTeam: g.teams.away.team.name,
+      homeTeam: g.teams.home.team.name
     };
   }
   return out;
@@ -173,6 +178,19 @@ async function main() {
   // since this run's pitchers object never populates them.
   let skipOddsFetch = false;
 
+  // 2026-08-26, Lynold's explicit instruction: "if we already captured
+  // money lines for a game, and pitcher KO lines, why are we using another
+  // call for the same data" -- correct. Until today, ANY single pitcher
+  // change on a 15-game slate re-pulled odds for all 15 (~1 quota-counted
+  // call per event, per file header above), because the loop below had no
+  // idea WHICH game triggered the refetch, only THAT one did. changedPks
+  // (and changedTeamKeys, below) narrow that to the actual game(s) that
+  // changed. null keeps the safe, original "fetch everything" behavior --
+  // used whenever there's no prior capture to compare against, or a
+  // pitching-plan update fires (that can touch any pitcher's role/expected
+  // innings, not just the one game that reported it, so it stays untargeted
+  // on purpose).
+  let changedTeamKeys = null;
   if (IF_CHANGED) {
     // Lines are captured once at publish and kept all day — only a pitcher
     // change, a pitching-plan update, or (2026-08-08) an opposing lineup
@@ -198,13 +216,19 @@ async function main() {
       // Changes that only affect OUR projection math (opp_lineup_k), never
       // the market's price -- never need a paid fetch on their own.
       const lineupChanges = [];
-      if (prev.pitching_plan_signature !== pitchingPlanSignature) criticalChanges.push("reported pitching plan updated");
+      // Per-game gamePks with a critical change, so the fetch below can be
+      // targeted. Stays a Set (not just a count) so a plan-signature change
+      // -- which isn't tied to one game -- can fall back to fetching
+      // everything by leaving changedTeamKeys null.
+      const changedPks = new Set();
+      let planChanged = false;
+      if (prev.pitching_plan_signature !== pitchingPlanSignature) { criticalChanges.push("reported pitching plan updated"); planChanged = true; }
       for (const [pk, cur] of Object.entries(now)) {
         const was = prev.probables[pk];
         if (!was) continue;
         for (const side of ["away", "home"]) {
-          if (was[side] !== "TBD" && cur[side] !== was[side]) criticalChanges.push(`${was[side]} → ${cur[side]}`);
-          if (was[side] === "TBD" && cur[side] !== "TBD") criticalChanges.push(`TBD → ${cur[side]}`);
+          if (was[side] !== "TBD" && cur[side] !== was[side]) { criticalChanges.push(`${was[side]} → ${cur[side]}`); changedPks.add(pk); }
+          if (was[side] === "TBD" && cur[side] !== "TBD") { criticalChanges.push(`TBD → ${cur[side]}`); changedPks.add(pk); }
         }
       }
       // 2026-08-08 (ERR-20260808-02): catch a lineup that has since posted for
@@ -232,7 +256,19 @@ async function main() {
         skipOddsFetch = true;
         console.log(`Lineup(s) posted (${lineupChanges.join("; ")}) — recomputing projections only, no odds fetch.`);
       } else {
-        console.log(`Change detected (${[...criticalChanges, ...lineupChanges].join("; ")}) — re-capturing prop lines.`);
+        // Targeted only when this is a genuine subset of the slate: a prior
+        // capture exists, the plan didn't change (untargetable, see above),
+        // and at least one specific game is actually known. Any of those
+        // failing falls back to changedTeamKeys staying null -- fetch
+        // everything, the original safe behavior.
+        if (!planChanged && changedPks.size) {
+          changedTeamKeys = new Set();
+          for (const pk of changedPks) {
+            const g = now[pk];
+            if (g && g.awayTeam && g.homeTeam) changedTeamKeys.add(`${g.awayTeam} @ ${g.homeTeam}`);
+          }
+        }
+        console.log(`Change detected (${[...criticalChanges, ...lineupChanges].join("; ")}) — re-capturing prop lines${changedTeamKeys ? ` for ${changedTeamKeys.size} game(s), not the full slate` : ""}.`);
       }
     }
   }
@@ -243,8 +279,21 @@ async function main() {
   if (!skipOddsFetch) {
     const events = await j(`https://api.the-odds-api.com/v4/sports/baseball_mlb/events?apiKey=${KEY}`);
     // keep events that start on DATE in ET
-    const todays = (events || []).filter(e => new Date(e.commence_time).toLocaleDateString("en-CA", { timeZone: "America/New_York" }) === DATE);
-    console.log(`K-props: ${todays.length} event(s) on ${DATE}.`);
+    let todays = (events || []).filter(e => new Date(e.commence_time).toLocaleDateString("en-CA", { timeZone: "America/New_York" }) === DATE);
+    // 2026-08-26: only pull odds for the game(s) that actually changed, when
+    // we know which those are (changedTeamKeys set above). Matching is by
+    // team-name pair, since that's the only thing the-odds-api's event list
+    // and our own schedule data share -- if a specific event can't be
+    // matched for any reason, KEEP it rather than drop it (skip only on a
+    // confident match, never on doubt -- a missed match costs one harmless
+    // extra call; a wrongly-dropped one costs a stale line all day).
+    if (changedTeamKeys) {
+      const before = todays.length;
+      todays = todays.filter(ev => changedTeamKeys.has(`${ev.away_team} @ ${ev.home_team}`));
+      console.log(`K-props: targeting ${todays.length}/${before} event(s) on ${DATE} (skipping unchanged games).`);
+    } else {
+      console.log(`K-props: ${todays.length} event(s) on ${DATE}.`);
+    }
 
     for (const ev of todays) {
       let data;
