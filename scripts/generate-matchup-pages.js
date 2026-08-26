@@ -1692,7 +1692,7 @@ function renderPitcherTable(game, pitcherGame) {
   </table>
   <p><strong>${(away.carriedByBullpen || home.carriedByBullpen) ? "Pitching plan edge" : "Pitcher edge"}:</strong> ${esc(pitcherEdgeCopy(p, away, home, game.away_team, game.home_team))}</p>
   ${(away.carriedByBullpen || home.carriedByBullpen) ? blendedReadCopy(p, away, home, game.away_team, game.home_team) : ""}
-  <p class="small dim" style="text-align:center"><strong>How to read this:</strong> the scorecards above name the starters; every number lives in this table. Highlighted cells mark a gap big enough to matter. K% and BB% are strikeout and walk rate as a share of batters faced -- K-BB% is the two combined into one skill number. HR/9 is home runs allowed per nine innings. Ground-ball and fly-ball rate are neither good nor bad on their own: high ground-ball pitchers trade strikeouts for double plays and fewer home runs, and on this data source the two rates are complementary (they add to 100%), not independent reads.</p>`;
+  <p class="small dim" style="text-align:center"><strong>How to read this:</strong> the scorecards above name the starters; every number lives in this table.</p>`;
 }
 // Index the locked published card's strikeout picks by game and pitcher so the
 // page labels a play "Official pick" only when it is actually on the card.
