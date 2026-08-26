@@ -250,10 +250,7 @@ async function main() {
   const freshRows = gamesToProcess.map(g => modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjections)).filter(Boolean);
   const freshByPk = new Map(freshRows.map(row => [String(row.game_pk), row]));
 
-  // The Member Brief is the permanent full-day record. Decision-trace fields
-  // are now regenerated for all game states to ensure model learning has
-  // complete data. Fresh analysis always wins over previous for the same game.
-  // Official picks remain protected by separate gates in officialEligible().
+  // The Member Brief is the permanent full-day record.
   /*
     THE DAY'S RECORD ONLY EVER GROWS. (2026-08-03)
 
@@ -274,16 +271,33 @@ async function main() {
     Both are fixed by keying off the union of what we know rather than off the
     schedule alone: every previously recorded row is carried forward
     unconditionally, and fresh rows are layered on top. A row that exists can
-    never be dropped by a later run, whatever the schedule says.
+    never be dropped by a later run, whatever the schedule says. This part is
+    unchanged below.
 
-    Fresh always wins over previous for the same game — this ensures games
-    get their decision-trace data regenerated regardless of game state.
-    Analysis values (pitcher ERA, team strength, bullpen fatigue) don't depend
-    on final score, so they're safe to recompute at any point.
+    2026-08-25, Lynold's explicit instruction -- REVERSED, do not revert:
+    this block used to let fresh analysis win over previous unconditionally,
+    on the theory that "analysis values (pitcher ERA, team strength, bullpen
+    fatigue) don't depend on final score, so they're safe to recompute at any
+    point." That theory was wrong in practice: Colorado Rockies @ Washington
+    Nationals, 2026-08-25 (gamePk 822693) flipped from Nationals ~67% pregame
+    to Rockies 54% after the first inning, because a later publish-picks.yml
+    run within the same day re-modeled the game fresh mid-game and this merge
+    let it silently overwrite the locked-in pregame row -- something in the
+    recomputed inputs (team strength blend, bullpen risk, or similar) moved
+    once the real game started generating its own data, even though the
+    pitcher matchup itself hadn't changed. A game's row now locks the moment
+    it leaves "Preview" (Live or Final) -- once true, no later run in the
+    same day may replace it, previous analysis or not. A game with NO prior
+    row yet (the day's first capture running after first pitch) still takes
+    the fresh row -- there is nothing to lock in that case, same as before.
   */
+  const gameStateByPk = new Map(allGames.map(g => [String(g.gamePk), g.status && g.status.abstractGameState]));
   const merged = new Map();
   for (const [pk, row] of previousByPk) merged.set(pk, row);   // never lose a recorded row
-  for (const [pk, row] of freshByPk) merged.set(pk, row);      // fresh read wins for unstarted games
+  for (const [pk, row] of freshByPk) {
+    const locked = previousByPk.has(pk) && gameStateByPk.get(pk) !== "Preview";
+    if (!locked) merged.set(pk, row);   // fresh read wins only while the game is still Preview
+  }
 
   const rows = [...merged.values()]
     .filter(Boolean)
