@@ -201,12 +201,15 @@
   ceiling: PITCHER_SCORE_FLOOR=50 (league-average start; the real
   pitcher_score distribution's median across 330 logged starts is 65, so 50
   sits below-average by design -- an average or below-average start earns
-  0-6 points, not half credit) and PITCHER_SCORE_CEILING=85 (the ~95th
-  percentile of real logged starts, so full credit requires a genuinely
-  excellent one, not just an above-average one). Checked against the real
-  pitcher_data_log.csv distribution (n=330) before picking these anchors:
-  15.2% of real starts land at 0 points, 2.7% max out at 30, mean/median
-  land at ~13/30 -- a real spread, not everyone bunched at one end.
+  0-6 points, not half credit) and PITCHER_SCORE_CEILING (originally 85, the
+  ~95th percentile of real logged starts; lowered to 80 the same day, Lynold's
+  explicit instruction -- "anything 80 and above should return the full
+  points"). Checked against the real pitcher_data_log.csv distribution
+  (n=330) at each ceiling before shipping: at 85, 15.2% of real starts land
+  at 0 points, 2.7% max out at 30, mean/median ~13/30; at 80, the floor-end
+  is unchanged (still 15.2% at 0) but 8.2% now max out at 30 and mean/median
+  rise to ~15/30 -- full credit is reachable by a real above-average start,
+  not only a near-best-of-the-season one.
 
   PITCHER_MAX is unchanged at 30 -- pitching-plan support still maxes the
   score out the same as every other component; only what earns those points
@@ -259,7 +262,14 @@ const PITCHER_MAX = 30;
 // (20-92 scale). See the 2026-08-26 version note above for how these two
 // anchors were chosen against the real score distribution.
 const PITCHER_SCORE_FLOOR = 50;   // pitcher_score at/below this earns 0 points
-const PITCHER_SCORE_CEILING = 85; // pitcher_score at/above this earns full PITCHER_MAX
+// 2026-08-26, Lynold's explicit instruction: 85 -> 80 ("anything 80 and
+// above should return the full points"). Real distribution recheck at this
+// ceiling (pitcher_data_log.csv, n=330): 15.2% of real starts still land at
+// 0 (unchanged, floor didn't move), 8.2% now max out at 30 (was 2.7% at 85),
+// mean/median points ~15/30 (was ~13/30) -- a slightly more generous curve,
+// full credit reachable by a real above-average start rather than only a
+// ~95th-percentile one.
+const PITCHER_SCORE_CEILING = 80; // pitcher_score at/above this earns full PITCHER_MAX
 // 2026-08-25, Lynold's explicit instruction: 20 -> 10. See version note above.
 const BULLPEN_MAX = 10;
 // 2026-08-16, Lynold's explicit instruction: 25 -> 40. See version note above.
