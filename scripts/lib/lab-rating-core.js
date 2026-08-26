@@ -173,6 +173,47 @@
   three times the weight of bullpen support, versus an even split before.
   Revisit against grade-confidence.js once enough games have been graded
   under v3.3.
+
+  ---------------------------------------------------------------------------
+  2026-08-26: PITCHING-PLAN SUPPORT REDESIGNED, LYNOLD'S EXPLICIT INSTRUCTION
+
+  Pitching-plan support used to score the GAP between the picked pitcher's
+  score and the opponent's ("pitchGap", only credited when the gap favoured
+  the pick). Lynold's words: "it should be more of an individualized calc of
+  the pitcher rather than comparing one pitcher to the other." Two reasons
+  this is a real fix, not just a preference:
+
+  1. It is largely redundant with conviction_points. The model's win
+     probability already prices this exact same pitcher-score gap in via
+     exp(ERA_K * scoreGap) (see pitcher-boost-constants.js) -- so a big
+     mismatch was earning credit twice, once through conviction and again
+     through the pitching plan, for the same underlying fact.
+  2. It rewarded facing a weak opponent pitcher, not pitching well. A great
+     start against a great opposing starter (gap ~0) scored near zero here,
+     while a mediocre start against a truly bad one (gap large) scored near
+     the max -- backwards from "how strong is LyDia's own starter," which is
+     what this component is supposed to be answering.
+
+  New formula: the picked pitcher's own individualized pitcher_score (20-92
+  scale, already opponent-free -- ERA/WHIP/K-BB/sample-size components
+  computed for that one pitcher, see js/pitcher-matchup-core.js's
+  scorePitcher()) is mapped directly onto 0-30 points between a floor and a
+  ceiling: PITCHER_SCORE_FLOOR=50 (league-average start; the real
+  pitcher_score distribution's median across 330 logged starts is 65, so 50
+  sits below-average by design -- an average or below-average start earns
+  0-6 points, not half credit) and PITCHER_SCORE_CEILING=85 (the ~95th
+  percentile of real logged starts, so full credit requires a genuinely
+  excellent one, not just an above-average one). Checked against the real
+  pitcher_data_log.csv distribution (n=330) before picking these anchors:
+  15.2% of real starts land at 0 points, 2.7% max out at 30, mean/median
+  land at ~13/30 -- a real spread, not everyone bunched at one end.
+
+  PITCHER_MAX is unchanged at 30 -- pitching-plan support still maxes the
+  score out the same as every other component; only what earns those points
+  changed. pitchGap itself is untouched everywhere else in the codebase (the
+  official-pick pitcher-conflict gate and the "owns the starting pitcher
+  edge by N points" matchup-page copy in generate-member-lab.js still read
+  it directly) -- only Lab Rating's own scoring stopped using it.
 */
 
 "use strict";
@@ -210,12 +251,15 @@ const AGREEMENT_FREE = 0.02;
 const AGREEMENT_ZERO = 0.15;
 
 // 2026-08-12: absorbed the old 6-pt plan-completeness bonus (see version note
-// above) -- was 14, then 20. PITCHER_FULL_GAP is unchanged, so a maxed-out
-// gap now earns whatever PITCHER_MAX currently is; nothing else about how
-// the gap is read changed.
+// above) -- was 14, then 20.
 // 2026-08-25, Lynold's explicit instruction: 20 -> 30. See version note above.
 const PITCHER_MAX = 30;
-const PITCHER_FULL_GAP = 20; // pitcher-score gap that earns full credit
+// 2026-08-26: replaced PITCHER_FULL_GAP (a comparative-gap threshold) with an
+// individualized floor/ceiling on the picked pitcher's own pitcher_score
+// (20-92 scale). See the 2026-08-26 version note above for how these two
+// anchors were chosen against the real score distribution.
+const PITCHER_SCORE_FLOOR = 50;   // pitcher_score at/below this earns 0 points
+const PITCHER_SCORE_CEILING = 85; // pitcher_score at/above this earns full PITCHER_MAX
 // 2026-08-25, Lynold's explicit instruction: 20 -> 10. See version note above.
 const BULLPEN_MAX = 10;
 // 2026-08-16, Lynold's explicit instruction: 25 -> 40. See version note above.
@@ -279,25 +323,38 @@ function agreementDiagnostic(strengthProbPick, runProbPick) {
 }
 
 /*
-  Pitching-plan support: does the projected pitching favour the side LyDia
-  picked, and by how much.
+  Pitching-plan support: how strong is the picked pitcher's own start, on his
+  own merits -- NOT how much better he grades than the pitcher he's facing.
 
-  An opposing pitcher edge scores zero here. It does not go negative: a hard
-  pitcher conflict is a separate official-pick gate, not a rating penalty.
+  2026-08-26, Lynold's explicit instruction: redesigned from a comparative
+  gap read to an individualized one. See the 2026-08-26 version note at the
+  top of this file for why (redundant with conviction, and rewarded facing a
+  weak opponent rather than pitching well).
+
+  No opposing-pitcher input enters this function at all now -- pickPitcherScore
+  is the picked pitcher's own individualized score (ERA/WHIP/K-BB/sample-size
+  components, no cross-reference to the opponent; see
+  js/pitcher-matchup-core.js's scorePitcher()). Missing score (pitcher TBD,
+  or stats unavailable) falls back to half credit, the same "no signal isn't
+  the same as a bad signal" convention bullpenPoints()/offensePoints() below
+  already use -- not the old zero-point default a missing gap used to produce.
 
   2026-08-12: this used to also award up to 6 points for the plan simply
   summing to nine innings. Removed -- see the version note at the top of this
   file. Every plan in 410 checked always summed to nine innings, so that
   credit was unconditional.
 */
-function pitchingPlanPoints({ pitchGap, pitchEdgeSupports }) {
-  const gap = isNum(pitchGap) ? pitchGap : 0;
-  const edgePts = pitchEdgeSupports
-    ? clamp(gap / PITCHER_FULL_GAP, 0, 1) * PITCHER_MAX
-    : 0;
+function pitchingPlanPoints({ pickPitcherScore }) {
+  if (!isNum(pickPitcherScore)) {
+    const neutral = PITCHER_MAX / 2;
+    return { points: neutral, pitcher_edge_points: round(neutral), available: false };
+  }
+  const frac = clamp((pickPitcherScore - PITCHER_SCORE_FLOOR) / (PITCHER_SCORE_CEILING - PITCHER_SCORE_FLOOR), 0, 1);
+  const points = frac * PITCHER_MAX;
   return {
-    points: edgePts,
-    pitcher_edge_points: round(edgePts)
+    points,
+    pitcher_edge_points: round(points),
+    available: true
   };
 }
 
@@ -405,8 +462,7 @@ function calcLabRating(input) {
     modelProb,
     strengthProbPick = null,
     runProbPick = null,
-    pitchGap = null,
-    pitchEdgeSupports = false,
+    pickPitcherScore = null,
     pickPlan = null,
     oppPlan = null,
     pickBullpenRisk = null,
@@ -425,9 +481,11 @@ function calcLabRating(input) {
 
   const pickPlanComplete = planAllocatesFullGame(pickPlan);
   const oppPlanComplete = planAllocatesFullGame(oppPlan);
+  // 2026-08-26: pickPitcherScore replaces pitchGap/pitchEdgeSupports here --
+  // see pitchingPlanPoints()'s header comment and the 2026-08-26 version
+  // note at the top of this file.
   const plan = pitchingPlanPoints({
-    pitchGap,
-    pitchEdgeSupports
+    pickPitcherScore
   });
 
   const penInnings = assignedBullpenInnings(pickPlan);
@@ -503,6 +561,8 @@ module.exports = {
   CONVICTION_MAX,
   AGREEMENT_MAX,
   PITCHER_MAX,
+  PITCHER_SCORE_FLOOR,
+  PITCHER_SCORE_CEILING,
   BULLPEN_MAX,
   OFFENSE_MAX,
   OFFENSE_WOBA_CAP,

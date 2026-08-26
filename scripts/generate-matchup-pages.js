@@ -1089,22 +1089,21 @@ function buildInsights(game, pitcherGame) {
   // buckets, strong or weak, so this is the same detail readers used to only
   // see when a setup failed, now available everywhere.
   const oppTeamName = game.pick_team === game.away_team ? game.home_team : game.pick_team === game.home_team ? game.away_team : null;
-  // Name the team, not the individual pitcher, on whichever side is a
-  // reported opener/bulk plan -- that side's score (and this gap) comes
-  // from the whole pitching plan's effective ERA, not from the named
-  // pitcher's own innings, so crediting him personally with "rating N
-  // points better" overstates his individual role in the number.
-  const betterPitcher = pitcher.edge_team === game.away_team
-    ? (pitcher.away && (pitcher.away.carriedByBullpen ? game.away_team : pitcher.away.name))
-    : pitcher.edge_team === game.home_team ? (pitcher.home && (pitcher.home.carriedByBullpen ? game.home_team : pitcher.home.name)) : null;
-  const worsePitcher = pitcher.edge_team === game.away_team
-    ? (pitcher.home && (pitcher.home.carriedByBullpen ? game.home_team : pitcher.home.name))
-    : pitcher.edge_team === game.home_team ? (pitcher.away && (pitcher.away.carriedByBullpen ? game.away_team : pitcher.away.name)) : null;
+  // 2026-08-26: Lab Rating's pitching-plan copy now names and scores only
+  // the PICKED side's own starter (individualized, no opponent reference --
+  // see lab-rating-core.js's 2026-08-26 version note). Still names the team
+  // rather than the individual pitcher when that side is a reported
+  // opener/bulk plan, same reasoning as before: that side's score comes from
+  // the whole pitching plan's effective ERA, not from one named pitcher's
+  // own innings, so crediting him personally overstates his individual role.
+  const pickPitcherSide = game.pick_team === game.away_team ? pitcher.away : game.pick_team === game.home_team ? pitcher.home : null;
+  const pickPitcherName = pickPitcherSide ? (pickPitcherSide.carriedByBullpen ? game.pick_team : pickPitcherSide.name) : null;
+  const pickPitcherScore = pickPitcherSide && typeof pickPitcherSide.score === "number" ? pickPitcherSide.score : null;
   const setupReasons = MatchupCopy.labRatingBreakdown({
     breakdown: game.lab_score_breakdown,
     pickTeam: game.pick_team, oppTeam: oppTeamName,
     modelProb: game.model_probability,
-    pitcherEdgeTeam: pitcher.edge_team, pitcherGap: pitcher.gap, betterPitcher, worsePitcher,
+    pickPitcherName, pickPitcherScore,
     bullpenPickLabel: pens.pick && pens.pick.risk_label, bullpenOppLabel: pens.opp && pens.opp.risk_label
   });
   if (gate.lab_score_passed === false) {

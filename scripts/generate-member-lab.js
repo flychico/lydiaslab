@@ -1173,12 +1173,18 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
   // Lab Rating v2 grades LyDia's analysis only. No market value is passed in:
   // the sportsbook keeps veto power through the official-pick gate below, but
   // it can no longer strengthen or weaken the analysis itself.
+  // 2026-08-26, Lynold's explicit instruction: Lab Rating's pitching-plan
+  // component now grades the picked pitcher's own individualized score, not
+  // the gap to the opponent -- pitchGap/pitchEdgeTeam themselves are
+  // untouched and still drive the pitcher-conflict gate check above and the
+  // "owns the starting pitcher edge by N points" copy elsewhere in this
+  // file; only what Lab Rating itself reads changed. See lab-rating-core.js.
+  const pickPitcherScore = pickHome ? homeScore.score : awayScore.score;
   const lab = calcLabRating({
     modelProb,
     strengthProbPick: pickHome ? legacyPHome : 1 - legacyPHome,
     runProbPick: Number.isFinite(runPHome) ? (pickHome ? runPHome : 1 - runPHome) : null,
-    pitchGap,
-    pitchEdgeSupports: pitchEdgeTeam === pickTeam,
+    pickPitcherScore,
     pickPlan: pitchingPlan ? (pickHome ? pitchingPlan.home : pitchingPlan.away) : null,
     oppPlan: pitchingPlan ? (pickHome ? pitchingPlan.away : pitchingPlan.home) : null,
     pickBullpenRisk: pickBullpen ? (pickBullpen.risk_index ?? pickBullpen.score) : null,

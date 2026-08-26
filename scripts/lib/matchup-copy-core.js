@@ -24,6 +24,7 @@ const Correlation = require("./coach-correlation-core");
 // emitted one on every game. Their explanation blocks are removed below.
 const {
   CONVICTION_FLOOR, CONVICTION_MAX, PITCHER_MAX,
+  PITCHER_SCORE_FLOOR, PITCHER_SCORE_CEILING,
   BULLPEN_MAX, OFFENSE_MAX
 } = require("./lab-rating-core");
 
@@ -254,7 +255,7 @@ const LAB_WEAK_FRACTION = 0.5;
 function labRatingReasons({
   breakdown, pickTeam, oppTeam, modelProb,
   strengthProbPick, runProbPick,
-  pitcherEdgeTeam, pitcherGap, betterPitcher, worsePitcher,
+  pickPitcherName, pickPitcherScore,
   bullpenPickLabel, bullpenOppLabel
 }) {
   if (!breakdown) return [];
@@ -283,16 +284,16 @@ function labRatingReasons({
   */
 
   if ((breakdown.pitching_plan_points / LAB_MAX.pitching_plan) < LAB_WEAK_FRACTION) {
-    if (pitcherEdgeTeam && pitcherEdgeTeam === pickTeam && isNum(pitcherGap)) {
+    if (isNum(pickPitcherScore)) {
       reasons.push({
         title: `Pitching plan: ${breakdown.pitching_plan_points}/${LAB_MAX.pitching_plan}`,
-        detail: `${betterPitcher || pitcherEdgeTeam} rates ${pitcherGap} points better than ${worsePitcher || "the opposing starter"} on LyDia's pitcher score — `
-          + `a real edge, but well short of the gap that earns full credit here.`
+        detail: `${pickPitcherName || pickTeam} rates ${pickPitcherScore} on LyDia's pitcher score, judged on its own merits — `
+          + `below the ${PITCHER_SCORE_CEILING} needed for full credit here, regardless of the opposing starter.`
       });
     } else {
       reasons.push({
         title: `Pitching plan: ${breakdown.pitching_plan_points}/${LAB_MAX.pitching_plan}`,
-        detail: `No meaningful starting-pitcher edge favors ${pickTeam} in this matchup.`
+        detail: `No individual pitcher score is available for ${pickTeam}'s starter in this matchup.`
       });
     }
   }
@@ -352,7 +353,7 @@ function labRatingReasons({
 */
 function labRatingBreakdown({
   breakdown, pickTeam, oppTeam, modelProb,
-  pitcherEdgeTeam, pitcherGap, betterPitcher, worsePitcher,
+  pickPitcherName, pickPitcherScore,
   bullpenPickLabel, bullpenOppLabel
 }) {
   if (!breakdown) return [];
@@ -365,11 +366,15 @@ function labRatingBreakdown({
         ? `LyDia's own win probability for ${pickTeam} (${pct(modelProb)}) is close enough to a coin flip that the rating credits little or no conviction -- credit only starts above ${pct(CONVICTION_FLOOR, 0)}.`
         : `LyDia leans toward ${pickTeam}, but not strongly enough to earn full conviction credit.`);
 
+  // 2026-08-26: pitching-plan support is individualized now -- it grades
+  // the picked pitcher's own score against a fixed floor/ceiling, not a
+  // comparison to the opposing starter. See lab-rating-core.js's 2026-08-26
+  // version note.
   const planFrac = breakdown.pitching_plan_points / LAB_MAX.pitching_plan;
-  const planDetail = (pitcherEdgeTeam && pitcherEdgeTeam === pickTeam && isNum(pitcherGap))
-    ? `${betterPitcher || pitcherEdgeTeam} rates ${pitcherGap} points better than ${worsePitcher || "the opposing starter"} on LyDia's pitcher score.`
-      + (strong(planFrac) ? " That is a real edge, and it earns most or all of the available credit here." : " A real edge, but well short of the gap that earns full credit here.")
-    : `No meaningful starting-pitcher edge favors ${pickTeam} in this matchup.`;
+  const planDetail = isNum(pickPitcherScore)
+    ? `${pickPitcherName || pickTeam} rates ${pickPitcherScore} on LyDia's pitcher score, judged on its own merits (${PITCHER_SCORE_FLOOR}-${PITCHER_SCORE_CEILING} is the credited range).`
+      + (strong(planFrac) ? " That is a strong start on its own, and it earns most or all of the available credit here." : " Average or below by that measure, so it earns little or none of the available credit here -- independent of who the opponent is throwing.")
+    : `No individual pitcher score is available for ${pickTeam}'s starter in this matchup.`;
 
   const bpFrac = breakdown.bullpen_points / LAB_MAX.bullpen;
   const bpDetail = strong(bpFrac)
