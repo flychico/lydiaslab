@@ -375,6 +375,16 @@ function renderLearningSummary(){
   // samples in generate-coach.js; before that it just reports collection
   // progress with no recommendations yet.
   const coach = s.coach || null;
+  // 2026-08-26, Lynold's explicit instruction -- full rewrite: Coach now
+  // reports on TWO separate things, kept visually distinct on purpose --
+  // (1) the official-pick tally (current_model_days/picks/game_log,
+  // unchanged from the coach-record-fix session) and (2) coach.history, the
+  // real correlation engine over the FULL analyzed history (every tier,
+  // every date -- 300+ games, not 22). See scripts/lib/coach-correlation-core.js
+  // for the method. history.recommendations is already fully-formed prose
+  // (quartile win-rates embedded in the sentence), same rendering pattern
+  // the old fixed recommendations list used.
+  const history = (coach && coach.history) || null;
   const coachHtml = coach ? `
     <h2 class="sec">LyDia Coach</h2>
     <div class="card" style="margin-bottom:16px">
@@ -387,9 +397,6 @@ function renderLearningSummary(){
         ${kpi("Current-model graded days", `${coach.current_model_days ?? 0}/${coach.minimum_days ?? "—"}`, (coach.current_model_days ?? 0) >= (coach.minimum_days ?? Infinity) ? "minimum met" : "below minimum")}
         ${kpi("Current-model official picks", `${coach.current_model_picks ?? 0}/${coach.minimum_picks ?? "—"}`, (coach.current_model_picks ?? 0) >= (coach.minimum_picks ?? Infinity) ? "minimum met" : "below minimum")}
       </div>
-      ${(coach.recommendations && coach.recommendations.length)
-        ? `<ul style="margin:0 0 10px;padding-left:18px">${coach.recommendations.map(r => `<li class="sec-note" style="margin-bottom:4px">${esc(r)}</li>`).join("")}</ul>`
-        : `<p class="dim small" style="margin:0 0 10px">No review recommendations yet -- still collecting a big enough current-model sample.</p>`}
       ${(coach.game_log && coach.game_log.length) ? `
       <details style="margin:0 0 10px">
         <summary class="small dim" style="cursor:pointer">Show the ${coach.game_log.length} game${coach.game_log.length === 1 ? "" : "s"} behind this record</summary>
@@ -399,6 +406,17 @@ function renderLearningSummary(){
       </details>` : ""}
       <div class="notice warn" style="margin:0">${esc(coach.hard_stop || "")}</div>
     </div>
+    ${history ? `
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:4px">
+        <h3 style="margin:0">Full-history correlation findings</h3>
+        <span class="${history.ready ? "pos-text" : "dim"} small" style="font-weight:700;text-transform:uppercase;letter-spacing:.03em">${history.ready ? `${history.n} games analyzed` : `${history.n}/${history.minimum_n} games`}</span>
+      </div>
+      <p class="sec-note" style="margin:0 0 10px">Every graded game LyDia has an analysis for -- official picks, value watches, watchlist, and passes, all dates -- run through a real correlation check against every input the model captures. This is what actually predicts right vs. wrong picks, not a fixed list chosen in advance. Feeds the "Evidence check" notes on today's matchup pages.</p>
+      ${(history.ready && history.recommendations && history.recommendations.length)
+        ? `<ul style="margin:0;padding-left:18px">${history.recommendations.map(r => `<li class="sec-note" style="margin-bottom:6px">${esc(r)}</li>`).join("")}</ul>`
+        : `<p class="dim small" style="margin:0">Not enough graded games yet for a meaningful correlation check (needs ${history ? history.minimum_n : "—"}+).</p>`}
+    </div>` : ""}
   ` : "";
   el.innerHTML = `
     <div class="card" style="margin-bottom:16px">

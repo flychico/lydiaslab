@@ -4,9 +4,31 @@
 /*
   Adds the real LyDia Coach object to the current learning summary.
   It never changes model weights, thresholds, picks, or results.
-  Readiness requires BOTH:
-  - at least 7 current-model graded days
-  - at least 20 current-model official moneyline picks
+
+  2026-08-26, Lynold's explicit instruction -- full rewrite: "I do not think
+  the coach is working how I would like it to be working... I want the
+  coach to look at all the games that we have an analysis for, look at the
+  inputs, look at the correlations, see what we predicted, look at what
+  happened, what are some patterns that we keep noticing... give real time
+  inputs for today's matchup based on the evidence we have collected."
+
+  Before this rewrite, Coach only looked at ~22 current-model official picks
+  and checked 4 pre-chosen splits (probability median, 3 fixed Lab Rating
+  tiers, pitcher support, bullpen caution) -- a fixed list someone picked in
+  advance, not a discovery process, and it never touched the ~318-game full
+  analyzed history sitting in data/calibration/*.csv.
+
+  Now: two separate things, kept distinct on purpose.
+    1. The OFFICIAL RECORD (current_model_days/current_model_picks/game_log,
+       unchanged from the 2026-08-26 coach-record-fix session) -- what
+       LyDia has actually published and how it's actually done. Small
+       sample, but it's the real public record.
+    2. HISTORY (new) -- the full analyzed history, every tier, every date,
+       run through scripts/lib/coach-correlation-core.js's real correlation
+       engine. This is where "what patterns predict right vs. wrong picks"
+       actually gets answered, and it's what now feeds the matchup-page
+       evidence notes (see matchup-copy-core.js's coachEvidenceNotes,
+       replacing the old fixed-bucket coachConsistencyNotes).
 */
 
 const fs = require("fs");
@@ -16,31 +38,9 @@ const RESULTS = path.join(ROOT, "data", "results.json");
 const SUMMARY = path.join(ROOT, "data", "learning-summary.json");
 const MIN_DAYS = 7;
 const MIN_PICKS = 20;
+const MIN_HISTORY_N = 20; // coach-correlation-core.js's own per-feature floor; used here for the overall "is there enough to report" gate
 
-// 2026-08-25, Lynold's explicit instruction: this file's probability/rating
-// split boundaries (0.72/0.78 probability, 85 lab rating) were never wired to
-// the real official-pick gate -- they were copied once and then went stale
-// when the live gate moved to 0.61 / 72 (see scripts/lib/gate-constants.js,
-// which generate-member-lab.js and generate-learning-summary.js already both
-// use as their single source of truth; this file was the one place still
-// carrying its own disconnected copy). Importing here so Coach's own
-// "official_gate" reference values can never drift from the live gate again.
-const { OFFICIAL_MODEL_PROB, OFFICIAL_LAB_SCORE } = require("./lib/gate-constants");
-// 2026-08-25, Lynold's explicit instruction: probability bucket split moves
-// from a fixed 0.78 threshold to the median of the current-model sample's own
-// model_probability values, recomputed every run. A fixed threshold sitting
-// outside the model's actual output range silently starves one bucket -- a
-// median split guarantees both halves stay populated as the sample grows.
-// Lab Rating instead moves to fixed three-tier bands (under 67 / 67-69.9 /
-// 70+), Lynold's explicit choice over a median split for this dimension.
-function median(nums) {
-  if (!nums.length) return null;
-  const sorted = [...nums].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-}
-const LAB_TIER_LOW_MAX = 67;
-const LAB_TIER_MID_MAX = 70;
+const Correlation = require("./lib/coach-correlation-core");
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, "utf8"));
@@ -67,15 +67,7 @@ function normalizePick(p, day) {
     pick: ml.pick || p.pick || null,
     result,
     model_probability: first(learning.model_probability, ml.prob, p.model_probability),
-    lab_score: first(learning.lab_score, p.labScore, p.lab_score, ml.edgeScore),
-    raw_edge: first(learning.raw_edge, ml.rawEdge, p.raw_edge),
-    clv_result: learning.clv_result || p.clv_result || "not_tracked",
-    pitcher_edge_team: learning.pitcher_edge_team || (p.pitcherEdge && p.pitcherEdge.team) || null,
-    pitcher_gap: first(learning.pitcher_gap, p.pitcherEdge && p.pitcherEdge.gap),
-    bullpen_label: learning.bullpen_label || (p.bullpen && p.bullpen.label) || null,
-    bullpen_model_version: learning.bullpen_model_version ||
-      (p.bullpen && p.bullpen.pick_team && p.bullpen.pick_team.source_version) ||
-      "bullpen-fatigue-v3-runs-aware"
+    lab_score: first(learning.lab_score, p.labScore, p.lab_score, ml.edgeScore)
   };
 }
 function record(rows) {
@@ -84,127 +76,6 @@ function record(rows) {
   return { wins, losses, total: wins + losses, rate: wins + losses ? wins / (wins + losses) : null };
 }
 function pct(v) { return typeof v === "number" ? `${(v * 100).toFixed(1)}%` : "-"; }
-
-// 2026-08-24, Lynold's explicit instruction: split out of buildRecommendations
-// so both the prose recommendations AND the new structured coach.buckets
-// (below, for matchup-page consumption) come from the exact same numbers --
-// two functions independently re-filtering the same rows was exactly the
-// "one place changed, the other went stale" bug pattern this project's own
-// ERRORS.md already documents more than once elsewhere in this codebase.
-// lowRating/pitcherUnsupported/bullpenNoCaution are the complement side of
-// splits that used to only compute one side, because the only consumer was
-// prose ("8.5+ official picks are W-L"). A machine-readable comparison needs
-// both sides of the same split so a downstream reader can ask "is THIS
-// pick's bucket the weaker one" without re-deriving the complement itself.
-function computeSplits(rows) {
-  const probValues = rows.map(x => num(x.model_probability)).filter(v => v !== null);
-  const probMedian = median(probValues);
-  return {
-    overall: record(rows),
-    probMedian,
-    highProb: probMedian === null ? record([]) : record(rows.filter(x => num(x.model_probability) !== null && x.model_probability >= probMedian)),
-    baseProb: probMedian === null ? record([]) : record(rows.filter(x => num(x.model_probability) !== null && x.model_probability < probMedian)),
-    lowRating: record(rows.filter(x => num(x.lab_score) !== null && x.lab_score < LAB_TIER_LOW_MAX)),
-    midRating: record(rows.filter(x => num(x.lab_score) !== null && x.lab_score >= LAB_TIER_LOW_MAX && x.lab_score < LAB_TIER_MID_MAX)),
-    highRating: record(rows.filter(x => num(x.lab_score) !== null && x.lab_score >= LAB_TIER_MID_MAX)),
-    pitcherSupported: record(rows.filter(x => x.pitcher_edge_team && x.pitcher_edge_team === x.pick)),
-    pitcherUnsupported: record(rows.filter(x => x.pitcher_edge_team && x.pitcher_edge_team !== x.pick)),
-    bullpenCaution: record(rows.filter(x => x.bullpen_label === "Adds caution" || x.bullpen_label === "Both bullpens stressed")),
-    bullpenNoCaution: record(rows.filter(x => !(x.bullpen_label === "Adds caution" || x.bullpen_label === "Both bullpens stressed"))),
-    beatClose: rows.filter(x => x.clv_result === "beat_close").length,
-    lostClose: rows.filter(x => x.clv_result === "lost_close").length
-  };
-}
-
-function buildRecommendations(rows) {
-  const recs = [];
-  const {
-    overall, probMedian, highProb, baseProb, lowRating, midRating, highRating, pitcherSupported, bullpenCaution, beatClose, lostClose
-  } = computeSplits(rows);
-
-  recs.push(`Current-model official record: ${overall.wins}-${overall.losses}${overall.rate !== null ? ` (${pct(overall.rate)})` : ""}.`);
-
-  if (probMedian !== null && highProb.total >= 5 && baseProb.total >= 5) {
-    recs.push(`Probability review: this sample's median win probability is ${pct(probMedian)}. At-or-above-median picks are ${highProb.wins}-${highProb.losses}; below-median picks are ${baseProb.wins}-${baseProb.losses}. This is a self-adjusting split of the current sample, not the official ${pct(OFFICIAL_MODEL_PROB)} gate -- review the gap, but do not change the gate from this report alone.`);
-  } else {
-    recs.push("Probability review: the above/below-median split still needs more samples before a comparison is meaningful.");
-  }
-
-  if (lowRating.total >= 5 || midRating.total >= 5 || highRating.total >= 5) {
-    const parts = [
-      `under 67 picks are ${lowRating.wins}-${lowRating.losses}`,
-      `67 to 69.9 picks are ${midRating.wins}-${midRating.losses}`,
-      `70+ picks are ${highRating.wins}-${highRating.losses}`
-    ];
-    recs.push(`Lab Rating review: ${parts.join("; ")}. The official gate is ${OFFICIAL_LAB_SCORE / 10}/10. Compare tiers before considering a rating-gate change.`);
-  } else {
-    recs.push("Lab Rating review: none of the three tiers (under 67 / 67-69.9 / 70+) has enough graded picks yet for a comparison.");
-  }
-
-  if (pitcherSupported.total >= 5) {
-    recs.push(`Pitcher support review: pitcher-supported official picks are ${pitcherSupported.wins}-${pitcherSupported.losses}.`);
-  }
-
-  if (bullpenCaution.total) {
-    recs.push(`Bullpen v3 review: ${bullpenCaution.total} official pick${bullpenCaution.total === 1 ? "" : "s"} carried material bullpen caution. Review these separately before changing the runs-aware formula.`);
-  } else {
-    recs.push("Bullpen v3 review: no current-model official picks with major bullpen caution are in the graded sample.");
-  }
-
-  if (beatClose + lostClose >= 5) {
-    recs.push(`Market review: ${beatClose} tracked picks beat the close and ${lostClose} lost to the close.`);
-  } else {
-    recs.push("Market review: closing-price coverage is still too small for a useful CLV conclusion.");
-  }
-
-  recs.push("Human approval remains required for every model or threshold change.");
-  return recs;
-}
-
-// 2026-08-24, Lynold's explicit instruction: structured counterpart to
-// buildRecommendations' prose, meant for a not-yet-played game to be checked
-// against -- e.g. generate-matchup-pages.js can ask "does today's pick fall
-// in the weaker side of any of these splits" without parsing English
-// sentences.
-//
-// 2026-08-25 revision, Lynold's explicit instruction: the probability and
-// lab_rating splits below used to be fixed thresholds (0.78 probability,
-// 85 lab rating) copied once from an old gate and left to go stale --
-// generate-member-lab.js's and generate-learning-summary.js's real gate had
-// already moved to 0.61 / 72 (scripts/lib/gate-constants.js) while this file
-// kept its own disconnected numbers. Fixed:
-// - probability.split_at is now the current sample's own median
-//   (method: "median_of_current_sample"), recomputed every run.
-// - lab_rating is now three fixed tiers (under 67 / 67-69.9 / 70+),
-//   Lynold's explicit choice over a median split for this dimension.
-// - official_gate on both now reads from gate-constants.js so it can never
-//   drift from the live gate again.
-// Only populated when `ready` (same MIN_DAYS/MIN_PICKS gate recommendations
-// already uses) -- an under-sample bucket comparison would be noise, not
-// signal.
-function buildBuckets(rows) {
-  const s = computeSplits(rows);
-  return {
-    probability: {
-      method: "median_of_current_sample",
-      split_at: s.probMedian,
-      official_gate: OFFICIAL_MODEL_PROB,
-      above: { label: s.probMedian === null ? "at or above sample median" : `${pct(s.probMedian)}+ (sample median or above)`, ...s.highProb },
-      below: { label: s.probMedian === null ? "below sample median" : `below ${pct(s.probMedian)} (sample median)`, ...s.baseProb }
-    },
-    lab_rating: {
-      method: "fixed_tiers",
-      official_gate: OFFICIAL_LAB_SCORE,
-      tiers: [
-        { key: "low", label: "under 67", ...s.lowRating },
-        { key: "mid", label: "67 to 69.9", ...s.midRating },
-        { key: "high", label: "70+", ...s.highRating }
-      ]
-    },
-    pitcher_support: { supported: { label: "pitcher edge favors the pick", ...s.pitcherSupported }, unsupported: { label: "pitcher edge favors the opponent", ...s.pitcherUnsupported } },
-    bullpen_caution: { flagged: { label: "flagged bullpen caution", ...s.bullpenCaution }, clear: { label: "no bullpen caution", ...s.bullpenNoCaution } }
-  };
-}
 
 function main() {
   if (!fs.existsSync(RESULTS) || !fs.existsSync(SUMMARY)) {
@@ -234,6 +105,18 @@ function main() {
   const pickCount = currentRows.length;
   const ready = dayCount >= MIN_DAYS && pickCount >= MIN_PICKS;
 
+  // --- HISTORY: the full analyzed record, every tier, every date ---
+  const historyRows = Correlation.loadHistoricalRows(ROOT);
+  const historyReady = historyRows.length >= MIN_HISTORY_N;
+  const historyRecord = record(historyRows.map(r => ({ result: r.pickWon === 1 ? "W" : "L" })));
+  let correlations = null, historyRecommendations = [];
+  if (historyReady) {
+    correlations = Correlation.computeCorrelations(historyRows);
+    historyRecommendations = Correlation.buildProseRecommendations(correlations, {
+      n: historyRows.length, w: historyRecord.wins, l: historyRecord.losses, rate: historyRecord.rate
+    });
+  }
+
   summary.coach = {
     status: ready ? "review_ready" : "collecting",
     title: ready ? "First evidence-based model review is ready" : "Collecting a trustworthy current-model sample",
@@ -245,18 +128,34 @@ function main() {
     minimum_days: MIN_DAYS,
     minimum_picks: MIN_PICKS,
     bullpen_model_owner: "bullpen-fatigue-v3-runs-aware",
-    recommendations: ready ? buildRecommendations(currentRows) : [],
-    buckets: ready ? buildBuckets(currentRows) : null,
-    // 2026-08-26, Lynold's explicit instruction: the record shown here
-    // (current_model_days/current_model_picks and every W-L number in
-    // recommendations/buckets) previously had no way to be checked --
-    // see ERR-20260826-01/02, where this exact number (16-6) didn't match
-    // the stats page's own-record ledger (14-4) and there was nothing to
-    // compare game-by-game. Newest first.
+    // 2026-08-26 (coach-record-fix session): the specific games behind the
+    // official-record tally above, so a number here can be checked against
+    // another ledger game by game.
     game_log: [...currentRows].sort((a, b) => String(b.date).localeCompare(String(a.date))).map(r => ({
       date: r.date, gamePk: r.gamePk, matchup: r.matchup, pick: r.pick, result: r.result,
       model_probability: r.model_probability, lab_score: r.lab_score
     })),
+
+    // 2026-08-26: the real correlation engine over the FULL analyzed
+    // history (every tier, every date -- not just current-model official
+    // picks). This is what "look at all the games we have an analysis
+    // for... look at the correlations" actually means; see
+    // scripts/lib/coach-correlation-core.js for the full method and every
+    // sign-convention note.
+    history: {
+      n: historyRows.length,
+      ready: historyReady,
+      minimum_n: MIN_HISTORY_N,
+      record: { wins: historyRecord.wins, losses: historyRecord.losses, rate: historyRecord.rate },
+      recommendations: historyRecommendations,
+      // Raw correlation findings (numeric + categorical), consumed directly
+      // by generate-matchup-pages.js/matchup-copy-core.js's
+      // coachEvidenceNotes() to compare today's specific game against real
+      // historical patterns -- this replaces the old fixed 4-bucket
+      // coach.buckets entirely.
+      correlations
+    },
+
     hard_stop: "Coach findings are review prompts only. No automatic threshold, weight, formula, publishing, or betting change is permitted."
   };
 
@@ -265,6 +164,6 @@ function main() {
     writeJson(path.join(ROOT, "data", "learning", `${summary.latest_date}.json`), summary);
   }
 
-  console.log(`Coach status: ${summary.coach.status}. Days: ${dayCount}/${MIN_DAYS}. Picks: ${pickCount}/${MIN_PICKS}.`);
+  console.log(`Coach status: ${summary.coach.status}. Official record: ${dayCount}/${MIN_DAYS} days, ${pickCount}/${MIN_PICKS} picks. Full history: ${historyRows.length} games (${historyReady ? "ready" : "below " + MIN_HISTORY_N}).`);
 }
 main();

@@ -23,7 +23,7 @@ const MatchupCopy = require("./lib/matchup-copy-core");
 // Set once in main() (module-level, read by buildInsights() below) -- see
 // the LEARNING_SUMMARY_PATH comment for why it's safe to treat as fresh,
 // same-day data by the time this script runs.
-let COACH_BUCKETS = null;
+let COACH_HISTORY = null; // learningSummary.coach.history -- full-history correlation findings, see scripts/lib/coach-correlation-core.js
 const RecapReview = require("./lib/recap-review-core");
 const RecapBuild = require("./lib/recap-build-core");
 
@@ -229,13 +229,15 @@ async function main() {
     throw new Error(`Missing canonical pitcher source ${relative(PITCHER_PATH)}. Run generate-pitcher-matchup-data.js first.`);
   }
   const results = readJsonSafe(RESULTS_PATH) || { days: {} };
-  // 2026-08-24: coach.buckets, set once here, read from buildInsights() below
-  // via the module-level COACH_BUCKETS var declared near MatchupCopy's other
-  // top-level constants -- missing or not-yet-ready (Coach's own
-  // MIN_DAYS/MIN_PICKS gate) both just mean coachConsistencyNotes() returns
-  // no notes, same as any other optional input in this file.
+  // 2026-08-26: coach.history.correlations (the real correlation-engine
+  // output, see scripts/lib/coach-correlation-core.js), set once here, read
+  // from buildInsights() below via the module-level COACH_HISTORY var
+  // declared near MatchupCopy's other top-level constants -- missing or
+  // not-yet-ready (history.ready) both just mean coachEvidenceNotes()
+  // returns no notes, same as any other optional input in this file. This
+  // replaces the old coach.buckets (fixed 4-dimension) design entirely.
   const learningSummary = readJsonSafe(LEARNING_SUMMARY_PATH);
-  COACH_BUCKETS = (learningSummary && learningSummary.coach && learningSummary.coach.buckets) || null;
+  COACH_HISTORY = (learningSummary && learningSummary.coach && learningSummary.coach.history) || null;
   const kprops = readJsonSafe(path.join(ROOT, "data", "k-props", `${DATE}.json`));
   // Official picks come from the locked published card, never a gate recomputed
   // at render time. Re-deriving it here invented phantom "Official pick" labels
@@ -1179,13 +1181,35 @@ function buildInsights(game, pitcherGame) {
   // manually with those two conditions only.
   const bullpenCautionNow = pickRisk !== null && oppRisk !== null
     && ((pickRisk >= 78 && oppRisk >= 78) || (pickRisk > oppRisk + 15));
-  const coachNotes = MatchupCopy.coachConsistencyNotes({
-    modelProb: game.model_probability,
-    labScore: game.lab_score,
-    pickTeam: game.pick_team,
-    pitcherEdgeTeam: pitcher.edge_team,
-    bullpenCautionNow,
-    coachBuckets: COACH_BUCKETS
+  // 2026-08-26, Lynold's explicit instruction: replaces the old fixed
+  // 4-bucket coachConsistencyNotes() with real evidence from the full
+  // analyzed history (scripts/lib/coach-correlation-core.js). Every value
+  // below is built the same pick-relative way that module's own feature
+  // loader builds it from the historical ledgers, using fields already
+  // computed above in this function -- see that module's header comment for
+  // the exact sign-convention proof. pick_era_edge is intentionally omitted:
+  // this file doesn't have a confirmed exact-match source for the model's
+  // effective ERA the way it does for every other feature, and that
+  // feature's correlation has never cleared the evidence floor anyway (see
+  // coach-correlation-core.js's MIN_R_FOR_EVIDENCE), so nothing is lost by
+  // leaving it null here rather than guessing at a field name.
+  const gameFeaturesForEvidence = {
+    pick_model_prob: typeof game.model_probability === "number" ? game.model_probability : null,
+    edge_vs_market: (typeof game.model_probability === "number" && typeof market.no_vig_probability === "number")
+      ? game.model_probability - market.no_vig_probability : null,
+    pick_pitcher_gap: typeof pitcherGapSigned === "number" ? pitcherGapSigned : null,
+    pick_era_edge: null,
+    pick_woba_gap: (off.pick && typeof off.pick.woba_15d === "number" && off.opp && typeof off.opp.woba_15d === "number")
+      ? off.pick.woba_15d - off.opp.woba_15d : null,
+    pick_bullpen_gap: (pickRisk !== null && oppRisk !== null) ? oppRisk - pickRisk : null,
+    pick_bullpen_adj: typeof game.bullpen_log_odds_adjustment === "number" ? game.bullpen_log_odds_adjustment : null,
+    pick_own_bullpen_risk: pickRisk,
+    pick_lab_score: typeof game.lab_score === "number" ? game.lab_score : null,
+    best_price_abs: typeof market.best_price === "number" ? Math.abs(market.best_price) : null
+  };
+  const coachNotes = MatchupCopy.coachEvidenceNotes({
+    gameFeatures: gameFeaturesForEvidence,
+    coachHistory: COACH_HISTORY
   });
 
   return { caseFor: caseFor.slice(0, 3), caseAgainst: (typeof caseAgainst !== "undefined" ? caseAgainst : []).slice(0, 4), oppName: (typeof oppName !== "undefined" ? oppName : null), concerns: concerns.slice(0, 3), setupReasons, moneyLineReasons: moneyLineReasonsList, coachNotes, verdict };
@@ -1199,11 +1223,11 @@ function renderInsights(game, pitcherGame) {
   const setupCards = (insights.setupReasons || []).map(item => `<div class="callout setup"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
   const priceCards = (insights.moneyLineReasons || []).map(item => `<div class="callout price"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
   // 2026-08-24, Lynold's explicit instruction: LyDia Coach on the matchup
-  // page. Only appears when coachConsistencyNotes() actually found something
-  // (Coach not ready yet, or nothing to flag, both render nothing here --
-  // same "say nothing rather than pad the page" rule every other section on
-  // this page follows). See scripts/lib/matchup-copy-core.js for what counts
-  // as a note.
+  // page. Only appears when coachEvidenceNotes() (2026-08-26 rewrite, see
+  // that function's own header) actually found something -- Coach's full
+  // history not ready yet, or nothing clears the evidence floor, both
+  // render nothing here -- same "say nothing rather than pad the page"
+  // rule every other section on this page follows.
   const coachCards = (insights.coachNotes || []).map(item => `<div class="callout coach"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
   return `
     ${insights.caseFor.length ? `<h3 class="co-head for">The case for ${esc(game.pick_team || "this side")}</h3><div class="callout-grid">${forCards}</div>` : ""}

@@ -13,6 +13,8 @@
    4. Recent form had a table but no headline anyone would actually read.
 */
 
+const Correlation = require("./coach-correlation-core");
+
 "use strict";
 
 // AGREEMENT_MAX and COMPLETENESS_MAX are deliberately not imported: Lab Rating
@@ -453,132 +455,34 @@ function moneyLineReasons({
 }
 
 /*
-  2026-08-24, Lynold's explicit instruction: "the coach should be reviewing
-  past analyses and current/today's analyse. it should be present in the
-  match up pages." Coach itself (scripts/generate-coach.js) only reviews
-  GRADED picks -- a not-yet-played game has no result to grade, so there is
-  no "did this pick win" question to ask about it yet. What IS answerable
-  before the game: does today's pick fall on the historically weaker side of
-  one of Coach's own splits (win-probability bucket, Lab Rating bucket,
-  pitcher-edge agreement, bullpen caution)? That is a real, checkable
-  consistency question against LyDia's own past analysis, without inventing
-  a verdict about a game that hasn't happened. Reuses Coach's own thresholds
-  and its n>=5 sample-size floor -- as of 2026-08-25 that's a median split of
-  the current sample for win probability, and three fixed tiers (under 67 /
-  67-69.9 / 70+) for Lab Rating -- no new numbers invented here.
+  2026-08-26, Lynold's explicit instruction -- full rewrite: the old
+  coachConsistencyNotes() checked a pick against 4 fixed, pre-chosen splits
+  (win-probability median, 3 Lab Rating tiers, pitcher-edge agreement,
+  bullpen caution) over ~22 current-model official picks. That was never
+  "look at all the games we have an analysis for... look at the
+  correlations" -- it was 4 numbers someone picked in advance, over a small
+  slice of the real history. Replaced entirely by coachEvidenceNotes(),
+  which compares today's own game numbers against
+  scripts/lib/coach-correlation-core.js's real correlation findings over
+  the FULL analyzed history (every tier, every date -- currently 300+
+  games, not 22). See that module's evidenceForGame() for the exact method:
+  it only ever reports a pattern whose correlation clears a minimum
+  strength floor, so a weak/noisy input silently produces no note rather
+  than a note dressed up to look meaningful.
 */
-// Minimum win-rate gap (percentage points, as a fraction) between a pick's
-// own bucket and its complement before the gap is worth surfacing on an
-// unplayed game -- below this, the "difference" is plausibly noise on top of
-// an already-small current-model sample.
-const COACH_NOTE_GAP = 0.10;
-// Same n>=5 floor generate-coach.js's own buildRecommendations() requires
-// before it will write a recommendation about a bucket at all.
-const COACH_NOTE_MIN_N = 5;
-
-function coachBucketNote({ dimension, pickSide, oppositeSide, pickLabel, oppositeLabel }) {
-  if (!pickSide || !oppositeSide) return null;
-  if (pickSide.total < COACH_NOTE_MIN_N || oppositeSide.total < COACH_NOTE_MIN_N) return null;
-  if (pickSide.rate === null || oppositeSide.rate === null) return null;
-  if (oppositeSide.rate - pickSide.rate < COACH_NOTE_GAP) return null;
-  return {
-    title: `Coach: ${dimension} is LyDia's weaker bucket`,
-    detail: `This pick falls in "${pickLabel}" (${pickSide.wins}-${pickSide.losses}, ${pct(pickSide.rate)}) in LyDia's current-model sample, versus "${oppositeLabel}" (${oppositeSide.wins}-${oppositeSide.losses}, ${pct(oppositeSide.rate)}). A review prompt only, per Coach's own rule -- not a reason to skip or fade this pick.`
-  };
-}
-
 /*
-  2026-08-25, Lynold's explicit instruction: Lab Rating's bucket moved from a
-  two-sided above/below split to three fixed tiers (under 67 / 67-69.9 / 70+),
-  so the consistency check needs a version that compares the pick's own tier
-  against the single best-performing OTHER tier (both requiring n>=5), rather
-  than a fixed complement. Same gap and sample-size rules as coachBucketNote --
-  this is the same check, just generalized past two groups.
+  gameFeatures: this game's own pick-relative numbers, built by
+  generate-matchup-pages.js the same way coach-correlation-core.js's
+  loadHistoricalRows() builds them from the historical ledgers (same field
+  names, same sign convention -- see that module's header for the proof).
+  coachHistory: data/learning-summary.json's coach.history (null until
+  generate-coach.js has enough graded games -- see its own MIN_HISTORY_N).
+  Missing input on either side just means fewer (or zero) notes, never a
+  guess.
 */
-function coachTierNote({ dimension, tiers, pickIndex }) {
-  if (!Array.isArray(tiers) || pickIndex < 0 || pickIndex >= tiers.length) return null;
-  const pick = tiers[pickIndex];
-  if (!pick || pick.total < COACH_NOTE_MIN_N || pick.rate === null) return null;
-
-  let best = null;
-  tiers.forEach((t, i) => {
-    if (i === pickIndex || !t || t.total < COACH_NOTE_MIN_N || t.rate === null) return;
-    if (!best || t.rate > best.rate) best = t;
-  });
-  if (!best) return null;
-  if (best.rate - pick.rate < COACH_NOTE_GAP) return null;
-
-  return {
-    title: `Coach: ${dimension} is LyDia's weaker bucket`,
-    detail: `This pick falls in "${pick.label}" (${pick.wins}-${pick.losses}, ${pct(pick.rate)}) in LyDia's current-model sample, versus "${best.label}" (${best.wins}-${best.losses}, ${pct(best.rate)}), its best-performing tier. A review prompt only, per Coach's own rule -- not a reason to skip or fade this pick.`
-  };
-}
-
-/*
-  coachBuckets is data/learning-summary.json's coach.buckets (null until
-  Coach has enough sample -- see generate-coach.js's MIN_DAYS/MIN_PICKS). Any
-  input this needs that is missing (no bullpen risk numbers yet, no pitcher
-  edge resolved, Coach not ready) just skips that one check rather than
-  guessing -- same "say nothing rather than invent a narrative" rule this
-  whole file follows.
-*/
-function coachConsistencyNotes({ modelProb, labScore, pickTeam, pitcherEdgeTeam, bullpenCautionNow, coachBuckets }) {
-  if (!coachBuckets) return [];
-  const notes = [];
-
-  if (isNum(modelProb) && coachBuckets.probability) {
-    const b = coachBuckets.probability;
-    const inAbove = modelProb >= b.split_at;
-    const note = coachBucketNote({
-      dimension: "win-probability bucket",
-      pickSide: inAbove ? b.above : b.below,
-      oppositeSide: inAbove ? b.below : b.above,
-      pickLabel: inAbove ? b.above.label : b.below.label,
-      oppositeLabel: inAbove ? b.below.label : b.above.label
-    });
-    if (note) notes.push(note);
-  }
-
-  if (isNum(labScore) && coachBuckets.lab_rating && Array.isArray(coachBuckets.lab_rating.tiers)) {
-    const tiers = coachBuckets.lab_rating.tiers;
-    // Tier boundaries (under 67 / 67-69.9 / 70+) are generate-coach.js's own
-    // LAB_TIER_LOW_MAX/LAB_TIER_MID_MAX -- matched here by key rather than
-    // re-deriving the cutoffs, so a future boundary change only has to happen
-    // in one place.
-    let pickKey = "low";
-    if (labScore >= 70) pickKey = "high";
-    else if (labScore >= 67) pickKey = "mid";
-    const pickIndex = tiers.findIndex(t => t.key === pickKey);
-    const note = coachTierNote({ dimension: "Lab Rating bucket", tiers, pickIndex });
-    if (note) notes.push(note);
-  }
-
-  if (pitcherEdgeTeam && pitcherEdgeTeam !== "No clear SP edge" && coachBuckets.pitcher_support) {
-    const b = coachBuckets.pitcher_support;
-    const supported = pitcherEdgeTeam === pickTeam;
-    const note = coachBucketNote({
-      dimension: "pitcher-edge agreement",
-      pickSide: supported ? b.supported : b.unsupported,
-      oppositeSide: supported ? b.unsupported : b.supported,
-      pickLabel: supported ? b.supported.label : b.unsupported.label,
-      oppositeLabel: supported ? b.unsupported.label : b.supported.label
-    });
-    if (note) notes.push(note);
-  }
-
-  if (typeof bullpenCautionNow === "boolean" && coachBuckets.bullpen_caution) {
-    const b = coachBuckets.bullpen_caution;
-    const note = coachBucketNote({
-      dimension: "bullpen caution",
-      pickSide: bullpenCautionNow ? b.flagged : b.clear,
-      oppositeSide: bullpenCautionNow ? b.clear : b.flagged,
-      pickLabel: bullpenCautionNow ? b.flagged.label : b.clear.label,
-      oppositeLabel: bullpenCautionNow ? b.clear.label : b.flagged.label
-    });
-    if (note) notes.push(note);
-  }
-
-  return notes;
+function coachEvidenceNotes({ gameFeatures, coachHistory }) {
+  if (!gameFeatures || !coachHistory || !coachHistory.ready || !coachHistory.correlations) return [];
+  return Correlation.evidenceForGame(gameFeatures, coachHistory.correlations, { topK: 3 });
 }
 
 module.exports = {
@@ -590,6 +494,6 @@ module.exports = {
   labRatingReasons,
   labRatingBreakdown,
   moneyLineReasons,
-  coachConsistencyNotes,
+  coachEvidenceNotes,
   LEAN_MIN
 };
