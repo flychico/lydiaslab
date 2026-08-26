@@ -33,9 +33,9 @@ on:
     # GitHub cron is UTC (EDT = UTC-4 in season). One run per first-pitch wave,
     # each ~15 minutes after that wave's prepare-slate run. Concurrency below
     # serializes them.
-    - cron: "5 15 * * *"    # 11:05am ET — covers the 12:00pm wave
-    - cron: "20 16 * * *"   # 12:20pm ET — covers the 1:30pm wave
-    - cron: "35 18 * * *"   # 2:35pm ET  — covers the 3:30/4:15pm wave
+#    - cron: "5 15 * * *"    # 11:05am ET — covers the 12:00pm wave
+#    - cron: "20 16 * * *"   # 12:20pm ET — covers the 1:30pm wave
+#    - cron: "35 18 * * *"   # 2:35pm ET  — covers the 3:30/4:15pm wave
     - cron: "30 21 * * *"   # 5:30pm ET  — covers the 6:35/7:10pm wave    
     - cron: "30 23 * * *"   # 7:30pm ET  — covers the 8:35/9:10pm wave
 
@@ -127,13 +127,33 @@ jobs:
             --date "${{ steps.publish_date.outputs.date }}" \
             --snapshot "${SNAPSHOT_INPUT:-posted}"
 
+      # 2026-08-15, Lynold's explicit instruction: the same pregame model
+      # inputs/derived-calc columns as attribution_model_log.csv, captured
+      # same-day from the member brief this step just wrote -- BEFORE
+      # daily-recap.yml grades anything tomorrow morning. Upserts by
+      # (date, gamePk), so later publish waves the same day (pitcher
+      # confirmations, line moves) overwrite this run's rows rather than
+      # duplicating them. See scripts/export-pregame-attribution.js.
       - name: Export pregame attribution snapshot
         run: node scripts/export-pregame-attribution.js "${{ steps.publish_date.outputs.date }}"
 
+      # 2026-08-15, Lynold's explicit instruction: the same pitcher-level
+      # inputs behind pitcher_score (era/whip/ip/so/bb/gs/gp from MLB StatsAPI,
+      # plus the derived score components) for every probable in today's
+      # member brief -- captured same-day, before the recap. Also computes an
+      # independent roleShare-over-5 comparison column alongside the live
+      # (roleShare-over-5.5) published score; does not touch the live model.
       # See scripts/export-pitcher-data.js.
       - name: Export daily pitcher data
         run: node scripts/export-pitcher-data.js "${{ steps.publish_date.outputs.date }}"
 
+      # 2026-08-16, built same session as the Lab Rating rebalance, but never
+      # actually wired into this workflow until 2026-08-22 -- the script sat
+      # in scripts/ unused, so data/calibration/lab_rating_inputs_log.csv
+      # never existed. Same upsert-by-(date,gamePk) pattern as the two export
+      # steps above; captures calcLabRating()'s raw inputs (model_prob,
+      # pitch_gap, bullpen risk, assigned bullpen innings, pick-relative wOBA
+      # windows) one level upstream of the pre-computed point values already
       # in the member brief. See scripts/export-lab-rating-inputs.js.
       - name: Export daily Lab Rating inputs
         run: node scripts/export-lab-rating-inputs.js "${{ steps.publish_date.outputs.date }}"
