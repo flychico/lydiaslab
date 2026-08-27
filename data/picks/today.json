@@ -32,5 +32,201 @@
       "status": "research_only"
     }
   },
-  "picks": []
+  "picks": [
+    {
+      "gamePk": 824879,
+      "away": "Los Angeles Dodgers",
+      "home": "Atlanta Braves",
+      "time": "2026-08-27T23:15:00Z",
+      "labScore": 53,
+      "labScoreBreakdown": {
+        "score": 53,
+        "version": "lab-rating-v3-measured-components",
+        "conviction_points": 1.26,
+        "agreement_points": 0,
+        "pitching_plan_points": 30,
+        "bullpen_points": 4.91,
+        "offense_points": 16.98,
+        "completeness_points": 0,
+        "pitcher_edge_points": 30,
+        "model_agreement_gap": 0.0376,
+        "model_agreement_credit": 0.865,
+        "bullpen_innings_weight": 0.78,
+        "assigned_bullpen_innings": 3.1,
+        "offense_delta": -0.0192,
+        "offense_delta_15d": -0.0278,
+        "offense_delta_30d": -0.0107,
+        "completeness_checks_passed": 5,
+        "completeness_checks_total": 5,
+        "data_complete": true,
+        "market_points": 0,
+        "model_edge_points": 0,
+        "base_points": 0,
+        "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
+      },
+      "status": "official_pick",
+      "modelVersion": "multi-market-v1",
+      "pitcherEdge": {
+        "team": "No clear SP edge",
+        "gap": 2,
+        "conflict": false,
+        "away_score": 81,
+        "home_score": 83,
+        "away_pitcher": "Yoshinobu Yamamoto",
+        "home_pitcher": "Chris Sale",
+        "away_pitcher_id": 808967,
+        "home_pitcher_id": 519242,
+        "away_era": 2.61,
+        "home_era": 2.2,
+        "away_whip": 0.9,
+        "home_whip": 1.03,
+        "away_advanced": {
+          "w": 12,
+          "l": 7,
+          "kbb_pct": 0.1887,
+          "gb_pct": 0.527,
+          "babip": 0.2251,
+          "hr9": 0.89,
+          "ip_per_start": 6.6,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 6.6,
+          "bullpen_innings": 2.4
+        },
+        "home_advanced": {
+          "w": 12,
+          "l": 9,
+          "kbb_pct": 0.2546,
+          "gb_pct": 0.489,
+          "babip": 0.3131,
+          "hr9": 0.53,
+          "ip_per_start": 5.9,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 5.9,
+          "bullpen_innings": 3.1
+        }
+      },
+      "bullpen": {
+        "pick_team": {
+          "score": 77,
+          "label": "Tired",
+          "last_game_bp_ip": 4,
+          "last7_bp_ip": 20,
+          "last7_bp_runs": 3,
+          "last_game_relievers": 4,
+          "last7_relievers": 18,
+          "back_to_back_arms": 5,
+          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+          "score_reason": "Tired (7.7/10): 20 recent relief innings, recency-weighted — 4 in the last game (pitched yesterday), 5 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 4,
+            "last7_relievers": 18,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 6,
+            "back_to_back_arms": 26.1,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 77.1
+          },
+          "efficiency_score": 66,
+          "efficiency_label": "Effective",
+          "efficiency_reason": "Effective (6.6/10): 1.35 ERA and 1.35 WHIP over 20 relief innings (3 ER, 17 H, 10 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": 17.1,
+            "whip_term": -0.8,
+            "confidence": 1,
+            "raw_score": 66.4
+          },
+          "era_7d": 1.35,
+          "whip_7d": 1.35,
+          "last15_bp_ip": 42.3,
+          "last15_bp_runs": 16,
+          "era_15d": 3.4,
+          "whip_15d": 1.49,
+          "recent15_games_tracked": 13,
+          "risk_index": 69,
+          "risk_label": "Tired",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "opponent": {
+          "score": 72,
+          "label": "Tired",
+          "last_game_bp_ip": 5.3,
+          "last7_bp_ip": 17,
+          "last7_bp_runs": 5,
+          "last_game_relievers": 5,
+          "last7_relievers": 19,
+          "back_to_back_arms": 5,
+          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+          "score_reason": "Tired (7.2/10): 17 recent relief innings, recency-weighted — 5.3 in the last game (pitched yesterday), 5 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 5,
+            "last7_relievers": 19,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 10.3,
+            "back_to_back_arms": 17.2,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 72.5
+          },
+          "efficiency_score": 59,
+          "efficiency_label": "Effective",
+          "efficiency_reason": "Effective (5.9/10): 2.65 ERA and 1.29 WHIP over 17 relief innings (5 ER, 15 H, 7 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": 9.3,
+            "whip_term": 0.1,
+            "confidence": 1,
+            "raw_score": 59.4
+          },
+          "era_7d": 2.65,
+          "whip_7d": 1.29,
+          "last15_bp_ip": 43.7,
+          "last15_bp_runs": 20,
+          "era_15d": 3.5,
+          "whip_15d": 1.31,
+          "recent15_games_tracked": 13,
+          "risk_index": 68,
+          "risk_label": "Tired",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "label": "Elevated volatility",
+        "major_caution": false,
+        "absolute_risk": "Elevated"
+      },
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Chris Sale",
+          "pick": "Under",
+          "line": 7.5,
+          "bestAm": -151,
+          "projection": 6.42,
+          "edge": -1.08,
+          "books": 3,
+          "expectedInnings": 5.9,
+          "pitcherRole": "traditional_starter",
+          "lineupSource": "posted",
+          "modelVersion": "leo-kprop",
+          "valueTag": "OFFICIAL PICK"
+        }
+      ]
+    }
+  ],
+  "last_appended_at": "2026-08-27T22:38:44.186Z"
 }
