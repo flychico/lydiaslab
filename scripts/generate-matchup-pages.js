@@ -20,10 +20,6 @@
 const fs = require("fs");
 const path = require("path");
 const MatchupCopy = require("./lib/matchup-copy-core");
-// Set once in main() (module-level, read by buildInsights() below) -- see
-// the LEARNING_SUMMARY_PATH comment for why it's safe to treat as fresh,
-// same-day data by the time this script runs.
-let COACH_HISTORY = null; // learningSummary.coach.history -- full-history correlation findings, see scripts/lib/coach-correlation-core.js
 const RecapReview = require("./lib/recap-review-core");
 const RecapBuild = require("./lib/recap-build-core");
 
@@ -44,13 +40,6 @@ const MEMBER_BRIEF_PATH = path.join(ROOT, "data", "member-brief", `${DATE}.json`
 const TOTALS_PATH = path.join(ROOT, "data", "totals", `${DATE}.json`);
 const PITCHER_PATH = path.join(ROOT, "data", "pitcher-matchups", `${DATE}.json`);
 const RESULTS_PATH = path.join(ROOT, "data", "results.json");
-// 2026-08-24, Lynold's explicit instruction: Coach on the matchup pages.
-// data/learning-summary.json is written by the daily-recap.yml workflow
-// (scripts/generate-coach.js, among other steps), which runs once each
-// morning before publish-picks.yml's first wave -- so by the time this
-// script runs for today's slate, today's coach.buckets are already fresh,
-// same-day data, not stale from days ago.
-const LEARNING_SUMMARY_PATH = path.join(ROOT, "data", "learning-summary.json");
 const MANIFEST_DIR = path.join(ROOT, "data", "matchup-pages");
 const MANIFEST_PATH = path.join(MANIFEST_DIR, `${DATE}.json`);
 const RECAP_DIR = path.join(ROOT, "data", "recap-reviews");
@@ -229,15 +218,6 @@ async function main() {
     throw new Error(`Missing canonical pitcher source ${relative(PITCHER_PATH)}. Run generate-pitcher-matchup-data.js first.`);
   }
   const results = readJsonSafe(RESULTS_PATH) || { days: {} };
-  // 2026-08-26: coach.history.correlations (the real correlation-engine
-  // output, see scripts/lib/coach-correlation-core.js), set once here, read
-  // from buildInsights() below via the module-level COACH_HISTORY var
-  // declared near MatchupCopy's other top-level constants -- missing or
-  // not-yet-ready (history.ready) both just mean coachEvidenceNotes()
-  // returns no notes, same as any other optional input in this file. This
-  // replaces the old coach.buckets (fixed 4-dimension) design entirely.
-  const learningSummary = readJsonSafe(LEARNING_SUMMARY_PATH);
-  COACH_HISTORY = (learningSummary && learningSummary.coach && learningSummary.coach.history) || null;
   const kprops = readJsonSafe(path.join(ROOT, "data", "k-props", `${DATE}.json`));
   // Official picks come from the locked published card, never a gate recomputed
   // at render time. Re-deriving it here invented phantom "Official pick" labels
@@ -1169,66 +1149,7 @@ function buildInsights(game, pitcherGame) {
     verdict = game.pass_reason ? `LyDia passes. ${game.pass_reason}` : `LyDia passes. Nothing about this matchup clears the bar, and passing is a position.`;
   }
 
-  // 2026-08-24, Lynold's explicit instruction: Coach's own consistency check
-  // against this pick's numbers. bullpenCautionNow mirrors
-  // generate-member-lab.js's bullpenLabel() exactly (its two caution-firing
-  // branches only -- "Both bullpens stressed" and "Adds caution") rather than
-  // trying to read a label off pens.pick.risk_label, which is a DIFFERENT
-  // vocabulary (a single bullpen's own risk tier, not this pick's
-  // caution verdict). Recomputed here instead of imported because
-  // bullpenLabel() isn't exported from generate-member-lab.js; kept in sync
-  // manually with those two conditions only.
-  const bullpenCautionNow = pickRisk !== null && oppRisk !== null
-    && ((pickRisk >= 78 && oppRisk >= 78) || (pickRisk > oppRisk + 15));
-  // 2026-08-26, Lynold's explicit instruction: replaces the old fixed
-  // 4-bucket coachConsistencyNotes() with real evidence from the full
-  // analyzed history (scripts/lib/coach-correlation-core.js). Every value
-  // below is built the same pick-relative way that module's own feature
-  // loader builds it from the historical ledgers, using fields already
-  // computed above in this function -- see that module's header comment for
-  // the exact sign-convention proof. pick_era_edge is intentionally omitted:
-  // this file doesn't have a confirmed exact-match source for the model's
-  // effective ERA the way it does for every other feature, and that
-  // feature's correlation has never cleared the evidence floor anyway (see
-  // coach-correlation-core.js's MIN_R_FOR_EVIDENCE), so nothing is lost by
-  // leaving it null here rather than guessing at a field name.
-  // 2026-08-26 additions, Lynold's direct follow-up ("why not analyze the
-  // pitching gap, the team strength comparison, offense points from the lab
-  // rating..."): team strength edge uses the exact same independent-blend
-  // read as the caseAgainst block above (not that block's own const, which
-  // is scoped to its own if -- recomputed here the same way to stay in
-  // scope). Lab Rating sub-components read straight off game.lab_score_breakdown,
-  // the same object already passed into MatchupCopy.labRatingBreakdown()
-  // above, so no new data source.
-  const oppTeamStrengthForEvidence = game.pick_team === game.home_team ? game.team_strength_blend_away : game.team_strength_blend_home;
-  const lsb = game.lab_score_breakdown || null;
-  const gameFeaturesForEvidence = {
-    pick_model_prob: typeof game.model_probability === "number" ? game.model_probability : null,
-    edge_vs_market: (typeof game.model_probability === "number" && typeof market.no_vig_probability === "number")
-      ? game.model_probability - market.no_vig_probability : null,
-    pick_pitcher_gap: typeof pitcherGapSigned === "number" ? pitcherGapSigned : null,
-    pick_era_edge: null,
-    pick_woba_gap: (off.pick && typeof off.pick.woba_15d === "number" && off.opp && typeof off.opp.woba_15d === "number")
-      ? off.pick.woba_15d - off.opp.woba_15d : null,
-    pick_bullpen_gap: (pickRisk !== null && oppRisk !== null) ? oppRisk - pickRisk : null,
-    pick_bullpen_adj: typeof game.bullpen_log_odds_adjustment === "number" ? game.bullpen_log_odds_adjustment : null,
-    pick_own_bullpen_risk: pickRisk,
-    pick_lab_score: typeof game.lab_score === "number" ? game.lab_score : null,
-    best_price_abs: typeof market.best_price === "number" ? Math.abs(market.best_price) : null,
-    pick_team_strength_edge: (typeof game.team_strength_probability === "number" && typeof oppTeamStrengthForEvidence === "number")
-      ? game.team_strength_probability - oppTeamStrengthForEvidence : null,
-    lab_offense_points: lsb && typeof lsb.offense_points === "number" ? lsb.offense_points : null,
-    lab_pitching_plan_points: lsb && typeof lsb.pitching_plan_points === "number" ? lsb.pitching_plan_points : null,
-    lab_bullpen_points: lsb && typeof lsb.bullpen_points === "number" ? lsb.bullpen_points : null,
-    lab_conviction_points: lsb && typeof lsb.conviction_points === "number" ? lsb.conviction_points : null,
-    lab_pitcher_edge_points: lsb && typeof lsb.pitcher_edge_points === "number" ? lsb.pitcher_edge_points : null
-  };
-  const coachNotes = MatchupCopy.coachEvidenceNotes({
-    gameFeatures: gameFeaturesForEvidence,
-    coachHistory: COACH_HISTORY
-  });
-
-  return { caseFor: caseFor.slice(0, 3), caseAgainst: (typeof caseAgainst !== "undefined" ? caseAgainst : []).slice(0, 4), oppName: (typeof oppName !== "undefined" ? oppName : null), concerns: concerns.slice(0, 3), setupReasons, moneyLineReasons: moneyLineReasonsList, coachNotes, verdict };
+  return { caseFor: caseFor.slice(0, 3), caseAgainst: (typeof caseAgainst !== "undefined" ? caseAgainst : []).slice(0, 4), oppName: (typeof oppName !== "undefined" ? oppName : null), concerns: concerns.slice(0, 3), setupReasons, moneyLineReasons: moneyLineReasonsList, verdict };
 }
 
 function renderInsights(game, pitcherGame) {
@@ -1238,20 +1159,15 @@ function renderInsights(game, pitcherGame) {
   const againstCards = (insights.caseAgainst || []).map(item => `<div class="callout against"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
   const setupCards = (insights.setupReasons || []).map(item => `<div class="callout setup"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
   const priceCards = (insights.moneyLineReasons || []).map(item => `<div class="callout price"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
-  // 2026-08-24, Lynold's explicit instruction: LyDia Coach on the matchup
-  // page. Only appears when coachEvidenceNotes() (2026-08-26 rewrite, see
-  // that function's own header) actually found something -- Coach's full
-  // history not ready yet, or nothing clears the evidence floor, both
-  // render nothing here -- same "say nothing rather than pad the page"
-  // rule every other section on this page follows.
-  const coachCards = (insights.coachNotes || []).map(item => `<div class="callout coach"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
+  // 2026-08-28, Lynold's explicit instruction: LyDia Coach's "consistency
+  // check" section removed from matchup pages entirely -- was here
+  // 2026-08-24 through 2026-08-26.
   return `
     ${insights.caseFor.length ? `<h3 class="co-head for">The case for ${esc(game.pick_team || "this side")}</h3><div class="callout-grid">${forCards}</div>` : ""}
     ${insights.caseAgainst && insights.caseAgainst.length ? `<h3 class="co-head against">The case for ${esc(insights.oppName || "the other side")}</h3><div class="callout-grid">${againstCards}</div>` : ""}
     ${insights.concerns.length ? `<h3 class="co-head against">${game.status === "official_pick" ? "What to watch" : "Why it is not official"}</h3><div class="callout-grid">${conCards}</div>` : ""}
     ${insights.setupReasons && insights.setupReasons.length ? `<h3 class="co-head setup">Why the setup score is what it is</h3><div class="callout-grid">${setupCards}</div>` : ""}
     ${insights.moneyLineReasons && insights.moneyLineReasons.length ? `<h3 class="co-head price">Why the price is what it is</h3><div class="callout-grid">${priceCards}</div>` : ""}
-    ${insights.coachNotes && insights.coachNotes.length ? `<h3 class="co-head coach">LyDia Coach — consistency check</h3><div class="callout-grid">${coachCards}</div><p class="dim small" style="margin-top:-4px">Review prompts only, from LyDia's own official-pick history. Not a signal to skip or fade this pick.</p>` : ""}
     <div class="verdict"><span class="v-label">The verdict</span> ${esc(insights.verdict)}</div>`;
 }
 
