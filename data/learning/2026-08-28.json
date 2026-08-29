@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-29T04:17:25.250Z",
+  "generated_at": "2026-08-29T04:59:54.748Z",
   "status": "ready",
   "latest_date": "2026-08-28",
   "days_reviewed": 27,
@@ -7,17 +7,17 @@
     "results": "data/results.json",
     "clv": "data/clv/clv_log.csv"
   },
-  "current_official_model": "multi-market-v1",
-  "headline": "Learning summary for 2026-08-28: no new moneyline picks graded today. Leo's current record: 111-85 (56.6%) across 196 graded games (all statuses, model leo).",
+  "current_official_model": "leo",
+  "headline": "Learning summary for 2026-08-28: moneyline record 1-1 (50.0%).",
   "day": {
     "date": "2026-08-28",
     "source": "published-picks",
-    "record_all_markets": "1-0",
-    "units_all_markets": 0.64,
-    "ungraded": 2,
-    "moneyline_record": "0-0",
-    "moneyline_win_rate": null,
-    "official_moneyline_picks": 0,
+    "record_all_markets": "6-4",
+    "units_all_markets": 0.9,
+    "ungraded": 0,
+    "moneyline_record": "1-1",
+    "moneyline_win_rate": 0.5,
+    "official_moneyline_picks": 2,
     "legacy_market_entries": 0
   },
   "gates": {
@@ -26,20 +26,25 @@
     "note": "Official picks require high model probability and strong setup quality. A high Lab Rating alone is not enough. (Market edge is no longer a gate -- a picked side with a lower market-implied probability than the model's read can still qualify, as long as market data exists for the game at all.)"
   },
   "process_metrics": {
-    "average_model_probability": null,
-    "average_lab_score": null,
-    "average_raw_edge": null,
-    "clv_counts": {},
-    "lesson_counts": {},
-    "strong_official_count": 27,
+    "average_model_probability": 0.7328,
+    "average_lab_score": 76.5,
+    "average_raw_edge": 0.1344,
+    "clv_counts": {
+      "not_tracked": 2
+    },
+    "lesson_counts": {
+      "loss_needs_review": 1,
+      "win_needs_more_sample": 1
+    },
+    "strong_official_count": 29,
     "protected_by_probability_gate_count": 0,
-    "high_bullpen_risk_count": 5,
+    "high_bullpen_risk_count": 6,
     "pitcher_conflict_count": 0
   },
   "findings": [
     {
-      "title": "No new moneyline picks graded today",
-      "read": "No moneyline picks finished grading for this date. The findings below draw on the full graded history instead."
+      "title": "Official-pick discipline",
+      "read": "2 moneyline picks were graded today. Record: 1-1 (50.0%)."
     },
     {
       "title": "Probability gate",
@@ -47,7 +52,7 @@
     },
     {
       "title": "Bullpen learning",
-      "read": "Across all reviewed days, 5 graded moneyline picks carried a meaningful bullpen caution. Review these before adjusting thresholds."
+      "read": "Across all reviewed days, 6 graded moneyline picks carried a meaningful bullpen caution. Review these before adjusting thresholds."
     },
     {
       "title": "Pitcher learning",
@@ -57,43 +62,43 @@
   "calibration": {
     "status": "ready",
     "model_version": "leo",
-    "games_graded": 196,
-    "wins": 111,
-    "losses": 85,
-    "brier_score": 0.2477,
+    "games_graded": 210,
+    "wins": 119,
+    "losses": 91,
+    "brier_score": 0.2474,
     "shadow_model": {
       "status": "ready",
-      "games": 264,
+      "games": 278,
       "official_model_version": "leo",
       "shadow_model_version": "v3.2-woba",
-      "brier_official": 0.2488,
-      "brier_shadow": 0.2521,
+      "brier_official": 0.2486,
+      "brier_shadow": 0.2508,
       "leader": "official",
-      "disagreements": 56,
-      "shadow_wins_disagreements": 27,
+      "disagreements": 59,
+      "shadow_wins_disagreements": 29,
       "note": "Only rows from the latest matching official/shadow model-version pair are compared. Promote nothing from a mixed-version sample."
     },
     "attribution": {
       "status": "ready",
-      "games": 340,
+      "games": 354,
       "factors": [
         {
           "factor": "Model probability",
           "tertiles": [
             {
               "band": "low",
-              "games": 114,
-              "win_rate": 0.491
+              "games": 119,
+              "win_rate": 0.487
             },
             {
               "band": "mid",
-              "games": 113,
-              "win_rate": 0.602
+              "games": 118,
+              "win_rate": 0.61
             },
             {
               "band": "high",
-              "games": 113,
-              "win_rate": 0.628
+              "games": 117,
+              "win_rate": 0.624
             }
           ],
           "spread": 0.137
@@ -103,63 +108,63 @@
           "tertiles": [
             {
               "band": "low",
-              "games": 114,
-              "win_rate": 0.596
+              "games": 129,
+              "win_rate": 0.581
             },
             {
               "band": "mid",
-              "games": 120,
-              "win_rate": 0.583
+              "games": 113,
+              "win_rate": 0.602
             },
             {
               "band": "high",
-              "games": 106,
-              "win_rate": 0.538
+              "games": 112,
+              "win_rate": 0.536
             }
           ],
-          "spread": -0.059
+          "spread": -0.046
         },
         {
           "factor": "Bullpen fatigue gap (opp − pick)",
           "tertiles": [
             {
               "band": "low",
-              "games": 115,
-              "win_rate": 0.574
+              "games": 122,
+              "win_rate": 0.566
             },
             {
               "band": "mid",
-              "games": 113,
-              "win_rate": 0.619
+              "games": 115,
+              "win_rate": 0.635
             },
             {
               "band": "high",
-              "games": 112,
-              "win_rate": 0.527
+              "games": 117,
+              "win_rate": 0.521
             }
           ],
-          "spread": -0.047
+          "spread": -0.044
         },
         {
           "factor": "Offense form gap (pick − opp, wOBA)",
           "tertiles": [
             {
               "band": "low",
-              "games": 175,
+              "games": 182,
               "win_rate": 0.566
             },
             {
               "band": "mid",
-              "games": 52,
-              "win_rate": 0.615
+              "games": 55,
+              "win_rate": 0.618
             },
             {
               "band": "high",
-              "games": 113,
-              "win_rate": 0.566
+              "games": 117,
+              "win_rate": 0.564
             }
           ],
-          "spread": 0.001
+          "spread": -0.002
         }
       ],
       "note": "Win rate by input tertile, pick-side relative. |spread| = high-band win rate minus low-band — bigger magnitude = the metric separates winners from losers harder, and deserves weight. Read direction too: a NEGATIVE spread on a should-be-positive factor is a red flag."
@@ -167,69 +172,69 @@
     "kprops": {
       "status": "ready",
       "self_calibration": "+0.24 K correction active (n=150)",
-      "graded": 555,
-      "with_projection": 551,
+      "graded": 582,
+      "with_projection": 577,
       "bias": -0.11,
-      "mae": 1.75,
-      "lean_record": "131-98",
-      "over_lean_record": "63-55",
-      "under_lean_record": "68-43",
-      "no_lean": 315,
+      "mae": 1.76,
+      "lean_record": "137-102",
+      "over_lean_record": "67-56",
+      "under_lean_record": "70-46",
+      "no_lean": 331,
       "note": "Bias = actual minus projection (positive means we under-project). Leans only counted at 0.7+ strikeout edges. Small samples early — a lean record means little before ~100 graded pitchers."
     },
     "note": "Shadow ledger for learning only — never part of the public record. Official picks stay the only published record.",
     "buckets": [
       {
         "range": "50-55%",
-        "games": 34,
-        "wins": 16,
-        "expected_win_rate": 0.524,
-        "actual_win_rate": 0.471
+        "games": 38,
+        "wins": 17,
+        "expected_win_rate": 0.525,
+        "actual_win_rate": 0.447
       },
       {
         "range": "55-60%",
-        "games": 34,
-        "wins": 16,
-        "expected_win_rate": 0.575,
-        "actual_win_rate": 0.471
+        "games": 35,
+        "wins": 17,
+        "expected_win_rate": 0.574,
+        "actual_win_rate": 0.486
       },
       {
         "range": "60-65%",
-        "games": 16,
-        "wins": 7,
-        "expected_win_rate": 0.626,
-        "actual_win_rate": 0.438
+        "games": 17,
+        "wins": 8,
+        "expected_win_rate": 0.625,
+        "actual_win_rate": 0.471
       },
       {
         "range": "65-70%",
-        "games": 26,
-        "wins": 18,
-        "expected_win_rate": 0.68,
-        "actual_win_rate": 0.692
+        "games": 27,
+        "wins": 19,
+        "expected_win_rate": 0.679,
+        "actual_win_rate": 0.704
       },
       {
         "range": "70-75%",
-        "games": 86,
-        "wins": 54,
-        "expected_win_rate": 0.728,
-        "actual_win_rate": 0.628
+        "games": 93,
+        "wins": 58,
+        "expected_win_rate": 0.727,
+        "actual_win_rate": 0.624
       }
     ],
     "shadow_by_status": {
       "official_pick": {
-        "games": 22,
-        "wins": 14,
-        "units": 3.05
+        "games": 24,
+        "wins": 15,
+        "units": 2.63
       },
       "pass": {
-        "games": 135,
-        "wins": 73,
-        "units": 10.11
+        "games": 146,
+        "wins": 79,
+        "units": 10.09
       },
       "watchlist": {
-        "games": 34,
-        "wins": 21,
-        "units": 2.37
+        "games": 35,
+        "wins": 22,
+        "units": 2.93
       },
       "value_watch": {
         "games": 5,
@@ -752,6 +757,44 @@
         "bullpen_label": "Elevated volatility",
         "pick_side_bullpen_score": 87,
         "opponent_bullpen_score": 74
+      },
+      {
+        "game_pk": 822691,
+        "date": "2026-08-28",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Miami Marlins @ Washington Nationals",
+        "pick": "Miami Marlins",
+        "result": "L",
+        "model_probability": 0.7326,
+        "lab_score": 72,
+        "raw_edge": 0.1521,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Miami Marlins",
+        "pitcher_gap": 49,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 80,
+        "opponent_bullpen_score": 95
+      },
+      {
+        "game_pk": 823744,
+        "date": "2026-08-28",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Texas Rangers @ Milwaukee Brewers",
+        "pick": "Milwaukee Brewers",
+        "result": "W",
+        "model_probability": 0.7329,
+        "lab_score": 81,
+        "raw_edge": 0.1166,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Milwaukee Brewers",
+        "pitcher_gap": 18,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 75,
+        "opponent_bullpen_score": 67
       }
     ],
     "protected_by_probability_gate": [],
@@ -850,16 +893,74 @@
         "bullpen_label": "Elevated volatility",
         "pick_side_bullpen_score": 87,
         "opponent_bullpen_score": 74
+      },
+      {
+        "game_pk": 822691,
+        "date": "2026-08-28",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Miami Marlins @ Washington Nationals",
+        "pick": "Miami Marlins",
+        "result": "L",
+        "model_probability": 0.7326,
+        "lab_score": 72,
+        "raw_edge": 0.1521,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Miami Marlins",
+        "pitcher_gap": 49,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 80,
+        "opponent_bullpen_score": 95
       }
     ],
     "pitcher_conflicts": [],
-    "all_moneyline": []
+    "all_moneyline": [
+      {
+        "game_pk": 822691,
+        "date": null,
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Miami Marlins @ Washington Nationals",
+        "pick": "Miami Marlins",
+        "result": "L",
+        "model_probability": 0.7326,
+        "lab_score": 72,
+        "raw_edge": 0.1521,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Miami Marlins",
+        "pitcher_gap": 49,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 80,
+        "opponent_bullpen_score": 95
+      },
+      {
+        "game_pk": 823744,
+        "date": null,
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Texas Rangers @ Milwaukee Brewers",
+        "pick": "Milwaukee Brewers",
+        "result": "W",
+        "model_probability": 0.7329,
+        "lab_score": 81,
+        "raw_edge": 0.1166,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Milwaukee Brewers",
+        "pitcher_gap": 18,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 75,
+        "opponent_bullpen_score": 67
+      }
+    ]
   },
   "multi_day": {
-    "moneyline_record": "18-9",
-    "moneyline_win_rate": 0.6667,
-    "official_moneyline_entries": 27,
-    "strict_gate_candidates": 27,
+    "moneyline_record": "19-10",
+    "moneyline_win_rate": 0.6552,
+    "official_moneyline_entries": 29,
+    "strict_gate_candidates": 29,
     "high_lab_low_probability_entries": 0,
     "note": "Multi-day view includes whatever historical data exists. Older days may include legacy model behavior."
   },
@@ -868,5 +969,1057 @@
     "Watch whether official picks with model probability >= 72% beat low-probability value watches over a larger sample.",
     "Track closing price movement once market snapshots have enough data.",
     "Keep value watch separate from official picks."
-  ]
+  ],
+  "coach": {
+    "status": "review_ready",
+    "title": "First evidence-based model review is ready",
+    "summary": "LyDia has 17 current-model graded days and 29 current-model official picks. The coach can now identify review questions, but it cannot change the model automatically.",
+    "current_model_days": 17,
+    "current_model_picks": 29,
+    "minimum_days": 7,
+    "minimum_picks": 20,
+    "bullpen_model_owner": "bullpen-fatigue-v3-runs-aware",
+    "game_log": [
+      {
+        "date": "2026-08-28",
+        "gamePk": 822691,
+        "matchup": "Miami Marlins @ Washington Nationals",
+        "pick": "Miami Marlins",
+        "result": "L",
+        "model_probability": 0.7326,
+        "lab_score": 72
+      },
+      {
+        "date": "2026-08-28",
+        "gamePk": 823744,
+        "matchup": "Texas Rangers @ Milwaukee Brewers",
+        "pick": "Milwaukee Brewers",
+        "result": "W",
+        "model_probability": 0.7329,
+        "lab_score": 81
+      },
+      {
+        "date": "2026-08-26",
+        "gamePk": 823180,
+        "matchup": "Cincinnati Reds @ San Francisco Giants",
+        "pick": "San Francisco Giants",
+        "result": "L",
+        "model_probability": 0.7184,
+        "lab_score": 72
+      },
+      {
+        "date": "2026-08-26",
+        "gamePk": 823988,
+        "matchup": "Cleveland Guardians @ Los Angeles Angels",
+        "pick": "Cleveland Guardians",
+        "result": "W",
+        "model_probability": 0.7317,
+        "lab_score": 81
+      },
+      {
+        "date": "2026-08-26",
+        "gamePk": 823825,
+        "matchup": "Boston Red Sox @ Miami Marlins",
+        "pick": "Boston Red Sox",
+        "result": "L",
+        "model_probability": 0.7071,
+        "lab_score": 83
+      },
+      {
+        "date": "2026-08-26",
+        "gamePk": 824878,
+        "matchup": "Los Angeles Dodgers @ Atlanta Braves",
+        "pick": "Los Angeles Dodgers",
+        "result": "L",
+        "model_probability": 0.7209,
+        "lab_score": 80
+      },
+      {
+        "date": "2026-08-26",
+        "gamePk": 824555,
+        "matchup": "Texas Rangers @ Chicago White Sox",
+        "pick": "Chicago White Sox",
+        "result": "W",
+        "model_probability": 0.6664,
+        "lab_score": 72
+      },
+      {
+        "date": "2026-08-25",
+        "gamePk": 823826,
+        "matchup": "Boston Red Sox @ Miami Marlins",
+        "pick": "Boston Red Sox",
+        "result": "W",
+        "model_probability": 0.6922,
+        "lab_score": 77
+      },
+      {
+        "date": "2026-08-25",
+        "gamePk": 822773,
+        "matchup": "Kansas City Royals @ Toronto Blue Jays",
+        "pick": "Kansas City Royals",
+        "result": "W",
+        "model_probability": 0.7289,
+        "lab_score": 73
+      },
+      {
+        "date": "2026-08-24",
+        "gamePk": 823992,
+        "matchup": "Cleveland Guardians @ Los Angeles Angels",
+        "pick": "Cleveland Guardians",
+        "result": "W",
+        "model_probability": 0.7418,
+        "lab_score": 72
+      },
+      {
+        "date": "2026-08-22",
+        "gamePk": 825044,
+        "matchup": "Cincinnati Reds @ Arizona Diamondbacks",
+        "pick": "Arizona Diamondbacks",
+        "result": "L",
+        "model_probability": 0.7419,
+        "lab_score": 93
+      },
+      {
+        "date": "2026-08-22",
+        "gamePk": 823261,
+        "matchup": "Minnesota Twins @ San Diego Padres",
+        "pick": "San Diego Padres",
+        "result": "W",
+        "model_probability": 0.7419,
+        "lab_score": 81
+      },
+      {
+        "date": "2026-08-21",
+        "gamePk": 825045,
+        "matchup": "Cincinnati Reds @ Arizona Diamondbacks",
+        "pick": "Arizona Diamondbacks",
+        "result": "W",
+        "model_probability": 0.7372,
+        "lab_score": 87
+      },
+      {
+        "date": "2026-08-20",
+        "gamePk": 822934,
+        "matchup": "Toronto Blue Jays @ Tampa Bay Rays",
+        "pick": "Tampa Bay Rays",
+        "result": "L",
+        "model_probability": 0.7429,
+        "lab_score": 81
+      },
+      {
+        "date": "2026-08-19",
+        "gamePk": 822937,
+        "matchup": "Toronto Blue Jays @ Tampa Bay Rays",
+        "pick": "Tampa Bay Rays",
+        "result": "W",
+        "model_probability": 0.7427,
+        "lab_score": 82
+      },
+      {
+        "date": "2026-08-18",
+        "gamePk": 824398,
+        "matchup": "San Francisco Giants @ Cleveland Guardians",
+        "pick": "Cleveland Guardians",
+        "result": "W",
+        "model_probability": 0.7376,
+        "lab_score": 80
+      },
+      {
+        "date": "2026-08-17",
+        "gamePk": 824514,
+        "matchup": "St. Louis Cardinals @ Cincinnati Reds",
+        "pick": "St. Louis Cardinals",
+        "result": "W",
+        "model_probability": 0.7315,
+        "lab_score": 80
+      },
+      {
+        "date": "2026-08-17",
+        "gamePk": 824478,
+        "matchup": "St. Louis Cardinals @ Cincinnati Reds",
+        "pick": "St. Louis Cardinals",
+        "result": "L",
+        "model_probability": 0.7443,
+        "lab_score": 84
+      },
+      {
+        "date": "2026-08-16",
+        "gamePk": 824880,
+        "matchup": "Arizona Diamondbacks @ Atlanta Braves",
+        "pick": "Arizona Diamondbacks",
+        "result": "L",
+        "model_probability": 0.6985,
+        "lab_score": 81
+      },
+      {
+        "date": "2026-08-16",
+        "gamePk": 824477,
+        "matchup": "Miami Marlins @ Cincinnati Reds",
+        "pick": "Miami Marlins",
+        "result": "W",
+        "model_probability": 0.7433,
+        "lab_score": 84
+      },
+      {
+        "date": "2026-08-16",
+        "gamePk": 823590,
+        "matchup": "Washington Nationals @ New York Mets",
+        "pick": "New York Mets",
+        "result": "W",
+        "model_probability": 0.736,
+        "lab_score": 82
+      },
+      {
+        "date": "2026-08-16",
+        "gamePk": 823991,
+        "matchup": "Kansas City Royals @ Los Angeles Angels",
+        "pick": "Kansas City Royals",
+        "result": "W",
+        "model_probability": 0.7417,
+        "lab_score": 81
+      },
+      {
+        "date": "2026-08-15",
+        "gamePk": 824400,
+        "matchup": "San Diego Padres @ Cleveland Guardians",
+        "pick": "San Diego Padres",
+        "result": "L",
+        "model_probability": 0.614,
+        "lab_score": 84
+      },
+      {
+        "date": "2026-08-11",
+        "gamePk": 824240,
+        "matchup": "Cleveland Guardians @ Detroit Tigers",
+        "pick": "Detroit Tigers",
+        "result": "W",
+        "model_probability": 0.6452,
+        "lab_score": 90
+      },
+      {
+        "date": "2026-08-11",
+        "gamePk": 824970,
+        "matchup": "Tampa Bay Rays @ Athletics",
+        "pick": "Tampa Bay Rays",
+        "result": "W",
+        "model_probability": 0.6566,
+        "lab_score": 87
+      },
+      {
+        "date": "2026-08-08",
+        "gamePk": 824079,
+        "matchup": "Chicago Cubs @ Kansas City Royals",
+        "pick": "Chicago Cubs",
+        "result": "L",
+        "model_probability": 0.6188,
+        "lab_score": 84
+      },
+      {
+        "date": "2026-08-06",
+        "gamePk": 824729,
+        "matchup": "Chicago White Sox @ Boston Red Sox",
+        "pick": "Boston Red Sox",
+        "result": "W",
+        "model_probability": 0.6114,
+        "lab_score": 80
+      },
+      {
+        "date": "2026-08-05",
+        "gamePk": 824482,
+        "matchup": "Athletics @ Cincinnati Reds",
+        "pick": "Cincinnati Reds",
+        "result": "W",
+        "model_probability": 0.6576,
+        "lab_score": 81
+      },
+      {
+        "date": "2026-08-02",
+        "gamePk": 824971,
+        "matchup": "Detroit Tigers @ Athletics",
+        "pick": "Detroit Tigers",
+        "result": "W",
+        "model_probability": 0.7358,
+        "lab_score": 82
+      }
+    ],
+    "history": {
+      "n": 354,
+      "ready": true,
+      "minimum_n": 20,
+      "record": {
+        "wins": 203,
+        "losses": 151,
+        "rate": 0.5734463276836158
+      },
+      "recommendations": [
+        "Full-history record across every analyzed game (all tiers, all dates): 203-151 (57.3%), n=354. This is what the correlations below are measured against -- not just the 22 current-model official picks.",
+        "Lab Rating's conviction component score: r=0.107 (n=354) -- a modest relationship. Bottom quarter (0.00 to 2.16): 45-43 (51.1%). Top quarter (20.00 to 35.00): 58-32 (64.4%).",
+        "LyDia's own win probability for this pick: r=0.102 (n=354) -- a modest relationship. Bottom quarter (0.44 to 0.54): 44-44 (50.0%). Top quarter (0.70 to 0.74): 55-35 (61.1%).",
+        "Team strength blend edge, before any pitcher/bullpen adjustment (picked side minus opponent): r=0.073 (n=209) -- little to no relationship. Bottom quarter (-0.19 to -0.06): 29-23 (55.8%). Top quarter (0.09 to 0.23): 33-20 (62.3%).",
+        "Size of the price (how big a favorite or underdog this pick was): r=-0.064 (n=348) -- little to no relationship. Bottom quarter (100.00 to 115.00): 47-40 (54.0%). Top quarter (159.00 to 850.00): 52-35 (59.8%).",
+        "Lab Rating's offense component score: r=0.063 (n=354) -- little to no relationship. Bottom quarter (0.00 to 12.48): 51-37 (58.0%). Top quarter (25.00 to 50.00): 57-33 (63.3%).",
+        "Probability points bullpen risk moved this pick's number: r=-0.061 (n=354) -- little to no relationship. Bottom quarter (-0.14 to -0.03): 54-34 (61.4%). Top quarter (0.05 to 0.17): 47-43 (52.2%).",
+        "Pick tier (official / value watch / watchlist / pass): official_pick 18-10 (64.3%, n=28) vs. watchlist 33-22 (60.0%, n=55) vs. value_watch 3-2 (60.0%, n=5) vs. pass 149-117 (56.0%, n=266).",
+        "Picked the home team vs. the road team: Home 121-76 (61.4%, n=197) vs. Road 82-75 (52.2%, n=157).",
+        "Day of the week: Thu 21-13 (61.8%, n=34) vs. Wed 37-23 (61.7%, n=60) vs. Mon 23-15 (60.5%, n=38) vs. Sun 27-19 (58.7%, n=46) vs. Tue 34-26 (56.7%, n=60) vs. Fri 32-26 (55.2%, n=58) vs. Sat 29-29 (50.0%, n=58).",
+        "These are correlations across LyDia's own analyzed history, not causal proof and not a signal to change any model weight or gate on their own -- human review still required for any actual change."
+      ],
+      "correlations": {
+        "numeric": [
+          {
+            "key": "lab_conviction_points",
+            "label": "Lab Rating's conviction component score",
+            "n": 354,
+            "r": 0.10665352650130722,
+            "quartiles": [
+              {
+                "n": 88,
+                "w": 45,
+                "l": 43,
+                "rate": 0.5113636363636364,
+                "min": 0,
+                "max": 2.16
+              },
+              {
+                "n": 88,
+                "w": 46,
+                "l": 42,
+                "rate": 0.5227272727272727,
+                "min": 2.26,
+                "max": 8.82
+              },
+              {
+                "n": 88,
+                "w": 54,
+                "l": 34,
+                "rate": 0.6136363636363636,
+                "min": 8.92,
+                "max": 20
+              },
+              {
+                "n": 90,
+                "w": 58,
+                "l": 32,
+                "rate": 0.6444444444444445,
+                "min": 20,
+                "max": 35
+              }
+            ]
+          },
+          {
+            "key": "pick_model_prob",
+            "label": "LyDia's own win probability for this pick",
+            "n": 354,
+            "r": 0.10165299181678829,
+            "quartiles": [
+              {
+                "n": 88,
+                "w": 44,
+                "l": 44,
+                "rate": 0.5,
+                "min": 0.442,
+                "max": 0.5375
+              },
+              {
+                "n": 88,
+                "w": 49,
+                "l": 39,
+                "rate": 0.5568181818181818,
+                "min": 0.5379,
+                "max": 0.586
+              },
+              {
+                "n": 88,
+                "w": 55,
+                "l": 33,
+                "rate": 0.625,
+                "min": 0.5869,
+                "max": 0.7005
+              },
+              {
+                "n": 90,
+                "w": 55,
+                "l": 35,
+                "rate": 0.6111111111111112,
+                "min": 0.7009000000000001,
+                "max": 0.7449
+              }
+            ]
+          },
+          {
+            "key": "pick_team_strength_edge",
+            "label": "Team strength blend edge, before any pitcher/bullpen adjustment (picked side minus opponent)",
+            "n": 209,
+            "r": 0.07349627019842958,
+            "quartiles": [
+              {
+                "n": 52,
+                "w": 29,
+                "l": 23,
+                "rate": 0.5576923076923077,
+                "min": -0.18519999999999998,
+                "max": -0.06030000000000002
+              },
+              {
+                "n": 52,
+                "w": 28,
+                "l": 24,
+                "rate": 0.5384615384615384,
+                "min": -0.05909999999999993,
+                "max": 0.01419999999999999
+              },
+              {
+                "n": 52,
+                "w": 28,
+                "l": 24,
+                "rate": 0.5384615384615384,
+                "min": 0.015699999999999992,
+                "max": 0.08379999999999999
+              },
+              {
+                "n": 53,
+                "w": 33,
+                "l": 20,
+                "rate": 0.6226415094339622,
+                "min": 0.0877,
+                "max": 0.2279
+              }
+            ]
+          },
+          {
+            "key": "best_price_abs",
+            "label": "Size of the price (how big a favorite or underdog this pick was)",
+            "n": 348,
+            "r": -0.06423327934695165,
+            "quartiles": [
+              {
+                "n": 87,
+                "w": 47,
+                "l": 40,
+                "rate": 0.5402298850574713,
+                "min": 100,
+                "max": 115
+              },
+              {
+                "n": 87,
+                "w": 52,
+                "l": 35,
+                "rate": 0.5977011494252874,
+                "min": 115,
+                "max": 133
+              },
+              {
+                "n": 87,
+                "w": 50,
+                "l": 37,
+                "rate": 0.5747126436781609,
+                "min": 133,
+                "max": 159
+              },
+              {
+                "n": 87,
+                "w": 52,
+                "l": 35,
+                "rate": 0.5977011494252874,
+                "min": 159,
+                "max": 850
+              }
+            ]
+          },
+          {
+            "key": "lab_offense_points",
+            "label": "Lab Rating's offense component score",
+            "n": 354,
+            "r": 0.06319517779776623,
+            "quartiles": [
+              {
+                "n": 88,
+                "w": 51,
+                "l": 37,
+                "rate": 0.5795454545454546,
+                "min": 0,
+                "max": 12.48
+              },
+              {
+                "n": 88,
+                "w": 46,
+                "l": 42,
+                "rate": 0.5227272727272727,
+                "min": 12.5,
+                "max": 20.83
+              },
+              {
+                "n": 88,
+                "w": 49,
+                "l": 39,
+                "rate": 0.5568181818181818,
+                "min": 21.04,
+                "max": 25
+              },
+              {
+                "n": 90,
+                "w": 57,
+                "l": 33,
+                "rate": 0.6333333333333333,
+                "min": 25,
+                "max": 50
+              }
+            ]
+          },
+          {
+            "key": "pick_bullpen_adj",
+            "label": "Probability points bullpen risk moved this pick's number",
+            "n": 354,
+            "r": -0.06064351696801752,
+            "quartiles": [
+              {
+                "n": 88,
+                "w": 54,
+                "l": 34,
+                "rate": 0.6136363636363636,
+                "min": -0.144,
+                "max": -0.03
+              },
+              {
+                "n": 88,
+                "w": 50,
+                "l": 38,
+                "rate": 0.5681818181818182,
+                "min": -0.03,
+                "max": 0.012
+              },
+              {
+                "n": 88,
+                "w": 52,
+                "l": 36,
+                "rate": 0.5909090909090909,
+                "min": 0.012,
+                "max": 0.051
+              },
+              {
+                "n": 90,
+                "w": 47,
+                "l": 43,
+                "rate": 0.5222222222222223,
+                "min": 0.051,
+                "max": 0.165
+              }
+            ]
+          },
+          {
+            "key": "pick_bullpen_gap",
+            "label": "Bullpen risk edge (positive = the picked side's bullpen is the safer one)",
+            "n": 354,
+            "r": -0.0605384140629601,
+            "quartiles": [
+              {
+                "n": 88,
+                "w": 54,
+                "l": 34,
+                "rate": 0.6136363636363636,
+                "min": -48,
+                "max": -10
+              },
+              {
+                "n": 88,
+                "w": 50,
+                "l": 38,
+                "rate": 0.5681818181818182,
+                "min": -10,
+                "max": 4
+              },
+              {
+                "n": 88,
+                "w": 52,
+                "l": 36,
+                "rate": 0.5909090909090909,
+                "min": 4,
+                "max": 17
+              },
+              {
+                "n": 90,
+                "w": 47,
+                "l": 43,
+                "rate": 0.5222222222222223,
+                "min": 17,
+                "max": 55
+              }
+            ]
+          },
+          {
+            "key": "lab_bullpen_points",
+            "label": "Lab Rating's bullpen component score",
+            "n": 354,
+            "r": -0.048505732942332506,
+            "quartiles": [
+              {
+                "n": 88,
+                "w": 55,
+                "l": 33,
+                "rate": 0.625,
+                "min": 1.1,
+                "max": 6.67
+              },
+              {
+                "n": 88,
+                "w": 42,
+                "l": 46,
+                "rate": 0.4772727272727273,
+                "min": 6.68,
+                "max": 10
+              },
+              {
+                "n": 88,
+                "w": 60,
+                "l": 28,
+                "rate": 0.6818181818181818,
+                "min": 10,
+                "max": 12.91
+              },
+              {
+                "n": 90,
+                "w": 46,
+                "l": 44,
+                "rate": 0.5111111111111111,
+                "min": 12.93,
+                "max": 20
+              }
+            ]
+          },
+          {
+            "key": "pick_lab_score",
+            "label": "Lab Rating (LyDia's own analysis-quality score for this pick)",
+            "n": 354,
+            "r": 0.04647033801567373,
+            "quartiles": [
+              {
+                "n": 88,
+                "w": 51,
+                "l": 37,
+                "rate": 0.5795454545454546,
+                "min": 10,
+                "max": 36
+              },
+              {
+                "n": 88,
+                "w": 41,
+                "l": 47,
+                "rate": 0.4659090909090909,
+                "min": 36,
+                "max": 48
+              },
+              {
+                "n": 88,
+                "w": 55,
+                "l": 33,
+                "rate": 0.625,
+                "min": 48,
+                "max": 63
+              },
+              {
+                "n": 90,
+                "w": 56,
+                "l": 34,
+                "rate": 0.6222222222222222,
+                "min": 63.56,
+                "max": 93
+              }
+            ]
+          },
+          {
+            "key": "edge_vs_market",
+            "label": "Model edge over the market (model prob minus no-vig market prob)",
+            "n": 348,
+            "r": -0.03402607644165045,
+            "quartiles": [
+              {
+                "n": 87,
+                "w": 44,
+                "l": 43,
+                "rate": 0.5057471264367817,
+                "min": -0.3188,
+                "max": -0.0019000000000000128
+              },
+              {
+                "n": 87,
+                "w": 55,
+                "l": 32,
+                "rate": 0.632183908045977,
+                "min": -0.00039999999999995595,
+                "max": 0.05710000000000004
+              },
+              {
+                "n": 87,
+                "w": 53,
+                "l": 34,
+                "rate": 0.6091954022988506,
+                "min": 0.057699999999999974,
+                "max": 0.1493
+              },
+              {
+                "n": 87,
+                "w": 49,
+                "l": 38,
+                "rate": 0.5632183908045977,
+                "min": 0.14939999999999998,
+                "max": 0.5022
+              }
+            ]
+          },
+          {
+            "key": "pick_era_edge",
+            "label": "Starting pitcher ERA edge (opponent's ERA minus the picked pitcher's)",
+            "n": 354,
+            "r": 0.030406243040343336,
+            "quartiles": [
+              {
+                "n": 88,
+                "w": 51,
+                "l": 37,
+                "rate": 0.5795454545454546,
+                "min": -2.6300000000000003,
+                "max": -0.10000000000000009
+              },
+              {
+                "n": 88,
+                "w": 49,
+                "l": 39,
+                "rate": 0.5568181818181818,
+                "min": -0.0600000000000005,
+                "max": 0.5
+              },
+              {
+                "n": 88,
+                "w": 48,
+                "l": 40,
+                "rate": 0.5454545454545454,
+                "min": 0.5,
+                "max": 1.08
+              },
+              {
+                "n": 90,
+                "w": 55,
+                "l": 35,
+                "rate": 0.6111111111111112,
+                "min": 1.0800000000000005,
+                "max": 4.49
+              }
+            ]
+          },
+          {
+            "key": "pick_woba_gap",
+            "label": "Offense wOBA edge, last 15 days (picked side minus opponent)",
+            "n": 278,
+            "r": 0.023906485180837007,
+            "quartiles": [
+              {
+                "n": 69,
+                "w": 34,
+                "l": 35,
+                "rate": 0.4927536231884058,
+                "min": -0.07990000000000003,
+                "max": -0.012800000000000034
+              },
+              {
+                "n": 69,
+                "w": 41,
+                "l": 28,
+                "rate": 0.5942028985507246,
+                "min": -0.01150000000000001,
+                "max": 0.0116
+              },
+              {
+                "n": 69,
+                "w": 40,
+                "l": 29,
+                "rate": 0.5797101449275363,
+                "min": 0.011799999999999977,
+                "max": 0.02939999999999998
+              },
+              {
+                "n": 71,
+                "w": 40,
+                "l": 31,
+                "rate": 0.5633802816901409,
+                "min": 0.029500000000000026,
+                "max": 0.10559999999999997
+              }
+            ]
+          },
+          {
+            "key": "pick_pitcher_gap",
+            "label": "Starting pitcher score edge (picked side minus opponent)",
+            "n": 354,
+            "r": -0.019366588858893388,
+            "quartiles": [
+              {
+                "n": 88,
+                "w": 51,
+                "l": 37,
+                "rate": 0.5795454545454546,
+                "min": -45,
+                "max": 0
+              },
+              {
+                "n": 88,
+                "w": 51,
+                "l": 37,
+                "rate": 0.5795454545454546,
+                "min": 1,
+                "max": 9
+              },
+              {
+                "n": 88,
+                "w": 52,
+                "l": 36,
+                "rate": 0.5909090909090909,
+                "min": 9,
+                "max": 18
+              },
+              {
+                "n": 90,
+                "w": 49,
+                "l": 41,
+                "rate": 0.5444444444444444,
+                "min": 18,
+                "max": 53
+              }
+            ]
+          },
+          {
+            "key": "lab_pitching_plan_points",
+            "label": "Lab Rating's pitching-plan component score",
+            "n": 354,
+            "r": 0.016233998468051417,
+            "quartiles": [
+              {
+                "n": 88,
+                "w": 52,
+                "l": 36,
+                "rate": 0.5909090909090909,
+                "min": 0,
+                "max": 6
+              },
+              {
+                "n": 88,
+                "w": 50,
+                "l": 38,
+                "rate": 0.5681818181818182,
+                "min": 6,
+                "max": 11
+              },
+              {
+                "n": 88,
+                "w": 50,
+                "l": 38,
+                "rate": 0.5681818181818182,
+                "min": 11,
+                "max": 19
+              },
+              {
+                "n": 90,
+                "w": 51,
+                "l": 39,
+                "rate": 0.5666666666666667,
+                "min": 19,
+                "max": 30
+              }
+            ]
+          },
+          {
+            "key": "lab_pitcher_edge_points",
+            "label": "Lab Rating's pitcher-edge component score",
+            "n": 354,
+            "r": 0.012170120517093281,
+            "quartiles": [
+              {
+                "n": 88,
+                "w": 53,
+                "l": 35,
+                "rate": 0.6022727272727273,
+                "min": 0,
+                "max": 0
+              },
+              {
+                "n": 88,
+                "w": 49,
+                "l": 39,
+                "rate": 0.5568181818181818,
+                "min": 0,
+                "max": 9
+              },
+              {
+                "n": 88,
+                "w": 47,
+                "l": 41,
+                "rate": 0.5340909090909091,
+                "min": 9.1,
+                "max": 14
+              },
+              {
+                "n": 90,
+                "w": 54,
+                "l": 36,
+                "rate": 0.6,
+                "min": 14,
+                "max": 30
+              }
+            ]
+          },
+          {
+            "key": "pick_own_bullpen_risk",
+            "label": "Picked team's own bullpen fatigue score (regardless of the opponent's)",
+            "n": 354,
+            "r": -0.0037357946567125205,
+            "quartiles": [
+              {
+                "n": 88,
+                "w": 51,
+                "l": 37,
+                "rate": 0.5795454545454546,
+                "min": 32,
+                "max": 54
+              },
+              {
+                "n": 88,
+                "w": 49,
+                "l": 39,
+                "rate": 0.5568181818181818,
+                "min": 54,
+                "max": 64
+              },
+              {
+                "n": 88,
+                "w": 53,
+                "l": 35,
+                "rate": 0.6022727272727273,
+                "min": 64,
+                "max": 74
+              },
+              {
+                "n": 90,
+                "w": 50,
+                "l": 40,
+                "rate": 0.5555555555555556,
+                "min": 75,
+                "max": 100
+              }
+            ]
+          }
+        ],
+        "categorical": [
+          {
+            "key": "status_tier",
+            "label": "Pick tier (official / value watch / watchlist / pass)",
+            "groups": [
+              {
+                "label": "official_pick",
+                "n": 28,
+                "w": 18,
+                "l": 10,
+                "rate": 0.6428571428571429
+              },
+              {
+                "label": "watchlist",
+                "n": 55,
+                "w": 33,
+                "l": 22,
+                "rate": 0.6
+              },
+              {
+                "label": "value_watch",
+                "n": 5,
+                "w": 3,
+                "l": 2,
+                "rate": 0.6
+              },
+              {
+                "label": "pass",
+                "n": 266,
+                "w": 149,
+                "l": 117,
+                "rate": 0.5601503759398496
+              }
+            ]
+          },
+          {
+            "key": "home_away",
+            "label": "Picked the home team vs. the road team",
+            "groups": [
+              {
+                "label": "Home",
+                "n": 197,
+                "w": 121,
+                "l": 76,
+                "rate": 0.6142131979695431
+              },
+              {
+                "label": "Road",
+                "n": 157,
+                "w": 82,
+                "l": 75,
+                "rate": 0.5222929936305732
+              }
+            ]
+          },
+          {
+            "key": "day_of_week",
+            "label": "Day of the week",
+            "groups": [
+              {
+                "label": "Thu",
+                "n": 34,
+                "w": 21,
+                "l": 13,
+                "rate": 0.6176470588235294
+              },
+              {
+                "label": "Wed",
+                "n": 60,
+                "w": 37,
+                "l": 23,
+                "rate": 0.6166666666666667
+              },
+              {
+                "label": "Mon",
+                "n": 38,
+                "w": 23,
+                "l": 15,
+                "rate": 0.6052631578947368
+              },
+              {
+                "label": "Sun",
+                "n": 46,
+                "w": 27,
+                "l": 19,
+                "rate": 0.5869565217391305
+              },
+              {
+                "label": "Tue",
+                "n": 60,
+                "w": 34,
+                "l": 26,
+                "rate": 0.5666666666666667
+              },
+              {
+                "label": "Fri",
+                "n": 58,
+                "w": 32,
+                "l": 26,
+                "rate": 0.5517241379310345
+              },
+              {
+                "label": "Sat",
+                "n": 58,
+                "w": 29,
+                "l": 29,
+                "rate": 0.5
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "hard_stop": "Coach findings are review prompts only. No automatic threshold, weight, formula, publishing, or betting change is permitted."
+  }
 }
