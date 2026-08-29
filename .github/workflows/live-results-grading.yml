@@ -4,7 +4,7 @@ name: Live results grading
 
 on:
   schedule:
-    - cron: "0 13 * * *"    
+    - cron: "0 12-23 * * *"    
   workflow_dispatch:
     inputs:
       date:
@@ -57,17 +57,7 @@ jobs:
           test -f results/index.html || { echo "ERROR: results/index.html missing"; exit 1; }
           grep -q "Today's Pick Status" results/index.html || { echo "ERROR: live pick status block missing"; exit 1; }
           echo "Live results page generated."
-
-      - name: Re-capture K props only on pitcher change
-        env:
-          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
-        run: node scripts/update-k-props.js --if-changed || true
-
-      - name: Re-capture totals only on pitcher change
-        env:
-          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
-        run: node scripts/update-totals.js --if-changed || true
-
+          
       - name: Commit and push if changed
         run: |
           git config user.name "lydia-bot"
