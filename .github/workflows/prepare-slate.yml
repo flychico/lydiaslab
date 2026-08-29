@@ -9,11 +9,11 @@ name: Prepare slate (gather data)
 
 on:
   schedule:
-    - cron: "50 14 * * *"   # 10:50am ET — before the 11:05 publish
-    - cron: "5 16 * * *"    # 12:05pm ET — before the 12:20 publish
-    - cron: "20 18 * * *"   # 2:20pm ET  — before the 2:35 publish
-    - cron: "15 21 * * *"   # 5:45pm ET  — before the 6:00 publish
-    - cron: "15 23 * * *"   # 5:15pm ET  —
+    - cron: "45 11 * * *"   # 10:50am ET
+    - cron: "45 12 * * *"    # 12:05pm ET
+    - cron: "05 15 * * *"   # 2:20pm ET 
+    - cron: "05 18 * * *"   # 5:45pm ET  
+    - cron: "00 21 * * *"   
   workflow_dispatch:
     inputs:
       date:
