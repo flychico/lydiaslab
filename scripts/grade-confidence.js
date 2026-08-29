@@ -133,14 +133,26 @@ const COMPONENTS = [
 // (clamp(pickBullpenInnings / BULLPEN_FULL_INNINGS, BULLPEN_MIN_WEIGHT, 1)) --
 // the risk-index gap alone under-determines the score. offense_points and
 // conviction_points needed nothing added; their raw inputs were already here.
-const LOG_SCORED = ["conviction_points", "pitching_plan_points", "bullpen_points", "offense_points"];
+// 2026-08-29, Lynold's explicit instruction: confidence_log.csv's columns
+// changed to match lab_rating_inputs_log.csv's schema exactly (same 22
+// columns, same order, same names -- see scripts/export-lab-rating-inputs.js).
+// This is CSV OUTPUT ONLY -- the six-component breakdown (conviction/
+// pitching-plan/bullpen/offense) that this script's actual analysis runs on
+// (band calibration, component lift, worst misses -- all written to
+// confidence_report.json) is computed exactly as before; collect() below
+// still gathers every COMPONENTS field into each row, just no longer writes
+// those point values into the CSV. lab_version and pitcher_edge_team are
+// likewise still collected (lab_version feeds by_lab_version in the report)
+// but no longer written to the CSV either, since they're not in the
+// requested column set.
 const LOG_COLUMNS = [
-  "date", "gamePk", "lab_version", "status", "pick_team",
-  "pitcher_edge_team", "pitcher_gap",
-  "pick_bullpen_risk_index", "opp_bullpen_risk_index", "pick_bullpen_innings",
+  "date", "gamePk", "matchup", "pick_team", "opp_team", "status", "result",
+  "lab_score_published", "model_prob", "strength_prob_pick", "run_prob_pick",
+  "pick_pitcher_score", "opp_pitcher_score",
+  "pick_bullpen_risk", "opp_bullpen_risk", "assigned_bullpen_innings",
   "pick_woba_15d", "opp_woba_15d", "pick_woba_30d", "opp_woba_30d",
-  "lab_score", "model_prob", "result"
-].concat(LOG_SCORED);
+  "pitch_gap", "pitch_edge_supports"
+];
 const HEADER = LOG_COLUMNS.join(",");
 
 const csvField = s => {
@@ -216,6 +228,24 @@ function collect(outcomes) {
       // same field bullpenPoints()'s weight factor is computed from.
       const plan = g.pitching_plan || {};
       const pickPlan = plan[g.side] || {};
+      // 2026-08-29 additions, matching export-lab-rating-inputs.js's
+      // pick-relative conventions exactly: opp_team is the side not picked;
+      // strength_prob_pick/run_prob_pick flip the home-relative brief field
+      // when the pick is away (both already exist on g, home-relative, same
+      // as everywhere else in this pipeline); pick/opp_pitcher_score read
+      // g.model_pitcher_score_home/away by which side was picked;
+      // pitch_edge_supports reuses pe.team (already stored, already applies
+      // the same <4-point "no clear edge" threshold pitcher-matchup-core.js
+      // computes it with) rather than recomputing that threshold here.
+      const oppTeam = pickHome ? g.away_team : g.home_team;
+      const strengthProbHome = num(g.legacy_strength_probability);
+      const strengthProbPick = strengthProbHome === null ? null : Number((pickHome ? strengthProbHome : 1 - strengthProbHome).toFixed(4));
+      const runProbHome = num(g.run_model_probability);
+      const runProbPick = runProbHome === null ? null : Number((pickHome ? runProbHome : 1 - runProbHome).toFixed(4));
+      const pickPitcherScore = num(pickHome ? g.model_pitcher_score_home : g.model_pitcher_score_away);
+      const oppPitcherScore = num(pickHome ? g.model_pitcher_score_away : g.model_pitcher_score_home);
+      const pitchEdgeSupports = Boolean(pe.team) && pe.team === g.pick_team;
+
       const row = {
         date, gamePk: g.game_pk,
         lab_version: b.version || brief.lab_rating_version || "unknown",
@@ -225,8 +255,14 @@ function collect(outcomes) {
         won: outcomes.get(key),
         game: g.game || "",
         pick: g.pick_team || "",
+        opp_team: oppTeam || "",
+        strength_prob_pick: strengthProbPick,
+        run_prob_pick: runProbPick,
+        pick_pitcher_score: pickPitcherScore,
+        opp_pitcher_score: oppPitcherScore,
         pitcher_edge_team: pe.team || "",
         pitcher_gap: num(pe.gap),
+        pitch_edge_supports: pitchEdgeSupports,
         pick_bullpen_risk_index: num(pickBp.risk_index),
         opp_bullpen_risk_index: num(oppBp.risk_index),
         pick_bullpen_innings: num(pickPlan.bullpen_innings),
@@ -362,12 +398,14 @@ function mmddyyyy(iso) {
   return m ? `${m[2]}/${m[3]}/${m[1]}` : iso;
 }
 const body = rows.map(r => [
-  mmddyyyy(r.date), r.gamePk, csvField(r.lab_version), r.status, csvField(r.pick),
-  csvField(r.pitcher_edge_team), blank(r.pitcher_gap),
+  mmddyyyy(r.date), r.gamePk, csvField(r.game), csvField(r.pick), csvField(r.opp_team),
+  r.status, r.won ? "W" : "L",
+  blank(r.lab), blank(r.prob), blank(r.strength_prob_pick), blank(r.run_prob_pick),
+  blank(r.pick_pitcher_score), blank(r.opp_pitcher_score),
   blank(r.pick_bullpen_risk_index), blank(r.opp_bullpen_risk_index), blank(r.pick_bullpen_innings),
   blank(r.pick_woba_15d), blank(r.opp_woba_15d), blank(r.pick_woba_30d), blank(r.opp_woba_30d),
-  r.lab, r.prob, r.won ? "W" : "L"
-].concat(LOG_SCORED.map(k => blank(r[k]))).join(",")).join("\n");
+  blank(r.pitcher_gap), r.pitch_edge_supports ? "TRUE" : "FALSE"
+].join(",")).join("\n");
 fs.writeFileSync(LOG, HEADER + "\n" + body + "\n");
 
 const byVersion = {};
