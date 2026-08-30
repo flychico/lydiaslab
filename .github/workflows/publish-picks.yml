@@ -1,43 +1,55 @@
 name: Publish picks
 
-# Publishing only. Runs LAST.
+# Rebuilt from scratch 2026-08-29, Lynold's explicit instruction, alongside
+# Prepare slate. Publishing only -- runs after Prepare slate, on a fixed
+# 15-minute offset from each of its 5 waves.
 #
-# Rebuilt 2026-08-03. Everything that gathers data moved to prepare-slate.yml;
-# the manual pitching-plan editor moved to pitching-plan.yml; the Research Desk
-# was dropped. What is left is what the name says: run the moneyline model over
-# data that has already been gathered and committed, lock the card, render the
-# pages, email.
+# Trimmed on the same instruction: dropped every step that only VERIFIES
+# (asserts something and fails loud, but writes nothing) -- verify-totals-
+# freshness.js, verify-pitcher-matchup-alignment.js, verify-pitching-plans.js,
+# verify-picks-bullpen.js, test-official-market-grading.js,
+# verify-official-markets.js, verify-google-analytics.js, and the old
+# multi-file cross-check block + assert-public-clean.js. Confirmed each one
+# has zero file-write side effects before dropping it -- none of them fed
+# data anything else reads. Also dropped the intraday "Refresh learning
+# summary" step -- daily-recap.yml already refreshes it every morning, and
+# matchup pages no longer read Coach history since the 2026-08-28 removal.
 #
-# REMOVED IN THE REBUILD, and why
-#   - Apply manual pitching plan     -> pitching-plan.yml. Changing one opener
-#                                       should not require regenerating every
-#                                       matchup page and risking an email.
-#   - Refresh totals projections     -> prepare-slate.yml, where it runs AFTER
-#                                       the bullpen file exists. It ran before
-#                                       it here, so totals were built with no
-#                                       bullpen input at all. ERR-20260803-01.
-#   - Provisional source data pass   -> prepare-slate.yml. This was the first of
-#                                       two full model passes; the second one
-#                                       below is now the only one. The round
-#                                       trip existed so totals could sit between
-#                                       them, and totals no longer lives here.
-#   - Refresh LyDia Research Desk    -> dropped entirely. A content scraper with
-#                                       no relationship to picks, running five
-#                                       times a day because publish did.
+# KEPT despite being asked to trim exports: export-pregame-attribution.js,
+# export-pitcher-data.js, export-lab-rating-inputs.js. These are named like
+# the diagnostics but they are not decorative -- they are the only thing that
+# writes attribution_model_log.csv, pitcher_data_log.csv and
+# lab_rating_inputs_log.csv, which is what the Coach correlation engine and
+# the confidence report (both built earlier today) actually run on. Dropping
+# them would not trim a nice-to-have, it would silently stop the historical
+# ledger that feeds everything built this session. Flagging this explicitly
+# rather than dropping them quietly.
+#
+# Also kept: site-health-cleanup.js, normalize-pitcher-tool-source.js,
+# normalize-public-shell.js. These fix real HTML on the live site (stale
+# nav/footer, a missing script tag, bad generated artifacts) rather than
+# just asserting something -- a different category from the verify-*.js
+# scripts above, so "trim verification checks" doesn't cover them.
+#
+# One minimal safety net replaces the old elaborate verification block:
+# member-brief and published-picks must both exist for the date before
+# anything commits. Everything else that used to double-check specific
+# fields (pitcher alignment, bullpen retention, market grading) is gone --
+# a real reduction in the safety net, by design, per this rebuild's brief.
 #
 # DAILY ORDER
 #   Prepare slate  ->  (optional Pitching plan, then Prepare slate again)  ->  Publish picks
+#
+# Five waves, ~15 min after each Prepare slate wave:
+#   11:05am, 12:20pm, 2:00pm, 4:00pm, 6:45pm ET
 
 on:
   schedule:
-    # GitHub cron is UTC (EDT = UTC-4 in season). One run per first-pitch wave,
-    # each ~15 minutes after that wave's prepare-slate run. Concurrency below
-    # serializes them.
-    - cron: "0 12 * * *"    
-    - cron: "05 13 * * *"   
-    - cron: "35 15 * * *"   
-    - cron: "30 18 * * *"     
-    - cron: "30 21 * * *"
+    - cron: "5 15 * * *"    # 11:05am ET
+    - cron: "20 16 * * *"   # 12:20pm ET
+    - cron: "0 18 * * *"    # 2:00pm ET
+    - cron: "0 20 * * *"    # 4:00pm ET
+    - cron: "45 22 * * *"   # 6:45pm ET
 
   workflow_dispatch:
     inputs:
@@ -90,7 +102,7 @@ jobs:
           echo "date=$DATE_INPUT" >> "$GITHUB_OUTPUT"
           echo "Resolved publish date: $DATE_INPUT"
 
-      # Publish now depends on prepare-slate having run. Say so plainly rather
+      # Publish depends on Prepare slate having run. Say so plainly rather
       # than letting the model silently build on a missing or stale capture.
       - name: Confirm the slate was prepared
         run: |
@@ -109,9 +121,6 @@ jobs:
             [ -f "$f/$DATE.json" ] && printf "  %-28s %s bytes\n" "$f/$DATE.json" "$(wc -c < "$f/$DATE.json")" || printf "  %-28s absent\n" "$f/$DATE.json"
           done
 
-      - name: Verify totals capture matches confirmed probables
-        run: node scripts/verify-totals-freshness.js "${{ steps.publish_date.outputs.date }}"
-        
       - name: Clean invalid generated artifacts
         run: node scripts/site-health-cleanup.js --fix
 
@@ -127,34 +136,17 @@ jobs:
             --date "${{ steps.publish_date.outputs.date }}" \
             --snapshot "${SNAPSHOT_INPUT:-posted}"
 
-      # 2026-08-15, Lynold's explicit instruction: the same pregame model
-      # inputs/derived-calc columns as attribution_model_log.csv, captured
-      # same-day from the member brief this step just wrote -- BEFORE
-      # daily-recap.yml grades anything tomorrow morning. Upserts by
-      # (date, gamePk), so later publish waves the same day (pitcher
-      # confirmations, line moves) overwrite this run's rows rather than
-      # duplicating them. See scripts/export-pregame-attribution.js.
+      # These three feed the historical learning ledgers (attribution,
+      # pitcher-score, Lab Rating raw inputs) that grade-calibration.js,
+      # grade-confidence.js and the Coach correlation engine all run on.
+      # Captured same-day, before tomorrow's recap grades anything. See the
+      # header note above for why these three specifically survived the trim.
       - name: Export pregame attribution snapshot
         run: node scripts/export-pregame-attribution.js "${{ steps.publish_date.outputs.date }}"
 
-      # 2026-08-15, Lynold's explicit instruction: the same pitcher-level
-      # inputs behind pitcher_score (era/whip/ip/so/bb/gs/gp from MLB StatsAPI,
-      # plus the derived score components) for every probable in today's
-      # member brief -- captured same-day, before the recap. Also computes an
-      # independent roleShare-over-5 comparison column alongside the live
-      # (roleShare-over-5.5) published score; does not touch the live model.
-      # See scripts/export-pitcher-data.js.
       - name: Export daily pitcher data
         run: node scripts/export-pitcher-data.js "${{ steps.publish_date.outputs.date }}"
 
-      # 2026-08-16, built same session as the Lab Rating rebalance, but never
-      # actually wired into this workflow until 2026-08-22 -- the script sat
-      # in scripts/ unused, so data/calibration/lab_rating_inputs_log.csv
-      # never existed. Same upsert-by-(date,gamePk) pattern as the two export
-      # steps above; captures calcLabRating()'s raw inputs (model_prob,
-      # pitch_gap, bullpen risk, assigned bullpen innings, pick-relative wOBA
-      # windows) one level upstream of the pre-computed point values already
-      # in the member brief. See scripts/export-lab-rating-inputs.js.
       - name: Export daily Lab Rating inputs
         run: node scripts/export-lab-rating-inputs.js "${{ steps.publish_date.outputs.date }}"
 
@@ -167,41 +159,19 @@ jobs:
       - name: Generate matchup pages with indexing quality gate
         run: node scripts/generate-matchup-pages.js "${{ steps.publish_date.outputs.date }}"
 
-      - name: Verify matchup pages use Pitcher Matchup Tool data
-        run: node scripts/verify-pitcher-matchup-alignment.js "${{ steps.publish_date.outputs.date }}"
+      - name: Normalize public shell and language
+        run: node scripts/normalize-public-shell.js
 
-      - name: Verify opener and bulk pitching plans flow through every model
-        run: node scripts/verify-pitching-plans.js "${{ steps.publish_date.outputs.date }}"
-
-      - name: Verify unified Picks and full-day bullpen retention
-        run: node scripts/verify-picks-bullpen.js "${{ steps.publish_date.outputs.date }}"
-
-      - name: Verify official totals, K props, and team-total research markets
-        run: |
-          node scripts/test-official-market-grading.js
-          node scripts/verify-official-markets.js "${{ steps.publish_date.outputs.date }}"
-
-      - name: Refresh learning summary and verify synchronized policy
-        run: |
-          node scripts/generate-learning-summary.js
-
-      - name: Normalize and verify Google Analytics
-        run: |
-          node scripts/normalize-public-shell.js
-          node scripts/verify-google-analytics.js
-
-      - name: Verify generated data and public copy
+      # Minimal safety net -- confirms the two files nothing else can recover
+      # from missing actually exist before anything commits. This replaces a
+      # much larger cross-check block; see the header note on what that
+      # traded away.
+      - name: Confirm the core published files exist
         run: |
           DATE_INPUT="${{ steps.publish_date.outputs.date }}"
-          test -f "data/member-brief/$DATE_INPUT.json" || { echo "ERROR: member brief missing"; exit 1; }
-          test -f "data/published-picks/$DATE_INPUT.json" || { echo "ERROR: official pick file missing"; exit 1; }
-          test -f "previews/$DATE_INPUT.html" || { echo "ERROR: preview page missing"; exit 1; }
-          test -f "data/pitcher-matchups/$DATE_INPUT.json" || { echo "ERROR: canonical pitcher data missing"; exit 1; }
-          test -f "data/matchup-pages/$DATE_INPUT.json" || { echo "ERROR: matchup manifest missing"; exit 1; }
-          test -f "mlb/matchups/index.html" || { echo "ERROR: matchup archive missing"; exit 1; }
-          node -e "const fs=require('fs'); const b=JSON.parse(fs.readFileSync('data/member-brief/$DATE_INPUT.json','utf8')); const p=JSON.parse(fs.readFileSync('data/published-picks/$DATE_INPUT.json','utf8')); const s=JSON.parse(fs.readFileSync('data/pitcher-matchups/$DATE_INPUT.json','utf8')); const m=JSON.parse(fs.readFileSync('data/matchup-pages/$DATE_INPUT.json','utf8')); if(!Array.isArray(b.games)||b.games.length===0) throw new Error('member brief has zero games'); if(!Array.isArray(p.picks)) throw new Error('official pick file has no picks array'); const pitcherGames=s.games||{}; const missingPitcherRows=b.games.filter(g=>!pitcherGames[String(g.game_pk)]); if(missingPitcherRows.length) throw new Error('missing pitcher data for member-brief games: '+missingPitcherRows.map(g=>g.game_pk).join(',')); if(!Array.isArray(m.pages)||m.total_pages!==m.pages.length) throw new Error('matchup manifest page count is invalid'); const manifestPks=new Set(m.pages.map(x=>String(x.game_pk))); const missingBriefPages=b.games.filter(g=>!manifestPks.has(String(g.game_pk))); if(missingBriefPages.length) throw new Error('member-brief games missing matchup pages: '+missingBriefPages.map(g=>g.game_pk).join(',')); const outputs=m.pages.map(x=>x.output); if(new Set(outputs).size!==outputs.length) throw new Error('duplicate matchup output paths detected'); if(m.pages.some(x=>!fs.existsSync(x.output))) throw new Error('one or more matchup pages are missing'); console.log('Active games:', b.games.length, 'Official picks:', p.picks.length, 'Pitcher rows available:', Object.keys(pitcherGames).length, 'Matchup pages retained:', m.total_pages, 'Indexable:', m.indexable_pages);"
-          node scripts/assert-public-clean.js
-          echo "Source data, previews and matchup pages verified."
+          test -f "data/member-brief/$DATE_INPUT.json" || { echo "::error::member brief missing for $DATE_INPUT"; exit 1; }
+          test -f "data/published-picks/$DATE_INPUT.json" || { echo "::error::official pick file missing for $DATE_INPUT"; exit 1; }
+          echo "Core published files present for $DATE_INPUT."
 
       - name: Commit and push if changed
         run: |
@@ -212,7 +182,6 @@ jobs:
           # Generated outputs are authoritative for these paths. Snapshot them
           # before synchronizing with main so a concurrent manual upload cannot
           # cause a rebase conflict at the end of an otherwise valid publish.
-          # "articles" is gone with the Research Desk.
           GENERATED_PATHS=(previews picks data sitemap.xml member-brief results tools mlb)
           SNAPSHOT_DIR=$(mktemp -d)
           for path in "${GENERATED_PATHS[@]}"; do
@@ -236,7 +205,7 @@ jobs:
 
           # -A, not a path list. A hardcoded add list goes stale the moment a
           # generator writes somewhere new, and the failure surfaces as an
-          # unrelated git error. ERR-20260720, and again ERR-20260803-02.
+          # unrelated git error (ERR-20260720, ERR-20260803-02).
           git add -A
           if git diff --cached --quiet; then
             echo "No changes to commit."
@@ -245,10 +214,10 @@ jobs:
             git push
           fi
 
+      # Publish runs several times a day to catch each wave's posted lineups.
+      # Only the first scheduled run of the day emails; later runs update the
+      # card and pages silently. The marker is committed so this survives runs.
       - name: Check if today's member emails already went out
-        # Publish runs several times a day to catch each wave's posted lineups.
-        # Only the first scheduled run of the day emails; later runs update the
-        # card and pages silently. The marker is committed so this survives runs.
         id: email_gate
         run: |
           DATE_INPUT="${{ steps.publish_date.outputs.date }}"
@@ -261,10 +230,6 @@ jobs:
             echo "No email marker for $DATE_INPUT yet — this run is eligible to send."
           fi
 
-      # 2026-08-24: NETLIFY_API_TOKEN / NETLIFY_SITE_ID removed. Both scripts now read
-      # signup emails from data/signups/*.csv on the "signups" branch (public raw content,
-      # no token needed) instead of the Netlify Forms API, which stopped working the moment
-      # DNS moved off Netlify. See cloudflare-worker/DEPLOY.md for the replacement backend.
       - name: Email picks to paid members
         if: ${{ (github.event_name == 'schedule' && steps.email_gate.outputs.already_sent != 'true') || github.event.inputs.send_email == 'true' }}
         env:

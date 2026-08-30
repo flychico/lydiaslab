@@ -1,19 +1,34 @@
 name: Prepare slate (gather data)
 
+# Rebuilt from scratch 2026-08-29, Lynold's explicit instruction. Two real
+# problems drove this:
+#   1. The schedule was not reliable -- separately confirmed real automated
+#      runs firing at times matching nothing in this file's own crons.
+#   2. The crons that WERE committed here did not match their own comments --
+#      "45 12 * * *" was commented 12:05pm ET but actually fires at 8:45am ET,
+#      and two other lines were off by 1-3 hours the same way. Anyone reading
+#      the comments to reason about the schedule was reading the wrong times.
+#
+# Trimmed on the same instruction: this version keeps only the steps that
+# gather and commit real data. Dropped entirely: npm install (nothing left
+# in this file needs it -- only the Excel export below used exceljs),
+# the Excel companion export, and the end-of-run console report. All three
+# were genuinely diagnostic -- none of them fed anything another script or
+# workflow reads.
+#
 # DAILY RHYTHM
 #   Prepare slate  ->  (optional: Pitching plan, then Prepare slate again)  ->  Publish picks
 #
-# Scheduled ~15 minutes before each publish wave so publish always reads fresh
-# committed data rather than fetching it itself.
-
+# Five waves, fixed offset (Publish picks fires ~15 min after each of these):
+#   10:50am, 12:05pm, 1:45pm, 3:45pm, 6:30pm ET
 
 on:
   schedule:
-    - cron: "45 11 * * *"   # 10:50am ET
-    - cron: "45 12 * * *"    # 12:05pm ET
-    - cron: "05 15 * * *"   # 2:20pm ET 
-    - cron: "05 18 * * *"   # 5:45pm ET  
-    - cron: "00 21 * * *"   
+    - cron: "50 14 * * *"   # 10:50am ET
+    - cron: "5 16 * * *"    # 12:05pm ET
+    - cron: "45 17 * * *"   # 1:45pm ET
+    - cron: "45 19 * * *"   # 3:45pm ET
+    - cron: "30 22 * * *"   # 6:30pm ET
   workflow_dispatch:
     inputs:
       date:
@@ -24,7 +39,7 @@ on:
 permissions:
   contents: write
 
-# Never let two gathers overlap — they write the same files.
+# Never let two gathers overlap -- they write the same files.
 concurrency:
   group: prepare-slate
   cancel-in-progress: false
@@ -37,18 +52,13 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-
-      # 2026-08-09: package.json now exists solely for exceljs (used by
-      # scripts/lib/kprops-xlsx.js to write data/k-props/<date>.xlsx). Every
-      # other script in this repo still uses only Node built-ins — this
-      # install exists for that one dependency.
-      - name: Install dependencies
-        run: npm install
 
       - name: Resolve slate date
         id: slate_date
@@ -70,8 +80,9 @@ jobs:
           fi
           echo "ODDS_API_KEY present."
 
-      # Writes data/bullpen/<date>.json, which update-totals reads in step 3.
-      # --defer-publish true means no official card is locked here.
+      # Writes data/bullpen/<date>.json, which update-totals reads in the
+      # step below. --defer-publish true means no official card is locked
+      # here -- that only happens in Publish picks.
       - name: Gather bullpen and provisional source data
         run: |
           node scripts/generate-member-lab.js \
@@ -84,16 +95,6 @@ jobs:
       - name: Capture strikeout prop lines and projections
         run: node scripts/update-k-props.js "${{ steps.slate_date.outputs.date }}" --if-changed
 
-      # 2026-08-09: human-readable companion to data/k-props/<date>.json —
-      # same 43 columns as kprops_log.csv. Pre-game, so actual_k/ou_result/
-      # error columns are blank; grade-calibration.js refreshes this same
-      # file the next morning once results are known. Runs every time above,
-      # even under --if-changed's skip, so the export always matches
-      # whatever is currently in the .json (cheap: no API call, just a
-      # local read + xlsx write).
-      - name: Export K-props capture to Excel
-        run: node scripts/export-kprops-xlsx.js "${{ steps.slate_date.outputs.date }}"
-
       - name: Capture totals lines and projections
         run: node scripts/update-totals.js "${{ steps.slate_date.outputs.date }}" --if-changed
 
@@ -104,33 +105,6 @@ jobs:
       - name: Capture moneyline odds
         run: node scripts/update-moneyline-odds.js --date "${{ steps.slate_date.outputs.date }}" --if-changed
 
-      # Report, do not gate. A thin slate is worth seeing in the log; failing
-      # here would leave the day with no committed data at all, which is worse
-      # than partial data. Publish has its own checks.
-      - name: What was gathered
-        run: |
-          DATE="${{ steps.slate_date.outputs.date }}"
-          for f in "data/bullpen/$DATE.json" "data/k-props/$DATE.json" "data/totals/$DATE.json" "data/moneyline-odds/$DATE.json"; do
-            if [ -f "$f" ]; then
-              printf "  %-40s %s bytes\n" "$f" "$(wc -c < "$f")"
-            else
-              printf "  %-40s MISSING\n" "$f"
-            fi
-          done
-          node -e "
-            const fs=require('fs');
-            const d='${{ steps.slate_date.outputs.date }}';
-            const read=p=>{try{return JSON.parse(fs.readFileSync(p,'utf8'))}catch(e){return null}};
-            const k=read('data/k-props/'+d+'.json');
-            const t=read('data/totals/'+d+'.json');
-            const m=read('data/moneyline-odds/'+d+'.json');
-            const b=read('data/bullpen/'+d+'.json');
-            console.log('  bullpen teams   :', b&&b.teams?Object.keys(b.teams).length:(b&&b.teams_by_name?Object.keys(b.teams_by_name).length:0));
-            console.log('  k-props pitchers:', k&&k.pitchers?Object.keys(k.pitchers).length:0, ' events:', k?k.events_fetched:0);
-            console.log('  totals games    :', t&&t.games?Object.keys(t.games).length:0, ' version:', t?t.model_version:'-');
-            console.log('  moneyline games :', m&&m.games?Object.keys(m.games).length:(Array.isArray(m&&m.events)?m.events.length:0));
-          "
-
       - name: Commit and push if changed
         run: |
           set -euo pipefail
@@ -138,17 +112,13 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           mkdir -p data/k-props data/totals data/moneyline-odds data/bullpen data/member-brief
 
-          # Stage EVERYTHING, not a path list.
-          #
-          # generate-member-lab.js does not only write data/. It also injects
-          # inline data into previews/, member-brief/index.html,
-          # results/index.html and tools/bullpen-fatigue/index.html. A path-scoped
-          # git add leaves those unstaged, and `git pull --rebase` then refuses to
-          # run at all — "cannot pull with rebase: You have unstaged changes" —
-          # so the commit is created but never pushed. That is ERR-20260720
-          # exactly: a hardcoded add list going stale the moment a generator
-          # starts writing somewhere new. The checkout is fresh, so anything
-          # modified here was written by this run and belongs in the commit.
+          # Stage EVERYTHING, not a path list. generate-member-lab.js writes
+          # inline data into previews/, member-brief/index.html, results/
+          # index.html and tools/bullpen-fatigue/index.html in addition to
+          # data/ -- a path-scoped add leaves those unstaged and then
+          # `git pull --rebase` refuses to run at all (ERR-20260720). The
+          # checkout is fresh, so anything modified here was written by this
+          # run and belongs in the commit.
           git add -A
           if git diff --cached --quiet; then
             echo "No change to commit."
@@ -157,6 +127,3 @@ jobs:
           git commit -m "Prepare slate ${{ steps.slate_date.outputs.date }}"
           git pull --rebase
           git push
-
-      - name: Next step
-        run: echo "Slate gathered and committed. Run 'Publish picks' when ready — it reads these files."
