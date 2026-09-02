@@ -47,6 +47,14 @@ const { OFFICIAL_MODEL_PROB, OFFICIAL_LAB_SCORE } = require("./lib/gate-constant
 const ROOT = path.join(__dirname, "..");
 const RESULTS_PATH = path.join(ROOT, "data", "results.json");
 const CLV_PATH = path.join(ROOT, "data", "clv", "clv_log.csv");
+// 2026-08-30, Lynold's direct instruction: the Findings section only ever
+// counted how often a flag tripped (bullpen caution, pitcher conflict) --
+// never whether that flag actually predicted anything. grade-confidence.js
+// already computes the real answer nightly (component lift/correlation,
+// rating-band calibration) into confidence_report.json; it just never fed
+// into this file. Read-only here -- this script never recomputes those
+// numbers, only reports them.
+const CONFIDENCE_REPORT_PATH = path.join(ROOT, "data", "calibration", "confidence_report.json");
 
 const args = parseArgs(process.argv.slice(2));
 
@@ -78,8 +86,9 @@ function main() {
 
   const allDays = dates.map(d => results.days[d]);
   const clvRows = readCsvSafe(CLV_PATH);
+  const confidenceReport = readJsonSafe(CONFIDENCE_REPORT_PATH);
 
-  const summary = buildLearningSummary({ date, day, allDays, clvRows });
+  const summary = buildLearningSummary({ date, day, allDays, clvRows, confidenceReport });
 
   writeJson(`data/learning/${date}.json`, summary);
   writeJson("data/learning-summary.json", summary);
@@ -88,7 +97,7 @@ function main() {
   console.log(`Learning summary generated for ${date}.`);
 }
 
-function buildLearningSummary({ date, day, allDays, clvRows }) {
+function buildLearningSummary({ date, day, allDays, clvRows, confidenceReport }) {
   const picks = Array.isArray(day.picks) ? day.picks : [];
   const gradedMoneyline = picks
     .map(p => normalizePickForLearning(p, day.source))
@@ -167,7 +176,8 @@ function buildLearningSummary({ date, day, allDays, clvRows }) {
     protectedByGate,
     highBullpenRisk,
     pitcherConflict,
-    clvCounts
+    clvCounts,
+    confidenceReport
   });
 
   // Computed before the headline so a zero-picks-today date can still
@@ -304,8 +314,52 @@ function legacyMarketRows(p) {
 // moneyline-heavy). The "Official-pick discipline" finding below still
 // reports honestly when today's count is zero; it just no longer skips the
 // other three.
+// 2026-08-30, Lynold's direct instruction: "this should be telling us what
+// is working vs what is not working." Before this, every finding here was a
+// static count of how often a flag tripped (bullpen caution, pitcher
+// conflict) -- never whether that flag actually predicted a win or a loss.
+// The real answer to that already gets computed every night by
+// grade-confidence.js into confidence_report.json (component win-rate
+// lift/correlation, rating-band calibration) -- it just never fed into this
+// file. This function now reads those numbers rather than duplicating the
+// statistics. See scripts/grade-confidence.js for the method; this is
+// display-only.
+//
+// Separately, "which raw inputs (pitcher score, wOBA, team strength, ...)
+// actually predict winning" is answered by scripts/lib/coach-correlation-core.js
+// and rendered as its own "Full-history correlation findings" card
+// (data/learning-summary.json's coach.history, written by
+// scripts/generate-coach.js). Findings below deliberately do NOT repeat
+// that -- it asks a different question (do the raw inputs work) from this
+// section (does Lab Rating's own scoring reward the right things, and is
+// the rating honestly calibrated).
+function signed(v, digits = 3) {
+  return (typeof v === "number" && Number.isFinite(v)) ? `${v >= 0 ? "+" : ""}${v.toFixed(digits)}` : "n/a";
+}
+function pctSigned(v) {
+  return (typeof v === "number" && Number.isFinite(v)) ? `${v >= 0 ? "+" : ""}${(v * 100).toFixed(1)}%` : "n/a";
+}
+// Shared verdict logic so a component gets the same read wherever it's
+// mentioned in this file -- lift (median-split win-rate difference) and
+// corr_with_win (full-range correlation) can disagree in sign, which is a
+// real property of a non-straight-line relationship, not a bug. Picking
+// whichever number sounds more confident and hiding the other would
+// misrepresent the data.
+function componentVerdict(comp) {
+  if (!comp) return "";
+  const weak = comp.corr_with_win < 0.02;
+  const disagree = weak && comp.lift > 0.02;
+  if (disagree) return " Correlation and the median-split lift disagree in sign here -- a sign the relationship isn't a straight line, not clear evidence either way.";
+  if (weak) return " Currently not earning its points -- moves the score without moving the record.";
+  return "";
+}
+
 function buildFindings(ctx) {
   const findings = [];
+  const cr = ctx.confidenceReport;
+  const components = (cr && Array.isArray(cr.components))
+    ? cr.components.filter(c => !c.constant && typeof c.corr_with_win === "number")
+    : [];
 
   if (ctx.gradedMoneyline.length) {
     findings.push({
@@ -326,19 +380,69 @@ function buildFindings(ctx) {
       : "No high-Lab, low-probability moneyline setups appeared in the graded official set."
   });
 
+  // ---- What's working vs. not, in Lab Rating's own scoring ----
+  if (components.length) {
+    const ranked = [...components].sort((a, b) => b.corr_with_win - a.corr_with_win);
+    const best = ranked[0];
+    const worst = ranked[ranked.length - 1];
+    findings.push({
+      title: "What's working: Lab Rating components",
+      read: `Over ${best.n} graded picks with a reconciling breakdown, ${best.component} is the strongest working piece of Lab Rating right now -- picks scoring above its median win ${pct(best.win_rate_above)} of the time vs. ${pct(best.win_rate_below)} below (lift ${pctSigned(best.lift)}, correlation to winning ${signed(best.corr_with_win)}).`
+    });
+    if (worst.key !== best.key) {
+      const notWorking = worst.corr_with_win < 0.02;
+      const disagree = notWorking && worst.lift > 0.02;
+      findings.push({
+        title: disagree ? "Mixed signal: Lab Rating component" : (notWorking ? "What's not working: Lab Rating components" : "Weakest-working Lab Rating component"),
+        read: `${worst.component} -- correlation to winning ${signed(worst.corr_with_win)}, lift ${pctSigned(worst.lift)} over ${worst.n} picks.${componentVerdict(worst)}`
+      });
+    }
+  } else {
+    findings.push({
+      title: "Lab Rating component check",
+      read: cr
+        ? (cr.components_note || "Not enough reconciling Lab Rating breakdowns yet to check which components actually earn their points.")
+        : "data/calibration/confidence_report.json not found yet -- run grade-confidence.js to unlock a real working/not-working check here."
+    });
+  }
+
+  // ---- Bullpen and pitcher: keep the original real-world flag counts
+  // (a different, still-useful question -- "how often did this specific
+  // caution actually show up today's/history's picks") but now attach the
+  // statistical read on whether that flag predicts anything, when available.
+  const bullpenComp = components.find(c => c.key === "bullpen_points");
   findings.push({
     title: "Bullpen learning",
-    read: ctx.highBullpenRisk.length
-      ? `Across all reviewed days, ${ctx.highBullpenRisk.length} graded moneyline pick${ctx.highBullpenRisk.length === 1 ? "" : "s"} carried a meaningful bullpen caution. Review these before adjusting thresholds.`
-      : "No graded moneyline picks carried a major bullpen caution."
+    read: (ctx.highBullpenRisk.length
+      ? `Across all reviewed days, ${ctx.highBullpenRisk.length} graded moneyline pick${ctx.highBullpenRisk.length === 1 ? "" : "s"} carried a meaningful bullpen caution.`
+      : "No graded moneyline picks carried a major bullpen caution.")
+      + (bullpenComp
+        ? ` Statistically, Lab Rating's bullpen component correlates ${signed(bullpenComp.corr_with_win)} with winning over ${bullpenComp.n} picks (lift ${pctSigned(bullpenComp.lift)}).${componentVerdict(bullpenComp)}`
+        : "")
   });
 
+  const pitchComp = components.find(c => c.key === "pitching_plan_points");
   findings.push({
     title: "Pitcher learning",
-    read: ctx.pitcherConflict.length
+    read: (ctx.pitcherConflict.length
       ? `Across all reviewed days, ${ctx.pitcherConflict.length} graded pick${ctx.pitcherConflict.length === 1 ? "" : "s"} had a starting-pitcher conflict. These need manual review.`
-      : "No major starting-pitcher conflicts showed up in the graded moneyline set."
+      : "No major starting-pitcher conflicts showed up in the graded moneyline set.")
+      + (pitchComp
+        ? ` Statistically, the pitching-plan component correlates ${signed(pitchComp.corr_with_win)} with winning over ${pitchComp.n} picks (lift ${pctSigned(pitchComp.lift)}).${componentVerdict(pitchComp)}`
+        : "")
   });
+
+  // ---- Is a high rating actually more reliable than a middling one? ----
+  if (cr && Array.isArray(cr.rating_bands) && cr.rating_bands.length >= 2) {
+    const bands = cr.rating_bands;
+    const worstGap = [...bands].sort((a, b) => a.gap - b.gap)[0];
+    const top = bands[bands.length - 1];
+    findings.push({
+      title: "Rating calibration",
+      read: `Actual win rate by Lab Rating band: ${bands.map(b => `${b.band} → ${pct(b.actual_win_rate)} (n=${b.n})`).join(", ")}. Widest predicted-vs-actual gap is the ${worstGap.band} band (${pctSigned(worstGap.gap)}).`
+        + (top.n < 10 ? ` The top band has only ${top.n} graded picks so far -- too few to trust its win rate yet, watch as the sample grows.` : "")
+    });
+  }
 
   return findings;
 }

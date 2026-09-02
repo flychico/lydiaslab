@@ -134,7 +134,19 @@ const FEATURES = [
   { key: "lab_pitching_plan_points", label: "Lab Rating's pitching-plan component score" },
   { key: "lab_bullpen_points", label: "Lab Rating's bullpen component score" },
   { key: "lab_conviction_points", label: "Lab Rating's conviction component score" },
-  { key: "lab_pitcher_edge_points", label: "Lab Rating's pitcher-edge component score" }
+  { key: "lab_pitcher_edge_points", label: "Lab Rating's pitcher-edge component score" },
+  // 2026-08-30, Lynold's direct follow-up: "relationship between a pitcher
+  // and a team winning or losing" -- pick_pitcher_gap above is opponent-
+  // relative (picked pitcher's score minus the opponent's), which predates
+  // the 2026-08-26 individualized Pitching Plan redesign. The model itself
+  // no longer scores a pitcher against his opponent; it scores him against
+  // a fixed 50-80 range on his own merits (see PITCHER_SCORE_FLOOR/CEILING
+  // in lab-rating-core.js). This feature asks the more direct version of
+  // Lynold's question: does a pitcher's OWN score predict his team winning,
+  // independent of what the other starter did that day. Sourced from
+  // attribution_model_log.csv's home_pitcher_score/away_pitcher_score,
+  // already collected there.
+  { key: "pick_pitcher_score", label: "Starting pitcher's own score (picked side, judged on its own merits, not against the opponent)" }
 ];
 
 /*
@@ -224,6 +236,12 @@ function loadHistoricalRows(ROOT) {
     const pickTeamStrengthEdge = (homeBlend !== null && awayBlend !== null)
       ? (pickHome ? homeBlend - awayBlend : awayBlend - homeBlend) : null;
 
+    // 2026-08-30 addition -- see the FEATURES comment above. Raw, not a
+    // gap: the picked pitcher's own home_pitcher_score/away_pitcher_score,
+    // whichever side was actually picked. Already collected on every
+    // attribution_model_log.csv row; just never read out as its own feature.
+    const pickPitcherScore = pickHome ? num(a.home_pitcher_score) : num(a.away_pitcher_score);
+
     // Lab Rating sub-components -- not in either CSV, only in member-brief
     // (see header comment). Missing brief for this date/game just means
     // these 5 stay null for this row, same "no guess" rule as everywhere
@@ -254,7 +272,8 @@ function loadHistoricalRows(ROOT) {
         lab_pitching_plan_points: lab ? num(lab.pitching_plan_points) : null,
         lab_bullpen_points: lab ? num(lab.bullpen_points) : null,
         lab_conviction_points: lab ? num(lab.conviction_points) : null,
-        lab_pitcher_edge_points: lab ? num(lab.pitcher_edge_points) : null
+        lab_pitcher_edge_points: lab ? num(lab.pitcher_edge_points) : null,
+        pick_pitcher_score: pickPitcherScore
       }
     });
   }
