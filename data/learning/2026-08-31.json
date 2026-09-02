@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-09-01T12:41:47.745Z",
+  "generated_at": "2026-09-02T00:18:35.681Z",
   "status": "ready",
   "latest_date": "2026-08-31",
-  "days_reviewed": 30,
+  "days_reviewed": 31,
   "source_files": {
     "results": "data/results.json",
     "clv": "data/clv/clv_log.csv"
@@ -50,12 +50,24 @@
       "read": "No high-Lab, low-probability moneyline setups appeared in the graded official set."
     },
     {
+      "title": "What's working: Lab Rating components",
+      "read": "Over 253 graded picks with a reconciling breakdown, pitching plan is the strongest working piece of Lab Rating right now -- picks scoring above its median win 61.0% of the time vs. 56.1% below (lift +4.8%, correlation to winning +0.104)."
+    },
+    {
+      "title": "What's not working: Lab Rating components",
+      "read": "bullpen -- correlation to winning -0.084, lift -4.3% over 253 picks. Currently not earning its points -- moves the score without moving the record."
+    },
+    {
       "title": "Bullpen learning",
-      "read": "Across all reviewed days, 8 graded moneyline picks carried a meaningful bullpen caution. Review these before adjusting thresholds."
+      "read": "Across all reviewed days, 8 graded moneyline picks carried a meaningful bullpen caution. Statistically, Lab Rating's bullpen component correlates -0.084 with winning over 253 picks (lift -4.3%). Currently not earning its points -- moves the score without moving the record."
     },
     {
       "title": "Pitcher learning",
-      "read": "No major starting-pitcher conflicts showed up in the graded moneyline set."
+      "read": "No major starting-pitcher conflicts showed up in the graded moneyline set. Statistically, the pitching-plan component correlates +0.104 with winning over 253 picks (lift +4.8%)."
+    },
+    {
+      "title": "Rating calibration",
+      "read": "Actual win rate by Lab Rating band: 0-49 → 54.1% (n=98), 50-64 → 58.5% (n=82), 65-74 → 65.1% (n=43), 75-84 → 64.0% (n=25), 85-100 → 60.0% (n=5). Widest predicted-vs-actual gap is the 85-100 band (-12.7%). The top band has only 5 graded picks so far -- too few to trust its win rate yet, watch as the sample grows."
     }
   ],
   "calibration": {
@@ -170,7 +182,7 @@
     },
     "kprops": {
       "status": "ready",
-      "self_calibration": "+0.33 K correction active (n=150)",
+      "self_calibration": "+0.29 K correction active (n=150)",
       "graded": 651,
       "with_projection": 646,
       "bias": -0.08,
@@ -1981,6 +1993,46 @@
                 "rate": 0.6138613861386139,
                 "min": 20,
                 "max": 30
+              }
+            ]
+          },
+          {
+            "key": "pick_pitcher_score",
+            "label": "Starting pitcher's own score (picked side, judged on its own merits, not against the opponent)",
+            "n": 398,
+            "r": -0.019184661994471924,
+            "quartiles": [
+              {
+                "n": 99,
+                "w": 55,
+                "l": 44,
+                "rate": 0.5555555555555556,
+                "min": 33,
+                "max": 61
+              },
+              {
+                "n": 99,
+                "w": 61,
+                "l": 38,
+                "rate": 0.6161616161616161,
+                "min": 62,
+                "max": 69
+              },
+              {
+                "n": 99,
+                "w": 62,
+                "l": 37,
+                "rate": 0.6262626262626263,
+                "min": 69,
+                "max": 76
+              },
+              {
+                "n": 101,
+                "w": 55,
+                "l": 46,
+                "rate": 0.5445544554455446,
+                "min": 76,
+                "max": 92
               }
             ]
           },
