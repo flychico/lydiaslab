@@ -1,6 +1,6 @@
 {
   "date": "2026-09-05",
-  "generated_at": "2026-09-05T16:57:53.354Z",
+  "generated_at": "2026-09-05T17:16:04.373Z",
   "snapshot_type": "posted",
   "source_of_truth": "LyDia Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -11,7 +11,7 @@
     "minimum_lab_score": 72,
     "note": "Lab Rating grades LyDia's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
   },
-  "summary": "4 official picks cleared their market gates: 4 moneyline. 0 value-watch setups had good price math but did not clear official-pick rules.",
+  "summary": "Brief generated without live market pricing. Treat the card as research-only until pricing is checked.",
   "official_card": [
     {
       "game_pk": 824389,
@@ -95,12 +95,77 @@
       "side": "home",
       "model_probability": 0.726,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
+      "projected_runs": {
+        "away": 2,
+        "home": 4.8,
+        "total": 7.4
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 664285,
+              "pitcher": "Framber Valdez",
+              "expected_innings": 5.580246913580247,
+              "fip_lite": 4.04,
+              "pitcher_score": 58,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.419753086419753
+            }
+          ],
+          "expected_innings": 5.6,
+          "bullpen_innings": 3.4,
+          "effective_era": 4.91,
+          "pitcher_score": 58,
+          "bullpen_carries_game": false,
+          "description": "Framber Valdez 5.6 IP + remaining bullpen 3.4 IP",
+          "pitcher": "Framber Valdez",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 800048,
+              "pitcher": "Parker Messick",
+              "expected_innings": 5.962962962962963,
+              "fip_lite": 3.08,
+              "pitcher_score": 81,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.037037037037037
+            }
+          ],
+          "expected_innings": 6,
+          "bullpen_innings": 3,
+          "effective_era": 3.02,
+          "pitcher_score": 81,
+          "bullpen_carries_game": false,
+          "description": "Parker Messick 6.0 IP + remaining bullpen 3.0 IP",
+          "pitcher": "Parker Messick",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.952,
-      "model_effective_era_away": 4.36,
-      "model_effective_era_home": 2.75,
+      "model_effective_era_away": 4.91,
+      "model_effective_era_home": 3.02,
       "model_pitcher_score_away": 58,
       "model_pitcher_score_home": 81,
       "team_strength_blend_away": 0.4723,
@@ -116,7 +181,7 @@
         "applied_home": -0.0174,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.859,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.953,
       "edge": 0.1372,
@@ -133,15 +198,15 @@
         "offense_points": 45.69,
         "completeness_points": 0,
         "pitcher_edge_points": 40,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.093,
+        "model_agreement_credit": 0.439,
+        "assigned_bullpen_innings": 3,
         "offense_delta": 0.0496,
         "offense_delta_15d": 0.0674,
         "offense_delta_30d": 0.0319,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -154,7 +219,7 @@
         "lab_score_passed": true
       },
       "pass_reason": null,
-      "read": "Cleveland Guardians is an official moneyline pick because it clears both gates: 72.6% model win probability and 9.4/10 Lab Rating. LyDia projects 72.6% against a 58.9% no-vig market number, a 13.7% model edge at -152. Cleveland Guardians owns the starting pitcher edge by 23 points. Bullpen read: Both bullpens stressed. Cleveland Guardians's pen efficiency: Effective (6.0/10). Bullpen fatigue moved this probability down 22.7 points from 95.3% (starting pitcher and team strength only) to 72.6%. Lineup check: Cleveland Guardians is swinging a hot bat (+0.051 OPS); Detroit Tigers is in a cold stretch (-0.137 OPS). Recent form supports this side and is included in the unified run projection.",
+      "read": "Cleveland Guardians is an official moneyline pick because it clears both gates: 72.6% model win probability and 9.4/10 Lab Rating. LyDia projects 72.6% against a 58.9% no-vig market number, a 13.7% model edge at -152. Cleveland Guardians owns the starting pitcher edge by 23 points. Bullpen read: Both bullpens stressed. Cleveland Guardians's pen efficiency: Effective (6.0/10). Lineup check: Cleveland Guardians is swinging a hot bat (+0.051 OPS); Detroit Tigers is in a cold stretch (-0.137 OPS). Recent form supports this side and is included in the unified run projection.",
       "pitcher_edge": {
         "team": "Cleveland Guardians",
         "gap": 23,
@@ -362,12 +427,77 @@
       "side": "away",
       "model_probability": 0.636,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
+      "projected_runs": {
+        "away": 6.7,
+        "home": 4.5,
+        "total": 12
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 665871,
+              "pitcher": "Javier Assad",
+              "expected_innings": 5.2,
+              "fip_lite": 4.93,
+              "pitcher_score": 70,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.8
+            }
+          ],
+          "expected_innings": 5.2,
+          "bullpen_innings": 3.8,
+          "effective_era": 5.05,
+          "pitcher_score": 70,
+          "bullpen_carries_game": false,
+          "description": "Javier Assad 5.2 IP + remaining bullpen 3.8 IP",
+          "pitcher": "Javier Assad",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 687473,
+              "pitcher": "Ryan Gusto",
+              "expected_innings": 4.166666666666666,
+              "fip_lite": 3.94,
+              "pitcher_score": 62,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.833333333333334
+            }
+          ],
+          "expected_innings": 4.2,
+          "bullpen_innings": 4.8,
+          "effective_era": 4.5,
+          "pitcher_score": 62,
+          "bullpen_carries_game": false,
+          "description": "Ryan Gusto 4.2 IP + remaining bullpen 4.8 IP",
+          "pitcher": "Ryan Gusto",
+          "role": "limited_starter",
+          "label": "Limited starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.7719,
-      "model_effective_era_away": 3.5,
-      "model_effective_era_home": 3.94,
+      "model_effective_era_away": 5.05,
+      "model_effective_era_home": 4.5,
       "model_pitcher_score_away": 70,
       "model_pitcher_score_home": 62,
       "team_strength_blend_away": 0.5494,
@@ -383,10 +513,10 @@
         "applied_home": 0.0234,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.7431,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.766,
-      "edge": 0.0987,
+      "edge": 0.0988,
       "status": "official_pick",
       "value_tag": "OFFICIAL PICK",
       "lab_score": 81,
@@ -400,15 +530,15 @@
         "offense_points": 50,
         "completeness_points": 0,
         "pitcher_edge_points": 26.67,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.0288,
+        "model_agreement_credit": 0.932,
+        "assigned_bullpen_innings": 3.8,
         "offense_delta": 0.0655,
         "offense_delta_15d": 0.0873,
         "offense_delta_30d": 0.0437,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -421,7 +551,7 @@
         "lab_score_passed": true
       },
       "pass_reason": null,
-      "read": "Chicago Cubs is an official moneyline pick because it clears both gates: 63.6% model win probability and 8.1/10 Lab Rating. LyDia projects 63.6% against a 53.7% no-vig market number, a 9.9% model edge at -120. Chicago Cubs owns the starting pitcher edge by 8 points. Bullpen read: Elevated volatility. Chicago Cubs's pen efficiency: Average (4.7/10). Bullpen fatigue moved this probability down 13.0 points from 76.6% (starting pitcher and team strength only) to 63.6%. Lineup check: Chicago Cubs is swinging a hot bat (+0.135 OPS); Miami Marlins is a touch below its season form (-0.048 OPS). Recent form supports this side and is included in the unified run projection.",
+      "read": "Chicago Cubs is an official moneyline pick because it clears both gates: 63.6% model win probability and 8.1/10 Lab Rating. LyDia projects 63.6% against a 53.7% no-vig market number, a 9.9% model edge at -120. Chicago Cubs owns the starting pitcher edge by 8 points. Bullpen read: Elevated volatility. Chicago Cubs's pen efficiency: Average (4.7/10). Pitching plan: Ryan Gusto 4.2 IP + remaining bullpen 4.8 IP. Bullpen fatigue, efficiency, and combined risk grade only the innings assigned to the bullpen. Lineup check: Chicago Cubs is swinging a hot bat (+0.135 OPS); Miami Marlins is a touch below its season form (-0.048 OPS). Recent form supports this side and is included in the unified run projection.",
       "pitcher_edge": {
         "team": "Chicago Cubs",
         "gap": 8,
@@ -629,12 +759,77 @@
       "side": "away",
       "model_probability": 0.7263,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
+      "projected_runs": {
+        "away": 3.8,
+        "home": 5.5,
+        "total": 10
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 543243,
+              "pitcher": "Sonny Gray",
+              "expected_innings": 5.746666666666666,
+              "fip_lite": 3.5,
+              "pitcher_score": 75,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.253333333333334
+            }
+          ],
+          "expected_innings": 5.7,
+          "bullpen_innings": 3.3,
+          "effective_era": 4,
+          "pitcher_score": 75,
+          "bullpen_carries_game": false,
+          "description": "Sonny Gray 5.7 IP + remaining bullpen 3.3 IP",
+          "pitcher": "Sonny Gray",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 605135,
+              "pitcher": "Chris Bassitt",
+              "expected_innings": 4.952380952380952,
+              "fip_lite": 4.33,
+              "pitcher_score": 48,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.047619047619048
+            }
+          ],
+          "expected_innings": 5,
+          "bullpen_innings": 4,
+          "effective_era": 3.28,
+          "pitcher_score": 48,
+          "bullpen_carries_game": false,
+          "description": "Chris Bassitt 5.0 IP + remaining bullpen 4.0 IP",
+          "pitcher": "Chris Bassitt",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.9525,
-      "model_effective_era_away": 2.76,
-      "model_effective_era_home": 4.89,
+      "model_effective_era_away": 4,
+      "model_effective_era_home": 3.28,
       "model_pitcher_score_away": 75,
       "model_pitcher_score_home": 48,
       "team_strength_blend_away": 0.5396,
@@ -650,7 +845,7 @@
         "applied_home": -0.0085,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.2905,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9561,
       "edge": 0.1869,
@@ -667,15 +862,15 @@
         "offense_points": 36.75,
         "completeness_points": 0,
         "pitcher_edge_points": 33.33,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.6621,
+        "model_agreement_credit": 0,
+        "assigned_bullpen_innings": 3.3,
         "offense_delta": 0.0282,
         "offense_delta_15d": 0.0302,
         "offense_delta_30d": 0.0262,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -688,7 +883,7 @@
         "lab_score_passed": true
       },
       "pass_reason": null,
-      "read": "Boston Red Sox is an official moneyline pick because it clears both gates: 72.6% model win probability and 7.9/10 Lab Rating. LyDia projects 72.6% against a 53.9% no-vig market number, a 18.7% model edge at -121. Boston Red Sox owns the starting pitcher edge by 27 points. Bullpen read: Adds caution. Boston Red Sox's pen efficiency: Struggling (2.1/10). Bullpen fatigue moved this probability down 23.0 points from 95.6% (starting pitcher and team strength only) to 72.6%. Lineup check: Boston Red Sox is near its season form (+0.012 OPS); Baltimore Orioles is a touch below its season form (-0.037 OPS).",
+      "read": "Boston Red Sox is an official moneyline pick because it clears both gates: 72.6% model win probability and 7.9/10 Lab Rating. LyDia projects 72.6% against a 53.9% no-vig market number, a 18.7% model edge at -121. Boston Red Sox owns the starting pitcher edge by 27 points. Bullpen read: Adds caution. Boston Red Sox's pen efficiency: Struggling (2.1/10). Lineup check: Boston Red Sox is near its season form (+0.012 OPS); Baltimore Orioles is a touch below its season form (-0.037 OPS).",
       "pitcher_edge": {
         "team": "Boston Red Sox",
         "gap": 27,
@@ -896,12 +1091,77 @@
       "side": "home",
       "model_probability": 0.7302,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
+      "projected_runs": {
+        "away": 2.4,
+        "home": 4.6,
+        "total": 7.7
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 579328,
+              "pitcher": "Yusei Kikuchi",
+              "expected_innings": 4.777777777777778,
+              "fip_lite": 4.3,
+              "pitcher_score": 46,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.222222222222222
+            }
+          ],
+          "expected_innings": 4.8,
+          "bullpen_innings": 4.2,
+          "effective_era": 4.69,
+          "pitcher_score": 46,
+          "bullpen_carries_game": false,
+          "description": "Yusei Kikuchi 4.8 IP + remaining bullpen 4.2 IP",
+          "pitcher": "Yusei Kikuchi",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 677952,
+              "pitcher": "Braxton Ashcraft",
+              "expected_innings": 5.938271604938272,
+              "fip_lite": 3.46,
+              "pitcher_score": 73,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.061728395061728
+            }
+          ],
+          "expected_innings": 5.9,
+          "bullpen_innings": 3.1,
+          "effective_era": 3.27,
+          "pitcher_score": 73,
+          "bullpen_carries_game": false,
+          "description": "Braxton Ashcraft 5.9 IP + remaining bullpen 3.1 IP",
+          "pitcher": "Braxton Ashcraft",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.9605,
-      "model_effective_era_away": 5.46,
-      "model_effective_era_home": 3.54,
+      "model_effective_era_away": 4.69,
+      "model_effective_era_home": 3.27,
       "model_pitcher_score_away": 46,
       "model_pitcher_score_home": 73,
       "team_strength_blend_away": 0.3527,
@@ -917,10 +1177,10 @@
         "applied_home": 0.0029,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.7956,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9635,
-      "edge": 0.1063,
+      "edge": 0.1062,
       "status": "official_pick",
       "value_tag": "OFFICIAL PICK",
       "lab_score": 75,
@@ -934,15 +1194,15 @@
         "offense_points": 35.04,
         "completeness_points": 0,
         "pitcher_edge_points": 30.67,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.1648,
+        "model_agreement_credit": 0,
+        "assigned_bullpen_innings": 3.1,
         "offense_delta": 0.0241,
         "offense_delta_15d": 0.0225,
         "offense_delta_30d": 0.0257,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -955,7 +1215,7 @@
         "lab_score_passed": true
       },
       "pass_reason": null,
-      "read": "Pittsburgh Pirates is an official moneyline pick because it clears both gates: 73.0% model win probability and 7.5/10 Lab Rating. LyDia projects 73.0% against a 62.4% no-vig market number, a 10.6% model edge at -175. Pittsburgh Pirates owns the starting pitcher edge by 27 points. Bullpen read: Adds caution. Pittsburgh Pirates's pen efficiency: Effective (5.7/10). Bullpen fatigue moved this probability down 23.3 points from 96.4% (starting pitcher and team strength only) to 73.0%. Lineup check: Pittsburgh Pirates is in a cold stretch (-0.108 OPS); Los Angeles Angels is in a cold stretch (-0.096 OPS).",
+      "read": "Pittsburgh Pirates is an official moneyline pick because it clears both gates: 73.0% model win probability and 7.5/10 Lab Rating. LyDia projects 73.0% against a 62.4% no-vig market number, a 10.6% model edge at -175. Pittsburgh Pirates owns the starting pitcher edge by 27 points. Bullpen read: Adds caution. Pittsburgh Pirates's pen efficiency: Effective (5.7/10). Lineup check: Pittsburgh Pirates is in a cold stretch (-0.108 OPS); Los Angeles Angels is in a cold stretch (-0.096 OPS).",
       "pitcher_edge": {
         "team": "Pittsburgh Pirates",
         "gap": 27,
@@ -1163,12 +1423,77 @@
       "side": "home",
       "model_probability": 0.6124,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
+      "projected_runs": {
+        "away": 3.6,
+        "home": 4.5,
+        "total": 8.8
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 676917,
+              "pitcher": "Cade Cavalli",
+              "expected_innings": 5.264367816091954,
+              "fip_lite": 3.18,
+              "pitcher_score": 74,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.735632183908046
+            }
+          ],
+          "expected_innings": 5.3,
+          "bullpen_innings": 3.7,
+          "effective_era": 4.68,
+          "pitcher_score": 74,
+          "bullpen_carries_game": false,
+          "description": "Cade Cavalli 5.3 IP + remaining bullpen 3.7 IP",
+          "pitcher": "Cade Cavalli",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 607192,
+              "pitcher": "Tyler Glasnow",
+              "expected_innings": 5.7407407407407405,
+              "fip_lite": 3.31,
+              "pitcher_score": 79,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.2592592592592595
+            }
+          ],
+          "expected_innings": 5.7,
+          "bullpen_innings": 3.3,
+          "effective_era": 3.42,
+          "pitcher_score": 79,
+          "bullpen_carries_game": false,
+          "description": "Tyler Glasnow 5.7 IP + remaining bullpen 3.3 IP",
+          "pitcher": "Tyler Glasnow",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.7247,
-      "model_effective_era_away": 3.17,
-      "model_effective_era_home": 2.75,
+      "model_effective_era_away": 4.68,
+      "model_effective_era_home": 3.42,
       "model_pitcher_score_away": 74,
       "model_pitcher_score_home": 79,
       "team_strength_blend_away": 0.5194,
@@ -1184,10 +1509,10 @@
         "applied_home": -0.007,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.6224,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.7211,
-      "edge": -0.0528,
+      "edge": -0.0527,
       "status": "watchlist",
       "value_tag": "WATCHLIST",
       "lab_score": 65,
@@ -1201,15 +1526,15 @@
         "offense_points": 23.17,
         "completeness_points": 0,
         "pitcher_edge_points": 38.67,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.1024,
+        "model_agreement_credit": 0.367,
+        "assigned_bullpen_innings": 3.3,
         "offense_delta": -0.0044,
         "offense_delta_15d": -0.0068,
         "offense_delta_30d": -0.002,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -1222,7 +1547,7 @@
         "lab_score_passed": false
       },
       "pass_reason": null,
-      "read": "Los Angeles Dodgers remains on the watchlist. Lab Rating 6.5/10: conviction 3.12, pitching plan 38.67, offense 23.17. LyDia projects 61.2% against a 66.5% no-vig market number, a -5.3% model edge at -215. Los Angeles Dodgers owns the starting pitcher edge by 5 points. Bullpen read: Elevated volatility. Los Angeles Dodgers's pen efficiency: Average (4.6/10). Bullpen fatigue moved this probability down 10.9 points from 72.1% (starting pitcher and team strength only) to 61.2%. Lineup check: Los Angeles Dodgers is in a cold stretch (-0.089 OPS); Washington Nationals is in a cold stretch (-0.052 OPS).",
+      "read": "Los Angeles Dodgers remains on the watchlist. Lab Rating 6.5/10: conviction 3.12, pitching plan 38.67, offense 23.17. LyDia projects 61.2% against a 66.5% no-vig market number, a -5.3% model edge at -215. Los Angeles Dodgers owns the starting pitcher edge by 5 points. Bullpen read: Elevated volatility. Los Angeles Dodgers's pen efficiency: Average (4.6/10). Lineup check: Los Angeles Dodgers is in a cold stretch (-0.089 OPS); Washington Nationals is in a cold stretch (-0.052 OPS).",
       "pitcher_edge": {
         "team": "Los Angeles Dodgers",
         "gap": 5,
@@ -1430,12 +1755,77 @@
       "side": "away",
       "model_probability": 0.6651,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
+      "projected_runs": {
+        "away": 3.7,
+        "home": 3.2,
+        "total": 7.6
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 656876,
+              "pitcher": "Drew Rasmussen",
+              "expected_innings": 5.628205128205129,
+              "fip_lite": 2.82,
+              "pitcher_score": 80,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.3717948717948714
+            }
+          ],
+          "expected_innings": 5.6,
+          "bullpen_innings": 3.4,
+          "effective_era": 3.08,
+          "pitcher_score": 80,
+          "bullpen_carries_game": false,
+          "description": "Drew Rasmussen 5.6 IP + remaining bullpen 3.4 IP",
+          "pitcher": "Drew Rasmussen",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 594798,
+              "pitcher": "Jacob deGrom",
+              "expected_innings": 5.282051282051283,
+              "fip_lite": 3.14,
+              "pitcher_score": 71,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.717948717948717
+            }
+          ],
+          "expected_innings": 5.3,
+          "bullpen_innings": 3.7,
+          "effective_era": 4.15,
+          "pitcher_score": 71,
+          "bullpen_carries_game": false,
+          "description": "Jacob deGrom 5.3 IP + remaining bullpen 3.7 IP",
+          "pitcher": "Jacob deGrom",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.8301,
-      "model_effective_era_away": 2.92,
-      "model_effective_era_home": 4.01,
+      "model_effective_era_away": 3.08,
+      "model_effective_era_home": 4.15,
       "model_pitcher_score_away": 80,
       "model_pitcher_score_home": 71,
       "team_strength_blend_away": 0.5402,
@@ -1451,7 +1841,7 @@
         "applied_home": 0.012,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.5741,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.8175,
       "edge": 0.1651,
@@ -1468,15 +1858,15 @@
         "offense_points": 17.94,
         "completeness_points": 0,
         "pitcher_edge_points": 40,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.256,
+        "model_agreement_credit": 0,
+        "assigned_bullpen_innings": 3.4,
         "offense_delta": -0.0169,
         "offense_delta_15d": -0.0446,
         "offense_delta_30d": 0.0107,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -1697,12 +2087,77 @@
       "side": "away",
       "model_probability": 0.7255,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
+      "projected_runs": {
+        "away": 3.1,
+        "home": 2.6,
+        "total": 6.4
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 694297,
+              "pitcher": "Brandon Pfaadt",
+              "expected_innings": 5.977777777777779,
+              "fip_lite": 4.09,
+              "pitcher_score": 70,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.0222222222222213
+            }
+          ],
+          "expected_innings": 6,
+          "bullpen_innings": 3,
+          "effective_era": 3.81,
+          "pitcher_score": 70,
+          "bullpen_carries_game": false,
+          "description": "Brandon Pfaadt 6.0 IP + remaining bullpen 3.0 IP",
+          "pitcher": "Brandon Pfaadt",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "medium",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 814490,
+              "pitcher": "Ethan Pecko",
+              "expected_innings": 4.333333333333333,
+              "fip_lite": 4.79,
+              "pitcher_score": 34,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.666666666666667
+            }
+          ],
+          "expected_innings": 4.3,
+          "bullpen_innings": 4.7,
+          "effective_era": 4.56,
+          "pitcher_score": 34,
+          "bullpen_carries_game": false,
+          "description": "Ethan Pecko 4.3 IP + remaining bullpen 4.7 IP",
+          "pitcher": "Ethan Pecko",
+          "role": "limited_starter",
+          "label": "Limited starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.951,
-      "model_effective_era_away": 3.43,
-      "model_effective_era_home": 4.2,
+      "model_effective_era_away": 3.81,
+      "model_effective_era_home": 4.56,
       "model_pitcher_score_away": 70,
       "model_pitcher_score_home": 34,
       "team_strength_blend_away": 0.4909,
@@ -1718,7 +2173,7 @@
         "applied_home": -0.0109,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.5812,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9487,
       "edge": 0.228,
@@ -1735,15 +2190,15 @@
         "offense_points": 28.42,
         "completeness_points": 0,
         "pitcher_edge_points": 26.67,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.3699,
+        "model_agreement_credit": 0,
+        "assigned_bullpen_innings": 3,
         "offense_delta": 0.0082,
         "offense_delta_15d": -0.0089,
         "offense_delta_30d": 0.0253,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -1964,12 +2419,77 @@
       "side": "home",
       "model_probability": 0.6051,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
+      "projected_runs": {
+        "away": 3.4,
+        "home": 5,
+        "total": 9
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 527048,
+              "pitcher": "Martín Pérez",
+              "expected_innings": 5.075757575757576,
+              "fip_lite": 4.17,
+              "pitcher_score": 70,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.924242424242424
+            }
+          ],
+          "expected_innings": 5.1,
+          "bullpen_innings": 3.9,
+          "effective_era": 3.24,
+          "pitcher_score": 70,
+          "bullpen_carries_game": false,
+          "description": "Martín Pérez 5.1 IP + remaining bullpen 3.9 IP",
+          "pitcher": "Martín Pérez",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 554430,
+              "pitcher": "Zack Wheeler",
+              "expected_innings": 5.666666666666667,
+              "fip_lite": 3.63,
+              "pitcher_score": 75,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.333333333333333
+            }
+          ],
+          "expected_innings": 5.7,
+          "bullpen_innings": 3.3,
+          "effective_era": 3.21,
+          "pitcher_score": 75,
+          "bullpen_carries_game": false,
+          "description": "Zack Wheeler 5.7 IP + remaining bullpen 3.3 IP",
+          "pitcher": "Zack Wheeler",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.7101,
-      "model_effective_era_away": 3.14,
-      "model_effective_era_home": 3.28,
+      "model_effective_era_away": 3.24,
+      "model_effective_era_home": 3.21,
       "model_pitcher_score_away": 70,
       "model_pitcher_score_home": 75,
       "team_strength_blend_away": 0.6288,
@@ -1985,7 +2505,7 @@
         "applied_home": -0.0114,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.7075,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.7064,
       "edge": 0.0128,
@@ -2002,15 +2522,15 @@
         "offense_points": 26.79,
         "completeness_points": 0,
         "pitcher_edge_points": 33.33,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.0027,
+        "model_agreement_credit": 1,
+        "assigned_bullpen_innings": 3.3,
         "offense_delta": 0.0043,
         "offense_delta_15d": -0.0147,
         "offense_delta_30d": 0.0233,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -2231,12 +2751,77 @@
       "side": "home",
       "model_probability": 0.5863,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
+      "projected_runs": {
+        "away": 4.2,
+        "home": 4.5,
+        "total": 9.4
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "low",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 683627,
+              "pitcher": "Anthony Molina",
+              "expected_innings": 5,
+              "fip_lite": 4.19,
+              "pitcher_score": 67,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4
+            }
+          ],
+          "expected_innings": 5,
+          "bullpen_innings": 4,
+          "effective_era": 4.61,
+          "pitcher_score": 67,
+          "bullpen_carries_game": false,
+          "description": "Anthony Molina 5.0 IP + remaining bullpen 4.0 IP",
+          "pitcher": "Anthony Molina",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 804267,
+              "pitcher": "Zac Thornton",
+              "expected_innings": 5.575757575757576,
+              "fip_lite": 3.93,
+              "pitcher_score": 72,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.424242424242424
+            }
+          ],
+          "expected_innings": 5.6,
+          "bullpen_innings": 3.4,
+          "effective_era": 4.14,
+          "pitcher_score": 72,
+          "bullpen_carries_game": false,
+          "description": "Zac Thornton 5.6 IP + remaining bullpen 3.4 IP",
+          "pitcher": "Zac Thornton",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.6727,
-      "model_effective_era_away": 4.2,
-      "model_effective_era_home": 2.91,
+      "model_effective_era_away": 4.61,
+      "model_effective_era_home": 4.14,
       "model_pitcher_score_away": 67,
       "model_pitcher_score_home": 72,
       "team_strength_blend_away": 0.4204,
@@ -2252,10 +2837,10 @@
         "applied_home": -0.0071,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.5399,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.6498,
-      "edge": -0.0138,
+      "edge": -0.0139,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 57,
@@ -2269,15 +2854,15 @@
         "offense_points": 25.79,
         "completeness_points": 0,
         "pitcher_edge_points": 29.33,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.1327,
+        "model_agreement_credit": 0.133,
+        "assigned_bullpen_innings": 3.4,
         "offense_delta": 0.0019,
         "offense_delta_15d": -0.0198,
         "offense_delta_30d": 0.0236,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -2498,12 +3083,77 @@
       "side": "away",
       "model_probability": 0.537,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
+      "projected_runs": {
+        "away": 3.6,
+        "home": 3.8,
+        "total": 8.2
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 607074,
+              "pitcher": "Carlos Rodón",
+              "expected_innings": 4.916666666666667,
+              "fip_lite": 3.83,
+              "pitcher_score": 68,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.083333333333333
+            }
+          ],
+          "expected_innings": 4.9,
+          "bullpen_innings": 4.1,
+          "effective_era": 3.8,
+          "pitcher_score": 68,
+          "bullpen_carries_game": false,
+          "description": "Carlos Rodón 4.9 IP + remaining bullpen 4.1 IP",
+          "pitcher": "Carlos Rodón",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 592662,
+              "pitcher": "Robbie Ray",
+              "expected_innings": 5.487179487179487,
+              "fip_lite": 4.67,
+              "pitcher_score": 67,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.5128205128205128
+            }
+          ],
+          "expected_innings": 5.5,
+          "bullpen_innings": 3.5,
+          "effective_era": 3.77,
+          "pitcher_score": 67,
+          "bullpen_carries_game": false,
+          "description": "Robbie Ray 5.5 IP + remaining bullpen 3.5 IP",
+          "pitcher": "Robbie Ray",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.5741,
-      "model_effective_era_away": 3.31,
-      "model_effective_era_home": 3.14,
+      "model_effective_era_away": 3.8,
+      "model_effective_era_home": 3.77,
       "model_pitcher_score_away": 68,
       "model_pitcher_score_home": 67,
       "team_strength_blend_away": 0.6073,
@@ -2519,7 +3169,7 @@
         "applied_home": 0.0155,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.4712,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.5652,
       "edge": 0.0794,
@@ -2536,15 +3186,15 @@
         "offense_points": 29.25,
         "completeness_points": 0,
         "pitcher_edge_points": 24,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.1029,
+        "model_agreement_credit": 0.363,
+        "assigned_bullpen_innings": 4.1,
         "offense_delta": 0.0102,
         "offense_delta_15d": 0.0296,
         "offense_delta_30d": -0.0092,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -2765,12 +3415,77 @@
       "side": "away",
       "model_probability": 0.5749,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
+      "projected_runs": {
+        "away": 3.7,
+        "home": 4,
+        "total": 8.3
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 671737,
+              "pitcher": "Taj Bradley",
+              "expected_innings": 5.71604938271605,
+              "fip_lite": 3.9,
+              "pitcher_score": 66,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.28395061728395
+            }
+          ],
+          "expected_innings": 5.7,
+          "bullpen_innings": 3.3,
+          "effective_era": 4.43,
+          "pitcher_score": 66,
+          "bullpen_carries_game": false,
+          "description": "Taj Bradley 5.7 IP + remaining bullpen 3.3 IP",
+          "pitcher": "Taj Bradley",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 641743,
+              "pitcher": "Anthony Kay",
+              "expected_innings": 4.987179487179487,
+              "fip_lite": 4.38,
+              "pitcher_score": 60,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.012820512820513
+            }
+          ],
+          "expected_innings": 5,
+          "bullpen_innings": 4,
+          "effective_era": 4.01,
+          "pitcher_score": 60,
+          "bullpen_carries_game": false,
+          "description": "Anthony Kay 5.0 IP + remaining bullpen 4.0 IP",
+          "pitcher": "Anthony Kay",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.6499,
-      "model_effective_era_away": 3.84,
-      "model_effective_era_home": 4.27,
+      "model_effective_era_away": 4.43,
+      "model_effective_era_home": 4.01,
       "model_pitcher_score_away": 66,
       "model_pitcher_score_home": 60,
       "team_strength_blend_away": 0.4452,
@@ -2786,10 +3501,10 @@
         "applied_home": 0.0182,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.4577,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.6539,
-      "edge": 0.1021,
+      "edge": 0.102,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 51,
@@ -2803,15 +3518,15 @@
         "offense_points": 28.35,
         "completeness_points": 0,
         "pitcher_edge_points": 21.33,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.1922,
+        "model_agreement_credit": 0,
+        "assigned_bullpen_innings": 3.3,
         "offense_delta": 0.0081,
         "offense_delta_15d": 0.0116,
         "offense_delta_30d": 0.0045,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -3032,12 +3747,77 @@
       "side": "away",
       "model_probability": 0.601,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
+      "projected_runs": {
+        "away": 5.4,
+        "home": 3.5,
+        "total": 9.6
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 669160,
+              "pitcher": "Dustin May",
+              "expected_innings": 4.948717948717948,
+              "fip_lite": 3.31,
+              "pitcher_score": 59,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.051282051282052
+            }
+          ],
+          "expected_innings": 4.9,
+          "bullpen_innings": 4.1,
+          "effective_era": 3.03,
+          "pitcher_score": 59,
+          "bullpen_carries_game": false,
+          "description": "Dustin May 4.9 IP + remaining bullpen 4.1 IP",
+          "pitcher": "Dustin May",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 671096,
+              "pitcher": "Andrew Abbott",
+              "expected_innings": 5.297619047619048,
+              "fip_lite": 4.86,
+              "pitcher_score": 55,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.7023809523809517
+            }
+          ],
+          "expected_innings": 5.3,
+          "bullpen_innings": 3.7,
+          "effective_era": 5.23,
+          "pitcher_score": 55,
+          "bullpen_carries_game": false,
+          "description": "Andrew Abbott 5.3 IP + remaining bullpen 3.7 IP",
+          "pitcher": "Andrew Abbott",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.702,
-      "model_effective_era_away": 4.64,
-      "model_effective_era_home": 4.48,
+      "model_effective_era_away": 3.03,
+      "model_effective_era_home": 5.23,
       "model_pitcher_score_away": 59,
       "model_pitcher_score_home": 55,
       "team_strength_blend_away": 0.6412,
@@ -3053,7 +3833,7 @@
         "applied_home": -0.0094,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.7361,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.7057,
       "edge": 0.0156,
@@ -3070,15 +3850,15 @@
         "offense_points": 32.31,
         "completeness_points": 0,
         "pitcher_edge_points": 12,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.0341,
+        "model_agreement_credit": 0.892,
+        "assigned_bullpen_innings": 4.1,
         "offense_delta": 0.0175,
         "offense_delta_15d": 0.0055,
         "offense_delta_30d": 0.0296,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -3299,12 +4079,77 @@
       "side": "home",
       "model_probability": 0.6248,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
+      "projected_runs": {
+        "away": 4.4,
+        "home": 4.2,
+        "total": 9.3
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 669461,
+              "pitcher": "Matthew Liberatore",
+              "expected_innings": 4.987654320987654,
+              "fip_lite": 4.52,
+              "pitcher_score": 52,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.012345679012346
+            }
+          ],
+          "expected_innings": 5,
+          "bullpen_innings": 4,
+          "effective_era": 5.43,
+          "pitcher_score": 52,
+          "bullpen_carries_game": false,
+          "description": "Matthew Liberatore 5.0 IP + remaining bullpen 4.0 IP",
+          "pitcher": "Matthew Liberatore",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "medium",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 690279,
+              "pitcher": "Mason Adams",
+              "expected_innings": 4.5,
+              "fip_lite": 4.2,
+              "pitcher_score": 61,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.5
+            }
+          ],
+          "expected_innings": 4.5,
+          "bullpen_innings": 4.5,
+          "effective_era": 3.93,
+          "pitcher_score": 61,
+          "bullpen_carries_game": false,
+          "description": "Mason Adams 4.5 IP + remaining bullpen 4.5 IP",
+          "pitcher": "Mason Adams",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.7496,
-      "model_effective_era_away": 5.3,
-      "model_effective_era_home": 4.2,
+      "model_effective_era_away": 5.43,
+      "model_effective_era_home": 3.93,
       "model_pitcher_score_away": 52,
       "model_pitcher_score_home": 61,
       "team_strength_blend_away": 0.5132,
@@ -3320,7 +4165,7 @@
         "applied_home": 0.0035,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.4732,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.7306,
       "edge": 0.1561,
@@ -3337,15 +4182,15 @@
         "offense_points": 27.21,
         "completeness_points": 0,
         "pitcher_edge_points": 14.67,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.2764,
+        "model_agreement_credit": 0,
+        "assigned_bullpen_innings": 4.5,
         "offense_delta": 0.0053,
         "offense_delta_15d": 0.0122,
         "offense_delta_30d": -0.0016,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -3566,12 +4411,77 @@
       "side": "home",
       "model_probability": 0.6532,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
+      "projected_runs": {
+        "away": 3.9,
+        "home": 3.9,
+        "total": 8.6
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 453286,
+              "pitcher": "Max Scherzer",
+              "expected_innings": 4.384615384615385,
+              "fip_lite": 5.23,
+              "pitcher_score": 44,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.615384615384615
+            }
+          ],
+          "expected_innings": 4.4,
+          "bullpen_innings": 4.6,
+          "effective_era": 4.46,
+          "pitcher_score": 44,
+          "bullpen_carries_game": false,
+          "description": "Max Scherzer 4.4 IP + remaining bullpen 4.6 IP",
+          "pitcher": "Max Scherzer",
+          "role": "limited_starter",
+          "label": "Limited starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 607625,
+              "pitcher": "Seth Lugo",
+              "expected_innings": 5.5,
+              "fip_lite": 4.09,
+              "pitcher_score": 54,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.5
+            }
+          ],
+          "expected_innings": 5.5,
+          "bullpen_innings": 3.5,
+          "effective_era": 3.99,
+          "pitcher_score": 54,
+          "bullpen_carries_game": false,
+          "description": "Seth Lugo 5.5 IP + remaining bullpen 3.5 IP",
+          "pitcher": "Seth Lugo",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.8064,
-      "model_effective_era_away": 5.76,
-      "model_effective_era_home": 5.03,
+      "model_effective_era_away": 4.46,
+      "model_effective_era_home": 3.99,
       "model_pitcher_score_away": 44,
       "model_pitcher_score_home": 54,
       "team_strength_blend_away": 0.5341,
@@ -3587,7 +4497,7 @@
         "applied_home": 0.0186,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.5,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.7993,
       "edge": 0.1514,
@@ -3604,15 +4514,15 @@
         "offense_points": 29.46,
         "completeness_points": 0,
         "pitcher_edge_points": 5.33,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.3064,
+        "model_agreement_credit": 0,
+        "assigned_bullpen_innings": 3.5,
         "offense_delta": 0.0107,
         "offense_delta_15d": 0.0163,
         "offense_delta_30d": 0.0051,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -3833,12 +4743,77 @@
       "side": "home",
       "model_probability": 0.714,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
+      "projected_runs": {
+        "away": 5.2,
+        "home": 4.7,
+        "total": 10.5
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 605488,
+              "pitcher": "Jeffrey Springs",
+              "expected_innings": 4.92,
+              "fip_lite": 6,
+              "pitcher_score": 43,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.08
+            }
+          ],
+          "expected_innings": 4.9,
+          "bullpen_innings": 4.1,
+          "effective_era": 4.9,
+          "pitcher_score": 43,
+          "bullpen_carries_game": false,
+          "description": "Jeffrey Springs 4.9 IP + remaining bullpen 4.1 IP",
+          "pitcher": "Jeffrey Springs",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 669923,
+              "pitcher": "George Kirby",
+              "expected_innings": 5.871794871794871,
+              "fip_lite": 3.8,
+              "pitcher_score": 62,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.1282051282051286
+            }
+          ],
+          "expected_innings": 5.9,
+          "bullpen_innings": 3.1,
+          "effective_era": 4.69,
+          "pitcher_score": 62,
+          "bullpen_carries_game": false,
+          "description": "George Kirby 5.9 IP + remaining bullpen 3.1 IP",
+          "pitcher": "George Kirby",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.9279,
-      "model_effective_era_away": 6,
-      "model_effective_era_home": 4.19,
+      "model_effective_era_away": 4.9,
+      "model_effective_era_home": 4.69,
       "model_pitcher_score_away": 43,
       "model_pitcher_score_home": 62,
       "team_strength_blend_away": 0.4289,
@@ -3854,10 +4829,10 @@
         "applied_home": 0.0119,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.4377,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9267,
-      "edge": 0.0333,
+      "edge": 0.0334,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 35,
@@ -3871,15 +4846,15 @@
         "offense_points": 10.98,
         "completeness_points": 0,
         "pitcher_edge_points": 16,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.4903,
+        "model_agreement_credit": 0,
+        "assigned_bullpen_innings": 3.1,
         "offense_delta": -0.0337,
         "offense_delta_15d": -0.0379,
         "offense_delta_30d": -0.0294,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
