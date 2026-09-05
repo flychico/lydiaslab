@@ -465,10 +465,41 @@ function platesFor(w) {
   return parts.join(" + ") + " per side + 45 lb bar" + (side > 0.01 ? " (+" + side.toFixed(1) + " more/side)" : "");
 }
 function hydrateCustom(){ (S.customEx || []).forEach(c => { if (!EXBY[c.id]) { EX.push(c); } EXBY[c.id] = c; }); }
-function addCustomExercise(name, unit){
-  const c = { id: "custom-" + Date.now(), n: name.slice(0, 40), p: "custom", e: "bw", m: unit === "time" ? "Custom cardio" : "Custom", inc: unit === "time" ? 0 : 5, u: unit === "time" ? "time" : undefined };
+function addCustomExercise(name, unit, muscle){
+  const map = unit !== "time" ? CUSTOM_MUSCLE_MAP[muscle] : null;
+  const c = { id: "custom-" + Date.now(), n: name.slice(0, 40), p: unit === "time" ? "custom" : (map ? map.p : "custom"), e: "bw", m: unit === "time" ? "Custom cardio" : (map ? map.m : "Custom"), inc: unit === "time" ? 0 : 5, u: unit === "time" ? "time" : undefined };
   S.customEx = S.customEx || []; S.customEx.push(c); EX.push(c); EXBY[c.id] = c; save();
   return c;
+}
+function setCustomMuscle(id, muscle){
+  const c = (S.customEx || []).find(x => x.id === id); if (!c) return;
+  const map = CUSTOM_MUSCLE_MAP[muscle]; if (!map) return;
+  c.p = map.p; c.m = map.m;
+  if (EXBY[id]) { EXBY[id].p = map.p; EXBY[id].m = map.m; }
+  const modal = document.getElementById("swapmodal"); if (modal) modal.innerHTML = "";
+  save(); render(); toast(c.n + " → " + muscle);
+}
+function openMuscleSetter(id){
+  const c = (S.customEx || []).find(x => x.id === id); if (!c) return;
+  const modal = document.getElementById("swapmodal"); if (!modal) return;
+  modal.innerHTML = `<div class="modal" onclick="if(event.target===this)this.parentNode.innerHTML=''">
+    <div class="inner"><h3 style="margin-bottom:10px">What muscle does "${esc(c.n)}" target?</h3>
+    <div class="qopt">${MUSCLE_ORDER.map(m => `<span class="pill" onclick="setCustomMuscle('${id}','${m}')">${m}</span>`).join("")}</div></div></div>`;
+}
+function deleteCustomExercise(id){
+  const c = (S.customEx || []).find(x => x.id === id); if (!c) return;
+  if (S.active && S.active.entries.some(en => en.ex === id)) return toast("Remove it from today's workout first");
+  const usedInPlan = !!(S.plan && S.plan.days.some(d => d.exercises.some(s => s.ex === id)));
+  const usedInLogs = S.logs.some(l => l.entries.some(en => en.ex === id));
+  let msg = 'Delete "' + c.n + '"?';
+  if (usedInPlan) msg += " It'll also be removed from your plan.";
+  if (usedInLogs) msg += " Past logged sets keep showing its name.";
+  if (!confirm(msg)) return;
+  S.customEx = S.customEx.filter(x => x.id !== id);
+  const idx = EX.findIndex(e => e.id === id); if (idx >= 0) EX.splice(idx, 1);
+  if (usedInPlan) S.plan.days.forEach(d => { d.exercises = d.exercises.filter(s => s.ex !== id); });
+  if (!usedInLogs) delete EXBY[id];
+  save(); render(); toast("Deleted");
 }
 
 /* ============ State (migrates old Forge data) ============ */
@@ -692,6 +723,22 @@ function musclesFor(exId){
   return out;
 }
 const MUSCLE_ORDER = ["Chest","Back","Shoulders","Biceps","Triceps","Quads","Hamstrings","Glutes","Calves","Core"];
+// Maps a chosen target muscle to a real movement pattern + description, so a
+// custom exercise is treated identically to a built-in one everywhere:
+// musclesFor() volume tracking, muscleTagsFor() search filters, swap
+// alternatives (poolFor().filter(p===cur.p)), and the missing-targets card.
+const CUSTOM_MUSCLE_MAP = {
+  Chest: { p: "pushH", m: "Chest (custom)" },
+  Back: { p: "pullH", m: "Back (custom)" },
+  Shoulders: { p: "pushV", m: "Shoulders (custom)" },
+  Biceps: { p: "arms", m: "Biceps (custom)" },
+  Triceps: { p: "arms", m: "Triceps (custom)" },
+  Quads: { p: "squat", m: "Quads (custom)" },
+  Hamstrings: { p: "hinge", m: "Hamstrings (custom)" },
+  Glutes: { p: "glute", m: "Glutes (custom)" },
+  Calves: { p: "calves", m: "Calves (custom)" },
+  Core: { p: "core", m: "Core (custom)" }
+};
 function weekStart(){ const d = new Date(); const mon = new Date(d); mon.setDate(d.getDate() - ((d.getDay() + 6) % 7)); mon.setHours(0,0,0,0); return mon; }
 function weeklySetsByMuscle(){
   const start = weekStart(), acc = {};
@@ -1243,9 +1290,11 @@ function activeAddOpen(){
       <label style="margin-top:0">Or create your own (anything — "Sled Push", "Boxing", "Yoga"...)</label>
       <div style="display:flex;gap:8px;margin-top:4px"><input id="custom-name" placeholder="Exercise name"></div>
       <div class="qopt" style="margin-top:8px">
-        <span class="pill on" id="cu-load" onclick="this.classList.add('on');document.getElementById('cu-time').classList.remove('on')">weight × reps</span>
-        <span class="pill" id="cu-time" onclick="this.classList.add('on');document.getElementById('cu-load').classList.remove('on')">minutes (cardio)</span>
+        <span class="pill on" id="cu-load" onclick="this.classList.add('on');document.getElementById('cu-time').classList.remove('on');document.getElementById('cu-muscle-row').style.display=''">weight × reps</span>
+        <span class="pill" id="cu-time" onclick="this.classList.add('on');document.getElementById('cu-load').classList.remove('on');document.getElementById('cu-muscle-row').style.display='none'">minutes (cardio)</span>
       </div>
+      <label style="margin-top:8px">Mainly targets</label>
+      <div class="qopt" id="cu-muscle-row" style="margin-top:8px">${MUSCLE_ORDER.map((m, i) => `<span class="pill ${i===0?"on":""}" onclick="document.querySelectorAll('#cu-muscle-row .pill').forEach(p=>p.classList.remove('on'));this.classList.add('on')">${m}</span>`).join("")}</div>
       <button class="btn small-btn" style="margin-top:6px" onclick="activeCreateCustom()">Create & add</button>
     </div>`;
   openExercisePicker(EX, activeAdd, {
@@ -1258,7 +1307,9 @@ function activeCreateCustom(){
   const name = document.getElementById("custom-name").value.trim();
   if (!name) return toast("Give it a name");
   const unit = document.getElementById("cu-time").classList.contains("on") ? "time" : "load";
-  const c = addCustomExercise(name, unit);
+  const muscleEl = document.querySelector("#cu-muscle-row .pill.on");
+  if (unit !== "time" && !muscleEl) return toast("Pick the muscle it mainly targets");
+  const c = addCustomExercise(name, unit, muscleEl ? muscleEl.textContent : null);
   activeAdd(c.id);
 }
 function activeAdd(id){
@@ -1350,9 +1401,11 @@ function planAdd(di){
         <input id="custom-name" placeholder="Exercise name">
       </div>
       <div class="qopt" style="margin-top:8px">
-        <span class="pill on" id="cu-load" onclick="this.classList.add('on');document.getElementById('cu-time').classList.remove('on')">weight × reps</span>
-        <span class="pill" id="cu-time" onclick="this.classList.add('on');document.getElementById('cu-load').classList.remove('on')">minutes (cardio)</span>
+        <span class="pill on" id="cu-load" onclick="this.classList.add('on');document.getElementById('cu-time').classList.remove('on');document.getElementById('cu-muscle-row').style.display=''">weight × reps</span>
+        <span class="pill" id="cu-time" onclick="this.classList.add('on');document.getElementById('cu-load').classList.remove('on');document.getElementById('cu-muscle-row').style.display='none'">minutes (cardio)</span>
       </div>
+      <label style="margin-top:8px">Mainly targets</label>
+      <div class="qopt" id="cu-muscle-row" style="margin-top:8px">${MUSCLE_ORDER.map((m, i) => `<span class="pill ${i===0?"on":""}" onclick="document.querySelectorAll('#cu-muscle-row .pill').forEach(p=>p.classList.remove('on'));this.classList.add('on')">${m}</span>`).join("")}</div>
       <button class="btn small-btn" style="margin-top:6px" onclick="createCustom(${di})">Create & add</button>
     </div>`;
   openExercisePicker(EX, id => doAdd(di, id), {
@@ -1364,7 +1417,9 @@ function createCustom(di){
   const name = document.getElementById("custom-name").value.trim();
   if (!name) return toast("Give it a name");
   const unit = document.getElementById("cu-time").classList.contains("on") ? "time" : "load";
-  const c = addCustomExercise(name, unit);
+  const muscleEl = document.querySelector("#cu-muscle-row .pill.on");
+  if (unit !== "time" && !muscleEl) return toast("Pick the muscle it mainly targets");
+  const c = addCustomExercise(name, unit, muscleEl ? muscleEl.textContent : null);
   doAdd(di, c.id);
 }
 function doAdd(di, id){
@@ -1663,8 +1718,9 @@ function renderSettings(){
   <div class="card"><h3>Clean up exercises</h3>
     <p class="dim small" style="margin-bottom:8px">Merge duplicates so progress isn't split, and tidy your custom exercises.</p>
     ${dups.length ? `<b class="small">Possible duplicates</b>` + dups.map(g => `<div class="exline"><span class="small">${g.map(id => esc(EXBY[id] ? EXBY[id].n : id)).join(" · ")}</span><span class="blue small" style="cursor:pointer" onclick="mergeGroup('${g.join(",")}')">merge →</span></div>`).join("") : '<p class="dim small">No duplicates detected. 👍</p>'}
-    ${customs.length ? `<b class="small" style="display:block;margin-top:12px">Your custom exercises</b>` + customs.map(c => `<div class="exline"><span class="small">${esc(c.n)}</span><span class="blue small" style="cursor:pointer" onclick="renameCustom('${c.id}')">rename</span></div>`).join("") : ""}
+    ${customs.length ? `<b class="small" style="display:block;margin-top:12px">Your custom exercises</b>` + customs.map(c => `<div class="exline"><span class="small">${esc(c.n)}${c.u !== "time" ? ` <span class="dim">· ${esc(c.m)}</span>` : ""}</span><span class="small"><span class="blue" style="cursor:pointer" onclick="renameCustom('${c.id}')">rename</span>${c.u !== "time" ? ` · <span class="blue" style="cursor:pointer" onclick="openMuscleSetter('${c.id}')">set muscle</span>` : ""} · <span class="red" style="cursor:pointer" onclick="deleteCustomExercise('${c.id}')">delete</span></span></div>`).join("") : ""}
   </div>
+  <div id="swapmodal"></div>
   <div class="card"><h3>Profile</h3>
     <p class="dim small" style="margin-bottom:4px">${esc(planLabel())}</p>
     <p class="dim small" style="margin-bottom:10px">${p.heightIn ? Math.floor(p.heightIn/12) + "'" + (p.heightIn%12) + '"' : ""}${p.weightLb ? " · " + p.weightLb + " lb" : ""}${p.age ? " · " + p.age + " yrs" : ""}${bmi() ? " · BMI " + bmi() : ""}</p>
