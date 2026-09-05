@@ -1,0 +1,266 @@
+name: Publish picks
+
+# Rebuilt from scratch 2026-08-29, Lynold's explicit instruction, alongside
+# Prepare slate. Publishing only -- runs after Prepare slate, on a fixed
+# 15-minute offset from each of its 5 waves.
+#
+# Trimmed on the same instruction: dropped every step that only VERIFIES
+# (asserts something and fails loud, but writes nothing) -- verify-totals-
+# freshness.js, verify-pitcher-matchup-alignment.js, verify-pitching-plans.js,
+# verify-picks-bullpen.js, test-official-market-grading.js,
+# verify-official-markets.js, verify-google-analytics.js, and the old
+# multi-file cross-check block + assert-public-clean.js. Confirmed each one
+# has zero file-write side effects before dropping it -- none of them fed
+# data anything else reads. Also dropped the intraday "Refresh learning
+# summary" step -- daily-recap.yml already refreshes it every morning, and
+# matchup pages no longer read Coach history since the 2026-08-28 removal.
+#
+# KEPT despite being asked to trim exports: export-pregame-attribution.js,
+# export-pitcher-data.js, export-lab-rating-inputs.js. These are named like
+# the diagnostics but they are not decorative -- they are the only thing that
+# writes attribution_model_log.csv, pitcher_data_log.csv and
+# lab_rating_inputs_log.csv, which is what the Coach correlation engine and
+# the confidence report (both built earlier today) actually run on. Dropping
+# them would not trim a nice-to-have, it would silently stop the historical
+# ledger that feeds everything built this session. Flagging this explicitly
+# rather than dropping them quietly.
+#
+# Also kept: site-health-cleanup.js, normalize-pitcher-tool-source.js,
+# normalize-public-shell.js. These fix real HTML on the live site (stale
+# nav/footer, a missing script tag, bad generated artifacts) rather than
+# just asserting something -- a different category from the verify-*.js
+# scripts above, so "trim verification checks" doesn't cover them.
+#
+# One minimal safety net replaces the old elaborate verification block:
+# member-brief and published-picks must both exist for the date before
+# anything commits. Everything else that used to double-check specific
+# fields (pitcher alignment, bullpen retention, market grading) is gone --
+# a real reduction in the safety net, by design, per this rebuild's brief.
+#
+# DAILY ORDER
+#   Prepare slate  ->  (optional Pitching plan, then Prepare slate again)  ->  Publish picks
+#
+# Five waves, ~15 min after each Prepare slate wave:
+#   11:05am, 12:20pm, 2:00pm, 4:00pm, 6:45pm ET
+
+on:
+  schedule:
+    - cron: "5 15 * * *"    # 11:05am ET
+    - cron: "20 16 * * *"   # 12:20pm ET
+    - cron: "0 18 * * *"    # 2:00pm ET
+    - cron: "0 20 * * *"    # 4:00pm ET
+    - cron: "45 22 * * *"   # 6:45pm ET
+
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "YYYY-MM-DD to publish. Blank for today in America/New_York."
+        required: false
+        default: ""
+      snapshot:
+        description: "posted, current, or closing"
+        required: false
+        default: "posted"
+      send_email:
+        description: "Email picks to paid members? Only set true after approval."
+        required: false
+        default: "false"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-picks
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # No ODDS_API_KEY, deliberately. This workflow spends nothing and can be
+    # re-run freely. Every paid call happens in prepare-slate.yml and is
+    # committed before this runs.
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Resolve publish date
+        id: publish_date
+        run: |
+          echo "UTC:"; date -u
+          echo "Eastern:"; TZ="America/New_York" date
+          DATE_INPUT="${{ github.event.inputs.date }}"
+          if [ -z "$DATE_INPUT" ]; then
+            DATE_INPUT=$(TZ="America/New_York" date +%F)
+          fi
+          echo "date=$DATE_INPUT" >> "$GITHUB_OUTPUT"
+          echo "Resolved publish date: $DATE_INPUT"
+
+      # Publish depends on Prepare slate having run. Say so plainly rather
+      # than letting the model silently build on a missing or stale capture.
+      - name: Confirm the slate was prepared
+        run: |
+          DATE="${{ steps.publish_date.outputs.date }}"
+          MISSING=""
+          for f in "data/bullpen/$DATE.json" "data/totals/$DATE.json"; do
+            [ -f "$f" ] || MISSING="$MISSING $f"
+          done
+          if [ -n "$MISSING" ]; then
+            echo "::error::Slate not prepared for $DATE. Missing:$MISSING"
+            echo "Run 'Prepare slate (gather data)' first, then re-run this workflow."
+            exit 1
+          fi
+          echo "Slate present for $DATE:"
+          for f in data/bullpen data/k-props data/totals data/moneyline-odds; do
+            [ -f "$f/$DATE.json" ] && printf "  %-28s %s bytes\n" "$f/$DATE.json" "$(wc -c < "$f/$DATE.json")" || printf "  %-28s absent\n" "$f/$DATE.json"
+          done
+
+      - name: Clean invalid generated artifacts
+        run: node scripts/site-health-cleanup.js --fix
+
+      - name: Normalize Pitcher Matchup Tool source
+        run: node scripts/normalize-pitcher-tool-source.js
+
+      # The only model pass. Reads the committed slate, runs the moneyline
+      # model, appends to the day's card and writes the member brief.
+      - name: Run the moneyline model and lock picks
+        run: |
+          SNAPSHOT_INPUT="${{ github.event.inputs.snapshot }}"
+          node scripts/generate-member-lab.js \
+            --date "${{ steps.publish_date.outputs.date }}" \
+            --snapshot "${SNAPSHOT_INPUT:-posted}"
+
+      # These three feed the historical learning ledgers (attribution,
+      # pitcher-score, Lab Rating raw inputs) that grade-calibration.js,
+      # grade-confidence.js and the Coach correlation engine all run on.
+      # Captured same-day, before tomorrow's recap grades anything. See the
+      # header note above for why these three specifically survived the trim.
+      - name: Export pregame attribution snapshot
+        run: node scripts/export-pregame-attribution.js "${{ steps.publish_date.outputs.date }}"
+
+      - name: Export daily pitcher data
+        run: node scripts/export-pitcher-data.js "${{ steps.publish_date.outputs.date }}"
+
+      - name: Export daily Lab Rating inputs
+        run: node scripts/export-lab-rating-inputs.js "${{ steps.publish_date.outputs.date }}"
+
+      - name: Generate canonical Pitcher Matchup Tool data
+        run: node scripts/generate-pitcher-matchup-data.js "${{ steps.publish_date.outputs.date }}"
+
+      - name: Render bettor-friendly previews
+        run: node scripts/generate-previews.js "${{ steps.publish_date.outputs.date }}"
+
+      - name: Generate matchup pages with indexing quality gate
+        run: node scripts/generate-matchup-pages.js "${{ steps.publish_date.outputs.date }}"
+
+      - name: Normalize public shell and language
+        run: node scripts/normalize-public-shell.js
+
+      # Minimal safety net -- confirms the two files nothing else can recover
+      # from missing actually exist before anything commits. This replaces a
+      # much larger cross-check block; see the header note on what that
+      # traded away.
+      - name: Confirm the core published files exist
+        run: |
+          DATE_INPUT="${{ steps.publish_date.outputs.date }}"
+          test -f "data/member-brief/$DATE_INPUT.json" || { echo "::error::member brief missing for $DATE_INPUT"; exit 1; }
+          test -f "data/published-picks/$DATE_INPUT.json" || { echo "::error::official pick file missing for $DATE_INPUT"; exit 1; }
+          echo "Core published files present for $DATE_INPUT."
+
+      - name: Commit and push if changed
+        run: |
+          DATE_INPUT="${{ steps.publish_date.outputs.date }}"
+          git config user.name "lydia-bot"
+          git config user.email "actions@users.noreply.github.com"
+
+          # Generated outputs are authoritative for these paths. Snapshot them
+          # before synchronizing with main so a concurrent manual upload cannot
+          # cause a rebase conflict at the end of an otherwise valid publish.
+          GENERATED_PATHS=(previews picks data sitemap.xml member-brief results tools mlb)
+          SNAPSHOT_DIR=$(mktemp -d)
+          for path in "${GENERATED_PATHS[@]}"; do
+            if [ -e "$path" ]; then
+              mkdir -p "$SNAPSHOT_DIR/$(dirname "$path")"
+              cp -a "$path" "$SNAPSHOT_DIR/$path"
+            fi
+          done
+
+          git fetch origin main
+          git reset --hard origin/main
+
+          for path in "${GENERATED_PATHS[@]}"; do
+            if [ -d "$SNAPSHOT_DIR/$path" ]; then
+              mkdir -p "$path"
+              rsync -a --delete "$SNAPSHOT_DIR/$path/" "$path/"
+            elif [ -f "$SNAPSHOT_DIR/$path" ]; then
+              cp -a "$SNAPSHOT_DIR/$path" "$path"
+            fi
+          done
+
+          # -A, not a path list. A hardcoded add list goes stale the moment a
+          # generator writes somewhere new, and the failure surfaces as an
+          # unrelated git error (ERR-20260720, ERR-20260803-02).
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Publish picks $DATE_INPUT"
+            git push
+          fi
+
+      # Publish runs several times a day to catch each wave's posted lineups.
+      # Only the first scheduled run of the day emails; later runs update the
+      # card and pages silently. The marker is committed so this survives runs.
+      - name: Check if today's member emails already went out
+        id: email_gate
+        run: |
+          DATE_INPUT="${{ steps.publish_date.outputs.date }}"
+          MARKER="data/email-log/$DATE_INPUT.json"
+          if [ -f "$MARKER" ]; then
+            echo "already_sent=true" >> "$GITHUB_OUTPUT"
+            echo "Emails already went out today per $MARKER — this run updates picks only."
+          else
+            echo "already_sent=false" >> "$GITHUB_OUTPUT"
+            echo "No email marker for $DATE_INPUT yet — this run is eligible to send."
+          fi
+
+      - name: Email picks to paid members
+        if: ${{ (github.event_name == 'schedule' && steps.email_gate.outputs.already_sent != 'true') || github.event.inputs.send_email == 'true' }}
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_REPLY_TO: ${{ secrets.EMAIL_REPLY_TO }}
+        run: node scripts/send-member-emails.js "${{ steps.publish_date.outputs.date }}"
+
+      - name: Email free daily preview to the free list
+        if: ${{ (github.event_name == 'schedule' && steps.email_gate.outputs.already_sent != 'true') || github.event.inputs.send_email == 'true' }}
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_REPLY_TO: ${{ secrets.EMAIL_REPLY_TO }}
+        run: node scripts/send-free-preview-emails.js "${{ steps.publish_date.outputs.date }}"
+
+      - name: Record that today's emails went out
+        if: ${{ (github.event_name == 'schedule' && steps.email_gate.outputs.already_sent != 'true') || github.event.inputs.send_email == 'true' }}
+        run: |
+          DATE_INPUT="${{ steps.publish_date.outputs.date }}"
+          mkdir -p data/email-log
+          cat > "data/email-log/$DATE_INPUT.json" <<JSON
+          {"date": "$DATE_INPUT", "sent_at_utc": "$(date -u +%FT%TZ)", "trigger": "${{ github.event_name }}", "run_id": "${{ github.run_id }}"}
+          JSON
+          git config user.name "lydia-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A data/email-log
+          if git diff --cached --quiet; then
+            echo "Email marker unchanged."
+          else
+            git commit -m "Record email delivery $DATE_INPUT"
+            git pull --rebase
+            git push
+          fi

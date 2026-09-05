@@ -1,0 +1,82 @@
+name: Refresh prop, totals, and moneyline lines (RETIRED — superseded by Prepare slate)
+
+# RETIRED 2026-08-03. Superseded by prepare-slate.yml.
+#
+# Kept manual-only for a few days as a fallback while the new gather workflow
+# proves itself. Delete this file once prepare-slate.yml has run clean for a
+# week. DO NOT re-enable the schedule — running both writes the same files
+# twice and the two can race.
+#
+# WHY IT WAS RETIRED
+# This workflow ran `update-totals.js` on its 10:50am ET cron, but nothing
+# writes data/bullpen/<date>.json for that day until publish-picks.yml runs at
+# 11:05am — fifteen minutes later. update-totals.js reads that file inside a
+# bare `catch (e) {}` that falls back to {}, so on every scheduled run the
+# totals model was built with NO BULLPEN INPUT AT ALL, silently, since this
+# workflow was created. The bullpen factor is applied across roughly half of
+# every game's innings. See ERR-20260803-01.
+#
+# prepare-slate.yml runs the bullpen generator first, then k-props, then
+# totals, then moneyline odds — the order the dependencies actually require.
+#
+# It also fixes the commit step: `git add` with a path list left the inline-data
+# injections in previews/ and tools/ unstaged, which makes `git pull --rebase`
+# refuse to run. See ERR-20260803-02, and ERR-20260720 for the first occurrence.
+
+on:
+  # Schedule removed deliberately. prepare-slate.yml owns the daily gather now.
+  #  schedule:
+  #    - cron: "50 14 * * *"   # 10:50am ET — RETIRED, see above
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-lines
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    env:
+      ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+    steps:
+      - name: Warn that this workflow is retired
+        run: |
+          echo "::warning::refresh-lines.yml is retired. Use 'Prepare slate (gather data)' instead."
+          echo "This workflow captures totals WITHOUT a fresh bullpen file (ERR-20260803-01)."
+          echo "Continuing only because it was dispatched manually."
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Capture strikeout prop lines + projections
+        run: node scripts/update-k-props.js
+
+      - name: Capture totals lines + projections
+        run: node scripts/update-totals.js
+
+      - name: Capture moneyline odds
+        run: node scripts/update-moneyline-odds.js
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "lydia-bot"
+          git config user.email "actions@users.noreply.github.com"
+          # -A, not a path list. See ERR-20260803-02.
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Refresh prop and totals lines $(TZ=America/New_York date +%F-%H%M)"
+            git pull --rebase
+            git push
+          fi

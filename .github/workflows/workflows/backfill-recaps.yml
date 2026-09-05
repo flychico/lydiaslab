@@ -1,0 +1,98 @@
+name: Backfill recaps
+
+# Grades each finished game's pregame reasoning against the actual boxscore,
+# renders "How the analysis held up" onto the matchup page, and appends the
+# structured result to data/calibration/recap_components.csv (the learning
+# ledger).
+#
+# Runs the morning after games finish. generate-matchup-pages already writes a
+# recap for a game that is Final at publish time; this catches everything that
+# went final after the day's last publish, plus days whose brief collapsed.
+#
+# ORDER: backfill-recaps.js (fetch boxscores, persist reviews + ledger)
+#        then generate-matchup-pages.js (render the persisted reviews).
+
+on:
+  schedule:
+    - cron: "20 12 * * *"   # 8:20am ET -- after daily-recap (7:35am ET), yesterday is final
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "YYYY-MM-DD to backfill. Blank for yesterday in America/New_York."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: backfill-recaps
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Resolve backfill date
+        id: backfill_date
+        run: |
+          DATE_INPUT="${{ github.event.inputs.date }}"
+          if [ -z "$DATE_INPUT" ]; then
+            DATE_INPUT=$(TZ="America/New_York" date -d "yesterday" +%F)
+          fi
+          echo "date=$DATE_INPUT" >> "$GITHUB_OUTPUT"
+          echo "Backfilling recaps for: $DATE_INPUT"
+
+      - name: Grade pregame reasoning vs boxscore (reviews + learning ledger)
+        run: node scripts/backfill-recaps.js "${{ steps.backfill_date.outputs.date }}"
+
+      - name: Render the recaps onto the matchup pages
+        run: node scripts/generate-matchup-pages.js "${{ steps.backfill_date.outputs.date }}"
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "lydia-bot"
+          git config user.email "actions@users.noreply.github.com"
+
+          # Snapshot generated outputs, then synchronize with main before adding,
+          # so a concurrent job cannot cause a rebase conflict. Same pattern as
+          # publish-picks.yml.
+          GENERATED_PATHS=(data mlb sitemap.xml)
+          SNAPSHOT_DIR=$(mktemp -d)
+          for path in "${GENERATED_PATHS[@]}"; do
+            if [ -e "$path" ]; then
+              mkdir -p "$SNAPSHOT_DIR/$(dirname "$path")"
+              cp -a "$path" "$SNAPSHOT_DIR/$path"
+            fi
+          done
+
+          git fetch origin main
+          git reset --hard origin/main
+
+          for path in "${GENERATED_PATHS[@]}"; do
+            if [ -d "$SNAPSHOT_DIR/$path" ]; then
+              mkdir -p "$path"
+              rsync -a --delete "$SNAPSHOT_DIR/$path/" "$path/"
+            elif [ -f "$SNAPSHOT_DIR/$path" ]; then
+              cp -a "$SNAPSHOT_DIR/$path" "$path"
+            fi
+          done
+
+          # -A, never a path list (ERR-20260720, ERR-20260803-02).
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No recap changes to commit."
+          else
+            git commit -m "Backfill recaps ${{ steps.backfill_date.outputs.date }}"
+            git push
+          fi

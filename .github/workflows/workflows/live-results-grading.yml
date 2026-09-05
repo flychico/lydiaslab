@@ -1,0 +1,72 @@
+name: Live results grading
+
+# Updates the public results record.
+
+on:
+  schedule:
+    - cron: "0 12-23 * * *"    
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Optional YYYY-MM-DD to grade. Leave blank to grade yesterday and today in ET."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: live-results-grading
+  cancel-in-progress: false
+
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Show run time
+        run: |
+          echo "UTC:"; date -u
+          echo "Eastern:"; TZ="America/New_York" date
+
+      - name: Grade live and recently finished picks
+        run: |
+          DATE_INPUT="${{ github.event.inputs.date }}"
+          if [ -n "$DATE_INPUT" ]; then
+            node scripts/grade-results.js "$DATE_INPUT"
+          else
+            TODAY=$(TZ="America/New_York" date +%F)
+            YESTERDAY=$(TZ="America/New_York" date -d "yesterday" +%F)
+            node scripts/grade-results.js "$YESTERDAY"
+            node scripts/grade-results.js "$TODAY"
+          fi
+          node scripts/dedupe-clv.js
+          node scripts/inject-live-results.js
+
+      - name: Verify results generated
+        run: |
+          test -f results/index.html || { echo "ERROR: results/index.html missing"; exit 1; }
+          grep -q "Today's Pick Status" results/index.html || { echo "ERROR: live pick status block missing"; exit 1; }
+          echo "Live results page generated."
+          
+      - name: Commit and push if changed
+        run: |
+          git config user.name "lydia-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add results/ data/results.json data/results_log.csv data/clv/ data/k-props/ data/totals/
+          if git diff --cached --quiet; then
+            echo "No result changes to commit."
+          else
+            git commit -m "Update live results $(TZ='America/New_York' date +%F-%H%M)"
+            git pull --rebase
+            git push
+          fi

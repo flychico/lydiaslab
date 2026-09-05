@@ -1,0 +1,129 @@
+name: Prepare slate (gather data)
+
+# Rebuilt from scratch 2026-08-29, Lynold's explicit instruction. Two real
+# problems drove this:
+#   1. The schedule was not reliable -- separately confirmed real automated
+#      runs firing at times matching nothing in this file's own crons.
+#   2. The crons that WERE committed here did not match their own comments --
+#      "45 12 * * *" was commented 12:05pm ET but actually fires at 8:45am ET,
+#      and two other lines were off by 1-3 hours the same way. Anyone reading
+#      the comments to reason about the schedule was reading the wrong times.
+#
+# Trimmed on the same instruction: this version keeps only the steps that
+# gather and commit real data. Dropped entirely: npm install (nothing left
+# in this file needs it -- only the Excel export below used exceljs),
+# the Excel companion export, and the end-of-run console report. All three
+# were genuinely diagnostic -- none of them fed anything another script or
+# workflow reads.
+#
+# DAILY RHYTHM
+#   Prepare slate  ->  (optional: Pitching plan, then Prepare slate again)  ->  Publish picks
+#
+# Five waves, fixed offset (Publish picks fires ~15 min after each of these):
+#   10:50am, 12:05pm, 1:45pm, 3:45pm, 6:30pm ET
+
+on:
+  schedule:
+    - cron: "50 14 * * *"   # 10:50am ET
+    - cron: "5 16 * * *"    # 12:05pm ET
+    - cron: "45 17 * * *"   # 1:45pm ET
+    - cron: "45 19 * * *"   # 3:45pm ET
+    - cron: "30 22 * * *"   # 6:30pm ET
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "YYYY-MM-DD to gather. Blank = today in America/New_York."
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+# Never let two gathers overlap -- they write the same files.
+concurrency:
+  group: prepare-slate
+  cancel-in-progress: false
+
+jobs:
+  gather:
+    runs-on: ubuntu-latest
+    env:
+      ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Resolve slate date
+        id: slate_date
+        run: |
+          echo "UTC:"; date -u
+          echo "Eastern:"; TZ="America/New_York" date
+          DATE_INPUT="${{ github.event.inputs.date }}"
+          if [ -z "$DATE_INPUT" ]; then
+            DATE_INPUT=$(TZ="America/New_York" date +%F)
+          fi
+          echo "date=$DATE_INPUT" >> "$GITHUB_OUTPUT"
+          echo "Resolved slate date: $DATE_INPUT"
+
+      - name: Confirm the odds key is present
+        run: |
+          if [ -z "${ODDS_API_KEY}" ]; then
+            echo "::error::ODDS_API_KEY is not set. k-props, totals and moneyline odds all exit quietly without it, which looks like a clean run and produces no data."
+            exit 1
+          fi
+          echo "ODDS_API_KEY present."
+
+      # Writes data/bullpen/<date>.json, which update-totals reads in the
+      # step below. --defer-publish true means no official card is locked
+      # here -- that only happens in Publish picks.
+      - name: Gather bullpen and provisional source data
+        run: |
+          node scripts/generate-member-lab.js \
+            --date "${{ steps.slate_date.outputs.date }}" \
+            --snapshot posted \
+            --defer-publish true
+
+      # --if-changed: skip the paid fetch if today's probables + pitching plan
+      # already match the last capture. First run of the day always captures.
+      - name: Capture strikeout prop lines and projections
+        run: node scripts/update-k-props.js "${{ steps.slate_date.outputs.date }}" --if-changed
+
+      - name: Capture totals lines and projections
+        run: node scripts/update-totals.js "${{ steps.slate_date.outputs.date }}" --if-changed
+
+      # NOTE the flag. update-k-props.js and update-totals.js take a positional
+      # date; update-moneyline-odds.js parses --date. Passing this one
+      # positionally is silently ignored and it falls back to "today", which is
+      # correct on a schedule but wrong on a manual backfill.
+      - name: Capture moneyline odds
+        run: node scripts/update-moneyline-odds.js --date "${{ steps.slate_date.outputs.date }}" --if-changed
+
+      - name: Commit and push if changed
+        run: |
+          set -euo pipefail
+          git config user.name "lydia-bot"
+          git config user.email "actions@users.noreply.github.com"
+          mkdir -p data/k-props data/totals data/moneyline-odds data/bullpen data/member-brief
+
+          # Stage EVERYTHING, not a path list. generate-member-lab.js writes
+          # inline data into previews/, member-brief/index.html, results/
+          # index.html and tools/bullpen-fatigue/index.html in addition to
+          # data/ -- a path-scoped add leaves those unstaged and then
+          # `git pull --rebase` refuses to run at all (ERR-20260720). The
+          # checkout is fresh, so anything modified here was written by this
+          # run and belongs in the commit.
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No change to commit."
+            exit 0
+          fi
+          git commit -m "Prepare slate ${{ steps.slate_date.outputs.date }}"
+          git pull --rebase
+          git push
