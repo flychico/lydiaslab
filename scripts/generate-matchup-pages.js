@@ -1359,7 +1359,7 @@ function renderMatchupPage(context) {
     url: canonical,
     datePublished: generatedAt,
     dateModified: new Date().toISOString(),
-    author: { "@type": "Person", "@id": AUTHOR_ID, name: "Lynold Mercado", url: AUTHOR_URL },
+    author: { "@type": "Person", "@id": AUTHOR_ID, name: "Lynold Rivera", url: AUTHOR_URL },
     publisher: { "@type": "Organization", "@id": `${SITE}/#organization`, name: "LyDia", url: `${SITE}/` },
     mainEntityOfPage: canonical,
     isAccessibleForFree: true,
@@ -1421,8 +1421,8 @@ section.card>h2{text-align:center}
     <h1>${esc(awayShort)} vs ${esc(homeShort)}${esc(dhSuffix)} Prediction, Odds and Model Pick</h1>
     <p class="subtitle">${esc(titleDate)} at ${esc(venue.name)}${game.time ? ` · ${esc(game.time)} ET` : ""}</p>
     <div class="byline">
-      <img src="/img/lynold-mercado-headshot.jpg" alt="Lynold Mercado">
-      <div class="small"><strong><a href="/writers/lynold/">Lynold Mercado</a></strong><br><span class="dim">Founder and Model Developer · Updated ${esc(prettyDateTime(generatedAt))}</span></div>
+      <img src="/img/lynold-rivera-headshot.jpg" alt="Lynold Rivera">
+      <div class="small"><strong><a href="/writers/lynold/">Lynold Rivera</a></strong><br><span class="dim">Founder and Model Developer · Updated ${esc(prettyDateTime(generatedAt))}</span></div>
     </div>
   </div>
 

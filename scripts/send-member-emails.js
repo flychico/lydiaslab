@@ -44,7 +44,7 @@ const MEMBER_EMAIL_CSV_PATH = "data/signups/member-email.csv";
 const OWNER_EMAIL_RAW = (process.env.OWNER_EMAIL || "").trim();
 const OWNER_EMAIL = (OWNER_EMAIL_RAW && !["disabled", "none", "false", "off"].includes(OWNER_EMAIL_RAW.toLowerCase()))
   ? OWNER_EMAIL_RAW
-  : (!OWNER_EMAIL_RAW ? "lynoldmercado@gmail.com" : "");
+  : (!OWNER_EMAIL_RAW ? "lynoldrivera@gmail.com" : "");
 
 function etToday() {
   const et = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));

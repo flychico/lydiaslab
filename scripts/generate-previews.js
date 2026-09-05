@@ -277,8 +277,8 @@ function renderCard(g, featured, published) {
   ${featured ? `<span class="featured-flag">Top Lab Rating</span>` : ""}<h2>${esc(g.game || "")}</h2>
   <div class="meta">${esc(g.time || "")} ET · ${pitcherLink(pe.away_pitcher, pe.away_pitcher_id)} vs ${pitcherLink(pe.home_pitcher, pe.home_pitcher_id)}</div>
   <div class="author-row">
-    <img src="/img/lynold-mercado-headshot.jpg" alt="Lynold Mercado" width="38" height="38">
-    <div class="byline small"><strong><a href="/writers/lynold/">Lynold Mercado</a></strong><br><span class="dim">Founder and Model Developer</span></div>
+    <img src="/img/lynold-rivera-headshot.jpg" alt="Lynold Rivera" width="38" height="38">
+    <div class="byline small"><strong><a href="/writers/lynold/">Lynold Rivera</a></strong><br><span class="dim">Founder and Model Developer</span></div>
   </div>
   <span class="status-badge ${statusClass(cardStatus)}">${statusLabel(cardStatus)}</span>
   ${officialMarkets.length ? `<div class="notice" style="max-width:760px;margin:4px auto 12px"><strong>Official markets</strong>${officialMarkets.join("")}</div>` : ""}

@@ -31,7 +31,7 @@ const previewHub = read("previews/index.html");
 const canonical = json(`data/pitcher-matchups/${DATE}.json`);
 const matchupManifest = json(`data/matchup-pages/${DATE}.json`);
 
-if (!preview.includes("Lynold Mercado") || !preview.includes("/writers/lynold/")) {
+if (!preview.includes("Lynold Rivera") || !preview.includes("/writers/lynold/")) {
   throw new Error("Unified Picks cards are missing author attribution.");
 }
 
