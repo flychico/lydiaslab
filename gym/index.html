@@ -785,6 +785,11 @@ function dayMuscles(day){
   const secondary = Object.keys(sec).filter(m => !prim[m]).sort((a, b) => sec[b] - sec[a]);
   return { primary, secondary };
 }
+function missingMuscleTargets(entries){
+  const touched = new Set();
+  for (const en of entries) { const ex = EXBY[en.ex]; if (!ex || ex.u === "time") continue; musclesFor(en.ex).forEach(([m]) => touched.add(m)); }
+  return MUSCLE_ORDER.filter(m => !touched.has(m));
+}
 // 4-week mesocycle; the 4th week is a deload
 function currentPhase(){
   if (!S.plan || !S.plan.created) return { week: 1, cycle: 4, deload: false };
@@ -910,9 +915,10 @@ function render(){
   applyTheme();
   if (!S.profile) { document.body.classList.remove("dashmode", "workout"); return renderOnboarding(); }
   const active = !!S.active;
-  document.body.classList.toggle("workout", active);
+  const showingWorkout = active && tab === "today";
+  document.body.classList.toggle("workout", showingWorkout);
   document.body.classList.toggle("dashmode", !active && tab === "dash");
-  if (active) return renderWorkout();
+  if (showingWorkout) return renderWorkout();
   if (tab === "dash") renderDash();
   else if (tab === "today") renderToday();
   else if (tab === "plan") renderPlan();
@@ -1151,6 +1157,7 @@ function renderWorkout(){
   const queue = a.entries.map((en, i) => ({ en, i }))
     .filter(({ en, i }) => !group.includes(i) && !entryDone(en));
   const doneList = a.entries.map((en, i) => ({ en, i })).filter(({ en }) => entryDone(en));
+  const missing = missingMuscleTargets(a.entries);
 
   V.innerHTML = `
   <div class="exhead"><h1>${esc(day.name)}</h1><span class="dim small">${mins}m · ${doneCount}/${a.entries.length} done</span></div>
@@ -1161,7 +1168,8 @@ function renderWorkout(){
     <b>${esc(ex.n)}</b> <span class="dim small">· ${en.sets.length}×${en.lo}–${en.hi}${en.ss ? " · superset pair" : ""}</span>
     <span style="float:right;color:var(--blue);font-weight:700">do now →</span></div>`; }).join("")}
   ${doneList.length ? `<h2 class="dim">Completed</h2>` + doneList.map(({ en }) => { const ex = EXBY[en.ex]; return `<div class="exline"><span>✓ ${esc(ex.n)}</span><span class="dim small">${en.sets.filter(s => s.done).map(s => (s.w || "bw") + "×" + s.r).join(" · ")}</span></div>`; }).join("") : ""}
-  <button class="btn full ghost" style="margin-top:14px" onclick="activeAddOpen()">＋ Add exercise to this workout</button>
+  ${missing.length ? `<div class="card" style="margin-top:14px"><b class="small">Not yet hit today</b><div class="dim small" style="margin-top:4px">${missing.join(" · ")}</div></div>` : `<div class="card" style="margin-top:14px"><b class="small">All muscle groups covered today 🗿</b></div>`}
+  <button class="btn full ghost" style="margin-top:8px" onclick="activeAddOpen()">＋ Add exercise to this workout</button>
   <button class="btn full" style="margin-top:8px" onclick="finishWorkout()">Finish workout ✓</button>
   <button class="btn full danger" style="margin-top:8px" onclick="cancelWorkout()">Discard</button>
   <div id="swapmodal"></div>`;
