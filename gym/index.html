@@ -252,6 +252,94 @@ const EX = [
   {id:"leg-press-calf",n:"Leg Press Calf Raise",p:"calves",e:"gym",m:"Calves",inc:10}
 ];
 const EXBY = {}; EX.forEach(e => EXBY[e.id] = e);
+/* ---------------------------------------------------------------------
+   Exercise picker: search + muscle-group filter
+   2026-09-04, Lynold's explicit instruction: adding an exercise meant
+   scrolling a long flat/grouped list to find it. Two asks: (1) a search
+   box that filters by name as you type, (2) a way to filter by target
+   muscle (biceps, back, triceps, ...) when you don't know the exact name.
+
+   Muscle tags are DERIVED from each exercise's existing `m` field (and its
+   movement pattern `p` as a fallback for exercises whose `m` text doesn't
+   say the muscle outright, e.g. "Posterior chain") rather than hand-tagged
+   per exercise -- so a newly added exercise is classified automatically
+   from the same description already shown on its card, and tags can never
+   drift out of sync with what the list already displays.
+--------------------------------------------------------------------- */
+const MUSCLE_TAGS = ["Back","Chest","Shoulders","Biceps","Triceps","Quads","Hamstrings","Glutes","Calves","Abs","Traps","Cardio"];
+function muscleTagsFor(e){
+  const m = e.m || "";
+  const has = re => re.test(m);
+  const tags = [];
+  if (has(/\bback\b/i) || has(/posterior chain/i) || has(/\blats?\b/i) || e.p === "pullH" || e.p === "pullV") tags.push("Back");
+  if (has(/chest/i)) tags.push("Chest");
+  if (has(/delt/i) || has(/shoulder/i) || e.p === "shoulders") tags.push("Shoulders");
+  if (has(/bicep/i)) tags.push("Biceps");
+  if (has(/tricep/i)) tags.push("Triceps");
+  if (has(/quad/i)) tags.push("Quads");
+  if (has(/hamstring/i) || has(/posterior chain/i)) tags.push("Hamstrings");
+  if (has(/glute/i) || has(/posterior chain/i) || e.p === "glute") tags.push("Glutes");
+  if (has(/calf|calves/i) || e.p === "calves") tags.push("Calves");
+  if (has(/\babs?\b/i) || has(/core/i) || has(/obliques?/i) || e.p === "core") tags.push("Abs");
+  if (has(/trap/i)) tags.push("Traps");
+  if (has(/cardio/i) || e.p === "cardio") tags.push("Cardio");
+  return [...new Set(tags)];
+}
+/*
+  Shared by activeAddOpen() (add mid-workout) and planAdd() (add to a plan
+  day) -- both used to carry their own near-identical copy of the same
+  grouped list with no way to search or filter it. pickerState holds the
+  live search text, selected muscle tags, and the pick callback for
+  whichever modal is currently open; renderPickerList() re-renders just the
+  list portion so typing/tapping a tag never has to rebuild the whole modal
+  (and never loses focus on the search input).
+*/
+let pickerState = null;
+function openExercisePicker(list, pickFn, opts){
+  opts = opts || {};
+  pickerState = { all: list, search: "", tags: [], pickFn };
+  document.getElementById("swapmodal").innerHTML = `<div class="modal" onclick="if(event.target===this)this.parentNode.innerHTML=''">
+    <div class="inner">
+      <h3 style="margin-bottom:4px">${esc(opts.title || "Add an exercise")}</h3>
+      ${opts.subtitle ? `<p class="dim small" style="margin-bottom:8px">${esc(opts.subtitle)}</p>` : ""}
+      ${opts.extraHTML || ""}
+      <input id="pk-search" placeholder="Search exercises by name..." style="margin-bottom:10px" oninput="pickerSetSearch(this.value)">
+      <div style="margin-bottom:6px">${MUSCLE_TAGS.map(t => `<span class="pill" id="pk-tag-${t}" onclick="pickerToggleTag('${t}')">${t}</span>`).join("")}</div>
+      <div class="swaplist" id="pk-list"></div>
+    </div></div>`;
+  renderPickerList();
+  document.getElementById("pk-search").focus();
+}
+function pickerSetSearch(v){ pickerState.search = v.trim().toLowerCase(); renderPickerList(true); }
+function pickerToggleTag(tag){
+  const i = pickerState.tags.indexOf(tag);
+  if (i >= 0) pickerState.tags.splice(i, 1); else pickerState.tags.push(tag);
+  const el = document.getElementById("pk-tag-" + tag); if (el) el.classList.toggle("on");
+  renderPickerList();
+}
+function renderPickerList(keepFocus){
+  const { all, search, tags } = pickerState;
+  let list = all;
+  if (search) list = list.filter(e => e.n.toLowerCase().includes(search));
+  // OR across selected tags: picking "Back" and "Biceps" shows exercises
+  // for either, not only exercises that hit both.
+  if (tags.length) list = list.filter(e => { const et = muscleTagsFor(e); return tags.some(t => et.includes(t)); });
+  const filtered = Boolean(search || tags.length);
+  const groups = filtered ? [[null, list]] : [
+    ["Cardio", list.filter(e => e.p === "cardio")],
+    ["My custom", list.filter(e => e.p === "custom")],
+    ["Legs & glutes", list.filter(e => ["squat","hinge","glute","lunge","calves"].includes(e.p))],
+    ["Push (chest/shoulders/tris)", list.filter(e => ["pushH","pushV","shoulders"].includes(e.p) || (e.p === "arms" && /Tri/i.test(e.m)))],
+    ["Pull (back/biceps)", list.filter(e => ["pullH","pullV"].includes(e.p) || (e.p === "arms" && /Bicep/i.test(e.m)))],
+    ["Core", list.filter(e => e.p === "core")]
+  ];
+  document.getElementById("pk-list").innerHTML = groups.map(([label, items]) => items.length
+    ? (label ? `<div class="dim small" style="margin:8px 0 4px;font-weight:700">${label}</div>` : "")
+      + items.map(o => `<div class="card" onclick="pickerPick('${o.id}')"><b>${esc(o.n)}</b><div class="dim small">${esc(o.m)}</div></div>`).join("")
+    : "").join("") || '<p class="dim small">No exercises match — try a different name or muscle.</p>';
+  if (keepFocus) { const f = document.getElementById("pk-search"); if (f) { f.focus(); const v = f.value; f.value = ""; f.value = v; } }
+}
+function pickerPick(id){ pickerState.pickFn(id); }
 /* Short form cues — shown on every exercise card */
 const CUES = {
 "bb-squat":"Brace hard, sit between your hips, drive the floor away. Depth over weight.",
@@ -1139,17 +1227,7 @@ function finishWorkout(){
 function cancelWorkout(){ if (confirm("Discard this workout?")) { S.active = null; save(); stopRest(); render(); } }
 /* Add / remove exercises mid-workout without resetting the session */
 function activeAddOpen(){
-  const groups = [
-    ["Cardio", EX.filter(e => e.p === "cardio")],
-    ["My custom", EX.filter(e => e.p === "custom")],
-    ["Legs & glutes", EX.filter(e => ["squat","hinge","glute","lunge","calves"].includes(e.p))],
-    ["Push (chest/shoulders/tris)", EX.filter(e => ["pushH","pushV","shoulders"].includes(e.p) || (e.p === "arms" && /Tri/i.test(e.m)))],
-    ["Pull (back/biceps)", EX.filter(e => ["pullH","pullV"].includes(e.p) || (e.p === "arms" && /Bicep/i.test(e.m)))],
-    ["Core", EX.filter(e => e.p === "core")]
-  ];
-  document.getElementById("swapmodal").innerHTML = `<div class="modal" onclick="if(event.target===this)this.parentNode.innerHTML=''">
-    <div class="inner"><h3 style="margin-bottom:4px">Add an exercise</h3>
-    <p class="dim small" style="margin-bottom:8px">Drops straight into today's session — nothing you've already logged is touched.</p>
+  const extraHTML = `
     <div class="qopt" style="margin-bottom:10px">
       <span class="pill on" id="aa-plan" onclick="this.classList.toggle('on')">✓ also add to my plan for next time</span>
     </div>
@@ -1161,9 +1239,12 @@ function activeAddOpen(){
         <span class="pill" id="cu-time" onclick="this.classList.add('on');document.getElementById('cu-load').classList.remove('on')">minutes (cardio)</span>
       </div>
       <button class="btn small-btn" style="margin-top:6px" onclick="activeCreateCustom()">Create & add</button>
-    </div>
-    <div class="swaplist">${groups.map(([label, list]) => list.length ? `<div class="dim small" style="margin:8px 0 4px;font-weight:700">${label}</div>` +
-      list.map(o => `<div class="card" onclick="activeAdd('${o.id}')"><b>${esc(o.n)}</b><div class="dim small">${esc(o.m)}</div></div>`).join("") : "").join("")}</div></div></div>`;
+    </div>`;
+  openExercisePicker(EX, activeAdd, {
+    title: "Add an exercise",
+    subtitle: "Drops straight into today's session — nothing you've already logged is touched.",
+    extraHTML
+  });
 }
 function activeCreateCustom(){
   const name = document.getElementById("custom-name").value.trim();
@@ -1254,16 +1335,7 @@ function planRemove(di, si){
   d.exercises.splice(si, 1); save(); render();
 }
 function planAdd(di){
-  const groups = [
-    ["Cardio", EX.filter(e => e.p === "cardio")],
-    ["My custom", EX.filter(e => e.p === "custom")],
-    ["Legs & glutes", EX.filter(e => ["squat","hinge","glute","lunge","calves"].includes(e.p))],
-    ["Push (chest/shoulders/tris)", EX.filter(e => ["pushH","pushV","shoulders"].includes(e.p) || (e.p === "arms" && /Tri/i.test(e.m)))],
-    ["Pull (back/biceps)", EX.filter(e => ["pullH","pullV"].includes(e.p) || (e.p === "arms" && /Bicep/i.test(e.m)))],
-    ["Core", EX.filter(e => e.p === "core")]
-  ];
-  document.getElementById("swapmodal").innerHTML = `<div class="modal" onclick="if(event.target===this)this.parentNode.innerHTML=''">
-    <div class="inner"><h3 style="margin-bottom:10px">Add to ${esc(S.plan.days[di].name)}</h3>
+  const extraHTML = `
     <div class="card" style="margin-bottom:12px">
       <label style="margin-top:0">Or create your own (anything — "Treadmill Run", "Boxing", "Yoga"...)</label>
       <div style="display:flex;gap:8px;margin-top:4px">
@@ -1274,9 +1346,11 @@ function planAdd(di){
         <span class="pill" id="cu-time" onclick="this.classList.add('on');document.getElementById('cu-load').classList.remove('on')">minutes (cardio)</span>
       </div>
       <button class="btn small-btn" style="margin-top:6px" onclick="createCustom(${di})">Create & add</button>
-    </div>
-    <div class="swaplist">${groups.map(([label, list]) => list.length ? `<div class="dim small" style="margin:8px 0 4px;font-weight:700">${label}</div>` +
-      list.map(o => `<div class="card" onclick="doAdd(${di},'${o.id}')"><b>${esc(o.n)}</b><div class="dim small">${esc(o.m)}</div></div>`).join("") : "").join("")}</div></div></div>`;
+    </div>`;
+  openExercisePicker(EX, id => doAdd(di, id), {
+    title: "Add to " + S.plan.days[di].name,
+    extraHTML
+  });
 }
 function createCustom(di){
   const name = document.getElementById("custom-name").value.trim();
