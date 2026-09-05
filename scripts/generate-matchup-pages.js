@@ -1065,9 +1065,11 @@ function buildInsights(game, pitcherGame) {
   }
   // 2026-08-16, Lynold's explicit instruction: the Lab Rating breakdown now
   // shows on every game, official picks included -- not just failing setups.
-  // labRatingBreakdown() (unlike labRatingReasons()) always returns all four
-  // buckets, strong or weak, so this is the same detail readers used to only
-  // see when a setup failed, now available everywhere.
+  // labRatingBreakdown() (unlike labRatingReasons()) always returns every
+  // scored bucket, strong or weak -- three since 2026-08-30 (bullpen
+  // removed, see lab-rating-core.js's version note), was four before -- so
+  // this is the same detail readers used to only see when a setup failed,
+  // now available everywhere.
   const oppTeamName = game.pick_team === game.away_team ? game.home_team : game.pick_team === game.home_team ? game.away_team : null;
   // 2026-08-26: Lab Rating's pitching-plan copy now names and scores only
   // the PICKED side's own starter (individualized, no opponent reference --

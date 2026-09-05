@@ -225,7 +225,7 @@ function recentFormSentence({ awayTeam, homeTeam, awayL10, homeL10, awayRunDiff,
 
    Lab Rating v2 (scripts/lib/lab-rating-core.js) already computes exactly why
    a game scored what it scored — conviction, model agreement, pitching plan,
-   bullpen, offense, data completeness — and stores every sub-value in
+   offense, data completeness — and stores every sub-value in
    lab_score_breakdown. Nothing here recomputes the rating; this only reads
    the breakdown that already exists and turns each component below its own
    "this is a real strength" threshold into a plain sentence. A component that
@@ -242,10 +242,14 @@ function recentFormSentence({ awayTeam, homeTeam, awayL10, homeL10, awayRunDiff,
 // max was never updated to match, so every matchup page has been displaying
 // "20/26" (and now would have shown "30/36") instead of the real max ever
 // since. Caught when Lynold flagged the wrong number on a live page.
+// 2026-08-30, Lynold's explicit instruction: bullpen removed entirely, not
+// just zeroed -- BULLPEN_MAX is 0 now (see lab-rating-core.js's version
+// note), which would make breakdown.bullpen_points / LAB_MAX.bullpen a
+// literal 0/0 (NaN) below. Dropped the key rather than leave a NaN-producing
+// dead branch in both functions that follow.
 const LAB_MAX = {
   conviction: CONVICTION_MAX,
   pitching_plan: PITCHER_MAX,
-  bullpen: BULLPEN_MAX,
   offense: OFFENSE_MAX
 };
 // A component earning less than this fraction of its max is treated as a real
@@ -298,14 +302,11 @@ function labRatingReasons({
     }
   }
 
-  if ((breakdown.bullpen_points / LAB_MAX.bullpen) < LAB_WEAK_FRACTION) {
-    reasons.push({
-      title: `Bullpen: ${breakdown.bullpen_points}/${LAB_MAX.bullpen}`,
-      detail: bullpenPickLabel && bullpenOppLabel && bullpenPickLabel === bullpenOppLabel
-        ? `Both bullpens are rated ${String(bullpenPickLabel).toLowerCase()} — this is close to a wash, not an advantage either way.`
-        : `LyDia does not see a meaningful bullpen edge for ${pickTeam} once assigned innings are weighted.`
-    });
-  }
+  // Bullpen removed 2026-08-30 -- it no longer scores Lab Rating, so it no
+  // longer has a weakness to report here. See lab-rating-core.js's version
+  // note. Bullpen-fatigue's effect on the moneyline PRICE is unrelated and
+  // still covered by bullpenCase()/the "Bullpen adjustment" line elsewhere
+  // in this file.
 
   if ((breakdown.offense_points / LAB_MAX.offense) < LAB_WEAK_FRACTION) {
     reasons.push({
@@ -335,8 +336,10 @@ function labRatingReasons({
 }
 
 /*
-  2026-08-16, Lynold's explicit instruction: always show all four Lab Rating
-  buckets on every matchup page, not just the weak ones. labRatingReasons()
+  2026-08-16, Lynold's explicit instruction: always show all Lab Rating
+  buckets on every matchup page, not just the weak ones (three since
+  2026-08-30 -- bullpen removed, see lab-rating-core.js's version note).
+  labRatingReasons()
   above is deliberately weakness-only (see its header comment) and stays that
   way for wherever it is still useful; this is a separate, always-on sibling
   used for the new un-gated "Why the setup score is what it is" section.
@@ -376,13 +379,9 @@ function labRatingBreakdown({
       + (strong(planFrac) ? " That is a strong start on its own, and it earns most or all of the available credit here." : " Average or below by that measure, so it earns little or none of the available credit here -- independent of who the opponent is throwing.")
     : `No individual pitcher score is available for ${pickTeam}'s starter in this matchup.`;
 
-  const bpFrac = breakdown.bullpen_points / LAB_MAX.bullpen;
-  const bpDetail = strong(bpFrac)
-    ? `${pickTeam}'s bullpen carries a real edge over ${oppTeam || "the opponent"}'s tonight.`
-    : (bullpenPickLabel && bullpenOppLabel && bullpenPickLabel === bullpenOppLabel
-        ? `Both bullpens are rated ${String(bullpenPickLabel).toLowerCase()} -- this is close to a wash, not an advantage either way.`
-        : `LyDia does not see a meaningful bullpen edge for ${pickTeam} here.`);
-
+  // Bullpen removed 2026-08-30 -- no bpFrac/bpDetail here any more; see
+  // lab-rating-core.js's version note. This function now returns three
+  // buckets, not four.
   const offFrac = breakdown.offense_points / LAB_MAX.offense;
   const offDetail = strong(offFrac)
     ? `${pickTeam}'s recent offensive form clearly outpaces ${oppTeam || "the opponent"}'s over the tracked windows.`
@@ -391,7 +390,6 @@ function labRatingBreakdown({
   return [
     { title: `Conviction: ${breakdown.conviction_points}/${LAB_MAX.conviction}`, detail: convDetail },
     { title: `Pitching plan: ${breakdown.pitching_plan_points}/${LAB_MAX.pitching_plan}`, detail: planDetail },
-    { title: `Bullpen: ${breakdown.bullpen_points}/${LAB_MAX.bullpen}`, detail: bpDetail },
     { title: `Offense: ${breakdown.offense_points}/${LAB_MAX.offense}`, detail: offDetail }
   ];
 }

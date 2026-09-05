@@ -108,6 +108,17 @@ const FOCUS_DATE = (process.argv[2] || "").match(/^\d{4}-\d{2}-\d{2}$/) ? proces
 // but they were wrong. Current weights per lab-rating-core.js: conviction 35,
 // agreement 0, pitching plan 20 (pitcher-edge-only since 2026-08-12), bullpen
 // 20, offense 25, completeness 0.
+// 2026-08-30, Lynold's explicit instruction: bullpen removed from Lab Rating
+// scoring, its 10 points folded into pitching plan (see lab-rating-core.js's
+// 2026-08-30 version note). BULLPEN_MAX now reads 0 from that file, same
+// "retained so this stays a number, not undefined" convention as
+// AGREEMENT_MAX/COMPLETENESS_MAX. bullpen_points is 0 on every game rated
+// under the new weights, but real (nonzero) on every game rated before
+// this change -- left in COMPONENTS rather than removed, so
+// componentAnalysis() below keeps reporting real pre-change history
+// instead of silently dropping it. Expect its win-rate lift/correlation
+// numbers to drift toward "constant: true" as the sample of new-regime
+// games grows and old-regime rows age out of relevance.
 const COMPONENTS = [
   { key: "conviction_points",    label: "conviction",    max: CONVICTION_MAX },
   { key: "agreement_points",     label: "agreement",     max: AGREEMENT_MAX },

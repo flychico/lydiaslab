@@ -217,6 +217,34 @@
   official-pick pitcher-conflict gate and the "owns the starting pitcher
   edge by N points" matchup-page copy in generate-member-lab.js still read
   it directly) -- only Lab Rating's own scoring stopped using it.
+
+  ---------------------------------------------------------------------------
+  2026-08-30: BULLPEN REMOVED FROM SCORING, LYNOLD'S EXPLICIT INSTRUCTION
+
+  BULLPEN_MAX 10 -> 0, PITCHER_MAX 30 -> 40. CONVICTION_MAX and OFFENSE_MAX
+  unchanged at 10 and 50. New split still sums to 100:
+
+                        v3.3    v3.4 (this change)
+      conviction        10      10
+      pitching plan     30      40
+      bullpen           10       0
+      offense           50      50
+
+  bullpenPoints() is removed entirely, not just zeroed -- BULLPEN_MAX is kept
+  as an exported constant at 0, same "retained so any consumer reading it
+  gets a number, not undefined" convention AGREEMENT_MAX/COMPLETENESS_MAX
+  already use below. pickBullpenRisk/oppBullpenRisk/assigned_bullpen_innings
+  are still accepted by calcLabRating() and still returned in the breakdown
+  -- they still feed the data-completeness diagnostic and the diagnostic
+  CSVs (lab_rating_inputs_log.csv, confidence_log.csv) -- only the function
+  that turned bullpen risk into POINTS is gone. Bullpen risk data itself is
+  untouched everywhere else it is used: the Totals model's own separate
+  bullpen scoring (scripts/lib/totals-setup-core.js), the bullpen-fatigue
+  tool, and the scoreboard's bullpen-caution badge all read the same raw
+  risk_index independently of Lab Rating and are unaffected by this change.
+
+  No new backtest was run to justify this redistribution, same as every
+  prior rebalance in this file's history -- a deliberate policy call.
 */
 
 "use strict";
@@ -256,7 +284,9 @@ const AGREEMENT_ZERO = 0.15;
 // 2026-08-12: absorbed the old 6-pt plan-completeness bonus (see version note
 // above) -- was 14, then 20.
 // 2026-08-25, Lynold's explicit instruction: 20 -> 30. See version note above.
-const PITCHER_MAX = 30;
+// 2026-08-30, Lynold's explicit instruction: 30 -> 40 (bullpen's 10 points
+// folded in). See the 2026-08-30 version note above.
+const PITCHER_MAX = 40;
 // 2026-08-26: replaced PITCHER_FULL_GAP (a comparative-gap threshold) with an
 // individualized floor/ceiling on the picked pitcher's own pitcher_score
 // (20-92 scale). See the 2026-08-26 version note above for how these two
@@ -270,8 +300,12 @@ const PITCHER_SCORE_FLOOR = 50;   // pitcher_score at/below this earns 0 points
 // full credit reachable by a real above-average start rather than only a
 // ~95th-percentile one.
 const PITCHER_SCORE_CEILING = 80; // pitcher_score at/above this earns full PITCHER_MAX
-// 2026-08-25, Lynold's explicit instruction: 20 -> 10. See version note above.
-const BULLPEN_MAX = 10;
+// 2026-08-25, Lynold's explicit instruction: 20 -> 10.
+// 2026-08-30, Lynold's explicit instruction: retired -- 10 -> 0, folded into
+// PITCHER_MAX above. Retained as an exported constant (like AGREEMENT_MAX/
+// COMPLETENESS_MAX below) so any consumer reading it still gets a number.
+// See the 2026-08-30 version note above.
+const BULLPEN_MAX = 0;
 // 2026-08-16, Lynold's explicit instruction: 25 -> 40. See version note above.
 // 2026-08-22, Lynold's explicit instruction: 40 -> 50.
 const OFFENSE_MAX = 50;
@@ -285,12 +319,10 @@ const OFFENSE_WOBA_CAP = 0.06;
 // scores pitching-plan support directly.
 const FULL_GAME_INNINGS = 9;
 const INNINGS_TOLERANCE = 0.05;
-// Bullpen differential is judged against the same 45-point spread v1 used, so
-// the bullpen read itself does not silently change meaning between versions.
-const BULLPEN_RISK_SPAN = 45;
-// A pen owning ~4 innings carries full weight; a 2-inning pen carries less.
-const BULLPEN_FULL_INNINGS = 4.0;
-const BULLPEN_MIN_WEIGHT = 0.5;
+// BULLPEN_RISK_SPAN/BULLPEN_FULL_INNINGS/BULLPEN_MIN_WEIGHT removed 2026-08-30
+// along with bullpenPoints() itself -- see the version note above. Bullpen
+// risk is still collected (pickBullpenRisk/oppBullpenRisk below) for the
+// completeness diagnostic and the diagnostic CSVs; it just no longer scores.
 
 function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
 function round(n, dp = 2) {
@@ -368,23 +400,10 @@ function pitchingPlanPoints({ pickPitcherScore }) {
   };
 }
 
-/*
-  Bullpen support, scoped to assigned bullpen innings only. A pen that owns 2.0
-  innings behind a bulk pitcher should not swing the rating as hard as one that
-  owns 4.5 innings behind a short opener.
-*/
-function bullpenPoints({ pickRisk, oppRisk, pickBullpenInnings }) {
-  const neutral = BULLPEN_MAX / 2;
-  if (!isNum(pickRisk) || !isNum(oppRisk)) {
-    return { points: neutral, weight: null, available: false };
-  }
-  const diff = clamp((oppRisk - pickRisk) / BULLPEN_RISK_SPAN, -1, 1);
-  const weight = isNum(pickBullpenInnings)
-    ? clamp(pickBullpenInnings / BULLPEN_FULL_INNINGS, BULLPEN_MIN_WEIGHT, 1)
-    : 1;
-  const points = clamp(neutral + diff * neutral * weight, 0, BULLPEN_MAX);
-  return { points, weight: round(weight), available: true };
-}
+// bullpenPoints() removed 2026-08-30 -- bullpen no longer scores Lab Rating.
+// See the 2026-08-30 version note at the top of this file. Bullpen risk
+// (pickBullpenRisk/oppBullpenRisk) is still collected by calcLabRating()
+// below, purely as a completeness diagnostic and for the diagnostic CSVs.
 
 /*
   Offensive matchup support: each side's current offense compared directly to
@@ -499,27 +518,29 @@ function calcLabRating(input) {
   });
 
   const penInnings = assignedBullpenInnings(pickPlan);
-  const bullpen = bullpenPoints({
-    pickRisk: pickBullpenRisk,
-    oppRisk: oppBullpenRisk,
-    pickBullpenInnings: penInnings
-  });
+  // 2026-08-30: bullpen no longer scores -- see the version note at the top
+  // of this file. pickBullpenRisk/oppBullpenRisk/penInnings are still
+  // accepted as inputs and still feed the completeness diagnostic and the
+  // breakdown object below (diagnostic only, matching agreement/
+  // completeness's "always 0 but still reported" pattern), they just no
+  // longer produce points.
+  const hasBothBullpens = isNum(pickBullpenRisk) && isNum(oppBullpenRisk);
 
   const offense = offensePoints({ pickWoba15, oppWoba15, pickWoba30, oppWoba30 });
 
   const completeness = completenessDiagnostic({
     hasTeamStrength,
     hasBothPitchers,
-    hasBothBullpens: bullpen.available,
+    hasBothBullpens,
     hasRunProjection: hasRunProjection === null ? agreement.available : hasRunProjection,
     planInningsBalanced: pickPlanComplete && oppPlanComplete
   });
 
-  // agreement and completeness contribute 0 by construction; they are included
-  // in the sum so that adding a component back later is a one-line change and
-  // so the arithmetic matches the breakdown a reader sees.
+  // agreement, bullpen and completeness contribute 0 by construction; they
+  // are included in the sum so that adding a component back later is a
+  // one-line change and so the arithmetic matches the breakdown a reader sees.
   const total = conviction + agreement.points + plan.points
-    + bullpen.points + offense.points + completeness.points;
+    + offense.points + completeness.points;
   const score = Math.round(clamp(total, 0, 100));
 
   return {
@@ -529,15 +550,14 @@ function calcLabRating(input) {
     conviction_points: round(conviction),
     agreement_points: round(agreement.points),          // always 0 in v3
     pitching_plan_points: round(plan.points),
-    bullpen_points: round(bullpen.points),
+    bullpen_points: 0,                                  // retired 2026-08-30 -- see version note
     offense_points: round(offense.points),
     completeness_points: round(completeness.points),    // always 0 in v3
 
     pitcher_edge_points: plan.pitcher_edge_points,
     model_agreement_gap: agreement.gap === null ? null : round(agreement.gap, 4),
     model_agreement_credit: agreement.credit,           // what v2 would have scored on
-    bullpen_innings_weight: bullpen.weight,
-    assigned_bullpen_innings: penInnings === null ? null : round(penInnings, 1),
+    assigned_bullpen_innings: penInnings === null ? null : round(penInnings, 1),  // diagnostic only, no longer scored
     offense_delta: offense.diff,               // average of the 15d/30d wOBA gaps below
     offense_delta_15d: offense.diff_15d,
     offense_delta_30d: offense.diff_30d,
@@ -556,10 +576,11 @@ function calcLabRating(input) {
 }
 
 /* One-line public breakdown. Never mentions the market. */
+// 2026-08-30: bullpen dropped from this sentence -- it no longer scores.
+// See the version note at the top of this file.
 function labRatingSentence(lab) {
   return `Lab Rating ${(lab.score / 10).toFixed(1)}/10: conviction ${lab.conviction_points}, `
-    + `pitching plan ${lab.pitching_plan_points}, bullpen ${lab.bullpen_points}, `
-    + `offense ${lab.offense_points}.`;
+    + `pitching plan ${lab.pitching_plan_points}, offense ${lab.offense_points}.`;
 }
 
 module.exports = {

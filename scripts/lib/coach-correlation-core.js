@@ -132,7 +132,16 @@ const FEATURES = [
   { key: "pick_team_strength_edge", label: "Team strength blend edge, before any pitcher/bullpen adjustment (picked side minus opponent)" },
   { key: "lab_offense_points", label: "Lab Rating's offense component score" },
   { key: "lab_pitching_plan_points", label: "Lab Rating's pitching-plan component score" },
-  { key: "lab_bullpen_points", label: "Lab Rating's bullpen component score" },
+  // 2026-08-30, Lynold's explicit instruction: bullpen removed from Lab
+  // Rating scoring (folded into pitching plan -- see lab-rating-core.js's
+  // 2026-08-30 version note). Kept here rather than removed -- this feature
+  // reads historical member-brief breakdowns, so it still carries real,
+  // meaningful variance for every game rated before the change. Going
+  // forward it will read a flat 0 for every new game, which will pull its
+  // correlation toward "no signal" over time as the sample mixes -- that is
+  // expected, not a bug, and is the same "let it age out" approach used for
+  // grade-confidence.js's own bullpen_points component analysis.
+  { key: "lab_bullpen_points", label: "Lab Rating's bullpen component score (retired 2026-08-30 -- pre-change history only)" },
   { key: "lab_conviction_points", label: "Lab Rating's conviction component score" },
   { key: "lab_pitcher_edge_points", label: "Lab Rating's pitcher-edge component score" },
   // 2026-08-30, Lynold's direct follow-up: "relationship between a pitcher

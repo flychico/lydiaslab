@@ -392,9 +392,17 @@ function buildFindings(ctx) {
     if (worst.key !== best.key) {
       const notWorking = worst.corr_with_win < 0.02;
       const disagree = notWorking && worst.lift > 0.02;
+      // 2026-08-30: bullpen is retired from scoring as of this date (see
+      // lab-rating-core.js) -- if it still surfaces here as weakest, that is
+      // PRE-CHANGE history (real variance from before the change), not a
+      // live component. Said explicitly so this doesn't read as "here's a
+      // component earning points today that shouldn't be."
+      const retiredNote = worst.key === "bullpen_points"
+        ? " Bullpen no longer scores Lab Rating (removed 2026-08-30, folded into pitching plan) -- this is its pre-change record, not a live component."
+        : "";
       findings.push({
         title: disagree ? "Mixed signal: Lab Rating component" : (notWorking ? "What's not working: Lab Rating components" : "Weakest-working Lab Rating component"),
-        read: `${worst.component} -- correlation to winning ${signed(worst.corr_with_win)}, lift ${pctSigned(worst.lift)} over ${worst.n} picks.${componentVerdict(worst)}`
+        read: `${worst.component} -- correlation to winning ${signed(worst.corr_with_win)}, lift ${pctSigned(worst.lift)} over ${worst.n} picks.${componentVerdict(worst)}${retiredNote}`
       });
     }
   } else {
@@ -410,14 +418,24 @@ function buildFindings(ctx) {
   // (a different, still-useful question -- "how often did this specific
   // caution actually show up today's/history's picks") but now attach the
   // statistical read on whether that flag predicts anything, when available.
+  // 2026-08-30, Lynold's explicit instruction: bullpen removed from Lab
+  // Rating scoring entirely (its 10 points folded into pitching plan -- see
+  // lab-rating-core.js's 2026-08-30 version note). The real-world caution
+  // count below still comes from the bullpen-fatigue system, which is
+  // independent of Lab Rating and unaffected by this change. The
+  // correlation/lift numbers, when present, describe bullpen's PRE-CHANGE
+  // scoring history only -- said explicitly so this doesn't read as a live
+  // Lab Rating component once new games start reporting bullpen_points as a
+  // flat 0.
   const bullpenComp = components.find(c => c.key === "bullpen_points");
   findings.push({
     title: "Bullpen learning",
     read: (ctx.highBullpenRisk.length
       ? `Across all reviewed days, ${ctx.highBullpenRisk.length} graded moneyline pick${ctx.highBullpenRisk.length === 1 ? "" : "s"} carried a meaningful bullpen caution.`
       : "No graded moneyline picks carried a major bullpen caution.")
+      + " Bullpen was removed from Lab Rating's own scoring on 2026-08-30 (folded into pitching plan) -- this caution count is a separate, still-live read from the bullpen-fatigue system, unaffected by that change."
       + (bullpenComp
-        ? ` Statistically, Lab Rating's bullpen component correlates ${signed(bullpenComp.corr_with_win)} with winning over ${bullpenComp.n} picks (lift ${pctSigned(bullpenComp.lift)}).${componentVerdict(bullpenComp)}`
+        ? ` For reference, its PRE-CHANGE scoring history correlated ${signed(bullpenComp.corr_with_win)} with winning over ${bullpenComp.n} picks (lift ${pctSigned(bullpenComp.lift)}).${componentVerdict(bullpenComp)}`
         : "")
   });
 
