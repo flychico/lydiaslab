@@ -68450,21 +68450,21 @@
     },
     "2026-09-07": {
       "date": "2026-09-07",
-      "wins": 2,
-      "losses": 0,
-      "ungraded": 2,
+      "wins": 5,
+      "losses": 4,
+      "ungraded": 0,
       "voided": 0,
-      "units": 1.6,
+      "units": 0.12,
       "source": "published-picks",
       "current_official_model": "multi_market_v1",
       "model_version": "multi-market-v1",
       "market_records": {
         "moneyline": {
           "wins": 0,
-          "losses": 0,
+          "losses": 1,
           "pushes": 0,
           "voids": 0,
-          "units": 0
+          "units": -1
         },
         "game_total": {
           "wins": 0,
@@ -68474,11 +68474,11 @@
           "units": 0
         },
         "pitcher_strikeouts": {
-          "wins": 2,
-          "losses": 0,
+          "wins": 5,
+          "losses": 3,
           "pushes": 0,
           "voids": 0,
-          "units": 1.6
+          "units": 1.12
         }
       },
       "picks": [
@@ -68938,7 +68938,29 @@
               "valueTag": "OFFICIAL PICK"
             }
           ],
-          "result": "NG",
+          "mlResult": "NG",
+          "totResult": "NG",
+          "kResults": [
+            {
+              "pitcher": "Jake Irvin",
+              "pick": "Over",
+              "line": 4.5,
+              "bestAm": 117,
+              "actual": 3,
+              "result": "L"
+            },
+            {
+              "pitcher": "Nick Pivetta",
+              "pick": "Over",
+              "line": 4.5,
+              "bestAm": -113,
+              "actual": 2,
+              "result": "L"
+            }
+          ],
+          "rlResult": "NG",
+          "finalAway": 2,
+          "finalHome": 3,
           "learning": {
             "model_version": "multi-market-v1",
             "official_model": "moneyline_only",
@@ -68958,6 +68980,270 @@
             "clv_result": "not_tracked",
             "result": "NG",
             "lesson_tag": "not_graded"
+          }
+        },
+        {
+          "gamePk": 823902,
+          "away": "Cincinnati Reds",
+          "home": "Los Angeles Dodgers",
+          "time": "2026-09-08T01:10:00Z",
+          "labScore": 77,
+          "labScoreBreakdown": {
+            "score": 77,
+            "version": "lab-rating-v3-measured-components",
+            "conviction_points": 8.2,
+            "agreement_points": 0,
+            "pitching_plan_points": 36,
+            "bullpen_points": 0,
+            "offense_points": 33.27,
+            "completeness_points": 0,
+            "pitcher_edge_points": 36,
+            "model_agreement_gap": 0.1301,
+            "model_agreement_credit": 0.153,
+            "assigned_bullpen_innings": 3.4,
+            "offense_delta": 0.0199,
+            "offense_delta_15d": 0.0395,
+            "offense_delta_30d": 0.0002,
+            "completeness_checks_passed": 5,
+            "completeness_checks_total": 5,
+            "data_complete": true,
+            "market_points": 0,
+            "model_edge_points": 0,
+            "base_points": 0,
+            "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
+          },
+          "status": "official_pick",
+          "modelVersion": "multi-market-v1",
+          "pitcherEdge": {
+            "team": "Cincinnati Reds",
+            "gap": 20,
+            "conflict": false,
+            "away_score": 77,
+            "home_score": 57,
+            "away_pitcher": "Chase Burns",
+            "home_pitcher": "Emmet Sheehan",
+            "away_pitcher_id": 695505,
+            "home_pitcher_id": 686218,
+            "away_era": 2.79,
+            "home_era": 5.29,
+            "away_whip": 1.16,
+            "home_whip": 1.29,
+            "away_advanced": {
+              "w": 15,
+              "l": 3,
+              "kbb_pct": 0.2044,
+              "gb_pct": 0.4024,
+              "babip": 0.291,
+              "hr9": 0.93,
+              "ip_per_start": 5.6,
+              "role": "traditional_starter",
+              "role_label": "Traditional starter",
+              "expected_innings": 5.6,
+              "bullpen_innings": 3.4
+            },
+            "home_advanced": {
+              "w": 4,
+              "l": 8,
+              "kbb_pct": 0.1893,
+              "gb_pct": 0.3873,
+              "babip": 0.298,
+              "hr9": 1.89,
+              "ip_per_start": 4.8,
+              "role": "traditional_starter",
+              "role_label": "Traditional starter",
+              "expected_innings": 4.8,
+              "bullpen_innings": 4.2
+            }
+          },
+          "bullpen": {
+            "pick_team": {
+              "score": 90,
+              "label": "High risk",
+              "last_game_bp_ip": 4,
+              "last7_bp_ip": 25.3,
+              "last7_bp_runs": 8,
+              "last_game_relievers": 5,
+              "last7_relievers": 26,
+              "back_to_back_arms": 6,
+              "workload_read": "Heavy recent workload. Late-game pitching condition could materially affect the read.",
+              "score_reason": "High risk (9.0/10): 25.3 recent relief innings, recency-weighted — 4 in the last game (pitched yesterday), 6 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+              "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+              "context_only": {
+                "last_game_relievers": 5,
+                "last7_relievers": 26,
+                "note": "Reliever counts are displayed for context only and do not add score points."
+              },
+              "component_scores": {
+                "baseline": 45,
+                "weighted_bp_ip": 16.9,
+                "back_to_back_arms": 27.9,
+                "reliever_counts_context_only": 0,
+                "no_recent_games_credit": 0,
+                "raw_score": 89.8
+              },
+              "efficiency_score": 58,
+              "efficiency_label": "Effective",
+              "efficiency_reason": "Effective (5.8/10): 2.84 ERA and 1.34 WHIP over 25.3 relief innings (8 ER, 21 H, 13 BB) in the last 7 days.",
+              "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+              "efficiency_component_scores": {
+                "baseline": 50,
+                "era_term": 8.1,
+                "whip_term": -0.6,
+                "confidence": 1,
+                "raw_score": 57.5
+              },
+              "era_7d": 2.84,
+              "whip_7d": 1.34,
+              "last15_bp_ip": 51.3,
+              "last15_bp_runs": 31,
+              "era_15d": 5.44,
+              "whip_15d": 1.46,
+              "recent15_games_tracked": 13,
+              "risk_index": 86,
+              "risk_label": "High risk",
+              "days_rest": 1,
+              "source_version": "bullpen-fatigue-v5-recency-weighted"
+            },
+            "opponent": {
+              "score": 74,
+              "label": "Tired",
+              "last_game_bp_ip": 6,
+              "last7_bp_ip": 24.3,
+              "last7_bp_runs": 15,
+              "last_game_relievers": 4,
+              "last7_relievers": 24,
+              "back_to_back_arms": 6,
+              "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+              "score_reason": "Tired (7.4/10): 24.3 recent relief innings, recency-weighted — 6 in the last game (pitched yesterday), 6 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+              "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+              "context_only": {
+                "last_game_relievers": 4,
+                "last7_relievers": 24,
+                "note": "Reliever counts are displayed for context only and do not add score points."
+              },
+              "component_scores": {
+                "baseline": 45,
+                "weighted_bp_ip": 15.1,
+                "back_to_back_arms": 13.9,
+                "reliever_counts_context_only": 0,
+                "no_recent_games_credit": 0,
+                "raw_score": 73.9
+              },
+              "efficiency_score": 49,
+              "efficiency_label": "Average",
+              "efficiency_reason": "Average (4.9/10): 4.81 ERA and 1.15 WHIP over 24.3 relief innings (13 ER, 21 H, 7 BB) in the last 7 days.",
+              "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+              "efficiency_component_scores": {
+                "baseline": 50,
+                "era_term": -3.6,
+                "whip_term": 2.2,
+                "confidence": 1,
+                "raw_score": 48.6
+              },
+              "era_7d": 4.81,
+              "whip_7d": 1.15,
+              "last15_bp_ip": 45.7,
+              "last15_bp_runs": 19,
+              "era_15d": 3.35,
+              "whip_15d": 1.18,
+              "recent15_games_tracked": 13,
+              "risk_index": 75,
+              "risk_label": "Tired",
+              "days_rest": 1,
+              "source_version": "bullpen-fatigue-v5-recency-weighted"
+            },
+            "label": "Elevated volatility",
+            "major_caution": false,
+            "absolute_risk": "Pick side high"
+          },
+          "moneyline": {
+            "pick": "Cincinnati Reds",
+            "side": "away",
+            "prob": 0.714,
+            "mktProb": 0.2617,
+            "bestAm": 273,
+            "valueTag": "OFFICIAL PICK",
+            "isPass": false,
+            "tier": "Qualified Official",
+            "edgeScore": 77,
+            "rawEdge": 0.4523,
+            "why": "Cincinnati Reds is an official moneyline pick because it clears both gates: 71.4% model win probability and 7.7/10 Lab Rating. LyDia projects 71.4% against a 26.2% no-vig market number, a 45.2% model edge at +273. Cincinnati Reds owns the starting pitcher edge by 20 points. Bullpen read: Elevated volatility. Cincinnati Reds's pen efficiency: Effective (5.8/10). Lineup check: Cincinnati Reds is swinging a hot bat (+0.095 OPS); Los Angeles Dodgers is in a cold stretch (-0.072 OPS). Recent form supports this side and is included in the unified run projection.",
+            "risk": "Primary caution: bullpen workload adds late-game volatility. Recheck official news before first pitch.",
+            "modelVersion": "leo"
+          },
+          "total": null,
+          "strikeouts": [
+            {
+              "pitcher": "Chase Burns",
+              "pick": "Over",
+              "line": 4.5,
+              "bestAm": -142,
+              "projection": 6.5,
+              "edge": 2,
+              "books": 5,
+              "expectedInnings": 5.6,
+              "pitcherRole": "traditional_starter",
+              "lineupSource": "posted",
+              "modelVersion": "leo-kprop",
+              "valueTag": "OFFICIAL PICK"
+            },
+            {
+              "pitcher": "Emmet Sheehan",
+              "pick": "Over",
+              "line": 6.5,
+              "bestAm": 109,
+              "projection": 7.55,
+              "edge": 1.05,
+              "books": 5,
+              "expectedInnings": 4.8,
+              "pitcherRole": "traditional_starter",
+              "lineupSource": "posted",
+              "modelVersion": "leo-kprop",
+              "valueTag": "OFFICIAL PICK"
+            }
+          ],
+          "mlResult": "L",
+          "totResult": "NG",
+          "kResults": [
+            {
+              "pitcher": "Chase Burns",
+              "pick": "Over",
+              "line": 4.5,
+              "bestAm": -142,
+              "actual": 5,
+              "result": "W"
+            },
+            {
+              "pitcher": "Emmet Sheehan",
+              "pick": "Over",
+              "line": 6.5,
+              "bestAm": 109,
+              "actual": 10,
+              "result": "W"
+            }
+          ],
+          "rlResult": "NG",
+          "finalAway": 3,
+          "finalHome": 6,
+          "learning": {
+            "model_version": "leo",
+            "official_model": "moneyline_only",
+            "result_source": "published-picks",
+            "lab_score": 77,
+            "model_probability": 0.714,
+            "market_probability": 0.2617,
+            "raw_edge": 0.4523,
+            "pitcher_edge_team": "Cincinnati Reds",
+            "pitcher_gap": 20,
+            "bullpen_label": "Elevated volatility",
+            "pick_side_bullpen_score": 90,
+            "opponent_bullpen_score": 74,
+            "posted_price": 273,
+            "current_price": null,
+            "closing_price": null,
+            "clv_result": "not_tracked",
+            "result": "L",
+            "lesson_tag": "loss_needs_review"
           }
         },
         {
@@ -69150,9 +69436,45 @@
               "lineupSource": "posted",
               "modelVersion": "leo-kprop",
               "valueTag": "OFFICIAL PICK"
+            },
+            {
+              "pitcher": "Jacob Lopez",
+              "pick": "Under",
+              "line": 4.5,
+              "bestAm": -138,
+              "projection": 3.56,
+              "edge": -0.94,
+              "books": 4,
+              "expectedInnings": 4.8,
+              "pitcherRole": "traditional_starter",
+              "lineupSource": "posted",
+              "modelVersion": "leo-kprop",
+              "valueTag": "OFFICIAL PICK"
             }
           ],
-          "result": "NG",
+          "mlResult": "NG",
+          "totResult": "NG",
+          "kResults": [
+            {
+              "pitcher": "Dylan Cease",
+              "pick": "Over",
+              "line": 7.5,
+              "bestAm": 102,
+              "actual": 6,
+              "result": "L"
+            },
+            {
+              "pitcher": "Jacob Lopez",
+              "pick": "Under",
+              "line": 4.5,
+              "bestAm": -138,
+              "actual": 1,
+              "result": "W"
+            }
+          ],
+          "rlResult": "NG",
+          "finalAway": 5,
+          "finalHome": 6,
           "learning": {
             "model_version": "multi-market-v1",
             "official_model": "moneyline_only",
