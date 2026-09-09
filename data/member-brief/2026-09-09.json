@@ -1,6 +1,6 @@
 {
   "date": "2026-09-09",
-  "generated_at": "2026-09-09T19:14:31.116Z",
+  "generated_at": "2026-09-09T19:17:49.113Z",
   "snapshot_type": "posted",
   "source_of_truth": "LyDia Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -11,24 +11,8 @@
     "minimum_lab_score": 72,
     "note": "Lab Rating grades LyDia's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
   },
-  "summary": "4 official picks cleared their market gates: 1 moneyline and 3 pitcher strikeout props. 2 value-watch setups had good price math but did not clear official-pick rules.",
+  "summary": "Brief generated without live market pricing. Treat the card as research-only until pricing is checked.",
   "official_card": [
-    {
-      "game_pk": 823416,
-      "game": "Houston Astros @ Philadelphia Phillies",
-      "away": "Houston Astros",
-      "home": "Philadelphia Phillies",
-      "time": "2026-09-09T22:40:00Z",
-      "lab_score": 74,
-      "moneyline": {
-        "pick": "Philadelphia Phillies",
-        "prob": 0.6782,
-        "mkt_prob": 0.6068,
-        "best_price": -172
-      },
-      "total": null,
-      "strikeouts": []
-    },
     {
       "game_pk": 824226,
       "game": "Minnesota Twins @ Detroit Tigers",
@@ -66,6 +50,14 @@
           "best_price": -145,
           "projection": 4.57,
           "edge": 1.07
+        },
+        {
+          "pitcher": "Walker Buehler",
+          "pick": "Over",
+          "line": 3.5,
+          "best_price": -170,
+          "projection": 5.1,
+          "edge": 1.6
         }
       ]
     },
@@ -88,6 +80,22 @@
           "edge": -1.53
         }
       ]
+    },
+    {
+      "game_pk": 823416,
+      "game": "Houston Astros @ Philadelphia Phillies",
+      "away": "Houston Astros",
+      "home": "Philadelphia Phillies",
+      "time": "2026-09-09T22:40:00Z",
+      "lab_score": 74,
+      "moneyline": {
+        "pick": "Philadelphia Phillies",
+        "prob": 0.6782,
+        "mkt_prob": 0.6068,
+        "best_price": -172
+      },
+      "total": null,
+      "strikeouts": []
     }
   ],
   "games": [
@@ -109,8 +117,8 @@
       "model_source": "leo",
       "projected_runs": {
         "away": 2.4,
-        "home": 4.7,
-        "total": 6.8
+        "home": 6,
+        "total": 8.1
       },
       "pitching_plan": {
         "away": {
@@ -193,10 +201,10 @@
         "applied_home": -0.0214,
         "weight": 0.5
       },
-      "run_model_probability": 0.8047,
+      "run_model_probability": 0.8948,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.961,
-      "edge": 0.0737,
+      "edge": 0.0736,
       "status": "value_watch",
       "value_tag": "VALUE WATCH",
       "lab_score": 81,
@@ -210,8 +218,8 @@
         "offense_points": 38.63,
         "completeness_points": 0,
         "pitcher_edge_points": 33.33,
-        "model_agreement_gap": 0.1549,
-        "model_agreement_credit": 0,
+        "model_agreement_gap": 0.0649,
+        "model_agreement_credit": 0.655,
         "assigned_bullpen_innings": 3.1,
         "offense_delta": 0.0327,
         "offense_delta_15d": 0.0208,
@@ -528,7 +536,7 @@
       "run_model_probability": 0.4446,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9355,
-      "edge": 0.2382,
+      "edge": 0.2383,
       "status": "value_watch",
       "value_tag": "VALUE WATCH",
       "lab_score": 79,
@@ -773,8 +781,8 @@
       "model_source": "leo",
       "projected_runs": {
         "away": 2.3,
-        "home": 4.4,
-        "total": 6.4
+        "home": 4,
+        "total": 6
       },
       "pitching_plan": {
         "away": {
@@ -857,7 +865,7 @@
         "applied_home": -0.0118,
         "weight": 0.5
       },
-      "run_model_probability": 0.7897,
+      "run_model_probability": 0.7483,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.8553,
       "edge": 0.0714,
@@ -874,8 +882,8 @@
         "offense_points": 30.02,
         "completeness_points": 0,
         "pitcher_edge_points": 37.33,
-        "model_agreement_gap": 0.0667,
-        "model_agreement_credit": 0.64,
+        "model_agreement_gap": 0.1081,
+        "model_agreement_credit": 0.322,
         "assigned_bullpen_innings": 2.7,
         "offense_delta": 0.012,
         "offense_delta_15d": -0.0059,
@@ -1856,7 +1864,7 @@
       "run_model_probability": 0.5149,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9621,
-      "edge": 0.1861,
+      "edge": 0.1862,
       "status": "watchlist",
       "value_tag": "WATCHLIST",
       "lab_score": 66,
@@ -2800,40 +2808,40 @@
           "bullpen_game": false
         },
         "home": {
-          "type": "opener_bullpen",
-          "confidence": "low",
+          "type": "starter_bullpen",
+          "confidence": "high",
           "reported": false,
           "segments": [
             {
-              "role": "opener",
-              "pitcher_id": null,
-              "pitcher": "TBD",
-              "expected_innings": 4.5,
-              "fip_lite": 4.2,
-              "pitcher_score": 50,
+              "role": "starter",
+              "pitcher_id": 625643,
+              "pitcher": "Reynaldo López",
+              "expected_innings": 4.515151515151516,
+              "fip_lite": 4.32,
+              "pitcher_score": 63,
               "role_stats": null
             },
             {
               "role": "bullpen",
-              "expected_innings": 4.5
+              "expected_innings": 4.484848484848484
             }
           ],
           "expected_innings": 4.5,
           "bullpen_innings": 4.5,
-          "effective_era": 3.38,
-          "pitcher_score": 50,
+          "effective_era": 3.44,
+          "pitcher_score": 63,
           "bullpen_carries_game": false,
-          "description": "TBD 4.5 IP + remaining bullpen 4.5 IP",
-          "pitcher": "TBD",
-          "role": "unknown",
-          "label": "Role unknown",
-          "bullpen_game": true
+          "description": "Reynaldo López 4.5 IP + remaining bullpen 4.5 IP",
+          "pitcher": "Reynaldo López",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
         }
       },
-      "bullpen_game": true,
+      "bullpen_game": false,
       "legacy_strength_probability": 0.5198,
       "model_effective_era_away": 3.92,
-      "model_effective_era_home": 3.74,
+      "model_effective_era_home": 3.44,
       "model_pitcher_score_away": 66,
       "model_pitcher_score_home": 63,
       "team_strength_blend_away": 0.5445,
@@ -2886,14 +2894,14 @@
         "model_probability_passed": false,
         "lab_score_passed": false
       },
-      "pass_reason": "This is a bullpen game -- no confirmed traditional starter, so LyDia does not publish an official pick here.",
-      "read": "This is a bullpen game -- no confirmed traditional starter, so LyDia does not publish an official pick here.",
+      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
+      "read": "The combined Lab Rating did not clear the official threshold.",
       "pitcher_edge": {
-        "team": "Tampa Bay Rays",
-        "gap": 16,
+        "team": "No clear SP edge",
+        "gap": 3,
         "conflict": false,
         "away_score": 66,
-        "home_score": 50,
+        "home_score": 63,
         "away_pitcher": "Griffin Jax",
         "home_pitcher": "Reynaldo López",
         "away_pitcher_id": 643377,
@@ -4180,7 +4188,7 @@
       "run_model_probability": 0.6536,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.7467,
-      "edge": 0.1608,
+      "edge": 0.1609,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 42,
@@ -4424,9 +4432,9 @@
       "model_probability": 0.7289,
       "model_source": "leo",
       "projected_runs": {
-        "away": 3.6,
+        "away": 3.4,
         "home": 6.2,
-        "total": 9.6
+        "total": 9.3
       },
       "pitching_plan": {
         "away": {
@@ -4509,7 +4517,7 @@
         "applied_home": 0.0166,
         "weight": 0.5
       },
-      "run_model_probability": 0.7958,
+      "run_model_probability": 0.8162,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9564,
       "edge": 0.1083,
@@ -4526,8 +4534,8 @@
         "offense_points": 19.17,
         "completeness_points": 0,
         "pitcher_edge_points": 12,
-        "model_agreement_gap": 0.162,
-        "model_agreement_credit": 0,
+        "model_agreement_gap": 0.1416,
+        "model_agreement_credit": 0.065,
         "assigned_bullpen_innings": 4.1,
         "offense_delta": -0.014,
         "offense_delta_15d": -0.0366,
