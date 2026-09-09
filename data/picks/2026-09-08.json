@@ -1451,6 +1451,20 @@
           "lineupSource": "posted",
           "modelVersion": "leo-kprop",
           "valueTag": "OFFICIAL PICK"
+        },
+        {
+          "pitcher": "Bryce Miller",
+          "pick": "Over",
+          "line": 4.5,
+          "bestAm": -142,
+          "projection": 5.35,
+          "edge": 0.85,
+          "books": 5,
+          "expectedInnings": 5.5,
+          "pitcherRole": "traditional_starter",
+          "lineupSource": "posted",
+          "modelVersion": "leo-kprop",
+          "valueTag": "OFFICIAL PICK"
         }
       ]
     },
@@ -1646,7 +1660,200 @@
           "valueTag": "OFFICIAL PICK"
         }
       ]
+    },
+    {
+      "gamePk": 823174,
+      "away": "St. Louis Cardinals",
+      "home": "San Francisco Giants",
+      "time": "2026-09-09T01:45:00Z",
+      "labScore": 46,
+      "labScoreBreakdown": {
+        "score": 46,
+        "version": "lab-rating-v3-measured-components",
+        "conviction_points": 6.21,
+        "agreement_points": 0,
+        "pitching_plan_points": 16,
+        "bullpen_points": 0,
+        "offense_points": 24.23,
+        "completeness_points": 0,
+        "pitcher_edge_points": 16,
+        "model_agreement_gap": 0.508,
+        "model_agreement_credit": 0,
+        "assigned_bullpen_innings": 3.6,
+        "offense_delta": -0.0019,
+        "offense_delta_15d": 0.0092,
+        "offense_delta_30d": -0.0129,
+        "completeness_checks_passed": 5,
+        "completeness_checks_total": 5,
+        "data_complete": true,
+        "market_points": 0,
+        "model_edge_points": 0,
+        "base_points": 0,
+        "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
+      },
+      "status": "official_pick",
+      "modelVersion": "multi-market-v1",
+      "pitcherEdge": {
+        "team": "San Francisco Giants",
+        "gap": 12,
+        "conflict": false,
+        "away_score": 50,
+        "home_score": 62,
+        "away_pitcher": "Quinn Mathews",
+        "home_pitcher": "Landen Roupp",
+        "away_pitcher_id": 687273,
+        "home_pitcher_id": 694738,
+        "away_era": 4.38,
+        "home_era": 4.17,
+        "away_whip": 1.58,
+        "home_whip": 1.29,
+        "away_advanced": {
+          "w": 1,
+          "l": 2,
+          "kbb_pct": 0.1071,
+          "gb_pct": 0.4167,
+          "babip": 0.3514,
+          "hr9": 0.36,
+          "ip_per_start": 4.9,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 4.9,
+          "bullpen_innings": 4.1
+        },
+        "home_advanced": {
+          "w": 8,
+          "l": 13,
+          "kbb_pct": 0.1124,
+          "gb_pct": 0.5719,
+          "babip": 0.2762,
+          "hr9": 0.68,
+          "ip_per_start": 5.4,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 5.4,
+          "bullpen_innings": 3.6
+        }
+      },
+      "bullpen": {
+        "pick_team": {
+          "score": 77,
+          "label": "Tired",
+          "last_game_bp_ip": 5,
+          "last7_bp_ip": 32.7,
+          "last7_bp_runs": 32,
+          "last_game_relievers": 4,
+          "last7_relievers": 25,
+          "back_to_back_arms": 5,
+          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+          "score_reason": "Tired (7.7/10): 32.7 recent relief innings, recency-weighted — 5 in the last game (pitched yesterday), 5 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 4,
+            "last7_relievers": 25,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 16.2,
+            "back_to_back_arms": 15.4,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 76.6
+          },
+          "efficiency_score": 21,
+          "efficiency_label": "Struggling",
+          "efficiency_reason": "Struggling (2.1/10): 7.44 ERA and 1.96 WHIP over 32.7 relief innings (27 ER, 46 H, 18 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": -19.4,
+            "whip_term": -9.9,
+            "confidence": 1,
+            "raw_score": 20.7
+          },
+          "era_7d": 7.44,
+          "whip_7d": 1.96,
+          "last15_bp_ip": 70.3,
+          "last15_bp_runs": 51,
+          "era_15d": 5.63,
+          "whip_15d": 1.58,
+          "recent15_games_tracked": 15,
+          "risk_index": 92,
+          "risk_label": "High risk",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "opponent": {
+          "score": 100,
+          "label": "High risk",
+          "last_game_bp_ip": 3.7,
+          "last7_bp_ip": 35,
+          "last7_bp_runs": 27,
+          "last_game_relievers": 4,
+          "last7_relievers": 32,
+          "back_to_back_arms": 9,
+          "workload_read": "Heavy recent workload. Late-game pitching condition could materially affect the read.",
+          "score_reason": "High risk (10.0/10): 35 recent relief innings, recency-weighted (pitched yesterday), 9 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 4,
+            "last7_relievers": 32,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 22.8,
+            "back_to_back_arms": 34.4,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 102.2
+          },
+          "efficiency_score": 35,
+          "efficiency_label": "Below average",
+          "efficiency_reason": "Below average (3.5/10): 5.66 ERA and 1.69 WHIP over 35 relief innings (22 ER, 40 H, 19 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": -8.7,
+            "whip_term": -5.8,
+            "confidence": 1,
+            "raw_score": 35.5
+          },
+          "era_7d": 5.66,
+          "whip_7d": 1.69,
+          "last15_bp_ip": 62.7,
+          "last15_bp_runs": 44,
+          "era_15d": 5.6,
+          "whip_15d": 1.56,
+          "recent15_games_tracked": 13,
+          "risk_index": 100,
+          "risk_label": "High risk",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "label": "Both bullpens stressed",
+        "major_caution": false,
+        "absolute_risk": "Both high"
+      },
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Landen Roupp",
+          "pick": "Under",
+          "line": 5.5,
+          "bestAm": -140,
+          "projection": 4.34,
+          "edge": -1.16,
+          "books": 5,
+          "expectedInnings": 5.4,
+          "pitcherRole": "traditional_starter",
+          "lineupSource": "posted",
+          "modelVersion": "leo-kprop",
+          "valueTag": "OFFICIAL PICK"
+        }
+      ]
     }
   ],
-  "last_appended_at": "2026-09-08T22:09:05.723Z"
+  "last_appended_at": "2026-09-09T00:37:49.481Z"
 }
