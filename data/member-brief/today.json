@@ -1,6 +1,6 @@
 {
   "date": "2026-09-10",
-  "generated_at": "2026-09-10T17:55:08.614Z",
+  "generated_at": "2026-09-10T18:19:54.596Z",
   "snapshot_type": "posted",
   "source_of_truth": "LyDia Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -11,7 +11,7 @@
     "minimum_lab_score": 72,
     "note": "Lab Rating grades LyDia's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
   },
-  "summary": "1 official pick cleared their market gates: 1 moneyline. 1 value-watch setup had good price math but did not clear official-pick rules.",
+  "summary": "Brief generated without live market pricing. Treat the card as research-only until pricing is checked.",
   "official_card": [
     {
       "game_pk": 823413,
@@ -581,12 +581,77 @@
       "side": "home",
       "model_probability": 0.736,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
+      "projected_runs": {
+        "away": 2.2,
+        "home": 5.4,
+        "total": 7.6
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 663372,
+              "pitcher": "Ryan Feltner",
+              "expected_innings": 4.888888888888889,
+              "fip_lite": 5.3,
+              "pitcher_score": 43,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.111111111111111
+            }
+          ],
+          "expected_innings": 4.9,
+          "bullpen_innings": 4.1,
+          "effective_era": 4.8,
+          "pitcher_score": 43,
+          "bullpen_carries_game": false,
+          "description": "Ryan Feltner 4.9 IP + remaining bullpen 4.1 IP",
+          "pitcher": "Ryan Feltner",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 608331,
+              "pitcher": "Max Fried",
+              "expected_innings": 5.627450980392157,
+              "fip_lite": 2.75,
+              "pitcher_score": 79,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.3725490196078427
+            }
+          ],
+          "expected_innings": 5.6,
+          "bullpen_innings": 3.4,
+          "effective_era": 2.85,
+          "pitcher_score": 79,
+          "bullpen_carries_game": false,
+          "description": "Max Fried 5.6 IP + remaining bullpen 3.4 IP",
+          "pitcher": "Max Fried",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.9719,
-      "model_effective_era_away": 5.72,
-      "model_effective_era_home": 2.75,
+      "model_effective_era_away": 4.8,
+      "model_effective_era_home": 2.85,
       "model_pitcher_score_away": 43,
       "model_pitcher_score_home": 79,
       "team_strength_blend_away": 0.3793,
@@ -602,10 +667,10 @@
         "applied_home": -0.0135,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.8784,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9688,
-      "edge": 0.0163,
+      "edge": 0.0164,
       "status": "watchlist",
       "value_tag": "WATCHLIST",
       "lab_score": 73,
@@ -619,15 +684,15 @@
         "offense_points": 24.77,
         "completeness_points": 0,
         "pitcher_edge_points": 38.67,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.0935,
+        "model_agreement_credit": 0.435,
+        "assigned_bullpen_innings": 3.4,
         "offense_delta": -0.0005,
         "offense_delta_15d": -0.0041,
         "offense_delta_30d": 0.003,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -640,7 +705,7 @@
         "lab_score_passed": true
       },
       "pass_reason": null,
-      "read": "New York Yankees remains on the watchlist. Lab Rating 7.3/10: conviction 9.3, pitching plan 38.67, offense 24.77. LyDia projects 73.6% against a 72.0% no-vig market number, a 1.6% model edge at -280. New York Yankees owns the starting pitcher edge by 36 points. Bullpen read: Supports LyDia side. New York Yankees's pen efficiency: Effective (7.0/10). Bullpen fatigue moved this probability down 23.3 points from 96.9% (starting pitcher and team strength only) to 73.6%. Lineup check: New York Yankees is near its season form (+0.015 OPS); Colorado Rockies is near its season form (+0.008 OPS).",
+      "read": "New York Yankees remains on the watchlist. Lab Rating 7.3/10: conviction 9.3, pitching plan 38.67, offense 24.77. LyDia projects 73.6% against a 72.0% no-vig market number, a 1.6% model edge at -280. New York Yankees owns the starting pitcher edge by 36 points. Bullpen read: Supports LyDia side. New York Yankees's pen efficiency: Effective (7.0/10). Lineup check: New York Yankees is near its season form (+0.015 OPS); Colorado Rockies is near its season form (+0.008 OPS).",
       "pitcher_edge": {
         "team": "New York Yankees",
         "gap": 36,
@@ -848,12 +913,77 @@
       "side": "home",
       "model_probability": 0.6923,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
-      "bullpen_game": false,
+      "projected_runs": {
+        "away": 3.8,
+        "home": 3.3,
+        "total": 7
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 683003,
+              "pitcher": "Jared Jones",
+              "expected_innings": 4.627450980392157,
+              "fip_lite": 3.87,
+              "pitcher_score": 63,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.372549019607843
+            }
+          ],
+          "expected_innings": 4.6,
+          "bullpen_innings": 4.4,
+          "effective_era": 3.5,
+          "pitcher_score": 63,
+          "bullpen_carries_game": false,
+          "description": "Jared Jones 4.6 IP + remaining bullpen 4.4 IP",
+          "pitcher": "Jared Jones",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "opener_bullpen",
+          "confidence": "low",
+          "reported": false,
+          "segments": [
+            {
+              "role": "opener",
+              "pitcher_id": 696146,
+              "pitcher": "Hagen Smith",
+              "expected_innings": 4.5,
+              "fip_lite": 3.95,
+              "pitcher_score": 77,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.5
+            }
+          ],
+          "expected_innings": 4.5,
+          "bullpen_innings": 4.5,
+          "effective_era": 3.66,
+          "pitcher_score": 77,
+          "bullpen_carries_game": false,
+          "description": "Hagen Smith 4.5 IP + remaining bullpen 4.5 IP",
+          "pitcher": "Hagen Smith",
+          "role": "unknown",
+          "label": "Role unknown",
+          "bullpen_game": true
+        }
+      },
+      "bullpen_game": true,
       "legacy_strength_probability": 0.8845,
-      "model_effective_era_away": 4.42,
-      "model_effective_era_home": 4.2,
+      "model_effective_era_away": 3.5,
+      "model_effective_era_home": 3.66,
       "model_pitcher_score_away": 63,
       "model_pitcher_score_home": 77,
       "team_strength_blend_away": 0.5921,
@@ -869,10 +999,10 @@
         "applied_home": 0.0144,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.4269,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.8852,
-      "edge": 0.1925,
+      "edge": 0.1926,
       "status": "watchlist",
       "value_tag": "WATCHLIST",
       "lab_score": 71,
@@ -886,15 +1016,15 @@
         "offense_points": 28.33,
         "completeness_points": 0,
         "pitcher_edge_points": 36,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.4577,
+        "model_agreement_credit": 0,
+        "assigned_bullpen_innings": 4.5,
         "offense_delta": 0.008,
         "offense_delta_15d": -0.0092,
         "offense_delta_30d": 0.0252,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -907,7 +1037,7 @@
         "lab_score_passed": false
       },
       "pass_reason": null,
-      "read": "Chicago White Sox remains on the watchlist. Lab Rating 7.1/10: conviction 7.11, pitching plan 36, offense 28.33. LyDia projects 69.2% against a 50.0% no-vig market number, a 19.3% model edge at -104. Chicago White Sox owns the starting pitcher edge by 14 points. Bullpen read: Both bullpens stressed. Chicago White Sox's pen efficiency: Average (5.2/10). Bullpen fatigue moved this probability down 19.3 points from 88.5% (starting pitcher and team strength only) to 69.2%. Lineup check: Chicago White Sox is a touch below its season form (-0.026 OPS); Pittsburgh Pirates is near its season form (-0.018 OPS).",
+      "read": "Chicago White Sox remains on the watchlist. Lab Rating 7.1/10: conviction 7.11, pitching plan 36, offense 28.33. LyDia projects 69.2% against a 50.0% no-vig market number, a 19.3% model edge at -104. Chicago White Sox owns the starting pitcher edge by 14 points. Bullpen read: Both bullpens stressed. Chicago White Sox's pen efficiency: Average (5.2/10). Pitching plan: Hagen Smith 4.5 IP + remaining bullpen 4.5 IP. Bullpen fatigue, efficiency, and combined risk grade only the innings assigned to the bullpen. Lineup check: Chicago White Sox is a touch below its season form (-0.026 OPS); Pittsburgh Pirates is near its season form (-0.018 OPS).",
       "pitcher_edge": {
         "team": "Chicago White Sox",
         "gap": 14,
@@ -1115,12 +1245,77 @@
       "side": "home",
       "model_probability": 0.5144,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
+      "projected_runs": {
+        "away": 3.1,
+        "home": 3.3,
+        "total": 6.4
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 594798,
+              "pitcher": "Jacob deGrom",
+              "expected_innings": 5.3086419753086425,
+              "fip_lite": 3.24,
+              "pitcher_score": 71,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.6913580246913575
+            }
+          ],
+          "expected_innings": 5.3,
+          "bullpen_innings": 3.7,
+          "effective_era": 4.13,
+          "pitcher_score": 71,
+          "bullpen_carries_game": false,
+          "description": "Jacob deGrom 5.3 IP + remaining bullpen 3.7 IP",
+          "pitcher": "Jacob deGrom",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 669302,
+              "pitcher": "Logan Gilbert",
+              "expected_innings": 5.892857142857143,
+              "fip_lite": 3.83,
+              "pitcher_score": 73,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.1071428571428568
+            }
+          ],
+          "expected_innings": 5.9,
+          "bullpen_innings": 3.1,
+          "effective_era": 4.52,
+          "pitcher_score": 73,
+          "bullpen_carries_game": false,
+          "description": "Logan Gilbert 5.9 IP + remaining bullpen 3.1 IP",
+          "pitcher": "Logan Gilbert",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.5288,
-      "model_effective_era_away": 3.97,
-      "model_effective_era_home": 3.68,
+      "model_effective_era_away": 4.13,
+      "model_effective_era_home": 4.52,
       "model_pitcher_score_away": 71,
       "model_pitcher_score_home": 73,
       "team_strength_blend_away": 0.4924,
@@ -1136,7 +1331,7 @@
         "applied_home": 0.011,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.5309,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.519,
       "edge": -0.0215,
@@ -1153,15 +1348,15 @@
         "offense_points": 12.37,
         "completeness_points": 0,
         "pitcher_edge_points": 30.67,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.0021,
+        "model_agreement_credit": 1,
+        "assigned_bullpen_innings": 3.1,
         "offense_delta": -0.0303,
         "offense_delta_15d": -0.0472,
         "offense_delta_30d": -0.0134,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
