@@ -999,6 +999,199 @@
       ]
     },
     {
+      "gamePk": 823657,
+      "away": "Cleveland Guardians",
+      "home": "Minnesota Twins",
+      "time": "2026-09-12T20:10:00Z",
+      "labScore": 59,
+      "labScoreBreakdown": {
+        "score": 59,
+        "version": "lab-rating-v3-measured-components",
+        "conviction_points": 8.71,
+        "agreement_points": 0,
+        "pitching_plan_points": 30.67,
+        "bullpen_points": 0,
+        "offense_points": 20.02,
+        "completeness_points": 0,
+        "pitcher_edge_points": 30.67,
+        "model_agreement_gap": 0.3247,
+        "model_agreement_credit": 0,
+        "assigned_bullpen_innings": 4.5,
+        "offense_delta": -0.012,
+        "offense_delta_15d": -0.0149,
+        "offense_delta_30d": -0.009,
+        "completeness_checks_passed": 5,
+        "completeness_checks_total": 5,
+        "data_complete": true,
+        "market_points": 0,
+        "model_edge_points": 0,
+        "base_points": 0,
+        "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
+      },
+      "status": "official_pick",
+      "modelVersion": "multi-market-v1",
+      "pitcherEdge": {
+        "team": "Cleveland Guardians",
+        "gap": 18,
+        "conflict": false,
+        "away_score": 73,
+        "home_score": 55,
+        "away_pitcher": "Daniel Espino",
+        "home_pitcher": "Connor Prielipp",
+        "away_pitcher_id": 682982,
+        "home_pitcher_id": 687570,
+        "away_era": 2.7,
+        "home_era": 5.25,
+        "away_whip": 1.3,
+        "home_whip": 1.36,
+        "away_advanced": {
+          "w": 0,
+          "l": 0,
+          "kbb_pct": 0.3256,
+          "gb_pct": 0.5833,
+          "babip": 0.4,
+          "hr9": 0.9,
+          "ip_per_start": null,
+          "role": "unknown",
+          "role_label": "Role unknown",
+          "expected_innings": 4.5,
+          "bullpen_innings": 4.5
+        },
+        "home_advanced": {
+          "w": 4,
+          "l": 7,
+          "kbb_pct": 0.1627,
+          "gb_pct": 0.4975,
+          "babip": 0.324,
+          "hr9": 1.17,
+          "ip_per_start": 5.2,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 5.2,
+          "bullpen_innings": 3.8
+        }
+      },
+      "bullpen": {
+        "pick_team": {
+          "score": 66,
+          "label": "Tired",
+          "last_game_bp_ip": 3.7,
+          "last7_bp_ip": 26.7,
+          "last7_bp_runs": 7,
+          "last_game_relievers": 4,
+          "last7_relievers": 20,
+          "back_to_back_arms": 3,
+          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+          "score_reason": "Tired (6.6/10): 26.7 recent relief innings, recency-weighted (pitched yesterday), 3 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 4,
+            "last7_relievers": 20,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 16.7,
+            "back_to_back_arms": 4,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 65.7
+          },
+          "efficiency_score": 70,
+          "efficiency_label": "Effective",
+          "efficiency_reason": "Effective (7.0/10): 2.03 ERA and 0.86 WHIP over 26.7 relief innings (6 ER, 16 H, 7 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": 13.1,
+            "whip_term": 6.6,
+            "confidence": 1,
+            "raw_score": 69.6
+          },
+          "era_7d": 2.03,
+          "whip_7d": 0.86,
+          "last15_bp_ip": 58,
+          "last15_bp_runs": 19,
+          "era_15d": 2.64,
+          "whip_15d": 1.02,
+          "recent15_games_tracked": 14,
+          "risk_index": 56,
+          "risk_label": "Normal",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "opponent": {
+          "score": 57,
+          "label": "Normal",
+          "last_game_bp_ip": 3,
+          "last7_bp_ip": 24.3,
+          "last7_bp_runs": 18,
+          "last_game_relievers": 4,
+          "last7_relievers": 22,
+          "back_to_back_arms": 2,
+          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
+          "score_reason": "Normal (5.7/10): 24.3 recent relief innings, recency-weighted (pitched yesterday), 2 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 4,
+            "last7_relievers": 22,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 10.7,
+            "back_to_back_arms": 1.8,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 57.5
+          },
+          "efficiency_score": 30,
+          "efficiency_label": "Below average",
+          "efficiency_reason": "Below average (3.0/10): 6.66 ERA and 1.64 WHIP over 24.3 relief innings (18 ER, 26 H, 14 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": -14.7,
+            "whip_term": -5.2,
+            "confidence": 1,
+            "raw_score": 30.1
+          },
+          "era_7d": 6.66,
+          "whip_7d": 1.64,
+          "last15_bp_ip": 56,
+          "last15_bp_runs": 29,
+          "era_15d": 4.34,
+          "whip_15d": 1.34,
+          "recent15_games_tracked": 13,
+          "risk_index": 67,
+          "risk_label": "Tired",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "label": "Elevated volatility",
+        "major_caution": false,
+        "absolute_risk": "Elevated"
+      },
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Connor Prielipp",
+          "pick": "Under",
+          "line": 4.5,
+          "bestAm": -150,
+          "projection": 3.75,
+          "edge": -0.75,
+          "books": 5,
+          "expectedInnings": 5.2,
+          "pitcherRole": "traditional_starter",
+          "lineupSource": "posted",
+          "modelVersion": "leo-kprop",
+          "valueTag": "OFFICIAL PICK"
+        }
+      ]
+    },
+    {
       "gamePk": 822927,
       "away": "Houston Astros",
       "home": "Tampa Bay Rays",
@@ -1385,5 +1578,5 @@
       ]
     }
   ],
-  "last_appended_at": "2026-09-12T20:13:09.875Z"
+  "last_appended_at": "2026-09-12T21:48:41.415Z"
 }
