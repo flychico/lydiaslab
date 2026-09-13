@@ -43,9 +43,9 @@
 */
 const fs = require("fs");
 const path = require("path");
+const { fetchOddsApi, loadKeys } = require("./lib/odds-api-core");
 
 const ROOT = path.join(__dirname, "..");
-const ODDS_API_KEY = process.env.ODDS_API_KEY || "";
 const MAX_ABS_PRICE = 1000;
 
 const args = parseArgs(process.argv.slice(2));
@@ -56,8 +56,8 @@ if (!/^\d{4}-\d{2}-\d{2}$/.test(DATE)) {
   console.error(`Bad date: ${DATE}`);
   process.exit(1);
 }
-if (!ODDS_API_KEY) {
-  console.log("ODDS_API_KEY is missing. Moneyline odds capture skipped.");
+if (!loadKeys().length) {
+  console.log("No ODDS_API_KEY[_2/_3/_4] set. Moneyline odds capture skipped.");
   process.exit(0);
 }
 
@@ -123,7 +123,7 @@ async function main() {
     }
   }
 
-  const oddsEvents = await fetchJson(`https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?apiKey=${encodeURIComponent(ODDS_API_KEY)}&regions=us&markets=h2h&oddsFormat=american`).catch(() => []);
+  const oddsEvents = await fetchOddsApi(`https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?regions=us&markets=h2h&oddsFormat=american`).catch(() => []);
   const games = buildOddsMap(oddsEvents);
   const gameCount = Object.keys(games).length;
 

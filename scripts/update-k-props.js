@@ -75,9 +75,9 @@ const path = require("path");
 const PitcherCore = require("../js/pitcher-matchup-core.js");
 const PitchingPlan = require("./lib/pitching-plan-core.js");
 const Arsenal = require("./lib/arsenal-leverage.js");
+const { fetchOddsApi, loadKeys } = require("./lib/odds-api-core");
 
 const ROOT = path.join(__dirname, "..");
-const KEY = (process.env.ODDS_API_KEY || "").trim();
 const DATE = (process.argv[2] || "").match(/^\d{4}-\d{2}-\d{2}$/)
   ? process.argv[2]
   : new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
@@ -159,7 +159,7 @@ async function currentLineupsPosted() {
 }
 
 async function main() {
-  if (!KEY) { console.log("ODDS_API_KEY not set — strikeout props skipped."); return; }
+  if (!loadKeys().length) { console.log("No ODDS_API_KEY[_2/_3/_4] set — strikeout props skipped."); return; }
   const reportedPlans = PitchingPlan.load(ROOT, DATE);
   const pitchingPlanSignature = JSON.stringify(reportedPlans.games || {});
 
@@ -277,7 +277,7 @@ async function main() {
   let fetched = 0;
 
   if (!skipOddsFetch) {
-    const events = await j(`https://api.the-odds-api.com/v4/sports/baseball_mlb/events?apiKey=${KEY}`);
+    const events = await fetchOddsApi(`https://api.the-odds-api.com/v4/sports/baseball_mlb/events`);
     // keep events that start on DATE in ET
     let todays = (events || []).filter(e => new Date(e.commence_time).toLocaleDateString("en-CA", { timeZone: "America/New_York" }) === DATE);
     // 2026-08-26: only pull odds for the game(s) that actually changed, when
@@ -298,7 +298,7 @@ async function main() {
     for (const ev of todays) {
       let data;
       try {
-        data = await j(`https://api.the-odds-api.com/v4/sports/baseball_mlb/events/${ev.id}/odds?apiKey=${KEY}&regions=us&markets=pitcher_strikeouts&oddsFormat=american`);
+        data = await fetchOddsApi(`https://api.the-odds-api.com/v4/sports/baseball_mlb/events/${ev.id}/odds?regions=us&markets=pitcher_strikeouts&oddsFormat=american`);
         fetched++;
       } catch (e) { console.warn(`event ${ev.id}: ${e.message}`); continue; }
       // collect per pitcher: [{point, overPrice, underPrice, book}]

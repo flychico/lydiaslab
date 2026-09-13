@@ -49,6 +49,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+      ODDS_API_KEY_2: ${{ secrets.ODDS_API_KEY_2 }}
+      ODDS_API_KEY_3: ${{ secrets.ODDS_API_KEY_3 }}
+      ODDS_API_KEY_4: ${{ secrets.ODDS_API_KEY_4 }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -72,6 +75,9 @@ jobs:
           echo "date=$DATE_INPUT" >> "$GITHUB_OUTPUT"
           echo "Resolved slate date: $DATE_INPUT"
 
+      # Only the base key is required -- _2/_3/_4 are optional backups that
+      # scripts/lib/odds-api-core.js rotates to automatically on 401/429. If
+      # ODDS_API_KEY alone is set, this still passes and behavior is unchanged.
       - name: Confirm the odds key is present
         run: |
           if [ -z "${ODDS_API_KEY}" ]; then

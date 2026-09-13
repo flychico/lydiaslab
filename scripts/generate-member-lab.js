@@ -24,6 +24,7 @@ const { OFFICIAL_MODEL_PROB, OFFICIAL_LAB_SCORE } = require("./lib/gate-constant
 // ledgers and had drifted to a stale hardcoded 0.20 while this file's own
 // live copy was retuned to 0.15. See scripts/lib/pitcher-boost-constants.js.
 const { ERA_K, PITCHER_SCORE_GAP_CLAMP } = require("./lib/pitcher-boost-constants");
+const { fetchOddsApi, loadKeys } = require("./lib/odds-api-core");
 const ROOT = path.join(__dirname, "..");
 // 2026-08-14, Lynold's explicit instruction: log5 (and the flat league-wide
 // HFA it applied) removed from the moneyline model. team_strength_blend now
@@ -158,7 +159,7 @@ const OFFICIAL_K_MIN_BOOKS = 2;
 const args = parseArgs(process.argv.slice(2));
 const DATE = args.date || etToday();
 const SNAPSHOT = args.snapshot || process.env.SNAPSHOT_TYPE || "posted";
-const ODDS_API_KEY = process.env.ODDS_API_KEY || "";
+const HAS_ODDS_API_KEY = loadKeys().length > 0;
 
 if (!/^\d{4}-\d{2}-\d{2}$/.test(DATE)) {
   console.error(`Bad date: ${DATE}`);
@@ -177,7 +178,7 @@ async function main() {
   const [sched, standings, oddsEvents] = await Promise.all([
     fetchJson(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${DATE}&hydrate=probablePitcher`),
     fetchJson(`https://statsapi.mlb.com/api/v1/standings?leagueId=103,104&season=${seasonYear(DATE)}&standingsTypes=regularSeason`),
-    ODDS_API_KEY ? fetchJson(`https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?apiKey=${encodeURIComponent(ODDS_API_KEY)}&regions=us&markets=h2h&oddsFormat=american`).catch(() => []) : Promise.resolve([])
+    HAS_ODDS_API_KEY ? fetchOddsApi(`https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?regions=us&markets=h2h&oddsFormat=american`).catch(() => []) : Promise.resolve([])
   ]);
 
   const allGames = ((((sched.dates || [])[0]) || {}).games || [])
@@ -386,7 +387,7 @@ async function main() {
       // so it's untouched and still accurate.
       note: "Lab Rating grades LyDia's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
     },
-    summary: summarize(rows, Boolean(ODDS_API_KEY), officialCard),
+    summary: summarize(rows, HAS_ODDS_API_KEY, officialCard),
     // The official card, market by market. The brief page renders from this so
     // it stops inferring "official" from the moneyline status alone.
     official_card: (officialCard.picks || []).map(g => ({

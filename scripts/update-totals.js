@@ -53,9 +53,9 @@ const path = require("path");
 const PitcherCore = require("../js/pitcher-matchup-core.js");
 const PitchingPlan = require("./lib/pitching-plan-core.js");
 const TotalsSetup = require("./lib/totals-setup-core.js");
+const { fetchOddsApi, loadKeys } = require("./lib/odds-api-core");
 
 const ROOT = path.join(__dirname, "..");
-const KEY = (process.env.ODDS_API_KEY || "").trim();
 const DATE = (process.argv[2] || "").match(/^\d{4}-\d{2}-\d{2}$/)
   ? process.argv[2]
   : new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
@@ -360,11 +360,11 @@ async function main() {
   // --- market total lines: one bulk request, retried ---
   let lines = {};
   const eventIds = {};
-  if (KEY) {
-    const url = `https://api.the-odds-api.com/v4/sports/baseball_mlb/odds?apiKey=${KEY}&regions=us&markets=totals&oddsFormat=american`;
+  if (loadKeys().length) {
+    const url = `https://api.the-odds-api.com/v4/sports/baseball_mlb/odds?regions=us&markets=totals&oddsFormat=american`;
     let odds = null;
     for (let attempt = 1; attempt <= 3 && !odds; attempt++) {
-      try { odds = await j(url); }
+      try { odds = await fetchOddsApi(url); }
       catch (e) {
         console.warn(`totals odds attempt ${attempt} failed: ${e.message}`);
         if (attempt < 3) await new Promise(r => setTimeout(r, 1500 * attempt));
@@ -393,13 +393,13 @@ async function main() {
         };
       }
     } else console.warn("totals odds unavailable after retries — reusing prior capture if present.");
-  } else console.log("ODDS_API_KEY not set — projections only, no market lines.");
+  } else console.log("No ODDS_API_KEY[_2/_3/_4] set — projections only, no market lines.");
 
   // Team totals are an additional market and must be requested one event at a
   // time. They are stored beside each team's run projection. Coverage varies
   // by book, so missing team totals never block the daily publish.
   const teamTotalLines = {};
-  if (KEY) {
+  if (loadKeys().length) {
     // 2026-08-26: only the game(s) that actually changed, when known -- see
     // changedTeamKeys above. Games skipped here are restored from the prior
     // capture by the "temporary Odds API failure must not erase a market"
@@ -412,7 +412,7 @@ async function main() {
     for (const [gameName, eventId] of eventEntries) {
       let data = null;
       try {
-        data = await j(`https://api.the-odds-api.com/v4/sports/baseball_mlb/events/${eventId}/odds?apiKey=${KEY}&regions=us&markets=team_totals&oddsFormat=american`);
+        data = await fetchOddsApi(`https://api.the-odds-api.com/v4/sports/baseball_mlb/events/${eventId}/odds?regions=us&markets=team_totals&oddsFormat=american`);
       } catch (e) {
         console.warn(`team totals ${gameName}: ${e.message}`);
         continue;
