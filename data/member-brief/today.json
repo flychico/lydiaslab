@@ -1,6 +1,6 @@
 {
   "date": "2026-09-13",
-  "generated_at": "2026-09-13T16:24:58.020Z",
+  "generated_at": "2026-09-13T16:35:47.307Z",
   "snapshot_type": "posted",
   "source_of_truth": "LyDia Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -11,8 +11,41 @@
     "minimum_lab_score": 72,
     "note": "Lab Rating grades LyDia's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
   },
-  "summary": "Brief generated without live market pricing. Treat the card as research-only until pricing is checked.",
-  "official_card": [],
+  "summary": "2 official picks cleared their market gates: 2 moneyline. 1 value-watch setup had good price math but did not clear official-pick rules.",
+  "official_card": [
+    {
+      "game_pk": 822764,
+      "game": "Baltimore Orioles @ Toronto Blue Jays",
+      "away": "Baltimore Orioles",
+      "home": "Toronto Blue Jays",
+      "time": "2026-09-13T17:37:00Z",
+      "lab_score": 91,
+      "moneyline": {
+        "pick": "Toronto Blue Jays",
+        "prob": 0.7052,
+        "mkt_prob": 0.5782,
+        "best_price": -148
+      },
+      "total": null,
+      "strikeouts": []
+    },
+    {
+      "game_pk": 824628,
+      "game": "Pittsburgh Pirates @ Chicago Cubs",
+      "away": "Pittsburgh Pirates",
+      "home": "Chicago Cubs",
+      "time": "2026-09-13T18:20:00Z",
+      "lab_score": 73,
+      "moneyline": {
+        "pick": "Chicago Cubs",
+        "prob": 0.6236,
+        "mkt_prob": 0.5986,
+        "best_price": -157
+      },
+      "total": null,
+      "strikeouts": []
+    }
+  ],
   "games": [
     {
       "game_pk": 822764,
@@ -119,9 +152,9 @@
       "run_model_probability": 0.5,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9168,
-      "edge": null,
-      "status": "watchlist",
-      "value_tag": "WATCHLIST",
+      "edge": 0.127,
+      "status": "official_pick",
+      "value_tag": "OFFICIAL PICK",
       "lab_score": 91,
       "lab_score_breakdown": {
         "score": 91,
@@ -154,7 +187,7 @@
         "lab_score_passed": true
       },
       "pass_reason": null,
-      "read": "Toronto Blue Jays remains on the watchlist. Lab Rating 9.1/10: conviction 7.76, pitching plan 40, offense 43.04. Market pricing was unavailable. Toronto Blue Jays owns the starting pitcher edge by 16 points. Bullpen read: Adds caution. Toronto Blue Jays's pen efficiency: Effective (6.9/10). Lineup check: Toronto Blue Jays is swinging a hot bat (+0.074 OPS); Baltimore Orioles is in a cold stretch (-0.062 OPS). Recent form supports this side and is included in the unified run projection.",
+      "read": "Toronto Blue Jays is an official moneyline pick because it clears both gates: 70.5% model win probability and 9.1/10 Lab Rating. LyDia projects 70.5% against a 57.8% no-vig market number, a 12.7% model edge at -148. Toronto Blue Jays owns the starting pitcher edge by 16 points. Bullpen read: Adds caution. Toronto Blue Jays's pen efficiency: Effective (6.9/10). Lineup check: Toronto Blue Jays is swinging a hot bat (+0.074 OPS); Baltimore Orioles is in a cold stretch (-0.062 OPS). Recent form supports this side and is included in the unified run projection.",
       "pitcher_edge": {
         "team": "Toronto Blue Jays",
         "gap": 16,
@@ -337,13 +370,13 @@
         "absolute_risk": "Pick side high"
       },
       "market": {
-        "no_vig_probability": null,
-        "best_price": null,
-        "away_price": null,
-        "home_price": null,
-        "away_no_vig": null,
-        "home_no_vig": null,
-        "books": 0
+        "no_vig_probability": 0.5782,
+        "best_price": -148,
+        "away_price": 134,
+        "home_price": -148,
+        "away_no_vig": 0.4218,
+        "home_no_vig": 0.5782,
+        "books": 9
       }
     },
     {
@@ -451,9 +484,9 @@
       "run_model_probability": 0.5625,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.5456,
-      "edge": null,
-      "status": "watchlist",
-      "value_tag": "WATCHLIST",
+      "edge": 0.0607,
+      "status": "value_watch",
+      "value_tag": "VALUE WATCH",
       "lab_score": 76,
       "lab_score_breakdown": {
         "score": 76,
@@ -486,7 +519,7 @@
         "lab_score_passed": true
       },
       "pass_reason": null,
-      "read": "Texas Rangers remains on the watchlist. Lab Rating 7.6/10: conviction 0, pitching plan 34.67, offense 41.6. Market pricing was unavailable. The starting pitcher matchup does not create a meaningful separation. Bullpen read: Elevated volatility. Texas Rangers's pen efficiency: Average (5.0/10). Lineup check: Texas Rangers is swinging a hot bat (+0.059 OPS); Arizona Diamondbacks is in a cold stretch (-0.074 OPS). Recent form supports this side and is included in the unified run projection.",
+      "read": "Texas Rangers is a value watch, not an official pick. LyDia projects 51.9% against a 45.8% no-vig market number, a 6.1% model edge at +112. Lab Rating 7.6/10: conviction 0, pitching plan 34.67, offense 41.6. Texas Rangers's pen efficiency: Average (5.0/10). It stayed a value watch because model win probability is 51.9%, below the 61.0% official-pick gate. Lineup check: Texas Rangers is swinging a hot bat (+0.059 OPS); Arizona Diamondbacks is in a cold stretch (-0.074 OPS). Recent form supports this side and is included in the unified run projection.",
       "pitcher_edge": {
         "team": "No clear SP edge",
         "gap": 2,
@@ -669,13 +702,13 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": null,
-        "best_price": null,
-        "away_price": null,
-        "home_price": null,
-        "away_no_vig": null,
-        "home_no_vig": null,
-        "books": 0
+        "no_vig_probability": 0.4584,
+        "best_price": 112,
+        "away_price": 112,
+        "home_price": -122,
+        "away_no_vig": 0.4584,
+        "home_no_vig": 0.5416,
+        "books": 9
       }
     },
     {
@@ -783,9 +816,9 @@
       "run_model_probability": 0.8399,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.7322,
-      "edge": null,
-      "status": "watchlist",
-      "value_tag": "WATCHLIST",
+      "edge": 0.025,
+      "status": "official_pick",
+      "value_tag": "OFFICIAL PICK",
       "lab_score": 73,
       "lab_score_breakdown": {
         "score": 73,
@@ -818,7 +851,7 @@
         "lab_score_passed": true
       },
       "pass_reason": null,
-      "read": "Chicago Cubs remains on the watchlist. Lab Rating 7.3/10: conviction 3.68, pitching plan 20, offense 49.27. Market pricing was unavailable. Chicago Cubs owns the starting pitcher edge by 5 points. Bullpen read: Supports LyDia side. Chicago Cubs's pen efficiency: Effective (6.2/10). Lineup check: Chicago Cubs is swinging a hot bat (+0.094 OPS); Pittsburgh Pirates is near its season form (-0.003 OPS). Recent form supports this side and is included in the unified run projection.",
+      "read": "Chicago Cubs is an official moneyline pick because it clears both gates: 62.4% model win probability and 7.3/10 Lab Rating. LyDia projects 62.4% against a 59.9% no-vig market number, a 2.5% model edge at -157. Chicago Cubs owns the starting pitcher edge by 5 points. Bullpen read: Supports LyDia side. Chicago Cubs's pen efficiency: Effective (6.2/10). Lineup check: Chicago Cubs is swinging a hot bat (+0.094 OPS); Pittsburgh Pirates is near its season form (-0.003 OPS). Recent form supports this side and is included in the unified run projection.",
       "pitcher_edge": {
         "team": "Chicago Cubs",
         "gap": 5,
@@ -1001,13 +1034,13 @@
         "absolute_risk": "Opponent high"
       },
       "market": {
-        "no_vig_probability": null,
-        "best_price": null,
-        "away_price": null,
-        "home_price": null,
-        "away_no_vig": null,
-        "home_no_vig": null,
-        "books": 0
+        "no_vig_probability": 0.5986,
+        "best_price": -157,
+        "away_price": 147,
+        "home_price": -157,
+        "away_no_vig": 0.4014,
+        "home_no_vig": 0.5986,
+        "books": 9
       }
     },
     {
@@ -1115,7 +1148,7 @@
       "run_model_probability": 0.7116,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9579,
-      "edge": null,
+      "edge": 0.1095,
       "status": "watchlist",
       "value_tag": "WATCHLIST",
       "lab_score": 65,
@@ -1150,7 +1183,7 @@
         "lab_score_passed": false
       },
       "pass_reason": null,
-      "read": "New York Yankees remains on the watchlist. Lab Rating 6.5/10: conviction 8.9, pitching plan 40, offense 16.46. Market pricing was unavailable. New York Yankees owns the starting pitcher edge by 18 points. Bullpen read: Adds caution. New York Yankees's pen efficiency: Below average (3.7/10). Lineup check: New York Yankees is a touch above its season form (+0.046 OPS); New York Mets is swinging a hot bat (+0.131 OPS). Recent form leans against this side and is included in the unified run projection.",
+      "read": "New York Yankees remains on the watchlist. Lab Rating 6.5/10: conviction 8.9, pitching plan 40, offense 16.46. LyDia projects 72.8% against a 61.8% no-vig market number, a 11.0% model edge at -171. New York Yankees owns the starting pitcher edge by 18 points. Bullpen read: Adds caution. New York Yankees's pen efficiency: Below average (3.7/10). Lineup check: New York Yankees is a touch above its season form (+0.046 OPS); New York Mets is swinging a hot bat (+0.131 OPS). Recent form leans against this side and is included in the unified run projection.",
       "pitcher_edge": {
         "team": "New York Yankees",
         "gap": 18,
@@ -1333,13 +1366,13 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": null,
-        "best_price": null,
-        "away_price": null,
-        "home_price": null,
-        "away_no_vig": null,
-        "home_no_vig": null,
-        "books": 0
+        "no_vig_probability": 0.6185,
+        "best_price": -171,
+        "away_price": 155,
+        "home_price": -171,
+        "away_no_vig": 0.3815,
+        "home_no_vig": 0.6185,
+        "books": 9
       }
     },
     {
@@ -1447,7 +1480,7 @@
       "run_model_probability": 0.5934,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.8449,
-      "edge": null,
+      "edge": 0.0498,
       "status": "watchlist",
       "value_tag": "WATCHLIST",
       "lab_score": 65,
@@ -1482,7 +1515,7 @@
         "lab_score_passed": false
       },
       "pass_reason": null,
-      "read": "Boston Red Sox remains on the watchlist. Lab Rating 6.5/10: conviction 6.34, pitching plan 36, offense 23.1. Market pricing was unavailable. Boston Red Sox owns the starting pitcher edge by 10 points. Bullpen read: Supports LyDia side. Boston Red Sox's pen efficiency: Effective (6.6/10). Lineup check: Boston Red Sox is near its season form (-0.019 OPS); Kansas City Royals is near its season form (-0.005 OPS).",
+      "read": "Boston Red Sox remains on the watchlist. Lab Rating 6.5/10: conviction 6.34, pitching plan 36, offense 23.1. LyDia projects 67.7% against a 62.7% no-vig market number, a 5.0% model edge at -175. Boston Red Sox owns the starting pitcher edge by 10 points. Bullpen read: Supports LyDia side. Boston Red Sox's pen efficiency: Effective (6.6/10). Lineup check: Boston Red Sox is near its season form (-0.019 OPS); Kansas City Royals is near its season form (-0.005 OPS).",
       "pitcher_edge": {
         "team": "Boston Red Sox",
         "gap": 10,
@@ -1665,13 +1698,13 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": null,
-        "best_price": null,
-        "away_price": null,
-        "home_price": null,
-        "away_no_vig": null,
-        "home_no_vig": null,
-        "books": 0
+        "no_vig_probability": 0.6271,
+        "best_price": -175,
+        "away_price": 166,
+        "home_price": -175,
+        "away_no_vig": 0.3729,
+        "home_no_vig": 0.6271,
+        "books": 9
       }
     },
     {
@@ -1779,7 +1812,7 @@
       "run_model_probability": 0.7234,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9438,
-      "edge": null,
+      "edge": 0.239,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 62,
@@ -1813,8 +1846,8 @@
         "model_probability_passed": true,
         "lab_score_passed": false
       },
-      "pass_reason": "No market data available, so this stays research-only until pricing is checked.",
-      "read": "No market data available, so this stays research-only until pricing is checked.",
+      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
+      "read": "The combined Lab Rating did not clear the official threshold.",
       "pitcher_edge": {
         "team": "St. Louis Cardinals",
         "gap": 27,
@@ -1997,13 +2030,13 @@
         "absolute_risk": "Both high"
       },
       "market": {
-        "no_vig_probability": null,
-        "best_price": null,
-        "away_price": null,
-        "home_price": null,
-        "away_no_vig": null,
-        "home_no_vig": null,
-        "books": 0
+        "no_vig_probability": 0.4829,
+        "best_price": 107,
+        "away_price": -112,
+        "home_price": 107,
+        "away_no_vig": 0.5171,
+        "home_no_vig": 0.4829,
+        "books": 9
       }
     },
     {
@@ -2111,7 +2144,7 @@
       "run_model_probability": 0.4321,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.7361,
-      "edge": null,
+      "edge": 0.0751,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 61,
@@ -2145,8 +2178,8 @@
         "model_probability_passed": true,
         "lab_score_passed": false
       },
-      "pass_reason": "No market data available, so this stays research-only until pricing is checked.",
-      "read": "No market data available, so this stays research-only until pricing is checked.",
+      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
+      "read": "The combined Lab Rating did not clear the official threshold.",
       "pitcher_edge": {
         "team": "Minnesota Twins",
         "gap": 8,
@@ -2329,13 +2362,13 @@
         "absolute_risk": "Pick side high"
       },
       "market": {
-        "no_vig_probability": null,
-        "best_price": null,
-        "away_price": null,
-        "home_price": null,
-        "away_no_vig": null,
-        "home_no_vig": null,
-        "books": 0
+        "no_vig_probability": 0.537,
+        "best_price": -122,
+        "away_price": 112,
+        "home_price": -122,
+        "away_no_vig": 0.463,
+        "home_no_vig": 0.537,
+        "books": 9
       }
     },
     {
@@ -2443,7 +2476,7 @@
       "run_model_probability": 0.3176,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.7312,
-      "edge": null,
+      "edge": 0.0731,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 59,
@@ -2477,8 +2510,8 @@
         "model_probability_passed": true,
         "lab_score_passed": false
       },
-      "pass_reason": "No market data available, so this stays research-only until pricing is checked.",
-      "read": "No market data available, so this stays research-only until pricing is checked.",
+      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
+      "read": "The combined Lab Rating did not clear the official threshold.",
       "pitcher_edge": {
         "team": "San Diego Padres",
         "gap": 6,
@@ -2661,13 +2694,13 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": null,
-        "best_price": null,
-        "away_price": null,
-        "home_price": null,
-        "away_no_vig": null,
-        "home_no_vig": null,
-        "books": 0
+        "no_vig_probability": 0.5395,
+        "best_price": -125,
+        "away_price": -125,
+        "home_price": 114,
+        "away_no_vig": 0.5395,
+        "home_no_vig": 0.4605,
+        "books": 9
       }
     },
     {
@@ -2775,7 +2808,7 @@
       "run_model_probability": 0.4751,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.8992,
-      "edge": null,
+      "edge": 0.1557,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 57,
@@ -2809,8 +2842,8 @@
         "model_probability_passed": true,
         "lab_score_passed": false
       },
-      "pass_reason": "No market data available, so this stays research-only until pricing is checked.",
-      "read": "No market data available, so this stays research-only until pricing is checked.",
+      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
+      "read": "The combined Lab Rating did not clear the official threshold.",
       "pitcher_edge": {
         "team": "Seattle Mariners",
         "gap": 13,
@@ -2993,13 +3026,13 @@
         "absolute_risk": "Opponent high"
       },
       "market": {
-        "no_vig_probability": null,
-        "best_price": null,
-        "away_price": null,
-        "home_price": null,
-        "away_no_vig": null,
-        "home_no_vig": null,
-        "books": 0
+        "no_vig_probability": 0.5488,
+        "best_price": -125,
+        "away_price": -125,
+        "home_price": 120,
+        "away_no_vig": 0.5488,
+        "home_no_vig": 0.4512,
+        "books": 9
       }
     },
     {
@@ -3107,7 +3140,7 @@
       "run_model_probability": 0.2898,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.8618,
-      "edge": null,
+      "edge": 0.2227,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 53,
@@ -3141,8 +3174,8 @@
         "model_probability_passed": true,
         "lab_score_passed": false
       },
-      "pass_reason": "No market data available, so this stays research-only until pricing is checked.",
-      "read": "No market data available, so this stays research-only until pricing is checked.",
+      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
+      "read": "The combined Lab Rating did not clear the official threshold.",
       "pitcher_edge": {
         "team": "Houston Astros",
         "gap": 14,
@@ -3325,13 +3358,13 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": null,
-        "best_price": null,
-        "away_price": null,
-        "home_price": null,
-        "away_no_vig": null,
-        "home_no_vig": null,
-        "books": 0
+        "no_vig_probability": 0.4561,
+        "best_price": 116,
+        "away_price": 116,
+        "home_price": -124,
+        "away_no_vig": 0.4561,
+        "home_no_vig": 0.5439,
+        "books": 9
       }
     },
     {
@@ -3439,7 +3472,7 @@
       "run_model_probability": 0.3081,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.944,
-      "edge": null,
+      "edge": 0.1827,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 52,
@@ -3473,8 +3506,8 @@
         "model_probability_passed": true,
         "lab_score_passed": false
       },
-      "pass_reason": "No market data available, so this stays research-only until pricing is checked.",
-      "read": "No market data available, so this stays research-only until pricing is checked.",
+      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
+      "read": "The combined Lab Rating did not clear the official threshold.",
       "pitcher_edge": {
         "team": "Atlanta Braves",
         "gap": 16,
@@ -3657,13 +3690,13 @@
         "absolute_risk": "Opponent high"
       },
       "market": {
-        "no_vig_probability": null,
-        "best_price": null,
-        "away_price": null,
-        "home_price": null,
-        "away_no_vig": null,
-        "home_no_vig": null,
-        "books": 0
+        "no_vig_probability": 0.5421,
+        "best_price": -125,
+        "away_price": 114,
+        "home_price": -125,
+        "away_no_vig": 0.4579,
+        "home_no_vig": 0.5421,
+        "books": 9
       }
     },
     {
@@ -3771,7 +3804,7 @@
       "run_model_probability": 0.3055,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.6851,
-      "edge": null,
+      "edge": 0.1388,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 49,
@@ -3805,8 +3838,8 @@
         "model_probability_passed": false,
         "lab_score_passed": false
       },
-      "pass_reason": "No market data available, so this stays research-only until pricing is checked.",
-      "read": "No market data available, so this stays research-only until pricing is checked.",
+      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
+      "read": "The combined Lab Rating did not clear the official threshold.",
       "pitcher_edge": {
         "team": "Miami Marlins",
         "gap": 6,
@@ -3989,13 +4022,13 @@
         "absolute_risk": "Pick side high"
       },
       "market": {
-        "no_vig_probability": null,
-        "best_price": null,
-        "away_price": null,
-        "home_price": null,
-        "away_no_vig": null,
-        "home_no_vig": null,
-        "books": 0
+        "no_vig_probability": 0.4412,
+        "best_price": 121,
+        "away_price": -132,
+        "home_price": 121,
+        "away_no_vig": 0.5588,
+        "home_no_vig": 0.4412,
+        "books": 9
       }
     },
     {
@@ -4103,7 +4136,7 @@
       "run_model_probability": 0.3114,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.8333,
-      "edge": null,
+      "edge": 0.3018,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 49,
@@ -4137,8 +4170,8 @@
         "model_probability_passed": true,
         "lab_score_passed": false
       },
-      "pass_reason": "No market data available, so this stays research-only until pricing is checked.",
-      "read": "No market data available, so this stays research-only until pricing is checked.",
+      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
+      "read": "The combined Lab Rating did not clear the official threshold.",
       "pitcher_edge": {
         "team": "Cincinnati Reds",
         "gap": 15,
@@ -4321,13 +4354,13 @@
         "absolute_risk": "Both high"
       },
       "market": {
-        "no_vig_probability": null,
-        "best_price": null,
-        "away_price": null,
-        "home_price": null,
-        "away_no_vig": null,
-        "home_no_vig": null,
-        "books": 0
+        "no_vig_probability": 0.3608,
+        "best_price": 175,
+        "away_price": 175,
+        "home_price": -190,
+        "away_no_vig": 0.3608,
+        "home_no_vig": 0.6392,
+        "books": 9
       }
     },
     {
@@ -4435,7 +4468,7 @@
       "run_model_probability": 0.6512,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9618,
-      "edge": null,
+      "edge": 0.2861,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 33,
@@ -4469,8 +4502,8 @@
         "model_probability_passed": true,
         "lab_score_passed": false
       },
-      "pass_reason": "No market data available, so this stays research-only until pricing is checked.",
-      "read": "No market data available, so this stays research-only until pricing is checked.",
+      "pass_reason": "This is a bullpen game -- no confirmed traditional starter, so LyDia does not publish an official pick here.",
+      "read": "This is a bullpen game -- no confirmed traditional starter, so LyDia does not publish an official pick here.",
       "pitcher_edge": {
         "team": "Los Angeles Angels",
         "gap": 21,
@@ -4653,13 +4686,13 @@
         "absolute_risk": "Elevated"
       },
       "market": {
-        "no_vig_probability": null,
-        "best_price": null,
-        "away_price": null,
-        "home_price": null,
-        "away_no_vig": null,
-        "home_no_vig": null,
-        "books": 0
+        "no_vig_probability": 0.4456,
+        "best_price": 122,
+        "away_price": 122,
+        "home_price": -132,
+        "away_no_vig": 0.4456,
+        "home_no_vig": 0.5544,
+        "books": 9
       }
     },
     {
