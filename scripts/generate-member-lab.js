@@ -1234,8 +1234,8 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
 
   let status = "pass";
   if (officialEligible) status = "official_pick";
-  else if (edge !== null && edge >= VALUE_EDGE && lab.score >= VALUE_WATCH_LAB_SCORE) status = "value_watch";
-  else if (lab.score >= WATCHLIST_LAB_SCORE) status = "watchlist";
+  else if (edge !== null && edge >= VALUE_EDGE && lab.score >= VALUE_WATCH_LAB_SCORE && !bullpenGame) status = "value_watch";
+  else if (lab.score >= WATCHLIST_LAB_SCORE && !bullpenGame) status = "watchlist";
 
   const passReason = status === "pass"
     ? passReasonFor({ edge, modelProb, pitchEdgeTeam, pickTeam, pitcherConflict, labScore: lab.score, market: m, majorBullpenCaution, bullpenGame })

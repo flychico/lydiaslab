@@ -93,6 +93,24 @@ loadBrief();
 function localISODate(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+// 2026-09-14: Unified date format system-wide.
+// dkey() normalizes YYYY-MM-DD or MM/DD/YYYY to YYYY-MM-DD for sortable comparison.
+// dfmt() normalizes either shape to MM/DD/YYYY for display.
+// This ensures consistent date handling across all pages and prevents sorting bugs
+// when mixed formats coexist (before 2026-08-14: YYYY-MM-DD, after: MM/DD/YYYY).
+function dkey(s){
+  s = String(s || "").trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return s;
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return `${m[3]}-${m[1].padStart(2,"0")}-${m[2].padStart(2,"0")}`;
+  return s;
+}
+function dfmt(s){
+  const iso = dkey(s);
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[2]}/${m[3]}/${m[1]}` : String(s || "");
+}
 function shiftDay(n) {
   const d = new Date(); d.setDate(d.getDate() + n);
   datePick.value = localISODate(d);
