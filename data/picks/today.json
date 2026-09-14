@@ -435,6 +435,199 @@
       ]
     },
     {
+      "gamePk": 824629,
+      "away": "Atlanta Braves",
+      "home": "Chicago Cubs",
+      "time": "2026-09-14T23:40:00Z",
+      "labScore": 19,
+      "labScoreBreakdown": {
+        "score": 19,
+        "version": "lab-rating-v3-measured-components",
+        "conviction_points": 4.85,
+        "agreement_points": 0,
+        "pitching_plan_points": 12,
+        "bullpen_points": 0,
+        "offense_points": 2.52,
+        "completeness_points": 0,
+        "pitcher_edge_points": 12,
+        "model_agreement_gap": null,
+        "model_agreement_credit": null,
+        "assigned_bullpen_innings": 4.5,
+        "offense_delta": -0.0539,
+        "offense_delta_15d": -0.0444,
+        "offense_delta_30d": -0.0635,
+        "completeness_checks_passed": 5,
+        "completeness_checks_total": 5,
+        "data_complete": true,
+        "market_points": 0,
+        "model_edge_points": 0,
+        "base_points": 0,
+        "note": "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
+      },
+      "status": "official_pick",
+      "modelVersion": "multi-market-v1",
+      "pitcherEdge": {
+        "team": "Atlanta Braves",
+        "gap": 11,
+        "conflict": false,
+        "away_score": 59,
+        "home_score": 48,
+        "away_pitcher": "Reynaldo López",
+        "home_pitcher": "David Peterson",
+        "away_pitcher_id": 625643,
+        "home_pitcher_id": 656849,
+        "away_era": 4.13,
+        "home_era": 5.28,
+        "away_whip": 1.39,
+        "home_whip": 1.58,
+        "away_advanced": {
+          "w": 4,
+          "l": 4,
+          "kbb_pct": 0.1185,
+          "gb_pct": 0.4533,
+          "babip": 0.2972,
+          "hr9": 1.3,
+          "ip_per_start": 4.5,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 4.5,
+          "bullpen_innings": 4.5
+        },
+        "home_advanced": {
+          "w": 7,
+          "l": 8,
+          "kbb_pct": 0.0968,
+          "gb_pct": 0.6015,
+          "babip": 0.3325,
+          "hr9": 0.96,
+          "ip_per_start": 5,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 5,
+          "bullpen_innings": 4
+        }
+      },
+      "bullpen": {
+        "pick_team": {
+          "score": 63,
+          "label": "Tired",
+          "last_game_bp_ip": 5,
+          "last7_bp_ip": 25,
+          "last7_bp_runs": 16,
+          "last_game_relievers": 4,
+          "last7_relievers": 17,
+          "back_to_back_arms": 4,
+          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+          "score_reason": "Tired (6.3/10): 25 recent relief innings, recency-weighted — 5 in the last game (pitched yesterday), 4 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 4,
+            "last7_relievers": 17,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 9.7,
+            "back_to_back_arms": 8.3,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 62.9
+          },
+          "efficiency_score": 47,
+          "efficiency_label": "Average",
+          "efficiency_reason": "Average (4.7/10): 4.68 ERA and 1.32 WHIP over 25 relief innings (13 ER, 27 H, 6 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": -2.9,
+            "whip_term": -0.3,
+            "confidence": 1,
+            "raw_score": 46.8
+          },
+          "era_7d": 4.68,
+          "whip_7d": 1.32,
+          "last15_bp_ip": 52.3,
+          "last15_bp_runs": 25,
+          "era_15d": 3.61,
+          "whip_15d": 1.11,
+          "recent15_games_tracked": 14,
+          "risk_index": 65,
+          "risk_label": "Tired",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "opponent": {
+          "score": 57,
+          "label": "Normal",
+          "last_game_bp_ip": 3.7,
+          "last7_bp_ip": 20,
+          "last7_bp_runs": 5,
+          "last_game_relievers": 3,
+          "last7_relievers": 20,
+          "back_to_back_arms": 5,
+          "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
+          "score_reason": "Normal (5.7/10): 20 recent relief innings, recency-weighted (pitched yesterday), 5 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 3,
+            "last7_relievers": 20,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 6.1,
+            "back_to_back_arms": 5.8,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 56.9
+          },
+          "efficiency_score": 70,
+          "efficiency_label": "Effective",
+          "efficiency_reason": "Effective (7.0/10): 1.35 ERA and 1.1 WHIP over 20 relief innings (3 ER, 13 H, 9 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": 17.1,
+            "whip_term": 3,
+            "confidence": 1,
+            "raw_score": 70.1
+          },
+          "era_7d": 1.35,
+          "whip_7d": 1.1,
+          "last15_bp_ip": 49,
+          "last15_bp_runs": 22,
+          "era_15d": 3.67,
+          "whip_15d": 1.31,
+          "recent15_games_tracked": 14,
+          "risk_index": 47,
+          "risk_label": "Normal",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "label": "Adds caution",
+        "major_caution": true,
+        "absolute_risk": "Elevated"
+      },
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Reynaldo López",
+          "pick": "Under",
+          "line": 4.5,
+          "bestAm": -142,
+          "projection": 3.21,
+          "edge": -1.29,
+          "books": 6,
+          "expectedInnings": 4.5,
+          "pitcherRole": "traditional_starter",
+          "lineupSource": "posted",
+          "modelVersion": "leo-kprop",
+          "valueTag": "OFFICIAL PICK"
+        }
+      ]
+    },
+    {
       "gamePk": 823006,
       "away": "San Francisco Giants",
       "home": "St. Louis Cardinals",
@@ -820,5 +1013,6 @@
         }
       ]
     }
-  ]
+  ],
+  "last_appended_at": "2026-09-14T20:18:53.063Z"
 }
