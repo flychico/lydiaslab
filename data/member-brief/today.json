@@ -1,6 +1,6 @@
 {
   "date": "2026-09-16",
-  "generated_at": "2026-09-16T20:25:58.983Z",
+  "generated_at": "2026-09-16T20:54:01.575Z",
   "snapshot_type": "posted",
   "source_of_truth": "LyDia Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -11,24 +11,8 @@
     "minimum_lab_score": 72,
     "note": "Lab Rating grades LyDia's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
   },
-  "summary": "5 official picks cleared their market gates: 4 moneyline and 1 pitcher strikeout prop. 1 value-watch setup had good price math but did not clear official-pick rules.",
+  "summary": "Brief generated without live market pricing. Treat the card as research-only until pricing is checked.",
   "official_card": [
-    {
-      "game_pk": 823332,
-      "game": "Milwaukee Brewers @ Pittsburgh Pirates",
-      "away": "Milwaukee Brewers",
-      "home": "Pittsburgh Pirates",
-      "time": "2026-09-16T22:40:00Z",
-      "lab_score": 98,
-      "moneyline": {
-        "pick": "Milwaukee Brewers",
-        "prob": 0.7043,
-        "mkt_prob": 0.5414,
-        "best_price": -125
-      },
-      "total": null,
-      "strikeouts": []
-    },
     {
       "game_pk": 824382,
       "game": "Chicago White Sox @ Cleveland Guardians",
@@ -61,6 +45,14 @@
       "total": null,
       "strikeouts": [
         {
+          "pitcher": "Carlos Rodon",
+          "pick": "Over",
+          "line": 3.5,
+          "best_price": -145,
+          "projection": 6,
+          "edge": 2.5
+        },
+        {
           "pitcher": "Carlos Rodón",
           "pick": "Over",
           "line": 3.5,
@@ -69,6 +61,22 @@
           "edge": 2.83
         }
       ]
+    },
+    {
+      "game_pk": 823332,
+      "game": "Milwaukee Brewers @ Pittsburgh Pirates",
+      "away": "Milwaukee Brewers",
+      "home": "Pittsburgh Pirates",
+      "time": "2026-09-16T22:40:00Z",
+      "lab_score": 98,
+      "moneyline": {
+        "pick": "Milwaukee Brewers",
+        "prob": 0.7043,
+        "mkt_prob": 0.5361,
+        "best_price": -118
+      },
+      "total": null,
+      "strikeouts": []
     },
     {
       "game_pk": 824626,
@@ -80,11 +88,51 @@
       "moneyline": {
         "pick": "Chicago Cubs",
         "prob": 0.7235,
-        "mkt_prob": 0.5925,
+        "mkt_prob": 0.5928,
         "best_price": -155
       },
       "total": null,
       "strikeouts": []
+    },
+    {
+      "game_pk": 822846,
+      "game": "Boston Red Sox @ Texas Rangers",
+      "away": "Boston Red Sox",
+      "home": "Texas Rangers",
+      "time": "2026-09-17T00:05:00Z",
+      "lab_score": 57,
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Jake Bennett",
+          "pick": "Over",
+          "line": 4.5,
+          "best_price": 120,
+          "projection": 5.53,
+          "edge": 1.03
+        }
+      ]
+    },
+    {
+      "game_pk": 824140,
+      "game": "Kansas City Royals @ Houston Astros",
+      "away": "Kansas City Royals",
+      "home": "Houston Astros",
+      "time": "2026-09-17T00:10:00Z",
+      "lab_score": 69,
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Cristian Javier",
+          "pick": "Under",
+          "line": 4.5,
+          "best_price": -106,
+          "projection": 3.42,
+          "edge": -1.08
+        }
+      ]
     }
   ],
   "games": [
@@ -105,9 +153,9 @@
       "model_probability": 0.7043,
       "model_source": "leo",
       "projected_runs": {
-        "away": 5.2,
+        "away": 7.4,
         "home": 2.5,
-        "total": 8.5
+        "total": 10.7
       },
       "pitching_plan": {
         "away": {
@@ -177,20 +225,20 @@
       "model_effective_era_home": 4.33,
       "model_pitcher_score_away": 83,
       "model_pitcher_score_home": 67,
-      "team_strength_blend_away": 0.6424,
-      "team_strength_blend_home": 0.534,
-      "team_strength_probability": 0.6424,
+      "team_strength_blend_away": 0.6423,
+      "team_strength_blend_home": 0.5341,
+      "team_strength_probability": 0.6423,
       "bullpen_log_odds_adjustment": 0.033,
       "venue_split": {
         "away_record": "42-31",
         "home_record": "38-35",
-        "away_edge": -0.0118,
-        "home_edge": -0.0033,
-        "applied_away": -0.0059,
-        "applied_home": -0.0017,
+        "away_edge": -0.012,
+        "home_edge": -0.0032,
+        "applied_away": -0.006,
+        "applied_home": -0.0016,
         "weight": 0.5
       },
-      "run_model_probability": 0.8344,
+      "run_model_probability": 0.9438,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9058,
       "edge": 0.1629,
@@ -200,15 +248,15 @@
       "lab_score_breakdown": {
         "score": 98,
         "version": "lab-rating-v3-measured-components",
-        "conviction_points": 7.72,
+        "conviction_points": 7.71,
         "agreement_points": 0,
         "pitching_plan_points": 40,
         "bullpen_points": 0,
         "offense_points": 50,
         "completeness_points": 0,
         "pitcher_edge_points": 40,
-        "model_agreement_gap": 0.0743,
-        "model_agreement_credit": 0.583,
+        "model_agreement_gap": 0.0353,
+        "model_agreement_credit": 0.883,
         "assigned_bullpen_innings": 3.5,
         "offense_delta": 0.0651,
         "offense_delta_15d": 0.0583,
@@ -298,7 +346,7 @@
         "window_days": 15
       },
       "model_v3": {
-        "p_home": 0.4681,
+        "p_home": 0.4682,
         "fip_away": 3.18,
         "fip_home": 3.69,
         "off_adj": -0.1555,
@@ -509,17 +557,17 @@
       "model_effective_era_home": 5.72,
       "model_pitcher_score_away": 77,
       "model_pitcher_score_home": 53,
-      "team_strength_blend_away": 0.6695,
-      "team_strength_blend_home": 0.3701,
-      "team_strength_probability": 0.6695,
+      "team_strength_blend_away": 0.6694,
+      "team_strength_blend_home": 0.3702,
+      "team_strength_probability": 0.6694,
       "bullpen_log_odds_adjustment": 0.12,
       "venue_split": {
         "away_record": "45-31",
         "home_record": "36-40",
-        "away_edge": 0.0077,
-        "home_edge": -0.0124,
-        "applied_away": 0.0039,
-        "applied_home": -0.0062,
+        "away_edge": 0.0075,
+        "home_edge": -0.0122,
+        "applied_away": 0.0038,
+        "applied_home": -0.0061,
         "weight": 0.5
       },
       "run_model_probability": 0.8628,
@@ -1375,17 +1423,17 @@
       "model_effective_era_home": 4.43,
       "model_pitcher_score_away": 52,
       "model_pitcher_score_home": 70,
-      "team_strength_blend_away": 0.5469,
-      "team_strength_blend_home": 0.5357,
-      "team_strength_probability": 0.5357,
+      "team_strength_blend_away": 0.5468,
+      "team_strength_blend_home": 0.5358,
+      "team_strength_probability": 0.5358,
       "bullpen_log_odds_adjustment": 0.039,
       "venue_split": {
         "away_record": "38-36",
         "home_record": "44-33",
-        "away_edge": -0.028,
-        "home_edge": -0.0067,
-        "applied_away": -0.014,
-        "applied_home": -0.0034,
+        "away_edge": -0.0281,
+        "home_edge": -0.0066,
+        "applied_away": -0.0141,
+        "applied_home": -0.0033,
         "weight": 0.5
       },
       "run_model_probability": 0.8062,
@@ -1426,7 +1474,7 @@
         "lab_score_passed": true
       },
       "pass_reason": null,
-      "read": "Chicago Cubs is an official moneyline pick because it clears both gates: 72.3% model win probability and 7.3/10 Lab Rating. LyDia projects 72.3% against a 59.2% no-vig market number, a 13.1% model edge at -155. Chicago Cubs owns the starting pitcher edge by 18 points. Bullpen read: Elevated volatility. Chicago Cubs's pen efficiency: Effective (6.0/10). Lineup check: Chicago Cubs is in a cold stretch (-0.068 OPS); Atlanta Braves is a touch below its season form (-0.021 OPS).",
+      "read": "Chicago Cubs is an official moneyline pick because it clears both gates: 72.3% model win probability and 7.3/10 Lab Rating. LyDia projects 72.3% against a 59.3% no-vig market number, a 13.1% model edge at -155. Chicago Cubs owns the starting pitcher edge by 18 points. Bullpen read: Elevated volatility. Chicago Cubs's pen efficiency: Effective (6.0/10). Lineup check: Chicago Cubs is in a cold stretch (-0.068 OPS); Atlanta Braves is a touch below its season form (-0.021 OPS).",
       "pitcher_edge": {
         "team": "Chicago Cubs",
         "gap": 18,
@@ -1496,7 +1544,7 @@
         "window_days": 15
       },
       "model_v3": {
-        "p_home": 0.5592,
+        "p_home": 0.5593,
         "fip_away": 4.93,
         "fip_home": 4.63,
         "off_adj": 0.0123,
@@ -1635,9 +1683,9 @@
       "model_probability": 0.7293,
       "model_source": "leo",
       "projected_runs": {
-        "away": 4.8,
-        "home": 4,
-        "total": 9.6
+        "away": 4.5,
+        "home": 3.2,
+        "total": 8.5
       },
       "pitching_plan": {
         "away": {
@@ -1707,20 +1755,20 @@
       "model_effective_era_home": 5.66,
       "model_pitcher_score_away": 77,
       "model_pitcher_score_home": 44,
-      "team_strength_blend_away": 0.4999,
-      "team_strength_blend_home": 0.4725,
-      "team_strength_probability": 0.4999,
+      "team_strength_blend_away": 0.4998,
+      "team_strength_blend_home": 0.4726,
+      "team_strength_probability": 0.4998,
       "bullpen_log_odds_adjustment": 0.03,
       "venue_split": {
         "away_record": "42-34",
         "home_record": "37-40",
-        "away_edge": 0.0209,
-        "home_edge": -0.0103,
+        "away_edge": 0.0207,
+        "home_edge": -0.0101,
         "applied_away": 0.0104,
         "applied_home": -0.0051,
         "weight": 0.5
       },
-      "run_model_probability": 0.6049,
+      "run_model_probability": 0.6781,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9573,
       "edge": 0.0937,
@@ -1737,7 +1785,7 @@
         "offense_points": 24.92,
         "completeness_points": 0,
         "pitcher_edge_points": 36,
-        "model_agreement_gap": 0.3536,
+        "model_agreement_gap": 0.2805,
         "model_agreement_credit": 0,
         "assigned_bullpen_innings": 3.3,
         "offense_delta": -0.0002,
@@ -1828,7 +1876,7 @@
         "window_days": 15
       },
       "model_v3": {
-        "p_home": 0.446,
+        "p_home": 0.4461,
         "fip_away": 3.51,
         "fip_home": 4.2,
         "off_adj": 0.0275,
@@ -1964,7 +2012,7 @@
       "home_l10": "8-2",
       "pick_team": "Tampa Bay Rays",
       "side": "home",
-      "model_probability": 0.7282,
+      "model_probability": 0.7283,
       "model_source": "leo",
       "projected_runs": {
         "away": 5.2,
@@ -2040,22 +2088,22 @@
       "model_pitcher_score_away": 59,
       "model_pitcher_score_home": 76,
       "team_strength_blend_away": 0.4491,
-      "team_strength_blend_home": 0.6235,
-      "team_strength_probability": 0.6235,
+      "team_strength_blend_home": 0.6236,
+      "team_strength_probability": 0.6236,
       "bullpen_log_odds_adjustment": 0.036,
       "venue_split": {
         "away_record": "32-44",
         "home_record": "51-25",
-        "away_edge": 0.0301,
-        "home_edge": 0.0232,
-        "applied_away": 0.0151,
-        "applied_home": 0.0116,
+        "away_edge": 0.03,
+        "home_edge": 0.0233,
+        "applied_away": 0.015,
+        "applied_home": 0.0117,
         "weight": 0.5
       },
       "run_model_probability": 0.5479,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.955,
-      "edge": 0.0198,
+      "edge": 0.0199,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 69,
@@ -2160,7 +2208,7 @@
         "window_days": 15
       },
       "model_v3": {
-        "p_home": 0.6307,
+        "p_home": 0.6308,
         "fip_away": 3.76,
         "fip_home": 3.89,
         "off_adj": 0.0141,
@@ -2168,7 +2216,7 @@
         "woba_home": 0.3343,
         "bp_adj": 0.036,
         "version": "v3.2-woba",
-        "p_home_v2": 0.7282,
+        "p_home_v2": 0.7283,
         "note": "shadow A/B — does not drive picks"
       },
       "bullpen": {
@@ -2299,9 +2347,9 @@
       "model_probability": 0.7325,
       "model_source": "leo",
       "projected_runs": {
-        "away": 4.6,
-        "home": 2.5,
-        "total": 7.9
+        "away": 5.6,
+        "home": 2.2,
+        "total": 8.6
       },
       "pitching_plan": {
         "away": {
@@ -2371,20 +2419,20 @@
       "model_effective_era_home": 4.46,
       "model_pitcher_score_away": 70,
       "model_pitcher_score_home": 48,
-      "team_strength_blend_away": 0.3847,
-      "team_strength_blend_home": 0.4394,
-      "team_strength_probability": 0.3847,
+      "team_strength_blend_away": 0.3846,
+      "team_strength_blend_home": 0.4395,
+      "team_strength_probability": 0.3846,
       "bullpen_log_odds_adjustment": 0.075,
       "venue_split": {
         "away_record": "27-49",
         "home_record": "38-38",
-        "away_edge": -0.0347,
-        "home_edge": -0.0212,
-        "applied_away": -0.0173,
-        "applied_home": -0.0106,
+        "away_edge": -0.0348,
+        "home_edge": -0.021,
+        "applied_away": -0.0174,
+        "applied_home": -0.0105,
         "weight": 0.5
       },
-      "run_model_probability": 0.7829,
+      "run_model_probability": 0.89,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9624,
       "edge": 0.3305,
@@ -2401,8 +2449,8 @@
         "offense_points": 33.12,
         "completeness_points": 0,
         "pitcher_edge_points": 26.67,
-        "model_agreement_gap": 0.1821,
-        "model_agreement_credit": 0,
+        "model_agreement_gap": 0.075,
+        "model_agreement_credit": 0.577,
         "assigned_bullpen_innings": 6,
         "offense_delta": 0.0195,
         "offense_delta_15d": -0.0009,
@@ -2628,12 +2676,12 @@
       "home_l10": "5-5",
       "pick_team": "New York Mets",
       "side": "home",
-      "model_probability": 0.662,
+      "model_probability": 0.6621,
       "model_source": "leo",
       "projected_runs": {
         "away": 5.4,
-        "home": 3.7,
-        "total": 9.9
+        "home": 4,
+        "total": 10.2
       },
       "pitching_plan": {
         "away": {
@@ -2703,22 +2751,22 @@
       "model_effective_era_home": 4.83,
       "model_pitcher_score_away": 49,
       "model_pitcher_score_home": 60,
-      "team_strength_blend_away": 0.496,
+      "team_strength_blend_away": 0.4959,
       "team_strength_blend_home": 0.4684,
       "team_strength_probability": 0.4684,
       "bullpen_log_odds_adjustment": 0.021,
       "venue_split": {
         "away_record": "38-39",
         "home_record": "34-42",
-        "away_edge": 0.0234,
-        "home_edge": -0.0253,
-        "applied_away": 0.0117,
+        "away_edge": 0.0233,
+        "home_edge": -0.0251,
+        "applied_away": 0.0116,
         "applied_home": -0.0126,
         "weight": 0.5
       },
-      "run_model_probability": 0.2884,
+      "run_model_probability": 0.3258,
       "run_model_weight": 0,
-      "model_probability_pre_bullpen": 0.821,
+      "model_probability_pre_bullpen": 0.8211,
       "edge": 0.1395,
       "status": "pass",
       "value_tag": "PASS",
@@ -2733,7 +2781,7 @@
         "offense_points": 41.67,
         "completeness_points": 0,
         "pitcher_edge_points": 13.33,
-        "model_agreement_gap": 0.5357,
+        "model_agreement_gap": 0.4984,
         "model_agreement_credit": 0,
         "assigned_bullpen_innings": 4.5,
         "offense_delta": 0.04,
@@ -2832,7 +2880,7 @@
         "woba_home": 0.3487,
         "bp_adj": 0.021,
         "version": "v3.2-woba",
-        "p_home_v2": 0.662,
+        "p_home_v2": 0.6621,
         "note": "shadow A/B — does not drive picks"
       },
       "bullpen": {
@@ -3035,22 +3083,22 @@
       "model_effective_era_home": 4.37,
       "model_pitcher_score_away": 61,
       "model_pitcher_score_home": 52,
-      "team_strength_blend_away": 0.4289,
-      "team_strength_blend_home": 0.4641,
-      "team_strength_probability": 0.4289,
+      "team_strength_blend_away": 0.4288,
+      "team_strength_blend_home": 0.4642,
+      "team_strength_probability": 0.4288,
       "bullpen_log_odds_adjustment": 0.036,
       "venue_split": {
         "away_record": "30-47",
         "home_record": "32-44",
-        "away_edge": -0.0276,
-        "home_edge": 0.0052,
-        "applied_away": -0.0138,
-        "applied_home": 0.0026,
+        "away_edge": -0.0278,
+        "home_edge": 0.0054,
+        "applied_away": -0.0139,
+        "applied_home": 0.0027,
         "weight": 0.5
       },
       "run_model_probability": 0.7017,
       "run_model_weight": 0,
-      "model_probability_pre_bullpen": 0.8167,
+      "model_probability_pre_bullpen": 0.8166,
       "edge": 0.1047,
       "status": "pass",
       "value_tag": "PASS",
@@ -3065,7 +3113,7 @@
         "offense_points": 40.54,
         "completeness_points": 0,
         "pitcher_edge_points": 14.67,
-        "model_agreement_gap": 0.1203,
+        "model_agreement_gap": 0.1202,
         "model_agreement_credit": 0.229,
         "assigned_bullpen_innings": 3.1,
         "offense_delta": 0.0373,
@@ -3156,7 +3204,7 @@
         "window_days": 15
       },
       "model_v3": {
-        "p_home": 0.4095,
+        "p_home": 0.4096,
         "fip_away": 3.84,
         "fip_home": 4.15,
         "off_adj": -0.1387,
@@ -3296,8 +3344,8 @@
       "model_source": "leo",
       "projected_runs": {
         "away": 4.1,
-        "home": 3.4,
-        "total": 8.3
+        "home": 4.2,
+        "total": 9.1
       },
       "pitching_plan": {
         "away": {
@@ -3367,23 +3415,23 @@
       "model_effective_era_home": 4.42,
       "model_pitcher_score_away": 72,
       "model_pitcher_score_home": 59,
-      "team_strength_blend_away": 0.5935,
-      "team_strength_blend_home": 0.4894,
-      "team_strength_probability": 0.5935,
+      "team_strength_blend_away": 0.5934,
+      "team_strength_blend_home": 0.4895,
+      "team_strength_probability": 0.5934,
       "bullpen_log_odds_adjustment": 0.069,
       "venue_split": {
         "away_record": "44-32",
         "home_record": "41-32",
-        "away_edge": 0.0425,
-        "home_edge": 0.0232,
+        "away_edge": 0.0423,
+        "home_edge": 0.0234,
         "applied_away": 0.0212,
-        "applied_home": 0.0116,
+        "applied_home": 0.0117,
         "weight": 0.5
       },
-      "run_model_probability": 0.5993,
+      "run_model_probability": 0.4864,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.88,
-      "edge": 0.193,
+      "edge": 0.1929,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 57,
@@ -3397,7 +3445,7 @@
         "offense_points": 20.56,
         "completeness_points": 0,
         "pitcher_edge_points": 29.33,
-        "model_agreement_gap": 0.2878,
+        "model_agreement_gap": 0.4007,
         "model_agreement_credit": 0,
         "assigned_bullpen_innings": 3.2,
         "offense_delta": -0.0107,
@@ -3488,7 +3536,7 @@
         "window_days": 15
       },
       "model_v3": {
-        "p_home": 0.4818,
+        "p_home": 0.4819,
         "fip_away": 3.6,
         "fip_home": 3.69,
         "off_adj": 0.0531,
@@ -4228,28 +4276,28 @@
         }
       },
       "bullpen_game": false,
-      "legacy_strength_probability": 0.7423,
+      "legacy_strength_probability": 0.7422,
       "model_effective_era_away": 4.23,
       "model_effective_era_home": 4.33,
       "model_pitcher_score_away": 59,
       "model_pitcher_score_home": 51,
-      "team_strength_blend_away": 0.4594,
-      "team_strength_blend_home": 0.5265,
-      "team_strength_probability": 0.4594,
+      "team_strength_blend_away": 0.4593,
+      "team_strength_blend_home": 0.5266,
+      "team_strength_probability": 0.4593,
       "bullpen_log_odds_adjustment": -0.036,
       "venue_split": {
         "away_record": "30-44",
         "home_record": "43-34",
-        "away_edge": -0.0384,
-        "home_edge": 0.0021,
-        "applied_away": -0.0192,
-        "applied_home": 0.001,
+        "away_edge": -0.0385,
+        "home_edge": 0.0022,
+        "applied_away": -0.0193,
+        "applied_home": 0.0011,
         "weight": 0.5
       },
       "run_model_probability": 0.5268,
       "run_model_weight": 0,
-      "model_probability_pre_bullpen": 0.7491,
-      "edge": 0.1759,
+      "model_probability_pre_bullpen": 0.749,
+      "edge": 0.1758,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 50,
@@ -4263,7 +4311,7 @@
         "offense_points": 34.38,
         "completeness_points": 0,
         "pitcher_edge_points": 12,
-        "model_agreement_gap": 0.2155,
+        "model_agreement_gap": 0.2154,
         "model_agreement_credit": 0,
         "assigned_bullpen_innings": 4.7,
         "offense_delta": 0.0225,
@@ -4354,7 +4402,7 @@
         "window_days": 15
       },
       "model_v3": {
-        "p_home": 0.4579,
+        "p_home": 0.458,
         "fip_away": 3.95,
         "fip_home": 5.44,
         "off_adj": -0.0872,
@@ -4560,28 +4608,28 @@
         }
       },
       "bullpen_game": false,
-      "legacy_strength_probability": 0.7121,
+      "legacy_strength_probability": 0.712,
       "model_effective_era_away": 4.64,
       "model_effective_era_home": 5.97,
       "model_pitcher_score_away": 63,
       "model_pitcher_score_home": 61,
       "team_strength_blend_away": 0.5708,
-      "team_strength_blend_home": 0.3627,
+      "team_strength_blend_home": 0.3628,
       "team_strength_probability": 0.5708,
       "bullpen_log_odds_adjustment": 0.042,
       "venue_split": {
         "away_record": "36-40",
         "home_record": "31-42",
-        "away_edge": -0.0265,
-        "home_edge": 0.016,
-        "applied_away": -0.0132,
-        "applied_home": 0.008,
+        "away_edge": -0.0267,
+        "home_edge": 0.0162,
+        "applied_away": -0.0133,
+        "applied_home": 0.0081,
         "weight": 0.5
       },
       "run_model_probability": 0.7294,
       "run_model_weight": 0,
-      "model_probability_pre_bullpen": 0.7034,
-      "edge": -0.0019,
+      "model_probability_pre_bullpen": 0.7033,
+      "edge": -0.002,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 44,
@@ -4686,7 +4734,7 @@
         "window_days": 15
       },
       "model_v3": {
-        "p_home": 0.3615,
+        "p_home": 0.3616,
         "fip_away": 4.76,
         "fip_home": 4.55,
         "off_adj": 0.0056,
