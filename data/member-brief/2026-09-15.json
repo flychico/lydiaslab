@@ -1,6 +1,6 @@
 {
   "date": "2026-09-15",
-  "generated_at": "2026-09-16T01:14:04.633Z",
+  "generated_at": "2026-09-16T01:14:54.222Z",
   "snapshot_type": "posted",
   "source_of_truth": "LyDia Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -11,7 +11,7 @@
     "minimum_lab_score": 72,
     "note": "Lab Rating grades LyDia's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
   },
-  "summary": "3 official picks cleared their market gates: 3 moneyline. 1 value-watch setup had good price math but did not clear official-pick rules.",
+  "summary": "Brief generated without live market pricing. Treat the card as research-only until pricing is checked.",
   "official_card": [
     {
       "game_pk": 823333,
@@ -60,6 +60,26 @@
       },
       "total": null,
       "strikeouts": []
+    },
+    {
+      "game_pk": 824307,
+      "game": "San Diego Padres @ Colorado Rockies",
+      "away": "San Diego Padres",
+      "home": "Colorado Rockies",
+      "time": "2026-09-16T00:40:00Z",
+      "lab_score": 49,
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Kyle Freeland",
+          "pick": "Over",
+          "line": 2.5,
+          "best_price": 150,
+          "projection": 4.34,
+          "edge": 1.84
+        }
+      ]
     }
   ],
   "games": [
@@ -613,12 +633,77 @@
       "side": "away",
       "model_probability": 0.7313,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
+      "projected_runs": {
+        "away": 5.4,
+        "home": 2.6,
+        "total": 8.8
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 669302,
+              "pitcher": "Logan Gilbert",
+              "expected_innings": 5.931034482758621,
+              "fip_lite": 3.78,
+              "pitcher_score": 73,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.068965517241379
+            }
+          ],
+          "expected_innings": 5.9,
+          "bullpen_innings": 3.1,
+          "effective_era": 4.41,
+          "pitcher_score": 73,
+          "bullpen_carries_game": false,
+          "description": "Logan Gilbert 5.9 IP + remaining bullpen 3.1 IP",
+          "pitcher": "Logan Gilbert",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 696270,
+              "pitcher": "Ryan Johnson",
+              "expected_innings": 4.958333333333334,
+              "fip_lite": 5.82,
+              "pitcher_score": 52,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.041666666666666
+            }
+          ],
+          "expected_innings": 5,
+          "bullpen_innings": 4,
+          "effective_era": 5.34,
+          "pitcher_score": 52,
+          "bullpen_carries_game": false,
+          "description": "Ryan Johnson 5.0 IP + remaining bullpen 4.0 IP",
+          "pitcher": "Ryan Johnson",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.9627,
-      "model_effective_era_away": 3.68,
-      "model_effective_era_home": 5.03,
+      "model_effective_era_away": 4.41,
+      "model_effective_era_home": 5.34,
       "model_pitcher_score_away": 73,
       "model_pitcher_score_home": 52,
       "team_strength_blend_away": 0.4303,
@@ -634,7 +719,7 @@
         "applied_home": 0.0013,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.8387,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9628,
       "edge": 0.1778,
@@ -651,15 +736,15 @@
         "offense_points": 43.73,
         "completeness_points": 0,
         "pitcher_edge_points": 30.67,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.124,
+        "model_agreement_credit": 0.2,
+        "assigned_bullpen_innings": 3.1,
         "offense_delta": 0.0449,
         "offense_delta_15d": 0.0544,
         "offense_delta_30d": 0.0355,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -672,7 +757,7 @@
         "lab_score_passed": true
       },
       "pass_reason": null,
-      "read": "Seattle Mariners is an official moneyline pick because it clears both gates: 73.1% model win probability and 8.3/10 Lab Rating. LyDia projects 73.1% against a 55.3% no-vig market number, a 17.8% model edge at -130. Seattle Mariners owns the starting pitcher edge by 21 points. Bullpen read: Neutral. Seattle Mariners's pen efficiency: Below average (3.7/10). Bullpen fatigue moved this probability down 23.1 points from 96.3% (starting pitcher and team strength only) to 73.1%. Lineup check: Seattle Mariners is swinging a hot bat (+0.125 OPS); Los Angeles Angels is near its season form (+0.003 OPS). Recent form supports this side and is included in the unified run projection.",
+      "read": "Seattle Mariners is an official moneyline pick because it clears both gates: 73.1% model win probability and 8.3/10 Lab Rating. LyDia projects 73.1% against a 55.4% no-vig market number, a 17.8% model edge at -130. Seattle Mariners owns the starting pitcher edge by 21 points. Bullpen read: Neutral. Seattle Mariners's pen efficiency: Below average (3.7/10). Lineup check: Seattle Mariners is swinging a hot bat (+0.125 OPS); Los Angeles Angels is near its season form (+0.003 OPS). Recent form supports this side and is included in the unified run projection.",
       "pitcher_edge": {
         "team": "Seattle Mariners",
         "gap": 21,
@@ -3283,12 +3368,77 @@
       "side": "home",
       "model_probability": 0.6892,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
+      "projected_runs": {
+        "away": 4,
+        "home": 4.7,
+        "total": 9.5
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 676083,
+              "pitcher": "Janson Junk",
+              "expected_innings": 5.000000000000001,
+              "fip_lite": 4.15,
+              "pitcher_score": 59,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.999999999999999
+            }
+          ],
+          "expected_innings": 5,
+          "bullpen_innings": 4,
+          "effective_era": 4.8,
+          "pitcher_score": 59,
+          "bullpen_carries_game": false,
+          "description": "Janson Junk 5.0 IP + remaining bullpen 4.0 IP",
+          "pitcher": "Janson Junk",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 647336,
+              "pitcher": "Michael Soroka",
+              "expected_innings": 5.296296296296296,
+              "fip_lite": 2.91,
+              "pitcher_score": 71,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.703703703703704
+            }
+          ],
+          "expected_innings": 5.3,
+          "bullpen_innings": 3.7,
+          "effective_era": 2.66,
+          "pitcher_score": 71,
+          "bullpen_carries_game": false,
+          "description": "Michael Soroka 5.3 IP + remaining bullpen 3.7 IP",
+          "pitcher": "Michael Soroka",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.8785,
-      "model_effective_era_away": 4.51,
-      "model_effective_era_home": 3.55,
+      "model_effective_era_away": 4.8,
+      "model_effective_era_home": 2.66,
       "model_pitcher_score_away": 59,
       "model_pitcher_score_home": 71,
       "team_strength_blend_away": 0.4321,
@@ -3304,10 +3454,10 @@
         "applied_home": 0.0022,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.5925,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.8716,
-      "edge": 0.1429,
+      "edge": 0.1428,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 48,
@@ -3321,15 +3471,15 @@
         "offense_points": 12.9,
         "completeness_points": 0,
         "pitcher_edge_points": 28,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.286,
+        "model_agreement_credit": 0,
+        "assigned_bullpen_innings": 3.7,
         "offense_delta": -0.0291,
         "offense_delta_15d": -0.0404,
         "offense_delta_30d": -0.0177,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
