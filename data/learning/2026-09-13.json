@@ -1,0 +1,2986 @@
+{
+  "generated_at": "2026-09-14T14:20:34.879Z",
+  "status": "ready",
+  "latest_date": "2026-09-13",
+  "days_reviewed": 43,
+  "source_files": {
+    "results": "data/results.json",
+    "clv": "data/clv/clv_log.csv"
+  },
+  "current_official_model": "leo",
+  "headline": "Learning summary for 2026-09-13: moneyline record 1-1 (50.0%).",
+  "day": {
+    "date": "2026-09-13",
+    "source": "published-picks",
+    "record_all_markets": "1-1",
+    "units_all_markets": -0.32,
+    "ungraded": 0,
+    "moneyline_record": "1-1",
+    "moneyline_win_rate": 0.5,
+    "official_moneyline_picks": 2,
+    "legacy_market_entries": 0
+  },
+  "gates": {
+    "official_model_probability": 0.61,
+    "official_lab_score": 72,
+    "note": "Official picks require high model probability and strong setup quality. A high Lab Rating alone is not enough. (Market edge is no longer a gate -- a picked side with a lower market-implied probability than the model's read can still qualify, as long as market data exists for the game at all.)"
+  },
+  "process_metrics": {
+    "average_model_probability": 0.6644,
+    "average_lab_score": 82,
+    "average_raw_edge": 0.076,
+    "clv_counts": {
+      "not_tracked": 2
+    },
+    "lesson_counts": {
+      "win_needs_more_sample": 1,
+      "loss_needs_review": 1
+    },
+    "strong_official_count": 54,
+    "protected_by_probability_gate_count": 0,
+    "high_bullpen_risk_count": 17,
+    "pitcher_conflict_count": 0
+  },
+  "findings": [
+    {
+      "title": "Official-pick discipline",
+      "read": "2 moneyline picks were graded today. Record: 1-1 (50.0%)."
+    },
+    {
+      "title": "Probability gate",
+      "read": "No high-Lab, low-probability moneyline setups appeared in the graded official set."
+    },
+    {
+      "title": "What's working: Lab Rating components",
+      "read": "Over 429 graded picks with a reconciling breakdown, pitching plan is the strongest working piece of Lab Rating right now -- picks scoring above its median win 62.8% of the time vs. 55.9% below (lift +7.0%, correlation to winning +0.093)."
+    },
+    {
+      "title": "What's not working: Lab Rating components",
+      "read": "bullpen -- correlation to winning -0.055, lift -6.6% over 429 picks. Currently not earning its points -- moves the score without moving the record. Bullpen no longer scores Lab Rating (removed 2026-08-30, folded into pitching plan) -- this is its pre-change record, not a live component."
+    },
+    {
+      "title": "Bullpen learning",
+      "read": "Across all reviewed days, 17 graded moneyline picks carried a meaningful bullpen caution. Bullpen was removed from Lab Rating's own scoring on 2026-08-30 (folded into pitching plan) -- this caution count is a separate, still-live read from the bullpen-fatigue system, unaffected by that change. For reference, its PRE-CHANGE scoring history correlated -0.055 with winning over 429 picks (lift -6.6%). Currently not earning its points -- moves the score without moving the record."
+    },
+    {
+      "title": "Pitcher learning",
+      "read": "No major starting-pitcher conflicts showed up in the graded moneyline set. Statistically, the pitching-plan component correlates +0.093 with winning over 429 picks (lift +7.0%)."
+    },
+    {
+      "title": "Rating calibration",
+      "read": "Actual win rate by Lab Rating band: 0-49 → 57.4% (n=155), 50-64 → 57.9% (n=140), 65-74 → 61.8% (n=76), 75-84 → 64.6% (n=48), 85-100 → 60.0% (n=10). Widest predicted-vs-actual gap is the 85-100 band (-11.9%)."
+    }
+  ],
+  "calibration": {
+    "status": "ready",
+    "model_version": "leo",
+    "games_graded": 430,
+    "wins": 255,
+    "losses": 175,
+    "brier_score": 0.2464,
+    "shadow_model": {
+      "status": "ready",
+      "games": 498,
+      "official_model_version": "leo",
+      "shadow_model_version": "v3.2-woba",
+      "brier_official": 0.2472,
+      "brier_shadow": 0.2511,
+      "leader": "official",
+      "disagreements": 139,
+      "shadow_wins_disagreements": 59,
+      "note": "Only rows from the latest matching official/shadow model-version pair are compared. Promote nothing from a mixed-version sample."
+    },
+    "attribution": {
+      "status": "ready",
+      "games": 574,
+      "factors": [
+        {
+          "factor": "Model probability",
+          "tertiles": [
+            {
+              "band": "low",
+              "games": 192,
+              "win_rate": 0.542
+            },
+            {
+              "band": "mid",
+              "games": 191,
+              "win_rate": 0.607
+            },
+            {
+              "band": "high",
+              "games": 191,
+              "win_rate": 0.623
+            }
+          ],
+          "spread": 0.081
+        },
+        {
+          "factor": "Bullpen fatigue gap (opp − pick)",
+          "tertiles": [
+            {
+              "band": "low",
+              "games": 197,
+              "win_rate": 0.599
+            },
+            {
+              "band": "mid",
+              "games": 193,
+              "win_rate": 0.601
+            },
+            {
+              "band": "high",
+              "games": 184,
+              "win_rate": 0.571
+            }
+          ],
+          "spread": -0.028
+        },
+        {
+          "factor": "Pitcher score gap (pick − opp)",
+          "tertiles": [
+            {
+              "band": "low",
+              "games": 217,
+              "win_rate": 0.599
+            },
+            {
+              "band": "mid",
+              "games": 180,
+              "win_rate": 0.594
+            },
+            {
+              "band": "high",
+              "games": 177,
+              "win_rate": 0.576
+            }
+          ],
+          "spread": -0.023
+        },
+        {
+          "factor": "Offense form gap (pick − opp, wOBA)",
+          "tertiles": [
+            {
+              "band": "low",
+              "games": 192,
+              "win_rate": 0.594
+            },
+            {
+              "band": "mid",
+              "games": 192,
+              "win_rate": 0.599
+            },
+            {
+              "band": "high",
+              "games": 190,
+              "win_rate": 0.579
+            }
+          ],
+          "spread": -0.015
+        }
+      ],
+      "note": "Win rate by input tertile, pick-side relative. |spread| = high-band win rate minus low-band — bigger magnitude = the metric separates winners from losers harder, and deserves weight. Read direction too: a NEGATIVE spread on a should-be-positive factor is a red flag."
+    },
+    "kprops": {
+      "status": "ready",
+      "self_calibration": "no correction needed yet",
+      "graded": 928,
+      "with_projection": 921,
+      "bias": -0.1,
+      "mae": 1.74,
+      "lean_record": "231-154",
+      "over_lean_record": "121-88",
+      "under_lean_record": "110-66",
+      "no_lean": 529,
+      "note": "Bias = actual minus projection (positive means we under-project). Leans only counted at 0.7+ strikeout edges. Small samples early — a lean record means little before ~100 graded pitchers."
+    },
+    "note": "Shadow ledger for learning only — never part of the public record. Official picks stay the only published record.",
+    "buckets": [
+      {
+        "range": "50-55%",
+        "games": 68,
+        "wins": 37,
+        "expected_win_rate": 0.523,
+        "actual_win_rate": 0.544
+      },
+      {
+        "range": "55-60%",
+        "games": 60,
+        "wins": 33,
+        "expected_win_rate": 0.574,
+        "actual_win_rate": 0.55
+      },
+      {
+        "range": "60-65%",
+        "games": 53,
+        "wins": 30,
+        "expected_win_rate": 0.624,
+        "actual_win_rate": 0.566
+      },
+      {
+        "range": "65-70%",
+        "games": 67,
+        "wins": 43,
+        "expected_win_rate": 0.679,
+        "actual_win_rate": 0.642
+      },
+      {
+        "range": "70-75%",
+        "games": 182,
+        "wins": 112,
+        "expected_win_rate": 0.726,
+        "actual_win_rate": 0.615
+      }
+    ],
+    "shadow_by_status": {
+      "official_pick": {
+        "games": 49,
+        "wins": 31,
+        "units": 5.34
+      },
+      "pass": {
+        "games": 294,
+        "wins": 171,
+        "units": 36.1
+      },
+      "watchlist": {
+        "games": 71,
+        "wins": 44,
+        "units": 3.9
+      },
+      "value_watch": {
+        "games": 16,
+        "wins": 9,
+        "units": -0.16
+      }
+    }
+  },
+  "buckets": {
+    "strong_official": [
+      {
+        "game_pk": 824971,
+        "date": "2026-08-02",
+        "status": "official_pick",
+        "model_version": "multi-market-v1",
+        "game": "Detroit Tigers @ Athletics",
+        "pick": "Detroit Tigers",
+        "result": "W",
+        "model_probability": 0.7358,
+        "lab_score": 82,
+        "raw_edge": 0.2248,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Detroit Tigers",
+        "pitcher_gap": 15,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 66,
+        "opponent_bullpen_score": 70
+      },
+      {
+        "game_pk": 824482,
+        "date": "2026-08-05",
+        "status": "official_pick",
+        "model_version": "multi-market-v1",
+        "game": "Athletics @ Cincinnati Reds",
+        "pick": "Cincinnati Reds",
+        "result": "W",
+        "model_probability": 0.6576,
+        "lab_score": 81,
+        "raw_edge": 0.0404,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Cincinnati Reds",
+        "pitcher_gap": 6,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 67,
+        "opponent_bullpen_score": 54
+      },
+      {
+        "game_pk": 824729,
+        "date": "2026-08-06",
+        "status": "official_pick",
+        "model_version": "multi-market-v1",
+        "game": "Chicago White Sox @ Boston Red Sox",
+        "pick": "Boston Red Sox",
+        "result": "W",
+        "model_probability": 0.6114,
+        "lab_score": 80,
+        "raw_edge": -0.0259,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Boston Red Sox",
+        "pitcher_gap": 18,
+        "bullpen_label": "Neutral",
+        "pick_side_bullpen_score": 58,
+        "opponent_bullpen_score": 62
+      },
+      {
+        "game_pk": 824079,
+        "date": "2026-08-08",
+        "status": "official_pick",
+        "model_version": "multi-market-v1",
+        "game": "Chicago Cubs @ Kansas City Royals",
+        "pick": "Chicago Cubs",
+        "result": "L",
+        "model_probability": 0.6188,
+        "lab_score": 84,
+        "raw_edge": 0.0046,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Chicago Cubs",
+        "pitcher_gap": 19,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 80,
+        "opponent_bullpen_score": 82
+      },
+      {
+        "game_pk": 824240,
+        "date": "2026-08-11",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Cleveland Guardians @ Detroit Tigers",
+        "pick": "Detroit Tigers",
+        "result": "W",
+        "model_probability": 0.6452,
+        "lab_score": 90,
+        "raw_edge": 0.1072,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Detroit Tigers",
+        "pitcher_gap": 8,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 56,
+        "opponent_bullpen_score": 83
+      },
+      {
+        "game_pk": 824970,
+        "date": "2026-08-11",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Tampa Bay Rays @ Athletics",
+        "pick": "Tampa Bay Rays",
+        "result": "W",
+        "model_probability": 0.6566,
+        "lab_score": 87,
+        "raw_edge": 0.0369,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Tampa Bay Rays",
+        "pitcher_gap": 30,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 89,
+        "opponent_bullpen_score": 55
+      },
+      {
+        "game_pk": 824400,
+        "date": "2026-08-15",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "San Diego Padres @ Cleveland Guardians",
+        "pick": "San Diego Padres",
+        "result": "L",
+        "model_probability": 0.614,
+        "lab_score": 84,
+        "raw_edge": 0.1077,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "San Diego Padres",
+        "pitcher_gap": 26,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 58,
+        "opponent_bullpen_score": 82
+      },
+      {
+        "game_pk": 824880,
+        "date": "2026-08-16",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Arizona Diamondbacks @ Atlanta Braves",
+        "pick": "Arizona Diamondbacks",
+        "result": "L",
+        "model_probability": 0.6985,
+        "lab_score": 81,
+        "raw_edge": 0.2371,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Arizona Diamondbacks",
+        "pitcher_gap": 12,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 46,
+        "opponent_bullpen_score": 63
+      },
+      {
+        "game_pk": 824477,
+        "date": "2026-08-16",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Miami Marlins @ Cincinnati Reds",
+        "pick": "Miami Marlins",
+        "result": "W",
+        "model_probability": 0.7433,
+        "lab_score": 84,
+        "raw_edge": 0.2127,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Miami Marlins",
+        "pitcher_gap": 24,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 47,
+        "opponent_bullpen_score": 63
+      },
+      {
+        "game_pk": 823590,
+        "date": "2026-08-16",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Washington Nationals @ New York Mets",
+        "pick": "New York Mets",
+        "result": "W",
+        "model_probability": 0.736,
+        "lab_score": 82,
+        "raw_edge": 0.1321,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "New York Mets",
+        "pitcher_gap": 17,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 52,
+        "opponent_bullpen_score": 74
+      },
+      {
+        "game_pk": 823991,
+        "date": "2026-08-16",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Kansas City Royals @ Los Angeles Angels",
+        "pick": "Kansas City Royals",
+        "result": "W",
+        "model_probability": 0.7417,
+        "lab_score": 81,
+        "raw_edge": 0.2259,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Kansas City Royals",
+        "pitcher_gap": 25,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 60,
+        "opponent_bullpen_score": 66
+      },
+      {
+        "game_pk": 824514,
+        "date": "2026-08-17",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "St. Louis Cardinals @ Cincinnati Reds",
+        "pick": "St. Louis Cardinals",
+        "result": "W",
+        "model_probability": 0.7315,
+        "lab_score": 80,
+        "raw_edge": 0.2186,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "St. Louis Cardinals",
+        "pitcher_gap": 14,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 53,
+        "opponent_bullpen_score": 78
+      },
+      {
+        "game_pk": 824478,
+        "date": "2026-08-17",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "St. Louis Cardinals @ Cincinnati Reds",
+        "pick": "St. Louis Cardinals",
+        "result": "L",
+        "model_probability": 0.7443,
+        "lab_score": 84,
+        "raw_edge": 0.2158,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "St. Louis Cardinals",
+        "pitcher_gap": 20,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 53,
+        "opponent_bullpen_score": 78
+      },
+      {
+        "game_pk": 824398,
+        "date": "2026-08-18",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "San Francisco Giants @ Cleveland Guardians",
+        "pick": "Cleveland Guardians",
+        "result": "W",
+        "model_probability": 0.7376,
+        "lab_score": 80,
+        "raw_edge": 0.0999,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Cleveland Guardians",
+        "pitcher_gap": 44,
+        "bullpen_label": "Neutral",
+        "pick_side_bullpen_score": 61,
+        "opponent_bullpen_score": 57
+      },
+      {
+        "game_pk": 822937,
+        "date": "2026-08-19",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Toronto Blue Jays @ Tampa Bay Rays",
+        "pick": "Tampa Bay Rays",
+        "result": "W",
+        "model_probability": 0.7427,
+        "lab_score": 82,
+        "raw_edge": 0.1323,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Tampa Bay Rays",
+        "pitcher_gap": 42,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 78,
+        "opponent_bullpen_score": 73
+      },
+      {
+        "game_pk": 822934,
+        "date": "2026-08-20",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Toronto Blue Jays @ Tampa Bay Rays",
+        "pick": "Tampa Bay Rays",
+        "result": "L",
+        "model_probability": 0.7429,
+        "lab_score": 81,
+        "raw_edge": 0.1412,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Tampa Bay Rays",
+        "pitcher_gap": 23,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 72,
+        "opponent_bullpen_score": 75
+      },
+      {
+        "game_pk": 825045,
+        "date": "2026-08-21",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Cincinnati Reds @ Arizona Diamondbacks",
+        "pick": "Arizona Diamondbacks",
+        "result": "W",
+        "model_probability": 0.7372,
+        "lab_score": 87,
+        "raw_edge": 0.1599,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Arizona Diamondbacks",
+        "pitcher_gap": 18,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 65,
+        "opponent_bullpen_score": 64
+      },
+      {
+        "game_pk": 825044,
+        "date": "2026-08-22",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Cincinnati Reds @ Arizona Diamondbacks",
+        "pick": "Arizona Diamondbacks",
+        "result": "L",
+        "model_probability": 0.7419,
+        "lab_score": 93,
+        "raw_edge": 0.1281,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Arizona Diamondbacks",
+        "pitcher_gap": 26,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 60,
+        "opponent_bullpen_score": 73
+      },
+      {
+        "game_pk": 823261,
+        "date": "2026-08-22",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Minnesota Twins @ San Diego Padres",
+        "pick": "San Diego Padres",
+        "result": "W",
+        "model_probability": 0.7419,
+        "lab_score": 81,
+        "raw_edge": 0.1489,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "San Diego Padres",
+        "pitcher_gap": 19,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 40,
+        "opponent_bullpen_score": 62
+      },
+      {
+        "game_pk": 823992,
+        "date": "2026-08-24",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Cleveland Guardians @ Los Angeles Angels",
+        "pick": "Cleveland Guardians",
+        "result": "W",
+        "model_probability": 0.7418,
+        "lab_score": 72,
+        "raw_edge": 0.1412,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Cleveland Guardians",
+        "pitcher_gap": 32,
+        "bullpen_label": "Neutral",
+        "pick_side_bullpen_score": 66,
+        "opponent_bullpen_score": 48
+      },
+      {
+        "game_pk": 823826,
+        "date": "2026-08-25",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Boston Red Sox @ Miami Marlins",
+        "pick": "Boston Red Sox",
+        "result": "W",
+        "model_probability": 0.6922,
+        "lab_score": 77,
+        "raw_edge": 0.1021,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Boston Red Sox",
+        "pitcher_gap": 14,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 63,
+        "opponent_bullpen_score": 80
+      },
+      {
+        "game_pk": 822773,
+        "date": "2026-08-25",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Kansas City Royals @ Toronto Blue Jays",
+        "pick": "Kansas City Royals",
+        "result": "W",
+        "model_probability": 0.7289,
+        "lab_score": 73,
+        "raw_edge": 0.2735,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Kansas City Royals",
+        "pitcher_gap": 23,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 61,
+        "opponent_bullpen_score": 55
+      },
+      {
+        "game_pk": 823180,
+        "date": "2026-08-26",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Cincinnati Reds @ San Francisco Giants",
+        "pick": "San Francisco Giants",
+        "result": "L",
+        "model_probability": 0.7184,
+        "lab_score": 72,
+        "raw_edge": 0.1915,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "San Francisco Giants",
+        "pitcher_gap": 21,
+        "bullpen_label": "Adds caution",
+        "pick_side_bullpen_score": 100,
+        "opponent_bullpen_score": 63
+      },
+      {
+        "game_pk": 823988,
+        "date": "2026-08-26",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Cleveland Guardians @ Los Angeles Angels",
+        "pick": "Cleveland Guardians",
+        "result": "W",
+        "model_probability": 0.7317,
+        "lab_score": 81,
+        "raw_edge": 0.1702,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Cleveland Guardians",
+        "pitcher_gap": 22,
+        "bullpen_label": "Neutral",
+        "pick_side_bullpen_score": 55,
+        "opponent_bullpen_score": 60
+      },
+      {
+        "game_pk": 823825,
+        "date": "2026-08-26",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Boston Red Sox @ Miami Marlins",
+        "pick": "Boston Red Sox",
+        "result": "L",
+        "model_probability": 0.7071,
+        "lab_score": 83,
+        "raw_edge": 0.1193,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Boston Red Sox",
+        "pitcher_gap": 16,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 76,
+        "opponent_bullpen_score": 100
+      },
+      {
+        "game_pk": 824878,
+        "date": "2026-08-26",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Los Angeles Dodgers @ Atlanta Braves",
+        "pick": "Los Angeles Dodgers",
+        "result": "L",
+        "model_probability": 0.7209,
+        "lab_score": 80,
+        "raw_edge": 0.18,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Los Angeles Dodgers",
+        "pitcher_gap": 27,
+        "bullpen_label": "Neutral",
+        "pick_side_bullpen_score": 51,
+        "opponent_bullpen_score": 53
+      },
+      {
+        "game_pk": 824555,
+        "date": "2026-08-26",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Texas Rangers @ Chicago White Sox",
+        "pick": "Chicago White Sox",
+        "result": "W",
+        "model_probability": 0.6664,
+        "lab_score": 72,
+        "raw_edge": 0.1322,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Chicago White Sox",
+        "pitcher_gap": 10,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 87,
+        "opponent_bullpen_score": 74
+      },
+      {
+        "game_pk": 822691,
+        "date": "2026-08-28",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Miami Marlins @ Washington Nationals",
+        "pick": "Miami Marlins",
+        "result": "L",
+        "model_probability": 0.7326,
+        "lab_score": 72,
+        "raw_edge": 0.1521,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Miami Marlins",
+        "pitcher_gap": 49,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 80,
+        "opponent_bullpen_score": 95
+      },
+      {
+        "game_pk": 823744,
+        "date": "2026-08-28",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Texas Rangers @ Milwaukee Brewers",
+        "pick": "Milwaukee Brewers",
+        "result": "W",
+        "model_probability": 0.7329,
+        "lab_score": 81,
+        "raw_edge": 0.1166,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Milwaukee Brewers",
+        "pitcher_gap": 18,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 75,
+        "opponent_bullpen_score": 67
+      },
+      {
+        "game_pk": 823986,
+        "date": "2026-08-29",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Philadelphia Phillies @ Los Angeles Angels",
+        "pick": "Philadelphia Phillies",
+        "result": "W",
+        "model_probability": 0.7347,
+        "lab_score": 93,
+        "raw_edge": 0.1055,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Philadelphia Phillies",
+        "pitcher_gap": 32,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 45,
+        "opponent_bullpen_score": 62
+      },
+      {
+        "game_pk": 823502,
+        "date": "2026-08-30",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Boston Red Sox @ New York Yankees",
+        "pick": "Boston Red Sox",
+        "result": "L",
+        "model_probability": 0.6606,
+        "lab_score": 76,
+        "raw_edge": 0.1388,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Boston Red Sox",
+        "pitcher_gap": 12,
+        "bullpen_label": "Both bullpens stressed",
+        "pick_side_bullpen_score": 83,
+        "opponent_bullpen_score": 81
+      },
+      {
+        "game_pk": 824232,
+        "date": "2026-08-30",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Los Angeles Dodgers @ Detroit Tigers",
+        "pick": "Los Angeles Dodgers",
+        "result": "W",
+        "model_probability": 0.7261,
+        "lab_score": 72,
+        "raw_edge": 0.1093,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Los Angeles Dodgers",
+        "pitcher_gap": 19,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 65,
+        "opponent_bullpen_score": 63
+      },
+      {
+        "game_pk": 823987,
+        "date": "2026-08-30",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Philadelphia Phillies @ Los Angeles Angels",
+        "pick": "Philadelphia Phillies",
+        "result": "W",
+        "model_probability": 0.7365,
+        "lab_score": 92,
+        "raw_edge": 0.1045,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Philadelphia Phillies",
+        "pitcher_gap": 35,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 53,
+        "opponent_bullpen_score": 73
+      },
+      {
+        "game_pk": 824719,
+        "date": "2026-08-31",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Seattle Mariners @ Boston Red Sox",
+        "pick": "Boston Red Sox",
+        "result": "W",
+        "model_probability": 0.6948,
+        "lab_score": 83,
+        "raw_edge": 0.095,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Boston Red Sox",
+        "pitcher_gap": 13,
+        "bullpen_label": "Adds caution",
+        "pick_side_bullpen_score": 79,
+        "opponent_bullpen_score": 53
+      },
+      {
+        "game_pk": 824148,
+        "date": "2026-09-01",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Chicago White Sox @ Houston Astros",
+        "pick": "Chicago White Sox",
+        "result": "W",
+        "model_probability": 0.728,
+        "lab_score": 75,
+        "raw_edge": 0.2278,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Chicago White Sox",
+        "pitcher_gap": 38,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 78,
+        "opponent_bullpen_score": 86
+      },
+      {
+        "game_pk": 823984,
+        "date": "2026-09-01",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "New York Yankees @ Los Angeles Angels",
+        "pick": "New York Yankees",
+        "result": "W",
+        "model_probability": 0.7343,
+        "lab_score": 79,
+        "raw_edge": 0.1092,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "New York Yankees",
+        "pitcher_gap": 34,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 71,
+        "opponent_bullpen_score": 52
+      },
+      {
+        "game_pk": 823983,
+        "date": "2026-09-02",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "New York Yankees @ Los Angeles Angels",
+        "pick": "New York Yankees",
+        "result": "W",
+        "model_probability": 0.6903,
+        "lab_score": 84,
+        "raw_edge": 0.0954,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "New York Yankees",
+        "pitcher_gap": 10,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 67,
+        "opponent_bullpen_score": 55
+      },
+      {
+        "game_pk": 823824,
+        "date": "2026-09-04",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Chicago Cubs @ Miami Marlins",
+        "pick": "Chicago Cubs",
+        "result": "W",
+        "model_probability": 0.6165,
+        "lab_score": 77,
+        "raw_edge": 0.0231,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Chicago Cubs",
+        "pitcher_gap": 7,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 71,
+        "opponent_bullpen_score": 72
+      },
+      {
+        "game_pk": 823256,
+        "date": "2026-09-04",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "New York Yankees @ San Diego Padres",
+        "pick": "New York Yankees",
+        "result": "L",
+        "model_probability": 0.7298,
+        "lab_score": 75,
+        "raw_edge": 0.2129,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "New York Yankees",
+        "pitcher_gap": 21,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 53,
+        "opponent_bullpen_score": 63
+      },
+      {
+        "game_pk": 823823,
+        "date": "2026-09-05",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Chicago Cubs @ Miami Marlins",
+        "pick": "Chicago Cubs",
+        "result": "W",
+        "model_probability": 0.636,
+        "lab_score": 81,
+        "raw_edge": 0.0988,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Chicago Cubs",
+        "pitcher_gap": 8,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 63,
+        "opponent_bullpen_score": 69
+      },
+      {
+        "game_pk": 824389,
+        "date": "2026-09-05",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Detroit Tigers @ Cleveland Guardians",
+        "pick": "Cleveland Guardians",
+        "result": "L",
+        "model_probability": 0.726,
+        "lab_score": 94,
+        "raw_edge": 0.1372,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Cleveland Guardians",
+        "pitcher_gap": 23,
+        "bullpen_label": "Both bullpens stressed",
+        "pick_side_bullpen_score": 95,
+        "opponent_bullpen_score": 70
+      },
+      {
+        "game_pk": 823335,
+        "date": "2026-09-05",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Los Angeles Angels @ Pittsburgh Pirates",
+        "pick": "Pittsburgh Pirates",
+        "result": "L",
+        "model_probability": 0.7302,
+        "lab_score": 75,
+        "raw_edge": 0.1062,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Pittsburgh Pirates",
+        "pitcher_gap": 27,
+        "bullpen_label": "Adds caution",
+        "pick_side_bullpen_score": 87,
+        "opponent_bullpen_score": 44
+      },
+      {
+        "game_pk": 824795,
+        "date": "2026-09-05",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Boston Red Sox @ Baltimore Orioles",
+        "pick": "Boston Red Sox",
+        "result": "W",
+        "model_probability": 0.7263,
+        "lab_score": 79,
+        "raw_edge": 0.1869,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Boston Red Sox",
+        "pitcher_gap": 27,
+        "bullpen_label": "Adds caution",
+        "pick_side_bullpen_score": 74,
+        "opponent_bullpen_score": 64
+      },
+      {
+        "game_pk": 824794,
+        "date": "2026-09-06",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Boston Red Sox @ Baltimore Orioles",
+        "pick": "Boston Red Sox",
+        "result": "W",
+        "model_probability": 0.7079,
+        "lab_score": 76,
+        "raw_edge": 0.1612,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Boston Red Sox",
+        "pitcher_gap": 15,
+        "bullpen_label": "Adds caution",
+        "pick_side_bullpen_score": 62,
+        "opponent_bullpen_score": 60
+      },
+      {
+        "game_pk": 823822,
+        "date": "2026-09-06",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Chicago Cubs @ Miami Marlins",
+        "pick": "Chicago Cubs",
+        "result": "L",
+        "model_probability": 0.68,
+        "lab_score": 93,
+        "raw_edge": 0.1039,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Chicago Cubs",
+        "pitcher_gap": 12,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 64,
+        "opponent_bullpen_score": 67
+      },
+      {
+        "game_pk": 824385,
+        "date": "2026-09-06",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Detroit Tigers @ Cleveland Guardians",
+        "pick": "Cleveland Guardians",
+        "result": "W",
+        "model_probability": 0.7244,
+        "lab_score": 80,
+        "raw_edge": 0.1233,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Cleveland Guardians",
+        "pitcher_gap": 23,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 80,
+        "opponent_bullpen_score": 67
+      },
+      {
+        "game_pk": 823902,
+        "date": "2026-09-07",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Cincinnati Reds @ Los Angeles Dodgers",
+        "pick": "Cincinnati Reds",
+        "result": "L",
+        "model_probability": 0.714,
+        "lab_score": 77,
+        "raw_edge": 0.4523,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Cincinnati Reds",
+        "pitcher_gap": 20,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 90,
+        "opponent_bullpen_score": 74
+      },
+      {
+        "game_pk": 824551,
+        "date": "2026-09-08",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Pittsburgh Pirates @ Chicago White Sox",
+        "pick": "Chicago White Sox",
+        "result": "L",
+        "model_probability": 0.7141,
+        "lab_score": 80,
+        "raw_edge": 0.1487,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Chicago White Sox",
+        "pitcher_gap": 16,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 77,
+        "opponent_bullpen_score": 64
+      },
+      {
+        "game_pk": 823092,
+        "date": "2026-09-08",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Texas Rangers @ Seattle Mariners",
+        "pick": "Texas Rangers",
+        "result": "W",
+        "model_probability": 0.6369,
+        "lab_score": 76,
+        "raw_edge": 0.2303,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Texas Rangers",
+        "pitcher_gap": 7,
+        "bullpen_label": "Adds caution",
+        "pick_side_bullpen_score": 90,
+        "opponent_bullpen_score": 46
+      },
+      {
+        "game_pk": 823416,
+        "date": "2026-09-09",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Houston Astros @ Philadelphia Phillies",
+        "pick": "Philadelphia Phillies",
+        "result": "W",
+        "model_probability": 0.6782,
+        "lab_score": 74,
+        "raw_edge": 0.0714,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Philadelphia Phillies",
+        "pitcher_gap": 11,
+        "bullpen_label": "Neutral",
+        "pick_side_bullpen_score": 44,
+        "opponent_bullpen_score": 61
+      },
+      {
+        "game_pk": 823413,
+        "date": "2026-09-10",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Houston Astros @ Philadelphia Phillies",
+        "pick": "Philadelphia Phillies",
+        "result": "L",
+        "model_probability": 0.7301,
+        "lab_score": 77,
+        "raw_edge": 0.2314,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Philadelphia Phillies",
+        "pitcher_gap": 30,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 44,
+        "opponent_bullpen_score": 63
+      },
+      {
+        "game_pk": 824631,
+        "date": "2026-09-11",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Pittsburgh Pirates @ Chicago Cubs",
+        "pick": "Chicago Cubs",
+        "result": "W",
+        "model_probability": 0.6965,
+        "lab_score": 79,
+        "raw_edge": 0.1679,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Chicago Cubs",
+        "pitcher_gap": 13,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 68,
+        "opponent_bullpen_score": 86
+      },
+      {
+        "game_pk": 822764,
+        "date": "2026-09-13",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Baltimore Orioles @ Toronto Blue Jays",
+        "pick": "Toronto Blue Jays",
+        "result": "W",
+        "model_probability": 0.7052,
+        "lab_score": 91,
+        "raw_edge": 0.127,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Toronto Blue Jays",
+        "pitcher_gap": 16,
+        "bullpen_label": "Adds caution",
+        "pick_side_bullpen_score": 91,
+        "opponent_bullpen_score": 61
+      },
+      {
+        "game_pk": 824628,
+        "date": "2026-09-13",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Pittsburgh Pirates @ Chicago Cubs",
+        "pick": "Chicago Cubs",
+        "result": "L",
+        "model_probability": 0.6236,
+        "lab_score": 73,
+        "raw_edge": 0.025,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Chicago Cubs",
+        "pitcher_gap": 5,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 58,
+        "opponent_bullpen_score": 72
+      }
+    ],
+    "protected_by_probability_gate": [],
+    "high_bullpen_risk": [
+      {
+        "game_pk": 824079,
+        "date": "2026-08-08",
+        "status": "official_pick",
+        "model_version": "multi-market-v1",
+        "game": "Chicago Cubs @ Kansas City Royals",
+        "pick": "Chicago Cubs",
+        "result": "L",
+        "model_probability": 0.6188,
+        "lab_score": 84,
+        "raw_edge": 0.0046,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Chicago Cubs",
+        "pitcher_gap": 19,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 80,
+        "opponent_bullpen_score": 82
+      },
+      {
+        "game_pk": 824970,
+        "date": "2026-08-11",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Tampa Bay Rays @ Athletics",
+        "pick": "Tampa Bay Rays",
+        "result": "W",
+        "model_probability": 0.6566,
+        "lab_score": 87,
+        "raw_edge": 0.0369,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Tampa Bay Rays",
+        "pitcher_gap": 30,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 89,
+        "opponent_bullpen_score": 55
+      },
+      {
+        "game_pk": 822937,
+        "date": "2026-08-19",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Toronto Blue Jays @ Tampa Bay Rays",
+        "pick": "Tampa Bay Rays",
+        "result": "W",
+        "model_probability": 0.7427,
+        "lab_score": 82,
+        "raw_edge": 0.1323,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Tampa Bay Rays",
+        "pitcher_gap": 42,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 78,
+        "opponent_bullpen_score": 73
+      },
+      {
+        "game_pk": 823180,
+        "date": "2026-08-26",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Cincinnati Reds @ San Francisco Giants",
+        "pick": "San Francisco Giants",
+        "result": "L",
+        "model_probability": 0.7184,
+        "lab_score": 72,
+        "raw_edge": 0.1915,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "San Francisco Giants",
+        "pitcher_gap": 21,
+        "bullpen_label": "Adds caution",
+        "pick_side_bullpen_score": 100,
+        "opponent_bullpen_score": 63
+      },
+      {
+        "game_pk": 824555,
+        "date": "2026-08-26",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Texas Rangers @ Chicago White Sox",
+        "pick": "Chicago White Sox",
+        "result": "W",
+        "model_probability": 0.6664,
+        "lab_score": 72,
+        "raw_edge": 0.1322,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Chicago White Sox",
+        "pitcher_gap": 10,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 87,
+        "opponent_bullpen_score": 74
+      },
+      {
+        "game_pk": 822691,
+        "date": "2026-08-28",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Miami Marlins @ Washington Nationals",
+        "pick": "Miami Marlins",
+        "result": "L",
+        "model_probability": 0.7326,
+        "lab_score": 72,
+        "raw_edge": 0.1521,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Miami Marlins",
+        "pitcher_gap": 49,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 80,
+        "opponent_bullpen_score": 95
+      },
+      {
+        "game_pk": 823502,
+        "date": "2026-08-30",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Boston Red Sox @ New York Yankees",
+        "pick": "Boston Red Sox",
+        "result": "L",
+        "model_probability": 0.6606,
+        "lab_score": 76,
+        "raw_edge": 0.1388,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Boston Red Sox",
+        "pitcher_gap": 12,
+        "bullpen_label": "Both bullpens stressed",
+        "pick_side_bullpen_score": 83,
+        "opponent_bullpen_score": 81
+      },
+      {
+        "game_pk": 824719,
+        "date": "2026-08-31",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Seattle Mariners @ Boston Red Sox",
+        "pick": "Boston Red Sox",
+        "result": "W",
+        "model_probability": 0.6948,
+        "lab_score": 83,
+        "raw_edge": 0.095,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Boston Red Sox",
+        "pitcher_gap": 13,
+        "bullpen_label": "Adds caution",
+        "pick_side_bullpen_score": 79,
+        "opponent_bullpen_score": 53
+      },
+      {
+        "game_pk": 824148,
+        "date": "2026-09-01",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Chicago White Sox @ Houston Astros",
+        "pick": "Chicago White Sox",
+        "result": "W",
+        "model_probability": 0.728,
+        "lab_score": 75,
+        "raw_edge": 0.2278,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Chicago White Sox",
+        "pitcher_gap": 38,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 78,
+        "opponent_bullpen_score": 86
+      },
+      {
+        "game_pk": 824389,
+        "date": "2026-09-05",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Detroit Tigers @ Cleveland Guardians",
+        "pick": "Cleveland Guardians",
+        "result": "L",
+        "model_probability": 0.726,
+        "lab_score": 94,
+        "raw_edge": 0.1372,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Cleveland Guardians",
+        "pitcher_gap": 23,
+        "bullpen_label": "Both bullpens stressed",
+        "pick_side_bullpen_score": 95,
+        "opponent_bullpen_score": 70
+      },
+      {
+        "game_pk": 823335,
+        "date": "2026-09-05",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Los Angeles Angels @ Pittsburgh Pirates",
+        "pick": "Pittsburgh Pirates",
+        "result": "L",
+        "model_probability": 0.7302,
+        "lab_score": 75,
+        "raw_edge": 0.1062,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Pittsburgh Pirates",
+        "pitcher_gap": 27,
+        "bullpen_label": "Adds caution",
+        "pick_side_bullpen_score": 87,
+        "opponent_bullpen_score": 44
+      },
+      {
+        "game_pk": 824795,
+        "date": "2026-09-05",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Boston Red Sox @ Baltimore Orioles",
+        "pick": "Boston Red Sox",
+        "result": "W",
+        "model_probability": 0.7263,
+        "lab_score": 79,
+        "raw_edge": 0.1869,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Boston Red Sox",
+        "pitcher_gap": 27,
+        "bullpen_label": "Adds caution",
+        "pick_side_bullpen_score": 74,
+        "opponent_bullpen_score": 64
+      },
+      {
+        "game_pk": 824794,
+        "date": "2026-09-06",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Boston Red Sox @ Baltimore Orioles",
+        "pick": "Boston Red Sox",
+        "result": "W",
+        "model_probability": 0.7079,
+        "lab_score": 76,
+        "raw_edge": 0.1612,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Boston Red Sox",
+        "pitcher_gap": 15,
+        "bullpen_label": "Adds caution",
+        "pick_side_bullpen_score": 62,
+        "opponent_bullpen_score": 60
+      },
+      {
+        "game_pk": 824385,
+        "date": "2026-09-06",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Detroit Tigers @ Cleveland Guardians",
+        "pick": "Cleveland Guardians",
+        "result": "W",
+        "model_probability": 0.7244,
+        "lab_score": 80,
+        "raw_edge": 0.1233,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Cleveland Guardians",
+        "pitcher_gap": 23,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 80,
+        "opponent_bullpen_score": 67
+      },
+      {
+        "game_pk": 823902,
+        "date": "2026-09-07",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Cincinnati Reds @ Los Angeles Dodgers",
+        "pick": "Cincinnati Reds",
+        "result": "L",
+        "model_probability": 0.714,
+        "lab_score": 77,
+        "raw_edge": 0.4523,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Cincinnati Reds",
+        "pitcher_gap": 20,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 90,
+        "opponent_bullpen_score": 74
+      },
+      {
+        "game_pk": 823092,
+        "date": "2026-09-08",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Texas Rangers @ Seattle Mariners",
+        "pick": "Texas Rangers",
+        "result": "W",
+        "model_probability": 0.6369,
+        "lab_score": 76,
+        "raw_edge": 0.2303,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Texas Rangers",
+        "pitcher_gap": 7,
+        "bullpen_label": "Adds caution",
+        "pick_side_bullpen_score": 90,
+        "opponent_bullpen_score": 46
+      },
+      {
+        "game_pk": 822764,
+        "date": "2026-09-13",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Baltimore Orioles @ Toronto Blue Jays",
+        "pick": "Toronto Blue Jays",
+        "result": "W",
+        "model_probability": 0.7052,
+        "lab_score": 91,
+        "raw_edge": 0.127,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Toronto Blue Jays",
+        "pitcher_gap": 16,
+        "bullpen_label": "Adds caution",
+        "pick_side_bullpen_score": 91,
+        "opponent_bullpen_score": 61
+      }
+    ],
+    "pitcher_conflicts": [],
+    "all_moneyline": [
+      {
+        "game_pk": 822764,
+        "date": null,
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Baltimore Orioles @ Toronto Blue Jays",
+        "pick": "Toronto Blue Jays",
+        "result": "W",
+        "model_probability": 0.7052,
+        "lab_score": 91,
+        "raw_edge": 0.127,
+        "clv_result": "not_tracked",
+        "lesson_tag": "win_needs_more_sample",
+        "pitcher_edge_team": "Toronto Blue Jays",
+        "pitcher_gap": 16,
+        "bullpen_label": "Adds caution",
+        "pick_side_bullpen_score": 91,
+        "opponent_bullpen_score": 61
+      },
+      {
+        "game_pk": 824628,
+        "date": null,
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Pittsburgh Pirates @ Chicago Cubs",
+        "pick": "Chicago Cubs",
+        "result": "L",
+        "model_probability": 0.6236,
+        "lab_score": 73,
+        "raw_edge": 0.025,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Chicago Cubs",
+        "pitcher_gap": 5,
+        "bullpen_label": "Supports LyDia side",
+        "pick_side_bullpen_score": 58,
+        "opponent_bullpen_score": 72
+      }
+    ]
+  },
+  "multi_day": {
+    "moneyline_record": "35-19",
+    "moneyline_win_rate": 0.6481,
+    "official_moneyline_entries": 54,
+    "strict_gate_candidates": 54,
+    "high_lab_low_probability_entries": 0,
+    "note": "Multi-day view includes whatever historical data exists. Older days may include legacy model behavior."
+  },
+  "next_review": [
+    "Do not change thresholds from one slate.",
+    "Watch whether official picks with model probability >= 72% beat low-probability value watches over a larger sample.",
+    "Track closing price movement once market snapshots have enough data.",
+    "Keep value watch separate from official picks."
+  ],
+  "coach": {
+    "status": "review_ready",
+    "title": "First evidence-based model review is ready",
+    "summary": "LyDia has 31 current-model graded days and 54 current-model official picks. The coach can now identify review questions, but it cannot change the model automatically.",
+    "current_model_days": 31,
+    "current_model_picks": 54,
+    "minimum_days": 7,
+    "minimum_picks": 20,
+    "bullpen_model_owner": "bullpen-fatigue-v3-runs-aware",
+    "game_log": [
+      {
+        "date": "2026-09-13",
+        "gamePk": 822764,
+        "matchup": "Baltimore Orioles @ Toronto Blue Jays",
+        "pick": "Toronto Blue Jays",
+        "result": "W",
+        "model_probability": 0.7052,
+        "lab_score": 91
+      },
+      {
+        "date": "2026-09-13",
+        "gamePk": 824628,
+        "matchup": "Pittsburgh Pirates @ Chicago Cubs",
+        "pick": "Chicago Cubs",
+        "result": "L",
+        "model_probability": 0.6236,
+        "lab_score": 73
+      },
+      {
+        "date": "2026-09-11",
+        "gamePk": 824631,
+        "matchup": "Pittsburgh Pirates @ Chicago Cubs",
+        "pick": "Chicago Cubs",
+        "result": "W",
+        "model_probability": 0.6965,
+        "lab_score": 79
+      },
+      {
+        "date": "2026-09-10",
+        "gamePk": 823413,
+        "matchup": "Houston Astros @ Philadelphia Phillies",
+        "pick": "Philadelphia Phillies",
+        "result": "L",
+        "model_probability": 0.7301,
+        "lab_score": 77
+      },
+      {
+        "date": "2026-09-09",
+        "gamePk": 823416,
+        "matchup": "Houston Astros @ Philadelphia Phillies",
+        "pick": "Philadelphia Phillies",
+        "result": "W",
+        "model_probability": 0.6782,
+        "lab_score": 74
+      },
+      {
+        "date": "2026-09-08",
+        "gamePk": 824551,
+        "matchup": "Pittsburgh Pirates @ Chicago White Sox",
+        "pick": "Chicago White Sox",
+        "result": "L",
+        "model_probability": 0.7141,
+        "lab_score": 80
+      },
+      {
+        "date": "2026-09-08",
+        "gamePk": 823092,
+        "matchup": "Texas Rangers @ Seattle Mariners",
+        "pick": "Texas Rangers",
+        "result": "W",
+        "model_probability": 0.6369,
+        "lab_score": 76
+      },
+      {
+        "date": "2026-09-07",
+        "gamePk": 823902,
+        "matchup": "Cincinnati Reds @ Los Angeles Dodgers",
+        "pick": "Cincinnati Reds",
+        "result": "L",
+        "model_probability": 0.714,
+        "lab_score": 77
+      },
+      {
+        "date": "2026-09-06",
+        "gamePk": 824794,
+        "matchup": "Boston Red Sox @ Baltimore Orioles",
+        "pick": "Boston Red Sox",
+        "result": "W",
+        "model_probability": 0.7079,
+        "lab_score": 76
+      },
+      {
+        "date": "2026-09-06",
+        "gamePk": 823822,
+        "matchup": "Chicago Cubs @ Miami Marlins",
+        "pick": "Chicago Cubs",
+        "result": "L",
+        "model_probability": 0.68,
+        "lab_score": 93
+      },
+      {
+        "date": "2026-09-06",
+        "gamePk": 824385,
+        "matchup": "Detroit Tigers @ Cleveland Guardians",
+        "pick": "Cleveland Guardians",
+        "result": "W",
+        "model_probability": 0.7244,
+        "lab_score": 80
+      },
+      {
+        "date": "2026-09-05",
+        "gamePk": 823823,
+        "matchup": "Chicago Cubs @ Miami Marlins",
+        "pick": "Chicago Cubs",
+        "result": "W",
+        "model_probability": 0.636,
+        "lab_score": 81
+      },
+      {
+        "date": "2026-09-05",
+        "gamePk": 824389,
+        "matchup": "Detroit Tigers @ Cleveland Guardians",
+        "pick": "Cleveland Guardians",
+        "result": "L",
+        "model_probability": 0.726,
+        "lab_score": 94
+      },
+      {
+        "date": "2026-09-05",
+        "gamePk": 823335,
+        "matchup": "Los Angeles Angels @ Pittsburgh Pirates",
+        "pick": "Pittsburgh Pirates",
+        "result": "L",
+        "model_probability": 0.7302,
+        "lab_score": 75
+      },
+      {
+        "date": "2026-09-05",
+        "gamePk": 824795,
+        "matchup": "Boston Red Sox @ Baltimore Orioles",
+        "pick": "Boston Red Sox",
+        "result": "W",
+        "model_probability": 0.7263,
+        "lab_score": 79
+      },
+      {
+        "date": "2026-09-04",
+        "gamePk": 823824,
+        "matchup": "Chicago Cubs @ Miami Marlins",
+        "pick": "Chicago Cubs",
+        "result": "W",
+        "model_probability": 0.6165,
+        "lab_score": 77
+      },
+      {
+        "date": "2026-09-04",
+        "gamePk": 823256,
+        "matchup": "New York Yankees @ San Diego Padres",
+        "pick": "New York Yankees",
+        "result": "L",
+        "model_probability": 0.7298,
+        "lab_score": 75
+      },
+      {
+        "date": "2026-09-02",
+        "gamePk": 823983,
+        "matchup": "New York Yankees @ Los Angeles Angels",
+        "pick": "New York Yankees",
+        "result": "W",
+        "model_probability": 0.6903,
+        "lab_score": 84
+      },
+      {
+        "date": "2026-09-01",
+        "gamePk": 824148,
+        "matchup": "Chicago White Sox @ Houston Astros",
+        "pick": "Chicago White Sox",
+        "result": "W",
+        "model_probability": 0.728,
+        "lab_score": 75
+      },
+      {
+        "date": "2026-09-01",
+        "gamePk": 823984,
+        "matchup": "New York Yankees @ Los Angeles Angels",
+        "pick": "New York Yankees",
+        "result": "W",
+        "model_probability": 0.7343,
+        "lab_score": 79
+      },
+      {
+        "date": "2026-08-31",
+        "gamePk": 824719,
+        "matchup": "Seattle Mariners @ Boston Red Sox",
+        "pick": "Boston Red Sox",
+        "result": "W",
+        "model_probability": 0.6948,
+        "lab_score": 83
+      },
+      {
+        "date": "2026-08-30",
+        "gamePk": 823502,
+        "matchup": "Boston Red Sox @ New York Yankees",
+        "pick": "Boston Red Sox",
+        "result": "L",
+        "model_probability": 0.6606,
+        "lab_score": 76
+      },
+      {
+        "date": "2026-08-30",
+        "gamePk": 824232,
+        "matchup": "Los Angeles Dodgers @ Detroit Tigers",
+        "pick": "Los Angeles Dodgers",
+        "result": "W",
+        "model_probability": 0.7261,
+        "lab_score": 72
+      },
+      {
+        "date": "2026-08-30",
+        "gamePk": 823987,
+        "matchup": "Philadelphia Phillies @ Los Angeles Angels",
+        "pick": "Philadelphia Phillies",
+        "result": "W",
+        "model_probability": 0.7365,
+        "lab_score": 92
+      },
+      {
+        "date": "2026-08-29",
+        "gamePk": 823986,
+        "matchup": "Philadelphia Phillies @ Los Angeles Angels",
+        "pick": "Philadelphia Phillies",
+        "result": "W",
+        "model_probability": 0.7347,
+        "lab_score": 93
+      },
+      {
+        "date": "2026-08-28",
+        "gamePk": 822691,
+        "matchup": "Miami Marlins @ Washington Nationals",
+        "pick": "Miami Marlins",
+        "result": "L",
+        "model_probability": 0.7326,
+        "lab_score": 72
+      },
+      {
+        "date": "2026-08-28",
+        "gamePk": 823744,
+        "matchup": "Texas Rangers @ Milwaukee Brewers",
+        "pick": "Milwaukee Brewers",
+        "result": "W",
+        "model_probability": 0.7329,
+        "lab_score": 81
+      },
+      {
+        "date": "2026-08-26",
+        "gamePk": 823180,
+        "matchup": "Cincinnati Reds @ San Francisco Giants",
+        "pick": "San Francisco Giants",
+        "result": "L",
+        "model_probability": 0.7184,
+        "lab_score": 72
+      },
+      {
+        "date": "2026-08-26",
+        "gamePk": 823988,
+        "matchup": "Cleveland Guardians @ Los Angeles Angels",
+        "pick": "Cleveland Guardians",
+        "result": "W",
+        "model_probability": 0.7317,
+        "lab_score": 81
+      },
+      {
+        "date": "2026-08-26",
+        "gamePk": 823825,
+        "matchup": "Boston Red Sox @ Miami Marlins",
+        "pick": "Boston Red Sox",
+        "result": "L",
+        "model_probability": 0.7071,
+        "lab_score": 83
+      },
+      {
+        "date": "2026-08-26",
+        "gamePk": 824878,
+        "matchup": "Los Angeles Dodgers @ Atlanta Braves",
+        "pick": "Los Angeles Dodgers",
+        "result": "L",
+        "model_probability": 0.7209,
+        "lab_score": 80
+      },
+      {
+        "date": "2026-08-26",
+        "gamePk": 824555,
+        "matchup": "Texas Rangers @ Chicago White Sox",
+        "pick": "Chicago White Sox",
+        "result": "W",
+        "model_probability": 0.6664,
+        "lab_score": 72
+      },
+      {
+        "date": "2026-08-25",
+        "gamePk": 823826,
+        "matchup": "Boston Red Sox @ Miami Marlins",
+        "pick": "Boston Red Sox",
+        "result": "W",
+        "model_probability": 0.6922,
+        "lab_score": 77
+      },
+      {
+        "date": "2026-08-25",
+        "gamePk": 822773,
+        "matchup": "Kansas City Royals @ Toronto Blue Jays",
+        "pick": "Kansas City Royals",
+        "result": "W",
+        "model_probability": 0.7289,
+        "lab_score": 73
+      },
+      {
+        "date": "2026-08-24",
+        "gamePk": 823992,
+        "matchup": "Cleveland Guardians @ Los Angeles Angels",
+        "pick": "Cleveland Guardians",
+        "result": "W",
+        "model_probability": 0.7418,
+        "lab_score": 72
+      },
+      {
+        "date": "2026-08-22",
+        "gamePk": 825044,
+        "matchup": "Cincinnati Reds @ Arizona Diamondbacks",
+        "pick": "Arizona Diamondbacks",
+        "result": "L",
+        "model_probability": 0.7419,
+        "lab_score": 93
+      },
+      {
+        "date": "2026-08-22",
+        "gamePk": 823261,
+        "matchup": "Minnesota Twins @ San Diego Padres",
+        "pick": "San Diego Padres",
+        "result": "W",
+        "model_probability": 0.7419,
+        "lab_score": 81
+      },
+      {
+        "date": "2026-08-21",
+        "gamePk": 825045,
+        "matchup": "Cincinnati Reds @ Arizona Diamondbacks",
+        "pick": "Arizona Diamondbacks",
+        "result": "W",
+        "model_probability": 0.7372,
+        "lab_score": 87
+      },
+      {
+        "date": "2026-08-20",
+        "gamePk": 822934,
+        "matchup": "Toronto Blue Jays @ Tampa Bay Rays",
+        "pick": "Tampa Bay Rays",
+        "result": "L",
+        "model_probability": 0.7429,
+        "lab_score": 81
+      },
+      {
+        "date": "2026-08-19",
+        "gamePk": 822937,
+        "matchup": "Toronto Blue Jays @ Tampa Bay Rays",
+        "pick": "Tampa Bay Rays",
+        "result": "W",
+        "model_probability": 0.7427,
+        "lab_score": 82
+      },
+      {
+        "date": "2026-08-18",
+        "gamePk": 824398,
+        "matchup": "San Francisco Giants @ Cleveland Guardians",
+        "pick": "Cleveland Guardians",
+        "result": "W",
+        "model_probability": 0.7376,
+        "lab_score": 80
+      },
+      {
+        "date": "2026-08-17",
+        "gamePk": 824514,
+        "matchup": "St. Louis Cardinals @ Cincinnati Reds",
+        "pick": "St. Louis Cardinals",
+        "result": "W",
+        "model_probability": 0.7315,
+        "lab_score": 80
+      },
+      {
+        "date": "2026-08-17",
+        "gamePk": 824478,
+        "matchup": "St. Louis Cardinals @ Cincinnati Reds",
+        "pick": "St. Louis Cardinals",
+        "result": "L",
+        "model_probability": 0.7443,
+        "lab_score": 84
+      },
+      {
+        "date": "2026-08-16",
+        "gamePk": 824880,
+        "matchup": "Arizona Diamondbacks @ Atlanta Braves",
+        "pick": "Arizona Diamondbacks",
+        "result": "L",
+        "model_probability": 0.6985,
+        "lab_score": 81
+      },
+      {
+        "date": "2026-08-16",
+        "gamePk": 824477,
+        "matchup": "Miami Marlins @ Cincinnati Reds",
+        "pick": "Miami Marlins",
+        "result": "W",
+        "model_probability": 0.7433,
+        "lab_score": 84
+      },
+      {
+        "date": "2026-08-16",
+        "gamePk": 823590,
+        "matchup": "Washington Nationals @ New York Mets",
+        "pick": "New York Mets",
+        "result": "W",
+        "model_probability": 0.736,
+        "lab_score": 82
+      },
+      {
+        "date": "2026-08-16",
+        "gamePk": 823991,
+        "matchup": "Kansas City Royals @ Los Angeles Angels",
+        "pick": "Kansas City Royals",
+        "result": "W",
+        "model_probability": 0.7417,
+        "lab_score": 81
+      },
+      {
+        "date": "2026-08-15",
+        "gamePk": 824400,
+        "matchup": "San Diego Padres @ Cleveland Guardians",
+        "pick": "San Diego Padres",
+        "result": "L",
+        "model_probability": 0.614,
+        "lab_score": 84
+      },
+      {
+        "date": "2026-08-11",
+        "gamePk": 824240,
+        "matchup": "Cleveland Guardians @ Detroit Tigers",
+        "pick": "Detroit Tigers",
+        "result": "W",
+        "model_probability": 0.6452,
+        "lab_score": 90
+      },
+      {
+        "date": "2026-08-11",
+        "gamePk": 824970,
+        "matchup": "Tampa Bay Rays @ Athletics",
+        "pick": "Tampa Bay Rays",
+        "result": "W",
+        "model_probability": 0.6566,
+        "lab_score": 87
+      },
+      {
+        "date": "2026-08-08",
+        "gamePk": 824079,
+        "matchup": "Chicago Cubs @ Kansas City Royals",
+        "pick": "Chicago Cubs",
+        "result": "L",
+        "model_probability": 0.6188,
+        "lab_score": 84
+      },
+      {
+        "date": "2026-08-06",
+        "gamePk": 824729,
+        "matchup": "Chicago White Sox @ Boston Red Sox",
+        "pick": "Boston Red Sox",
+        "result": "W",
+        "model_probability": 0.6114,
+        "lab_score": 80
+      },
+      {
+        "date": "2026-08-05",
+        "gamePk": 824482,
+        "matchup": "Athletics @ Cincinnati Reds",
+        "pick": "Cincinnati Reds",
+        "result": "W",
+        "model_probability": 0.6576,
+        "lab_score": 81
+      },
+      {
+        "date": "2026-08-02",
+        "gamePk": 824971,
+        "matchup": "Detroit Tigers @ Athletics",
+        "pick": "Detroit Tigers",
+        "result": "W",
+        "model_probability": 0.7358,
+        "lab_score": 82
+      }
+    ],
+    "history": {
+      "n": 574,
+      "ready": true,
+      "minimum_n": 20,
+      "record": {
+        "wins": 339,
+        "losses": 235,
+        "rate": 0.5905923344947736
+      },
+      "recommendations": [
+        "Full-history record across every analyzed game (all tiers, all dates): 339-235 (59.1%), n=574. This is what the correlations below are measured against -- not just the 22 current-model official picks.",
+        "Model edge over the market (model prob minus no-vig market prob): r=-0.076 (n=567) -- little to no relationship. Bottom quarter (-0.32 to 0.02): 79-62 (56.0%). Top quarter (0.17 to 0.50): 75-69 (52.1%).",
+        "LyDia's own win probability for this pick: r=0.063 (n=574) -- little to no relationship. Bottom quarter (0.44 to 0.55): 74-69 (51.7%). Top quarter (0.72 to 0.74): 84-61 (57.9%).",
+        "Lab Rating's conviction component score: r=0.057 (n=574) -- little to no relationship. Bottom quarter (0.00 to 2.26): 80-63 (55.9%). Top quarter (11.24 to 35.00): 92-53 (63.4%).",
+        "Lab Rating's pitching-plan component score: r=0.047 (n=574) -- little to no relationship. Bottom quarter (0.00 to 6.00): 84-59 (58.7%). Top quarter (22.00 to 40.00): 91-54 (62.8%).",
+        "Lab Rating's pitcher-edge component score: r=0.046 (n=574) -- little to no relationship. Bottom quarter (0.00 to 4.90): 84-59 (58.7%). Top quarter (22.00 to 40.00): 91-54 (62.8%).",
+        "Lab Rating's bullpen component score (retired 2026-08-30 -- pre-change history only): r=-0.046 (n=574) -- little to no relationship. Bottom quarter (0.00 to 2.47): 86-57 (60.1%). Top quarter (10.86 to 20.00): 83-62 (57.2%).",
+        "Pick tier (official / value watch / watchlist / pass): official_pick 34-19 (64.2%, n=53) vs. watchlist 55-36 (60.4%, n=91) vs. pass 241-173 (58.2%, n=414) vs. value_watch 9-7 (56.3%, n=16).",
+        "Picked the home team vs. the road team: Home 198-116 (63.1%, n=314) vs. Road 141-119 (54.2%, n=260).",
+        "Day of the week: Mon 39-22 (63.9%, n=61) vs. Wed 55-35 (61.1%, n=90) vs. Thu 29-19 (60.4%, n=48) vs. Sun 54-36 (60.0%, n=90) vs. Tue 53-37 (58.9%, n=90) vs. Fri 51-39 (56.7%, n=90) vs. Sat 58-47 (55.2%, n=105).",
+        "These are correlations across LyDia's own analyzed history, not causal proof and not a signal to change any model weight or gate on their own -- human review still required for any actual change."
+      ],
+      "correlations": {
+        "numeric": [
+          {
+            "key": "edge_vs_market",
+            "label": "Model edge over the market (model prob minus no-vig market prob)",
+            "n": 567,
+            "r": -0.07567154042274292,
+            "quartiles": [
+              {
+                "n": 141,
+                "w": 79,
+                "l": 62,
+                "rate": 0.5602836879432624,
+                "min": -0.3188,
+                "max": 0.01540000000000008
+              },
+              {
+                "n": 141,
+                "w": 98,
+                "l": 43,
+                "rate": 0.6950354609929078,
+                "min": 0.016800000000000037,
+                "max": 0.08530000000000004
+              },
+              {
+                "n": 141,
+                "w": 84,
+                "l": 57,
+                "rate": 0.5957446808510638,
+                "min": 0.08729999999999993,
+                "max": 0.16910000000000003
+              },
+              {
+                "n": 144,
+                "w": 75,
+                "l": 69,
+                "rate": 0.5208333333333334,
+                "min": 0.16920000000000002,
+                "max": 0.5022
+              }
+            ]
+          },
+          {
+            "key": "pick_model_prob",
+            "label": "LyDia's own win probability for this pick",
+            "n": 574,
+            "r": 0.06301694014272362,
+            "quartiles": [
+              {
+                "n": 143,
+                "w": 74,
+                "l": 69,
+                "rate": 0.5174825174825175,
+                "min": 0.442,
+                "max": 0.5525
+              },
+              {
+                "n": 143,
+                "w": 90,
+                "l": 53,
+                "rate": 0.6293706293706294,
+                "min": 0.5526,
+                "max": 0.6212
+              },
+              {
+                "n": 143,
+                "w": 91,
+                "l": 52,
+                "rate": 0.6363636363636364,
+                "min": 0.6213,
+                "max": 0.7152
+              },
+              {
+                "n": 145,
+                "w": 84,
+                "l": 61,
+                "rate": 0.5793103448275863,
+                "min": 0.7154,
+                "max": 0.7449
+              }
+            ]
+          },
+          {
+            "key": "lab_conviction_points",
+            "label": "Lab Rating's conviction component score",
+            "n": 574,
+            "r": 0.056584196095784925,
+            "quartiles": [
+              {
+                "n": 143,
+                "w": 80,
+                "l": 63,
+                "rate": 0.5594405594405595,
+                "min": 0,
+                "max": 2.26
+              },
+              {
+                "n": 143,
+                "w": 84,
+                "l": 59,
+                "rate": 0.5874125874125874,
+                "min": 2.43,
+                "max": 7.71
+              },
+              {
+                "n": 143,
+                "w": 83,
+                "l": 60,
+                "rate": 0.5804195804195804,
+                "min": 7.73,
+                "max": 11.17
+              },
+              {
+                "n": 145,
+                "w": 92,
+                "l": 53,
+                "rate": 0.6344827586206897,
+                "min": 11.24,
+                "max": 35
+              }
+            ]
+          },
+          {
+            "key": "lab_pitching_plan_points",
+            "label": "Lab Rating's pitching-plan component score",
+            "n": 574,
+            "r": 0.04731240796320903,
+            "quartiles": [
+              {
+                "n": 143,
+                "w": 84,
+                "l": 59,
+                "rate": 0.5874125874125874,
+                "min": 0,
+                "max": 6
+              },
+              {
+                "n": 143,
+                "w": 80,
+                "l": 63,
+                "rate": 0.5594405594405595,
+                "min": 6,
+                "max": 16.5
+              },
+              {
+                "n": 143,
+                "w": 84,
+                "l": 59,
+                "rate": 0.5874125874125874,
+                "min": 16.5,
+                "max": 22
+              },
+              {
+                "n": 145,
+                "w": 91,
+                "l": 54,
+                "rate": 0.6275862068965518,
+                "min": 22,
+                "max": 40
+              }
+            ]
+          },
+          {
+            "key": "lab_pitcher_edge_points",
+            "label": "Lab Rating's pitcher-edge component score",
+            "n": 574,
+            "r": 0.046490568783143026,
+            "quartiles": [
+              {
+                "n": 143,
+                "w": 84,
+                "l": 59,
+                "rate": 0.5874125874125874,
+                "min": 0,
+                "max": 4.9
+              },
+              {
+                "n": 143,
+                "w": 76,
+                "l": 67,
+                "rate": 0.5314685314685315,
+                "min": 4.9,
+                "max": 14
+              },
+              {
+                "n": 143,
+                "w": 88,
+                "l": 55,
+                "rate": 0.6153846153846154,
+                "min": 14,
+                "max": 22
+              },
+              {
+                "n": 145,
+                "w": 91,
+                "l": 54,
+                "rate": 0.6275862068965518,
+                "min": 22,
+                "max": 40
+              }
+            ]
+          },
+          {
+            "key": "lab_bullpen_points",
+            "label": "Lab Rating's bullpen component score (retired 2026-08-30 -- pre-change history only)",
+            "n": 574,
+            "r": -0.04567957907466425,
+            "quartiles": [
+              {
+                "n": 143,
+                "w": 86,
+                "l": 57,
+                "rate": 0.6013986013986014,
+                "min": 0,
+                "max": 2.47
+              },
+              {
+                "n": 143,
+                "w": 88,
+                "l": 55,
+                "rate": 0.6153846153846154,
+                "min": 2.51,
+                "max": 6.65
+              },
+              {
+                "n": 143,
+                "w": 82,
+                "l": 61,
+                "rate": 0.5734265734265734,
+                "min": 6.67,
+                "max": 10.85
+              },
+              {
+                "n": 145,
+                "w": 83,
+                "l": 62,
+                "rate": 0.5724137931034483,
+                "min": 10.86,
+                "max": 20
+              }
+            ]
+          },
+          {
+            "key": "pick_woba_gap",
+            "label": "Offense wOBA edge, last 15 days (picked side minus opponent)",
+            "n": 498,
+            "r": -0.03630855999102009,
+            "quartiles": [
+              {
+                "n": 124,
+                "w": 75,
+                "l": 49,
+                "rate": 0.6048387096774194,
+                "min": -0.10349999999999998,
+                "max": -0.017400000000000027
+              },
+              {
+                "n": 124,
+                "w": 70,
+                "l": 54,
+                "rate": 0.5645161290322581,
+                "min": -0.01720000000000005,
+                "max": 0.005599999999999994
+              },
+              {
+                "n": 124,
+                "w": 71,
+                "l": 53,
+                "rate": 0.5725806451612904,
+                "min": 0.00610000000000005,
+                "max": 0.028700000000000003
+              },
+              {
+                "n": 126,
+                "w": 75,
+                "l": 51,
+                "rate": 0.5952380952380952,
+                "min": 0.028700000000000003,
+                "max": 0.10559999999999997
+              }
+            ]
+          },
+          {
+            "key": "pick_bullpen_adj",
+            "label": "Probability points bullpen risk moved this pick's number",
+            "n": 574,
+            "r": -0.03515009043806325,
+            "quartiles": [
+              {
+                "n": 143,
+                "w": 90,
+                "l": 53,
+                "rate": 0.6293706293706294,
+                "min": -0.144,
+                "max": -0.033
+              },
+              {
+                "n": 143,
+                "w": 82,
+                "l": 61,
+                "rate": 0.5734265734265734,
+                "min": -0.033,
+                "max": 0.009
+              },
+              {
+                "n": 143,
+                "w": 85,
+                "l": 58,
+                "rate": 0.5944055944055944,
+                "min": 0.009,
+                "max": 0.048
+              },
+              {
+                "n": 145,
+                "w": 82,
+                "l": 63,
+                "rate": 0.5655172413793104,
+                "min": 0.048,
+                "max": 0.165
+              }
+            ]
+          },
+          {
+            "key": "pick_bullpen_gap",
+            "label": "Bullpen risk edge (positive = the picked side's bullpen is the safer one)",
+            "n": 574,
+            "r": -0.03511379442654638,
+            "quartiles": [
+              {
+                "n": 143,
+                "w": 89,
+                "l": 54,
+                "rate": 0.6223776223776224,
+                "min": -48,
+                "max": -11
+              },
+              {
+                "n": 143,
+                "w": 83,
+                "l": 60,
+                "rate": 0.5804195804195804,
+                "min": -11,
+                "max": 3
+              },
+              {
+                "n": 143,
+                "w": 85,
+                "l": 58,
+                "rate": 0.5944055944055944,
+                "min": 3,
+                "max": 16
+              },
+              {
+                "n": 145,
+                "w": 82,
+                "l": 63,
+                "rate": 0.5655172413793104,
+                "min": 16,
+                "max": 55
+              }
+            ]
+          },
+          {
+            "key": "pick_team_strength_edge",
+            "label": "Team strength blend edge, before any pitcher/bullpen adjustment (picked side minus opponent)",
+            "n": 429,
+            "r": 0.03187838828758253,
+            "quartiles": [
+              {
+                "n": 107,
+                "w": 59,
+                "l": 48,
+                "rate": 0.5514018691588785,
+                "min": -0.24870000000000003,
+                "max": -0.05289999999999995
+              },
+              {
+                "n": 107,
+                "w": 63,
+                "l": 44,
+                "rate": 0.5887850467289719,
+                "min": -0.05249999999999999,
+                "max": 0.019699999999999995
+              },
+              {
+                "n": 107,
+                "w": 67,
+                "l": 40,
+                "rate": 0.6261682242990654,
+                "min": 0.019999999999999962,
+                "max": 0.08950000000000002
+              },
+              {
+                "n": 108,
+                "w": 65,
+                "l": 43,
+                "rate": 0.6018518518518519,
+                "min": 0.09060000000000001,
+                "max": 0.277
+              }
+            ]
+          },
+          {
+            "key": "pick_era_edge",
+            "label": "Starting pitcher ERA edge (opponent's ERA minus the picked pitcher's)",
+            "n": 574,
+            "r": 0.0257726771597352,
+            "quartiles": [
+              {
+                "n": 143,
+                "w": 87,
+                "l": 56,
+                "rate": 0.6083916083916084,
+                "min": -2.6300000000000003,
+                "max": -0.16000000000000014
+              },
+              {
+                "n": 143,
+                "w": 79,
+                "l": 64,
+                "rate": 0.5524475524475524,
+                "min": -0.16000000000000014,
+                "max": 0.5
+              },
+              {
+                "n": 143,
+                "w": 84,
+                "l": 59,
+                "rate": 0.5874125874125874,
+                "min": 0.5,
+                "max": 1.1400000000000001
+              },
+              {
+                "n": 145,
+                "w": 89,
+                "l": 56,
+                "rate": 0.6137931034482759,
+                "min": 1.1499999999999995,
+                "max": 4.49
+              }
+            ]
+          },
+          {
+            "key": "best_price_abs",
+            "label": "Size of the price (how big a favorite or underdog this pick was)",
+            "n": 567,
+            "r": -0.025280257695689347,
+            "quartiles": [
+              {
+                "n": 141,
+                "w": 80,
+                "l": 61,
+                "rate": 0.5673758865248227,
+                "min": 100,
+                "max": 113
+              },
+              {
+                "n": 141,
+                "w": 83,
+                "l": 58,
+                "rate": 0.5886524822695035,
+                "min": 113,
+                "max": 133
+              },
+              {
+                "n": 141,
+                "w": 83,
+                "l": 58,
+                "rate": 0.5886524822695035,
+                "min": 133,
+                "max": 160
+              },
+              {
+                "n": 144,
+                "w": 90,
+                "l": 54,
+                "rate": 0.625,
+                "min": 160,
+                "max": 850
+              }
+            ]
+          },
+          {
+            "key": "pick_lab_score",
+            "label": "Lab Rating (LyDia's own analysis-quality score for this pick)",
+            "n": 574,
+            "r": 0.025042905790114315,
+            "quartiles": [
+              {
+                "n": 143,
+                "w": 81,
+                "l": 62,
+                "rate": 0.5664335664335665,
+                "min": 10,
+                "max": 40.09
+              },
+              {
+                "n": 143,
+                "w": 82,
+                "l": 61,
+                "rate": 0.5734265734265734,
+                "min": 40.2,
+                "max": 52
+              },
+              {
+                "n": 143,
+                "w": 89,
+                "l": 54,
+                "rate": 0.6223776223776224,
+                "min": 52,
+                "max": 66
+              },
+              {
+                "n": 145,
+                "w": 87,
+                "l": 58,
+                "rate": 0.6,
+                "min": 66,
+                "max": 94
+              }
+            ]
+          },
+          {
+            "key": "pick_pitcher_score",
+            "label": "Starting pitcher's own score (picked side, judged on its own merits, not against the opponent)",
+            "n": 574,
+            "r": 0.02218099299342591,
+            "quartiles": [
+              {
+                "n": 143,
+                "w": 77,
+                "l": 66,
+                "rate": 0.5384615384615384,
+                "min": 33,
+                "max": 62
+              },
+              {
+                "n": 143,
+                "w": 87,
+                "l": 56,
+                "rate": 0.6083916083916084,
+                "min": 62,
+                "max": 70
+              },
+              {
+                "n": 143,
+                "w": 92,
+                "l": 51,
+                "rate": 0.6433566433566433,
+                "min": 70,
+                "max": 76
+              },
+              {
+                "n": 145,
+                "w": 83,
+                "l": 62,
+                "rate": 0.5724137931034483,
+                "min": 76,
+                "max": 92
+              }
+            ]
+          },
+          {
+            "key": "lab_offense_points",
+            "label": "Lab Rating's offense component score",
+            "n": 574,
+            "r": 0.011089001779135943,
+            "quartiles": [
+              {
+                "n": 143,
+                "w": 87,
+                "l": 56,
+                "rate": 0.6083916083916084,
+                "min": 0,
+                "max": 14.35
+              },
+              {
+                "n": 143,
+                "w": 81,
+                "l": 62,
+                "rate": 0.5664335664335665,
+                "min": 14.37,
+                "max": 22.54
+              },
+              {
+                "n": 143,
+                "w": 86,
+                "l": 57,
+                "rate": 0.6013986013986014,
+                "min": 22.71,
+                "max": 27.88
+              },
+              {
+                "n": 145,
+                "w": 85,
+                "l": 60,
+                "rate": 0.5862068965517241,
+                "min": 27.92,
+                "max": 50
+              }
+            ]
+          },
+          {
+            "key": "pick_own_bullpen_risk",
+            "label": "Picked team's own bullpen fatigue score (regardless of the opponent's)",
+            "n": 574,
+            "r": -0.008522212067593609,
+            "quartiles": [
+              {
+                "n": 143,
+                "w": 88,
+                "l": 55,
+                "rate": 0.6153846153846154,
+                "min": 32,
+                "max": 55
+              },
+              {
+                "n": 143,
+                "w": 80,
+                "l": 63,
+                "rate": 0.5594405594405595,
+                "min": 55,
+                "max": 65
+              },
+              {
+                "n": 143,
+                "w": 85,
+                "l": 58,
+                "rate": 0.5944055944055944,
+                "min": 65,
+                "max": 77
+              },
+              {
+                "n": 145,
+                "w": 86,
+                "l": 59,
+                "rate": 0.593103448275862,
+                "min": 77,
+                "max": 100
+              }
+            ]
+          },
+          {
+            "key": "pick_pitcher_gap",
+            "label": "Starting pitcher score edge (picked side minus opponent)",
+            "n": 574,
+            "r": -0.008468311134993188,
+            "quartiles": [
+              {
+                "n": 143,
+                "w": 87,
+                "l": 56,
+                "rate": 0.6083916083916084,
+                "min": -45,
+                "max": 3
+              },
+              {
+                "n": 143,
+                "w": 85,
+                "l": 58,
+                "rate": 0.5944055944055944,
+                "min": 3,
+                "max": 10
+              },
+              {
+                "n": 143,
+                "w": 84,
+                "l": 59,
+                "rate": 0.5874125874125874,
+                "min": 10,
+                "max": 19
+              },
+              {
+                "n": 145,
+                "w": 83,
+                "l": 62,
+                "rate": 0.5724137931034483,
+                "min": 19,
+                "max": 53
+              }
+            ]
+          }
+        ],
+        "categorical": [
+          {
+            "key": "status_tier",
+            "label": "Pick tier (official / value watch / watchlist / pass)",
+            "groups": [
+              {
+                "label": "official_pick",
+                "n": 53,
+                "w": 34,
+                "l": 19,
+                "rate": 0.6415094339622641
+              },
+              {
+                "label": "watchlist",
+                "n": 91,
+                "w": 55,
+                "l": 36,
+                "rate": 0.6043956043956044
+              },
+              {
+                "label": "pass",
+                "n": 414,
+                "w": 241,
+                "l": 173,
+                "rate": 0.5821256038647343
+              },
+              {
+                "label": "value_watch",
+                "n": 16,
+                "w": 9,
+                "l": 7,
+                "rate": 0.5625
+              }
+            ]
+          },
+          {
+            "key": "home_away",
+            "label": "Picked the home team vs. the road team",
+            "groups": [
+              {
+                "label": "Home",
+                "n": 314,
+                "w": 198,
+                "l": 116,
+                "rate": 0.6305732484076433
+              },
+              {
+                "label": "Road",
+                "n": 260,
+                "w": 141,
+                "l": 119,
+                "rate": 0.5423076923076923
+              }
+            ]
+          },
+          {
+            "key": "day_of_week",
+            "label": "Day of the week",
+            "groups": [
+              {
+                "label": "Mon",
+                "n": 61,
+                "w": 39,
+                "l": 22,
+                "rate": 0.639344262295082
+              },
+              {
+                "label": "Wed",
+                "n": 90,
+                "w": 55,
+                "l": 35,
+                "rate": 0.6111111111111112
+              },
+              {
+                "label": "Thu",
+                "n": 48,
+                "w": 29,
+                "l": 19,
+                "rate": 0.6041666666666666
+              },
+              {
+                "label": "Sun",
+                "n": 90,
+                "w": 54,
+                "l": 36,
+                "rate": 0.6
+              },
+              {
+                "label": "Tue",
+                "n": 90,
+                "w": 53,
+                "l": 37,
+                "rate": 0.5888888888888889
+              },
+              {
+                "label": "Fri",
+                "n": 90,
+                "w": 51,
+                "l": 39,
+                "rate": 0.5666666666666667
+              },
+              {
+                "label": "Sat",
+                "n": 105,
+                "w": 58,
+                "l": 47,
+                "rate": 0.5523809523809524
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "hard_stop": "Coach findings are review prompts only. No automatic threshold, weight, formula, publishing, or betting change is permitted."
+  }
+}
