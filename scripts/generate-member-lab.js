@@ -25,7 +25,6 @@ const { OFFICIAL_MODEL_PROB, OFFICIAL_LAB_SCORE } = require("./lib/gate-constant
 // live copy was retuned to 0.15. See scripts/lib/pitcher-boost-constants.js.
 const { ERA_K, PITCHER_SCORE_GAP_CLAMP } = require("./lib/pitcher-boost-constants");
 const { fetchOddsApi, loadKeys } = require("./lib/odds-api-core");
-const { recordMoneylinePickForUnifiedLog, recordKPropsPickForUnifiedLog, appendPickToUnifiedLog } = require("./lib/unified-picks-tracker");
 const ROOT = path.join(__dirname, "..");
 // 2026-08-14, Lynold's explicit instruction: log5 (and the flat league-wide
 // HFA it applied) removed from the moneyline model. team_strength_blend now
@@ -1662,10 +1661,6 @@ function buildPicksFile(rows, generatedAt) {
       // grade-results.js's buildLearning(), which now prefers this field.
       modelVersion: MONEYLINE_MODEL_VERSION
     };
-
-    // 2026-09-14: Log moneyline pick to unified tracking system
-    const mlRow = recordMoneylinePickForUnifiedLog(r, DATE);
-    if (mlRow) appendPickToUnifiedLog(mlRow, DATE);
   }
 
   // The totals gate is read from the policy the totals engine itself wrote to
@@ -1726,7 +1721,7 @@ function buildPicksFile(rows, generatedAt) {
       console.log(`Price gate: ${rec.name} K ${pick} ${rec.line} cleared its gates but the best price is ${price} (floor ${MIN_OFFICIAL_PRICE}). Not published as official.`);
       continue;
     }
-    const kpropPick = {
+    ensureGroup(r).strikeouts.push({
       pitcher: rec.name,
       pick,
       line: rec.line,
@@ -1745,12 +1740,7 @@ function buildPicksFile(rows, generatedAt) {
       // (Model Versions.md > "leo-kprop").
       modelVersion: "leo-kprop",
       valueTag: "OFFICIAL PICK"
-    };
-    ensureGroup(r).strikeouts.push(kpropPick);
-
-    // 2026-09-14: Log K-props pick to unified tracking system
-    const kpRow = recordKPropsPickForUnifiedLog(kpropPick, DATE, String(rec.game_pk), `${r.away_team} @ ${r.home_team}`);
-    if (kpRow) appendPickToUnifiedLog(kpRow, DATE);
+    });
   }
 
   return {
@@ -1775,7 +1765,7 @@ function buildPicksFile(rows, generatedAt) {
       // official-pick requirement for moneylines (Lynold's call).
       moneyline: { minimum_probability: OFFICIAL_MODEL_PROB, minimum_lab: OFFICIAL_LAB_SCORE, maximum_price: MIN_OFFICIAL_PRICE },
       game_total: { minimum_edge_runs: totalsOfficialEdge, minimum_lab: totalsOfficialLab, official_enabled: totalsOfficialEnabled, maximum_price: MIN_OFFICIAL_PRICE },
-      pitcher_strikeouts: { minimum_edge_k: OFFICIAL_K_EDGE, minimum_books: OFFICIAL_K_MIN_BOOKS, minimum_expected_innings: 4, maximum_line: OFFICIAL_K_MAX_LINE, requires_posted_lineup: true, maximum_price: MIN_OFFICIAL_PRICE },
+      pitcher_strikeouts: { minimum_edge_k: OFFICIAL_K_EDGE, minimum_books: OFFICIAL_K_MIN_BOOKS, minimum_expected_innings: 4, requires_posted_lineup: true, maximum_line: OFFICIAL_K_MAX_LINE, maximum_price: MIN_OFFICIAL_PRICE },
       team_totals: { official_enabled: false, status: "research_only" }
     },
     picks: [...groups.values()]
