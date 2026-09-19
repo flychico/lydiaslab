@@ -14,6 +14,7 @@ const ROOT=path.join(__dirname,"..");
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const v=(x,d="—")=>(x==null||x===""||Number.isNaN(x))?d:x;
 const fmtAm=x=>x==null?"—":(x>0?"+"+x:""+x);
+const d2=x=>x==null?"\u2014":Number(x).toFixed(2);
 
 function qbRow(q){
   if(!q) return `<tr><td colspan="8" class="none">No qualifying passer</td></tr>`;
@@ -65,6 +66,87 @@ function scorers(side, label){
       <span class="tdp">${esc(x.pos)}</span>
       <span class="tdc">${x.tds}</span>
       <span class="tdd">${x.rush_td} rush &middot; ${x.rec_td} rec</span></li>`).join("")}</ol></div>`;
+}
+
+
+/** One rating row: two 0-100 scores facing each other with a shared bar. */
+function ratingRow(label, a, h, hint){
+  if (a==null || h==null) return "";
+  const aw=Math.max(2,Math.min(98,a)), hw=Math.max(2,Math.min(98,h));
+  const lead = a>h ? "a" : (h>a ? "h" : "");
+  return `<div class="rrow">
+    <span class="rv rva ${lead==="a"?"lead":""}">${a.toFixed(0)}</span>
+    <span class="rlab">${esc(label)}${hint?`<em>${esc(hint)}</em>`:""}</span>
+    <span class="rv rvh ${lead==="h"?"lead":""}">${h.toFixed(0)}</span>
+    <span class="rbar"><i class="ra" style="width:${aw/2}%"></i><i class="rh" style="width:${hw/2}%"></i></span>
+  </div>`;
+}
+/** A plain stat comparison line (raw numbers, lower-is-better aware). */
+function statRow(label, a, h, fmt=x=>v(x), lowerBetter=false){
+  if (a==null && h==null) return "";
+  const lead = (a==null||h==null) ? "" : (lowerBetter ? (a<h?"a":(h<a?"h":"")) : (a>h?"a":(h>a?"h":"")));
+  return `<tr><td class="${lead==="a"?"lead":""}">${fmt(a)}</td><th>${esc(label)}</th><td class="${lead==="h"?"lead":""}">${fmt(h)}</td></tr>`;
+}
+
+function ratingsSection(m){
+  const R=m.ratings; if(!R) return "";
+  const cur=R.this_season, pri=R.last_season;
+  if(!cur||!cur.away||!cur.home) return "";
+  const A=cur.away, H=cur.home, Ap=pri&&pri.away, Hp=pri&&pri.home;
+  const pc=x=>x==null?"—":(x*100).toFixed(1)+"%";
+  const sg=x=>x==null?"—":(x>0?"+":"")+x;
+  return `
+  <h2 class="sec">Leo ratings &mdash; head to head</h2>
+  <p class="sub">Each rating is 0&ndash;100 against the league this season, built from efficiency rather than record: 50 is average, every 15 points is one standard deviation. These describe the teams &mdash; they are not used to price the game.</p>
+
+  <div class="rcard">
+    <div class="rhead">
+      <span class="rt"><img src="/img/nfl/${encodeURIComponent(m.away)}.png" alt=""><b>${esc(m.away)}</b></span>
+      <span class="rmid">This season</span>
+      <span class="rt rr"><b>${esc(m.home)}</b><img src="/img/nfl/${encodeURIComponent(m.home)}.png" alt=""></span>
+    </div>
+    <div class="rbody">
+      ${ratingRow("Quarterback", A.qb_rating, H.qb_rating, "EPA, accuracy, giveaways")}
+      ${ratingRow("Offense", A.off_rating, H.off_rating, "efficiency, explosives, ball security")}
+      ${ratingRow("Defense", A.def_rating, H.def_rating, "EPA allowed, pressure, takeaways")}
+      ${ratingRow("Overall", A.overall, H.overall)}
+    </div>
+    ${Ap&&Hp?`<div class="rprior">
+      <span class="rpl">Last season</span>
+      <span class="rpv">QB ${Ap.qb_rating.toFixed(0)} &middot; OFF ${Ap.off_rating.toFixed(0)} &middot; DEF ${Ap.def_rating.toFixed(0)}</span>
+      <span class="rpv rr">QB ${Hp.qb_rating.toFixed(0)} &middot; OFF ${Hp.off_rating.toFixed(0)} &middot; DEF ${Hp.def_rating.toFixed(0)}</span>
+    </div>`:""}
+  </div>
+
+  <h2 class="sec">The turnover battle</h2>
+  <p class="sub">Interceptions thrown against interceptions caught, and the same for fumbles. Bold is the better side of each line.</p>
+  <table class="vs">
+    <tr><th>${esc(m.away)}</th><th>Per game, this season</th><th>${esc(m.home)}</th></tr>
+    ${statRow("Interceptions thrown", A.ints_thrown_pg, H.ints_thrown_pg, d2, true)}
+    ${statRow("Interceptions caught", A.ints_caught_pg, H.ints_caught_pg, d2)}
+    ${statRow("Fumbles lost", A.fum_lost_pg, H.fum_lost_pg, d2, true)}
+    ${statRow("Fumbles forced", A.fum_forced_pg, H.fum_forced_pg, d2)}
+    ${statRow("Takeaways", A.takeaways_pg, H.takeaways_pg, d2)}
+    ${statRow("Giveaways", A.giveaways_pg, H.giveaways_pg, d2, true)}
+    ${statRow("Net turnover margin", A.turnover_diff_pg, H.turnover_diff_pg, sg)}
+  </table>
+
+  <h2 class="sec">Efficiency detail</h2>
+  <p class="sub">The inputs behind the ratings above, shown raw so you can check the work.</p>
+  <table class="vs">
+    <tr><th>${esc(m.away)}</th><th>Offense</th><th>${esc(m.home)}</th></tr>
+    ${statRow("EPA per dropback", A.epa_per_dropback, H.epa_per_dropback, x=>x==null?"—":(x>0?"+":"")+x.toFixed(3))}
+    ${statRow("Completion % over expected", A.cpoe, H.cpoe, x=>x==null?"—":(x>0?"+":"")+x.toFixed(1))}
+    ${statRow("Interception rate", A.int_rate, H.int_rate, pc, true)}
+    ${statRow("Sack rate taken", A.sack_rate_taken, H.sack_rate_taken, pc, true)}
+    ${statRow("Rush EPA per carry", A.rush_epa_per_carry, H.rush_epa_per_carry, x=>x==null?"—":(x>0?"+":"")+x.toFixed(3))}
+    ${statRow("Explosive play rate", A.explosive_rate, H.explosive_rate, pc)}
+    <tr><th>${esc(m.away)}</th><th>Defense</th><th>${esc(m.home)}</th></tr>
+    ${statRow("EPA allowed per play", A.def_epa_per_play, H.def_epa_per_play, x=>x==null?"—":(x>0?"+":"")+x.toFixed(3), true)}
+    ${statRow("Yards allowed per play", A.def_yards_per_play, H.def_yards_per_play, v, true)}
+    ${statRow("Sack rate", A.def_sack_rate, H.def_sack_rate, pc)}
+    ${statRow("Interception rate forced", A.def_int_rate, H.def_int_rate, pc)}
+  </table>`;
 }
 
 function page(m){
@@ -135,6 +217,28 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
 .tdc{grid-area:c;font-size:1.5rem;font-weight:800;color:var(--accent2)}
 .tdd{grid-area:d;color:var(--text-dim);font-size:.74rem}
 .note{margin-top:8px}
+.rcard{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-sm)}
+.rhead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px;background:var(--bg-elev);border-bottom:1px solid var(--border)}
+.rt{display:flex;align-items:center;gap:9px;font-size:.98rem}
+.rt img{width:30px;height:30px;object-fit:contain}
+.rmid{font-size:.64rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim)}
+.rbody{padding:6px 16px 14px}
+.rrow{display:grid;grid-template-columns:48px 1fr 48px;grid-template-areas:"a l h" "b b b";gap:2px 10px;align-items:center;padding:11px 0}
+.rrow+.rrow{border-top:1px solid var(--border)}
+.rv{font-size:1.32rem;font-weight:800;color:var(--text-dim)}
+.rv.rva{grid-area:a;text-align:left}
+.rv.rvh{grid-area:h;text-align:right}
+.rv.lead{color:var(--accent2)}
+.rlab{grid-area:l;text-align:center;font-weight:700;font-size:.85rem;line-height:1.3}
+.rlab em{display:block;font-style:normal;font-weight:500;font-size:.68rem;color:var(--text-dim)}
+.rbar{grid-area:b;display:flex;height:6px;border-radius:999px;overflow:hidden;background:var(--bg-elev);margin-top:5px}
+.rbar i{display:block;height:100%}
+.rbar .ra{background:var(--accent2);margin-right:auto}
+.rbar .rh{background:var(--accent)}
+.rprior{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 16px;border-top:1px solid var(--border);background:var(--bg-elev);font-size:.76rem;color:var(--text-dim)}
+.rpl{font-weight:800;text-transform:uppercase;letter-spacing:.07em;font-size:.62rem}
+.rr{justify-content:flex-end;text-align:right}
+.vs td.lead{color:var(--accent2);font-weight:800}
 @media(max-width:820px){.grid2,.tdgrid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -158,6 +262,8 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
     <div class="box"><span class="lbl">Total</span><span class="val">${v(m.total_line)}</span><span class="sub">closing total</span></div>
   </section>
   <div class="notice note">Market numbers are the closing line, shown for context. Leo does not publish a pick on this game &mdash; testing against the 2025 season showed the model does not beat the closing price, so these pages report stats rather than projections.</div>
+
+  ${ratingsSection(m)}
 
   <h2 class="sec">Team comparison</h2>
   <p class="sub">Season totals on both sides of the ball. Left column is ${esc(m.away)}, right is ${esc(m.home)}.</p>
