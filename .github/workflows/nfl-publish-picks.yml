@@ -1,0 +1,110 @@
+name: NFL publish picks
+
+# NFL counterpart to publish-picks.yml. Runs 15 minutes after each NFL
+# prepare-slate wave, on the same UTC/DST caveat documented there.
+#
+# What "publish" means here: prepare-slate writes the model output, this
+# workflow promotes it to the rolling *-today.json files the public pages
+# read, and refuses to do so if the slate is empty or malformed. A bad or
+# missing slate must never overwrite a good published card.
+#
+# WEEKLY RHYTHM (15 min after each gather wave)
+#   Daily     9:15am ET
+#   Thursday  5:15pm ET
+#   Sunday   10:15am / 2:15pm / 6:15pm ET
+#   Monday    5:15pm ET
+
+on:
+  schedule:
+    - cron: "15 13 * * *"   # 9:15am ET  daily
+    - cron: "15 21 * * 4"   # 5:15pm ET  Thursday
+    - cron: "15 14 * * 0"   # 10:15am ET Sunday
+    - cron: "15 18 * * 0"   # 2:15pm ET  Sunday
+    - cron: "15 22 * * 0"   # 6:15pm ET  Sunday
+    - cron: "15 21 * * 1"   # 5:15pm ET  Monday
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "YYYY-MM-DD slate to publish. Blank = today in America/New_York."
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nfl-publish-picks
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Resolve slate date
+        id: slate_date
+        run: |
+          set -euo pipefail
+          DATE_INPUT="${{ github.event.inputs.date }}"
+          if [ -z "$DATE_INPUT" ]; then
+            DATE_INPUT=$(TZ="America/New_York" date +%F)
+          fi
+          echo "date=$DATE_INPUT" >> "$GITHUB_OUTPUT"
+          echo "Publishing NFL slate: $DATE_INPUT"
+
+      # Regenerate rather than trusting whatever is on disk, so a publish is
+      # always reproducible from source data.
+      - name: Rebuild models for the slate
+        run: |
+          node scripts/generate-nfl-model.js "${{ steps.slate_date.outputs.date }}"
+          node scripts/generate-nfl-props.js "${{ steps.slate_date.outputs.date }}" || true
+
+      # The one safety net, matching the spirit of publish-picks.yml: refuse
+      # to publish something structurally broken. An EMPTY slate is not an
+      # error -- most days have no NFL games -- it just exits without
+      # promoting anything.
+      - name: Validate before publishing
+        id: gate
+        run: |
+          set -euo pipefail
+          node -e '
+            const fs=require("fs");
+            const d="'"${{ steps.slate_date.outputs.date }}"'";
+            const picks="data/nfl/picks-"+d+".json";
+            if(!fs.existsSync(picks)){ console.log("No picks file for "+d+" - nothing to publish."); process.exit(78); }
+            const p=JSON.parse(fs.readFileSync(picks,"utf8"));
+            if(!Array.isArray(p)){ console.error("::error::picks file is not an array"); process.exit(1); }
+            if(p.length===0){ console.log("Empty slate for "+d+" - nothing to publish."); process.exit(78); }
+            const required=["matchup","status","model_prob","total_status","spread_status"];
+            const bad=p.filter(g=>required.some(k=>!(k in g)));
+            if(bad.length){ console.error("::error::"+bad.length+" games missing required model fields"); process.exit(1); }
+            const teams=new Set(p.flatMap(g=>[g.away,g.home]));
+            const missing=[...teams].filter(t=>!fs.existsSync("img/nfl/"+t+".png"));
+            if(missing.length){ console.error("::error::missing team logos: "+missing.join(" ")); process.exit(1); }
+            const off=p.filter(g=>g.status==="official_pick").length;
+            console.log("Validated "+p.length+" games, "+off+" official moneyline picks.");
+          '
+
+      - name: Commit and push if changed
+        if: steps.gate.outcome == 'success'
+        run: |
+          set -euo pipefail
+          git config user.name "lydia-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No change to commit."
+            exit 0
+          fi
+          git commit -m "NFL publish picks ${{ steps.slate_date.outputs.date }}"
+          git pull --rebase
+          git push

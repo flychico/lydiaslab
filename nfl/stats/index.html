@@ -3,122 +3,195 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NFL Team Stats and Power Ratings | Leo</title>
-<meta name="description" content="Every NFL team ranked by Leo point-margin power rating, with scoring, yardage and defensive splits.">
+<title>NFL Standings, Power Ratings and Team Stats | Leo</title>
+<meta name="description" content="NFL standings by division, Leo power ratings, scoring pace and a two-axis team map of offense against defense.">
 <link rel="canonical" href="https://lydiaslab.com/nfl/stats/">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127944;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/scoreboard.css">
 <style>
-.tbl-wrap { background:var(--bg-card); border:1px solid var(--border); border-radius:16px; overflow:hidden; box-shadow:var(--shadow-sm); }
-table.stats { width:100%; border-collapse:collapse; font-size:.9rem; }
-table.stats th, table.stats td { padding:10px 12px; text-align:right; white-space:nowrap; }
-table.stats th { background:var(--bg-elev); color:var(--text-dim); font-size:.68rem; font-weight:800; text-transform:uppercase; letter-spacing:.4px; cursor:pointer; user-select:none; position:sticky; top:0; }
-table.stats th:hover { color:var(--accent); }
-table.stats th.sorted::after { content:" \2193"; }
-table.stats th.asc::after { content:" \2191"; }
-table.stats td:nth-child(1), table.stats th:nth-child(1) { text-align:center; width:46px; color:var(--text-dim); }
-table.stats td:nth-child(2), table.stats th:nth-child(2) { text-align:left; }
-table.stats tbody tr { border-top:1px solid var(--border); }
-table.stats tbody tr:hover { background:var(--bg-elev); }
-.tm { display:flex; align-items:center; gap:9px; }
-.tm img { width:26px; height:26px; object-fit:contain; flex:none; }
-.tm b { font-weight:700; }
-.tm span { color:var(--text-dim); font-size:.78rem; font-weight:500; }
-.pos { color:var(--good,#1e8e3e); font-weight:700; }
-.neg { color:var(--danger,#cf222e); font-weight:700; }
-.scroller { overflow-x:auto; }
-@media (max-width:760px){ table.stats th, table.stats td { padding:9px 8px; font-size:.84rem; } }
+h2.sec{font-size:1.3rem;margin:30px 0 6px;}
+p.sec-sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px;}
+.div-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:15px;}
+.div-card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-sm);}
+.div-head{padding:10px 15px;background:var(--bg-elev);border-bottom:1px solid var(--border);font-weight:800;font-size:.76rem;text-transform:uppercase;letter-spacing:.09em;color:var(--text-dim);}
+table.t{width:100%;border-collapse:collapse;font-size:.88rem;}
+table.t th,table.t td{padding:8px 11px;text-align:right;white-space:nowrap;}
+table.t th{background:var(--bg-elev);color:var(--text-dim);font-size:.64rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;}
+table.t td:first-child,table.t th:first-child{text-align:left;}
+table.t tbody tr{border-top:1px solid var(--border);}
+table.t tbody tr:hover{background:var(--bg-elev);}
+.tm{display:flex;align-items:center;gap:8px;}
+.tm img{width:24px;height:24px;object-fit:contain;flex:none;}
+.pos{color:var(--good);font-weight:700;}.neg{color:var(--danger);font-weight:700;}
+.scroller{overflow-x:auto;}
+.map-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:var(--shadow-sm);}
+.map{position:relative;width:100%;aspect-ratio:16/10;min-height:340px;}
+.map svg{width:100%;height:100%;overflow:visible;}
+.qd{font-size:.63rem;fill:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:.07em;}
+.axl{font-size:.72rem;fill:var(--text-dim);font-weight:700;}
+.legend{margin-top:12px;}
+.fpill{display:inline-block;padding:5px 12px;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);font-size:.8rem;font-weight:700;cursor:pointer;margin:0 6px 6px 0;color:var(--text-dim);}
+.fpill.on{background:var(--accent2);border-color:var(--accent2);color:#fff;}
+@media(max-width:760px){.div-grid{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
 <nav id="nav"></nav>
 <main class="scoreboard-shell">
   <section class="score-hero">
-    <p class="eyebrow">All 32 teams. One ranking.</p>
-    <h1>NFL Team Stats and Power Ratings</h1>
-    <p class="subtitle">Every team ranked by point-margin power rating, regressed toward a prior-season baseline so a single blowout does not distort the board, alongside scoring and yardage on both sides of the ball.</p>
+    <p class="eyebrow">All 32 teams. Every angle.</p>
+    <h1>NFL Standings, Ratings and Team Stats</h1>
+    <p class="subtitle">Standings by division, Leo power ratings regressed toward a prior-season baseline, scoring pace on both sides of the ball, and a two-axis map of every team's offense against its defense.</p>
     <div class="score-hero-chips">
-      <span class="hero-chip">&#127944; All 32 teams</span>
-      <span class="hero-chip">&#128200; Offense and defense</span>
-      <span class="hero-chip">&#129514; Regressed ratings</span>
+      <span class="hero-chip">&#127944; Eight divisions</span>
+      <span class="hero-chip">&#128202; Power ratings</span>
+      <span class="hero-chip">&#128506; Team map</span>
+      <span class="hero-chip">&#129514; Scoring pace</span>
     </div>
   </section>
 
   <section class="kpis" id="kpis" aria-label="League summary"></section>
-  <div id="status" class="loading">Loading team ratings&hellip;</div>
-  <div class="tbl-wrap"><div class="scroller"><table class="stats" id="tbl"></table></div></div>
-  <p class="data-note">Ratings are point margin per game adjusted for home field and regressed toward a prior-season baseline. Yardage is per game from the open nflverse dataset. Click any column to sort.</p>
+  <div id="status" class="loading">Loading NFL team data&hellip;</div>
+
+  <h2 class="sec">Standings by division</h2>
+  <p class="sec-sub">Record, point differential and Leo rating for all eight divisions. Rating is point margin per game adjusted for home field and regressed, so one blowout does not move a team.</p>
+  <div class="div-grid" id="divs"></div>
+
+  <h2 class="sec">The Map &mdash; every team, two axes</h2>
+  <p class="sec-sub">Points scored against points allowed, both regressed. Up and to the right is a team scoring well and defending well. Pick either axis to re-cut it.</p>
+  <div class="map-wrap">
+    <div id="axpick"></div>
+    <div class="map" id="map"></div>
+    <div class="notice legend" id="mapnote"></div>
+  </div>
+
+  <h2 class="sec">Power ratings &mdash; full board</h2>
+  <p class="sec-sub">Every team ranked, sortable. Pace figures are per game and already regressed toward the prior season.</p>
+  <div class="div-card"><div class="scroller"><table class="t" id="board"></table></div></div>
+
+  <p class="data-note">Records and scores from the open nflverse dataset. Ratings, pace and the map are Leo model output. Click any column header on the full board to sort.</p>
 </main>
 
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script>
 renderNav("/nfl/stats/"); renderFooter();
-
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 async function tryJson(u){try{const r=await fetch(u,{cache:"no-store"});return r.ok?await r.json():null;}catch(e){return null;}}
+function logo(t){return '<img src="/img/nfl/'+encodeURIComponent(t)+'.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">';}
 
-const COLS=[
-  ["rank","#",false],["team","Team",false],["record","Rec",false],
-  ["rating","Rating",true],["points_for","PF/G",true],["points_against","PA/G",true],
-  ["point_diff","Diff",true],["pass_yards_for","Pass Y",true],["rush_yards_for","Rush Y",true],
-  ["pass_yards_against","Pass YA",true],["rush_yards_against","Rush YA",true]
-];
-let data=[], sortKey="rating", asc=false;
+const AX={rating:["Leo rating","rating"],points_for:["Points scored","points_for"],
+          points_against:["Points allowed","points_against"],pace_for:["Scoring pace","pace_for"],
+          pace_against:["Pace allowed","pace_against"],pass_yards_for:["Pass yards","pass_yards_for"],
+          rush_yards_for:["Rush yards","rush_yards_for"]};
+let D=[], AXX="points_for", AXY="points_against", sortKey="rating", asc=false;
 
 (async function(){
   for(const u of ["/data/nfl/team-stats-"+iso(new Date())+".json",
                   "/data/nfl/team-stats-"+iso(new Date(Date.now()+864e5))+".json",
                   "/data/nfl/team-stats-today.json"]){
-    const j=await tryJson(u); if(Array.isArray(j)&&j.length){data=j;break;}
+    const j=await tryJson(u); if(Array.isArray(j)&&j.length){D=j;break;}
   }
   const st=document.getElementById("status");
-  if(!data.length){ st.innerHTML='<div class="score-empty">No team ratings are published right now.</div>'; return; }
+  if(!D.length){st.innerHTML='<div class="score-empty">No team data published right now.</div>';return;}
   st.style.display="none";
-
-  const gp=data[0].games||0;
-  const best=data[0], worst=data[data.length-1];
-  const avgPts=(data.reduce((s,x)=>s+(x.points_for||0),0)/data.length).toFixed(1);
-  document.getElementById("kpis").innerHTML=
-    '<article class="kpi"><div class="label">Teams rated</div><div class="value">'+data.length+'</div><div class="sub">'+gp+' game'+(gp===1?"":"s")+' played</div></article>'+
-    '<article class="kpi"><div class="label">Top rated</div><div class="value">'+esc(best.team)+'</div><div class="sub">'+best.rating.toFixed(1)+' margin</div></article>'+
-    '<article class="kpi"><div class="label">Lowest rated</div><div class="value">'+esc(worst.team)+'</div><div class="sub">'+worst.rating.toFixed(1)+' margin</div></article>'+
-    '<article class="kpi"><div class="label">League scoring</div><div class="value">'+avgPts+'</div><div class="sub">points per game</div></article>';
-  render();
+  kpis(); divisions(); axpick(); drawMap(); board();
 })();
 
-function render(){
-  const rows=data.slice().sort((a,b)=>{
-    const x=a[sortKey], y=b[sortKey];
+function kpis(){
+  const gp=D[0].games||0;
+  const best=D.slice().sort((a,b)=>b.rating-a.rating)[0];
+  const off=D.slice().sort((a,b)=>b.points_for-a.points_for)[0];
+  const def=D.slice().sort((a,b)=>a.points_against-b.points_against)[0];
+  const avg=(D.reduce((s,x)=>s+(x.points_for||0),0)/D.length).toFixed(1);
+  document.getElementById("kpis").innerHTML=
+    '<article class="kpi"><div class="label">Top rated</div><div class="value">'+esc(best.team)+'</div><div class="sub">'+best.rating.toFixed(1)+' margin</div></article>'+
+    '<article class="kpi"><div class="label">Best offense</div><div class="value">'+esc(off.team)+'</div><div class="sub">'+off.points_for+' pts/g</div></article>'+
+    '<article class="kpi"><div class="label">Best defense</div><div class="value">'+esc(def.team)+'</div><div class="sub">'+def.points_against+' allowed</div></article>'+
+    '<article class="kpi"><div class="label">League scoring</div><div class="value">'+avg+'</div><div class="sub">'+gp+' game'+(gp===1?"":"s")+' played</div></article>';
+}
+
+function divisions(){
+  const groups={};
+  D.forEach(t=>{const k=(t.conf||"?")+"|"+(t.division||"?");(groups[k]=groups[k]||[]).push(t);});
+  const order=Object.keys(groups).sort();
+  document.getElementById("divs").innerHTML=order.map(k=>{
+    const [conf,div]=k.split("|");
+    const rows=groups[k].slice().sort((a,b)=>{
+      const wa=+String(a.record).split("-")[0], wb=+String(b.record).split("-")[0];
+      return wb-wa || b.rating-a.rating;
+    });
+    return '<div class="div-card"><div class="div-head">'+esc(div||conf)+'</div><div class="scroller">'+
+      '<table class="t"><thead><tr><th>Team</th><th>Rec</th><th>PF</th><th>PA</th><th>Diff</th><th>Rating</th></tr></thead><tbody>'+
+      rows.map(t=>'<tr><td><span class="tm">'+logo(t.team)+'<b>'+esc(t.team)+'</b></span></td>'+
+        '<td>'+esc(t.record)+'</td><td>'+(t.points_for??"—")+'</td><td>'+(t.points_against??"—")+'</td>'+
+        '<td class="'+(t.point_diff>0?"pos":(t.point_diff<0?"neg":""))+'">'+(t.point_diff==null?"—":(t.point_diff>0?"+":"")+t.point_diff)+'</td>'+
+        '<td class="'+(t.rating>0?"pos":(t.rating<0?"neg":""))+'">'+(t.rating>0?"+":"")+t.rating.toFixed(1)+'</td></tr>').join("")+
+      '</tbody></table></div></div>';
+  }).join("");
+}
+
+function axpick(){
+  const mk=(cur,which)=>Object.entries(AX).map(([k,v])=>
+    '<span class="fpill'+(k===cur?" on":"")+'" data-ax="'+which+'" data-k="'+k+'">'+v[0]+'</span>').join("");
+  document.getElementById("axpick").innerHTML=
+    '<div style="margin-bottom:6px"><b style="font-size:.74rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.07em">Horizontal</b><br>'+mk(AXX,"x")+'</div>'+
+    '<div style="margin-bottom:12px"><b style="font-size:.74rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.07em">Vertical</b><br>'+mk(AXY,"y")+'</div>';
+  document.querySelectorAll("[data-ax]").forEach(el=>el.addEventListener("click",()=>{
+    if(el.dataset.ax==="x") AXX=el.dataset.k; else AXY=el.dataset.k;
+    axpick(); drawMap();
+  }));
+}
+
+function drawMap(){
+  const xs=D.map(t=>t[AXX]).filter(v=>v!=null), ys=D.map(t=>t[AXY]).filter(v=>v!=null);
+  if(!xs.length||!ys.length){document.getElementById("map").innerHTML="";return;}
+  const xmin=Math.min(...xs),xmax=Math.max(...xs),ymin=Math.min(...ys),ymax=Math.max(...ys);
+  const px=v=>((v-xmin)/((xmax-xmin)||1))*880+60;
+  const py=v=>500-((v-ymin)/((ymax-ymin)||1))*430-40;
+  const xmid=px((xmin+xmax)/2), ymid=py((ymin+ymax)/2);
+  const pts=D.filter(t=>t[AXX]!=null&&t[AXY]!=null).map(t=>
+    '<image href="/img/nfl/'+encodeURIComponent(t.team)+'.png" x="'+(px(t[AXX])-13)+'" y="'+(py(t[AXY])-13)+
+    '" width="26" height="26"><title>'+esc(t.team)+" · "+AX[AXX][0]+" "+t[AXX]+" · "+AX[AXY][0]+" "+t[AXY]+'</title></image>').join("");
+  document.getElementById("map").innerHTML=
+    '<svg viewBox="0 0 1000 520" role="img" aria-label="Team map">'+
+    '<line x1="'+xmid+'" y1="20" x2="'+xmid+'" y2="480" stroke="var(--border)" stroke-dasharray="5 5"/>'+
+    '<line x1="50" y1="'+ymid+'" x2="960" y2="'+ymid+'" stroke="var(--border)" stroke-dasharray="5 5"/>'+
+    '<text class="axl" x="505" y="515" text-anchor="middle">'+esc(AX[AXX][0])+' →</text>'+
+    '<text class="axl" x="16" y="255" text-anchor="middle" transform="rotate(-90 16 255)">'+esc(AX[AXY][0])+' →</text>'+
+    pts+'</svg>';
+  document.getElementById("mapnote").textContent=
+    "Horizontal: "+AX[AXX][0]+" ("+xmin+" to "+xmax+"). Vertical: "+AX[AXY][0]+" ("+ymin+" to "+ymax+"). Dashed lines mark the league midpoint on each axis.";
+}
+
+const COLS=[["rank","#"],["team","Team"],["conf","Conf"],["division","Division"],["record","Rec"],
+ ["rating","Rating"],["points_for","PF/G"],["points_against","PA/G"],["point_diff","Diff"],
+ ["pace_for","Pace"],["pace_against","Pace A"],["pass_yards_for","Pass Y"],["rush_yards_for","Rush Y"],
+ ["pass_yards_against","Pass YA"],["rush_yards_against","Rush YA"]];
+function board(){
+  const rows=D.slice().sort((a,b)=>{
+    const x=a[sortKey],y=b[sortKey];
     if(typeof x==="number"&&typeof y==="number") return asc?x-y:y-x;
     return asc?String(x).localeCompare(String(y)):String(y).localeCompare(String(x));
   });
-  const head="<thead><tr>"+COLS.map(([k,l])=>
-    '<th data-k="'+k+'" class="'+(k===sortKey?(asc?"asc sorted":"sorted"):"")+'">'+l+'</th>').join("")+"</tr></thead>";
-  const body="<tbody>"+rows.map(r=>{
-    const d=r.point_diff;
-    return "<tr>"+
-      "<td>"+r.rank+"</td>"+
-      '<td><span class="tm"><img src="/img/nfl/'+encodeURIComponent(r.team)+'.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'+
-        "<b>"+esc(r.team)+"</b></span></td>"+
-      "<td>"+esc(r.record)+"</td>"+
-      '<td class="'+(r.rating>0?"pos":(r.rating<0?"neg":""))+'">'+(r.rating>0?"+":"")+r.rating.toFixed(1)+"</td>"+
-      "<td>"+(r.points_for??"\u2014")+"</td>"+
-      "<td>"+(r.points_against??"\u2014")+"</td>"+
-      '<td class="'+(d>0?"pos":(d<0?"neg":""))+'">'+(d==null?"\u2014":(d>0?"+":"")+d)+"</td>"+
-      "<td>"+(r.pass_yards_for??"\u2014")+"</td>"+
-      "<td>"+(r.rush_yards_for??"\u2014")+"</td>"+
-      "<td>"+(r.pass_yards_against??"\u2014")+"</td>"+
-      "<td>"+(r.rush_yards_against??"\u2014")+"</td>"+
-    "</tr>";
-  }).join("")+"</tbody>";
-  const t=document.getElementById("tbl");
-  t.innerHTML=head+body;
-  t.querySelectorAll("th").forEach(th=>th.addEventListener("click",()=>{
+  document.getElementById("board").innerHTML=
+    "<thead><tr>"+COLS.map(([k,l])=>'<th data-k="'+k+'" style="cursor:pointer">'+l+(k===sortKey?(asc?" ↑":" ↓"):"")+"</th>").join("")+"</tr></thead><tbody>"+
+    rows.map(t=>"<tr><td>"+t.rank+"</td>"+
+      '<td><span class="tm">'+logo(t.team)+"<b>"+esc(t.team)+"</b></span></td>"+
+      "<td>"+esc(t.conf)+"</td><td>"+esc(String(t.division).replace(/^(AFC|NFC)\s*/,""))+"</td>"+
+      "<td>"+esc(t.record)+"</td>"+
+      '<td class="'+(t.rating>0?"pos":(t.rating<0?"neg":""))+'">'+(t.rating>0?"+":"")+t.rating.toFixed(1)+"</td>"+
+      "<td>"+(t.points_for??"—")+"</td><td>"+(t.points_against??"—")+"</td>"+
+      '<td class="'+(t.point_diff>0?"pos":(t.point_diff<0?"neg":""))+'">'+(t.point_diff==null?"—":(t.point_diff>0?"+":"")+t.point_diff)+"</td>"+
+      "<td>"+(t.pace_for??"—")+"</td><td>"+(t.pace_against??"—")+"</td>"+
+      "<td>"+(t.pass_yards_for??"—")+"</td><td>"+(t.rush_yards_for??"—")+"</td>"+
+      "<td>"+(t.pass_yards_against??"—")+"</td><td>"+(t.rush_yards_against??"—")+"</td></tr>").join("")+
+    "</tbody>";
+  document.querySelectorAll("#board th").forEach(th=>th.addEventListener("click",()=>{
     const k=th.dataset.k;
-    if(k===sortKey) asc=!asc; else { sortKey=k; asc=(k==="team"||k==="record"||k==="rank"); }
-    render();
+    if(k===sortKey) asc=!asc; else {sortKey=k; asc=["team","conf","division","record","rank"].includes(k);}
+    board();
   }));
 }
 </script>

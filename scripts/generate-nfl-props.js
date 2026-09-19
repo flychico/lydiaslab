@@ -225,7 +225,12 @@ function anytimeTD(e, field, base, adj) {
   fs.mkdirSync(path.join(ROOT, "data/nfl"), { recursive: true });
   const out = path.join(ROOT, `data/nfl/props-${targetDate}.json`);
   fs.writeFileSync(out, JSON.stringify(props, null, 2));
-  fs.writeFileSync(path.join(ROOT, "data/nfl/props-today.json"), JSON.stringify(props, null, 2));
+  // Never let an empty slate blank the published props (see generate-nfl-model.js).
+  if (props.length) {
+    fs.writeFileSync(path.join(ROOT, "data/nfl/props-today.json"), JSON.stringify(props, null, 2));
+  } else {
+    console.log("  props: empty for this date, leaving props-today.json untouched");
+  }
 
   // unified log schema (claude/MODEL_IMPROVEMENT_FRAMEWORK.md)
   const logPath = path.join(ROOT, "data/nfl/nfl-props-log.csv");

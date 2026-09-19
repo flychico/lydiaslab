@@ -1,0 +1,102 @@
+name: NFL prepare slate (gather data)
+
+# NFL counterpart to prepare-slate.yml. Same shape, different rhythm: the NFL
+# plays Thu / Sun / Mon rather than daily, so this gathers every morning
+# (lines move all week) and adds waves on the three game days.
+#
+# CRON IS UTC AND DOES NOT FOLLOW DST. The times below are correct for
+# Eastern DAYLIGHT time (UTC-4), which covers the regular season through
+# early November. After the November change to Eastern STANDARD time (UTC-5)
+# every one of these fires one hour EARLIER in ET. That is a deliberate,
+# documented tradeoff, not a mistake -- prepare-slate.yml was once rebuilt
+# precisely because its comments disagreed with its crons, so this file
+# states the drift instead of hiding it.
+#
+# WEEKLY RHYTHM
+#   NFL prepare slate  ->  NFL publish picks (fires 15 min after each wave)
+#
+#   Daily     9:00am ET   line movement through the week
+#   Thursday  5:00pm ET   before TNF
+#   Sunday   10:00am ET   before the 1:00pm ET block
+#   Sunday    2:00pm ET   before the 4:05/4:25 block
+#   Sunday    6:00pm ET   before SNF
+#   Monday    5:00pm ET   before MNF
+
+on:
+  schedule:
+    - cron: "0 13 * * *"    # 9:00am ET  daily
+    - cron: "0 21 * * 4"    # 5:00pm ET  Thursday
+    - cron: "0 14 * * 0"    # 10:00am ET Sunday
+    - cron: "0 18 * * 0"    # 2:00pm ET  Sunday
+    - cron: "0 22 * * 0"    # 6:00pm ET  Sunday
+    - cron: "0 21 * * 1"    # 5:00pm ET  Monday
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "YYYY-MM-DD slate to gather. Blank = next slate date in America/New_York."
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+# Never let two gathers overlap -- they write the same files.
+concurrency:
+  group: nfl-prepare-slate
+  cancel-in-progress: false
+
+jobs:
+  gather:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # The NFL models read open nflverse data over plain HTTPS and need no
+      # API key. That is why there is no key-presence gate here, unlike the
+      # MLB gather -- there is nothing to silently fail on.
+      - name: Resolve slate date
+        id: slate_date
+        run: |
+          set -euo pipefail
+          echo "UTC:";      date -u
+          echo "Eastern:";  TZ="America/New_York" date
+          DATE_INPUT="${{ github.event.inputs.date }}"
+          if [ -z "$DATE_INPUT" ]; then
+            # Default to today; if today has no games the model writes an empty
+            # slate and the commit step no-ops, which is the correct outcome.
+            DATE_INPUT=$(TZ="America/New_York" date +%F)
+          fi
+          echo "date=$DATE_INPUT" >> "$GITHUB_OUTPUT"
+          echo "Resolved NFL slate date: $DATE_INPUT"
+
+      # Ratings, moneyline / totals / spread picks, team stats by division,
+      # the injury report and completed results. Writes data/nfl/*.json.
+      - name: Team ratings, game models, injuries and results
+        run: node scripts/generate-nfl-model.js "${{ steps.slate_date.outputs.date }}"
+
+      # Player props: passing, rushing, receiving yards and anytime TD.
+      - name: Player prop projections
+        run: node scripts/generate-nfl-props.js "${{ steps.slate_date.outputs.date }}"
+
+      - name: Commit and push if changed
+        run: |
+          set -euo pipefail
+          git config user.name "lydia-bot"
+          git config user.email "actions@users.noreply.github.com"
+          mkdir -p data/nfl
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No change to commit."
+            exit 0
+          fi
+          git commit -m "NFL prepare slate ${{ steps.slate_date.outputs.date }}"
+          git pull --rebase
+          git push

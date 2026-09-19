@@ -27,6 +27,11 @@ const K_PSEUDO = 4;     // regression strength, matches the props model
 const EDGE_MIN = 0.04;  // minimum edge to call an official pick
 const K_MARKET = 8;     // pseudo-games before the model outweighs the market prior
 const EDGE_CAP = 0.15;  // a disagreement past this means the MODEL is wrong, not the market
+const TOTAL_SD = 10.4;  // SD of actual combined points vs the closing total
+const TOTAL_EDGE_MIN = 1.5;   // points of disagreement before a total is playable
+const TOTAL_EDGE_CAP = 7.0;   // past this the totals model is wrong, not the market
+const SPREAD_EDGE_MIN = 1.0;  // points vs the closing spread
+const ROOF_BUMP = { dome: 0.8, closed: 0.8, open: 0.0, outdoors: 0.0 };
 
 function parseCSV(text){
   const rows=[]; let row=[], f="", q=false;
@@ -115,8 +120,42 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
     if(as>hs){A.w++;H.l++;} else if(hs>as){H.w++;A.l++;} else {A.t++;H.t++;}
   });
 
+  // ---- conference / division ----------------------------------------------
+  let confDiv = {};
+  try{
+    const meta = get("https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/teams_colors_logos.csv");
+    meta.forEach(r=>{ if(r.team_abbr) confDiv[r.team_abbr] = {
+      conf:r.team_conf||"", div:r.team_division||"", name:r.team_name||r.team_abbr,
+      color:r.team_color||"", color2:r.team_color2||"" }; });
+  }catch(e){ console.log("  conf/div: unavailable ("+e.message+")"); }
+
+  // ---- scoring pace, regressed (drives the totals model) -------------------
+  const pf={}, pa={};
+  played(SEASON).forEach(g=>{
+    const as=n(g.away_score), hs=n(g.home_score);
+    (pf[g.away_team]=pf[g.away_team]||[]).push(as); (pa[g.away_team]=pa[g.away_team]||[]).push(hs);
+    (pf[g.home_team]=pf[g.home_team]||[]).push(hs); (pa[g.home_team]=pa[g.home_team]||[]).push(as);
+  });
+  const pfP={}, paP={};
+  played(PRIOR).forEach(g=>{
+    const as=n(g.away_score), hs=n(g.home_score);
+    (pfP[g.away_team]=pfP[g.away_team]||[]).push(as); (paP[g.away_team]=paP[g.away_team]||[]).push(hs);
+    (pfP[g.home_team]=pfP[g.home_team]||[]).push(hs); (paP[g.home_team]=paP[g.home_team]||[]).push(as);
+  });
+  const allPf = played(SEASON).flatMap(g=>[n(g.away_score),n(g.home_score)]).filter(x=>x!=null);
+  const leaguePPG = allPf.length ? mean(allPf) : 22.5;
+  const paceFor={}, paceAgainst={};
+  teams.forEach(t=>{
+    const priorFor = pfP[t] ? shrink(mean(pfP[t]), pfP[t].length, leaguePPG, 6) : leaguePPG;
+    const priorAgn = paP[t] ? shrink(mean(paP[t]), paP[t].length, leaguePPG, 6) : leaguePPG;
+    paceFor[t]     = shrink(pf[t]?mean(pf[t]):leaguePPG, (pf[t]||[]).length, priorFor);
+    paceAgainst[t] = shrink(pa[t]?mean(pa[t]):leaguePPG, (pa[t]||[]).length, priorAgn);
+  });
+
   const teamStats = teams.map(t=>({
     team:t, games:gp[t],
+    name:(confDiv[t]||{}).name||t, conf:(confDiv[t]||{}).conf||"", division:(confDiv[t]||{}).div||"",
+    pace_for:r1(paceFor[t]??leaguePPG), pace_against:r1(paceAgainst[t]??leaguePPG),
     record: `${rec[t].w}-${rec[t].l}${rec[t].t?"-"+rec[t].t:""}`,
     rating: r1(rating[t]),
     points_for: gp[t]?r1(rec[t].pf/gp[t]):null,
@@ -158,6 +197,39 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
     const status = edge==null ? "no_market"
                  : suspect     ? "model_flag"
                  : (edge>=EDGE_MIN ? "official_pick" : "pass");
+
+    // ---- TOTALS MODEL -----------------------------------------------------
+    // Each side's expected points = its own scoring pace blended with what the
+    // opponent's defense concedes. Both inputs are already regressed toward a
+    // prior-season baseline, so one blowout cannot move a number.
+    const awayPts = ((paceFor[g.away_team]??leaguePPG) + (paceAgainst[g.home_team]??leaguePPG))/2;
+    const homePts = ((paceFor[g.home_team]??leaguePPG) + (paceAgainst[g.away_team]??leaguePPG))/2;
+    const roofKey = String(g.roof||"").toLowerCase();
+    const roofAdj = ROOF_BUMP[roofKey] ?? 0;
+    const windAdj = (n(g.wind)!=null && n(g.wind) >= 15) ? -1.6 : 0;   // heavy wind suppresses scoring
+    const rawTotal = awayPts + homePts + roofAdj + windAdj;
+    const mktTotal = n(g.total_line);
+    // Same market-prior discipline as the moneyline: the closing total is sharp.
+    const projTotal = mktTotal!=null ? (w*rawTotal + (1-w)*mktTotal) : rawTotal;
+    const totalEdge = mktTotal!=null ? projTotal-mktTotal : null;
+    const rawTotalDisagree = mktTotal!=null ? Math.abs(rawTotal-mktTotal) : null;
+    const totalSuspect = rawTotalDisagree!=null && rawTotalDisagree>TOTAL_EDGE_CAP;
+    const totalStatus = totalEdge==null ? "no_market"
+                      : totalSuspect    ? "model_flag"
+                      : (Math.abs(totalEdge)>=TOTAL_EDGE_MIN ? "official_pick" : "pass");
+    const totalSide = totalEdge==null ? null : (totalEdge>0 ? "Over" : "Under");
+    // P(total clears the line), for sizing context
+    const overProb = mktTotal==null ? null : 1-normCdf((mktTotal-projTotal)/TOTAL_SD);
+
+    // ---- SPREAD MODEL -----------------------------------------------------
+    // spread_line is stated from the HOME side: positive = home favoured.
+    const mktSpread = n(g.spread_line);
+    const projSpread = mktSpread!=null ? (w*expMargin + (1-w)*mktSpread) : expMargin;
+    const spreadEdge = mktSpread!=null ? projSpread-mktSpread : null;
+    const spreadSide = spreadEdge==null ? null : (spreadEdge>0 ? g.home_team : g.away_team);
+    const coverProb = mktSpread==null ? null : 1-normCdf((mktSpread-projSpread)/SD);
+    const spreadStatus = spreadEdge==null ? "no_market"
+                       : (Math.abs(spreadEdge)>=SPREAD_EDGE_MIN ? "official_pick" : "pass");
     return {
       date:target, game_id:g.game_id, matchup:`${g.away_team} @ ${g.home_team}`,
       away:g.away_team, home:g.home_team, kickoff:g.gametime, stadium:g.stadium,
@@ -167,6 +239,18 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
       exp_margin:r1(expMargin), raw_model_prob:r3(rawHome),
       model_weight:r3(w), raw_disagreement:rawDisagree!=null?r3(rawDisagree):null,
       spread_line:n(g.spread_line), total_line:n(g.total_line),
+      // totals model
+      total_status:totalStatus, total_side:totalSide,
+      proj_total:r1(projTotal), raw_proj_total:r1(rawTotal),
+      total_edge:totalEdge==null?null:r1(totalEdge),
+      over_prob:overProb==null?null:r3(overProb),
+      roof_adj:roofAdj, wind_adj:windAdj,
+      away_exp_points:r1(awayPts), home_exp_points:r1(homePts),
+      // spread model
+      spread_status:spreadStatus, spread_side:spreadSide,
+      proj_spread:r1(projSpread),
+      spread_edge:spreadEdge==null?null:r1(spreadEdge),
+      cover_prob:coverProb==null?null:r3(coverProb),
       away_rating:r1(rating[g.away_team]??0), home_rating:r1(rating[g.home_team]??0),
       away_ml:n(g.away_moneyline), home_ml:n(g.home_moneyline)
     };
@@ -213,7 +297,14 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
   fs.mkdirSync(dir,{recursive:true});
   for(const [name,data] of [["team-stats",teamStats],["picks",picks],["injuries",injuries],["results",results]]){
     fs.writeFileSync(path.join(dir,`${name}-${target}.json`), JSON.stringify(data,null,2));
-    fs.writeFileSync(path.join(dir,`${name}-today.json`), JSON.stringify(data,null,2));
+    // Only promote to the rolling -today file when there is something to show.
+    // Most calendar days have no NFL games; without this guard the daily
+    // gather blanks the live pages every Tuesday by publishing an empty array.
+    if(Array.isArray(data) && data.length){
+      fs.writeFileSync(path.join(dir,`${name}-today.json`), JSON.stringify(data,null,2));
+    } else {
+      console.log(`  ${name}: empty for ${target}, leaving -today.json untouched`);
+    }
   }
   const official=picks.filter(p=>p.status==="official_pick").length;
   const flagged=picks.filter(p=>p.status==="model_flag").length;
@@ -221,5 +312,9 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
   console.log(`  flagged as model-unreliable: ${flagged}`);
   console.log(`  teams rated: ${teamStats.length}  (top: ${teamStats[0].team} ${teamStats[0].rating}, bottom: ${teamStats[teamStats.length-1].team} ${teamStats[teamStats.length-1].rating})`);
   console.log(`  slate: ${picks.length} games  official picks: ${official}  passes: ${picks.length-official-flagged}`);
+  const tOff=picks.filter(p=>p.total_status==="official_pick").length;
+  const sOff=picks.filter(p=>p.spread_status==="official_pick").length;
+  console.log(`  totals model: ${tOff} playable  (league pace ${r1(leaguePPG)} ppg)`);
+  console.log(`  spread model: ${sOff} playable`);
   console.log(`  results logged: ${results.length} completed games`);
 })();
