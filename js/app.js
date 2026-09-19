@@ -69,7 +69,7 @@ const Sport = {
   SPORTS: ["MLB", "NFL"],
   get() { try { return localStorage.getItem(this.KEY) || "MLB"; } catch (e) { return "MLB"; } },
   set(v) { try { localStorage.setItem(this.KEY, v); } catch (e) {} },
-  prefix() { const sport = this.get(); return "/" + sport.toLowerCase() + "/"; }
+  prefix() { const sport = this.get(); return sport === "MLB" ? "/" : "/" + sport.toLowerCase() + "/"; }
 };
 
 // ---------- Nav ----------
