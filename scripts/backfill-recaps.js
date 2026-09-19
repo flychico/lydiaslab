@@ -63,7 +63,7 @@ function csvCell(v) {
 
 async function fetchSchedule(date) {
   const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${encodeURIComponent(date)}&hydrate=probablePitcher,linescore`;
-  const r = await fetch(url, { headers: { "user-agent": "LyDia recap backfill" } });
+  const r = await fetch(url, { headers: { "user-agent": "Leo recap backfill" } });
   if (!r.ok) throw new Error(`schedule HTTP ${r.status}`);
   return r.json();
 }

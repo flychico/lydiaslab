@@ -1,7 +1,7 @@
 /*
-  LyDia — post-game recap review core.
+  Leo — post-game recap review core.
 
-  Purpose: compare what LyDia's pregame analysis actually claimed against what
+  Purpose: compare what Leo's pregame analysis actually claimed against what
   the game actually did, for every game that reaches Final — official pick,
   value watch, watchlist, or pass. A "W" or "L" tells you the side was right.
   It does not tell you whether the REASONS were right, and reasons are what
@@ -12,16 +12,16 @@
     1. Direction  — did the pick team actually win?
     2. Sub-model split — when the team-strength model and the run-projection
        model disagreed pregame, which one was closer to the actual winner?
-    3. Starting pitcher — did the pitcher LyDia rated better actually pitch
-       better, by the same categories LyDia used to grade the edge?
-    4. Bullpen — did the bullpen LyDia flagged as risky actually get exposed,
+    3. Starting pitcher — did the pitcher Leo rated better actually pitch
+       better, by the same categories Leo used to grade the edge?
+    4. Bullpen — did the bullpen Leo flagged as risky actually get exposed,
        or did it hold? Unearned runs are called out explicitly, because a run
        that scores on an error is not evidence about pitching quality either
        way. 2026-08-08: this now also reports a bullpen's actual performance
        when it WASN'T flagged pregame but turned in a night far from league
        average -- a quiet shutdown or a quiet collapse is exactly the kind of
        thing "what made the analysis wrong" needs, and the old version only
-       ever spoke about bullpens LyDia had already called out.
+       ever spoke about bullpens Leo had already called out.
     5. Offense vs projection — did a team's bats over- or under-perform the
        pregame run projection.
 
@@ -109,7 +109,7 @@ function submodelReview({ pickTeam, oppTeam, strengthProbabilityPick, runModelPr
 }
 
 /*
-  3. Starting pitcher. Compares the side LyDia's pitcher score favored against
+  3. Starting pitcher. Compares the side Leo's pitcher score favored against
   what that pitcher actually did, in the same units the edge was built from —
   earned runs allowed and innings, not a vibe.
 
@@ -278,17 +278,17 @@ function narrate({ direction, submodel, starter, awayBullpenReview, homeBullpenR
       direction.correct === null
         ? `${direction.winner} won.`
         : direction.correct
-          ? `${direction.winner} won, the side LyDia's model favored.`
-          : `${direction.winner} won. LyDia's model favored the other side.`
+          ? `${direction.winner} won, the side Leo's model favored.`
+          : `${direction.winner} won. Leo's model favored the other side.`
     );
   }
 
   if (submodel) {
     const sentence = submodel.verdict === "neither"
-      ? `LyDia's two internal reads disagreed pregame — the team-strength model favored ${submodel.strengthFavored} `
+      ? `Leo's two internal reads disagreed pregame — the team-strength model favored ${submodel.strengthFavored} `
         + `(${pct(submodel.strengthProbabilityPick)} for ${pickTeam}), the run-projection model favored ${submodel.runFavored} `
         + `(${pct(submodel.runModelProbabilityPick)} for ${pickTeam}). Neither actually had the winner.`
-      : `LyDia's two internal reads disagreed pregame by ${submodel.gap} points — the team-strength model favored ${submodel.strengthFavored}, `
+      : `Leo's two internal reads disagreed pregame by ${submodel.gap} points — the team-strength model favored ${submodel.strengthFavored}, `
         + `the run-projection model favored ${submodel.runFavored}. The ${submodel.verdict === "strength" ? "team-strength" : "run-projection"} `
         + `model had the winner here.`;
     paragraphs.push(sentence);
@@ -301,16 +301,16 @@ function narrate({ direction, submodel, starter, awayBullpenReview, homeBullpenR
     else if (heldUp && bothSharp) qualifier = " Both starters were sharp; the edge is a narrow one between two good outings.";
     else if (!heldUp && bothRough) qualifier = " Both starters struggled; this was not a case of one clean outing beating one bad one.";
     const line = heldUp
-      ? `${favoredName} (${favoredTeam}), the starter LyDia's pitcher score favored, actually outpitched ${otherName}: `
+      ? `${favoredName} (${favoredTeam}), the starter Leo's pitcher score favored, actually outpitched ${otherName}: `
         + `${fmtIp(favored.ip)} IP, ${favored.er} ER (${fmtEra(favored.era)} ERA) against ${fmtIp(other.ip)} IP, ${other.er} ER (${fmtEra(other.era)} ERA). The edge held up.${qualifier}`
-      : `${favoredName} (${favoredTeam}) was LyDia's favored starter by pitcher score, but ${otherName} actually pitched better tonight: `
+      : `${favoredName} (${favoredTeam}) was Leo's favored starter by pitcher score, but ${otherName} actually pitched better tonight: `
         + `${fmtIp(other.ip)} IP, ${other.er} ER (${fmtEra(other.era)} ERA) against ${fmtIp(favored.ip)} IP, ${favored.er} ER (${fmtEra(favored.era)} ERA). The edge did not show up in this game.${qualifier}`;
     paragraphs.push(line);
   }
 
   // 2026-08-08: report a bullpen's actual outing whenever it was flagged
   // pregame OR turned in a night far enough from league average to matter,
-  // not only when LyDia had already called it out. A pen that quietly shuts
+  // not only when Leo had already called it out. A pen that quietly shuts
   // a hot offense down for six scoreless, unflagged, used to be invisible
   // here even though it is often exactly why an offense missed its projection.
   for (const review of [awayBullpenReview, homeBullpenReview]) {

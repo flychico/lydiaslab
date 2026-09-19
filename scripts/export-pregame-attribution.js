@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
-  LyDia — pregame attribution snapshot.
+  Leo — pregame attribution snapshot.
 
   Writes data/calibration/pregame_attribution_log.csv: the same 30 model
   inputs/derived-calc columns as attribution_model_log.csv (Lynold's
@@ -14,7 +14,7 @@
     - added away_team, home_team (were previously only inferrable from the
       `matchup` "AWAY @ HOME" string)
     - pick_team now holds the literal string "home team" or "away team"
-      (which side LyDia picked), not the team name -- the team name is
+      (which side Leo picked), not the team name -- the team name is
       already in away_team/home_team
     - dropped opp_team (redundant with away_team/home_team + pick_team),
       pick_whip/opp_whip, pick_hr9/opp_hr9 (both pairs logged but never

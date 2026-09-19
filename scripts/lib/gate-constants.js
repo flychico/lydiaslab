@@ -1,7 +1,7 @@
 "use strict";
 
 /*
-  LyDia -- single source of truth for the official-pick gate thresholds.
+  Leo -- single source of truth for the official-pick gate thresholds.
 
   Both generate-member-lab.js (which enforces the live gate) and
   generate-learning-summary.js (which reports historically against that same

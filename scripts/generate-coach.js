@@ -2,7 +2,7 @@
 "use strict";
 
 /*
-  Adds the real LyDia Coach object to the current learning summary.
+  Adds the real Leo Coach object to the current learning summary.
   It never changes model weights, thresholds, picks, or results.
 
   2026-08-26, Lynold's explicit instruction -- full rewrite: "I do not think
@@ -21,7 +21,7 @@
   Now: two separate things, kept distinct on purpose.
     1. The OFFICIAL RECORD (current_model_days/current_model_picks/game_log,
        unchanged from the 2026-08-26 coach-record-fix session) -- what
-       LyDia has actually published and how it's actually done. Small
+       Leo has actually published and how it's actually done. Small
        sample, but it's the real public record.
     2. HISTORY (new) -- the full analyzed history, every tier, every date,
        run through scripts/lib/coach-correlation-core.js's real correlation
@@ -121,8 +121,8 @@ function main() {
     status: ready ? "review_ready" : "collecting",
     title: ready ? "First evidence-based model review is ready" : "Collecting a trustworthy current-model sample",
     summary: ready
-      ? `LyDia has ${dayCount} current-model graded days and ${pickCount} current-model official picks. The coach can now identify review questions, but it cannot change the model automatically.`
-      : `LyDia has ${dayCount} of ${MIN_DAYS} required current-model days and ${pickCount} of ${MIN_PICKS} required current-model official picks. Recommendations remain paused until both minimums are reached.`,
+      ? `Leo has ${dayCount} current-model graded days and ${pickCount} current-model official picks. The coach can now identify review questions, but it cannot change the model automatically.`
+      : `Leo has ${dayCount} of ${MIN_DAYS} required current-model days and ${pickCount} of ${MIN_PICKS} required current-model official picks. Recommendations remain paused until both minimums are reached.`,
     current_model_days: dayCount,
     current_model_picks: pickCount,
     minimum_days: MIN_DAYS,

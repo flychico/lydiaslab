@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
-  LyDia true-game daily recap generator.
+  Leo true-game daily recap generator.
   Uses official MLB schedule, linescore, boxscore and play-by-play data.
   Usage: node scripts/generate-recap.js [YYYY-MM-DD]
 
@@ -269,7 +269,7 @@ async function main() {
   fs.mkdirSync(RECAP_DIR, { recursive: true });
   const outFile = path.join(RECAP_DIR, `${DATE}.html`);
   const desc = `${stories[0].headline}. ${stories[1] ? stories[1].headline + ". " : ""}${finals.length} MLB games recapped for ${nice}.`;
-  fs.writeFileSync(outFile, pageShell(`MLB Recap ${nice}: key performances, rallies and final scores | LyDia`, desc, body));
+  fs.writeFileSync(outFile, pageShell(`MLB Recap ${nice}: key performances, rallies and final scores | Leo`, desc, body));
   console.log("wrote", path.relative(ROOT, outFile));
 
   // 2026-08-05: recaps/index.html is no longer written here -- see the file

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 /*
-  LyDia — confidence accountability.
+  Leo — confidence accountability.
 
   THE QUESTION THIS EXISTS TO ANSWER
   "ARI @ PIT scored 87. The final was 3-0 and it was never close. What did the

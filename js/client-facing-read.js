@@ -1,7 +1,7 @@
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
-  if (root) root.LyDiaRead = api;
+  if (root) root.LeoRead = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
@@ -34,7 +34,7 @@
       return "Bullpen workload data is unavailable.";
     }
 
-    const team = g.pick_team || "LyDia's side";
+    const team = g.pick_team || "Leo's side";
     const opponent = opponentName(g);
     // Risk index blends fatigue (workload) with efficiency (how well the pen
     // has actually pitched) — this is what the model itself uses, so the
@@ -80,7 +80,7 @@
     if (p.team === g.pick_team) {
       return `${g.pick_team} has the stronger starting pitcher matchup${p.gap ? ` by ${p.gap} rating points` : ""}.`;
     }
-    return `${p.team} has the starting pitcher advantage${p.gap ? ` by ${p.gap} rating points` : ""}, which works against LyDia's side.`;
+    return `${p.team} has the starting pitcher advantage${p.gap ? ` by ${p.gap} rating points` : ""}, which works against Leo's side.`;
   }
 
   function clientRead(g) {
@@ -104,7 +104,7 @@
     })();
 
     if (g && g.status === "official_pick") {
-      return `${team} is an official moneyline pick because LyDia gives it a ${modelProb} chance to win, compared with the market's ${marketProb} no-vig probability. The full setup earned a ${rating} Lab Rating. ${pitcher} ${bullpen}${bullpenProbNote} At ${price}, the price still offers enough value for the play to qualify as official.`;
+      return `${team} is an official moneyline pick because Leo gives it a ${modelProb} chance to win, compared with the market's ${marketProb} no-vig probability. The full setup earned a ${rating} Lab Rating. ${pitcher} ${bullpen}${bullpenProbNote} At ${price}, the price still offers enough value for the play to qualify as official.`;
     }
 
     if (g && g.status === "value_watch") {
@@ -120,7 +120,7 @@
     }
 
     if (g && g.status === "watchlist") {
-      return `${team} is worth monitoring, but it does not clear every requirement for an official pick. LyDia projects ${modelProb} win probability, the market is at ${marketProb}, and the setup carries a ${rating} Lab Rating. ${pitcher} ${bullpen}${bullpenProbNote}`;
+      return `${team} is worth monitoring, but it does not clear every requirement for an official pick. Leo projects ${modelProb} win probability, the market is at ${marketProb}, and the setup carries a ${rating} Lab Rating. ${pitcher} ${bullpen}${bullpenProbNote}`;
     }
 
     return (g && g.pass_reason) || `${team} does not have a strong enough overall setup for an official pick.`;

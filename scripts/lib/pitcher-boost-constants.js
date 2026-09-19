@@ -1,5 +1,5 @@
 /*
-  LyDia -- pitcher-score-gap boost coefficient (ERA_K).
+  Leo -- pitcher-score-gap boost coefficient (ERA_K).
 
   Single source of truth for the coefficient used in every place that prices
   a starting-pitcher score gap into odds: exp(ERA_K * scoreGap), scoreGap

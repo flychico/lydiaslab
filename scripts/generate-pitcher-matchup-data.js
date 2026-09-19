@@ -184,7 +184,7 @@ async function main() {
 
 async function getJson(url) {
   const response = await fetch(url, {
-    headers: { "user-agent": "LyDia pitcher matchup source generator" }
+    headers: { "user-agent": "Leo pitcher matchup source generator" }
   });
   if (!response.ok) throw new Error(`HTTP ${response.status}: ${url}`);
   return response.json();

@@ -2,7 +2,7 @@
 "use strict";
 
 /*
-  LyDia matchup-page generator.
+  Leo matchup-page generator.
 
   Purpose
   - Generate one permanent page for every MLB matchup in the daily member brief.
@@ -99,7 +99,7 @@ const TEAM_ID = {
 
 async function teamSeasonGames(teamId, season, endDate) {
   const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=${teamId}&startDate=${season}-01-01&endDate=${encodeURIComponent(endDate)}&gameType=R`;
-  const response = await fetch(url, { headers: { "user-agent": "LyDia matchup generator" } });
+  const response = await fetch(url, { headers: { "user-agent": "Leo matchup generator" } });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   const data = await response.json();
   const games = [];
@@ -204,7 +204,7 @@ main().catch(error => fail(error.stack || error.message));
 
 async function main() {
   if (!fs.existsSync(MEMBER_BRIEF_PATH)) {
-    throw new Error(`Missing ${relative(MEMBER_BRIEF_PATH)}. Run the LyDia source engine first.`);
+    throw new Error(`Missing ${relative(MEMBER_BRIEF_PATH)}. Run the Leo source engine first.`);
   }
 
   const brief = readJson(MEMBER_BRIEF_PATH);
@@ -654,7 +654,7 @@ async function fetchOffense30(date) {
   };
   const out = { d30: {}, season: {} };
   const grab = async (url, apply) => {
-    const r = await fetch(url, { headers: { "user-agent": "LyDia matchup generator" } });
+    const r = await fetch(url, { headers: { "user-agent": "Leo matchup generator" } });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const data = await r.json();
     for (const sp of (((data.stats || [])[0] || {}).splits || [])) { const t = canonicalTeamName(sp.team && sp.team.name); if (t) apply(t, sp.stat || {}); }
@@ -680,7 +680,7 @@ async function fetchTeamHitting(date) {
   const start = (() => { const d = new Date(`${date}T12:00:00Z`); d.setUTCDate(d.getUTCDate() - 15); return d.toISOString().slice(0, 10); })();
   const out = { season: {}, recent: {}, recentDetail: {}, standings: {} };
   const grab = async (url, handler) => {
-    const response = await fetch(url, { headers: { "user-agent": "LyDia matchup generator" } });
+    const response = await fetch(url, { headers: { "user-agent": "Leo matchup generator" } });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     handler(await response.json());
   };
@@ -752,7 +752,7 @@ function verifyStandingsCoverage(games, teamHitting) {
 async function fetchSchedule(date) {
   const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${encodeURIComponent(date)}&hydrate=probablePitcher,venue,linescore,broadcasts`;
   try {
-    const response = await fetch(url, { headers: { "user-agent": "LyDia matchup generator" } });
+    const response = await fetch(url, { headers: { "user-agent": "Leo matchup generator" } });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return await response.json();
   } catch (error) {
@@ -814,7 +814,7 @@ async function weatherForGame(game, scheduleGame, previousWeather) {
 
   try {
     const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`, {
-      headers: { "user-agent": "LyDia matchup generator" }
+      headers: { "user-agent": "Leo matchup generator" }
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
@@ -915,8 +915,8 @@ function decisionClass(status) {
 }
 
 function decisionHeadline(game) {
-  if (game.status === "pass") return `LyDia decision: Pass on ${shortTeam(game.away_team)} vs ${shortTeam(game.home_team)}`;
-  return `LyDia prediction: ${game.pick_team} moneyline`;
+  if (game.status === "pass") return `Leo decision: Pass on ${shortTeam(game.away_team)} vs ${shortTeam(game.home_team)}`;
+  return `Leo prediction: ${game.pick_team} moneyline`;
 }
 
 function decisionExplanation(game) {
@@ -928,7 +928,7 @@ function decisionExplanation(game) {
   if (gate.lab_score_passed === false) failed.push(`Lab Rating is below ${rating(gate.minimum_lab_score)}`);
   if (gate.edge_passed === false) failed.push(`model edge is below ${pct(gate.minimum_edge)}`);
   if (failed.length) return `${game.pick_team} does not qualify as an official pick because ${failed.join(" and ")}.`;
-  return `${game.pick_team || "This matchup"} does not clear every LyDia official-pick requirement.`;
+  return `${game.pick_team || "This matchup"} does not clear every Leo official-pick requirement.`;
 }
 
 
@@ -1002,7 +1002,7 @@ function buildInsights(game, pitcherGame) {
     if (pickRisk !== null && oppRisk !== null && oppRisk > pickRisk) leans.push("the bullpen");
     if (off.pick && typeof off.pick.delta_woba === "number" && off.pick.delta_woba > 0) leans.push("recent bats");
     const driver = leans.length ? `${leans.join(", ")} tilt the same way` : "team strength and the run environment tilt slightly this way";
-    caseFor.push({ title: `Why LyDia leans ${game.pick_team}`, detail: `LyDia's model makes ${game.pick_team} ${pct(game.model_probability)} to win. No single factor dominates — ${driver}, enough to lean ${game.pick_team} even though it does not clear the bar for a high-confidence pick.` });
+    caseFor.push({ title: `Why Leo leans ${game.pick_team}`, detail: `Leo's model makes ${game.pick_team} ${pct(game.model_probability)} to win. No single factor dominates — ${driver}, enough to lean ${game.pick_team} even though it does not clear the bar for a high-confidence pick.` });
   }
 
   // The opposite view: the model leans one way, but state the strongest case for
@@ -1053,7 +1053,7 @@ function buildInsights(game, pitcherGame) {
     // directly instead of checking the pick's against a fixed 0.5 midpoint.
     const oppTeamStrength = game.pick_team === game.home_team ? game.team_strength_blend_away : game.team_strength_blend_home;
     if (typeof game.team_strength_probability === "number" && typeof oppTeamStrength === "number" && oppTeamStrength > game.team_strength_probability) {
-      caseAgainst.push({ title: `Team strength favors ${oppName}`, detail: `Before any pitcher or bullpen adjustment, LyDia's own team-strength model has ${oppName} ahead (${pct(oppTeamStrength)} to ${pct(game.team_strength_probability)}). The pick still comes from ${game.pick_team} once the pitcher and bullpen terms are applied.` });
+      caseAgainst.push({ title: `Team strength favors ${oppName}`, detail: `Before any pitcher or bullpen adjustment, Leo's own team-strength model has ${oppName} ahead (${pct(oppTeamStrength)} to ${pct(game.team_strength_probability)}). The pick still comes from ${game.pick_team} once the pitcher and bullpen terms are applied.` });
     }
     if (!caseAgainst.length) {
       caseAgainst.push({ title: `The case is thin`, detail: `The model finds little going ${oppName}'s way — it trails on the pitching plan, bullpen, and recent form. The main path to a ${oppName} win is variance.` });
@@ -1061,7 +1061,7 @@ function buildInsights(game, pitcherGame) {
   }
 
   if (gate.model_probability_passed === false) {
-    concerns.push({ title: `Below the ${pct(gate.minimum_model_probability)} official gate`, detail: `Win probability is ${pct(game.model_probability)}. LyDia does not make a game official below ${pct(gate.minimum_model_probability)}, no matter how good the price is. This is a value spot, not a high-confidence winner.` });
+    concerns.push({ title: `Below the ${pct(gate.minimum_model_probability)} official gate`, detail: `Win probability is ${pct(game.model_probability)}. Leo does not make a game official below ${pct(gate.minimum_model_probability)}, no matter how good the price is. This is a value spot, not a high-confidence winner.` });
   }
   // 2026-08-16, Lynold's explicit instruction: the Lab Rating breakdown now
   // shows on every game, official picks included -- not just failing setups.
@@ -1141,14 +1141,14 @@ function buildInsights(game, pitcherGame) {
 
   let verdict;
   if (game.status === "official_pick") {
-    verdict = `LyDia backs ${game.pick_team} at ${odds(market.best_price)}. ${pct(game.model_probability)} to win against a market implying ${pct(market.no_vig_probability)} - the model sees value and the setup clears every gate.`;
+    verdict = `Leo backs ${game.pick_team} at ${odds(market.best_price)}. ${pct(game.model_probability)} to win against a market implying ${pct(market.no_vig_probability)} - the model sees value and the setup clears every gate.`;
   } else if (game.status === "value_watch") {
     const lead = concerns.length ? concerns[0].title.charAt(0).toLowerCase() + concerns[0].title.slice(1) : "the stricter official review";
-    verdict = `Real value, not an official bet. The ${signedPct(game.edge)} edge on ${game.pick_team} is genuine, but ${lead}. If you play it, you are taking on risk LyDia's official card will not.`;
+    verdict = `Real value, not an official bet. The ${signedPct(game.edge)} edge on ${game.pick_team} is genuine, but ${lead}. If you play it, you are taking on risk Leo's official card will not.`;
   } else if (game.status === "watchlist") {
     verdict = `Worth monitoring, nothing more. The setup has pieces but does not add up to a bet at today's price.`;
   } else {
-    verdict = game.pass_reason ? `LyDia passes. ${game.pass_reason}` : `LyDia passes. Nothing about this matchup clears the bar, and passing is a position.`;
+    verdict = game.pass_reason ? `Leo passes. ${game.pass_reason}` : `Leo passes. Nothing about this matchup clears the bar, and passing is a position.`;
   }
 
   return { caseFor: caseFor.slice(0, 3), caseAgainst: (typeof caseAgainst !== "undefined" ? caseAgainst : []).slice(0, 4), oppName: (typeof oppName !== "undefined" ? oppName : null), concerns: concerns.slice(0, 3), setupReasons, moneyLineReasons: moneyLineReasonsList, verdict };
@@ -1161,7 +1161,7 @@ function renderInsights(game, pitcherGame) {
   const againstCards = (insights.caseAgainst || []).map(item => `<div class="callout against"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
   const setupCards = (insights.setupReasons || []).map(item => `<div class="callout setup"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
   const priceCards = (insights.moneyLineReasons || []).map(item => `<div class="callout price"><div class="co-title">${esc(item.title)}</div><div class="co-detail">${esc(item.detail)}</div></div>`).join("");
-  // 2026-08-28, Lynold's explicit instruction: LyDia Coach's "consistency
+  // 2026-08-28, Lynold's explicit instruction: Leo Coach's "consistency
   // check" section removed from matchup pages entirely -- was here
   // 2026-08-24 through 2026-08-26.
   return `
@@ -1180,7 +1180,7 @@ function renderEdgeBar(game) {
   const model = Math.max(0, Math.min(100, game.model_probability * 100));
   const mkt = Math.max(0, Math.min(100, market.no_vig_probability * 100));
   return `<div class="edgebar">
-    <div class="eb-row"><span class="eb-name">LyDia model</span><div class="eb-track"><div class="eb-fill model" style="width:${model.toFixed(1)}%"></div></div><span class="eb-val">${pct(game.model_probability)}</span></div>
+    <div class="eb-row"><span class="eb-name">Leo model</span><div class="eb-track"><div class="eb-fill model" style="width:${model.toFixed(1)}%"></div></div><span class="eb-val">${pct(game.model_probability)}</span></div>
     <div class="eb-row"><span class="eb-name">Market</span><div class="eb-track"><div class="eb-fill mkt" style="width:${mkt.toFixed(1)}%"></div></div><span class="eb-val">${pct(market.no_vig_probability)}</span></div>
   </div>`;
 }
@@ -1338,7 +1338,7 @@ function renderMatchupPage(context) {
   const homeShort = shortTeam(game.home_team);
   const titleDate = niceDate(DATE);
   const title = `${awayShort} vs ${homeShort}${dhSuffix} Prediction, Odds and Model Pick | ${DATE}`;
-  const description = `${awayShort} vs ${homeShort} prediction for ${titleDate}: LyDia model probability, moneyline odds, starting pitchers, offense form, bullpen risk, Lab Rating and pass or pick decision.`;
+  const description = `${awayShort} vs ${homeShort} prediction for ${titleDate}: Leo model probability, moneyline odds, starting pitchers, offense form, bullpen risk, Lab Rating and pass or pick decision.`;
   const canonical = `${SITE}${urlPath}`;
   const robots = quality.indexable ? "index,follow,max-image-preview:large" : "noindex,follow";
   const pitcher = pitcherGame || {};
@@ -1360,7 +1360,7 @@ function renderMatchupPage(context) {
     datePublished: generatedAt,
     dateModified: new Date().toISOString(),
     author: { "@type": "Person", "@id": AUTHOR_ID, name: "Lynold Rivera", url: AUTHOR_URL },
-    publisher: { "@type": "Organization", "@id": `${SITE}/#organization`, name: "LyDia", url: `${SITE}/` },
+    publisher: { "@type": "Organization", "@id": `${SITE}/#organization`, name: "Leo", url: `${SITE}/` },
     mainEntityOfPage: canonical,
     isAccessibleForFree: true,
     about: { "@id": `${canonical}#event` }
@@ -1391,7 +1391,7 @@ function renderMatchupPage(context) {
 <meta name="robots" content="${robots}">
 <link rel="canonical" href="${esc(canonical)}">
 <meta property="og:type" content="article">
-<meta property="og:site_name" content="LyDia">
+<meta property="og:site_name" content="Leo">
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:url" content="${esc(canonical)}">
@@ -1404,7 +1404,7 @@ function renderMatchupPage(context) {
 <link rel="stylesheet" href="/css/style.css">
 <style>
 .matchup-head{margin-bottom:18px}.matchup-head h1{margin-bottom:6px}.byline{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.byline img{width:42px;height:42px;border-radius:50%;object-fit:cover;border:1px solid var(--border)}.status-badge{display:inline-block;color:#fff;font-size:.76rem;font-weight:800;padding:4px 10px;border-radius:20px;background:var(--accent2)}.status-badge.official{background:var(--good)}.status-badge.pass{background:var(--text-dim)}.status-badge.watch{background:var(--accent2)}.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:14px 0}.metric{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.metric .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}.metric .value{font-size:1.15rem;font-weight:800;margin-top:2px}.matchup-table{width:100%;border-collapse:collapse;font-size:.88rem}.matchup-table th,.matchup-table td{padding:8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}.matchup-table th:not(:first-child),.matchup-table td:not(:first-child){text-align:right}.section-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}.decision-card{border-color:var(--accent2)}.decision-card.official{border-color:var(--good)}.quality-list{columns:2;column-gap:24px}.quality-list li{break-inside:avoid;margin-bottom:5px}.result-win{border-color:var(--good)}.result-loss{border-color:var(--bad)}.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}.sec-head h2{margin-bottom:6px}.tool-link{font-size:.82rem;font-weight:700;white-space:nowrap}.co-head{margin:16px 0 8px;font-size:.95rem}.co-head.for{color:var(--good)}.co-head.against{color:#e08726}.co-head.setup{color:var(--accent2)}.co-head.price{color:#2f6fed}.co-head.coach{color:var(--accent3)}.callout-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}.callout{border:1px solid var(--border);border-left:4px solid var(--border);border-radius:var(--radius);padding:12px;background:var(--bg-elev)}.callout.for{border-left-color:var(--good)}.callout.against{border-left-color:#e08726}.callout.setup{border-left-color:var(--accent2)}.callout.price{border-left-color:#2f6fed}.callout.coach{border-left-color:var(--accent3)}.co-title{font-weight:800;margin-bottom:4px}.co-detail{font-size:.86rem;color:var(--text);line-height:1.5}.verdict{margin-top:14px;padding:14px;border:1px solid var(--accent2);border-radius:var(--radius);background:var(--bg-elev);font-size:.95rem;line-height:1.55}.verdict .v-label{display:inline-block;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--accent2);margin-right:8px}.full-read summary{cursor:pointer;font-weight:700;color:var(--text-dim);font-size:.85rem;margin-top:12px}.full-read p{font-size:.86rem;color:var(--text-dim);line-height:1.55}.recap-review{margin-top:14px;padding:14px;border:1px solid var(--border);border-left:4px solid var(--accent2);border-radius:var(--radius);background:var(--bg-elev)}.recap-review h3{font-size:.9rem;margin-bottom:8px}.recap-review p{font-size:.88rem;line-height:1.55;margin-bottom:8px}.edgebar{margin:12px 0 4px}.eb-row{display:flex;align-items:center;gap:10px;margin:6px 0}.eb-name{width:92px;font-size:.78rem;color:var(--text-dim);text-align:right}.eb-track{flex:1;height:14px;background:var(--bg-elev);border:1px solid var(--border);border-radius:7px;overflow:hidden}.eb-fill{height:100%;border-radius:7px}.eb-fill.model{background:var(--accent2)}.eb-fill.mkt{background:var(--text-dim)}.eb-val{width:56px;font-size:.82rem;font-weight:800;font-variant-numeric:tabular-nums}.gauge-row{display:flex;align-items:center;gap:10px;margin:6px 0}.g-label{width:120px;font-size:.78rem;color:var(--text-dim);text-align:right}.g-track{flex:1;height:11px;background:var(--bg-elev);border:1px solid var(--border);border-radius:6px;overflow:hidden}.g-fill{height:100%;border-radius:6px}.g-val{width:110px;font-size:.8rem;font-weight:700;font-variant-numeric:tabular-nums}.pen-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:10px}.pen-side{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.pen-side b{display:block;margin-bottom:6px}.adv{color:var(--good);font-weight:800}.pcard-grid{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin:6px 0 12px}.pcard{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.pcard-top{display:flex;flex-direction:column;margin-bottom:8px}.pcard-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}.pc-num{display:block;font-size:1.15rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}.pc-lab{display:block;font-size:.62rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}.pcard-vs{font-weight:800;color:var(--text-dim);font-size:.85rem}.related-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}.related-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-elev);font-size:.9rem;font-weight:600}@media(max-width:640px){.pcard-grid{grid-template-columns:1fr;gap:6px}.pcard-vs{display:none}}.k-lean{font-size:.98rem;font-weight:800;margin:6px 0 4px;padding:5px 10px;border-radius:6px;display:inline-block}.k-lean.over{background:rgba(30,142,62,.12);color:var(--good)}.k-lean.under{background:rgba(207,34,46,.10);color:var(--bad)}.k-lean.flat{background:var(--bg-card);color:var(--text-dim);font-weight:700}@media(max-width:640px){.quality-list{columns:1}.matchup-table{font-size:.8rem}.matchup-table th,.matchup-table td{padding:6px 4px}}
-/* LyDia layout cleanup: center the analysis presentation without sacrificing the table structure. */
+/* Leo layout cleanup: center the analysis presentation without sacrificing the table structure. */
 .matchup-head{text-align:center}.byline{justify-content:center}.sec-head{justify-content:center;align-items:center;text-align:center}
 section.card{text-align:center}.metric,.pcard,.pcard-top,.pen-side,.callout{text-align:center}.pcard-top{align-items:center}
 .matchup-table th,.matchup-table td{text-align:center!important}
@@ -1497,7 +1497,7 @@ section.card>h2{text-align:center}
   ${renderRelatedGames(dayLinks, game)}
 
   <div class="lead-box" style="margin-top:8px">
-    <h3 style="margin:0 0 4px">Every LyDia pick, graded in public</h3>
+    <h3 style="margin:0 0 4px">Every Leo pick, graded in public</h3>
     <p class="dim small" style="margin:0">Free daily model card by email, or open today's full slate. Membership adds delivery before first pitch.</p>
     <form class="lydia-signup-form" data-list="newsletter" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <input type="hidden" name="bot-field">
@@ -1507,7 +1507,7 @@ section.card>h2{text-align:center}
     <p style="margin-top:10px"><a class="btn blue" href="/previews/">Today's picks</a> <a class="btn secondary" href="/membership/">Membership</a></p>
   </div>
 
-  <p class="small dim" style="margin-top:18px">Model outputs are not guarantees. LyDia provides analysis and education only. Every official pick remains visible on the <a href="/results/">Results page</a>. 21+. If you or someone you know has a gambling problem, call 1-800-GAMBLER.</p>
+  <p class="small dim" style="margin-top:18px">Model outputs are not guarantees. Leo provides analysis and education only. Every official pick remains visible on the <a href="/results/">Results page</a>. 21+. If you or someone you know has a gambling problem, call 1-800-GAMBLER.</p>
 </main>
 <footer id="footer"></footer>
 <script src="/js/app.js"></script>
@@ -1548,7 +1548,7 @@ function renderPitcherCard(game, pitcherGame) {
 }
 
 // Blended read: state the actual read, not just the method. When a side's
-// bullpen is projected to throw more of the game than its named starter, LyDia
+// bullpen is projected to throw more of the game than its named starter, Leo
 // grades that side on a whole-game effective ERA (the starter's line blended
 // with the bullpen behind him, weighted by expected innings). This copy gives
 // the effective-ERA number, compares the two sides, and states which way the
@@ -1566,7 +1566,7 @@ function blendedReadCopy(p, away, home, awayTeam, homeTeam) {
     let s = `For the ${esc(teamName)}, the bullpen is projected to throw more of the game than ${esc(name)}`;
     if (ip) s += ` (about ${ip} innings for the starter)`;
     if (eff != null) {
-      s += `, so LyDia grades that side on a whole-game effective ERA of ${two(eff)}`;
+      s += `, so Leo grades that side on a whole-game effective ERA of ${two(eff)}`;
       if (own != null && Math.abs(own - eff) >= 0.01) s += ` rather than ${esc(name)}'s own ${two(own)}`;
     }
     return s + ".";
@@ -1613,7 +1613,7 @@ function renderPitcherTable(game, pitcherGame) {
   // "airOuts" bucket does not separate fly balls from liners and pop-ups),
   // so the two rows are complementary, not two independent reads.
   const rows = [
-    { label: "LyDia pitcher score", a: away.score, h: home.score, better: "high", gap: 8, fmt: v => String(v) },
+    { label: "Leo pitcher score", a: away.score, h: home.score, better: "high", gap: 8, fmt: v => String(v) },
     { label: "ERA", a: away.era, h: home.era, better: "low", gap: 0.5, fmt: v => v.toFixed(2) },
     { label: "WHIP", a: away.whip, h: home.whip, better: "low", gap: 0.1, fmt: v => v.toFixed(2) },
     { label: "K/9", a: away.k9, h: home.k9, better: "high", gap: 1.0, fmt: v => v.toFixed(1) },
@@ -1747,12 +1747,12 @@ function renderStrikeoutProjections(game, pitcherGame, kprops, officialKIndex) {
     } else if (variance !== null && Math.abs(variance) >= 0.7) {
       leanHtml = `<div class="k-lean ${variance > 0 ? "over" : "under"}">Qualifying projection: ${variance > 0 ? "OVER" : "UNDER"} ${esc(oneDecimal(prop.line))}K &middot; ${esc(variance > 0 ? "+" : "")}${esc(variance.toFixed(1))}K difference</div>`;
     } else if (variance !== null) {
-      leanHtml = `<div class="k-lean flat">No K play &middot; ${esc(variance > 0 ? "+" : "")}${esc(variance.toFixed(1))}K difference is below LyDia's 0.7K threshold</div>`;
+      leanHtml = `<div class="k-lean flat">No K play &middot; ${esc(variance > 0 ? "+" : "")}${esc(variance.toFixed(1))}K difference is below Leo's 0.7K threshold</div>`;
     }
     const marketLine = hasLine
       ? `Market ${esc(oneDecimal(prop.line))}K &middot; O ${esc(odds(prop.over))} / U ${esc(odds(prop.under))} &middot; ${esc(prop.books)} book${prop.books === 1 ? "" : "s"}`
       : `No strikeout line posted when this page was generated`;
-    return `<div class="metric"><div class="label">${mlbPitcherLink(entry.pitcher)} strikeouts</div><div class="value">${esc(oneDecimal(prop.projection))} <span class="dim small">LyDia projected Ks</span></div>${leanHtml}<div class="small dim">${marketLine}</div></div>`;
+    return `<div class="metric"><div class="label">${mlbPitcherLink(entry.pitcher)} strikeouts</div><div class="value">${esc(oneDecimal(prop.projection))} <span class="dim small">Leo projected Ks</span></div>${leanHtml}<div class="small dim">${marketLine}</div></div>`;
   }).join("");
   return `<h3 style="margin:16px 0 4px">Strikeout Projections <a class="tool-link" style="font-size:.78rem" href="/tools/strikeout-projections/">Full strikeout projections &rarr;</a></h3>
   <div class="metric-grid">${cells}</div>`;
@@ -1917,7 +1917,7 @@ function pitcherEdgeCopy(p, away, home, awayTeam, homeTeam) {
   const worse = awayBetter ? home : away;
   const betterTeam = awayBetter ? (awayTeam || better.name) : (homeTeam || better.name);
   const worseTeam = awayBetter ? (homeTeam || worse.name) : (awayTeam || worse.name);
-  const gapClause = gap ? ` (${gap} points on LyDia's pitcher score)` : "";
+  const gapClause = gap ? ` (${gap} points on Leo's pitcher score)` : "";
 
   // A side is "carried by the bullpen" when its own bullpen is projected to
   // throw more innings than its named starter -- his own line is not a
@@ -1933,15 +1933,15 @@ function pitcherEdgeCopy(p, away, home, awayTeam, homeTeam) {
   const ipClause = side => Number.isFinite(side.expectedInnings) ? `${inningsThirds(side.expectedInnings)} innings` : "a short outing";
 
   if (betterCarried && worseCarried) {
-    return `LyDia gives the ${betterTeam} pitching plan the edge over the ${worseTeam} pitching plan${gapClause}. `
+    return `Leo gives the ${betterTeam} pitching plan the edge over the ${worseTeam} pitching plan${gapClause}. `
       + `Both starters are projected for a short outing, so this compares each side's blended starting-pitcher-and-bullpen quality, not the two starters directly.`;
   }
   if (betterCarried) {
-    return `LyDia gives the ${betterTeam} pitching plan the edge over ${worse.name}${gapClause}. `
+    return `Leo gives the ${betterTeam} pitching plan the edge over ${worse.name}${gapClause}. `
       + `${better.name} is projected for only ${ipClause(better)}, with the ${betterTeam} bullpen covering the rest -- this compares the ${betterTeam} blended starting-pitcher-and-bullpen quality against ${worse.name}'s own line, not two starters directly.`;
   }
   if (worseCarried) {
-    return `LyDia gives ${better.name} the edge over the ${worseTeam} pitching plan${gapClause}. `
+    return `Leo gives ${better.name} the edge over the ${worseTeam} pitching plan${gapClause}. `
       + `${worse.name} is projected for only ${ipClause(worse)}, with the ${worseTeam} bullpen covering the rest -- this compares ${better.name}'s own line against the ${worseTeam} blended starting-pitcher-and-bullpen quality, not two starters directly.`;
   }
   return MatchupCopy.pitcherEdgeSentence({
@@ -2011,7 +2011,7 @@ function scoreAndLabel(score, label) {
 }
 
 function renderTotals(total) {
-  if (!total) return `<section class="card"><div class="sec-head"><h2>Run total projection</h2><a class="tool-link" href="/tools/totals-projections/">Full Totals Projections &rarr;</a></div><p>A verified LyDia totals projection was not available when this page was generated. Every game\'s projection lives on the <a href="/tools/totals-projections/">Totals Projections tool</a>.</p></section>`;
+  if (!total) return `<section class="card"><div class="sec-head"><h2>Run total projection</h2><a class="tool-link" href="/tools/totals-projections/">Full Totals Projections &rarr;</a></div><p>A verified Leo totals projection was not available when this page was generated. Every game\'s projection lives on the <a href="/tools/totals-projections/">Totals Projections tool</a>.</p></section>`;
   const difference = typeof total.projection === "number" && typeof total.line === "number" ? total.projection - total.line : null;
   const context = difference === null
     ? "The current model and market total cannot be compared yet."
@@ -2034,7 +2034,7 @@ function renderTotals(total) {
   return `<section class="card">
     <div class="sec-head"><h2>Run total projection</h2><a class="tool-link" href="/tools/totals-projections/">Full Totals Projections &rarr;</a></div>
     <div class="metric-grid">
-      <div class="metric"><div class="label">LyDia projection</div><div class="value">${esc(oneDecimal(total.projection))}</div></div>
+      <div class="metric"><div class="label">Leo projection</div><div class="value">${esc(oneDecimal(total.projection))}</div></div>
       <div class="metric"><div class="label">Market total</div><div class="value">${esc(oneDecimal(total.line))}</div></div>
       <div class="metric"><div class="label">Projected away runs</div><div class="value">${esc(oneDecimal(total.proj_away))}</div></div>
       <div class="metric"><div class="label">Projected home runs</div><div class="value">${esc(oneDecimal(total.proj_home))}</div></div>
@@ -2145,25 +2145,25 @@ function buildArchive() {
 
   const page = (canonical, navActive, eyebrow, h1, sub) => `<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${esc(h1)} | LyDia</title>
-<meta name="description" content="LyDia MLB matchup analysis: model probability, moneyline odds, starting pitchers, offense form, bullpen risk and public grading for every game.">
+<title>${esc(h1)} | Leo</title>
+<meta name="description" content="Leo MLB matchup analysis: model probability, moneyline odds, starting pitchers, offense form, bullpen risk and public grading for every game.">
 <link rel="canonical" href="${SITE}${canonical}">
 <link rel="stylesheet" href="/css/style.css"><style>.matchup-row{margin:8px 0}</style></head>
 <body><nav id="nav"></nav><main><p class="eyebrow">${esc(eyebrow)}</p><h1>${esc(h1)}</h1><p class="subtitle">${esc(sub)}</p>${body}
 <div class="lead-box" style="border-color:var(--accent2);margin-top:22px"><h3 style="margin:0 0 4px">Get tomorrow's MLB model card free</h3><p class="dim small" style="margin:0">One email each morning with the featured game and the previous day's graded result.</p><p style="margin-top:10px"><a class="btn blue" href="/membership/#free">Get the free card &rarr;</a></p></div>
 </main><footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("${navActive}");renderFooter();</script></body></html>`;
 
-  const sub = "Every game gets its own permanent analysis page built from LyDia's model: win probability, market odds, starting pitchers, offense form, bullpen risk and final grading. These are LyDia's own analyses, not aggregated from other sites.";
+  const sub = "Every game gets its own permanent analysis page built from Leo's model: win probability, market odds, starting pitchers, offense form, bullpen risk and final grading. These are Leo's own analyses, not aggregated from other sites.";
 
   // Canonical archive stays at /mlb/matchups/.
   fs.writeFileSync(path.join(ARCHIVE_DIR, "index.html"),
-    page("/mlb/matchups/", "/articles/", "LyDia matchup archive", "MLB Matchup Predictions and Odds", sub), "utf8");
+    page("/mlb/matchups/", "/articles/", "Leo matchup archive", "MLB Matchup Predictions and Odds", sub), "utf8");
 
   /*
     /recaps/ is the archive of past matchup analyses (Lynold 2026-08-05:
     "this page needs to be all the previous match up pages"). Same source as
     /mlb/matchups/, but past-facing: it lists only dates before today and shows
-    the final score next to each game, so it reads as a record of what LyDia
+    the final score next to each game, so it reads as a record of what Leo
     said and what happened rather than a slate listing.
   */
   const todayET = easternDate();
@@ -2179,20 +2179,20 @@ function buildArchive() {
     return `<h2 style="margin-top:22px">${esc(niceDate(date))}</h2>${rows}`;
   }).join("\n");
   const recapsBody = pastSections || '<div class="notice">No completed matchup analyses yet.</div>';
-  const recapsSub = "Every past LyDia matchup analysis, with the final score beside it. Each page keeps its original pregame reasoning and adds how that analysis held up once the game was over.";
+  const recapsSub = "Every past Leo matchup analysis, with the final score beside it. Each page keeps its original pregame reasoning and adds how that analysis held up once the game was over.";
   const recapsDir = path.join(ROOT, "recaps");
   fs.mkdirSync(recapsDir, { recursive: true });
   fs.writeFileSync(path.join(recapsDir, "index.html"), `<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MLB Recaps: every past LyDia matchup analysis | LyDia</title>
-<meta name="description" content="Every past LyDia MLB matchup analysis with its final score: pregame model reasoning, and how that analysis held up.">
+<title>MLB Recaps: every past Leo matchup analysis | Leo</title>
+<meta name="description" content="Every past Leo MLB matchup analysis with its final score: pregame model reasoning, and how that analysis held up.">
 <link rel="canonical" href="${SITE}/recaps/">
 <link rel="stylesheet" href="/css/style.css"><style>.matchup-row{margin:8px 0}</style></head>
-<body><nav id="nav"></nav><main><p class="eyebrow">LyDia recaps</p><h1>MLB Recaps</h1><p class="subtitle">${esc(recapsSub)}</p>${recapsBody}
+<body><nav id="nav"></nav><main><p class="eyebrow">Leo recaps</p><h1>MLB Recaps</h1><p class="subtitle">${esc(recapsSub)}</p>${recapsBody}
 <div class="lead-box" style="border-color:var(--accent2);margin-top:22px"><h3 style="margin:0 0 4px">Get tomorrow's MLB model card free</h3><p class="dim small" style="margin:0">One email each morning with the featured game and the previous day's graded result.</p><p style="margin-top:10px"><a class="btn blue" href="/membership/#free">Get the free card &rarr;</a></p></div>
 </main><footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/recaps/");renderFooter();</script></body></html>`, "utf8");
 
-  // The Articles tab shows LyDia's own matchup analyses. It used to be
+  // The Articles tab shows Leo's own matchup analyses. It used to be
   // overwritten by a later "Research Desk" step that scraped outside betting
   // headlines -- that step, scripts/generate-research-desk.js, and its
   // data/research-desk.json cache were removed entirely on 2026-08-13
@@ -2202,7 +2202,7 @@ function buildArchive() {
   const articlesDir = path.join(ROOT, "articles");
   fs.mkdirSync(articlesDir, { recursive: true });
   fs.writeFileSync(path.join(articlesDir, "index.html"),
-    page("/articles/", "/articles/", "LyDia analysis", "MLB Matchup Analysis", sub), "utf8");
+    page("/articles/", "/articles/", "Leo analysis", "MLB Matchup Analysis", sub), "utf8");
 }
 
 function updateSitemap(manifest) {

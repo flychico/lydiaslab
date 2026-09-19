@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
-  LyDia — daily pitcher-data export.
+  Leo — daily pitcher-data export.
 
   Writes data/calibration/pitcher_data_log.csv: every model input scorePitcher()
   uses (era, whip, ip, so, bb, gs, gp from MLB StatsAPI season stats) plus the

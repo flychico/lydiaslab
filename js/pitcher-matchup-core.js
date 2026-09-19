@@ -3,7 +3,7 @@
 (function attachPitcherCore(root, factory) {
   const api = factory();
   if (typeof module !== "undefined" && module.exports) module.exports = api;
-  if (root) root.LyDiaPitcherCore = api;
+  if (root) root.LeoPitcherCore = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function buildPitcherCore() {
   const VERSION = "pitcher-matchup-core-v2-role-aware";
   const LEAGUE_ERA = 4.20;
@@ -352,7 +352,7 @@
     return {
       date,
       generated_at: generatedAt || new Date().toISOString(),
-      source_of_truth: "LyDia Pitcher Matchup Tool",
+      source_of_truth: "Leo Pitcher Matchup Tool",
       source_version: VERSION,
       method: "Role-aware pitcher model using starter-only game logs. Traditional starters, limited starters, openers, and unknown roles receive workload-appropriate innings; the remainder belongs to the bullpen.",
       pitchers_by_id: pitchersById,

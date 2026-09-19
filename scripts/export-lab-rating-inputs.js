@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
-  LyDia — daily Lab Rating raw-inputs export.
+  Leo — daily Lab Rating raw-inputs export.
 
   Writes data/calibration/lab_rating_inputs_log.csv: every RAW input
   scripts/lib/lab-rating-core.js's calcLabRating() reads (NOT the pre-computed

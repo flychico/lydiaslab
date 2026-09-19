@@ -1,7 +1,7 @@
 /*
-  LyDia — Lab Rating core (v3, measured-components)
+  Leo — Lab Rating core (v3, measured-components)
 
-  Lab Rating answers one question only: how strong is LyDia's baseball
+  Lab Rating answers one question only: how strong is Leo's baseball
   analysis of this game? It is NOT win probability and it is NOT a price
   judgement. The sportsbook number never enters this file.
 
@@ -191,7 +191,7 @@
   2. It rewarded facing a weak opponent pitcher, not pitching well. A great
      start against a great opposing starter (gap ~0) scored near zero here,
      while a mediocre start against a truly bad one (gap large) scored near
-     the max -- backwards from "how strong is LyDia's own starter," which is
+     the max -- backwards from "how strong is Leo's own starter," which is
      what this component is supposed to be answering.
 
   New formula: the picked pitcher's own individualized pitcher_score (20-92
@@ -332,7 +332,7 @@ function round(n, dp = 2) {
 function isNum(n) { return typeof n === "number" && Number.isFinite(n); }
 
 /*
-  Model conviction. How far above a coin flip LyDia actually is. This replaces
+  Model conviction. How far above a coin flip Leo actually is. This replaces
   model-vs-market edge as the primary driver: conviction is a property of the
   model, edge is a property of the sportsbook.
 */
@@ -483,7 +483,7 @@ function assignedBullpenInnings(plan) {
 }
 
 /*
-  Lab Rating v3. Every argument is internal to LyDia's model. There is
+  Lab Rating v3. Every argument is internal to Leo's model. There is
   deliberately no market parameter — adding one is a regression.
 */
 function calcLabRating(input) {
@@ -571,7 +571,7 @@ function calcLabRating(input) {
     model_edge_points: 0,
     base_points: 0,
 
-    note: "Lab Rating grades LyDia's analysis quality only. It contains no market or price input."
+    note: "Lab Rating grades Leo's analysis quality only. It contains no market or price input."
   };
 }
 

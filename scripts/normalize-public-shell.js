@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
-  LyDia public shell and language normalizer.
+  Leo public shell and language normalizer.
 
   Purpose:
   - Fix existing static/generated HTML pages that still contain old hardcoded nav/footer markup.
@@ -141,19 +141,19 @@ function sanitizePublicLanguage(html) {
 
   // Remove internal script paths from public pages.
   out = out.replace(/<code>node\s+scripts\/generate-[^<]+<\/code>/gi, "the daily workflow");
-  out = out.replace(/scripts\/generate-[a-z0-9_.-]+\.js/gi, "LyDia daily engine");
+  out = out.replace(/scripts\/generate-[a-z0-9_.-]+\.js/gi, "Leo daily engine");
   out = out.replace(/source_of_truth/gi, "daily_source");
   out = out.replace(/source-of-truth/gi, "daily");
 
   // Replace raw ISO timestamps in old generated pages with public wording.
-  out = out.replace(/Generated\s+20\d{2}-\d{2}-\d{2}T[0-9:.]+Z\s*·\s*/g, "Updated by LyDia · ");
-  out = out.replace(/Generated:\s*20\d{2}-\d{2}-\d{2}T[0-9:.]+Z/gi, "Updated by LyDia");
-  out = out.replace(/Generated\s+20\d{2}-\d{2}-\d{2}T[0-9:.]+Z/gi, "Updated by LyDia");
+  out = out.replace(/Generated\s+20\d{2}-\d{2}-\d{2}T[0-9:.]+Z\s*·\s*/g, "Updated by Leo · ");
+  out = out.replace(/Generated:\s*20\d{2}-\d{2}-\d{2}T[0-9:.]+Z/gi, "Updated by Leo");
+  out = out.replace(/Generated\s+20\d{2}-\d{2}-\d{2}T[0-9:.]+Z/gi, "Updated by Leo");
 
   // Replace internal source labels with public language.
   out = out.replace(/Official record source:\s*<code>[^<]+<\/code>\.?/gi, "Official card record is locked before first pitch.");
   out = out.replace(/<strong>Source:<\/strong>\s*generated bullpen file\s*<code>[^<]+<\/code>/gi, "<strong>Bullpen data loaded.</strong>");
-  out = out.replace(/<strong>Source:<\/strong>\s*[^<]*LyDia daily engine[^<]*/gi, "<strong>LyDia Daily Engine</strong>");
+  out = out.replace(/<strong>Source:<\/strong>\s*[^<]*Leo daily engine[^<]*/gi, "<strong>Leo Daily Engine</strong>");
 
 
   // Avoid dynamic raw timestamps in public tool status messages.
@@ -189,11 +189,11 @@ function ensureHeadTags(html, rel) {
 
   // Open Graph + Twitter Card, derived from existing title/description/canonical.
   if (!/property=["']og:title["']/i.test(out)) {
-    const title = (out.match(/<title>([\s\S]*?)<\/title>/i) || [,"LyDia \u2014 Daily MLB Model"])[1].trim();
+    const title = (out.match(/<title>([\s\S]*?)<\/title>/i) || [,"Leo \u2014 Daily MLB Model"])[1].trim();
     const desc = (out.match(/<meta name=["']description["'] content=["']([^"']*)["']/i) || [,"Daily MLB moneyline model previews, transparent results, and research tools."])[1];
     const canon = (out.match(/<link rel=["']canonical["'] href=["']([^"']*)["']/i) || [,"https://lydiaslab.com/" + rel.replace(/index\.html$/, "")])[1];
     const block = `<meta property="og:type" content="website">
-<meta property="og:site_name" content="LyDia">
+<meta property="og:site_name" content="Leo">
 <meta property="og:title" content="${escAttr(title)}">
 <meta property="og:description" content="${escAttr(desc)}">
 <meta property="og:url" content="${escAttr(canon)}">

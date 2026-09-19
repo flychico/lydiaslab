@@ -1,5 +1,5 @@
 /*
-  LyDia — Totals Setup Rating core (v2, market-independent)
+  Leo — Totals Setup Rating core (v2, market-independent)
 
   This rating answers one question only: how much do we actually know about
   this game's total-runs inputs? It is NOT an edge, NOT a probability, and
@@ -15,7 +15,7 @@
   `projection - line`), on top of a 40-point floor from base + data-presence
   alone. That made `OFFICIAL_TOTAL_LAB = 80` reachable by disagreement alone:
   at n=71 the gate was shown to select for confident-and-wrong over
-  humble-and-right (LyDia MAE 5.22 vs line MAE 2.83 in the 90+ band). See
+  humble-and-right (Leo MAE 5.22 vs line MAE 2.83 in the 90+ band). See
   EXP-20260727-01 in the vault for the full diagnosis.
 
   v2 redistributes all 100 points across internal inputs only:
@@ -143,7 +143,7 @@ function completenessPoints({ parkKnown, avgGamesPlayed }) {
 }
 
 /*
-  Totals Setup Rating v2. Every argument is internal to LyDia's model —
+  Totals Setup Rating v2. Every argument is internal to Leo's model —
   there is deliberately no market/line parameter. Adding one is a regression.
 
   Inputs:

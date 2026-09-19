@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
-  LyDia — full-slate calibration grading.
+  Leo — full-slate calibration grading.
 
   Grades EVERY game the model analyzed (official picks, value watches,
   watchlist, and passes) against final scores, so learning can measure

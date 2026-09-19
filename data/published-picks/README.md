@@ -1,6 +1,6 @@
 # Published Picks
 
-This folder is the official dated record for LyDia picks.
+This folder is the official dated record for Leo picks.
 
 Rules:
 

@@ -12,15 +12,15 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Offense Matchup Tool — LyDia's Lab</title>
+<title>Offense Matchup Tool — Leo's Lab</title>
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="LyDia">
-<meta property="og:title" content="Offense Matchup Tool — LyDia's Lab">
+<meta property="og:site_name" content="Leo">
+<meta property="og:title" content="Offense Matchup Tool — Leo's Lab">
 <meta property="og:description" content="Compare both offenses in every MLB game: recent form vs season baseline, run scoring, strikeout rate, starting lineups, and how each lineup performs against tonight">
 <meta property="og:url" content="https://lydiaslab.com/tools/offense-matchups/">
 <meta property="og:image" content="https://lydiaslab.com/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Offense Matchup Tool — LyDia's Lab">
+<meta name="twitter:title" content="Offense Matchup Tool — Leo's Lab">
 <meta name="twitter:description" content="Compare both offenses in every MLB game: recent form vs season baseline, run scoring, strikeout rate, starting lineups, and how each lineup performs against tonight">
 <meta name="twitter:image" content="https://lydiaslab.com/img/og-card.png">
 
@@ -67,7 +67,7 @@ table.lu td:first-child, table.lu td:nth-child(2) { text-align:left; }
 <body>
 <nav id="nav"></nav>
 <main>
-  <p class="eyebrow">LyDia's Lab</p>
+  <p class="eyebrow">Leo's Lab</p>
   <h1>Offense Matchup Tool</h1>
   <p class="subtitle">Which lineup is hot, which is actually good, and how each hits the hand of tonight's opposing starter. Quality and heat are different things — this tool shows both, plus the actual starting lineup once it posts.</p>
 
@@ -132,8 +132,8 @@ function jumpToGame(pk) {
 function f3(v){ return Number.isFinite(v) ? v.toFixed(3).replace(/^0/, "") : "—"; }
 function seasonYear(){ const d = new Date(datePick.value + "T12:00"); return d.getMonth() >= 2 ? d.getFullYear() : d.getFullYear() - 1; }
 
-// wOBA linear weights -- must match LyDia daily engine's
-// fetchOffense30(), LyDia daily engine's wobaOf(), and
+// wOBA linear weights -- must match Leo daily engine's
+// fetchOffense30(), Leo daily engine's wobaOf(), and
 // stats/index.html's wobaOf() exactly (kept in sync manually across all four).
 const WOBA_W = { bb: 0.69, hbp: 0.72, "1b": 0.89, "2b": 1.27, "3b": 1.62, hr: 2.10 };
 function wobaOf(st) {

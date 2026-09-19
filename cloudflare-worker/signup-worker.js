@@ -1,5 +1,5 @@
 /*
-  LyDia -- signup form receiver (replaces Netlify Forms).
+  Leo -- signup form receiver (replaces Netlify Forms).
 
   2026-08-24: after moving off Netlify to GitHub Pages, the two <form
   data-netlify="true"> forms (name="newsletter" / "free-preview" and
@@ -66,12 +66,12 @@ async function parseBody(request) {
 }
 
 function thanksPage(message) {
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>LyDia</title>
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Leo</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>body{font-family:system-ui,-apple-system,sans-serif;background:#0b1220;color:#e8edf5;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
 .card{max-width:420px;padding:32px;text-align:center}
 a{color:#6db4ff}</style></head>
-<body><div class="card"><h1>&#9993; ${message}</h1><p><a href="https://lydiaslab.com/">Back to LyDia</a></p></div></body></html>`;
+<body><div class="card"><h1>&#9993; ${message}</h1><p><a href="https://lydiaslab.com/">Back to Leo</a></p></div></body></html>`;
 }
 
 // GitHub Contents API: fetch current file (sha + decoded content), or null if it doesn't exist yet.

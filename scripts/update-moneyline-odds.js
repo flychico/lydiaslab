@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
-  LyDia moneyline odds capture.
+  Leo moneyline odds capture.
   Fetches today's h2h (moneyline) odds and writes them to
   data/moneyline-odds/<date>.json for generate-member-lab.js to read as a
   fallback when it runs without ODDS_API_KEY (every publish-picks.yml run).

@@ -57,7 +57,7 @@ patch("scripts/generate-member-lab.js", [
 ]);
 
 patch("scripts/lib/bullpen-fatigue-core.js", [
-  ["LyDia Bullpen Fatigue Core v2.1-locked-formula", "LyDia Bullpen Fatigue Core v3-runs-aware"],
+  ["Leo Bullpen Fatigue Core v2.1-locked-formula", "Leo Bullpen Fatigue Core v3-runs-aware"],
   ["Scoring rule (v3, runs-aware):", "Active owned scoring rule (v3, runs-aware):"],
   ["// Audit formula v3. Reliever counts remain context-only.", "// Active owned formula v3. Reliever counts remain context-only."],
   ['const VERSION = "bullpen-fatigue-v3-runs-aware";', 'const VERSION = "bullpen-fatigue-v3-runs-aware";']

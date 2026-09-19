@@ -39,7 +39,7 @@ function planStarterIdentity(sidePlan) {
 
 async function fetchSchedule(date) {
   const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${encodeURIComponent(date)}&hydrate=probablePitcher`;
-  const response = await fetch(url, { headers: { "user-agent": "LyDia totals freshness check" } });
+  const response = await fetch(url, { headers: { "user-agent": "Leo totals freshness check" } });
   if (!response.ok) throw new Error(`schedule HTTP ${response.status}`);
   return response.json();
 }

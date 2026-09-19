@@ -2,7 +2,7 @@
 "use strict";
 
 /*
-  Generate LyDia bullpen fatigue JSON only.
+  Generate Leo bullpen fatigue JSON only.
   This is useful for testing the bullpen module separately from the full daily picks workflow.
 */
 

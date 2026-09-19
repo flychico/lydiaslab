@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* LyDia — grade published picks against final scores, log to
+/* Leo — grade published picks against final scores, log to
    data/results_log.csv, then rebuild data/results.json and
    results/index.html from that log.
    Usage: node scripts/grade-results.js [YYYY-MM-DD]  (default: yesterday in US Eastern)

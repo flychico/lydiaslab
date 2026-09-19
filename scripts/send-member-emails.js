@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
-  LyDia — email the Daily Member Brief to paid members.
+  Leo — email the Daily Member Brief to paid members.
 
   Source:
   - Prefer data/member-brief/<date>.json from scripts/generate-member-lab.js
@@ -28,7 +28,7 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..");
 
 const RESEND_API_KEY = (process.env.RESEND_API_KEY || "").trim();
-const EMAIL_FROM = (process.env.EMAIL_FROM || "LyDia Picks <picks@lydiaslab.com>").trim();
+const EMAIL_FROM = (process.env.EMAIL_FROM || "Leo Picks <picks@lydiaslab.com>").trim();
 const EMAIL_REPLY_TO = (process.env.EMAIL_REPLY_TO || "").trim();
 
 // 2026-08-24: replaces NETLIFY_API_TOKEN / NETLIFY_SITE_ID.
@@ -138,8 +138,8 @@ function buildFromBrief(dateStr, brief, isPreview) {
   const passes = games.filter(g => g.status === "pass");
 
   const subjectBase = official.length
-    ? `LyDia Daily Member Brief — ${nice} (${official.length} official pick${official.length > 1 ? "s" : ""})`
-    : `LyDia Daily Member Brief — ${nice} (no official picks)`;
+    ? `Leo Daily Member Brief — ${nice} (${official.length} official pick${official.length > 1 ? "s" : ""})`
+    : `Leo Daily Member Brief — ${nice} (no official picks)`;
 
   const subject = isPreview ? `[Preview — owner copy] ${subjectBase}` : subjectBase;
 
@@ -177,7 +177,7 @@ function buildFromBrief(dateStr, brief, isPreview) {
 
   const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:620px;margin:0 auto;color:#1a1a1a">
     ${previewBanner}
-    <h2 style="margin-bottom:4px;color:#d6508e">LyDia Daily Member Brief — ${esc(nice)}</h2>
+    <h2 style="margin-bottom:4px;color:#d6508e">Leo Daily Member Brief — ${esc(nice)}</h2>
     <p style="color:#666;font-size:14px">${esc(brief.summary || `${official.length} official picks, ${watchlist.length} watchlist games, ${passes.length} passes.`)}</p>
     ${officialHtml}
     ${watchHtml}
@@ -189,7 +189,7 @@ function buildFromBrief(dateStr, brief, isPreview) {
     </p>
     <p style="font-size:12px;color:#888;margin-top:14px">Your Lab: <a href="https://lydiaslab.com/member-brief/" style="color:#4d9fdc">Member Brief</a> · <a href="https://lydiaslab.com/tools/pitcher-matchups/" style="color:#4d9fdc">Pitchers</a> · <a href="https://lydiaslab.com/tools/offense-matchups/" style="color:#4d9fdc">Offense</a> · <a href="https://lydiaslab.com/tools/bullpen-fatigue/" style="color:#4d9fdc">Bullpens</a> · <a href="https://lydiaslab.com/tools/strikeout-projections/" style="color:#4d9fdc">Strikeouts</a> · <a href="https://lydiaslab.com/tools/totals-projections/" style="color:#4d9fdc">Totals</a></p>
     <p style="font-size:12px;color:#aaa;margin-top:24px;border-top:1px solid #eee;padding-top:10px">
-      LyDia — analysis and education only, not betting advice. No win rate is guaranteed. Please bet responsibly;
+      Leo — analysis and education only, not betting advice. No win rate is guaranteed. Please bet responsibly;
       if gambling stops being fun, call 1-800-GAMBLER. Manage your subscription from your PayPal account.
       Questions? Just reply to this email.
     </p>
@@ -211,7 +211,7 @@ function buildFromBrief(dateStr, brief, isPreview) {
     ? `\n\nWatchlist: ${watchlist.map(g => `${g.game} (${g.pick_team || "—"}, Lab ${g.lab_score ?? "—"})`).join(" · ")}`
     : "";
 
-  const text = `${isPreview ? "PREVIEW SEND — owner copy.\n\n" : ""}LyDia Daily Member Brief — ${nice}
+  const text = `${isPreview ? "PREVIEW SEND — owner copy.\n\n" : ""}Leo Daily Member Brief — ${nice}
 
 ${brief.summary || ""}
 
@@ -223,7 +223,7 @@ Full member brief: https://lydiaslab.com/member-brief/
 Public preview: https://lydiaslab.com/previews/${dateStr}.html
 Results history: https://lydiaslab.com/results/
 
-LyDia — analysis and education only, not betting advice. 1-800-GAMBLER.`;
+Leo — analysis and education only, not betting advice. 1-800-GAMBLER.`;
 
   return { subject, html, text };
 }
@@ -234,8 +234,8 @@ function buildFromLegacyPicks(dateStr, picksFile, isPreview) {
   const active = picks.filter(p => p.moneyline && p.moneyline.pick && !p.moneyline.isPass);
 
   const subjectBase = active.length
-    ? `LyDia Picks — ${nice} (${active.length} official pick${active.length > 1 ? "s" : ""})`
-    : `LyDia Picks — ${nice} (no official picks)`;
+    ? `Leo Picks — ${nice} (${active.length} official pick${active.length > 1 ? "s" : ""})`
+    : `Leo Picks — ${nice} (no official picks)`;
 
   const subject = isPreview ? `[Preview — owner copy] ${subjectBase}` : subjectBase;
 
@@ -251,7 +251,7 @@ function buildFromLegacyPicks(dateStr, picksFile, isPreview) {
 
   const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:560px;margin:0 auto;color:#1a1a1a">
     ${isPreview ? `<div style="background:#fff3cd;color:#664d03;font-size:12px;padding:8px 12px;border-radius:6px;margin-bottom:14px">Preview send — owner copy.</div>` : ""}
-    <h2 style="margin-bottom:4px;color:#d6508e">LyDia Picks — ${esc(nice)}</h2>
+    <h2 style="margin-bottom:4px;color:#d6508e">Leo Picks — ${esc(nice)}</h2>
     <p style="color:#666;font-size:14px">${active.length ? `${active.length} official pick${active.length > 1 ? "s" : ""}.` : `No official picks today.`}</p>
     ${rowsHtml || `<p style="color:#888;font-style:italic">Nothing cleared the bar today.</p>`}
     <p style="font-size:13px;color:#888;margin-top:20px">
@@ -260,11 +260,11 @@ function buildFromLegacyPicks(dateStr, picksFile, isPreview) {
     </p>
     <p style="font-size:12px;color:#888;margin-top:14px">Your Lab: <a href="https://lydiaslab.com/member-brief/" style="color:#4d9fdc">Member Brief</a> · <a href="https://lydiaslab.com/tools/pitcher-matchups/" style="color:#4d9fdc">Pitchers</a> · <a href="https://lydiaslab.com/tools/offense-matchups/" style="color:#4d9fdc">Offense</a> · <a href="https://lydiaslab.com/tools/bullpen-fatigue/" style="color:#4d9fdc">Bullpens</a> · <a href="https://lydiaslab.com/tools/strikeout-projections/" style="color:#4d9fdc">Strikeouts</a> · <a href="https://lydiaslab.com/tools/totals-projections/" style="color:#4d9fdc">Totals</a></p>
     <p style="font-size:12px;color:#aaa;margin-top:24px;border-top:1px solid #eee;padding-top:10px">
-      LyDia — analysis and education only, not betting advice. 1-800-GAMBLER.
+      Leo — analysis and education only, not betting advice. 1-800-GAMBLER.
     </p>
   </div>`;
 
-  const text = `${isPreview ? "PREVIEW SEND — owner copy.\n\n" : ""}LyDia Picks — ${nice}\n\n` +
+  const text = `${isPreview ? "PREVIEW SEND — owner copy.\n\n" : ""}Leo Picks — ${nice}\n\n` +
     (active.length
       ? active.map(p => `${p.away} @ ${p.home}\n  Moneyline: ${p.moneyline.pick} (${pct(p.moneyline.prob)}, ${fmtAm(p.moneyline.bestAm)})`).join("\n\n")
       : "Nothing cleared the bar today.") +

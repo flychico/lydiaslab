@@ -1,4 +1,4 @@
-/* LyDia — shared utilities */
+/* Leo — shared utilities */
 
 // ---------- Odds math ----------
 const Odds = {
@@ -65,7 +65,7 @@ const ApiKey = {
 
 // ---------- Nav ----------
 // Tab order is deliberate: Scoreboard, Picks, Pitchers, Lab, Stats, Results,
-// Recaps. There is no Home tab — the LyDia wordmark is the route home. Picks
+// Recaps. There is no Home tab — the Leo wordmark is the route home. Picks
 // points at /previews/, the unified picks product; /picks/ redirects there and
 // is still matched for the active state so older pages highlight correctly.
 function renderNav(active) {
@@ -91,7 +91,7 @@ function renderNav(active) {
   const el = document.getElementById("nav");
   if (!el) return;
   el.innerHTML = '<div class="nav-inner">'
-    + '<a class="brand" href="/" aria-label="LyDia home"><span class="brand-ly">Ly</span><span class="brand-dia">Dia</span></a>'
+    + '<a class="brand" href="/" aria-label="Leo home"><span class="brand-ly">Ly</span><span class="brand-dia">Dia</span></a>'
     + links.map(function (l) {
         if (l[0] === "/tools/") {
           var tools = [
@@ -231,7 +231,7 @@ function renderFooter() {
     + '</form>'
     + '<div class="dim small" style="margin-top:5px">The morning slate and model reads, free by email. Unsubscribe anytime.</div>'
     + '</div>'
-    + "LyDia — analysis and education only, not betting advice. "
+    + "Leo — analysis and education only, not betting advice. "
     + "Odds and stats can change quickly; always verify with your sportsbook. "
     + "Please bet responsibly. If gambling stops being fun, call 1-800-GAMBLER.";
   wireAllSignupForms(el);

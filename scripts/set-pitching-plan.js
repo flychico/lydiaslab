@@ -13,7 +13,7 @@ function option(name, fallback = "") {
 }
 
 async function getJson(url) {
-  const response = await fetch(url, { headers: { "user-agent": "LyDia manual pitching-plan editor" } });
+  const response = await fetch(url, { headers: { "user-agent": "Leo manual pitching-plan editor" } });
   if (!response.ok) throw new Error(`HTTP ${response.status}: ${url}`);
   return response.json();
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
-  LyDia — export a day's K-props capture to Excel.
+  Leo — export a day's K-props capture to Excel.
 
   Reads data/k-props/<date>.json (written by update-k-props.js) and writes
   data/k-props/<date>.xlsx alongside it, same 43-column schema as

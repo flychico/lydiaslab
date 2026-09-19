@@ -1,5 +1,5 @@
 /*
-  LyDia — data/results_log.csv: the flat, hand-editable results ledger.
+  Leo — data/results_log.csv: the flat, hand-editable results ledger.
 
   One row per graded market leg (a game can produce up to 3+ rows: one
   moneyline, one game_total, one per pitcher-strikeout prop). This is the

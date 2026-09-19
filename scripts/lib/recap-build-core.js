@@ -15,7 +15,7 @@ function known(v) { return v !== null && v !== undefined && v !== ""; }
 async function fetchBoxscore(gamePk) {
   const url = `https://statsapi.mlb.com/api/v1/game/${gamePk}/boxscore`;
   try {
-    const response = await fetch(url, { headers: { "user-agent": "LyDia recap builder" } });
+    const response = await fetch(url, { headers: { "user-agent": "Leo recap builder" } });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return await response.json();
   } catch (error) {

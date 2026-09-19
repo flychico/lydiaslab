@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 /*
-  LyDia — one-time ledger consolidation.
+  Leo — one-time ledger consolidation.
 
   THE PROBLEM THIS FIXES
   Four learning ledgers exist as old/new pairs. When each versioned ledger was

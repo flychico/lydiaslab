@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 /*
-  LyDia — total-runs projections + market total lines (K-props pattern).
+  Leo — total-runs projections + market total lines (K-props pattern).
 
   2026-07-29: rebuilt as an ADDITIVE runs model. No league-RPG multiplication
   anywhere. Per team:
@@ -806,7 +806,7 @@ async function main() {
     }
   } catch (e) {}
 
-  const payload = { date: DATE, generated_at: new Date().toISOString(), model_version: TOTALS_MODEL_VERSION, policy: TOTALS_POLICY, source: "LyDia totals projection (median RPG + lineup wOBA offense adjustment + FIP-lite starter adjustment + shrunk bullpen era_7d adjustment) + the-odds-api totals consensus", league_rpg: Number(lgRPG.toFixed(2)), probables, lineups_posted: lineupsPosted, pitching_plan_signature: pitchingPlanSignature, games: out, learned_bias: learnedBias, learned_n: learnedN };
+  const payload = { date: DATE, generated_at: new Date().toISOString(), model_version: TOTALS_MODEL_VERSION, policy: TOTALS_POLICY, source: "Leo totals projection (median RPG + lineup wOBA offense adjustment + FIP-lite starter adjustment + shrunk bullpen era_7d adjustment) + the-odds-api totals consensus", league_rpg: Number(lgRPG.toFixed(2)), probables, lineups_posted: lineupsPosted, pitching_plan_signature: pitchingPlanSignature, games: out, learned_bias: learnedBias, learned_n: learnedN };
   fs.mkdirSync(path.join(ROOT, "data", "totals"), { recursive: true });
   fs.writeFileSync(path.join(ROOT, "data", "totals", `${DATE}.json`), JSON.stringify(payload, null, 1));
   fs.writeFileSync(path.join(ROOT, "data", "totals", "today.json"), JSON.stringify(payload, null, 1));

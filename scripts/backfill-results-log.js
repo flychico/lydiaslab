@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
-  LyDia — ONE-TIME migration: convert the existing (pre-CSV) data/results.json
+  Leo — ONE-TIME migration: convert the existing (pre-CSV) data/results.json
   into data/results_log.csv rows, so switching to the new CSV-driven
   grade-results.js / rebuild-results.js doesn't lose the 31 days of history
   already graded under the old system.

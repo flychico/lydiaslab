@@ -12,15 +12,15 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MLB Team Stats — Offense Trends & Standings | LyDia</title>
+<title>MLB Team Stats — Offense Trends & Standings | Leo</title>
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="LyDia">
-<meta property="og:title" content="MLB Team Stats — Offense Trends &amp; Standings | LyDia">
+<meta property="og:site_name" content="Leo">
+<meta property="og:title" content="MLB Team Stats — Offense Trends &amp; Standings | Leo">
 <meta property="og:description" content="MLB team stats that matter for betting: offense and defense per game, run differential, expected record from run differential, and last-10 form.">
 <meta property="og:url" content="https://lydiaslab.com/stats/">
 <meta property="og:image" content="https://lydiaslab.com/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="MLB Team Stats — Offense Trends &amp; Standings | LyDia">
+<meta name="twitter:title" content="MLB Team Stats — Offense Trends &amp; Standings | Leo">
 <meta name="twitter:description" content="MLB team stats that matter for betting: offense and defense per game, run differential, expected record from run differential, and last-10 form.">
 <meta name="twitter:image" content="https://lydiaslab.com/img/og-card.png">
 
@@ -55,15 +55,15 @@ td.team-cell { font-weight: 600; white-space: nowrap; }
 
   <div id="stories"></div>
 
-  <h2 style="margin-top:18px">LyDia's Own Record</h2>
+  <h2 style="margin-top:18px">Leo's Own Record</h2>
   <div class="notice legend">
-    <b>How to read this:</b> every graded model lean gets a row in LyDia's own ledger, win or lose — this is that
+    <b>How to read this:</b> every graded model lean gets a row in Leo's own ledger, win or lose — this is that
     ledger, not a highlight reel. <b>Official picks only</b> is what actually went out on the card; <b>every graded
     model lean</b> includes passes and watchlist reads the model evaluated but didn't publish. Tap a team for its
     full breakdown.
   </div>
   <div id="own-filter" style="margin-bottom:8px"></div>
-  <div id="own-status" class="loading">Loading LyDia's record…</div>
+  <div id="own-status" class="loading">Loading Leo's record…</div>
   <div id="own-record"></div>
 
   <h2 style="margin-top:18px">The Map — every team, two axes, your call</h2>
@@ -121,13 +121,13 @@ td.team-cell { font-weight: 600; white-space: nowrap; }
   <div id="status" class="loading">Loading standings…</div>
   <div id="standings"></div>
 
-  <h2 style="margin-top:26px">Situational Trends — LyDia's Angles</h2>
+  <h2 style="margin-top:26px">Situational Trends — Leo's Angles</h2>
   <div class="notice legend">
-    <b>How to read this:</b> these splits come from LyDia's own graded-lean ledger (every model lean, official or
+    <b>How to read this:</b> these splits come from Leo's own graded-lean ledger (every model lean, official or
     not) crossed against real team form from the standings above. It's a mirror on the model's own tendencies, not a
     market trend claim.
   </div>
-  <div id="situational"><div class="dim small">Waiting on LyDia's ledger and standings to finish loading…</div></div>
+  <div id="situational"><div class="dim small">Waiting on Leo's ledger and standings to finish loading…</div></div>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script>
@@ -138,8 +138,8 @@ const season = new Date().getMonth() >= 2 ? new Date().getFullYear() : new Date(
 // ---------- Offense trends (last 15 days vs season) ----------
 const OFF_DAYS = 15;
 function f3(v){ return isFinite(v) ? v.toFixed(3).replace(/^0/, "") : "—"; }
-// wOBA linear weights -- must match LyDia daily engine's
-// fetchOffense30() and LyDia daily engine's wobaOf() exactly
+// wOBA linear weights -- must match Leo daily engine's
+// fetchOffense30() and Leo daily engine's wobaOf() exactly
 // (kept in sync manually across all three).
 const WOBA_W = { bb: 0.69, hbp: 0.72, "1b": 0.89, "2b": 1.27, "3b": 1.62, hr: 2.10 };
 function wobaOf(st) {
@@ -292,7 +292,7 @@ function renderOffense() {
     ["seasonOps", "Season OPS", "Full-season OPS baseline"],
     ["woba", "wOBA", "wOBA, last " + OFF_DAYS + " days -- linear weights, the better proxy for actual run scoring"],
     ["seasonWoba", "Season wOBA", "Full-season wOBA baseline"],
-    ["deltaWoba", "wOBA Δ", "Last " + OFF_DAYS + " days minus season wOBA -- this is LyDia's hot/cold/steady read"],
+    ["deltaWoba", "wOBA Δ", "Last " + OFF_DAYS + " days minus season wOBA -- this is Leo's hot/cold/steady read"],
     ["rpg", "R/G", "Runs per game over the window"],
     ["hr", "HR", "Home runs over the window"],
     ["kPct", "K%", "Strikeout rate over the window (lower is better)"],
@@ -363,7 +363,7 @@ function sortOffense(key) {
   renderOffense();
 }
 
-/* ================= LyDia's own record (calibration_model_log.csv) ================= */
+/* ================= Leo's own record (calibration_model_log.csv) ================= */
 // Same ledger the Learning Dashboard reads (learning/index.html) -- this page
 // only needs date/matchup/model_side/status/model_prob/result, so it parses
 // the CSV itself rather than pulling in that page's larger buildMoneyline()
@@ -375,7 +375,7 @@ function splitCsvLine(l) { const c = []; let cur = "", q = false; for (const ch 
 function parseOwnCSV(t) { if (!t) return []; const l = t.trim().split(/\r?\n/); if (l.length < 2) return []; const h = splitCsvLine(l[0]); return l.slice(1).map(x => { const c = splitCsvLine(x); const o = {}; h.forEach((k, i) => o[k] = c[i]); return o; }); }
 const homeOfMatchup = m => { const p = String(m || "").split(" @ "); return p.length === 2 ? p[1] : ""; };
 function dkeyOwn(d) { const m = String(d || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return m ? Number(m[3]) * 10000 + Number(m[1]) * 100 + Number(m[2]) : 0; }
-// Same slug scheme as LyDia daily engine's matchupSlug() --
+// Same slug scheme as Leo daily engine's matchupSlug() --
 // away-vs-home-prediction-odds-YYYY-MM-DD -- so links land on the real page.
 function slugify(v) { return String(v || "").toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""); }
 function ownMatchupUrl(r) {
@@ -386,8 +386,8 @@ function ownMatchupUrl(r) {
   const iso = `${dm[3]}-${dm[1].padStart(2, "0")}-${dm[2].padStart(2, "0")}`;
   return `/mlb/${slugify(shortTeam(parts[0]))}-vs-${slugify(shortTeam(parts[1]))}-prediction-odds-${iso}/`;
 }
-// The specific games behind a team's LyDia record -- used by teamPanel() so
-// clicking a team from "LyDia's own record" or "Teams LyDia leans on most"
+// The specific games behind a team's Leo record -- used by teamPanel() so
+// clicking a team from "Leo's own record" or "Teams Leo leans on most"
 // shows the actual picks, not just the tally. Newest first.
 function ownGamesFor(name) {
   return (ownRows || []).filter(r => r.side === name).sort((a, b) => dkeyOwn(b.date) - dkeyOwn(a.date));
@@ -415,8 +415,8 @@ async function loadOwnRecord() {
     renderOwnRecord();
     renderSituational();
   } catch (e) {
-    if (ownRows.length) status.textContent = "LyDia's ledger didn\u2019t respond — showing your last saved copy.";
-    else status.textContent = "LyDia's own record isn't available right now.";
+    if (ownRows.length) status.textContent = "Leo's ledger didn\u2019t respond — showing your last saved copy.";
+    else status.textContent = "Leo's own record isn't available right now.";
   }
 }
 function ownPool() { return ownScope === "official" ? ownRows.filter(r => r.status === "official_pick") : ownRows; }
@@ -446,7 +446,7 @@ function renderOwnRecord() {
   </table></div>`;
 }
 
-/* ---- Situational trends: LyDia's own angles, crossed with real team form ---- */
+/* ---- Situational trends: Leo's own angles, crossed with real team form ---- */
 function renderSituational() {
   const el = document.getElementById("situational");
   if (!el || !ownRows.length || !window._standRows) return; // needs both the ledger and standings loaded
@@ -461,7 +461,7 @@ function renderSituational() {
   const sorted = [...pool].sort((a, b) => dkeyOwn(b.date) - dkeyOwn(a.date));
   let streak = 0, streakType = null;
   for (const r of sorted) { if (streakType === null) { streakType = r.won; streak = 1; } else if (r.won === streakType) streak++; else break; }
-  const streakLine = streak >= 3 ? `<div class="notice ${streakType === 1 ? "" : "warn"}" style="margin-bottom:12px">LyDia's model is on a <b>${streak}-${streakType === 1 ? "win" : "loss"} streak</b> across its most recent graded leans.</div>` : "";
+  const streakLine = streak >= 3 ? `<div class="notice ${streakType === 1 ? "" : "warn"}" style="margin-bottom:12px">Leo's model is on a <b>${streak}-${streakType === 1 ? "win" : "loss"} streak</b> across its most recent graded leans.</div>` : "";
 
   const angle = (label, r, note) => `<tr><td>${label}</td><td class="num">${r.n}</td><td class="num">${r.w}-${r.l}</td><td class="num ${r.pct != null && r.pct >= 0.5 ? "pos-text" : r.pct != null ? "neg-text" : ""}">${r.pct != null ? (r.pct * 100).toFixed(0) + "%" : "—"}</td><td class="dim small">${note}</td></tr>`;
 
@@ -477,15 +477,15 @@ function renderSituational() {
     <div class="card game-card"><table>
       <thead><tr><th>Angle</th><th class="num">n</th><th class="num">Record</th><th class="num">Win%</th><th>Note</th></tr></thead>
       <tbody>
-        ${angle("Backing the home team", rHome, "LyDia's lean was the home side")}
-        ${angle("Backing the road team", rRoad, "LyDia's lean was the away side")}
+        ${angle("Backing the home team", rHome, "Leo's lean was the home side")}
+        ${angle("Backing the road team", rRoad, "Leo's lean was the away side")}
         ${angle("High-confidence leans (≥60% model)", rHigh, "")}
         ${angle("Closer calls (50–60% model)", rClose, "")}
       </tbody>
     </table></div>
-    <h3 style="margin-top:16px">Teams LyDia leans on most, real form alongside</h3>
+    <h3 style="margin-top:16px">Teams Leo leans on most, real form alongside</h3>
     <div class="card game-card"><table>
-      <thead><tr><th>Team</th><th class="num">LyDia n</th><th class="num">LyDia record</th><th class="num">LyDia win%</th><th>Real streak</th><th>Real L10</th></tr></thead>
+      <thead><tr><th>Team</th><th class="num">Leo n</th><th class="num">Leo record</th><th class="num">Leo win%</th><th>Real streak</th><th>Real L10</th></tr></thead>
       <tbody>${teamAngles.map(t => `<tr><td class="team-cell" onclick="teamPanel('${t.team.replace(/'/g, "\\'")}')">${escapeHtml(t.team)}</td><td class="num">${t.n}</td><td class="num">${t.w}-${t.l}</td><td class="num ${t.pct >= 0.5 ? "pos-text" : "neg-text"}">${(t.pct * 100).toFixed(0)}%</td><td>${escapeHtml(t.streak)}</td><td>${escapeHtml(t.l10)}</td></tr>`).join("") || `<tr><td colspan="6" class="dim">Not enough data yet.</td></tr>`}</tbody>
     </table></div>`;
 }
@@ -840,7 +840,7 @@ async function teamPanel(name) {
         const rec = rs => { const w = rs.filter(r => r.won === 1).length, n = rs.length; return { w, l: n - w, n }; };
         const official = games.filter(r => r.status === "official_pick");
         const ro = rec(official), ra = rec(games);
-        return `<h3 style="margin-top:0">LyDia's own record on ${escapeHtml(shortTeam(name))}</h3>
+        return `<h3 style="margin-top:0">Leo's own record on ${escapeHtml(shortTeam(name))}</h3>
         <p class="dim small" style="margin:2px 0 8px">Official picks: <b class="${ro.n && ro.w >= ro.l ? "pos-text" : ro.n ? "neg-text" : ""}">${ro.w}-${ro.l}</b> (${ro.n})&nbsp;&nbsp;·&nbsp;&nbsp;All graded leans: <b class="${ra.n && ra.w >= ra.l ? "pos-text" : "neg-text"}">${ra.w}-${ra.l}</b> (${ra.n})</p>
         <table style="margin-bottom:12px"><thead><tr><th>Date</th><th>Matchup</th><th>Side</th><th class="num">Model</th><th>Result</th><th></th></tr></thead><tbody>
           ${games.map(r => {

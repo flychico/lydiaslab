@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 /*
-  LyDia — fetch pitcher strikeout prop lines (Over/Under) for today's slate.
+  Leo — fetch pitcher strikeout prop lines (Over/Under) for today's slate.
 
   - Uses The Odds API per-event endpoint: /events/{id}/odds?markets=pitcher_strikeouts
   - Cost: 1 quota-counted request per event (~15/day). The /events list itself is free.

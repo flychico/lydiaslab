@@ -11,19 +11,19 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pitcher Matchup Tool — LyDia's Lab</title>
+<title>Pitcher Matchup Tool — Leo's Lab</title>
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="LyDia">
-<meta property="og:title" content="Pitcher Matchup Tool — LyDia's Lab">
+<meta property="og:site_name" content="Leo">
+<meta property="og:title" content="Pitcher Matchup Tool — Leo's Lab">
 <meta property="og:description" content="Compare today">
 <meta property="og:url" content="https://lydiaslab.com/tools/pitcher-matchups/">
 <meta property="og:image" content="https://lydiaslab.com/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Pitcher Matchup Tool — LyDia's Lab">
+<meta name="twitter:title" content="Pitcher Matchup Tool — Leo's Lab">
 <meta name="twitter:description" content="Compare today">
 <meta name="twitter:image" content="https://lydiaslab.com/img/og-card.png">
 
-<meta name="description" content="Compare today's MLB probable starters with LyDia's pitcher edge score, matchup strength, ERA, WHIP, strikeout profile, and reliability notes.">
+<meta name="description" content="Compare today's MLB probable starters with Leo's pitcher edge score, matchup strength, ERA, WHIP, strikeout profile, and reliability notes.">
 <link rel="canonical" href="https://lydiaslab.com/tools/pitcher-matchups/">
 <link rel="manifest" href="/img/manifest-pitcher.json">
 <link rel="apple-touch-icon" href="/img/app-pitcher-192.png">
@@ -57,7 +57,7 @@
 <body>
 <nav id="nav"></nav>
 <main>
-  <p class="eyebrow">LyDia's Lab</p>
+  <p class="eyebrow">Leo's Lab</p>
   <h1>Pitcher Matchup Tool</h1>
   <p class="subtitle">Every probable starter on the card, translated: which numbers are real skill, which are luck waiting to correct, and how deep each arm takes you before the bullpen decides the rest.</p>
 
@@ -76,7 +76,7 @@
   </div>
 
   <div class="notice">
-    <strong>How to read it:</strong> the big number is the <b>LyDia Pitcher Score</b> (out of 10) — run prevention, WHIP, K/BB profile, and sample size in one grade. Tier labels translate the decimals: every ~0.50 of ERA and ~0.10 of WHIP is roughly one class of pitcher. <b>K-BB%</b> is the most skill-driven stat on the card; <b>BABIP</b> far from ~.300 flags luck that usually corrects; <b>IP/start</b> is how much of the game the bullpen inherits.
+    <strong>How to read it:</strong> the big number is the <b>Leo Pitcher Score</b> (out of 10) — run prevention, WHIP, K/BB profile, and sample size in one grade. Tier labels translate the decimals: every ~0.50 of ERA and ~0.10 of WHIP is roughly one class of pitcher. <b>K-BB%</b> is the most skill-driven stat on the card; <b>BABIP</b> far from ~.300 flags luck that usually corrects; <b>IP/start</b> is how much of the game the bullpen inherits.
   </div>
 
   <div id="kpis" class="kpis"></div>
@@ -163,7 +163,7 @@ async function load() {
     const response = await fetch(`/data/pitcher-matchups/${date}.json?v=${Date.now()}`, { cache:"no-store" });
     if (response.ok) canonical = await response.json();
   } catch(e) {}
-  const [fallbackStats] = await Promise.all([LyDiaPitcherCore.loadPitchersForDate(ids, date), loadBullpen(date)]);
+  const [fallbackStats] = await Promise.all([LeoPitcherCore.loadPitchersForDate(ids, date), loadBullpen(date)]);
   const pitcherStats = canonical && canonical.pitchers_by_id ? canonical.pitchers_by_id : fallbackStats;
   const cards = games.map(g => renderGame(g, pitcherStats, games, date, canonical && canonical.games ? canonical.games[String(g.gamePk)] : null));
   statusEl.innerHTML = "";
@@ -273,9 +273,9 @@ async function fetchStarterUsage(id, season) {
 
 function pitcher(side, stats) {
   const p = side.probablePitcher;
-  if (!p) return LyDiaPitcherCore.scorePitcher({ name: "TBD", missing: true });
+  if (!p) return LeoPitcherCore.scorePitcher({ name: "TBD", missing: true });
   const st = stats[p.id] || { name: p.fullName, missing: true };
-  return LyDiaPitcherCore.scorePitcher(st);
+  return LeoPitcherCore.scorePitcher(st);
 }
 
 function scorePitcher(st) {
@@ -323,7 +323,7 @@ function matchupData(g, stats, canonicalGame=null) {
     if (!arms.length) return fallback;
     const innings = arms.reduce((sum, segment) => sum + Number(segment.expected_innings), 0);
     return innings > 0
-      ? Math.round(arms.reduce((sum, segment) => sum + LyDiaPitcherCore.scorePitcher(segment.stats).score * Number(segment.expected_innings), 0) / innings)
+      ? Math.round(arms.reduce((sum, segment) => sum + LeoPitcherCore.scorePitcher(segment.stats).score * Number(segment.expected_innings), 0) / innings)
       : fallback;
   };
   const awayPlanScore = planScore("away", away.score);
@@ -387,8 +387,8 @@ function buildPitcherRead(d, awayTeam, homeTeam) {
   const parts = [];
 
   const lt = tEra(lead.era), tt = tEra(trail.era);
-  if (gap < 4) parts.push(`LyDia scores this nearly even (${(A.score/10).toFixed(1)}–${(H.score/10).toFixed(1)}) — ${A.name} and ${H.name} are the same class of starter tonight.`);
-  else { const an = t => /^[aeiou]/i.test(t) ? "an" : "a"; parts.push(`LyDia scores it ${(lead.score/10).toFixed(1)}–${(trail.score/10).toFixed(1)} for ${lead.name}: ${lt ? an(lt.t) + " " + lt.t : "a"}-level arm (${fmt(lead.era)} ERA, ${fmt(lead.whip)} WHIP) against ${tt ? an(tt.t) + " " + tt.t : "a"} one (${fmt(trail.era)}, ${fmt(trail.whip)}).`); }
+  if (gap < 4) parts.push(`Leo scores this nearly even (${(A.score/10).toFixed(1)}–${(H.score/10).toFixed(1)}) — ${A.name} and ${H.name} are the same class of starter tonight.`);
+  else { const an = t => /^[aeiou]/i.test(t) ? "an" : "a"; parts.push(`Leo scores it ${(lead.score/10).toFixed(1)}–${(trail.score/10).toFixed(1)} for ${lead.name}: ${lt ? an(lt.t) + " " + lt.t : "a"}-level arm (${fmt(lead.era)} ERA, ${fmt(lead.whip)} WHIP) against ${tt ? an(tt.t) + " " + tt.t : "a"} one (${fmt(trail.era)}, ${fmt(trail.whip)}).`); }
 
   if (Number.isFinite(lead.kbbPct) && Number.isFinite(trail.kbbPct)) {
     const kg = lead.kbbPct - trail.kbbPct;
@@ -429,7 +429,7 @@ function renderPitcherBox(label, team, p) {
     <div class="dim small">${escapeHtml(label)} starter</div>
     <div style="display:flex;justify-content:space-between;gap:10px;align-items:end">
       <div><b>${pitcherName}</b><div class="small dim">${escapeHtml(p.grade || "Unknown")}</div></div>
-      <div><div class="score-label">LyDia Pitcher Score</div><div class="score" style="text-align:right">${(p.score/10).toFixed(1)}<span style="font-size:.85rem;color:var(--text-dim)">/10</span></div></div>
+      <div><div class="score-label">Leo Pitcher Score</div><div class="score" style="text-align:right">${(p.score/10).toFixed(1)}<span style="font-size:.85rem;color:var(--text-dim)">/10</span></div></div>
     </div>
     <div class="stat-row"><span>ERA</span><span><b>${fmt(p.era)}</b>${chip(tEra(p.era))}</span></div>
     <div class="stat-row"><span>WHIP</span><span><b>${fmt(p.whip)}</b>${chip(tWhip(p.whip))}</span></div>

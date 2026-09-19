@@ -1,6 +1,6 @@
 "use strict";
 /*
-  LyDia — swing-and-miss / arsenal leverage (pitch-type resolved).
+  Leo — swing-and-miss / arsenal leverage (pitch-type resolved).
 
   Isolates how much THIS lineup misses THIS pitcher's specific pitch mix,
   relative to a league-average lineup. It is a matchup multiplier only — the

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
-  LyDia — rebuild data/results.json and results/index.html from
+  Leo — rebuild data/results.json and results/index.html from
   data/results_log.csv alone. No network access, no re-grading.
 
   Run this after hand-editing a row in data/results_log.csv to correct a

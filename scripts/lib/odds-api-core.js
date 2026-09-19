@@ -1,5 +1,5 @@
 /*
-  LyDia — the-odds-api.com key rotation.
+  Leo — the-odds-api.com key rotation.
 
   Every script that calls api.the-odds-api.com used to read a single
   ODDS_API_KEY and build its own request URL. When that one key ran out of

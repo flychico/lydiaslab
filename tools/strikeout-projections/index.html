@@ -12,15 +12,15 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Strikeout Projections — LyDia's Lab</title>
+<title>Strikeout Projections — Leo's Lab</title>
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="LyDia">
-<meta property="og:title" content="Strikeout Projections — LyDia's Lab">
+<meta property="og:site_name" content="Leo">
+<meta property="og:title" content="Strikeout Projections — Leo's Lab">
 <meta property="og:description" content="A projected strikeout total for every MLB starter today, built from whiff skill, expected innings, and the opposing lineup">
 <meta property="og:url" content="https://lydiaslab.com/tools/strikeout-projections/">
 <meta property="og:image" content="https://lydiaslab.com/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Strikeout Projections — LyDia's Lab">
+<meta name="twitter:title" content="Strikeout Projections — Leo's Lab">
 <meta name="twitter:description" content="A projected strikeout total for every MLB starter today, built from whiff skill, expected innings, and the opposing lineup">
 <meta name="twitter:image" content="https://lydiaslab.com/img/og-card.png">
 
@@ -89,7 +89,7 @@ table.lu td:first-child, table.lu td:nth-child(2) { text-align:left; }
 <body>
 <nav id="nav"></nav>
 <main>
-  <p class="eyebrow">LyDia's Lab</p>
+  <p class="eyebrow">Leo's Lab</p>
   <h1>Strikeout Projections</h1>
   <p class="subtitle">How many strikeouts should each starter get tonight? Built from three things: his whiff skill, how deep he pitches, and how much the opposing lineup swings and misses against his throwing hand — pitch by pitch.</p>
 
@@ -188,7 +188,7 @@ async function load(){
     const wEnd = new Date(date + "T12:00");
     const wStart = new Date(wEnd.getTime() - WINDOW * 86400000);
     const [ps] = await Promise.all([
-      pids.length ? LyDiaPitcherCore.loadPitchersForDate(pids, date) : Promise.resolve({}),
+      pids.length ? LeoPitcherCore.loadPitchersForDate(pids, date) : Promise.resolve({}),
       loadWindowBatters(localISODate(wStart), localISODate(wEnd))
     ]);
 
@@ -216,7 +216,7 @@ async function load(){
    rescales it exactly: proj * (editedIP / serverIP). */
 function project(p, oppTeamId, kv){
   if(!p || !p.ip || p.ip < 15 || !p.bf) return null;
-  const role = LyDiaPitcherCore.classifyPitcherRole(p);
+  const role = LeoPitcherCore.classifyPitcherRole(p);
   const server = LINES[String(p.name||"").toLowerCase()] || null;
   const hasServer = server && Number.isFinite(server.projection) && Number.isFinite(server.expected_innings) && server.expected_innings > 0;
 

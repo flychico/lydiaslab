@@ -1,5 +1,5 @@
 /*
-  LyDia — shared K-props -> Excel row schema.
+  Leo — shared K-props -> Excel row schema.
 
   Both scripts/export-kprops-xlsx.js (pre-game capture) and
   scripts/grade-calibration.js (post-game grading refresh) build rows through

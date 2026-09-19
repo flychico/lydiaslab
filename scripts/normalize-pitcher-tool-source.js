@@ -21,8 +21,8 @@ if (!html.includes('/js/pitcher-matchup-core.js')) {
 }
 
 const oldLoad = 'const [pitcherStats] = await Promise.all([fetchPitchers(ids, date), loadBullpen(date)]);';
-const newLoad = 'const [pitcherStats] = await Promise.all([LyDiaPitcherCore.loadPitchersForDate(ids, date), loadBullpen(date)]);';
-const canonicalLoadPattern = /LyDiaPitcherCore\.loadPitchersForDate\s*\(\s*ids\s*,\s*date\s*\)/;
+const newLoad = 'const [pitcherStats] = await Promise.all([LeoPitcherCore.loadPitchersForDate(ids, date), loadBullpen(date)]);';
+const canonicalLoadPattern = /LeoPitcherCore\.loadPitchersForDate\s*\(\s*ids\s*,\s*date\s*\)/;
 if (html.includes(oldLoad)) {
   html = html.replace(oldLoad, newLoad);
   changed = true;
@@ -31,7 +31,7 @@ if (html.includes(oldLoad)) {
 }
 
 const oldMissing = 'if (!p) return scorePitcher({ name: "TBD", missing: true });';
-const newMissing = 'if (!p) return LyDiaPitcherCore.scorePitcher({ name: "TBD", missing: true });';
+const newMissing = 'if (!p) return LeoPitcherCore.scorePitcher({ name: "TBD", missing: true });';
 if (html.includes(oldMissing)) {
   html = html.replace(oldMissing, newMissing);
   changed = true;
@@ -40,7 +40,7 @@ if (html.includes(oldMissing)) {
 }
 
 const oldScore = 'return scorePitcher(st);';
-const newScore = 'return LyDiaPitcherCore.scorePitcher(st);';
+const newScore = 'return LeoPitcherCore.scorePitcher(st);';
 if (html.includes(oldScore)) {
   html = html.replace(oldScore, newScore);
   changed = true;

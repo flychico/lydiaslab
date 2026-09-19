@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
-  LyDia site health cleanup.
+  Leo site health cleanup.
   Removes invalid generated artifacts and stale/invalid today mirrors.
   It never edits manual content, historical results, or membership pages.
 */
@@ -179,7 +179,7 @@ function rebuildPreviewArchive() {
     return `<a href="/previews/${f}">MLB Picks - ${esc(niceDate(date))}</a>`;
   }).join("\n");
   const html = `<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>MLB Picks archive | LyDia</title><meta name="description" content="Previous LyDia MLB picks and full-card analysis."><link rel="stylesheet" href="/css/style.css"><style>main{text-align:center}.archive-list{max-width:820px;margin:auto}.archive-list a{display:block;padding:10px 0;border-bottom:1px solid var(--border)}</style></head><body><nav id="nav"></nav><main><h1>MLB Picks Archive</h1><p class="subtitle">Previous daily cards with every official pick, research setup, and pass.</p><div class="card archive-list">
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>MLB Picks archive | Leo</title><meta name="description" content="Previous Leo MLB picks and full-card analysis."><link rel="stylesheet" href="/css/style.css"><style>main{text-align:center}.archive-list{max-width:820px;margin:auto}.archive-list a{display:block;padding:10px 0;border-bottom:1px solid var(--border)}</style></head><body><nav id="nav"></nav><main><h1>MLB Picks Archive</h1><p class="subtitle">Previous daily cards with every official pick, research setup, and pass.</p><div class="card archive-list">
 ${links || '<p class="dim">No preview archive is available yet.</p>'}
 </div></main><footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/previews/"); renderFooter();</script></body></html>
 `;

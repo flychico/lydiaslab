@@ -1,6 +1,6 @@
 "use strict";
 /*
-  LyDia Coach — correlation engine over the FULL analyzed history.
+  Leo Coach — correlation engine over the FULL analyzed history.
 
   2026-08-26, Lynold's explicit instruction: Coach previously only looked at
   22 current-model official picks and 4 pre-chosen splits (probability,
@@ -19,7 +19,7 @@
        (date, gamePk) for market_prob/best_price. ~318 games as of 08-26,
        not 22.
     2. Converts every home/away-relative input into a PICK-relative feature
-       (positive = favors the side LyDia actually picked), so "does a bigger
+       (positive = favors the side Leo actually picked), so "does a bigger
        pitcher edge for our side predict winning" is a straight yes/no
        question instead of something you have to mentally flip per game.
     3. Computes a real point-biserial correlation (equivalent to Pearson
@@ -118,7 +118,7 @@ function dayOfWeek(isoOrSlash) {
 }
 
 const FEATURES = [
-  { key: "pick_model_prob", label: "LyDia's own win probability for this pick" },
+  { key: "pick_model_prob", label: "Leo's own win probability for this pick" },
   { key: "edge_vs_market", label: "Model edge over the market (model prob minus no-vig market prob)" },
   { key: "pick_pitcher_gap", label: "Starting pitcher score edge (picked side minus opponent)" },
   { key: "pick_era_edge", label: "Starting pitcher ERA edge (opponent's ERA minus the picked pitcher's)" },
@@ -126,7 +126,7 @@ const FEATURES = [
   { key: "pick_bullpen_gap", label: "Bullpen risk edge (positive = the picked side's bullpen is the safer one)" },
   { key: "pick_bullpen_adj", label: "Probability points bullpen risk moved this pick's number" },
   { key: "pick_own_bullpen_risk", label: "Picked team's own bullpen fatigue score (regardless of the opponent's)" },
-  { key: "pick_lab_score", label: "Lab Rating (LyDia's own analysis-quality score for this pick)" },
+  { key: "pick_lab_score", label: "Lab Rating (Leo's own analysis-quality score for this pick)" },
   { key: "best_price_abs", label: "Size of the price (how big a favorite or underdog this pick was)" },
   // 2026-08-26 additions, direct follow-up (see header comment):
   { key: "pick_team_strength_edge", label: "Team strength blend edge, before any pitcher/bullpen adjustment (picked side minus opponent)" },
@@ -426,7 +426,7 @@ function buildProseRecommendations(correlations, overallRecord) {
     lines.push(`${c.label}: ${parts.join(" vs. ")}.`);
   }
 
-  lines.push("These are correlations across LyDia's own analyzed history, not causal proof and not a signal to change any model weight or gate on their own -- human review still required for any actual change.");
+  lines.push("These are correlations across Leo's own analyzed history, not causal proof and not a signal to change any model weight or gate on their own -- human review still required for any actual change.");
   return lines;
 }
 
@@ -472,7 +472,7 @@ function evidenceForGame(gameFeatures, correlations, opts) {
     const band = bandFor(Math.abs(f.r));
     notes.push({
       title: `Evidence check: ${f.label}`,
-      detail: `Today's number here (${fmtNum(val)}) falls in the ${position} of LyDia's historical range -- ${direction} of this angle. Across ${f.n} analyzed games, this input has shown ${band} to winning (r=${fmtNum(f.r, 3)}). In that quarter, LyDia's record is ${bucket.w}-${bucket.l} (${pct(bucket.rate)}, n=${bucket.n}). A review note only -- not a reason to skip or fade this pick on its own.`
+      detail: `Today's number here (${fmtNum(val)}) falls in the ${position} of Leo's historical range -- ${direction} of this angle. Across ${f.n} analyzed games, this input has shown ${band} to winning (r=${fmtNum(f.r, 3)}). In that quarter, Leo's record is ${bucket.w}-${bucket.l} (${pct(bucket.rate)}, n=${bucket.n}). A review note only -- not a reason to skip or fade this pick on its own.`
     });
   }
   return notes;

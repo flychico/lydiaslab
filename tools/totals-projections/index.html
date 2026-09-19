@@ -12,15 +12,15 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Totals Projections — LyDia's Lab</title>
+<title>Totals Projections — Leo's Lab</title>
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="LyDia">
-<meta property="og:title" content="Totals Projections — LyDia's Lab">
+<meta property="og:site_name" content="Leo">
+<meta property="og:title" content="Totals Projections — Leo's Lab">
 <meta property="og:description" content="A projected total-runs number for every MLB game — lineups, starting pitchers, park, and bullpen condition — next to the market">
 <meta property="og:url" content="https://lydiaslab.com/tools/totals-projections/">
 <meta property="og:image" content="https://lydiaslab.com/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Totals Projections — LyDia's Lab">
+<meta name="twitter:title" content="Totals Projections — Leo's Lab">
 <meta name="twitter:description" content="A projected total-runs number for every MLB game — lineups, starting pitchers, park, and bullpen condition — next to the market">
 <meta name="twitter:image" content="https://lydiaslab.com/img/og-card.png">
 
@@ -73,7 +73,7 @@ table.lu td:first-child, table.lu td:nth-child(2) { text-align:left; }
 <body>
 <nav id="nav"></nav>
 <main>
-  <p class="eyebrow">LyDia's Lab</p>
+  <p class="eyebrow">Leo's Lab</p>
   <h1>Totals Projections</h1>
   <p class="subtitle">How many runs should each game produce? Every projection blends both lineups' scoring, the opposing starters' skill (FIP-based), the ballpark, and bullpen condition — next to the market's over/under.</p>
 
@@ -294,7 +294,7 @@ async function load(){
       return `<div class="card match-card" id="tg-${g.pk}">
         <div class="t-head"><a class="matchup" href="${matchupPageUrl(g,games,date)}">${escapeHtml(g.game)}</a><span class="dim small">${time}${` · <b id="lab-${g.pk}">${Number.isFinite(g.line)&&Number.isFinite(g.lab)?`Setup ${(g.lab/10).toFixed(1)}/10`:"Setup pending line"}</b>`}</span></div>
         <div class="t-grid">
-          <div><div class="t-label">LyDia projects</div><span class="t-proj">${g.projection.toFixed(1)}</span> <span class="dim small">runs</span></div>
+          <div><div class="t-label">Leo projects</div><span class="t-proj">${g.projection.toFixed(1)}</span> <span class="dim small">runs</span></div>
           <div><div class="t-label">Market line${hasLine?` (${g.books} book${g.books===1?"":"s"})`:""}</div>
             <div class="line-input">
               <input type="number" step="0.5" id="tl-${g.pk}" placeholder="e.g. 8.5" value="${hasLine?g.line:""}" oninput="lean('${g.pk}')">

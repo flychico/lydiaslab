@@ -1,5 +1,5 @@
 /*
-  LyDia — shared results.json / results/index.html reconstruction.
+  Leo — shared results.json / results/index.html reconstruction.
 
   Used by both scripts/grade-results.js (grades today's picks, then rebuilds
   using what it just wrote) and scripts/rebuild-results.js (rebuilds
@@ -286,8 +286,8 @@ function rebuildResultsPage(results) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Results — verified official pick record | LyDia</title>
-<meta name="description" content="LyDia verified official results by market: moneyline, game totals, and pitcher strikeout props. Every official pick stays public, including losses, pushes, and voids.">
+<title>Results — verified official pick record | Leo</title>
+<meta name="description" content="Leo verified official results by market: moneyline, game totals, and pitcher strikeout props. Every official pick stays public, including losses, pushes, and voids.">
 <link rel="canonical" href="https://lydiaslab.com/results/">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
@@ -296,7 +296,7 @@ function rebuildResultsPage(results) {
 <nav id="nav"></nav>
 <main>
 <h1>Results</h1>
-<p class="subtitle">LyDia tracks official moneylines, full-game totals, and pitcher strikeout props. Each market has its own qualification rules and its own public record. Team totals remain research-only while their graded sample develops.</p>
+<p class="subtitle">Leo tracks official moneylines, full-game totals, and pitcher strikeout props. Each market has its own qualification rules and its own public record. Team totals remain research-only while their graded sample develops.</p>
 <section id="live-pick-results" class="card" style="margin:16px 0 24px">
   <h2 style="margin-top:0">Today's Pick Status</h2>
   <div class="loading">Loading live pick results...</div>
@@ -328,7 +328,7 @@ ${dayRows}
 <div class="lead-box" style="border-color:var(--accent2);margin-top:16px">
   <h3 style="margin:0 0 4px">Want this delivered before first pitch?</h3>
   <p class="dim small" style="margin:0">$30/month. Same transparency, cleaner delivery.</p>
-  <p style="margin-top:10px"><a class="btn blue" href="/membership/">Join LyDia — $30/mo →</a></p>
+  <p style="margin-top:10px"><a class="btn blue" href="/membership/">Join Leo — $30/mo →</a></p>
 </div>
 </main>
 <footer id="footer"></footer>

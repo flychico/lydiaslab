@@ -1,7 +1,7 @@
 "use strict";
 
 /*
-  LyDia Bullpen Core v4, fatigue and efficiency split
+  Leo Bullpen Core v4, fatigue and efficiency split
 
   One source of truth for bullpen scoring.
   Used by:

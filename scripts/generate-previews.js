@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /*
-  LyDia preview renderer.
+  Leo preview renderer.
   Reads member brief and locked official picks. Does not calculate or overwrite picks.
 */
 const fs = require("fs");
 const path = require("path");
-const LyDiaRead = require("../js/client-facing-read.js");
+const LeoRead = require("../js/client-facing-read.js");
 
 const SITE = "https://lydiaslab.com";
 const ROOT = path.join(__dirname, "..");
@@ -44,7 +44,7 @@ function pitcherLink(name, id) {
 }
 function pct(v, dp = 1) { return typeof v === "number" && Number.isFinite(v) ? `${(v * 100).toFixed(dp)}%` : "-"; }
 function edge(v) { return typeof v === "number" && Number.isFinite(v) ? `${v >= 0 ? "+" : ""}${pct(v)}` : "-"; }
-function labRating(v) { return LyDiaRead.labRating(v); }
+function labRating(v) { return LeoRead.labRating(v); }
 function odds(v) { if (typeof v !== "number" || !Number.isFinite(v)) return "-"; return v > 0 ? `+${Math.round(v)}` : String(Math.round(v)); }
 function readJson(file) { return JSON.parse(fs.readFileSync(file, "utf8")); }
 function statusLabel(s) { if (s === "official_pick") return "Official Pick"; if (s === "value_watch") return "Value Watch"; if (s === "watchlist") return "Watchlist"; return "Pass"; }
@@ -60,7 +60,7 @@ function bullpenAnalysis(g) {
   const opp = bp.opponent || null;
   if (!pick || !opp || typeof pick.score !== "number" || typeof opp.score !== "number") return "Bullpen workload data unavailable.";
 
-  const team = g.pick_team || "LyDia side";
+  const team = g.pick_team || "Leo side";
   const opponent = opponentName(g);
   const pickScore = Math.round(pick.score);
   const oppScore = Math.round(opp.score);
@@ -85,7 +85,7 @@ function pitcherSentence(g) {
   const p = g.pitcher_edge || {};
   if (!p.team || p.team === "No clear SP edge") return "The starting pitching matchup does not create a clear advantage.";
   if (p.team === g.pick_team) return `${g.pick_team} has the stronger starting pitcher matchup${p.gap ? ` by ${p.gap} points` : ""}.`;
-  return `${p.team} has the starting pitcher advantage${p.gap ? ` by ${p.gap} points` : ""}, which works against LyDia's side.`;
+  return `${p.team} has the starting pitcher advantage${p.gap ? ` by ${p.gap} points` : ""}, which works against Leo's side.`;
 }
 function pitcherPlan(pitcher) {
   const p = pitcher || {};
@@ -125,7 +125,7 @@ function bullpenGameAnalysis(g) {
       ? `${risk ? " with" : "The pen has"} ${(item.pen.efficiency_score/10).toFixed(1)}/10 recent efficiency`
       : "";
     const impact = item.picked
-      ? "Because this is LyDia's side, bullpen quality is central to the pick."
+      ? "Because this is Leo's side, bullpen quality is central to the pick."
       : `That heavy bullpen exposure strengthens the case for ${g.pick_team}.`;
     return `${item.team} is using a bullpen game. ${allocation} ${risk}${efficiency ? efficiency : ""}${risk || efficiency ? "." : ""} ${impact}`;
   };
@@ -148,13 +148,13 @@ function clientRead(g) {
   const bullpen = bullpenAnalysis(g);
 
   if (g.status === "official_pick") {
-    return `${team} is an official moneyline pick because LyDia gives it a ${modelProb} chance to win, compared with the market's ${marketProb} no-vig probability. ${pitcher} ${bullpen} At ${price}, the price still offers enough value for the play to qualify as official.`;
+    return `${team} is an official moneyline pick because Leo gives it a ${modelProb} chance to win, compared with the market's ${marketProb} no-vig probability. ${pitcher} ${bullpen} At ${price}, the price still offers enough value for the play to qualify as official.`;
   }
   if (g.status === "value_watch") {
-    return `${team} grades as a strong setup because LyDia sees ${modelProb} win probability against a ${marketProb} market number. ${pitcher} ${bullpen} It stays a value watch instead of an official pick because the model probability does not reach the 72% official threshold.`;
+    return `${team} grades as a strong setup because Leo sees ${modelProb} win probability against a ${marketProb} market number. ${pitcher} ${bullpen} It stays a value watch instead of an official pick because the model probability does not reach the 72% official threshold.`;
   }
   if (g.status === "watchlist") {
-    return `${team} is worth monitoring, but it does not clear every requirement for an official pick. LyDia projects ${modelProb} win probability against a ${marketProb} market number. ${pitcher} ${bullpen}`;
+    return `${team} is worth monitoring, but it does not clear every requirement for an official pick. Leo projects ${modelProb} win probability against a ${marketProb} market number. ${pitcher} ${bullpen}`;
   }
   return g.pass_reason || `${team} does not have a strong enough overall setup for an official pick.`;
 }
@@ -227,8 +227,8 @@ function renderPreviewPage(brief, published) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MLB Picks and Full-Card Analysis ${esc(titleDate)} | LyDia</title>
-<meta name="description" content="LyDia MLB picks for ${esc(titleDate)} with model probability, author attribution, pitcher matchup, bullpen workload, market value, and a documented reason for every decision.">
+<title>MLB Picks and Full-Card Analysis ${esc(titleDate)} | Leo</title>
+<meta name="description" content="Leo MLB picks for ${esc(titleDate)} with model probability, author attribution, pitcher matchup, bullpen workload, market value, and a documented reason for every decision.">
 <link rel="canonical" href="${SITE}/previews/${esc(DATE)}.html">
 <link rel="stylesheet" href="/css/style.css">
 <style>
@@ -239,7 +239,7 @@ function renderPreviewPage(brief, published) {
 <nav id="nav"></nav>
 <main>
 <div class="picks-hero">
-<p class="eyebrow">LyDia daily card</p>
+<p class="eyebrow">Leo daily card</p>
 <h1>MLB Picks | ${esc(titleDate)}</h1>
 <p class="subtitle">One authoritative page for every official pick, research setup, and pass. Each decision includes the model probability, matchup evidence, risk, and author.</p>
 </div>
@@ -250,12 +250,12 @@ function renderPreviewPage(brief, published) {
   <div class="card"><div class="dim small">WATCHLIST</div><div style="font-size:1.5rem;font-weight:800">${watchlist.length}</div></div>
   <div class="card"><div class="dim small">PASSES</div><div style="font-size:1.5rem;font-weight:800">${passes.length}</div></div>
 </div>
-<p class="dim small">${updated ? `Updated ${esc(updated)}.` : "Updated by LyDia Daily Engine."} Official picks are published before grading.</p>
+<p class="dim small">${updated ? `Updated ${esc(updated)}.` : "Updated by Leo Daily Engine."} Official picks are published before grading.</p>
 <p class="archive-link"><a href="/previews/archive.html">View previous daily cards &rarr;</a></p>
 <div class="lead-box" style="margin-bottom:12px"><h3 style="margin:0 0 4px">Get tomorrow's MLB model card free</h3><p class="dim small" style="margin:0">One email, every morning. No payment required.</p><form class="lydia-signup-form" data-list="newsletter" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input type="hidden" name="bot-field"><input type="email" name="email" required placeholder="you@example.com" style="flex:1;min-width:200px"><button type="submit" class="secondary">Subscribe free</button></form></div>
-<div class="lead-box" style="border-color:var(--accent2)"><h3 style="margin:0 0 4px">Get the organized member view</h3><p class="dim small" style="margin:0">Members get official picks first, value watch setups second, and clear pass reasons for the rest of the card.</p><p style="margin-top:10px"><a class="btn blue" href="/membership/">Join LyDia | $30/mo</a> <a class="btn secondary" href="/member-brief/">Open Member Brief</a></p></div>
+<div class="lead-box" style="border-color:var(--accent2)"><h3 style="margin:0 0 4px">Get the organized member view</h3><p class="dim small" style="margin:0">Members get official picks first, value watch setups second, and clear pass reasons for the rest of the card.</p><p style="margin-top:10px"><a class="btn blue" href="/membership/">Join Leo | $30/mo</a> <a class="btn secondary" href="/member-brief/">Open Member Brief</a></p></div>
 ${cards}
-<p class="dim small">Model outputs, not promises. LyDia provides analysis and education only, not betting advice. Every official pick is graded on the <a href="/results/">Results page</a>.</p>
+<p class="dim small">Model outputs, not promises. Leo provides analysis and education only, not betting advice. Every official pick is graded on the <a href="/results/">Results page</a>.</p>
 </main>
 <footer id="footer"></footer>
 <script src="/js/app.js"></script>
@@ -283,7 +283,7 @@ function renderCard(g, featured, published) {
   <span class="status-badge ${statusClass(cardStatus)}">${statusLabel(cardStatus)}</span>
   ${officialMarkets.length ? `<div class="notice" style="max-width:760px;margin:4px auto 12px"><strong>Official markets</strong>${officialMarkets.join("")}</div>` : ""}
   <dl class="field-grid">
-    <dt>LyDia side</dt><dd>${esc(g.pick_team || "-")} Money Line</dd>
+    <dt>Leo side</dt><dd>${esc(g.pick_team || "-")} Money Line</dd>
     <dt>Lab Rating</dt><dd>${labRating(g.lab_score)}</dd>
     <dt>Model probability</dt><dd>${pct(g.model_probability)}</dd>
     <dt>Market probability</dt><dd>${pct(m.no_vig_probability)}</dd>
@@ -292,7 +292,7 @@ function renderCard(g, featured, published) {
     <dt>Pitcher edge</dt><dd>${esc(pe.team || "-")}${pe.gap ? ` by ${esc(pe.gap)} points` : ""}</dd>
     <dt>Bullpen read</dt><dd>${esc(bullpenAnalysis(g))}</dd>
   </dl>
-  <div class="why-block"><b>Why LyDia made this decision</b>${bullpenGameAnalysis(g) ? `<strong>Bullpen game impact</strong><br>${esc(bullpenGameAnalysis(g))}<br><br>` : ""}${esc(LyDiaRead.clientRead(g))}</div>
+  <div class="why-block"><b>Why Leo made this decision</b>${bullpenGameAnalysis(g) ? `<strong>Bullpen game impact</strong><br>${esc(bullpenGameAnalysis(g))}<br><br>` : ""}${esc(LeoRead.clientRead(g))}</div>
   ${isPass ? `<div class="risk-block"><b>Pass reason</b>${esc(g.pass_reason || "No clear setup.")}</div>` : `<div class="risk-block"><b>Risk note</b>${esc(riskNote(g))}</div>`}
 </div>`;
 }
@@ -307,7 +307,7 @@ function updatePreviewArchive(date) {
     .slice(0, 60);
   const links = dates.map(day => `<a href="/previews/${day}.html">MLB Picks | ${niceDate(day)}</a>`);
   fs.writeFileSync(file, `<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>MLB Picks archive | LyDia</title><meta name="description" content="LyDia's dated MLB picks and full-card analysis archive."><link rel="stylesheet" href="/css/style.css"><style>main{text-align:center}.archive-list{max-width:820px;margin:auto}.archive-list a{display:block;padding:10px 0;border-bottom:1px solid var(--border)}</style></head><body><nav id="nav"></nav><main><h1>MLB Picks Archive</h1><p class="subtitle">Previous daily cards with every official pick, research setup, and pass.</p><div class="card archive-list">
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>MLB Picks archive | Leo</title><meta name="description" content="Leo's dated MLB picks and full-card analysis archive."><link rel="stylesheet" href="/css/style.css"><style>main{text-align:center}.archive-list{max-width:820px;margin:auto}.archive-list a{display:block;padding:10px 0;border-bottom:1px solid var(--border)}</style></head><body><nav id="nav"></nav><main><h1>MLB Picks Archive</h1><p class="subtitle">Previous daily cards with every official pick, research setup, and pass.</p><div class="card archive-list">
 ${links.join("\n")}
 </div></main><footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/previews/"); renderFooter();</script></body></html>`, "utf8");
 }

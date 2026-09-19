@@ -2,7 +2,7 @@
 "use strict";
 
 /*
-  LyDia Learning Summary Generator
+  Leo Learning Summary Generator
 
   Reads:
   - data/results.json
@@ -911,7 +911,7 @@ function buildCalibration() {
       // Every source column below is home-relative; flipped back to
       // pick-relative here (negated for away picks) so "high tertile" means
       // the same thing — favorable to whoever was picked — on every row,
-      // regardless of which side LyDia picked.
+      // regardless of which side Leo picked.
       // toPickRelative: gap-type columns (additive, symmetric around 0) just
       // negate for an away pick; home_model_prob is a bounded 0-1
       // probability, so an away pick needs the complement (1-v), not -v.

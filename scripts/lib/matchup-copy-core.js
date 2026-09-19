@@ -1,5 +1,5 @@
 /*
-  LyDia — matchup page explanation copy.
+  Leo — matchup page explanation copy.
 
   Every sentence here is written from data the page already has. Nothing in this
   file invents a narrative: when the data does not support a claim, the copy says
@@ -7,7 +7,7 @@
 
   Four defects this replaces:
    1. "That gap is the entire reason this game is on the board" was printed even
-      when LyDia had no lean at all (50.0%). Conviction language on a coin flip.
+      when Leo had no lean at all (50.0%). Conviction language on a coin flip.
    2. Bullpen case read as raw model output: "4.7/10 risk against 7.7/10".
    3. Pitcher edge was a bare score gap with no reason attached.
    4. Recent form had a table but no headline anyone would actually read.
@@ -28,7 +28,7 @@ const {
   BULLPEN_MAX, OFFENSE_MAX
 } = require("./lab-rating-core");
 
-// Below this, LyDia has no directional lean worth describing as conviction.
+// Below this, Leo has no directional lean worth describing as conviction.
 // Single source of truth: this is the same floor Lab Rating's own conviction
 // component uses (scripts/lib/lab-rating-core.js). A market-mispricing case
 // used to fire down to 52% while the rating itself credited zero conviction
@@ -53,7 +53,7 @@ function wins(rec) {
 /* ---------------------------------------------------------------------------
    1. Market mispricing
 
-   Only frames the edge as a directional case when LyDia actually leans that way.
+   Only frames the edge as a directional case when Leo actually leans that way.
    At a coin flip the value lives in the price, not in a read on the game, and
    the copy now says exactly that.
 --------------------------------------------------------------------------- */
@@ -65,8 +65,8 @@ function marketMispricingCase({ pickTeam, modelProb, marketProb, edge, minEdge =
   // "case for" framing is not honest.
   if (modelProb < LEAN_MIN) {
     return {
-      title: `Priced above LyDia's read: ${signedPct(edge)}`,
-      detail: `LyDia has this closer to a coin flip than the market does — ${pct(modelProb)} for ${pickTeam}, `
+      title: `Priced above Leo's read: ${signedPct(edge)}`,
+      detail: `Leo has this closer to a coin flip than the market does — ${pct(modelProb)} for ${pickTeam}, `
         + `against a no-vig market price of ${pct(marketProb)}. The value here is in the price, not in a strong `
         + `lean toward either side, so treat it as a pricing observation rather than a read on the game.`
     };
@@ -74,8 +74,8 @@ function marketMispricingCase({ pickTeam, modelProb, marketProb, edge, minEdge =
 
   return {
     title: `Market mispricing: ${signedPct(edge)}`,
-    detail: `LyDia makes ${pickTeam} ${pct(modelProb)} to win while the no-vig market says ${pct(marketProb)}. `
-      + `LyDia rates this side ${signedPct(edge)} better than the price implies.`
+    detail: `Leo makes ${pickTeam} ${pct(modelProb)} to win while the no-vig market says ${pct(marketProb)}. `
+      + `Leo rates this side ${signedPct(edge)} better than the price implies.`
   };
 }
 
@@ -101,7 +101,7 @@ function bullpenCase({ pickTeam, oppTeam, pickPen, oppPen, minRiskGap = 15 }) {
   if (isNum(pickEra) && isNum(oppEra)) {
     evidence = `${oppTeam} relievers have a ${two(oppEra)} ERA over the last 7 days; ${pickTeam} relievers have a ${two(pickEra)}.`;
   } else if (pickPen && oppPen && pickPen.efficiency_label && oppPen.efficiency_label) {
-    evidence = `LyDia currently grades the ${pickTeam} bullpen ${String(pickPen.efficiency_label).toLowerCase()} and the ${oppTeam} bullpen ${String(oppPen.efficiency_label).toLowerCase()}.`;
+    evidence = `Leo currently grades the ${pickTeam} bullpen ${String(pickPen.efficiency_label).toLowerCase()} and the ${oppTeam} bullpen ${String(oppPen.efficiency_label).toLowerCase()}.`;
   } else {
     evidence = `The ${oppTeam} bullpen carries materially more late-inning risk than the ${pickTeam} bullpen.`;
   }
@@ -160,7 +160,7 @@ function pitcherEdgeSentence({ edgeTeam, gap, betterPitcher, worsePitcher, bette
     return `${edgeTeam} holds the starting pitcher edge${isNum(gap) ? ` by ${gap} points` : ""}.`;
   }
   const drivers = rankPitcherDrivers(betterStats, worseStats).slice(0, maxDrivers);
-  const head = `LyDia gives ${betterPitcher} a ${isNum(gap) ? gap + "-point " : ""}edge over ${worsePitcher}`;
+  const head = `Leo gives ${betterPitcher} a ${isNum(gap) ? gap + "-point " : ""}edge over ${worsePitcher}`;
   if (!drivers.length) return `${head}.`;
 
   const parts = drivers.map(d => `${d.label} (${d.fmt(d.better)} vs ${d.fmt(d.worse)})`);
@@ -269,8 +269,8 @@ function labRatingReasons({
     reasons.push({
       title: `Conviction: ${breakdown.conviction_points}/${LAB_MAX.conviction}`,
       detail: isNum(modelProb) && modelProb < CONVICTION_FLOOR
-        ? `LyDia's own win probability for ${pickTeam} (${pct(modelProb)}) is close enough to a coin flip that the rating credits no conviction at all — credit only starts above ${pct(CONVICTION_FLOOR, 0)}.`
-        : `LyDia leans toward ${pickTeam}, but not strongly enough to earn full conviction credit.`
+        ? `Leo's own win probability for ${pickTeam} (${pct(modelProb)}) is close enough to a coin flip that the rating credits no conviction at all — credit only starts above ${pct(CONVICTION_FLOOR, 0)}.`
+        : `Leo leans toward ${pickTeam}, but not strongly enough to earn full conviction credit.`
     });
   }
 
@@ -291,7 +291,7 @@ function labRatingReasons({
     if (isNum(pickPitcherScore)) {
       reasons.push({
         title: `Pitching plan: ${breakdown.pitching_plan_points}/${LAB_MAX.pitching_plan}`,
-        detail: `${pickPitcherName || pickTeam} rates ${pickPitcherScore} on LyDia's pitcher score, judged on its own merits — `
+        detail: `${pickPitcherName || pickTeam} rates ${pickPitcherScore} on Leo's pitcher score, judged on its own merits — `
           + `below the ${PITCHER_SCORE_CEILING} needed for full credit here, regardless of the opposing starter.`
       });
     } else {
@@ -364,10 +364,10 @@ function labRatingBreakdown({
 
   const convFrac = breakdown.conviction_points / LAB_MAX.conviction;
   const convDetail = strong(convFrac)
-    ? `LyDia's win probability for ${pickTeam} (${isNum(modelProb) ? pct(modelProb) : "n/a"}) is well clear of a coin flip -- this is a real, stated lean, not a guess.`
+    ? `Leo's win probability for ${pickTeam} (${isNum(modelProb) ? pct(modelProb) : "n/a"}) is well clear of a coin flip -- this is a real, stated lean, not a guess.`
     : (isNum(modelProb) && modelProb < CONVICTION_FLOOR
-        ? `LyDia's own win probability for ${pickTeam} (${pct(modelProb)}) is close enough to a coin flip that the rating credits little or no conviction -- credit only starts above ${pct(CONVICTION_FLOOR, 0)}.`
-        : `LyDia leans toward ${pickTeam}, but not strongly enough to earn full conviction credit.`);
+        ? `Leo's own win probability for ${pickTeam} (${pct(modelProb)}) is close enough to a coin flip that the rating credits little or no conviction -- credit only starts above ${pct(CONVICTION_FLOOR, 0)}.`
+        : `Leo leans toward ${pickTeam}, but not strongly enough to earn full conviction credit.`);
 
   // 2026-08-26: pitching-plan support is individualized now -- it grades
   // the picked pitcher's own score against a fixed floor/ceiling, not a
@@ -375,7 +375,7 @@ function labRatingBreakdown({
   // version note.
   const planFrac = breakdown.pitching_plan_points / LAB_MAX.pitching_plan;
   const planDetail = isNum(pickPitcherScore)
-    ? `${pickPitcherName || pickTeam} rates ${pickPitcherScore} on LyDia's pitcher score, judged on its own merits (${PITCHER_SCORE_FLOOR}-${PITCHER_SCORE_CEILING} is the credited range).`
+    ? `${pickPitcherName || pickTeam} rates ${pickPitcherScore} on Leo's pitcher score, judged on its own merits (${PITCHER_SCORE_FLOOR}-${PITCHER_SCORE_CEILING} is the credited range).`
       + (strong(planFrac) ? " That is a strong start on its own, and it earns most or all of the available credit here." : " Average or below by that measure, so it earns little or none of the available credit here -- independent of who the opponent is throwing.")
     : `No individual pitcher score is available for ${pickTeam}'s starter in this matchup.`;
 
@@ -398,7 +398,7 @@ function labRatingBreakdown({
   2026-08-16, Lynold's explicit instruction: a breakdown of the moneyline
   price itself -- team strength, the pitcher-score gap driving pitcher_boost,
   and the bullpen adjustment -- distinct from the Lab Rating breakdown above.
-  Lab Rating grades LyDia's analysis quality; this explains the PRICE, which
+  Lab Rating grades Leo's analysis quality; this explains the PRICE, which
   is a different question (see lab-rating-core.js's header: "It is NOT win
   probability and it is NOT a price judgement"). All values are read directly
   off fields generate-member-lab.js already writes to the brief -- nothing
@@ -425,7 +425,7 @@ function moneyLineReasons({
   if (isNum(teamStrengthProbPick)) {
     reasons.push({
       title: `Team strength: ${pct(teamStrengthProbPick)}`,
-      detail: `Before any pitcher or bullpen adjustment, LyDia's team-strength model alone makes ${pickTeam} ${pct(teamStrengthProbPick)} to win. Everything below moves the price from this starting point.`
+      detail: `Before any pitcher or bullpen adjustment, Leo's team-strength model alone makes ${pickTeam} ${pct(teamStrengthProbPick)} to win. Everything below moves the price from this starting point.`
     });
   }
 
