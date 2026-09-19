@@ -63,47 +63,76 @@ const ApiKey = {
   clear() { try { localStorage.removeItem(this.KEY); } catch (e) {} }
 };
 
+// ---------- Sport Selector ----------
+const Sport = {
+  KEY: "leo_selected_sport",
+  SPORTS: ["MLB", "NFL"],
+  get() { try { return localStorage.getItem(this.KEY) || "MLB"; } catch (e) { return "MLB"; } },
+  set(v) { try { localStorage.setItem(this.KEY, v); } catch (e) {} },
+  prefix() { const sport = this.get(); return "/" + sport.toLowerCase() + "/"; }
+};
+
 // ---------- Nav ----------
 // Tab order is deliberate: Scoreboard, Picks, Pitchers, Lab, Stats, Results,
 // Recaps. There is no Home tab — the Leo wordmark is the route home. Picks
 // points at /previews/, the unified picks product; /picks/ redirects there and
 // is still matched for the active state so older pages highlight correctly.
 function renderNav(active) {
+  const sport = Sport.get();
+  const prefix = Sport.prefix();
+  
   const links = [
-    ["/dashboard/", "Scoreboard"],
-    ["/previews/", "Picks"],
-    ["/tools/strikeout-projections/", "Pitchers"],
-    ["/tools/", "Lab"],
-    ["/stats/", "Stats"],
-    ["/results/", "Results"],
-    ["/recaps/", "Recaps"]
+    [prefix + "dashboard/", "Scoreboard"],
+    [prefix + "previews/", "Picks"],
+    [prefix === "/mlb/" ? "/tools/strikeout-projections/" : prefix + "player-props/", sport === "MLB" ? "Pitchers" : "Props"],
+    [prefix + "tools/", "Lab"],
+    [prefix + "stats/", "Stats"],
+    [prefix + "results/", "Results"],
+    [prefix + "recaps/", "Recaps"]
   ];
+  
   // A page may report an old or more specific path than the tab it belongs to.
-  const ALIASES = {
-    "/picks/": "/previews/",
-    "/articles/": null,
-    "/": null
-  };
+  const ALIASES = {};
+  ALIASES[prefix + "picks/"] = prefix + "previews/";
+  ALIASES["/articles/"] = null;
+  ALIASES["/"] = null;
+  
   const current = Object.prototype.hasOwnProperty.call(ALIASES, active) ? ALIASES[active] : active;
   const isActive = href => href === current
-    || (href === "/tools/strikeout-projections/" && current === "/tools/strikeout-projections/");
+    || (sport === "MLB" && href === "/tools/strikeout-projections/" && current === "/tools/strikeout-projections/");
 
   const el = document.getElementById("nav");
   if (!el) return;
-  el.innerHTML = '<div class="nav-inner">'
+  
+  let navHtml = '<div class="nav-inner">'
     + '<a class="brand" href="/" aria-label="Leo home"><span class="brand-leo">Leo</span></a>'
-    + links.map(function (l) {
-        if (l[0] === "/tools/") {
-          var tools = [
-            ["/member-brief/", "Daily Member Brief"],
-            ["/tools/offense-matchups/", "Offense Matchup"],
-            ["/tools/pitcher-matchups/", "Pitcher Matchup"],
-            ["/tools/bullpen-fatigue/", "Bullpen Fatigue"],
-            ["/tools/strikeout-projections/", "Strikeout Projections"],
-            ["/tools/totals-projections/", "Totals Projections"]
-          ];
-          return '<span class="nav-drop' + (current === "/tools/" ? ' active-wrap' : '') + '">'
-            + '<a class="navlink nav-drop-toggle' + (current === "/tools/" ? ' active' : '') + '" href="/tools/">Lab ▾</a>'
+    + '<div class="nav-sport-selector">';
+  
+  // Add sport selector
+  Sport.SPORTS.forEach(function (s) {
+    navHtml += '<button class="nav-sport' + (s === sport ? ' active' : '') + '" data-sport="' + s + '">' + s + '</button>';
+  });
+  navHtml += '</div>';
+  
+  navHtml += links.map(function (l) {
+        if (l[0] === prefix + "tools/") {
+          var tools = sport === "MLB" 
+            ? [
+                [prefix + "member-brief/", "Daily Member Brief"],
+                [prefix + "tools/offense-matchups/", "Offense Matchup"],
+                [prefix + "tools/pitcher-matchups/", "Pitcher Matchup"],
+                [prefix + "tools/bullpen-fatigue/", "Bullpen Fatigue"],
+                [prefix + "tools/strikeout-projections/", "Strikeout Projections"],
+                [prefix + "tools/totals-projections/", "Totals Projections"]
+              ]
+            : [
+                [prefix + "member-brief/", "Daily Member Brief"],
+                [prefix + "tools/player-props/", "Player Props"],
+                [prefix + "tools/team-stats/", "Team Stats"],
+                [prefix + "tools/injury-tracker/", "Injury Tracker"]
+              ];
+          return '<span class="nav-drop' + (current === prefix + "tools/" ? ' active-wrap' : '') + '">'
+            + '<a class="navlink nav-drop-toggle' + (current === prefix + "tools/" ? ' active' : '') + '" href="' + l[0] + '">Lab ▾</a>'
             + '<span class="nav-drop-menu">'
             + tools.map(function (t) { return '<a href="' + t[0] + '">' + t[1] + '</a>'; }).join("")
             + '</span></span>';
@@ -112,6 +141,22 @@ function renderNav(active) {
       }).join("")
     + '<a class="navlink navlink-cta' + (current === "/membership/" ? ' active' : '') + '" href="/membership/">Join $30/mo</a>'
     + '</div>';
+
+  el.innerHTML = navHtml;
+
+  // Wire sport selector buttons
+  var sportBtns = el.querySelectorAll(".nav-sport");
+  sportBtns.forEach(function (btn) {
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      var newSport = btn.getAttribute("data-sport");
+      Sport.set(newSport);
+      // Redirect to equivalent page in new sport
+      var path = window.location.pathname;
+      var newPath = path.replace(/^\/(mlb|nfl)\//, "/" + newSport.toLowerCase() + "/");
+      window.location.href = newPath;
+    });
+  });
 
   // Mobile/touch: first tap on "Lab ▾" opens the menu instead of navigating;
   // tapping elsewhere closes it. Desktop hover keeps working via CSS.
@@ -130,6 +175,7 @@ function renderNav(active) {
     });
   }
 }
+
 
 // ---------- Signup forms (Cloudflare Worker — replaces Netlify Forms) ----------
 // 2026-08-24: GitHub Pages has no server-side form processing, so the old

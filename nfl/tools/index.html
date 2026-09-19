@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lab — NFL Tools | Leo</title>
+<link rel="stylesheet" href="/css/style.css">
+<style>
+body { background: var(--bg); }
+main { padding: 20px; max-width: 960px; margin: 0 auto; }
+.tools-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 20px; }
+.tool-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+.tool-card h3 { margin: 0 0 8px; font-size: 1.1rem; }
+.tool-card p { margin: 0; color: var(--text-dim); font-size: 0.95rem; line-height: 1.5; }
+.tool-card a { display: inline-block; margin-top: 12px; color: var(--accent); text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main>
+  <h1>Lab — NFL Tools</h1>
+  <p>Advanced analysis tools for NFL betting edge</p>
+  
+  <div class="tools-grid">
+    <div class="tool-card">
+      <h3>Daily Member Brief</h3>
+      <p>Curated NFL insights and prop projections with model reasoning</p>
+      <a href="/nfl/member-brief/">Open Brief →</a>
+    </div>
+    <div class="tool-card">
+      <h3>Player Props</h3>
+      <p>Moneyline, passing yards, receiving yards, rushing yards, anytime TD</p>
+      <a href="/nfl/tools/player-props/">View Props →</a>
+    </div>
+    <div class="tool-card">
+      <h3>Team Stats</h3>
+      <p>Offensive and defensive rankings with home/away splits</p>
+      <a href="/nfl/tools/team-stats/">View Stats →</a>
+    </div>
+    <div class="tool-card">
+      <h3>Injury Tracker</h3>
+      <p>Key player status updates and game impact analysis</p>
+      <a href="/nfl/tools/injury-tracker/">Track Injuries →</a>
+    </div>
+  </div>
+</main>
+<script src="/js/app.js"></script>
+<script>
+renderNav("/nfl/tools/");
+</script>
+</body>
+</html>

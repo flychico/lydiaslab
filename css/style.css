@@ -228,3 +228,13 @@ footer {
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* Sport selector in nav */
+.nav-sport-selector { display: inline-flex; gap: 4px; margin: 0 12px; border-left: 1px solid var(--border); padding-left: 12px; }
+.nav-sport { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: .85rem; font-weight: 600; color: var(--text-dim); cursor: pointer; transition: all 0.2s; }
+.nav-sport:hover { border-color: var(--accent); color: var(--text); }
+.nav-sport.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+@media (max-width: 640px) {
+  .nav-sport-selector { gap: 2px; margin: 0 8px; padding-left: 8px; }
+  .nav-sport { padding: 3px 8px; font-size: .78rem; }
+}
