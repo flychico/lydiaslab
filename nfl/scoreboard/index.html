@@ -150,7 +150,7 @@ function teamRow(abbr, score, price, prob, isFinal, winner, side){
     : '<span class="team-price">'+fmtAm(price)+'</span><span class="team-prob">'+fmtPct(prob)+' mkt</span>';
   return '<div class="team-row '+side+' '+(winner?"winner":"")+'">'+
     '<span class="team-logo-wrap">'+
-      '<img class="team-logo" src="/img/nfl/'+encodeURIComponent(abbr)+'.svg" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\'">'+
+      '<img class="team-logo" src="/img/nfl/'+encodeURIComponent(abbr)+'.png" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\'">'+
       '<span class="team-initials">'+escapeHtml(abbr)+'</span>'+
     '</span>'+
     '<span class="team-copy"><span class="team-name">'+escapeHtml(name)+'</span>'+
