@@ -1,0 +1,186 @@
+/* Shared scoreboard styles — MLB (/scoreboard/) and NFL (/nfl/scoreboard/).
+   Extracted 2026-09-19 so the two sports cannot drift apart visually.
+   Edit here, both scoreboards change together. */
+.scoreboard-shell { max-width: 1220px; }
+.score-hero {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(109,93,252,.25);
+  border-radius: 24px;
+  padding: 28px;
+  margin-bottom: 22px;
+  background:
+    radial-gradient(circle at 92% 0%, rgba(217,70,143,.24), transparent 34%),
+    radial-gradient(circle at 5% 100%, rgba(35,184,199,.22), transparent 38%),
+    linear-gradient(135deg, rgba(109,93,252,.13), rgba(255,255,255,.92) 48%, rgba(217,70,143,.10));
+  box-shadow: 0 24px 65px rgba(74,58,150,.14);
+}
+.score-hero::after {
+  content: "";
+  position: absolute;
+  width: 230px;
+  height: 230px;
+  border-radius: 50%;
+  right: -90px;
+  bottom: -125px;
+  background: linear-gradient(135deg, rgba(109,93,252,.26), rgba(217,70,143,.18));
+  filter: blur(2px);
+}
+.score-hero > * { position: relative; z-index: 1; }
+.score-hero h1 { font-size: clamp(2rem, 4vw, 3.35rem); max-width: 850px; line-height: 1.02; letter-spacing: -.045em; }
+.score-hero .subtitle { max-width: 790px; font-size: 1rem; margin-bottom: 0; }
+.score-hero-chips { display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; }
+.hero-chip {
+  display:inline-flex; align-items:center; gap:6px; padding:7px 11px;
+  border:1px solid rgba(109,93,252,.18); border-radius:999px;
+  background:rgba(255,255,255,.72); color:var(--text); font-size:.82rem; font-weight:700;
+  backdrop-filter: blur(10px);
+}
+.score-controls {
+  display:flex; align-items:end; justify-content:space-between; gap:14px; flex-wrap:wrap;
+  background:rgba(255,255,255,.78); border:1px solid var(--border); border-radius:18px;
+  padding:14px; margin-bottom:16px; box-shadow:var(--shadow-sm); backdrop-filter:blur(12px);
+}
+.date-controls, .view-controls { display:flex; align-items:end; gap:8px; flex-wrap:wrap; }
+.date-controls .field { margin:0; min-width:165px; }
+.control-btn {
+  min-height:42px; padding:9px 14px; border-radius:12px; background:#fff;
+  color:var(--text); border:1px solid var(--border); box-shadow:none;
+}
+.control-btn:hover { border-color:rgba(109,93,252,.45); background:var(--bg-elev); }
+.control-btn.active { background:linear-gradient(135deg,var(--accent2),var(--accent)); color:#fff; border-color:transparent; }
+.kpis {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:20px;
+}
+.kpi {
+  position:relative; overflow:hidden; background:rgba(255,255,255,.88); border:1px solid var(--border);
+  border-radius:17px; padding:15px 16px; box-shadow:var(--shadow-sm);
+}
+.kpi::after {
+  content:""; position:absolute; width:70px; height:70px; border-radius:50%;
+  right:-25px; top:-28px; background:rgba(109,93,252,.10);
+}
+.kpi:nth-child(2)::after { background:rgba(217,70,143,.11); }
+.kpi:nth-child(3)::after { background:rgba(35,184,199,.12); }
+.kpi:nth-child(4)::after { background:rgba(246,170,28,.13); }
+.kpi .label { font-size:.73rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.08em; font-weight:800; }
+.kpi .value { font-size:1.45rem; line-height:1.1; font-weight:850; margin-top:4px; letter-spacing:-.03em; }
+.kpi .sub { font-size:.78rem; color:var(--text-dim); margin-top:3px; }
+.games-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(350px,1fr)); gap:16px; }
+.score-card {
+  --away-color:#6d5dfc; --home-color:#d9468f;
+  position:relative; display:flex; flex-direction:column; min-height:100%; cursor:pointer;
+  color:var(--text); text-decoration:none; overflow:hidden;
+  background:rgba(255,255,255,.94); border:1px solid rgba(109,93,252,.16);
+  border-radius:22px; box-shadow:0 12px 32px rgba(31,35,40,.08);
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.score-card::before {
+  content:""; height:6px; display:block;
+  background:linear-gradient(90deg,var(--away-color) 0 50%,var(--home-color) 50% 100%);
+}
+.score-card:hover {
+  transform:translateY(-4px); box-shadow:0 24px 55px rgba(74,58,150,.17);
+  border-color:rgba(109,93,252,.38); text-decoration:none;
+}
+.score-card:focus-visible { outline:3px solid rgba(109,93,252,.32); outline-offset:3px; }
+.score-card.is-live { border-color:rgba(207,34,46,.44); box-shadow:0 14px 34px rgba(207,34,46,.11); }
+.card-body { padding:15px 16px 16px; display:flex; flex-direction:column; gap:12px; flex:1; }
+.card-top { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.game-meta { min-width:0; }
+.game-time { font-size:.92rem; font-weight:850; }
+.game-venue { display:block; color:var(--text-dim); font-size:.73rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:230px; }
+.game-status {
+  flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; border-radius:999px;
+  padding:5px 9px; font-size:.7rem; line-height:1; font-weight:850; letter-spacing:.04em; text-transform:uppercase;
+  background:rgba(109,93,252,.10); color:var(--accent2);
+}
+.game-status.live { background:rgba(207,34,46,.10); color:var(--danger); }
+.game-status.live::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; animation:pulse 1.4s infinite; }
+.game-status.final { background:rgba(31,35,40,.07); color:var(--text-dim); }
+.game-status.official { background:rgba(30,142,62,.12); color:var(--good); }
+.game-status.value { background:rgba(217,70,143,.12); color:var(--accent); }
+.game-status.watch { background:rgba(246,170,28,.14); color:#8d5c00; }
+.game-status.pass { background:rgba(87,96,106,.10); color:var(--text-dim); }
+/* 2026-08-24: bullpen games weren't called out anywhere on the scoreboard --
+   you'd only find out by reading "TBD" or an opener's name in the pitcher
+   line and knowing what that meant. This makes it explicit: a header pill
+   when either side is bullpen-managed, plus a per-team tag on the pitcher
+   line itself so it's clear which side. Cards grow to fit automatically
+   (.pitcher-line already wraps, .score-card has no fixed height), and since
+   the scoreboard grid stretches every card in a row to match its tallest
+   sibling, this doesn't create uneven rows. */
+.card-top-badges { display:flex; align-items:center; gap:6px; flex:0 0 auto; }
+.bullpen-badge {
+  display:inline-flex; align-items:center; gap:5px; border-radius:999px;
+  padding:5px 9px; font-size:.68rem; line-height:1; font-weight:850; letter-spacing:.03em; text-transform:uppercase;
+  background:rgba(141,92,0,.13); color:#8d5c00; white-space:nowrap;
+}
+.bullpen-badge::before { content:"🔄"; font-size:.75rem; }
+.pitcher-line .bullpen-badge { padding:3px 8px; font-size:.64rem; }
+.teams { display:grid; gap:9px; }
+.team-row {
+  display:grid; grid-template-columns:42px minmax(0,1fr) auto; align-items:center; gap:10px;
+  padding:8px 9px; border-radius:14px; background:linear-gradient(90deg,rgba(109,93,252,.045),rgba(255,255,255,.2));
+}
+.team-row.home { background:linear-gradient(90deg,rgba(217,70,143,.045),rgba(255,255,255,.2)); }
+.team-logo-wrap {
+  width:42px; height:42px; display:grid; place-items:center; border-radius:12px;
+  background:#fff; border:1px solid rgba(31,35,40,.08); box-shadow:0 4px 12px rgba(31,35,40,.06);
+}
+.team-logo { width:34px; height:34px; object-fit:contain; }
+.team-initials { display:none; font-size:.75rem; font-weight:900; color:var(--text-dim); }
+.team-copy { min-width:0; }
+.team-name { font-weight:850; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.team-record { color:var(--text-dim); font-size:.74rem; margin-top:2px; }
+.team-numbers { text-align:right; font-variant-numeric:tabular-nums; }
+.team-score { font-size:1.65rem; line-height:1; font-weight:900; }
+.team-price { font-size:1rem; line-height:1.1; font-weight:900; }
+.team-prob { display:block; font-size:.72rem; color:var(--text-dim); margin-top:2px; }
+.team-row.winner .team-name, .team-row.winner .team-score { color:var(--good); }
+.market-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.market-box {
+  min-width:0; border:1px solid rgba(109,93,252,.13); border-radius:13px;
+  padding:9px; min-height:76px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; text-align:center;
+  background:linear-gradient(180deg,rgba(246,243,255,.75),rgba(255,255,255,.85));
+}
+.market-box.total { border-color:rgba(35,184,199,.18); background:linear-gradient(180deg,rgba(232,252,253,.76),rgba(255,255,255,.88)); }
+.market-box.rating { border-color:rgba(217,70,143,.18); background:linear-gradient(180deg,rgba(255,239,248,.76),rgba(255,255,255,.88)); }
+.market-label { display:block; color:var(--text-dim); font-size:.65rem; font-weight:850; text-transform:uppercase; letter-spacing:.07em; }
+.market-value { display:block; font-size:.93rem; font-weight:900; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.market-sub { display:block; color:var(--text-dim); font-size:.68rem; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.prob-compare { display:grid; gap:6px; }
+.prob-line { display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:.72rem; color:var(--text-dim); }
+.prob-track { height:8px; border-radius:999px; overflow:hidden; display:flex; background:var(--bg-elev); }
+.prob-away { background:var(--away-color); }
+.prob-home { background:var(--home-color); }
+.pitcher-line {
+  display:flex; align-items:center; flex-wrap:wrap; gap:6px 8px; padding-top:10px; border-top:1px solid var(--border);
+  color:var(--text-dim); font-size:.76rem;
+}
+.card-cta {
+  margin-top:auto; padding-top:2px; display:flex; justify-content:space-between; align-items:center;
+  color:var(--accent2); font-size:.79rem; font-weight:850;
+}
+.card-cta span:last-child { font-size:1rem; transition:transform .18s ease; }
+.score-card:hover .card-cta span:last-child { transform:translateX(4px); }
+.score-empty {
+  grid-column:1/-1; padding:32px; text-align:center; border-radius:20px;
+  border:1px dashed var(--border); background:rgba(255,255,255,.72); color:var(--text-dim);
+}
+.data-note { margin-top:16px; font-size:.76rem; color:var(--text-dim); }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.35;transform:scale(.75)} }
+@media (max-width:760px) {
+  .score-hero { padding:22px 18px; border-radius:20px; }
+  .score-controls { align-items:stretch; }
+  .date-controls,.view-controls { width:100%; }
+  .date-controls .field { flex:1; }
+  .view-controls .control-btn { flex:1; padding-left:8px; padding-right:8px; }
+  .games-grid { grid-template-columns:1fr; }
+}
+@media (max-width:420px) {
+  .market-grid { grid-template-columns:1fr 1fr; }
+  .market-box.rating { grid-column:1/-1; }
+  .game-venue { max-width:180px; }
+}
