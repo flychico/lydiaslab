@@ -26,6 +26,10 @@ const HFA = 2.0;        // home-field advantage in points (modern NFL ~2)
 const SD  = 13.2;       // SD of NFL game margin vs spread
 const K_PSEUDO = 4;     // regression strength, matches the props model
 const EDGE_MIN = 0.04;  // minimum edge to call an official pick
+// No NFL market has a backtested profitable threshold yet, so Leo publishes
+// numbers and passes -- never a wager. Flip this only when
+// scripts/backtest-nfl.js shows a positive ROI band holding across seasons.
+const PICKS_ENABLED = false;
 const K_MARKET = 8;     // pseudo-games before the model outweighs the market prior
 const EDGE_CAP = 0.15;  // a disagreement past this means the MODEL is wrong, not the market
 const TOTAL_SD = 10.4;  // SD of actual combined points vs the closing total
@@ -200,13 +204,19 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
     const rawHome = normCdf(expMargin/SD);
     const [mktAway,mktHome] = devig(g.away_moneyline,g.home_moneyline);
 
-    // The betting market is a strong, well-calibrated prior. Early in the season a
-    // margin rating built on 1-2 games cannot beat it, so the model only earns
-    // weight as real games accumulate. Without this the model "finds" 30% edges,
-    // which is a symptom of overfitting, not an opportunity.
+    // LEO'S NUMBER IS LEO'S. No market blending anywhere in this file.
+    // A probability blended toward the closing line cannot show a real edge
+    // against that line -- it is damped toward zero by construction, so the
+    // "edge" becomes a statement about itself. The posted price already tells
+    // you what the market thinks. This is Leo's independent read.
+    //
+    // The cost of that honesty is measured, not assumed: across 599 bets in
+    // 2023-2025 this unblended model returns -8.1% at a 3% edge threshold and
+    // -38.7% at 20%. Its most confident disagreements are its worst bets.
+    // Hence PICKS_ENABLED below -- the number publishes, the wager does not.
     const gamesSeen = Math.min(gp[g.home_team]??0, gp[g.away_team]??0);
-    const w = gamesSeen/(gamesSeen+K_MARKET);
-    const homeProb = (mktHome!=null) ? (w*rawHome + (1-w)*mktHome) : rawHome;
+    const w = 1;                        // kept for reporting; no longer blends
+    const homeProb = rawHome;
     const awayProb = 1-homeProb;
     const edgeHome = mktHome!=null ? homeProb-mktHome : null;
     const edgeAway = mktAway!=null ? awayProb-mktAway : null;
@@ -215,13 +225,13 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
       if(edgeHome>=edgeAway){side=g.home_team;edge=edgeHome;prob=homeProb;price=n(g.home_moneyline);mkt=mktHome;}
       else {side=g.away_team;edge=edgeAway;prob=awayProb;price=n(g.away_moneyline);mkt=mktAway;}
     }
-    // A residual disagreement past EDGE_CAP means the model is broken for this
-    // game, not that the market is wrong. Flag it rather than betting it.
+    // Cards carry two states only: official_pick or pass. Nuance about WHY a
+    // game passes belongs on the matchup page, not on a card.
     const rawDisagree = (mktHome!=null) ? Math.abs(rawHome-mktHome) : null;
     const suspect = rawDisagree!=null && rawDisagree>EDGE_CAP;
     const status = edge==null ? "no_market"
-                 : suspect     ? "model_flag"
-                 : (edge>=EDGE_MIN ? "official_pick" : "pass");
+                 : (PICKS_ENABLED && edge>=EDGE_MIN && !suspect) ? "official_pick"
+                 : "pass";
 
     // ---- TOTALS MODEL -----------------------------------------------------
     // Each side's expected points = its own scoring pace blended with what the
@@ -235,13 +245,13 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
     const rawTotal = awayPts + homePts + roofAdj + windAdj;
     const mktTotal = n(g.total_line);
     // Same market-prior discipline as the moneyline: the closing total is sharp.
-    const projTotal = mktTotal!=null ? (w*rawTotal + (1-w)*mktTotal) : rawTotal;
+    const projTotal = rawTotal;    // Leo total, unblended
     const totalEdge = mktTotal!=null ? projTotal-mktTotal : null;
     const rawTotalDisagree = mktTotal!=null ? Math.abs(rawTotal-mktTotal) : null;
     const totalSuspect = rawTotalDisagree!=null && rawTotalDisagree>TOTAL_EDGE_CAP;
     const totalStatus = totalEdge==null ? "no_market"
-                      : totalSuspect    ? "model_flag"
-                      : (Math.abs(totalEdge)>=TOTAL_EDGE_MIN ? "official_pick" : "pass");
+                      : (PICKS_ENABLED && Math.abs(totalEdge)>=TOTAL_EDGE_MIN && !totalSuspect)
+                        ? "official_pick" : "pass";
     const totalSide = totalEdge==null ? null : (totalEdge>0 ? "Over" : "Under");
     // P(total clears the line), for sizing context
     const overProb = mktTotal==null ? null : 1-normCdf((mktTotal-projTotal)/TOTAL_SD);
@@ -249,19 +259,20 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
     // ---- SPREAD MODEL -----------------------------------------------------
     // spread_line is stated from the HOME side: positive = home favoured.
     const mktSpread = n(g.spread_line);
-    const projSpread = mktSpread!=null ? (w*expMargin + (1-w)*mktSpread) : expMargin;
+    const projSpread = expMargin;  // Leo spread, unblended
     const spreadEdge = mktSpread!=null ? projSpread-mktSpread : null;
     const spreadSide = spreadEdge==null ? null : (spreadEdge>0 ? g.home_team : g.away_team);
     const coverProb = mktSpread==null ? null : 1-normCdf((mktSpread-projSpread)/SD);
     const spreadStatus = spreadEdge==null ? "no_market"
-                       : (Math.abs(spreadEdge)>=SPREAD_EDGE_MIN ? "official_pick" : "pass");
+                       : (PICKS_ENABLED && Math.abs(spreadEdge)>=SPREAD_EDGE_MIN)
+                         ? "official_pick" : "pass";
     return {
       date:target, game_id:g.game_id, matchup:`${g.away_team} @ ${g.home_team}`,
       away:g.away_team, home:g.home_team, kickoff:g.gametime, stadium:g.stadium,
       week:g.week, model_version:"leo-nflml-v1", status,
       pick:side, model_prob:prob!=null?r3(prob):null, market_prob:mkt!=null?r3(mkt):null,
       edge:edge!=null?r3(edge):null, price,
-      exp_margin:r1(expMargin), raw_model_prob:r3(rawHome),
+      exp_margin:r1(expMargin), raw_model_prob:r3(rawHome), model_flagged:suspect,
       model_weight:r3(w), raw_disagreement:rawDisagree!=null?r3(rawDisagree):null,
       spread_line:n(g.spread_line), total_line:n(g.total_line),
       // head-to-head component comparison (context, not an input to model_prob)

@@ -130,16 +130,28 @@ if (props) {
     : ok("OPP-ADJ",`${adj.length?Math.round(100*pegged/adj.length):0}% of opponent adjustments at the rails`);
 }
 
-// ---- 9. no model claims a fantasy edge over the closing line --------------
-// Bug: the first moneyline model reported a 30.8% edge. An efficient market
-// does not misprice by 30 points; the model was overfit.
+// ---- 9. a large disagreement must never become a wager --------------------
+// Leo's number is deliberately unblended, so large gaps vs the market are
+// EXPECTED, not bugs -- the model is allowed to disagree loudly. What is
+// never allowed is turning one into a pick: the backtest shows this model's
+// most confident disagreements are its worst bets (-38.7% ROI at a 20%
+// threshold across 599 bets). So the check is on PICKS, not on edges.
 if (picks) {
-  const big=picks.filter(g=>g.edge!=null && Math.abs(g.edge)>0.15);
-  const bigT=picks.filter(g=>g.total_edge!=null && Math.abs(g.total_edge)>7);
-  big.length ? fail("EDGE-SANITY",`${big.length} games claim >15% moneyline edge — model is broken, not the market`)
-             : ok("EDGE-SANITY","no implausible moneyline edges");
-  bigT.length ? warn("EDGE-SANITY",`${bigT.length} totals disagree with the market by >7 pts`)
-              : ok("EDGE-SANITY","totals disagreement within bounds");
+  const bigPicks = picks.filter(g=>g.status==="official_pick" && g.edge!=null && Math.abs(g.edge)>0.15);
+  bigPicks.length
+    ? fail("EDGE-SANITY",`${bigPicks.length} OFFICIAL PICKS with >15% edge — the model's worst historical bets`)
+    : ok("EDGE-SANITY","no official pick rests on an implausible edge");
+
+  const loud = picks.filter(g=>g.edge!=null && Math.abs(g.edge)>0.15).length;
+  if (loud) warn("EDGE-SANITY",`${loud} games disagree with the market by >15% (expected while unblended, but watch the direction)`);
+
+  // Picks must stay gated until a backtest opens them.
+  const anyPick = picks.filter(g=>g.status==="official_pick").length
+                + picks.filter(g=>g.total_status==="official_pick").length
+                + picks.filter(g=>g.spread_status==="official_pick").length;
+  anyPick
+    ? warn("PICKS-GATE",`${anyPick} official picks published — confirm PICKS_ENABLED was opened on backtest evidence`)
+    : ok("PICKS-GATE","no official picks; gate is closed as intended");
 }
 
 // ---- 10. palette discipline ----------------------------------------------

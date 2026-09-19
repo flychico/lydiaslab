@@ -230,13 +230,15 @@ function renderCards(){
             '<span class="market-sub">'+(isFinal&&ft!=null
                 ? "Scored "+ft+" \u00b7 "+(tl!=null?(ft>tl?"Over":(ft<tl?"Under":"Push")):"\u2014")
                 : (leo&&leo.proj_total!=null ? "Leo "+leo.proj_total : "Closing total"))+'</span></div>'+
-          '<div class="market-box rating"><span class="market-label">Moneyline read</span>'+
-            '<span class="market-value">'+(leo&&leo.pick?escapeHtml(leo.pick):"\u2014")+'</span>'+
+          // Two states only. Any nuance about WHY belongs on the matchup page.
+          '<div class="market-box rating"><span class="market-label">Leo</span>'+
+            '<span class="market-value">'+(leo&&leo.status==="official_pick"
+                ? escapeHtml(leo.pick) : "Pass")+'</span>'+
             '<span class="market-sub">'+(leo
-                ? (leo.status==="official_pick" ? "Official pick \u00b7 "+(leo.edge*100).toFixed(1)+"% edge"
-                  : leo.status==="model_flag"   ? "Model flagged \u2014 no play"
-                  : "Pass \u00b7 no edge")
-                : (g.div_game==="1"?"Division game":"Model pending"))+'</span></div>'+
+                ? (leo.status==="official_pick"
+                    ? "Official pick \u00b7 "+(leo.edge*100).toFixed(1)+"% edge"
+                    : "No official pick")
+                : "Model pending")+'</span></div>'+
         '</div>'+
         ((g.away_qb_name&&g.home_qb_name)
           ? '<div class="pitcher-line">\ud83c\udfc8 <span>'+escapeHtml(g.away_qb_name)+' vs '+escapeHtml(g.home_qb_name)+'</span></div>' : "")+

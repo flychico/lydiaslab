@@ -13,6 +13,7 @@
  *   QB  most pass attempts        RB  most carries        WR  most targets
  */
 const { execFileSync } = require("child_process");
+const { buildRatings, headToHead } = require("./lib/nfl-ratings.js");
 const fs=require("fs"), path=require("path");
 const ROOT=path.join(__dirname,"..");
 const FEED="https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv";
@@ -124,6 +125,17 @@ function teamProfile(rows, team, active){
             pass_td:a.pass_td, rush_td:a.rush_td, ints_forced:a.ints};
   };
 
+  // Component ratings for the head-to-head band. Context only: the 2025
+  // backtest and a fitted regression both showed these do not improve win
+  // probability (claude/NFL_RATINGS_SPEC.md), so they describe the teams --
+  // they do not price the game.
+  let RTG={}, RTG_PRI={};
+  try{
+    RTG     = buildRatings(wkCur, wkPri);
+    RTG_PRI = buildRatings(wkPri, []);
+    console.log(`  ratings: ${Object.keys(RTG).length} teams this season, ${Object.keys(RTG_PRI).length} last`);
+  }catch(e){ console.log("  ratings unavailable: "+e.message); }
+
   const out=games.map(g=>{
     const pageSlug=`${slug(g.away_team)}-vs-${slug(g.home_team)}-prediction-odds-${target}`;
     const build=(team)=>({
@@ -145,7 +157,12 @@ function teamProfile(rows, team, active){
       total_line:g.total_line===""?null:n(g.total_line),
       away_qb_name:g.away_qb_name, home_qb_name:g.home_qb_name,
       away_coach:g.away_coach, home_coach:g.home_coach,
-      sides:{ away: build(g.away_team), home: build(g.home_team) }
+      sides:{ away: build(g.away_team), home: build(g.home_team) },
+      ratings:{
+        this_season:{ away: RTG[g.away_team]||null, home: RTG[g.home_team]||null },
+        last_season:{ away: RTG_PRI[g.away_team]||null, home: RTG_PRI[g.home_team]||null },
+        h2h: headToHead(RTG, g.away_team, g.home_team)
+      }
     };
   });
 
