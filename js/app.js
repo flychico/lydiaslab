@@ -84,7 +84,7 @@ function renderNav(active) {
   const links = [
     [prefix + "scoreboard/", "Scoreboard"],
     [prefix + "previews/", "Picks"],
-    [prefix === "/mlb/" ? "/tools/strikeout-projections/" : prefix + "player-props/", sport === "MLB" ? "Pitchers" : "Props"],
+    [sport === "MLB" ? "/tools/strikeout-projections/" : prefix + "tools/player-props/", sport === "MLB" ? "Pitchers" : "Props"],
     [prefix + "tools/", "Lab"],
     [prefix + "stats/", "Stats"],
     [prefix + "results/", "Results"],
@@ -150,11 +150,21 @@ function renderNav(active) {
     btn.addEventListener("click", function (e) {
       e.preventDefault();
       var newSport = btn.getAttribute("data-sport");
-      Sport.set(newSport);
-      // Redirect to equivalent page in new sport
+      if (newSport === sport) return;
+      // MLB lives at the site root, NFL under /nfl/. Derive the page slug by
+      // stripping the CURRENT sport's prefix, then re-prefix it for the new one.
+      var newPrefix = newSport === "MLB" ? "/" : "/" + newSport.toLowerCase() + "/";
       var path = window.location.pathname;
-      var newPath = path.replace(/^\/(mlb|nfl)\//, "/" + newSport.toLowerCase() + "/");
-      window.location.href = newPath;
+      var slug = path.indexOf(prefix) === 0 ? path.slice(prefix.length) : path.replace(/^\//, "");
+      // Pages whose route genuinely differs between the two sports.
+      var XWALK = {
+        "MLB>NFL": { "tools/strikeout-projections/": "tools/player-props/" },
+        "NFL>MLB": { "tools/player-props/": "tools/strikeout-projections/" }
+      };
+      var map = XWALK[sport + ">" + newSport] || {};
+      if (map[slug]) slug = map[slug];
+      Sport.set(newSport);
+      window.location.href = newPrefix + slug;
     });
   });
 
