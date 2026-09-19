@@ -1,6 +1,6 @@
 {
   "date": "2026-09-19",
-  "generated_at": "2026-09-19T17:29:05.827Z",
+  "generated_at": "2026-09-19T17:56:19.874Z",
   "snapshot_type": "posted",
   "source_of_truth": "Leo Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -11,7 +11,7 @@
     "minimum_lab_score": 72,
     "note": "Lab Rating grades Leo's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
   },
-  "summary": "2 official picks cleared their market gates: 1 moneyline and 1 pitcher strikeout prop. 0 value-watch setups had good price math but did not clear official-pick rules.",
+  "summary": "Brief generated without live market pricing. Treat the card as research-only until pricing is checked.",
   "official_card": [
     {
       "game_pk": 825029,
@@ -44,8 +44,8 @@
           "pick": "Over",
           "line": 4.5,
           "best_price": -115,
-          "projection": 6.83,
-          "edge": 2.33
+          "projection": 6.95,
+          "edge": 2.45
         }
       ]
     }
@@ -70,38 +70,38 @@
       "projected_runs": {
         "away": 4.2,
         "home": 4.5,
-        "total": 9
+        "total": 9.1
       },
       "pitching_plan": {
         "away": {
-          "type": "opener_bullpen",
+          "type": "starter_bullpen",
           "confidence": "low",
           "reported": false,
           "segments": [
             {
-              "role": "opener",
-              "pitcher_id": null,
-              "pitcher": "TBD",
-              "expected_innings": 4.5,
-              "fip_lite": 4.2,
-              "pitcher_score": 50,
+              "role": "starter",
+              "pitcher_id": 805074,
+              "pitcher": "Yunior Marte",
+              "expected_innings": 4.666666666666667,
+              "fip_lite": 4.33,
+              "pitcher_score": 71,
               "role_stats": null
             },
             {
               "role": "bullpen",
-              "expected_innings": 4.5
+              "expected_innings": 4.333333333333333
             }
           ],
-          "expected_innings": 4.5,
-          "bullpen_innings": 4.5,
-          "effective_era": 4,
-          "pitcher_score": 50,
+          "expected_innings": 4.7,
+          "bullpen_innings": 4.3,
+          "effective_era": 4.08,
+          "pitcher_score": 71,
           "bullpen_carries_game": false,
-          "description": "TBD 4.5 IP + remaining bullpen 4.5 IP",
-          "pitcher": "TBD",
-          "role": "unknown",
-          "label": "Role unknown",
-          "bullpen_game": true
+          "description": "Yunior Marte 4.7 IP + remaining bullpen 4.3 IP",
+          "pitcher": "Yunior Marte",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
         },
         "home": {
           "type": "starter_bullpen",
@@ -134,9 +134,9 @@
           "bullpen_game": false
         }
       },
-      "bullpen_game": true,
+      "bullpen_game": false,
       "legacy_strength_probability": 0.9105,
-      "model_effective_era_away": 4.2,
+      "model_effective_era_away": 4.08,
       "model_effective_era_home": 3.15,
       "model_pitcher_score_away": 71,
       "model_pitcher_score_home": 83,
@@ -157,8 +157,8 @@
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9151,
       "edge": -0.0657,
-      "status": "pass",
-      "value_tag": "PASS",
+      "status": "watchlist",
+      "value_tag": "WATCHLIST",
       "lab_score": 82,
       "lab_score_breakdown": {
         "score": 82,
@@ -190,13 +190,13 @@
         "model_probability_passed": true,
         "lab_score_passed": true
       },
-      "pass_reason": "This is a bullpen game -- no confirmed traditional starter, so Leo does not publish an official pick here.",
-      "read": "This is a bullpen game -- no confirmed traditional starter, so Leo does not publish an official pick here.",
+      "pass_reason": null,
+      "read": "Los Angeles Dodgers remains on the watchlist. Lab Rating 8.2/10: conviction 7.76, pitching plan 40, offense 33.96. Leo projects 70.5% against a 77.1% no-vig market number, a -6.6% model edge at -385. Los Angeles Dodgers owns the starting pitcher edge by 12 points. Bullpen read: Adds caution. Los Angeles Dodgers's pen efficiency: Below average (4.3/10). Lineup check: Los Angeles Dodgers is a touch above its season form (+0.049 OPS); San Francisco Giants is a touch above its season form (+0.022 OPS).",
       "pitcher_edge": {
         "team": "Los Angeles Dodgers",
-        "gap": 33,
+        "gap": 12,
         "conflict": false,
-        "away_score": 50,
+        "away_score": 71,
         "home_score": 83,
         "away_pitcher": "Yunior Marte",
         "home_pitcher": "Tarik Skubal",
@@ -484,7 +484,7 @@
       "run_model_probability": null,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9255,
-      "edge": 0.1148,
+      "edge": 0.1147,
       "status": "official_pick",
       "value_tag": "OFFICIAL PICK",
       "lab_score": 78,
@@ -816,7 +816,7 @@
       "run_model_probability": 0.6633,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9322,
-      "edge": 0.1591,
+      "edge": 0.1592,
       "status": "watchlist",
       "value_tag": "WATCHLIST",
       "lab_score": 69,
@@ -1148,7 +1148,7 @@
       "run_model_probability": 0.5774,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.7837,
-      "edge": 0.0549,
+      "edge": 0.055,
       "status": "watchlist",
       "value_tag": "WATCHLIST",
       "lab_score": 68,
@@ -3384,40 +3384,40 @@
       "model_probability": 0.6064,
       "model_source": "leo",
       "projected_runs": {
-        "away": 3.7,
+        "away": 3.9,
         "home": 3.5,
-        "total": 7.5
+        "total": 7.8
       },
       "pitching_plan": {
         "away": {
-          "type": "opener_bullpen",
-          "confidence": "low",
+          "type": "starter_bullpen",
+          "confidence": "high",
           "reported": false,
           "segments": [
             {
-              "role": "opener",
-              "pitcher_id": null,
-              "pitcher": "TBD",
-              "expected_innings": 4.5,
-              "fip_lite": 4.2,
-              "pitcher_score": 50,
+              "role": "starter",
+              "pitcher_id": 678394,
+              "pitcher": "Brayan Bello",
+              "expected_innings": 4.518518518518519,
+              "fip_lite": 4.01,
+              "pitcher_score": 55,
               "role_stats": null
             },
             {
               "role": "bullpen",
-              "expected_innings": 4.5
+              "expected_innings": 4.481481481481481
             }
           ],
           "expected_innings": 4.5,
           "bullpen_innings": 4.5,
-          "effective_era": 3.1,
-          "pitcher_score": 50,
+          "effective_era": 3.02,
+          "pitcher_score": 55,
           "bullpen_carries_game": false,
-          "description": "TBD 4.5 IP + remaining bullpen 4.5 IP",
-          "pitcher": "TBD",
-          "role": "unknown",
-          "label": "Role unknown",
-          "bullpen_game": true
+          "description": "Brayan Bello 4.5 IP + remaining bullpen 4.5 IP",
+          "pitcher": "Brayan Bello",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
         },
         "home": {
           "type": "starter_bullpen",
@@ -3450,9 +3450,9 @@
           "bullpen_game": false
         }
       },
-      "bullpen_game": true,
+      "bullpen_game": false,
       "legacy_strength_probability": 0.7128,
-      "model_effective_era_away": 4.64,
+      "model_effective_era_away": 3.02,
       "model_effective_era_home": 4.11,
       "model_pitcher_score_away": 55,
       "model_pitcher_score_home": 58,
@@ -3469,7 +3469,7 @@
         "applied_home": 0.0115,
         "weight": 0.5
       },
-      "run_model_probability": 0.4708,
+      "run_model_probability": 0.4425,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.7249,
       "edge": 0.0309,
@@ -3486,7 +3486,7 @@
         "offense_points": 36.54,
         "completeness_points": 0,
         "pitcher_edge_points": 10.67,
-        "model_agreement_gap": 0.242,
+        "model_agreement_gap": 0.2703,
         "model_agreement_credit": 0,
         "assigned_bullpen_innings": 3.7,
         "offense_delta": 0.0277,
@@ -3506,13 +3506,13 @@
         "model_probability_passed": false,
         "lab_score_passed": false
       },
-      "pass_reason": "This is a bullpen game -- no confirmed traditional starter, so Leo does not publish an official pick here.",
-      "read": "This is a bullpen game -- no confirmed traditional starter, so Leo does not publish an official pick here.",
+      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
+      "read": "The combined Lab Rating did not clear the official threshold.",
       "pitcher_edge": {
-        "team": "Tampa Bay Rays",
-        "gap": 8,
+        "team": "No clear SP edge",
+        "gap": 3,
         "conflict": false,
-        "away_score": 50,
+        "away_score": 55,
         "home_score": 58,
         "away_pitcher": "Brayan Bello",
         "home_pitcher": "Freddy Peralta",
@@ -4464,7 +4464,7 @@
       "run_model_probability": 0.5459,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.741,
-      "edge": 0.1439,
+      "edge": 0.1438,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 43,
