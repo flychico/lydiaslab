@@ -101,6 +101,14 @@ jobs:
             console.log("Validated "+p.length+" games, "+off+" official moneyline picks.");
           '
 
+      # Smell tests for defects that have actually shipped here before:
+      # team rates divided by player-weeks, inverted defensive stat keying,
+      # a no-games day blanking the live card, logos that do not fill their
+      # box, and models claiming an edge an efficient market would not leave.
+      # See claude/NFL_WATCH_LIST.md. Fails the publish; warnings do not.
+      - name: Health check
+        run: node scripts/nfl-healthcheck.js
+
       - name: Commit and push if changed
         if: steps.gate.outcome == 'success'
         run: |
