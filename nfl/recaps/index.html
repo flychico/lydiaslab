@@ -3,24 +3,88 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Recaps — NFL | Leo</title>
+<title>NFL Recaps | Leo</title>
+<meta name="description" content="Recaps of every completed NFL game with final score, margin and how the closing total and spread landed.">
+<link rel="canonical" href="https://lydiaslab.com/nfl/recaps/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127944;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/scoreboard.css">
 <style>
-body { background: var(--bg); }
-main { padding: 20px; max-width: 960px; margin: 0 auto; }
+.recap{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-sm);margin-bottom:16px;overflow:hidden;}
+.recap-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 17px;border-bottom:1px solid var(--border);background:var(--bg-elev);}
+.recap-teams{display:flex;align-items:center;gap:9px;font-weight:800;font-size:1.02rem;}
+.recap-teams img{width:28px;height:28px;object-fit:contain;}
+.recap-sc{font-size:1.25rem;font-weight:800;white-space:nowrap;}
+.recap-body{padding:15px 17px;}
+.recap-body p{margin:0 0 10px;line-height:1.6;}
+.wk-head{font-size:1.15rem;margin:26px 0 12px;}
 </style>
 </head>
 <body>
 <nav id="nav"></nav>
-<main>
-  <h1>Recaps — NFL</h1>
-  <div id="content">
-    <p style="color: var(--text-dim);">Loading…</p>
-  </div>
+<main class="scoreboard-shell">
+  <section class="score-hero">
+    <p class="eyebrow">What actually happened.</p>
+    <h1>NFL Recaps</h1>
+    <p class="subtitle">Every completed game, week by week, with the final score and how it landed against the closing total and spread.</p>
+    <div class="score-hero-chips"><span class="hero-chip">&#127944; Week by week</span><span class="hero-chip">&#128200; Totals and spreads</span><span class="hero-chip">&#129514; Upsets flagged</span></div>
+  </section>
+  <section class="kpis" id="kpis" aria-label="Recap summary"></section>
+  <div id="status" class="loading">Loading NFL recaps&hellip;</div>
+  <div id="recaps"></div>
+  <p class="data-note">Recaps are generated from final scores and closing market numbers. They describe what happened, not what to bet next.</p>
 </main>
-<script src="/js/app.js"></script>
+<footer id="footer"></footer><script src="/js/app.js"></script>
 <script>
-renderNav("/nfl/recaps/");
+renderNav("/nfl/recaps/"); renderFooter();
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+async function tryJson(u){try{const r=await fetch(u,{cache:"no-store"});return r.ok?await r.json():null;}catch(e){return null;}}
+async function loadFirst(base){
+  for(const u of ["/data/nfl/"+base+"-"+iso(new Date())+".json",
+                  "/data/nfl/"+base+"-"+iso(new Date(Date.now()+864e5))+".json",
+                  "/data/nfl/"+base+"-today.json"]){
+    const j=await tryJson(u); if(Array.isArray(j)&&j.length) return j;
+  }
+  return null;
+}
+function logo(t){return '<img src="/img/nfl/'+encodeURIComponent(t)+'.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">';}
+
+(async function(){
+  const el=document.getElementById("recaps"), st=document.getElementById("status");
+  const r=await loadFirst("results");
+  if(!r){st.innerHTML='<div class="score-empty">No completed NFL games to recap yet.</div>';return;}
+  st.style.display="none";
+  const blow=r.filter(x=>x.margin>=17).length, close=r.filter(x=>x.margin<=3).length;
+  const dogs=r.filter(x=>x.underdog_won===true).length;
+  document.getElementById("kpis").innerHTML=
+    '<article class="kpi"><div class="label">Games recapped</div><div class="value">'+r.length+'</div><div class="sub">this season</div></article>'+
+    '<article class="kpi"><div class="label">One-score games</div><div class="value">'+close+'</div><div class="sub">within 3 points</div></article>'+
+    '<article class="kpi"><div class="label">Blowouts</div><div class="value">'+blow+'</div><div class="sub">17+ margin</div></article>'+
+    '<article class="kpi"><div class="label">Upsets</div><div class="value">'+dogs+'</div><div class="sub">underdog won</div></article>';
+
+  const byWeek={};
+  r.forEach(x=>{(byWeek[x.week]=byWeek[x.week]||[]).push(x);});
+  el.innerHTML=Object.keys(byWeek).sort((a,b)=>b-a).map(wk=>
+    '<h2 class="wk-head">Week '+wk+'</h2>'+byWeek[wk].map(x=>{
+      const w=x.winner, l=w===x.home?x.away:x.home;
+      const ws=Math.max(x.away_score,x.home_score), ls=Math.min(x.away_score,x.home_score);
+      const how = x.margin>=17?"pulled away from":(x.margin<=3?"edged":"beat");
+      const tot = x.total_result==="Over"?"cleared the closing total of "+x.total_line
+                : x.total_result==="Under"?"stayed under the closing total of "+x.total_line
+                : "landed on the number";
+      const up = x.underdog_won===true ? " The market had them as the underdog." : "";
+      const cov = x.favorite_covered==null?"" : (x.favorite_covered?" The favorite covered.":" The underdog covered the spread.");
+      return '<article class="recap">'+
+        '<div class="recap-head"><span class="recap-teams">'+logo(x.away)+esc(x.away)+
+          ' <span style="color:var(--text-dim);font-weight:500">at</span> '+logo(x.home)+esc(x.home)+'</span>'+
+          '<span class="recap-sc">'+x.away_score+' &ndash; '+x.home_score+'</span></div>'+
+        '<div class="recap-body"><p><b>'+esc(w)+'</b> '+how+' <b>'+esc(l)+'</b> '+ws+'&ndash;'+ls+
+          ' at '+esc(x.stadium||"home")+'.'+up+'</p>'+
+          '<p>The '+x.total+' combined points '+tot+'.'+cov+'</p></div></article>';
+    }).join("")).join("");
+})();
 </script>
 </body>
 </html>

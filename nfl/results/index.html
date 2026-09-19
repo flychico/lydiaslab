@@ -3,24 +3,90 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Results — NFL | Leo</title>
+<title>NFL Results and Closing Lines | Leo</title>
+<meta name="description" content="Every completed NFL game with final score, closing total, spread result and whether the underdog won.">
+<link rel="canonical" href="https://lydiaslab.com/nfl/results/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127944;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/scoreboard.css">
 <style>
-body { background: var(--bg); }
-main { padding: 20px; max-width: 960px; margin: 0 auto; }
+.res-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:15px;}
+.res-card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-sm);}
+.res-top{display:flex;justify-content:space-between;align-items:center;padding:10px 15px;border-bottom:1px solid var(--border);background:var(--bg-elev);font-size:.8rem;color:var(--text-dim);}
+.res-body{padding:13px 15px;}
+.res-row{display:flex;align-items:center;gap:10px;padding:6px 0;}
+.res-row img{width:30px;height:30px;object-fit:contain;flex:none;}
+.res-row .nm{flex:1;font-weight:600;font-size:.93rem;}
+.res-row .sc{font-size:1.3rem;font-weight:800;}
+.res-row.win .nm,.res-row.win .sc{font-weight:800;}
+.res-row.lose{opacity:.6;}
+.tag{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;border-radius:999px;}
+.t-over{background:rgba(109,93,252,.13);color:var(--accent);}
+.t-under{background:rgba(217,70,143,.13);color:var(--accent2);}
+.t-push{background:rgba(31,35,40,.10);color:var(--text-dim);}
+@media(max-width:760px){.res-grid{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
 <nav id="nav"></nav>
-<main>
-  <h1>Results — NFL</h1>
-  <div id="content">
-    <p style="color: var(--text-dim);">Loading…</p>
-  </div>
+<main class="scoreboard-shell">
+  <section class="score-hero">
+    <p class="eyebrow">Every final. Every closing line.</p>
+    <h1>NFL Results and Closing Lines</h1>
+    <p class="subtitle">Completed games with final scores measured against the closing total and spread, so you can see how the market read each game before it kicked off.</p>
+    <div class="score-hero-chips"><span class="hero-chip">&#127944; Every final</span><span class="hero-chip">&#128200; Over / under</span><span class="hero-chip">&#129514; Spread outcomes</span></div>
+  </section>
+  <section class="kpis" id="kpis" aria-label="Results summary"></section>
+  <div id="status" class="loading">Loading NFL results&hellip;</div>
+  <section class="res-grid" id="res" aria-live="polite"></section>
+  <p class="data-note">Final scores and closing market numbers from the open nflverse dataset.</p>
 </main>
-<script src="/js/app.js"></script>
+<footer id="footer"></footer><script src="/js/app.js"></script>
 <script>
-renderNav("/nfl/results/");
+renderNav("/nfl/results/"); renderFooter();
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+async function tryJson(u){try{const r=await fetch(u,{cache:"no-store"});return r.ok?await r.json():null;}catch(e){return null;}}
+async function loadFirst(base){
+  for(const u of ["/data/nfl/"+base+"-"+iso(new Date())+".json",
+                  "/data/nfl/"+base+"-"+iso(new Date(Date.now()+864e5))+".json",
+                  "/data/nfl/"+base+"-today.json"]){
+    const j=await tryJson(u); if(Array.isArray(j)&&j.length) return j;
+  }
+  return null;
+}
+function logo(t){return '<img src="/img/nfl/'+encodeURIComponent(t)+'.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">';}
+
+(async function(){
+  const el=document.getElementById("res"), st=document.getElementById("status");
+  const r=await loadFirst("results");
+  if(!r){st.innerHTML='<div class="score-empty">No completed NFL games yet this season.</div>';return;}
+  st.style.display="none";
+  const ov=r.filter(x=>x.total_result==="Over").length, un=r.filter(x=>x.total_result==="Under").length;
+  const dogs=r.filter(x=>x.underdog_won===true).length;
+  const avg=(r.reduce((s,x)=>s+x.total,0)/r.length).toFixed(1);
+  document.getElementById("kpis").innerHTML=
+    '<article class="kpi"><div class="label">Games played</div><div class="value">'+r.length+'</div><div class="sub">this season</div></article>'+
+    '<article class="kpi"><div class="label">Over / Under</div><div class="value">'+ov+' &ndash; '+un+'</div><div class="sub">vs closing total</div></article>'+
+    '<article class="kpi"><div class="label">Underdog wins</div><div class="value">'+dogs+'</div><div class="sub">of '+r.length+' games</div></article>'+
+    '<article class="kpi"><div class="label">Avg points</div><div class="value">'+avg+'</div><div class="sub">combined</div></article>';
+  el.innerHTML=r.map(x=>{
+    const aw=x.away_score>x.home_score, hw=x.home_score>x.away_score;
+    const tc=x.total_result==="Over"?"t-over":(x.total_result==="Under"?"t-under":"t-push");
+    return '<article class="res-card">'+
+      '<div class="res-top"><span>Week '+x.week+' &middot; '+esc(x.date)+'</span>'+
+        (x.total_result?'<span class="tag '+tc+'">'+x.total_result+' '+(x.total_line??"")+'</span>':"")+'</div>'+
+      '<div class="res-body">'+
+        '<div class="res-row '+(aw?"win":(hw?"lose":""))+'">'+logo(x.away)+'<span class="nm">'+esc(x.away)+'</span><span class="sc">'+x.away_score+'</span></div>'+
+        '<div class="res-row '+(hw?"win":(aw?"lose":""))+'">'+logo(x.home)+'<span class="nm">'+esc(x.home)+'</span><span class="sc">'+x.home_score+'</span></div>'+
+        '<div class="market-grid" style="grid-template-columns:1fr 1fr 1fr;margin-top:10px">'+
+          '<div class="market-box"><span class="market-label">Margin</span><span class="market-value">'+x.margin+'</span><span class="market-sub">points</span></div>'+
+          '<div class="market-box"><span class="market-label">Total</span><span class="market-value">'+x.total+'</span><span class="market-sub">line '+(x.total_line??"\u2014")+'</span></div>'+
+          '<div class="market-box"><span class="market-label">Spread</span><span class="market-value">'+(x.spread_line==null?"\u2014":(x.spread_line>0?x.home+" -"+x.spread_line:x.away+" -"+Math.abs(x.spread_line)))+'</span><span class="market-sub">'+(x.favorite_covered==null?"\u2014":(x.favorite_covered?"Favorite covered":"Dog covered"))+'</span></div>'+
+        '</div></div></article>';
+  }).join("");
+})();
 </script>
 </body>
 </html>

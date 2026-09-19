@@ -3,24 +3,124 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stats — NFL | Leo</title>
+<title>NFL Team Stats and Power Ratings | Leo</title>
+<meta name="description" content="Every NFL team ranked by Leo point-margin power rating, with scoring, yardage and defensive splits.">
+<link rel="canonical" href="https://lydiaslab.com/nfl/stats/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127944;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/scoreboard.css">
 <style>
-body { background: var(--bg); }
-main { padding: 20px; max-width: 960px; margin: 0 auto; }
+.tbl-wrap { background:var(--bg-card); border:1px solid var(--border); border-radius:16px; overflow:hidden; box-shadow:var(--shadow-sm); }
+table.stats { width:100%; border-collapse:collapse; font-size:.9rem; }
+table.stats th, table.stats td { padding:10px 12px; text-align:right; white-space:nowrap; }
+table.stats th { background:var(--bg-elev); color:var(--text-dim); font-size:.68rem; font-weight:800; text-transform:uppercase; letter-spacing:.4px; cursor:pointer; user-select:none; position:sticky; top:0; }
+table.stats th:hover { color:var(--accent); }
+table.stats th.sorted::after { content:" \2193"; }
+table.stats th.asc::after { content:" \2191"; }
+table.stats td:nth-child(1), table.stats th:nth-child(1) { text-align:center; width:46px; color:var(--text-dim); }
+table.stats td:nth-child(2), table.stats th:nth-child(2) { text-align:left; }
+table.stats tbody tr { border-top:1px solid var(--border); }
+table.stats tbody tr:hover { background:var(--bg-elev); }
+.tm { display:flex; align-items:center; gap:9px; }
+.tm img { width:26px; height:26px; object-fit:contain; flex:none; }
+.tm b { font-weight:700; }
+.tm span { color:var(--text-dim); font-size:.78rem; font-weight:500; }
+.pos { color:var(--good,#1e8e3e); font-weight:700; }
+.neg { color:var(--danger,#cf222e); font-weight:700; }
+.scroller { overflow-x:auto; }
+@media (max-width:760px){ table.stats th, table.stats td { padding:9px 8px; font-size:.84rem; } }
 </style>
 </head>
 <body>
 <nav id="nav"></nav>
-<main>
-  <h1>Stats — NFL</h1>
-  <div id="content">
-    <p style="color: var(--text-dim);">Loading…</p>
-  </div>
+<main class="scoreboard-shell">
+  <section class="score-hero">
+    <p class="eyebrow">All 32 teams. One ranking.</p>
+    <h1>NFL Team Stats and Power Ratings</h1>
+    <p class="subtitle">Every team ranked by point-margin power rating, regressed toward a prior-season baseline so a single blowout does not distort the board, alongside scoring and yardage on both sides of the ball.</p>
+    <div class="score-hero-chips">
+      <span class="hero-chip">&#127944; All 32 teams</span>
+      <span class="hero-chip">&#128200; Offense and defense</span>
+      <span class="hero-chip">&#129514; Regressed ratings</span>
+    </div>
+  </section>
+
+  <section class="kpis" id="kpis" aria-label="League summary"></section>
+  <div id="status" class="loading">Loading team ratings&hellip;</div>
+  <div class="tbl-wrap"><div class="scroller"><table class="stats" id="tbl"></table></div></div>
+  <p class="data-note">Ratings are point margin per game adjusted for home field and regressed toward a prior-season baseline. Yardage is per game from the open nflverse dataset. Click any column to sort.</p>
 </main>
-<script src="/js/app.js"></script>
+
+<footer id="footer"></footer><script src="/js/app.js"></script>
 <script>
-renderNav("/nfl/stats/");
+renderNav("/nfl/stats/"); renderFooter();
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+async function tryJson(u){try{const r=await fetch(u,{cache:"no-store"});return r.ok?await r.json():null;}catch(e){return null;}}
+
+const COLS=[
+  ["rank","#",false],["team","Team",false],["record","Rec",false],
+  ["rating","Rating",true],["points_for","PF/G",true],["points_against","PA/G",true],
+  ["point_diff","Diff",true],["pass_yards_for","Pass Y",true],["rush_yards_for","Rush Y",true],
+  ["pass_yards_against","Pass YA",true],["rush_yards_against","Rush YA",true]
+];
+let data=[], sortKey="rating", asc=false;
+
+(async function(){
+  for(const u of ["/data/nfl/team-stats-"+iso(new Date())+".json",
+                  "/data/nfl/team-stats-"+iso(new Date(Date.now()+864e5))+".json",
+                  "/data/nfl/team-stats-today.json"]){
+    const j=await tryJson(u); if(Array.isArray(j)&&j.length){data=j;break;}
+  }
+  const st=document.getElementById("status");
+  if(!data.length){ st.innerHTML='<div class="score-empty">No team ratings are published right now.</div>'; return; }
+  st.style.display="none";
+
+  const gp=data[0].games||0;
+  const best=data[0], worst=data[data.length-1];
+  const avgPts=(data.reduce((s,x)=>s+(x.points_for||0),0)/data.length).toFixed(1);
+  document.getElementById("kpis").innerHTML=
+    '<article class="kpi"><div class="label">Teams rated</div><div class="value">'+data.length+'</div><div class="sub">'+gp+' game'+(gp===1?"":"s")+' played</div></article>'+
+    '<article class="kpi"><div class="label">Top rated</div><div class="value">'+esc(best.team)+'</div><div class="sub">'+best.rating.toFixed(1)+' margin</div></article>'+
+    '<article class="kpi"><div class="label">Lowest rated</div><div class="value">'+esc(worst.team)+'</div><div class="sub">'+worst.rating.toFixed(1)+' margin</div></article>'+
+    '<article class="kpi"><div class="label">League scoring</div><div class="value">'+avgPts+'</div><div class="sub">points per game</div></article>';
+  render();
+})();
+
+function render(){
+  const rows=data.slice().sort((a,b)=>{
+    const x=a[sortKey], y=b[sortKey];
+    if(typeof x==="number"&&typeof y==="number") return asc?x-y:y-x;
+    return asc?String(x).localeCompare(String(y)):String(y).localeCompare(String(x));
+  });
+  const head="<thead><tr>"+COLS.map(([k,l])=>
+    '<th data-k="'+k+'" class="'+(k===sortKey?(asc?"asc sorted":"sorted"):"")+'">'+l+'</th>').join("")+"</tr></thead>";
+  const body="<tbody>"+rows.map(r=>{
+    const d=r.point_diff;
+    return "<tr>"+
+      "<td>"+r.rank+"</td>"+
+      '<td><span class="tm"><img src="/img/nfl/'+encodeURIComponent(r.team)+'.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'+
+        "<b>"+esc(r.team)+"</b></span></td>"+
+      "<td>"+esc(r.record)+"</td>"+
+      '<td class="'+(r.rating>0?"pos":(r.rating<0?"neg":""))+'">'+(r.rating>0?"+":"")+r.rating.toFixed(1)+"</td>"+
+      "<td>"+(r.points_for??"\u2014")+"</td>"+
+      "<td>"+(r.points_against??"\u2014")+"</td>"+
+      '<td class="'+(d>0?"pos":(d<0?"neg":""))+'">'+(d==null?"\u2014":(d>0?"+":"")+d)+"</td>"+
+      "<td>"+(r.pass_yards_for??"\u2014")+"</td>"+
+      "<td>"+(r.rush_yards_for??"\u2014")+"</td>"+
+      "<td>"+(r.pass_yards_against??"\u2014")+"</td>"+
+      "<td>"+(r.rush_yards_against??"\u2014")+"</td>"+
+    "</tr>";
+  }).join("")+"</tbody>";
+  const t=document.getElementById("tbl");
+  t.innerHTML=head+body;
+  t.querySelectorAll("th").forEach(th=>th.addEventListener("click",()=>{
+    const k=th.dataset.k;
+    if(k===sortKey) asc=!asc; else { sortKey=k; asc=(k==="team"||k==="record"||k==="rank"); }
+    render();
+  }));
+}
 </script>
 </body>
 </html>

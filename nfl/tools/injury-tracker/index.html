@@ -3,24 +3,99 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Injury tracker | Leo</title>
+<title>NFL Injury Tracker | Leo</title>
+<meta name="description" content="Official NFL injury reports by team with status, injury and practice participation.">
+<link rel="canonical" href="https://lydiaslab.com/nfl/tools/injury-tracker/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127944;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/scoreboard.css">
 <style>
-body { background: var(--bg); }
-main { padding: 20px; max-width: 960px; margin: 0 auto; }
+.inj-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-sm);}
+table.inj{width:100%;border-collapse:collapse;font-size:.89rem;}
+table.inj th,table.inj td{padding:10px 12px;text-align:left;}
+table.inj th{background:var(--bg-elev);color:var(--text-dim);font-size:.67rem;font-weight:800;text-transform:uppercase;letter-spacing:.4px;}
+table.inj tbody tr{border-top:1px solid var(--border);}
+table.inj tbody tr:hover{background:var(--bg-elev);}
+.tm{display:flex;align-items:center;gap:8px;}
+.tm img{width:24px;height:24px;object-fit:contain;}
+.st{font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.4px;padding:3px 8px;border-radius:999px;white-space:nowrap;}
+.s-out{background:rgba(207,34,46,.13);color:var(--danger,#cf222e);}
+.s-doubt{background:rgba(217,70,143,.13);color:var(--accent2);}
+.s-quest{background:rgba(109,93,252,.13);color:var(--accent);}
+.s-other{background:rgba(31,35,40,.10);color:var(--text-dim);}
+.scroller{overflow-x:auto;}
+.filters{display:flex;flex-wrap:wrap;gap:8px;}
 </style>
 </head>
 <body>
 <nav id="nav"></nav>
-<main>
-  <h1>Injury tracker</h1>
-  <div id="content">
-    <p style="color: var(--text-dim);">Loading…</p>
-  </div>
+<main class="scoreboard-shell">
+  <section class="score-hero">
+    <p class="eyebrow">Who is in. Who is out.</p>
+    <h1>NFL Injury Tracker</h1>
+    <p class="subtitle">The official league injury report for every team, with designation, injury and practice participation, so you can see what moves a number before kickoff.</p>
+    <div class="score-hero-chips"><span class="hero-chip">&#127944; All 32 teams</span><span class="hero-chip">&#129517; Official designations</span><span class="hero-chip">&#128203; Practice status</span></div>
+  </section>
+  <section class="score-controls" aria-label="Filters">
+    <div class="view-controls filters" role="group">
+      <button class="control-btn active" type="button" data-f="all">All</button>
+      <button class="control-btn" type="button" data-f="Out">Out</button>
+      <button class="control-btn" type="button" data-f="Doubtful">Doubtful</button>
+      <button class="control-btn" type="button" data-f="Questionable">Questionable</button>
+    </div>
+  </section>
+  <section class="kpis" id="kpis" aria-label="Injury summary"></section>
+  <div id="status" class="loading">Loading the injury report&hellip;</div>
+  <div class="inj-wrap"><div class="scroller"><table class="inj" id="tbl"></table></div></div>
+  <p class="data-note">Official team injury reports from the open nflverse dataset. Status reflects the most recent published report.</p>
 </main>
-<script src="/js/app.js"></script>
+<footer id="footer"></footer><script src="/js/app.js"></script>
 <script>
-renderNav("/nfl/tools/injury-tracker/");
+renderNav("/nfl/tools/injury-tracker/"); renderFooter();
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+async function tryJson(u){try{const r=await fetch(u,{cache:"no-store"});return r.ok?await r.json():null;}catch(e){return null;}}
+async function loadFirst(base){
+  for(const u of ["/data/nfl/"+base+"-"+iso(new Date())+".json",
+                  "/data/nfl/"+base+"-"+iso(new Date(Date.now()+864e5))+".json",
+                  "/data/nfl/"+base+"-today.json"]){
+    const j=await tryJson(u); if(Array.isArray(j)&&j.length) return j;
+  }
+  return null;
+}
+function logo(t){return '<img src="/img/nfl/'+encodeURIComponent(t)+'.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">';}
+
+let ALL=[], F="all";
+document.querySelectorAll("[data-f]").forEach(b=>b.addEventListener("click",()=>{
+  F=b.dataset.f;document.querySelectorAll("[data-f]").forEach(x=>x.classList.toggle("active",x===b));render();}));
+function cls(s){s=(s||"").toLowerCase();return s.includes("out")?"s-out":s.includes("doubt")?"s-doubt":s.includes("question")?"s-quest":"s-other";}
+(async function(){
+  const st=document.getElementById("status");
+  ALL=await loadFirst("injuries")||[];
+  if(!ALL.length){st.innerHTML='<div class="score-empty">No injury report is published right now.</div>';return;}
+  st.style.display="none";
+  const c=s=>ALL.filter(x=>(x.status||"").toLowerCase().includes(s)).length;
+  document.getElementById("kpis").innerHTML=
+    '<article class="kpi"><div class="label">Players listed</div><div class="value">'+ALL.length+'</div><div class="sub">week '+ALL[0].week+' report</div></article>'+
+    '<article class="kpi"><div class="label">Out</div><div class="value">'+c("out")+'</div><div class="sub">ruled out</div></article>'+
+    '<article class="kpi"><div class="label">Questionable</div><div class="value">'+c("question")+'</div><div class="sub">game-time calls</div></article>'+
+    '<article class="kpi"><div class="label">Teams</div><div class="value">'+new Set(ALL.map(x=>x.team)).size+'</div><div class="sub">reporting</div></article>';
+  render();
+})();
+function render(){
+  const rows=ALL.filter(x=>F==="all"||(x.status||"").toLowerCase().includes(F.toLowerCase()));
+  document.getElementById("tbl").innerHTML=
+    "<thead><tr><th>Team</th><th>Player</th><th>Pos</th><th>Injury</th><th>Status</th><th>Practice</th></tr></thead><tbody>"+
+    (rows.length?rows.map(x=>"<tr>"+
+      '<td><span class="tm">'+logo(x.team)+"<b>"+esc(x.team)+"</b></span></td>"+
+      "<td>"+esc(x.player)+"</td><td>"+esc(x.position||"")+"</td>"+
+      "<td>"+esc(x.injury||"\u2014")+"</td>"+
+      '<td><span class="st '+cls(x.status)+'">'+esc(x.status||"\u2014")+"</span></td>"+
+      "<td>"+esc(x.practice||"\u2014")+"</td></tr>").join("")
+     : '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-dim)">No players match this filter.</td></tr>')
+    +"</tbody>";
+}
 </script>
 </body>
 </html>

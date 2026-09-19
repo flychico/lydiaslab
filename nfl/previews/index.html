@@ -3,24 +3,122 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Today's Picks — NFL | Leo</title>
+<title>NFL Picks and Model Reads | Leo</title>
+<meta name="description" content="Leo moneyline model reads for every NFL game, with market comparison, edge and an honest pass when the model has no demonstrable edge.">
+<link rel="canonical" href="https://lydiaslab.com/nfl/previews/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127944;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/scoreboard.css">
 <style>
-body { background: var(--bg); }
-main { padding: 20px; max-width: 960px; margin: 0 auto; }
+.pick-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px; }
+.pick-card { background:var(--bg-card); border:1px solid var(--border); border-radius:16px; overflow:hidden; box-shadow:var(--shadow-sm); }
+.pick-top { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:11px 15px; border-bottom:1px solid var(--border); background:var(--bg-elev); }
+.pick-when { font-weight:700; font-size:.88rem; }
+.pick-body { padding:14px 15px; }
+.side { display:flex; align-items:center; gap:10px; padding:7px 0; }
+.side img { width:32px; height:32px; object-fit:contain; flex:none; }
+.side .nm { flex:1; font-weight:600; font-size:.93rem; }
+.side .pr { font-weight:700; font-size:.92rem; }
+.side .pb { color:var(--text-dim); font-size:.74rem; display:block; text-align:right; }
+.side.lean .nm { font-weight:800; }
+.badge { font-size:.65rem; font-weight:800; text-transform:uppercase; letter-spacing:.5px; padding:3px 9px; border-radius:999px; }
+.b-pass { background:rgba(31,35,40,.10); color:var(--text-dim); }
+.b-pick { background:rgba(30,142,62,.14); color:var(--good,#1e8e3e); }
+.b-flag { background:rgba(207,34,46,.12); color:var(--danger,#cf222e); }
+.wbar { height:7px; border-radius:999px; overflow:hidden; display:flex; background:var(--bg-elev); margin:9px 0 4px; }
+.wbar i { display:block; height:100%; }
+@media (max-width:760px){ .pick-grid{grid-template-columns:1fr;} }
 </style>
 </head>
 <body>
 <nav id="nav"></nav>
-<main>
-  <h1>Today's Picks — NFL</h1>
-  <div id="picks-section">
-    <p style="color: var(--text-dim);">Loading today's NFL picks…</p>
-  </div>
+<main class="scoreboard-shell">
+  <section class="score-hero">
+    <p class="eyebrow">Every game. An honest read.</p>
+    <h1>NFL Picks and Model Reads</h1>
+    <p class="subtitle">A point-margin power rating for all 32 teams, blended against the betting market and compared price by price. When the model has not yet earned an edge, the card says pass rather than inventing one.</p>
+    <div class="score-hero-chips"><span class="hero-chip">&#127944; Full slate</span><span class="hero-chip">&#128200; Market comparison</span><span class="hero-chip">&#129514; Transparent edge</span><span class="hero-chip">&#9989; Honest passes</span></div>
+  </section>
+
+  <section class="kpis" id="kpis" aria-label="Slate summary"></section>
+  <div id="note"></div>
+  <div id="status" class="loading">Loading NFL model reads&hellip;</div>
+  <section class="pick-grid" id="picks" aria-live="polite"></section>
+  <p class="data-note">Official picks require the model to beat the no-vig market price by at least 4 points of probability. Early in a season the market prior dominates, so passes are expected.</p>
 </main>
-<script src="/js/app.js"></script>
+
+<footer id="footer"></footer><script src="/js/app.js"></script>
 <script>
-renderNav("/nfl/previews/");
+renderNav("/nfl/previews/"); renderFooter();
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+async function tryJson(u){try{const r=await fetch(u,{cache:"no-store"});return r.ok?await r.json():null;}catch(e){return null;}}
+async function loadFirst(base){
+  for(const u of ["/data/nfl/"+base+"-"+iso(new Date())+".json",
+                  "/data/nfl/"+base+"-"+iso(new Date(Date.now()+864e5))+".json",
+                  "/data/nfl/"+base+"-today.json"]){
+    const j=await tryJson(u); if(Array.isArray(j)&&j.length) return j;
+  }
+  return null;
+}
+function fmtAm(v){const n=Number(v);return !Number.isFinite(n)?"\u2014":(n>0?"+"+n:""+n);}
+
+(async function(){
+  const el=document.getElementById("picks"), st=document.getElementById("status"), kp=document.getElementById("kpis");
+  const p=await loadFirst("picks");
+  if(!p){ st.innerHTML='<div class="score-empty">No NFL model reads are published right now.</div>'; return; }
+  st.style.display="none";
+
+  const official=p.filter(x=>x.status==="official_pick").length;
+  const flagged=p.filter(x=>x.status==="model_flag").length;
+  const w=p[0].model_weight;
+  const when=new Date(p[0].date+"T12:00:00").toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+  kp.innerHTML=
+    '<article class="kpi"><div class="label">Games</div><div class="value">'+p.length+'</div><div class="sub">Week '+esc(p[0].week)+' &middot; '+when+'</div></article>'+
+    '<article class="kpi"><div class="label">Official picks</div><div class="value">'+official+'</div><div class="sub">edge &ge; 4 pts</div></article>'+
+    '<article class="kpi"><div class="label">Model weight</div><div class="value">'+Math.round(w*100)+'%</div><div class="sub">rest is market prior</div></article>'+
+    '<article class="kpi"><div class="label">Flagged</div><div class="value">'+flagged+'</div><div class="sub">model unreliable</div></article>';
+
+  if(official===0){
+    document.getElementById("note").innerHTML=
+      '<div class="notice">The model has no official picks on this card. With '+
+      Math.round(w*100)+'% model weight this early in the season, a point-margin rating cannot reliably beat the market, so every game reads as a pass. Picks appear as real games accumulate and the model earns weight.</div>';
+  }
+
+  el.innerHTML=p.map(x=>{
+    const cls = x.status==="official_pick"?"b-pick":(x.status==="model_flag"?"b-flag":"b-pass");
+    const lbl = x.status==="official_pick"?"Official pick":(x.status==="model_flag"?"Model flag":"Pass");
+    const hp = x.model_prob==null?null:(x.home===x.pick?x.model_prob:1-x.model_prob);
+    const homeP = (x.model_prob!=null) ? (x.pick===x.home?x.model_prob:1-x.model_prob) : null;
+    const awayP = homeP==null?null:1-homeP;
+    const row=(t,price,prob,lean)=>'<div class="side'+(lean?" lean":"")+'">'+
+      '<img src="/img/nfl/'+encodeURIComponent(t)+'.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'+
+      '<span class="nm">'+esc(t)+'</span><span><span class="pr">'+fmtAm(price)+'</span>'+
+      '<span class="pb">'+(prob==null?"\u2014":(prob*100).toFixed(1)+"% Leo")+'</span></span></div>';
+    return '<article class="pick-card">'+
+      '<div class="pick-top"><span class="pick-when">'+esc(x.matchup)+'</span>'+
+        '<span class="badge '+cls+'">'+lbl+'</span></div>'+
+      '<div class="pick-body">'+
+        row(x.away,x.away_ml,awayP,x.pick===x.away)+
+        row(x.home,x.home_ml,homeP,x.pick===x.home)+
+        '<div class="wbar"><i style="width:'+((awayP||0)*100).toFixed(1)+'%;background:var(--accent)"></i>'+
+          '<i style="width:'+((homeP||0)*100).toFixed(1)+'%;background:var(--accent2)"></i></div>'+
+        '<div class="market-grid" style="grid-template-columns:repeat(3,1fr);margin-top:10px">'+
+          '<div class="market-box"><span class="market-label">Edge</span>'+
+            '<span class="market-value">'+(x.edge==null?"\u2014":(x.edge*100).toFixed(1)+"%")+'</span>'+
+            '<span class="market-sub">vs no-vig</span></div>'+
+          '<div class="market-box"><span class="market-label">Exp margin</span>'+
+            '<span class="market-value">'+(x.exp_margin>0?"+":"")+x.exp_margin+'</span>'+
+            '<span class="market-sub">home side</span></div>'+
+          '<div class="market-box"><span class="market-label">Total</span>'+
+            '<span class="market-value">'+(x.total_line==null?"\u2014":x.total_line)+'</span>'+
+            '<span class="market-sub">closing</span></div>'+
+        '</div>'+
+        (x.status==="model_flag"?'<div class="brief-line" style="border-top:1px solid var(--border);margin-top:10px;padding-top:8px;color:var(--text-dim);font-size:.8rem">Raw model disagrees with the market by '+(x.raw_disagreement*100).toFixed(0)+' points. Treated as a model error, not an edge.</div>':"")+
+      '</div></article>';
+  }).join("");
+})();
 </script>
 </body>
 </html>

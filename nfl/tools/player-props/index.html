@@ -3,113 +3,135 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Player Props — NFL | Leo</title>
+<title>NFL Player Props and Projections | Leo</title>
+<meta name="description" content="Leo player prop projections for every NFL game: passing, rushing and receiving yards plus anytime touchdown probabilities.">
 <meta name="robots" content="noindex,nofollow">
+<link rel="canonical" href="https://lydiaslab.com/nfl/tools/player-props/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127944;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/scoreboard.css">
 <style>
-body { background: var(--bg); }
-main { padding: 20px; max-width: 1200px; margin: 0 auto; }
-.props-header { margin-bottom: 24px; }
-.props-header h1 { margin: 0 0 8px; }
-.props-header .date { color: var(--text-dim); font-size: 0.95rem; }
-.prop-type-section { margin-bottom: 32px; }
-.prop-type-title { font-weight: 700; font-size: 1.2rem; margin-bottom: 16px; color: var(--text); border-bottom: 2px solid var(--accent); padding-bottom: 8px; }
-.props-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
-.prop-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
-.prop-matchup { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; font-weight: 600; margin-bottom: 6px; }
-.prop-player { font-size: 0.95rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-.prop-value { font-size: 1.4rem; font-weight: 800; color: var(--accent); margin: 8px 0; }
-.prop-type { font-size: 0.8rem; color: var(--text-dim); }
-.loading { text-align: center; padding: 40px; color: var(--text-dim); }
-.error { background: rgba(192, 57, 43, 0.1); border: 1px solid rgba(192, 57, 43, 0.3); color: #c0392b; padding: 16px; border-radius: 6px; margin: 16px 0; }
+.prop-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:16px; }
+.prop-card { background:var(--bg-card); border:1px solid var(--border); border-radius:16px; overflow:hidden; box-shadow:var(--shadow-sm); }
+.prop-card .card-top { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:11px 15px; border-bottom:1px solid var(--border); background:var(--bg-elev); }
+.prop-mkt { font-size:.68rem; font-weight:800; text-transform:uppercase; letter-spacing:.5px; color:var(--accent); }
+.prop-game { font-size:.72rem; color:var(--text-dim); }
+.prop-body { padding:13px 15px; }
+.prop-top { display:flex; align-items:center; gap:11px; }
+.prop-top img { width:34px; height:34px; object-fit:contain; flex:none; }
+.prop-who { flex:1; min-width:0; }
+.prop-name { display:block; font-weight:700; font-size:.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.prop-vs { display:block; color:var(--text-dim); font-size:.75rem; }
+.prop-num { text-align:right; flex:none; }
+.prop-num b { display:block; font-size:1.5rem; font-weight:800; line-height:1.1; }
+.prop-num span { display:block; color:var(--text-dim); font-size:.68rem; text-transform:uppercase; letter-spacing:.4px; }
+.filters { display:flex; flex-wrap:wrap; gap:8px; }
+@media (max-width:760px){ .prop-grid{grid-template-columns:1fr;} }
 </style>
 </head>
 <body>
 <nav id="nav"></nav>
-<main>
-  <div class="props-header">
-    <h1>Player Props — NFL</h1>
-    <div class="date" id="props-date">Loading…</div>
-  </div>
-  
-  <div id="props-content">
-    <div class="loading">Loading tomorrow's NFL player props…</div>
-  </div>
+<main class="scoreboard-shell">
+  <section class="score-hero">
+    <p class="eyebrow">Every projection. One clear starting point.</p>
+    <h1>NFL Player Props and Projections</h1>
+    <p class="subtitle">Passing, rushing and receiving yard projections plus anytime touchdown probabilities for every player on the slate, blended from recent form, season pace and a prior-season baseline, then adjusted for the opponent.</p>
+    <div class="score-hero-chips">
+      <span class="hero-chip">&#127944; Full slate coverage</span>
+      <span class="hero-chip">&#128200; Yards and touchdowns</span>
+      <span class="hero-chip">&#129514; Opponent adjusted</span>
+    </div>
+  </section>
+
+  <section class="score-controls" aria-label="Prop filters">
+    <div class="view-controls filters" role="group" aria-label="Filter by market">
+      <button class="control-btn active" type="button" data-mkt="all">All</button>
+      <button class="control-btn" type="button" data-mkt="QB_PASS_YARDS">Passing</button>
+      <button class="control-btn" type="button" data-mkt="RB_RUSH_YARDS">Rushing</button>
+      <button class="control-btn" type="button" data-mkt="WR_REC_YARDS">Receiving</button>
+      <button class="control-btn" type="button" data-mkt="ANYTIME_TD">Anytime TD</button>
+    </div>
+  </section>
+
+  <section class="kpis" id="kpis" aria-label="Slate summary"></section>
+  <div id="status" class="loading">Loading NFL projections&hellip;</div>
+  <section class="prop-grid" id="props" aria-live="polite"></section>
+  <p class="data-note">Projections are Leo model output, not official picks. Yard lines and touchdown prices are not yet attached, so these are projections rather than graded plays.</p>
 </main>
 
-<script src="/js/app.js"></script>
+<footer id="footer"></footer><script src="/js/app.js"></script>
 <script>
-renderNav("/nfl/tools/player-props/");
+renderNav("/nfl/tools/player-props/"); renderFooter();
 
-const LABELS = {
-  QB_PASS_YARDS:  "QB Passing Yards",
-  RB_RUSH_YARDS:  "RB Rushing Yards",
-  WR_REC_YARDS:   "WR Receiving Yards",
-  ANYTIME_TD:     "Anytime Touchdown"
-};
-const ORDER = ["QB_PASS_YARDS","RB_RUSH_YARDS","WR_REC_YARDS","ANYTIME_TD"];
+const LABEL={QB_PASS_YARDS:"Passing Yards",RB_RUSH_YARDS:"Rushing Yards",WR_REC_YARDS:"Receiving Yards",ANYTIME_TD:"Anytime TD"};
+const ORDER=["QB_PASS_YARDS","RB_RUSH_YARDS","WR_REC_YARDS","ANYTIME_TD"];
+const statusEl=document.getElementById("status"), gridEl=document.getElementById("props"), kpisEl=document.getElementById("kpis");
+let all=[], mkt="all";
 
-function esc(x){ return String(x==null?"":x).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
-function localISO(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
-function fmt(v, market){ return market==="ANYTIME_TD" ? (v*100).toFixed(1)+"%" : Math.round(v); }
+document.querySelectorAll("[data-mkt]").forEach(b=>b.addEventListener("click",()=>{
+  mkt=b.dataset.mkt;
+  document.querySelectorAll("[data-mkt]").forEach(x=>x.classList.toggle("active",x===b));
+  render();
+}));
 
-async function tryJson(url){
-  try { const r = await fetch(url, {cache:"no-store"}); return r.ok ? await r.json() : null; }
-  catch(e){ return null; }
-}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+async function tryJson(u){try{const r=await fetch(u,{cache:"no-store"});return r.ok?await r.json():null;}catch(e){return null;}}
 
-async function loadProps(){
-  const el = document.getElementById("props-content");
-  // today, then tomorrow, then the rolling file the generator always writes
-  const today = new Date();
-  const tomorrow = new Date(Date.now()+864e5);
-  const candidates = [
-    "/data/nfl/props-"+localISO(today)+".json",
-    "/data/nfl/props-"+localISO(tomorrow)+".json",
-    "/data/nfl/props-today.json"
-  ];
-  let props=null, used=null;
-  for (const u of candidates){ props = await tryJson(u); if (Array.isArray(props) && props.length){ used=u; break; } }
-
-  if (!props || !props.length){
-    el.innerHTML = '<div class="error">No NFL props are published right now. They post once the upcoming slate is generated.</div>';
-    document.getElementById("props-date").textContent = "";
+(async function load(){
+  const cands=["/data/nfl/props-"+iso(new Date())+".json",
+               "/data/nfl/props-"+iso(new Date(Date.now()+864e5))+".json",
+               "/data/nfl/props-today.json"];
+  for(const u of cands){ const j=await tryJson(u); if(Array.isArray(j)&&j.length){ all=j; break; } }
+  if(!all.length){
+    statusEl.innerHTML='<div class="score-empty">No NFL projections are published right now. They post once the upcoming slate is generated.</div>';
     return;
   }
+  statusEl.style.display="none";
+  renderKPIs(); render();
+})();
 
-  const d = props[0].date || "";
-  document.getElementById("props-date").textContent =
-    d ? new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}) : "";
-
-  const byMarket = {};
-  props.forEach(p => { (byMarket[p.market] = byMarket[p.market] || []).push(p); });
-
-  let html = "";
-  ORDER.forEach(market => {
-    const list = (byMarket[market] || []).slice().sort((a,b) => b.projection - a.projection);
-    if (!list.length) return;
-    html += '<div class="prop-type-section"><div class="prop-type-title">'+esc(LABELS[market]||market)+
-            ' <span style="font-weight:500;color:var(--text-dim);font-size:.85rem">('+list.length+')</span></div><div class="props-grid">';
-    list.forEach(p => {
-      const vol = (p.rate_used!=null && p.expected_volume!=null)
-        ? esc(p.rate_used)+" \u00d7 "+esc(p.expected_volume)+" vol" : "";
-      html += '<div class="prop-card">'+
-        '<div class="prop-matchup">'+esc(p.matchup)+'</div>'+
-        '<div class="prop-player">'+esc(p.player)+' <span style="color:var(--text-dim);font-weight:500">'+esc(p.team)+'</span></div>'+
-        '<div class="prop-value">'+fmt(p.projection, p.market)+'</div>'+
-        '<div class="prop-type">vs '+esc(p.opponent)+' \u00b7 opp adj '+esc(p.opp_adjustment)+(vol?' \u00b7 '+vol:'')+'</div>'+
-      '</div>';
-    });
-    html += "</div></div>";
-  });
-
-  el.innerHTML = html;
-  const note = document.createElement("p");
-  note.style.cssText = "margin-top:22px;color:var(--text-dim);font-size:.8rem;text-align:center";
-  note.textContent = "Projections blend recent form, season-to-date and prior-season baselines, shrunk toward league means and adjusted for opponent. Source: nflverse.";
-  el.appendChild(note);
+function renderKPIs(){
+  const games=new Set(all.map(p=>p.matchup)).size;
+  const players=new Set(all.map(p=>p.player)).size;
+  const d=all[0].date||"";
+  const when=d?new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"}):"\u2014";
+  const td=all.filter(p=>p.market==="ANYTIME_TD");
+  const best=td.sort((a,b)=>b.projection-a.projection)[0];
+  kpisEl.innerHTML=
+    '<article class="kpi"><div class="label">Projections</div><div class="value">'+all.length+'</div><div class="sub">across '+games+' games</div></article>'+
+    '<article class="kpi"><div class="label">Players</div><div class="value">'+players+'</div><div class="sub">starters by usage</div></article>'+
+    '<article class="kpi"><div class="label">Slate</div><div class="value">'+when+'</div><div class="sub">'+games+' game card</div></article>'+
+    '<article class="kpi"><div class="label">Top TD chance</div><div class="value">'+(best?(best.projection*100).toFixed(0)+"%":"\u2014")+'</div><div class="sub">'+(best?esc(best.player):"\u2014")+'</div></article>';
 }
-loadProps();
+
+function render(){
+  const list=all.filter(p=>mkt==="all"||p.market===mkt)
+    .sort((a,b)=> ORDER.indexOf(a.market)-ORDER.indexOf(b.market) || b.projection-a.projection);
+  if(!list.length){ gridEl.innerHTML='<div class="score-empty">No projections match this filter.</div>'; return; }
+  gridEl.innerHTML=list.map(p=>{
+    const isTD=p.market==="ANYTIME_TD";
+    const val=isTD?(p.projection*100).toFixed(1)+"%":Math.round(p.projection);
+    const unit=isTD?"to score":"proj yards";
+    return '<article class="prop-card">'+
+      '<div class="card-top"><span class="prop-mkt">'+esc(LABEL[p.market]||p.market)+'</span>'+
+        '<span class="prop-game">'+esc(p.matchup)+'</span></div>'+
+      '<div class="prop-body"><div class="prop-top">'+
+        '<img src="/img/nfl/'+encodeURIComponent(p.team)+'.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'+
+        '<span class="prop-who"><span class="prop-name">'+esc(p.player)+'</span>'+
+          '<span class="prop-vs">'+esc(p.position)+' &middot; '+esc(p.team)+' vs '+esc(p.opponent)+'</span></span>'+
+        '<span class="prop-num"><b>'+val+'</b><span>'+unit+'</span></span>'+
+      '</div>'+
+      '<div class="market-grid" style="grid-template-columns:1fr 1fr">'+
+        '<div class="market-box"><span class="market-label">Opponent adj</span>'+
+          '<span class="market-value">'+(p.opp_adjustment!=null?Number(p.opp_adjustment).toFixed(2)+"\u00d7":"\u2014")+'</span>'+
+          '<span class="market-sub">defense vs league</span></div>'+
+        '<div class="market-box"><span class="market-label">'+(isTD?"Sample":"Rate \u00d7 volume")+'</span>'+
+          '<span class="market-value">'+(isTD?(p.games_played+" gm"):((p.rate_used!=null?p.rate_used:"\u2014")+" \u00d7 "+(p.expected_volume!=null?p.expected_volume:"\u2014")))+'</span>'+
+          '<span class="market-sub">'+(isTD?"this season":"per game")+'</span></div>'+
+      '</div></div></article>';
+  }).join("");
+}
 </script>
 </body>
 </html>

@@ -128,7 +128,6 @@ function renderNav(active) {
             : [
                 [prefix + "member-brief/", "Daily Member Brief"],
                 [prefix + "tools/player-props/", "Player Props"],
-                [prefix + "tools/team-stats/", "Team Stats"],
                 [prefix + "tools/injury-tracker/", "Injury Tracker"]
               ];
           return '<span class="nav-drop' + (current === prefix + "tools/" ? ' active-wrap' : '') + '">'
