@@ -73,6 +73,7 @@ const gamesEl=document.getElementById("games");
 const statusEl=document.getElementById("status");
 const kpisEl=document.getElementById("kpis");
 let allRows=null, renderedGames=[], activeFilter="all";
+let LEO={}, REC={};   // model reads and W-L, keyed by matchup / team
 
 datePick.value = localISODate(new Date());
 datePick.addEventListener("change", () => loadScoreboard());
@@ -119,6 +120,16 @@ async function loadScoreboard(opts={}){
       allRows=parseCSV(await r.text());
     }
     const date=datePick.value;
+    // Leo's own numbers and team records. Absent for most dates; the card
+    // falls back to market-only rather than breaking.
+    LEO={}; REC={};
+    const [pk,ts]=await Promise.all([
+      fetch("/data/nfl/picks-"+date+".json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null),
+      fetch("/data/nfl/team-stats-today.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
+    ]);
+    if(Array.isArray(pk)) pk.forEach(g=>{LEO[g.matchup]=g;});
+    if(Array.isArray(ts)) ts.forEach(t=>{REC[t.team]=t;});
+
     renderedGames=allRows.filter(x=>x.gameday===date)
                          .sort((a,b)=>String(a.gametime).localeCompare(String(b.gametime)));
     statusEl.innerHTML = renderedGames.length ? "" :
@@ -143,18 +154,19 @@ function renderKPIs(){
     '<article class="kpi"><div class="label">Totals posted</div><div class="value">'+withTotals+'/'+total+'</div><div class="sub">market and model context</div></article>';
 }
 
-function teamRow(abbr, score, price, prob, isFinal, winner, side){
+function teamRow(abbr, score, price, prob, isFinal, winner, side, leoProb){
   const name=TEAM_NAMES[abbr]||abbr;
   const numbers = isFinal
     ? '<span class="team-score">'+escapeHtml(score)+'</span>'
-    : '<span class="team-price">'+fmtAm(price)+'</span><span class="team-prob">'+fmtPct(prob)+' mkt</span>';
+    : '<span class="team-price">'+fmtAm(price)+'</span><span class="team-prob">'+
+      (leoProb!=null ? fmtPct(leoProb)+' Leo' : fmtPct(prob)+' mkt')+'</span>';
   return '<div class="team-row '+side+' '+(winner?"winner":"")+'">'+
     '<span class="team-logo-wrap">'+
       '<img class="team-logo" src="/img/nfl/'+encodeURIComponent(abbr)+'.png" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\'">'+
       '<span class="team-initials">'+escapeHtml(abbr)+'</span>'+
     '</span>'+
     '<span class="team-copy"><span class="team-name">'+escapeHtml(name)+'</span>'+
-    '<span class="team-record">'+escapeHtml(TEAM_NICKS[abbr]||"")+'</span></span>'+
+    '<span class="team-record">'+escapeHtml((REC[abbr]&&REC[abbr].record)||"")+'</span></span>'+
     '<span class="team-numbers">'+numbers+'</span></div>';
 }
 
@@ -170,12 +182,20 @@ function renderCards(){
     const spreadTxt = spread==null?"\u2014":(spread>0?g.home_team+" -"+spread:(spread<0?g.away_team+" -"+Math.abs(spread):"PK"));
     const tl=num(g.total_line), ft=num(g.total);
 
-    const probCompare = (pa!=null&&ph!=null)
+    const leo = LEO[g.away_team+" @ "+g.home_team] || null;
+    // Leo's own win probability, stated from each side.
+    const leoHome = leo && leo.model_prob!=null
+      ? (leo.pick===leo.home ? leo.model_prob : 1-leo.model_prob) : null;
+    const leoAway = leoHome==null ? null : 1-leoHome;
+    const barA = leoAway!=null?leoAway:pa, barH = leoHome!=null?leoHome:ph;
+    const probCompare = (barA!=null&&barH!=null)
       ? '<div class="prob-compare">'+
-          '<div class="prob-line"><span>Market probability</span><span>'+escapeHtml(TEAM_NICKS[g.away_team]||g.away_team)+' '+fmtPct(pa)+' \u00b7 '+escapeHtml(TEAM_NICKS[g.home_team]||g.home_team)+' '+fmtPct(ph)+'</span></div>'+
-          '<div class="prob-track" title="No-vig market probability">'+
-            '<div class="prob-away" style="width:'+(pa*100).toFixed(1)+'%"></div>'+
-            '<div class="prob-home" style="width:'+(ph*100).toFixed(1)+'%"></div>'+
+          '<div class="prob-line"><span>'+(leoHome!=null?"Leo probability":"Market probability")+'</span><span>'+
+            escapeHtml(TEAM_NICKS[g.away_team]||g.away_team)+' '+fmtPct(barA)+' \u00b7 '+
+            escapeHtml(TEAM_NICKS[g.home_team]||g.home_team)+' '+fmtPct(barH)+'</span></div>'+
+          '<div class="prob-track" title="'+(leoHome!=null?"Leo win probability":"No-vig market probability")+'">'+
+            '<div class="prob-away" style="width:'+(barA*100).toFixed(1)+'%"></div>'+
+            '<div class="prob-home" style="width:'+(barH*100).toFixed(1)+'%"></div>'+
           '</div></div>'
       : "";
 
@@ -191,8 +211,8 @@ function renderCards(){
           '</div>'+
         '</div>'+
         '<div class="teams">'+
-          teamRow(g.away_team,g.away_score,g.away_moneyline,pa,isFinal,isFinal&&as>hs,"away")+
-          teamRow(g.home_team,g.home_score,g.home_moneyline,ph,isFinal,isFinal&&hs>as,"home")+
+          teamRow(g.away_team,g.away_score,g.away_moneyline,pa,isFinal,isFinal&&as>hs,"away",leoAway)+
+          teamRow(g.home_team,g.home_score,g.home_moneyline,ph,isFinal,isFinal&&hs>as,"home",leoHome)+
         '</div>'+
         probCompare+
         '<div class="market-grid">'+
@@ -201,10 +221,16 @@ function renderCards(){
             '<span class="market-sub">'+(isFinal&&as!=null&&hs!=null?"Final margin "+Math.abs(hs-as):"Closing line")+'</span></div>'+
           '<div class="market-box total"><span class="market-label">Over / Under</span>'+
             '<span class="market-value">'+(tl==null?"\u2014":tl)+'</span>'+
-            '<span class="market-sub">'+(isFinal&&ft!=null?"Scored "+ft+" \u00b7 "+(tl!=null?(ft>tl?"Over":(ft<tl?"Under":"Push")):"\u2014"):"Closing total")+'</span></div>'+
-          '<div class="market-box rating"><span class="market-label">Context</span>'+
-            '<span class="market-value">'+(g.div_game==="1"?"Division":(g.roof&&g.roof!=="NA"?escapeHtml(g.roof):"\u2014"))+'</span>'+
-            '<span class="market-sub">'+escapeHtml(g.surface||"")+'</span></div>'+
+            '<span class="market-sub">'+(isFinal&&ft!=null
+                ? "Scored "+ft+" \u00b7 "+(tl!=null?(ft>tl?"Over":(ft<tl?"Under":"Push")):"\u2014")
+                : (leo&&leo.proj_total!=null ? "Leo "+leo.proj_total : "Closing total"))+'</span></div>'+
+          '<div class="market-box rating"><span class="market-label">Moneyline read</span>'+
+            '<span class="market-value">'+(leo&&leo.pick?escapeHtml(leo.pick):"\u2014")+'</span>'+
+            '<span class="market-sub">'+(leo
+                ? (leo.status==="official_pick" ? "Official pick \u00b7 "+(leo.edge*100).toFixed(1)+"% edge"
+                  : leo.status==="model_flag"   ? "Model flagged \u2014 no play"
+                  : "Pass \u00b7 no edge")
+                : (g.div_game==="1"?"Division game":"Model pending"))+'</span></div>'+
         '</div>'+
         ((g.away_qb_name&&g.home_qb_name)
           ? '<div class="pitcher-line">\ud83c\udfc8 <span>'+escapeHtml(g.away_qb_name)+' vs '+escapeHtml(g.home_qb_name)+'</span></div>' : "")+
