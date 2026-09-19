@@ -11,17 +11,17 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MLB Scoreboard, Predictions and Odds | LyDia</title>
-<meta name="description" content="Today's MLB scoreboard with live scores, probable pitchers, moneyline odds, totals, LyDia win probabilities, and permanent matchup analysis pages.">
+<title>MLB Scoreboard, Predictions and Odds | Leo</title>
+<meta name="description" content="Today's MLB scoreboard with live scores, probable pitchers, moneyline odds, totals, Leo win probabilities, and permanent matchup analysis pages.">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="LyDia">
-<meta property="og:title" content="MLB Scoreboard, Predictions and Odds | LyDia">
-<meta property="og:description" content="Every MLB matchup in one place with live scores, market odds, LyDia probabilities, totals projections, and matchup analysis.">
+<meta property="og:site_name" content="Leo">
+<meta property="og:title" content="MLB Scoreboard, Predictions and Odds | Leo">
+<meta property="og:description" content="Every MLB matchup in one place with live scores, market odds, Leo probabilities, totals projections, and matchup analysis.">
 <meta property="og:url" content="https://lydiaslab.com/dashboard/">
 <meta property="og:image" content="https://lydiaslab.com/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="MLB Scoreboard, Predictions and Odds | LyDia">
-<meta name="twitter:description" content="Every MLB matchup in one place with live scores, market odds, LyDia probabilities, totals projections, and matchup analysis.">
+<meta name="twitter:title" content="MLB Scoreboard, Predictions and Odds | Leo">
+<meta name="twitter:description" content="Every MLB matchup in one place with live scores, market odds, Leo probabilities, totals projections, and matchup analysis.">
 <meta name="twitter:image" content="https://lydiaslab.com/img/og-card.png">
 <link rel="canonical" href="https://lydiaslab.com/dashboard/">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
@@ -218,11 +218,11 @@
   <section class="score-hero">
     <p class="eyebrow">Every game. One clear starting point.</p>
     <h1>MLB Scoreboard, Predictions and Odds</h1>
-    <p class="subtitle">Follow the full slate from pregame to final. Compare moneyline prices, market probabilities, LyDia win probabilities, projected totals, and open the complete matchup analysis from every card.</p>
+    <p class="subtitle">Follow the full slate from pregame to final. Compare moneyline prices, market probabilities, Leo win probabilities, projected totals, and open the complete matchup analysis from every card.</p>
     <div class="score-hero-chips">
       <span class="hero-chip">⚾ Full daily slate</span>
       <span class="hero-chip">📈 Moneyline and totals</span>
-      <span class="hero-chip">🧪 LyDia model reads</span>
+      <span class="hero-chip">🧪 Leo model reads</span>
       <span class="hero-chip">🔗 Permanent matchup pages</span>
     </div>
   </section>
@@ -250,7 +250,7 @@
   <section class="kpis" id="kpis" aria-label="Slate summary"></section>
   <div id="status" class="loading">Loading the MLB slate…</div>
   <section class="games-grid" id="games" aria-live="polite"></section>
-  <p class="data-note">Official LyDia picks remain moneyline-only. Totals are shown as market information and LyDia projections, not official picks. Pregame odds can remain visible during live and completed games for context.</p>
+  <p class="data-note">Official Leo picks remain moneyline-only. Totals are shown as market information and Leo projections, not official picks. Pregame odds can remain visible during live and completed games for context.</p>
 </main>
 
 <footer id="footer"></footer><script src="/js/app.js"></script>
@@ -382,9 +382,9 @@ async function loadScoreboard(options = {}) {
       oddsMap = buildOddsMap(await oddsResponse.json());
       oddsNoteEl.innerHTML = "";
     } else if (oddsUrl) {
-      oddsNoteEl.innerHTML = `<div class="notice warn">Live market prices are temporarily unavailable. LyDia model data and the MLB schedule are still shown.</div>`;
+      oddsNoteEl.innerHTML = `<div class="notice warn">Live market prices are temporarily unavailable. Leo model data and the MLB schedule are still shown.</div>`;
     } else {
-      oddsNoteEl.innerHTML = `<div class="notice">Live market prices require your saved Odds access in this browser. Published LyDia probabilities and totals projections still appear when available. <a href="/odds/">Open Live Odds</a>.</div>`;
+      oddsNoteEl.innerHTML = `<div class="notice">Live market prices require your saved Odds access in this browser. Published Leo probabilities and totals projections still appear when available. <a href="/odds/">Open Live Odds</a>.</div>`;
     }
 
     const briefByPk = Object.fromEntries(((brief && brief.games) || []).map(game => [String(game.game_pk), game]));
@@ -484,7 +484,7 @@ function renderKPIs() {
   kpisEl.innerHTML = `
     <article class="kpi"><div class="label">Games</div><div class="value">${totalGames}</div><div class="sub">${pregameGames} pregame · ${liveGames} live · ${finalGames} final</div></article>
     <article class="kpi"><div class="label">First pitch</div><div class="value">${firstPitch}</div><div class="sub">${escapeHtml(datePick.value)}</div></article>
-    <article class="kpi"><div class="label">LyDia coverage</div><div class="value">${withModel}/${totalGames}</div><div class="sub">${officialPicks} official moneyline pick${officialPicks === 1 ? "" : "s"}</div></article>
+    <article class="kpi"><div class="label">Leo coverage</div><div class="value">${withModel}/${totalGames}</div><div class="sub">${officialPicks} official moneyline pick${officialPicks === 1 ? "" : "s"}</div></article>
     <article class="kpi"><div class="label">Totals projected</div><div class="value">${withTotals}/${totalGames}</div><div class="sub">market and model context</div></article>
   `;
 }
@@ -558,7 +558,7 @@ function renderGameCard(item) {
     : `<span class="market-value">Building</span><span class="market-sub">model read not published</span>`;
 
   const totalBox = consensusLine != null || projectedTotal != null
-    ? `<span class="market-value">${consensusLine != null ? `O/U ${formatNumber(consensusLine)}` : "Market pending"}</span><span class="market-sub">${projectedTotal != null ? `LyDia ${formatNumber(projectedTotal)}` : pricePair(overPrice,underPrice)}</span>`
+    ? `<span class="market-value">${consensusLine != null ? `O/U ${formatNumber(consensusLine)}` : "Market pending"}</span><span class="market-sub">${projectedTotal != null ? `Leo ${formatNumber(projectedTotal)}` : pricePair(overPrice,underPrice)}</span>`
     : `<span class="market-value">Pending</span><span class="market-sub">total not published</span>`;
 
   const ratingBox = labRating
@@ -567,8 +567,8 @@ function renderGameCard(item) {
 
   const probabilityCompare = model || marketMoneyline
     ? `<div class="prob-compare">
-        <div class="prob-line"><span>${model ? "LyDia probability" : "Market probability"}</span><span>${escapeHtml(TEAM_SHORT[away.team.name] || away.team.name)} ${Odds.fmtPct(model ? model.away : marketMoneyline.awayProbability)} · ${escapeHtml(TEAM_SHORT[home.team.name] || home.team.name)} ${Odds.fmtPct(model ? model.home : marketMoneyline.homeProbability)}</span></div>
-        <div class="prob-track" title="${model ? "LyDia win probability" : "No-vig market probability"}">
+        <div class="prob-line"><span>${model ? "Leo probability" : "Market probability"}</span><span>${escapeHtml(TEAM_SHORT[away.team.name] || away.team.name)} ${Odds.fmtPct(model ? model.away : marketMoneyline.awayProbability)} · ${escapeHtml(TEAM_SHORT[home.team.name] || home.team.name)} ${Odds.fmtPct(model ? model.home : marketMoneyline.homeProbability)}</span></div>
+        <div class="prob-track" title="${model ? "Leo win probability" : "No-vig market probability"}">
           <div class="prob-away" style="width:${((model ? model.away : marketMoneyline.awayProbability)*100).toFixed(1)}%"></div>
           <div class="prob-home" style="width:${((model ? model.home : marketMoneyline.homeProbability)*100).toFixed(1)}%"></div>
         </div>
@@ -631,7 +631,7 @@ function teamRow(team, modelProbability, price, hasScore, winner, side) {
   const initials = (TEAM_SHORT[team.team.name] || team.team.name).split(/\s+/).map(x => x[0]).join("").slice(0,3).toUpperCase();
   const number = hasScore
     ? `<span class="team-score">${team.score}</span>`
-    : `<span class="team-price">${price == null ? "—" : Odds.fmtAm(price)}</span><span class="team-prob">${modelProbability == null ? "model pending" : `${Odds.fmtPct(modelProbability)} LyDia`}</span>`;
+    : `<span class="team-price">${price == null ? "—" : Odds.fmtAm(price)}</span><span class="team-prob">${modelProbability == null ? "model pending" : `${Odds.fmtPct(modelProbability)} Leo`}</span>`;
 
   return `<div class="team-row ${side} ${winner ? "winner" : ""}">
     <span class="team-logo-wrap">

@@ -6,19 +6,19 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Learning Dashboard | LyDia</title>
+<title>Learning Dashboard | Leo</title>
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="LyDia">
-<meta property="og:title" content="Learning Dashboard | LyDia">
-<meta property="og:description" content="Analyze how LyDia">
+<meta property="og:site_name" content="Leo">
+<meta property="og:title" content="Learning Dashboard | Leo">
+<meta property="og:description" content="Analyze how Leo">
 <meta property="og:url" content="https://lydiaslab.com/learning/">
 <meta property="og:image" content="https://lydiaslab.com/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Learning Dashboard | LyDia">
-<meta name="twitter:description" content="Analyze how LyDia">
+<meta name="twitter:title" content="Learning Dashboard | Leo">
+<meta name="twitter:description" content="Analyze how Leo">
 <meta name="twitter:image" content="https://lydiaslab.com/img/og-card.png">
 
-<meta name="description" content="Analyze how LyDia's model and reads held up across every graded game.">
+<meta name="description" content="Analyze how Leo's model and reads held up across every graded game.">
 <link rel="canonical" href="https://lydiaslab.com/learning/">
 <link rel="stylesheet" href="/css/style.css">
 <style>
@@ -86,7 +86,7 @@ tr.filter-row select.col-filter,tr.filter-row input.col-filter{width:100%;min-wi
 <body>
 <nav id="nav"></nav>
 <main>
-  <p class="eyebrow">LyDia's Lab</p>
+  <p class="eyebrow">Leo's Lab</p>
   <h1>Learning Dashboard</h1>
   <p class="subtitle">Slice every graded game by the dimensions that matter — where the model is right and wrong, whether the edge is real, and which reads actually predict. Measurement only; it never changes a pick.</p>
   <div id="status" class="loading">Loading the learning ledgers…</div>
@@ -365,7 +365,7 @@ function renderLearningSummary(){
   const cal = s.calibration || {};
   const kp = cal.kprops || {};
   // 2026-08-24, Lynold's explicit instruction: surface data/learning-summary.json's
-  // "coach" object -- generate-coach.js (LyDia daily engine) already
+  // "coach" object -- generate-coach.js (Leo daily engine) already
   // writes it every run, but nothing on the site read it before this. Coach
   // is a backward-looking, aggregate self-audit only (does the 72% prob gate
   // hold up, does the 8.0 Lab Rating gate hold up, is bullpen v3 causing bad
@@ -386,7 +386,7 @@ function renderLearningSummary(){
   // the old fixed recommendations list used.
   const history = (coach && coach.history) || null;
   const coachHtml = coach ? `
-    <h2 class="sec">LyDia Coach</h2>
+    <h2 class="sec">Leo Coach</h2>
     <div class="card" style="margin-bottom:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:4px">
         <h3 style="margin:0">${esc(coach.title || "")}</h3>
@@ -412,7 +412,7 @@ function renderLearningSummary(){
         <h3 style="margin:0">Full-history correlation findings</h3>
         <span class="${history.ready ? "pos-text" : "dim"} small" style="font-weight:700;text-transform:uppercase;letter-spacing:.03em">${history.ready ? `${history.n} games analyzed` : `${history.n}/${history.minimum_n} games`}</span>
       </div>
-      <p class="sec-note" style="margin:0 0 10px">Every graded game LyDia has an analysis for -- official picks, value watches, watchlist, and passes, all dates -- run through a real correlation check against every input the model captures. This is what actually predicts right vs. wrong picks, not a fixed list chosen in advance. Feeds the "Evidence check" notes on today's matchup pages.</p>
+      <p class="sec-note" style="margin:0 0 10px">Every graded game Leo has an analysis for -- official picks, value watches, watchlist, and passes, all dates -- run through a real correlation check against every input the model captures. This is what actually predicts right vs. wrong picks, not a fixed list chosen in advance. Feeds the "Evidence check" notes on today's matchup pages.</p>
       ${(history.ready && history.recommendations && history.recommendations.length)
         ? `<ul style="margin:0;padding-left:18px">${history.recommendations.map(r => `<li class="sec-note" style="margin-bottom:6px">${esc(r)}</li>`).join("")}</ul>`
         : `<p class="dim small" style="margin:0">Not enough graded games yet for a meaningful correlation check (needs ${history ? history.minimum_n : "—"}+).</p>`}

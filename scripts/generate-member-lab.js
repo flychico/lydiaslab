@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
-  LyDia source-of-truth daily engine.
+  Leo source-of-truth daily engine.
   Creates research data and locked official picks only for an open slate.
   Official markets: moneyline, full-game totals, and pitcher strikeouts.
   Each market keeps its own qualification rule and record.
@@ -376,7 +376,7 @@ async function main() {
     date: DATE,
     generated_at: generatedAt,
     snapshot_type: SNAPSHOT,
-    source_of_truth: "LyDia Daily Engine",
+    source_of_truth: "Leo Daily Engine",
     current_official_model: "multi_market_v1",
     model_version: MONEYLINE_MODEL_VERSION,
     lab_rating_version: LAB_RATING_VERSION,
@@ -386,7 +386,7 @@ async function main() {
       // 2026-08-06: market edge dropped as an official-pick requirement
       // (Lynold's call) -- this note already didn't claim edge was a gate,
       // so it's untouched and still accurate.
-      note: "Lab Rating grades LyDia's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
+      note: "Lab Rating grades Leo's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
     },
     summary: summarize(rows, HAS_ODDS_API_KEY, officialCard),
     // The official card, market by market. The brief page renders from this so
@@ -429,13 +429,13 @@ async function main() {
   }
 
   if (args["defer-publish"] === "true") {
-    console.log(`Generated provisional LyDia source data for ${DATE}. Waiting for unified run projections before locking picks.`);
+    console.log(`Generated provisional Leo source data for ${DATE}. Waiting for unified run projections before locking picks.`);
   } else {
     const published = officialCard;
     writeJson(`data/picks/${DATE}.json`, published);
     if (DATE === etToday()) writeJson("data/picks/today.json", published);
     mergeAndWriteMarket(buildMarketFile(rows, generatedAt));
-    console.log(`Generated unified LyDia source data for ${DATE}. Games: ${rows.length}. Official picks: ${published.picks.length}.`);
+    console.log(`Generated unified Leo source data for ${DATE}. Games: ${rows.length}. Official picks: ${published.picks.length}.`);
   }
 }
 
@@ -1172,7 +1172,7 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
   const pickOffCtx = offenseFormFor(pickHome ? hT.id : aT.id, null, offense);
   const oppOffCtx = offenseFormFor(pickHome ? aT.id : hT.id, null, offense);
 
-  // Lab Rating v2 grades LyDia's analysis only. No market value is passed in:
+  // Lab Rating v2 grades Leo's analysis only. No market value is passed in:
   // the sportsbook keeps veto power through the official-pick gate below, but
   // it can no longer strengthen or weaken the analysis itself.
   // 2026-08-26, Lynold's explicit instruction: Lab Rating's pitching-plan
@@ -1204,7 +1204,7 @@ function modelGame(g, strength, pitchers, oddsMap, bullpen, offense, runProjecti
   });
   const priceTooShort = Number.isFinite(bestPrice) && !priceAllowsOfficial(bestPrice);
   // 2026-08-06, Lynold: market edge (VALUE_EDGE) is no longer a requirement
-  // for an official moneyline pick. His case: LyDia at 68% win probability
+  // for an official moneyline pick. His case: Leo at 68% win probability
   // against a 66% no-vig market is only a 2-point edge -- below the old 3-point
   // floor -- but he still wants that published as official. `edge !== null` is
   // kept (not dropped) because it's the only thing here guaranteeing real
@@ -1447,7 +1447,7 @@ function bullpenLabel(pick, opp) {
   const pickRisk = pick.risk_index ?? pick.score;
   const oppRisk = opp.risk_index ?? opp.score;
   if (pickRisk >= 78 && oppRisk >= 78) return "Both bullpens stressed";
-  if (pickRisk + 15 < oppRisk) return "Supports LyDia side";
+  if (pickRisk + 15 < oppRisk) return "Supports Leo side";
   if (pickRisk > oppRisk + 15) return "Adds caution";
   if (pickRisk >= 60 || oppRisk >= 60) return "Elevated volatility";
   return "Neutral";
@@ -1467,18 +1467,18 @@ function passReasonFor({ edge, modelProb, pitchEdgeTeam, pickTeam, pitcherConfli
   // 2026-08-19, Lynold's explicit instruction: bullpen games are excluded
   // from the model -- checked first/highest priority since it's a hard
   // exclusion, not a marginal miss on any of the checks below.
-  if (bullpenGame) return "This is a bullpen game -- no confirmed traditional starter, so LyDia does not publish an official pick here.";
+  if (bullpenGame) return "This is a bullpen game -- no confirmed traditional starter, so Leo does not publish an official pick here.";
   // 2026-08-06: edge no longer gates the official pick, so the reasons below
   // are reordered -- prob/lab/pitcher-conflict are checked first because
   // those are what can actually keep a game out of official now. Edge is
   // checked last and the copy was reworded: edge still gates the separate
   // value_watch tier, so a low/negative edge here means "not even a value
   // watch," not "not an official pick" (that would now be inaccurate).
-  if (modelProb < OFFICIAL_MODEL_PROB && labScore >= VALUE_WATCH_LAB_SCORE) return `Setup quality is strong, but LyDia's win probability is only ${fmtPct(modelProb)}. That is not high enough for an official pick.`;
+  if (modelProb < OFFICIAL_MODEL_PROB && labScore >= VALUE_WATCH_LAB_SCORE) return `Setup quality is strong, but Leo's win probability is only ${fmtPct(modelProb)}. That is not high enough for an official pick.`;
   if (pitcherConflict) return "Starting pitcher edge conflicts with the model side.";
   if (labScore < OFFICIAL_LAB_SCORE) return "The combined Lab Rating did not clear the official threshold.";
   if (pitchEdgeTeam !== "No clear SP edge" && pitchEdgeTeam !== pickTeam) return "Starting pitcher edge does not support the model side.";
-  if (edge !== null && edge < 0) return "Market is higher than LyDia's model probability, and the edge was too small for a value-watch grade.";
+  if (edge !== null && edge < 0) return "Market is higher than Leo's model probability, and the edge was too small for a value-watch grade.";
   if (edge !== null && edge < VALUE_EDGE) return "Model edge was too small for a value-watch grade.";
   return "No clear setup.";
 }
@@ -1486,7 +1486,7 @@ function passReasonFor({ edge, modelProb, pitchEdgeTeam, pickTeam, pitcherConfli
 function buildRead(ctx) {
   const valueLine = ctx.marketProb === null
     ? "Market pricing was unavailable."
-    : `LyDia projects ${fmtPct(ctx.modelProb)} against a ${fmtPct(ctx.marketProb)} no-vig market number, a ${fmtPct(ctx.edge)} model edge at ${fmtOdds(ctx.bestPrice)}.`;
+    : `Leo projects ${fmtPct(ctx.modelProb)} against a ${fmtPct(ctx.marketProb)} no-vig market number, a ${fmtPct(ctx.edge)} model edge at ${fmtOdds(ctx.bestPrice)}.`;
   const pitcherLine = ctx.pitchEdgeTeam === "No clear SP edge"
     ? "The starting pitcher matchup does not create a meaningful separation."
     : `${ctx.pitchEdgeTeam} owns the starting pitcher edge by ${ctx.pitchGap} points.`;
@@ -1748,7 +1748,7 @@ function buildPicksFile(rows, generatedAt) {
     generated: generatedAt,
     generated_at: generatedAt,
     locked_at: generatedAt,
-    source_of_truth: "LyDia Daily Engine",
+    source_of_truth: "Leo Daily Engine",
     current_official_model: "multi_market_v1",
     // 2026-08-06, Lynold: removed the "no pick added to a game that has
     // already started" sentence from this public-facing string, matching the
@@ -1756,7 +1756,7 @@ function buildPicksFile(rows, generatedAt) {
     // instruction, see DEC-20260806-04). A published pick is still never
     // changed or removed once on the card -- that part is unchanged.
     lock_policy: "Dated official pick files are append-only. A published pick is never changed or removed once it is on the card. New picks CAN be appended during the day as they qualify — pitcher strikeout picks require the real posted starting lineup, which for a late game does not exist until the early evening, so the card is expected to grow as the slate progresses.",
-    note: `Official records are separated by market. Moneylines use the ${(OFFICIAL_MODEL_PROB * 100).toFixed(0)}% probability and ${(OFFICIAL_LAB_SCORE / 10).toFixed(1)}/10 Lab gates; game totals ${totalsOfficialEnabled ? `use a ${totalsOfficialEdge}-run edge and ${(totalsOfficialLab / 10).toFixed(1)}/10 totals setup` : "are currently paused while the totals setup rating is rebuilt (see EXP-20260727-01)"}; pitcher Ks use a 0.7-K edge, posted price, two-book coverage, a confirmed non-opener workload, and the real posted starting lineup (not a projected one). No market publishes an official pick at a price of ${MIN_OFFICIAL_PRICE} or shorter — a favourite that heavy has to win ${(100 * (185 / 285)).toFixed(1)}% of the time just to break even, and LyDia's graded record does not support paying that.`,
+    note: `Official records are separated by market. Moneylines use the ${(OFFICIAL_MODEL_PROB * 100).toFixed(0)}% probability and ${(OFFICIAL_LAB_SCORE / 10).toFixed(1)}/10 Lab gates; game totals ${totalsOfficialEnabled ? `use a ${totalsOfficialEdge}-run edge and ${(totalsOfficialLab / 10).toFixed(1)}/10 totals setup` : "are currently paused while the totals setup rating is rebuilt (see EXP-20260727-01)"}; pitcher Ks use a 0.7-K edge, posted price, two-book coverage, a confirmed non-opener workload, and the real posted starting lineup (not a projected one). No market publishes an official pick at a price of ${MIN_OFFICIAL_PRICE} or shorter — a favourite that heavy has to win ${(100 * (185 / 285)).toFixed(1)}% of the time just to break even, and Leo's graded record does not support paying that.`,
     rules: {
       // Applies to every market. -185 needs a 64.9% strike rate to break even
       // and the graded record does not support paying that.
@@ -1976,7 +1976,7 @@ function buildMarketFile(rows, generatedAt) {
       posted_at: SNAPSHOT === "posted" ? generatedAt : null,
       last_checked_at: generatedAt,
       movement: "pending",
-      read: "Market tracking compares LyDia's posted number against later current and closing snapshots."
+      read: "Market tracking compares Leo's posted number against later current and closing snapshots."
     }))
   };
 }
