@@ -82,7 +82,7 @@ function renderNav(active) {
   const prefix = Sport.prefix();
   
   const links = [
-    [prefix + "dashboard/", "Scoreboard"],
+    [prefix + "scoreboard/", "Scoreboard"],
     [prefix + "previews/", "Picks"],
     [prefix === "/mlb/" ? "/tools/strikeout-projections/" : prefix + "player-props/", sport === "MLB" ? "Pitchers" : "Props"],
     [prefix + "tools/", "Lab"],

@@ -17,7 +17,7 @@ const ROOT = path.join(__dirname, "..");
 const SKIP_DIRS = new Set([".git", "node_modules", ".netlify", "dist", "build", "gym"]);
 const ROOTS = [
   ".",
-  "dashboard",
+  "scoreboard",
   "picks",
   "previews",
   "results",

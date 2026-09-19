@@ -22,7 +22,7 @@ const forbidden = [
   { re: /API key/i, label: "internal lingo: API key" }
 ];
 
-const roots = [".", "picks", "member-brief", "tools", "previews", "recaps", "results", "membership", "articles", "dashboard", "stats"];
+const roots = [".", "picks", "member-brief", "tools", "previews", "recaps", "results", "membership", "articles", "scoreboard", "stats"];
 const files = [];
 for (const root of roots) collect(path.join(ROOT, root));
 
