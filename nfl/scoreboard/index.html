@@ -165,7 +165,7 @@ function renderCards(){
     const isFinal=stateKey(g)==="final";
     const as=num(g.away_score), hs=num(g.home_score);
     const [pa,ph]=devig(g.away_moneyline,g.home_moneyline);
-    const awayColor=TEAM_COLORS[g.away_team]||"#6d5dfc", homeColor=TEAM_COLORS[g.home_team]||"#d9468f";
+    const awayColor=TEAM_COLORS[g.away_team]||"var(--accent2)", homeColor=TEAM_COLORS[g.home_team]||"var(--accent)";
     const spread=num(g.spread_line);
     const spreadTxt = spread==null?"\u2014":(spread>0?g.home_team+" -"+spread:(spread<0?g.away_team+" -"+Math.abs(spread):"PK"));
     const tl=num(g.total_line), ft=num(g.total);

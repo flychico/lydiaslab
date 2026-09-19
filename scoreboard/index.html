@@ -357,8 +357,8 @@ function renderGameCard(item) {
   const inning = liveLabel(game);
   const topStatus = isLive ? inning : isFinal ? "Final" : statusLabel;
 
-  const awayColor = TEAM_COLORS[away.team.id] || "#6d5dfc";
-  const homeColor = TEAM_COLORS[home.team.id] || "#d9468f";
+  const awayColor = TEAM_COLORS[away.team.id] || "var(--accent2)";
+  const homeColor = TEAM_COLORS[home.team.id] || "var(--accent)";
 
   const pitcherAway = away.probablePitcher ? away.probablePitcher.fullName : (total && total.away_sp) || "TBD";
   const pitcherHome = home.probablePitcher ? home.probablePitcher.fullName : (total && total.home_sp) || "TBD";

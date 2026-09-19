@@ -1,27 +1,33 @@
+@import url("https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800;900&family=EB+Garamond:wght@400;500;600&display=swap");
 /* Leo — shared stylesheet */
 :root {
-  --bg: #ffffff;
-  --bg-card: #ffffff;
-  --bg-elev: #f2f3f5;
-  --border: #e5e7eb;
-  --text: #211d35;
-  --text-dim: #655f78;
-  --accent: #E8C547;
-  --accent2: #6d5dfc;
-  --accent3: #23b8c7;
-  --warn: #9a6700;
-  --danger: #cf222e;
-  --good: #1e8e3e;
+  /* Palette: warm editorial — cream ground, deep navy, gold accent.
+     Navy carries every text/link role (14:1 on cream); gold is decorative
+     fill only, since gold-on-cream fails text contrast. */
+  --bg: #F5F0E8;
+  --bg-card: #FDFBF7;
+  --bg-elev: #EDE6D9;
+  --border: #DED4C2;
+  --text: #2A2620;
+  --text-dim: #675D4F;
+  --accent: #C9A84C;        /* gold  — fills, bars, decoration */
+  --accent2: #1A2535;       /* navy  — links, active states, primary */
+  --accent3: #4A6478;       /* steel — tertiary */
+  --navy-deep: #141D29;
+  --gold-deep: #7A5D14;     /* gold that passes as text on cream */
+  --warn: #7A5D14;
+  --danger: #A63A2E;
+  --good: #2F6E4A;
   --radius: 14px;
-  --shadow-sm: 0 8px 24px rgba(58,45,118,.08);
-  --shadow-md: 0 18px 48px rgba(58,45,118,.12);
+  --shadow-sm: 0 8px 24px rgba(42,38,32,.07);
+  --shadow-md: 0 18px 48px rgba(42,38,32,.11);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: "Onest", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.6;
   min-height: 100vh;
 }
@@ -55,13 +61,13 @@ nav a.navlink {
   color: var(--text-dim); padding: 7px 12px; border-radius: 9px; font-size: .94rem; font-weight: 600;
 }
 nav a.navlink:hover { color: var(--text); background: var(--bg-elev); text-decoration: none; }
-nav a.navlink.active { color: var(--accent2); background: rgba(109,93,252,.10); }
+nav a.navlink.active { color: var(--accent2); background: rgba(26,37,53,.07); }
 nav a.navlink-cta {
-  margin-left: auto; background: linear-gradient(135deg,var(--accent2),var(--accent)); color: #fff; font-weight: 800;
-  white-space: nowrap; box-shadow: 0 8px 18px rgba(109,93,252,.18);
+  margin-left: auto; background: var(--accent2); color: #fff; font-weight: 800;
+  white-space: nowrap; box-shadow: 0 8px 18px rgba(26,37,53,.18);
 }
 nav a.navlink-cta:hover { filter: brightness(1.06); color: #fff; text-decoration: none; }
-nav a.navlink-cta.active { background: linear-gradient(135deg,var(--accent2),var(--accent)); color: #fff; }
+nav a.navlink-cta.active { background: var(--navy-deep); color: #fff; }
 
 /* Layout */
 main { max-width: 1180px; margin: 0 auto; padding: 34px 20px 68px; }
@@ -84,12 +90,12 @@ h3 { font-size: 1.06rem; margin: 18px 0 8px; }
 .grid-3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 
 .card {
-  background: rgba(255,255,255,.92); border: 1px solid var(--border);
+  background: rgba(253,251,247,.94); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow-sm);
 }
 .card h3 { margin-top: 0; }
 .card p { color: var(--text-dim); font-size: .95rem; }
-.card:hover { border-color: rgba(109,93,252,.26); }
+.card:hover { border-color: rgba(26,37,53,.26); }
 
 /* Tables */
 table { width: 100%; border-collapse: collapse; font-size: .92rem; background: rgba(255,255,255,.6); }
@@ -105,22 +111,22 @@ input, select {
   border: 1px solid var(--border); background: rgba(255,255,255,.88); color: var(--text);
   font-size: .95rem;
 }
-input:focus, select:focus { outline: none; border-color: var(--accent2); box-shadow: 0 0 0 3px rgba(109,93,252,.12); }
+input:focus, select:focus { outline: none; border-color: var(--accent2); box-shadow: 0 0 0 3px rgba(26,37,53,.09); }
 .field { margin-bottom: 14px; }
 button, .btn {
-  background: linear-gradient(135deg,var(--accent2),var(--accent)); color: #ffffff; border: none; border-radius: 10px;
+  background: var(--accent2); color: #ffffff; border: none; border-radius: 10px;
   padding: 10px 18px; font-size: .94rem; font-weight: 750; cursor: pointer;
-  display: inline-block; box-shadow: 0 8px 18px rgba(109,93,252,.16);
+  display: inline-block; box-shadow: 0 8px 18px rgba(26,37,53,.16);
 }
 button:hover, .btn:hover { filter: brightness(1.06); text-decoration: none; transform: translateY(-1px); }
 button.secondary, .btn.secondary { background: rgba(255,255,255,.88); color: var(--text); border: 1px solid var(--border); box-shadow: none; }
-.btn.blue { background: linear-gradient(135deg,var(--accent3),var(--accent2)); }
+.btn.blue { background: var(--accent3); }
 
 /* Badges & results */
 .badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: .76rem; font-weight: 700; }
 .badge.pos { background: rgba(30,142,62,.12); color: var(--good); }
 .badge.neg { background: rgba(207,34,46,.10); color: var(--danger); }
-.badge.neutral { background: rgba(109,93,252,.12); color: var(--accent2); }
+.badge.neutral { background: rgba(26,37,53,.09); color: var(--accent2); }
 .result-box {
   background: rgba(255,255,255,.82); border: 1px solid var(--border); border-radius: var(--radius);
   padding: 16px; margin-top: 14px; font-size: .95rem; box-shadow: var(--shadow-sm);
@@ -159,7 +165,7 @@ main.container > .controls { justify-content:center; }
 }
 .game-head.matchup-title-center .matchup { grid-column:2; text-align:center; }
 .game-head.matchup-title-center .small { grid-column:3; justify-self:end; text-align:right; }
-.best-odds { background: rgba(217,70,143,.14); border-radius: 4px; }
+.best-odds { background: rgba(201,168,76,.14); border-radius: 4px; }
 .notice {
   background: rgba(255,255,255,.82); border: 1px solid var(--border); border-left: 4px solid var(--accent2);
   border-radius: 10px; padding: 14px 16px; margin: 16px 0; font-size: .92rem; color: var(--text-dim);
@@ -170,13 +176,13 @@ main.container > .controls { justify-content:center; }
 
 /* Lead capture / membership upsell boxes */
 .lead-box {
-  border: 1px solid rgba(217,70,143,.45); border-radius: var(--radius); background: rgba(255,255,255,.92);
+  border: 1px solid rgba(201,168,76,.45); border-radius: var(--radius); background: rgba(253,251,247,.94);
   padding: 18px; margin: 18px 0; box-shadow: var(--shadow-sm);
 }
 .lead-box form { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .lead-box input[type=email] { flex: 1; min-width: 200px; }
 .member-tease {
-  border: 1px dashed var(--accent); border-radius: var(--radius); background: rgba(217,70,143,.05);
+  border: 1px dashed var(--accent); border-radius: var(--radius); background: rgba(201,168,76,.05);
   padding: 16px 18px; margin: 16px 0;
 }
 .member-tease .lock { font-size: 1.1rem; }
@@ -185,7 +191,7 @@ main.container > .controls { justify-content:center; }
 .cmp-table th, .cmp-table td { text-align: center; }
 .cmp-table th:first-child, .cmp-table td:first-child { text-align: left; }
 .cmp-table td.yes { color: var(--good); font-weight: 700; }
-.cmp-table td.member-col { background: rgba(217,70,143,.05); }
+.cmp-table td.member-col { background: rgba(201,168,76,.05); }
 
 /* Articles */
 article.post { margin-bottom: 36px; }
@@ -238,3 +244,8 @@ footer {
   .nav-sport-selector { gap: 2px; margin: 0 8px; padding-left: 8px; }
   .nav-sport { padding: 3px 8px; font-size: .78rem; }
 }
+
+
+/* Display type: serif headings against the sans UI, matching the reference. */
+h1, h2, .score-hero h1 { font-family:"EB Garamond", Georgia, "Times New Roman", serif; font-weight:600; letter-spacing:-.01em; }
+.eyebrow { font-family:"Onest",sans-serif; letter-spacing:.14em; text-transform:uppercase; font-size:.7rem; font-weight:700; color:var(--gold-deep); }
