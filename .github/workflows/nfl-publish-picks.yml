@@ -68,6 +68,13 @@ jobs:
           node scripts/generate-nfl-model.js "${{ steps.slate_date.outputs.date }}"
           node scripts/generate-nfl-props.js "${{ steps.slate_date.outputs.date }}" || true
 
+      # Permanent per-game stat pages: last season beside this season, the
+      # starting QB, RB / WR1 / WR2 and each side's touchdown leaders.
+      - name: Matchup data and pages
+        run: |
+          node scripts/generate-nfl-matchups.js "${{ steps.slate_date.outputs.date }}"
+          node scripts/render-nfl-matchup-pages.js "${{ steps.slate_date.outputs.date }}"
+
       # The one safety net, matching the spirit of publish-picks.yml: refuse
       # to publish something structurally broken. An EMPTY slate is not an
       # error -- most days have no NFL games -- it just exits without

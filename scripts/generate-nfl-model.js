@@ -16,6 +16,7 @@
 const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
+const { buildRatings, headToHead } = require("./lib/nfl-ratings.js");
 const ROOT = path.join(__dirname, "..");
 const FEED = "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv";
 const REL  = "https://github.com/nflverse/nflverse-data/releases/download";
@@ -120,6 +121,19 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
     if(as>hs){A.w++;H.l++;} else if(hs>as){H.w++;A.l++;} else {A.t++;H.t++;}
   });
 
+  // ---- component ratings: QB, offense, defense, turnover battle -----------
+  // DISPLAY AND CONTEXT ONLY. The 2025 backtest (claude/NFL_BACKTEST_RESULTS.md)
+  // showed this composite scores WORSE than plain point margin on win
+  // probability (Brier .2182 vs .2146, market .2123), so it deliberately does
+  // NOT feed model_prob. Wiring it in would make picks worse. Revisit only
+  // with FITTED weights, not the hand-assigned ones in lib/nfl-ratings.js.
+  let RATINGS = {};
+  try{
+    const wkPrior = get(`${REL}/stats_player/stats_player_week_${PRIOR}.csv`);
+    RATINGS = buildRatings(wk, wkPrior);
+    console.log(`  component ratings: ${Object.keys(RATINGS).length} teams (context only)`);
+  }catch(e){ console.log("  component ratings unavailable: "+e.message); }
+
   // ---- conference / division ----------------------------------------------
   let confDiv = {};
   try{
@@ -164,7 +178,18 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
     pass_yards_for: off[t]?r1(mean(off[t].p)):null,
     rush_yards_for: off[t]?r1(mean(off[t].r)):null,
     pass_yards_against: def[t]?r1(mean(def[t].p)):null,
-    rush_yards_against: def[t]?r1(mean(def[t].r)):null
+    rush_yards_against: def[t]?r1(mean(def[t].r)):null,
+    ...(RATINGS[t] ? {
+      qb_rating:RATINGS[t].qb_rating, off_rating:RATINGS[t].off_rating,
+      def_rating:RATINGS[t].def_rating, overall_rating:RATINGS[t].overall,
+      ints_thrown_pg:RATINGS[t].ints_thrown_pg, ints_caught_pg:RATINGS[t].ints_caught_pg,
+      takeaways_pg:RATINGS[t].takeaways_pg, giveaways_pg:RATINGS[t].giveaways_pg,
+      turnover_diff_pg:RATINGS[t].turnover_diff_pg,
+      epa_per_dropback:RATINGS[t].epa_per_dropback, cpoe:RATINGS[t].cpoe,
+      int_rate:RATINGS[t].int_rate, sack_rate_taken:RATINGS[t].sack_rate_taken,
+      def_epa_per_play:RATINGS[t].def_epa_per_play, def_sack_rate:RATINGS[t].def_sack_rate,
+      def_int_rate:RATINGS[t].def_int_rate, def_yards_per_play:RATINGS[t].def_yards_per_play
+    } : {})
   })).sort((a,b)=>b.rating-a.rating).map((x,i)=>({...x, rank:i+1}));
 
   // ---- picks for the target slate -----------------------------------------
@@ -239,6 +264,24 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
       exp_margin:r1(expMargin), raw_model_prob:r3(rawHome),
       model_weight:r3(w), raw_disagreement:rawDisagree!=null?r3(rawDisagree):null,
       spread_line:n(g.spread_line), total_line:n(g.total_line),
+      // head-to-head component comparison (context, not an input to model_prob)
+      h2h: headToHead(RATINGS, g.away_team, g.home_team),
+      away_ratings: RATINGS[g.away_team] ? {
+        qb:RATINGS[g.away_team].qb_rating, off:RATINGS[g.away_team].off_rating,
+        def:RATINGS[g.away_team].def_rating, overall:RATINGS[g.away_team].overall,
+        ints_thrown_pg:RATINGS[g.away_team].ints_thrown_pg,
+        ints_caught_pg:RATINGS[g.away_team].ints_caught_pg,
+        turnover_diff_pg:RATINGS[g.away_team].turnover_diff_pg,
+        epa_per_dropback:RATINGS[g.away_team].epa_per_dropback,
+        def_epa_per_play:RATINGS[g.away_team].def_epa_per_play } : null,
+      home_ratings: RATINGS[g.home_team] ? {
+        qb:RATINGS[g.home_team].qb_rating, off:RATINGS[g.home_team].off_rating,
+        def:RATINGS[g.home_team].def_rating, overall:RATINGS[g.home_team].overall,
+        ints_thrown_pg:RATINGS[g.home_team].ints_thrown_pg,
+        ints_caught_pg:RATINGS[g.home_team].ints_caught_pg,
+        turnover_diff_pg:RATINGS[g.home_team].turnover_diff_pg,
+        epa_per_dropback:RATINGS[g.home_team].epa_per_dropback,
+        def_epa_per_play:RATINGS[g.home_team].def_epa_per_play } : null,
       // totals model
       total_status:totalStatus, total_side:totalSide,
       proj_total:r1(projTotal), raw_proj_total:r1(rawTotal),

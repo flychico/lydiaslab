@@ -108,6 +108,12 @@ function impliedProb(am){const n=num(am);if(n==null)return null;return n>0?100/(
 function devig(a,b){const x=impliedProb(a),y=impliedProb(b);if(x==null||y==null)return[null,null];const s=x+y;return s>0?[x/s,y/s]:[null,null];}
 function fmtPct(p){return p==null?"\u2014":(p*100).toFixed(1)+"%";}
 function fmtTime(t){const m=String(t||"").match(/^(\d{1,2}):(\d{2})/);if(!m)return "TBD";let h=+m[1];const ap=h>=12?"PM":"AM";h=h%12||12;return h+":"+m[2]+" "+ap+" ET";}
+// Permanent per-game stat page, same slug the renderer writes.
+function matchupUrl(g){
+  const sl=t=>String(t).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+  return "/nfl/"+sl(g.away_team)+"-vs-"+sl(g.home_team)+"-prediction-odds-"+g.gameday+"/";
+}
+
 function stateKey(g){return (g.away_score!==""&&g.home_score!=="")?"final":"preview";}
 
 async function loadScoreboard(opts={}){
@@ -234,6 +240,8 @@ function renderCards(){
         '</div>'+
         ((g.away_qb_name&&g.home_qb_name)
           ? '<div class="pitcher-line">\ud83c\udfc8 <span>'+escapeHtml(g.away_qb_name)+' vs '+escapeHtml(g.home_qb_name)+'</span></div>' : "")+
+        '<a class="card-cta" href="'+matchupUrl(g)+'" aria-label="'+escapeHtml(g.away_team)+' at '+escapeHtml(g.home_team)+' stats and matchup">'+
+          '<span>'+(isFinal?"View matchup and final result":"View stats, odds and matchup")+'</span><span>\u2192</span></a>'+
       '</div></div>';
   }).join("");
 }

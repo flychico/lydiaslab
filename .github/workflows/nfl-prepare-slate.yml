@@ -86,6 +86,13 @@ jobs:
       - name: Player prop projections
         run: node scripts/generate-nfl-props.js "${{ steps.slate_date.outputs.date }}"
 
+      # Permanent per-game stat pages: last season beside this season, the
+      # starting QB, RB / WR1 / WR2 and each side's touchdown leaders.
+      - name: Matchup data and pages
+        run: |
+          node scripts/generate-nfl-matchups.js "${{ steps.slate_date.outputs.date }}"
+          node scripts/render-nfl-matchup-pages.js "${{ steps.slate_date.outputs.date }}"
+
       - name: Commit and push if changed
         run: |
           set -euo pipefail
