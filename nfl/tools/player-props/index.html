@@ -41,76 +41,74 @@ main { padding: 20px; max-width: 1200px; margin: 0 auto; }
 <script>
 renderNav("/nfl/tools/player-props/");
 
-async function loadProps() {
-  try {
-    const res = await fetch('/data/nfl/props-2026-09-20.json');
-    if (!res.ok) throw new Error('Props not found');
-    
-    const allProps = await res.json();
-    if (!Array.isArray(allProps)) throw new Error('Invalid props data');
-    
-    document.getElementById('props-date').textContent = new Date().toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      month: 'long', 
-      day: 'numeric',
-      year: 'numeric'
-    });
-    
-    const byType = {};
-    allProps.forEach(prop => {
-      const typeLabel = formatPropType(prop.type);
-      if (!byType[typeLabel]) byType[typeLabel] = [];
-      byType[typeLabel].push(prop);
-    });
-    
-    let html = '';
-    const propTypeOrder = ['QB Pass Yards', 'WR Receiving Yards', 'RB Rushing Yards', 'Anytime TD', 'Moneyline', 'Other'];
-    
-    propTypeOrder.forEach(typeLabel => {
-      const props = byType[typeLabel] || [];
-      if (props.length === 0) return;
-      
-      html += `<div class="prop-type-section">
-        <div class="prop-type-title">${typeLabel}</div>
-        <div class="props-grid">`;
-      
-      props.forEach(prop => {
-        const value = formatValue(prop.projection, prop.type);
-        html += `<div class="prop-card">
-          <div class="prop-matchup">${prop.matchup || 'Unknown'}</div>
-          <div class="prop-player">${prop.player || 'Team'}</div>
-          <div class="prop-value">${value}</div>
-          <div class="prop-type">${prop.type.replace(/_/g, ' ')}</div>
-        </div>`;
-      });
-      
-      html += '</div></div>';
-    });
-    
-    document.getElementById('props-content').innerHTML = html || '<div class="error">No props available for tomorrow</div>';
-  } catch (error) {
-    document.getElementById('props-content').innerHTML = `<div class="error">Error loading props: ${error.message}</div>`;
+const LABELS = {
+  QB_PASS_YARDS:  "QB Passing Yards",
+  RB_RUSH_YARDS:  "RB Rushing Yards",
+  WR_REC_YARDS:   "WR Receiving Yards",
+  ANYTIME_TD:     "Anytime Touchdown"
+};
+const ORDER = ["QB_PASS_YARDS","RB_RUSH_YARDS","WR_REC_YARDS","ANYTIME_TD"];
+
+function esc(x){ return String(x==null?"":x).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function localISO(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function fmt(v, market){ return market==="ANYTIME_TD" ? (v*100).toFixed(1)+"%" : Math.round(v); }
+
+async function tryJson(url){
+  try { const r = await fetch(url, {cache:"no-store"}); return r.ok ? await r.json() : null; }
+  catch(e){ return null; }
+}
+
+async function loadProps(){
+  const el = document.getElementById("props-content");
+  // today, then tomorrow, then the rolling file the generator always writes
+  const today = new Date();
+  const tomorrow = new Date(Date.now()+864e5);
+  const candidates = [
+    "/data/nfl/props-"+localISO(today)+".json",
+    "/data/nfl/props-"+localISO(tomorrow)+".json",
+    "/data/nfl/props-today.json"
+  ];
+  let props=null, used=null;
+  for (const u of candidates){ props = await tryJson(u); if (Array.isArray(props) && props.length){ used=u; break; } }
+
+  if (!props || !props.length){
+    el.innerHTML = '<div class="error">No NFL props are published right now. They post once the upcoming slate is generated.</div>';
+    document.getElementById("props-date").textContent = "";
+    return;
   }
-}
 
-function formatPropType(type) {
-  const map = {
-    'QB_PASS_YARDS': 'QB Pass Yards',
-    'WR_RECEIVING_YARDS': 'WR Receiving Yards',
-    'RB_RUSHING_YARDS': 'RB Rushing Yards',
-    'ANYTIME_TD': 'Anytime TD',
-    'MONEYLINE': 'Moneyline'
-  };
-  return map[type] || type;
-}
+  const d = props[0].date || "";
+  document.getElementById("props-date").textContent =
+    d ? new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}) : "";
 
-function formatValue(projection, type) {
-  if (type === 'MONEYLINE' || type === 'ANYTIME_TD') {
-    return (projection * 100).toFixed(1) + '%';
-  }
-  return Math.round(projection);
-}
+  const byMarket = {};
+  props.forEach(p => { (byMarket[p.market] = byMarket[p.market] || []).push(p); });
 
+  let html = "";
+  ORDER.forEach(market => {
+    const list = (byMarket[market] || []).slice().sort((a,b) => b.projection - a.projection);
+    if (!list.length) return;
+    html += '<div class="prop-type-section"><div class="prop-type-title">'+esc(LABELS[market]||market)+
+            ' <span style="font-weight:500;color:var(--text-dim);font-size:.85rem">('+list.length+')</span></div><div class="props-grid">';
+    list.forEach(p => {
+      const vol = (p.rate_used!=null && p.expected_volume!=null)
+        ? esc(p.rate_used)+" \u00d7 "+esc(p.expected_volume)+" vol" : "";
+      html += '<div class="prop-card">'+
+        '<div class="prop-matchup">'+esc(p.matchup)+'</div>'+
+        '<div class="prop-player">'+esc(p.player)+' <span style="color:var(--text-dim);font-weight:500">'+esc(p.team)+'</span></div>'+
+        '<div class="prop-value">'+fmt(p.projection, p.market)+'</div>'+
+        '<div class="prop-type">vs '+esc(p.opponent)+' \u00b7 opp adj '+esc(p.opp_adjustment)+(vol?' \u00b7 '+vol:'')+'</div>'+
+      '</div>';
+    });
+    html += "</div></div>";
+  });
+
+  el.innerHTML = html;
+  const note = document.createElement("p");
+  note.style.cssText = "margin-top:22px;color:var(--text-dim);font-size:.8rem;text-align:center";
+  note.textContent = "Projections blend recent form, season-to-date and prior-season baselines, shrunk toward league means and adjusted for opponent. Source: nflverse.";
+  el.appendChild(note);
+}
 loadProps();
 </script>
 </body>

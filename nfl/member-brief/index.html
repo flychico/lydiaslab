@@ -43,7 +43,7 @@ renderNav("/nfl/member-brief/");
 // Load and display NFL props
 async function loadBrief() {
   try {
-    const res = await fetch('/data/nfl/props-2026-09-20.json');
+    const res = await fetch('/data/nfl/props-today.json');
     if (!res.ok) throw new Error('Props not found');
     
     const allProps = await res.json();
@@ -60,11 +60,11 @@ async function loadBrief() {
     // Render
     let html = '';
     Object.entries(byGame).forEach(([matchup, props]) => {
-      const moneyline = props.find(p => p.type === 'MONEYLINE');
-      const qbProps = props.filter(p => p.type === 'QB_PASS_YARDS');
-      const wrProps = props.filter(p => p.type === 'WR_RECEIVING_YARDS');
-      const rbProps = props.filter(p => p.type === 'RB_RUSHING_YARDS');
-      const tdProps = props.filter(p => p.type === 'ANYTIME_TD');
+      const moneyline = props.find(p => p.market === 'MONEYLINE'); // not currently generated
+      const qbProps = props.filter(p => p.market === 'QB_PASS_YARDS');
+      const wrProps = props.filter(p => p.market === 'WR_REC_YARDS');
+      const rbProps = props.filter(p => p.market === 'RB_RUSH_YARDS');
+      const tdProps = props.filter(p => p.market === 'ANYTIME_TD');
       
       html += `<div class="game-section">
         <div class="game-title">⚔️ ${matchup}</div>
