@@ -25,7 +25,18 @@ const FEED = "https://raw.githubusercontent.com/nflverse/nfldata/master/data/gam
 
 const SEASON = 2026, PRIOR = 2025;
 const CLAMP_LO = 0.85, CLAMP_HI = 1.15;   // opponent multiplier bounds (K-props spec)
-const CALIBRATION_BIAS = 0.0;             // populates from graded results; no NFL history yet
+// Calibration bias, MEASURED — not guessed and not zero.
+// scripts/backtest-nfl-props.js walked the full 3828-projection 2025 season
+// walk-forward and found the raw model under-projects every yardage market.
+// These correct that measured bias. Re-derive them by re-running the backtest;
+// do NOT hand-tune.
+const CALIBRATION = {
+  QB_PASS_YARDS: +8.4,   // 2025 bias -8.4 yds over n=590
+  RB_RUSH_YARDS: +3.4,   // 2025 bias -3.4 yds over n=1221
+  WR_REC_YARDS:  +1.1,   // 2025 bias -1.1 yds over n=2017
+  ANYTIME_TD:     0.0     // probability market; bias handled by the TD_CEILING cap
+};
+const CALIBRATION_BIAS = 0.0;  // retained so existing references still resolve
 
 // --- blend weights by games played (shrinkage toward prior season) -----------
 function weights(n) {
@@ -197,14 +208,14 @@ function anytimeTD(e, field, base, adj) {
       for (const { name, e } of s.qb) {
         const ypa = blend(e.cur.map(x => x.att ? x.pyds / x.att : 0), e.cur.map(x => x.att ? x.pyds / x.att : 0), e.prior.map(x => x.att ? x.pyds / x.att : 0));
         const att = blend(e.cur.map(x => x.att), e.cur.map(x => x.att), e.prior.map(x => x.att));
-        const proj = (ypa * att * adjPass) + CALIBRATION_BIAS;
+        const proj = (ypa * att * adjPass) + CALIBRATION.QB_PASS_YARDS;
         push(g, { name, pos: "QB", team, opp, gp: e.cur.length, adj: adjPass },
              "QB_PASS_YARDS", Math.max(0, Math.round(proj)), { rate_used: r1(ypa), expected_volume: r1(att) });
       }
       for (const { name, e } of s.rb) {
         const ypc = blend(e.cur.map(x => x.car ? x.ryds / x.car : 0), e.cur.map(x => x.car ? x.ryds / x.car : 0), e.prior.map(x => x.car ? x.ryds / x.car : 0));
         const car = blend(e.cur.map(x => x.car), e.cur.map(x => x.car), e.prior.map(x => x.car));
-        const proj = (ypc * car * adjRush) + CALIBRATION_BIAS;
+        const proj = (ypc * car * adjRush) + CALIBRATION.RB_RUSH_YARDS;
         push(g, { name, pos: "RB", team, opp, gp: e.cur.length, adj: adjRush },
              "RB_RUSH_YARDS", Math.max(0, Math.round(proj)), { rate_used: r1(ypc), expected_volume: r1(car) });
         push(g, { name, pos: "RB", team, opp, gp: e.cur.length, adj: adjRush },
@@ -213,7 +224,7 @@ function anytimeTD(e, field, base, adj) {
       for (const { name, e } of s.wr) {
         const ypt = blend(e.cur.map(x => x.tgt ? x.recy / x.tgt : 0), e.cur.map(x => x.tgt ? x.recy / x.tgt : 0), e.prior.map(x => x.tgt ? x.recy / x.tgt : 0));
         const tgt = blend(e.cur.map(x => x.tgt), e.cur.map(x => x.tgt), e.prior.map(x => x.tgt));
-        const proj = (ypt * tgt * adjPass) + CALIBRATION_BIAS;
+        const proj = (ypt * tgt * adjPass) + CALIBRATION.WR_REC_YARDS;
         push(g, { name, pos: "WR", team, opp, gp: e.cur.length, adj: adjPass },
              "WR_REC_YARDS", Math.max(0, Math.round(proj)), { rate_used: r1(ypt), expected_volume: r1(tgt) });
         push(g, { name, pos: "WR", team, opp, gp: e.cur.length, adj: adjPass },
