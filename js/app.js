@@ -91,7 +91,7 @@ function renderNav(active) {
   const el = document.getElementById("nav");
   if (!el) return;
   el.innerHTML = '<div class="nav-inner">'
-    + '<a class="brand" href="/" aria-label="Leo home"><span class="brand-ly">Ly</span><span class="brand-dia">Dia</span></a>'
+    + '<a class="brand" href="/" aria-label="Leo home"><span class="brand-leo">Leo</span></a>'
     + links.map(function (l) {
         if (l[0] === "/tools/") {
           var tools = [
