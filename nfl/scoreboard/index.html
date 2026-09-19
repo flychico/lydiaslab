@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scoreboard — Leo</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75' font-weight='bold' fill='%23f0ad4e'>🏈</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    :root {
+      --bg: #fff; --bg-elev: #f9f9f9; --text: #1f2328; --text-dim: #626a73;
+      --border: #dae4eb; --shadow-sm: 0 3px 8px rgba(31,35,40,.08);
+      --accent: #6d5dfc; --accent2: #d9468f; --danger: #cf222e; --good: #1e8e3e;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117; --bg-elev: #161b22; --text: #e6edf3; --text-dim: #8b949e;
+        --border: #30363d; --shadow-sm: 0 3px 8px rgba(0,0,0,.33);
+      }
+    }
+    html, body { background:var(--bg); color:var(--text); font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; line-height:1.5; }
+    .container { max-width:1440px; margin:0 auto; padding:20px; }
+    nav { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; padding-bottom:16px; border-bottom:1px solid var(--border); }
+    nav a { color:var(--accent); text-decoration:none; font-weight:700; }
+    .nav-brand { display:flex; align-items:center; gap:12px; }
+    .nav-brand span { font-size:1.15rem; color:var(--text); }
+    .nav-sport-selector { display:flex; gap:8px; }
+    .nav-sport { padding:6px 14px; border:1px solid var(--border); background:var(--bg); color:var(--text); border-radius:8px; cursor:pointer; font-weight:600; font-size:.9rem; transition:all .2s; }
+    .nav-sport.active { background:#E8C547; color:#000; border-color:#E8C547; }
+    .header { margin-bottom:24px; }
+    .header h1 { font-size:1.8rem; margin-bottom:16px; }
+    .date-controls { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+    .field { display:flex; align-items:center; gap:6px; }
+    .field label { font-size:.85rem; font-weight:600; color:var(--text-dim); }
+    .field input { padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); font-family:inherit; }
+    .control-btn { min-height:42px; padding:9px 14px; border-radius:12px; background:#fff; color:var(--text); border:1px solid var(--border); box-shadow:none; cursor:pointer; font-weight:600; transition:all .2s; }
+    .control-btn:hover { border-color:rgba(109,93,252,.45); background:var(--bg-elev); }
+    .control-btn.active { background:linear-gradient(135deg,var(--accent2),var(--accent)); color:#fff; border-color:transparent; }
+    .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:20px; }
+    .kpi { position:relative; overflow:hidden; background:rgba(255,255,255,.88); border:1px solid var(--border); border-radius:17px; padding:15px 16px; box-shadow:var(--shadow-sm); }
+    .kpi::after { content:""; position:absolute; width:70px; height:70px; border-radius:50%; right:-25px; top:-28px; background:rgba(109,93,252,.10); }
+    .kpi:nth-child(2)::after { background:rgba(217,70,143,.11); }
+    .kpi:nth-child(3)::after { background:rgba(35,184,199,.12); }
+    .kpi:nth-child(4)::after { background:rgba(246,170,28,.13); }
+    .kpi .label { font-size:.73rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.08em; font-weight:800; }
+    .kpi .value { font-size:1.45rem; line-height:1.1; font-weight:850; margin-top:4px; letter-spacing:-.03em; }
+    .kpi .sub { font-size:.78rem; color:var(--text-dim); margin-top:3px; }
+    .games-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(350px,1fr)); gap:16px; }
+    .score-card { --away-color:#6d5dfc; --home-color:#d9468f; position:relative; display:flex; flex-direction:column; min-height:100%; cursor:pointer; color:var(--text); text-decoration:none; overflow:hidden; background:rgba(255,255,255,.94); border:1px solid rgba(109,93,252,.16); border-radius:22px; box-shadow:0 12px 32px rgba(31,35,40,.08); transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+    .score-card::before { content:""; height:6px; display:block; background:linear-gradient(90deg,var(--away-color) 0 50%,var(--home-color) 50% 100%); }
+    .score-card:hover { transform:translateY(-4px); box-shadow:0 24px 55px rgba(74,58,150,.17); border-color:rgba(109,93,252,.38); text-decoration:none; }
+    .card-body { padding:15px 16px 16px; display:flex; flex-direction:column; gap:12px; flex:1; }
+    .card-top { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .game-meta { min-width:0; }
+    .game-time { font-size:.92rem; font-weight:850; }
+    .game-venue { display:block; color:var(--text-dim); font-size:.73rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:230px; }
+    .game-status { flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:5px 9px; font-size:.7rem; line-height:1; font-weight:850; letter-spacing:.04em; text-transform:uppercase; background:rgba(109,93,252,.10); color:var(--accent2); }
+    .game-status.live { background:rgba(207,34,46,.10); color:var(--danger); }
+    .game-status.live::before { content:"●"; animation:pulse 1.4s infinite; }
+    .game-status.final { background:rgba(31,35,40,.07); color:var(--text-dim); }
+    .teams { display:grid; gap:9px; }
+    .team-row { display:grid; grid-template-columns:48px minmax(0,1fr) auto; align-items:center; gap:10px; padding:8px 9px; border-radius:14px; background:linear-gradient(90deg,rgba(109,93,252,.045),rgba(255,255,255,.2)); }
+    .team-logo { width:48px; height:48px; border-radius:12px; background:rgba(0,0,0,.05); display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .team-logo img { width:100%; height:100%; object-fit:contain; }
+    .team-info { min-width:0; }
+    .team-name { font-weight:750; font-size:.95rem; line-height:1.2; }
+    .team-record { font-size:.73rem; color:var(--text-dim); }
+    .team-score { font-size:1.35rem; line-height:1; font-weight:900; text-align:right; }
+    .stats-row { font-size:.78rem; color:var(--text-dim); line-height:1.3; margin-top:10px; padding-top:9px; border-top:1px solid rgba(109,93,252,.08); }
+    .stat { display:inline; margin-right:12px; }
+    .stat-label { color:var(--text-dim); font-weight:600; }
+    .stat-value { color:var(--text); font-weight:750; }
+    #odds-note { padding:12px 14px; background:rgba(246,170,28,.08); border-left:3px solid #f6aa1c; border-radius:6px; font-size:.85rem; color:var(--text); margin-bottom:16px; }
+    .status { padding:12px 14px; border-radius:8px; background:rgba(35,184,199,.08); border:1px solid rgba(35,184,199,.2); color:var(--text); font-size:.85rem; text-align:center; margin-top:12px; }
+    .status.error { background:rgba(207,34,46,.08); border-color:rgba(207,34,46,.2); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav>
+      <div class="nav-brand">
+        <a href="/">🏈 Leo</a>
+        <div class="nav-sport-selector">
+          <button class="nav-sport" data-sport="mlb">MLB</button>
+          <button class="nav-sport active" data-sport="nfl">NFL</button>
+        </div>
+      </div>
+      <a href="https://leo.bet">Join $30/mo</a>
+    </nav>
+
+    <div class="header">
+      <h1>Scoreboard</h1>
+      <div class="date-controls">
+        <div class="field">
+          <label>Date</label>
+          <input type="date" id="datePick">
+        </div>
+        <button class="control-btn" id="todayBtn">Today</button>
+        <button class="control-btn" id="prevBtn">←</button>
+        <button class="control-btn" id="nextBtn">→</button>
+        <button class="control-btn" id="refreshBtn">Refresh</button>
+        <div style="flex:1"></div>
+        <button class="control-btn active" data-filter="all">All</button>
+        <button class="control-btn" data-filter="pregame">Pregame</button>
+        <button class="control-btn" data-filter="live">Live</button>
+        <button class="control-btn" data-filter="final">Final</button>
+      </div>
+    </div>
+
+    <div id="odds-note"></div>
+
+    <div id="kpis" class="kpis"></div>
+
+    <div id="games" class="games-grid"></div>
+
+    <div id="status" class="status" style="display:none;"></div>
+  </div>
+
+  <script>
+    const datePick = document.getElementById("datePick");
+    const gamesEl = document.getElementById("games");
+    const kpisEl = document.getElementById("kpis");
+    const oddsNoteEl = document.getElementById("odds-note");
+    const statusEl = document.getElementById("status");
+    
+    let activeFilter = "all";
+    let gamesData = [];
+
+    // Sport selector
+    document.querySelectorAll(".nav-sport").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const sport = btn.dataset.sport;
+        window.location.href = "/" + sport + "/scoreboard/";
+      });
+    });
+
+    // Date controls
+    datePick.value = localISODate(new Date());
+    datePick.addEventListener("change", loadScoreboard);
+    document.getElementById("todayBtn").addEventListener("click", () => {
+      datePick.value = localISODate(new Date());
+      loadScoreboard();
+    });
+    document.getElementById("prevBtn").addEventListener("click", () => {
+      const d = new Date(parseLocalDate(datePick.value));
+      d.setDate(d.getDate() - 1);
+      datePick.value = localISODate(d);
+      loadScoreboard();
+    });
+    document.getElementById("nextBtn").addEventListener("click", () => {
+      const d = new Date(parseLocalDate(datePick.value));
+      d.setDate(d.getDate() + 1);
+      datePick.value = localISODate(d);
+      loadScoreboard();
+    });
+    document.getElementById("refreshBtn").addEventListener("click", () => loadScoreboard());
+
+    // Filter buttons
+    document.querySelectorAll("[data-filter]").forEach(button => {
+      button.addEventListener("click", () => {
+        activeFilter = button.dataset.filter;
+        document.querySelectorAll("[data-filter]").forEach(x => x.classList.toggle("active", x === button));
+        renderCards();
+      });
+    });
+
+    function localISODate(date) {
+      return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+    }
+
+    function parseLocalDate(value) {
+      const [year,month,day] = value.split("-").map(Number);
+      return new Date(year, month-1, day, 12, 0, 0);
+    }
+
+    async function loadScoreboard() {
+      const date = datePick.value;
+      const url = `/data/nfl-scoreboard/${date}.json`;
+      
+      try {
+        statusEl.textContent = "Loading...";
+        statusEl.style.display = "block";
+        
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        gamesData = await res.json();
+        
+        renderKpis();
+        renderCards();
+        
+        statusEl.style.display = "none";
+      } catch (err) {
+        statusEl.textContent = `Error: ${err.message}`;
+        statusEl.classList.add("error");
+        statusEl.style.display = "block";
+      }
+    }
+
+    function renderKpis() {
+      const count = gamesData.length;
+      const times = gamesData.map(g => g.time).filter((v,i,a) => a.indexOf(v) === i);
+      const firstTime = times[0] || "TBD";
+      
+      kpisEl.innerHTML = `
+        <div class="kpi">
+          <div class="label">Games</div>
+          <div class="value">${count}</div>
+          <div class="sub">${count - 1} pregame · 0 live</div>
+        </div>
+        <div class="kpi">
+          <div class="label">First Game</div>
+          <div class="value">${firstTime}</div>
+          <div class="sub">${datePick.value}</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Leo Coverage</div>
+          <div class="value">${count}/${count}</div>
+          <div class="sub">All games covered</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Totals Projected</div>
+          <div class="value">${count}/${count}</div>
+          <div class="sub">Model and odds</div>
+        </div>
+      `;
+    }
+
+    function renderCards() {
+      let filtered = gamesData;
+      if (activeFilter !== "all") {
+        filtered = gamesData.filter(g => g.status.toLowerCase() === activeFilter);
+      }
+
+      gamesEl.innerHTML = filtered.map(game => {
+        const ml = game.moneyline;
+        const homeProb = Math.round(ml.homeProb * 100);
+        const awayProb = Math.round(ml.awayProb * 100);
+        
+        return `
+          <a href="#" class="score-card">
+            <div class="card-body">
+              <div class="card-top">
+                <div class="game-meta">
+                  <div class="game-time">${game.time}</div>
+                  <div class="game-venue">${game.venue}</div>
+                </div>
+                <span class="game-status">${game.status}</span>
+              </div>
+
+              <div class="teams">
+                <div class="team-row">
+                  <div class="team-logo"><img src="${game.awayTeam.logo}" alt="${game.awayTeam.name}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22%3E%3Crect fill=%22%236d5dfc%22 width=%2248%22 height=%2248%22/%3E%3Ctext y=%2735%22 x=%2724%22 font-size=%2220%22 fill=%22white%22 text-anchor=%22middle%22%3E🏈%3C/text%3E%3C/svg%3E'"></div>
+                  <div class="team-info">
+                    <div class="team-name">${game.awayTeam.name}</div>
+                    <div class="team-record">${game.awayTeam.record}</div>
+                  </div>
+                  <div class="team-score">−</div>
+                </div>
+                <div class="team-row">
+                  <div class="team-logo"><img src="${game.homeTeam.logo}" alt="${game.homeTeam.name}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22%3E%3Crect fill=%22%23d9468f%22 width=%2248%22 height=%2248%22/%3E%3Ctext y=%2735%22 x=%2724%22 font-size=%2220%22 fill=%22white%22 text-anchor=%22middle%22%3E🏈%3C/text%3E%3C/svg%3E'"></div>
+                  <div class="team-info">
+                    <div class="team-name">${game.homeTeam.name}</div>
+                    <div class="team-record">${game.homeTeam.record}</div>
+                  </div>
+                  <div class="team-score">−</div>
+                </div>
+              </div>
+
+              <div class="stats-row">
+                <span class="stat"><span class="stat-label">Moneyline</span>: ${game.homeTeam.name.split(" ").slice(-1)[0]} ${homeProb}%</span><br>
+                <span class="stat"><span class="stat-label">Total</span>: ${game.totals.line}</span><br>
+                <span class="stat"><span class="stat-label">Leo Prob</span>: ${homeProb}%</span>
+              </div>
+            </div>
+          </a>
+        `;
+      }).join("");
+    }
+
+    loadScoreboard();
+    setInterval(() => {
+      if (datePick.value === localISODate(new Date())) loadScoreboard();
+    }, 120000);
+  </script>
+</body>
+</html>
