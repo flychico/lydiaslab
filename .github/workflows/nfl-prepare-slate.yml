@@ -88,6 +88,29 @@ jobs:
 
       # Permanent per-game stat pages: last season beside this season, the
       # starting QB, RB / WR1 / WR2 and each side's touchdown leaders.
+      # Player prop MARKET LINES. This is the only NFL step that spends
+      # the-odds-api credits: player props are billed per EVENT at
+      # [markets] x [regions], so a 14-game slate x 4 markets x 1 region is
+      # ~56 credits per run. Mirrors the MLB split deliberately -- gathering
+      # spends, publishing does not (see publish-picks.yml).
+      #
+      # `|| true`: a dry key, a quota wall or a provider outage must not fail
+      # the whole gather. Props stay publishable without lines; they simply
+      # carry no lean, and the merge step below no-ops when the file is absent.
+      - name: Player prop market lines
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          ODDS_API_KEY_2: ${{ secrets.ODDS_API_KEY_2 }}
+          ODDS_API_KEY_3: ${{ secrets.ODDS_API_KEY_3 }}
+          ODDS_API_KEY_4: ${{ secrets.ODDS_API_KEY_4 }}
+        run: node scripts/update-nfl-props-odds.js --date="${{ steps.slate_date.outputs.date }}" || true
+
+      # Attach those lines to our projections and state an over/under lean.
+      # Costs nothing -- pure local join. Prints every unmatched name rather
+      # than swallowing it (NFL_WATCH_LIST #23).
+      - name: Attach lines to projections
+        run: node scripts/merge-nfl-prop-lines.js --date="${{ steps.slate_date.outputs.date }}" || true
+
       - name: Matchup data and pages
         run: |
           node scripts/generate-nfl-matchups.js "${{ steps.slate_date.outputs.date }}"

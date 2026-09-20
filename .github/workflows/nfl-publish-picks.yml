@@ -68,6 +68,13 @@ jobs:
           node scripts/generate-nfl-model.js "${{ steps.slate_date.outputs.date }}"
           node scripts/generate-nfl-props.js "${{ steps.slate_date.outputs.date }}" || true
 
+      # Re-attach whatever prop lines were already gathered. No key here and
+      # no fetch: this workflow spends nothing, same as publish-picks.yml.
+      # Regenerating props above strips the line fields, so without this the
+      # published page would lose every line it had.
+      - name: Re-attach prop lines
+        run: node scripts/merge-nfl-prop-lines.js --date="${{ steps.slate_date.outputs.date }}" || true
+
       # Permanent per-game stat pages: last season beside this season, the
       # starting QB, RB / WR1 / WR2 and each side's touchdown leaders.
       - name: Matchup data and pages

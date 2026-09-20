@@ -29,6 +29,10 @@ const STATE_FILE = path.join(__dirname, "..", "..", "data", ".odds-api-key-state
 const KEY_ENV_NAMES = ["ODDS_API_KEY", "ODDS_API_KEY_2", "ODDS_API_KEY_3", "ODDS_API_KEY_4"];
 const KEY_EXHAUSTED_STATUSES = new Set([401, 429]);
 
+let lastQuota = null;
+// Quota from the most recent successful call: { remaining, used, keyName, at }.
+function getLastQuota() { return lastQuota; }
+
 function loadKeys() {
   const keys = [];
   for (const name of KEY_ENV_NAMES) {
@@ -73,6 +77,17 @@ async function fetchOddsApi(urlWithoutKey, fetchOpts) {
     const res = await fetch(url, fetchOpts);
     if (res.ok) {
       saveGoodIndex(i, key.name);
+      // Capture the provider's quota headers so callers can report burn.
+      // Player-prop endpoints are per-event and cost [markets] x [regions]
+      // credits EACH, so a silent quota drain is a real risk.
+      const rem = Number(res.headers.get("x-requests-remaining"));
+      const used = Number(res.headers.get("x-requests-used"));
+      lastQuota = {
+        remaining: Number.isFinite(rem) ? rem : null,
+        used: Number.isFinite(used) ? used : null,
+        keyName: key.name,
+        at: new Date().toISOString()
+      };
       return await res.json();
     }
     if (!KEY_EXHAUSTED_STATUSES.has(res.status)) {
@@ -84,4 +99,4 @@ async function fetchOddsApi(urlWithoutKey, fetchOpts) {
   throw new Error(`All ${keys.length} configured odds-api key(s) returned ${lastStatus} -- every key is out of quota or invalid.`);
 }
 
-module.exports = { fetchOddsApi, loadKeys };
+module.exports = { fetchOddsApi, loadKeys, getLastQuota };

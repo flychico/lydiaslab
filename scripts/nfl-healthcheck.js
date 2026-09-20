@@ -171,6 +171,58 @@ for (const f of ["css/style.css","css/scoreboard.css"]) {
                     : ok("DIR-GROWTH",`${dirs.length} matchup directories`);
 }
 
+// ---- 12. team name map covers every team in use --------------------------
+// gameKeyFromFullNames() turns the book's "Kansas City Chiefs" into our "KC".
+// A relocation, rename or new abbreviation silently drops that game's lines --
+// which is indistinguishable from "no lines were posted". Fail, don't warn.
+{
+  try {
+    const { assertTeamMap } = require("./lib/nfl-names");
+    const ts = P("data/nfl/team-stats-today.json");
+    if (fs.existsSync(ts)) {
+      const inUse = JSON.parse(fs.readFileSync(ts,"utf8")).map(t=>t.team);
+      const r = assertTeamMap(inUse);
+      r.ok ? ok("TEAM-MAP",`all ${inUse.length} teams map to a full club name`)
+           : fail("TEAM-MAP",`no full-name mapping for: ${r.missing.join(", ")} — those games lose every prop line`);
+    }
+  } catch (e) { fail("TEAM-MAP",`team map check could not run: ${e.message}`); }
+}
+
+// ---- 13. prop line coverage ----------------------------------------------
+// Props are publishable without lines, so absence is not a failure. But a
+// SUDDEN COLLAPSE in coverage means name matching broke, and that looks
+// exactly like "the books posted nothing" (NFL_WATCH_LIST #23). Surface it.
+{
+  const pf = P("data/nfl/props-today.json"), of = P("data/nfl/prop-odds-today.json");
+  if (!fs.existsSync(pf)) {
+    warn("LINE-COVER","no props-today.json to check");
+  } else if (!fs.existsSync(of)) {
+    warn("LINE-COVER","no prop odds fetched yet — projections publish without lines or leans");
+  } else {
+    const props = JSON.parse(fs.readFileSync(pf,"utf8"));
+    const odds  = JSON.parse(fs.readFileSync(of,"utf8"));
+    const posted = (odds.entries||[]).length;
+    const linked = props.filter(x=>x.line!=null||x.market_prob!=null||x.lean_blocked==="one_sided_no_devig").length;
+    const rate = posted ? linked/posted : 0;
+    if (!posted)          warn("LINE-COVER","odds file present but empty");
+    else if (rate < 0.80) fail("LINE-COVER",`only ${linked}/${posted} posted lines attached (${(rate*100).toFixed(0)}%) — name matching is likely broken`);
+    else                  ok("LINE-COVER",`${linked}/${posted} posted lines attached (${(rate*100).toFixed(0)}%)`);
+  }
+}
+
+// ---- 14. no lean may be presented as a pick ------------------------------
+// A lean is descriptive. Prop ROI has never been backtested, so nothing in
+// the props file may carry a pick flag until it has been.
+{
+  const pf = P("data/nfl/props-today.json");
+  if (fs.existsSync(pf)) {
+    const props = JSON.parse(fs.readFileSync(pf,"utf8"));
+    const picky = props.filter(x=>x.status==="official_pick"||x.pick===true||x.is_pick===true).length;
+    picky ? fail("PROP-GATE",`${picky} prop(s) flagged as a pick — prop ROI has never been measured`)
+          : ok("PROP-GATE","no prop is flagged as a pick; gate is closed as intended");
+  }
+}
+
 console.log("=".repeat(58));
 console.log(`  ${passes} passed · ${warns} warnings · ${fails} failures\n`);
 process.exit(fails ? 1 : 0);

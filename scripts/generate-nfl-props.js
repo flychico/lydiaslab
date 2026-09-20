@@ -195,6 +195,7 @@ function anytimeTD(e, field, base, adj) {
     matchup: `${g.away_team} @ ${g.home_team}`,
     team: p.team, opponent: p.opp, player: p.name, position: p.pos,
     market, projection, model_version: "leo-nflprop-v1",
+    depth: p.depth || null,
     games_played: p.gp, opp_adjustment: r1(p.adj * 100) / 100, ...extra
   });
 
@@ -205,29 +206,29 @@ function anytimeTD(e, field, base, adj) {
       const adjPass = oppAdjustment(mean(d.pass.slice(-3)), mean(d.pass), leaguePass, d.pass.length);
       const adjRush = oppAdjustment(mean(d.rush.slice(-3)), mean(d.rush), leagueRush, d.rush.length);
 
-      for (const { name, e } of s.qb) {
+      for (const [i, { name, e }] of s.qb.entries()) {
         const ypa = blend(e.cur.map(x => x.att ? x.pyds / x.att : 0), e.cur.map(x => x.att ? x.pyds / x.att : 0), e.prior.map(x => x.att ? x.pyds / x.att : 0));
         const att = blend(e.cur.map(x => x.att), e.cur.map(x => x.att), e.prior.map(x => x.att));
         const proj = (ypa * att * adjPass) + CALIBRATION.QB_PASS_YARDS;
-        push(g, { name, pos: "QB", team, opp, gp: e.cur.length, adj: adjPass },
+        push(g, { name, pos: "QB", depth: `QB${i + 1}`, team, opp, gp: e.cur.length, adj: adjPass },
              "QB_PASS_YARDS", Math.max(0, Math.round(proj)), { rate_used: r1(ypa), expected_volume: r1(att) });
       }
-      for (const { name, e } of s.rb) {
+      for (const [i, { name, e }] of s.rb.entries()) {
         const ypc = blend(e.cur.map(x => x.car ? x.ryds / x.car : 0), e.cur.map(x => x.car ? x.ryds / x.car : 0), e.prior.map(x => x.car ? x.ryds / x.car : 0));
         const car = blend(e.cur.map(x => x.car), e.cur.map(x => x.car), e.prior.map(x => x.car));
         const proj = (ypc * car * adjRush) + CALIBRATION.RB_RUSH_YARDS;
-        push(g, { name, pos: "RB", team, opp, gp: e.cur.length, adj: adjRush },
+        push(g, { name, pos: "RB", depth: `RB${i + 1}`, team, opp, gp: e.cur.length, adj: adjRush },
              "RB_RUSH_YARDS", Math.max(0, Math.round(proj)), { rate_used: r1(ypc), expected_volume: r1(car) });
-        push(g, { name, pos: "RB", team, opp, gp: e.cur.length, adj: adjRush },
+        push(g, { name, pos: "RB", depth: `RB${i + 1}`, team, opp, gp: e.cur.length, adj: adjRush },
              "ANYTIME_TD", anytimeTD(e, "rtd", TD_BASE_RB, adjRush));
       }
-      for (const { name, e } of s.wr) {
+      for (const [i, { name, e }] of s.wr.entries()) {
         const ypt = blend(e.cur.map(x => x.tgt ? x.recy / x.tgt : 0), e.cur.map(x => x.tgt ? x.recy / x.tgt : 0), e.prior.map(x => x.tgt ? x.recy / x.tgt : 0));
         const tgt = blend(e.cur.map(x => x.tgt), e.cur.map(x => x.tgt), e.prior.map(x => x.tgt));
         const proj = (ypt * tgt * adjPass) + CALIBRATION.WR_REC_YARDS;
-        push(g, { name, pos: "WR", team, opp, gp: e.cur.length, adj: adjPass },
+        push(g, { name, pos: "WR", depth: `WR${i + 1}`, team, opp, gp: e.cur.length, adj: adjPass },
              "WR_REC_YARDS", Math.max(0, Math.round(proj)), { rate_used: r1(ypt), expected_volume: r1(tgt) });
-        push(g, { name, pos: "WR", team, opp, gp: e.cur.length, adj: adjPass },
+        push(g, { name, pos: "WR", depth: `WR${i + 1}`, team, opp, gp: e.cur.length, adj: adjPass },
              "ANYTIME_TD", anytimeTD(e, "rectd", TD_BASE_WR, adjPass));
       }
     }

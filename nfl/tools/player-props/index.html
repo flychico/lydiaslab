@@ -47,6 +47,35 @@
 .prop-num span { display:block; color:var(--text-dim); font-size:.68rem; text-transform:uppercase; letter-spacing:.4px; }
 .filters { display:flex; flex-wrap:wrap; gap:8px; }
 @media (max-width:760px){ .prop-grid{grid-template-columns:1fr;} }
+
+/* --- market line + lean -------------------------------------------------
+   Scoped to this page on purpose: css/scoreboard.css is shared with MLB and
+   a change there hits both sports (NFL_WATCH_LIST #18).
+   Contrast: gold (#C9A84C) fails as text on cream (2.0:1, WATCH LIST #16),
+   so every value below is navy, deep green or deep red -- never gold. */
+.line-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  margin:10px 0 0;padding:10px 12px;border-radius:10px;
+  background:var(--bg-elev);border:1px solid var(--border)}
+.line-row.none{justify-content:flex-start;gap:8px}
+.line-cell{display:flex;flex-direction:column;gap:2px;min-width:78px}
+.line-label{font-size:.66rem;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--text-dim);font-weight:700}
+.line-val{font-size:1rem;font-weight:800;color:var(--accent2);
+  font-variant-numeric:tabular-nums}
+.line-why{font-size:.78rem;color:var(--text-dim);font-style:italic}
+.lean{margin-left:auto;font-size:.7rem;font-weight:800;letter-spacing:.08em;
+  padding:5px 11px;border-radius:999px;white-space:nowrap}
+.lean.over{background:rgba(47,110,74,.13);color:var(--good);
+  border:1px solid rgba(47,110,74,.34)}
+.lean.under{background:rgba(166,58,46,.13);color:var(--danger);
+  border:1px solid rgba(166,58,46,.34)}
+.lean.flat{background:transparent;color:var(--text-dim);
+  border:1px solid var(--border)}
+@media (max-width:480px){
+  .line-row{gap:10px;padding:9px 10px}
+  .line-cell{min-width:66px}
+  .lean{margin-left:0;width:100%;text-align:center}
+}
 </style>
 </head>
 <body>
@@ -71,12 +100,20 @@
       <button class="control-btn" type="button" data-mkt="WR_REC_YARDS">Receiving</button>
       <button class="control-btn" type="button" data-mkt="ANYTIME_TD">Anytime TD</button>
     </div>
+    <div class="view-controls filters" role="group" aria-label="Filter by depth">
+      <button class="control-btn active" type="button" data-depth="all">All</button>
+      <button class="control-btn" type="button" data-depth="QB1">QB</button>
+      <button class="control-btn" type="button" data-depth="RB">RB</button>
+      <button class="control-btn" type="button" data-depth="WR1">WR1</button>
+      <button class="control-btn" type="button" data-depth="WR2">WR2</button>
+      <button class="control-btn" type="button" data-depth="WR3">WR3</button>
+    </div>
   </section>
 
   <section class="kpis" id="kpis" aria-label="Slate summary"></section>
   <div id="status" class="loading">Loading NFL projections&hellip;</div>
   <section class="prop-grid" id="props" aria-live="polite"></section>
-  <p class="data-note">Projections are Leo model output, not official picks. Yard lines and touchdown prices are not yet attached, so these are projections rather than graded plays.</p>
+  <p class="data-note">Projections are Leo model output, not official picks. Where a market line is posted we show it and whether Leo sits over or under it — that lean is descriptive only. Prop accuracy has not yet been backtested against closing lines, so no lean here carries a demonstrated edge.</p>
 </main>
 
 <footer id="footer"></footer><script src="/js/app.js"></script>
@@ -86,13 +123,24 @@ renderNav("/articles/"); renderFooter();
 const LABEL={QB_PASS_YARDS:"Passing Yards",RB_RUSH_YARDS:"Rushing Yards",WR_REC_YARDS:"Receiving Yards",ANYTIME_TD:"Anytime TD"};
 const ORDER=["QB_PASS_YARDS","RB_RUSH_YARDS","WR_REC_YARDS","ANYTIME_TD"];
 const statusEl=document.getElementById("status"), gridEl=document.getElementById("props"), kpisEl=document.getElementById("kpis");
-let all=[], mkt="all";
+let all=[], mkt="all", depth="all";
 
 document.querySelectorAll("[data-mkt]").forEach(b=>b.addEventListener("click",()=>{
   mkt=b.dataset.mkt;
   document.querySelectorAll("[data-mkt]").forEach(x=>x.classList.toggle("active",x===b));
   render();
 }));
+document.querySelectorAll("[data-depth]").forEach(b=>b.addEventListener("click",()=>{
+  depth=b.dataset.depth;
+  document.querySelectorAll("[data-depth]").forEach(x=>x.classList.toggle("active",x===b));
+  render();
+}));
+// "RB" matches RB1 and RB2; every other filter is an exact depth match.
+function depthOk(p){
+  if(depth==="all") return true;
+  if(depth==="RB")  return String(p.depth||"").startsWith("RB");
+  return p.depth===depth;
+}
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
@@ -125,8 +173,37 @@ function renderKPIs(){
     '<article class="kpi"><div class="label">Top TD chance</div><div class="value">'+(best?(best.projection*100).toFixed(0)+"%":"\u2014")+'</div><div class="sub">'+(best?esc(best.player):"\u2014")+'</div></article>';
 }
 
+/*
+  Market line + lean.
+
+  A lean is DESCRIPTIVE -- it says our number sits above or below the posted
+  line, nothing more. It is not a pick and carries no demonstrated edge; prop
+  ROI has never been backtested. Three states are rendered honestly:
+    - no line posted        -> say so, show nothing else
+    - line posted, no lean  -> show the line, say why the lean is suppressed
+    - line posted + lean    -> show line, gap, and direction
+*/
+function lineRow(p,isTD){
+  const hasLine = isTD ? (p.market_prob!=null) : (p.line!=null);
+  if(!hasLine){
+    const why = p.lean_blocked==="one_sided_no_devig"
+      ? "one-sided price \u2014 vig cannot be removed"
+      : "no market line posted";
+    return '<div class="line-row none"><span class="line-label">Market</span>'+
+           '<span class="line-why">'+esc(why)+'</span></div>';
+  }
+  const shown = isTD ? (p.market_prob*100).toFixed(1)+"%" : p.line;
+  const gap   = p.edge==null ? null : (isTD ? (p.edge*100).toFixed(1)+" pts" : (p.edge>0?"+":"")+p.edge+" yds");
+  const lean  = p.lean ? p.lean.toUpperCase() : null;
+  return '<div class="line-row">'+
+    '<span class="line-cell"><span class="line-label">Line</span><span class="line-val">'+esc(shown)+'</span></span>'+
+    '<span class="line-cell"><span class="line-label">Leo vs line</span><span class="line-val">'+esc(gap==null?"\u2014":gap)+'</span></span>'+
+    '<span class="lean '+(lean?lean.toLowerCase():"flat")+'">'+esc(lean||"NO LEAN")+'</span>'+
+  '</div>';
+}
+
 function render(){
-  const list=all.filter(p=>mkt==="all"||p.market===mkt)
+  const list=all.filter(p=>(mkt==="all"||p.market===mkt)&&depthOk(p))
     .sort((a,b)=> ORDER.indexOf(a.market)-ORDER.indexOf(b.market) || b.projection-a.projection);
   if(!list.length){ gridEl.innerHTML='<div class="score-empty">No projections match this filter.</div>'; return; }
   gridEl.innerHTML=list.map(p=>{
@@ -139,9 +216,10 @@ function render(){
       '<div class="prop-body"><div class="prop-top">'+
         '<img src="/img/nfl/'+encodeURIComponent(p.team)+'.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'+
         '<span class="prop-who"><span class="prop-name">'+esc(p.player)+'</span>'+
-          '<span class="prop-vs">'+esc(p.position)+' &middot; '+esc(p.team)+' vs '+esc(p.opponent)+'</span></span>'+
+          '<span class="prop-vs">'+esc(p.depth||p.position)+' &middot; '+esc(p.team)+' vs '+esc(p.opponent)+'</span></span>'+
         '<span class="prop-num"><b>'+val+'</b><span>'+unit+'</span></span>'+
       '</div>'+
+      lineRow(p,isTD)+
       '<div class="market-grid" style="grid-template-columns:1fr 1fr">'+
         '<div class="market-box"><span class="market-label">Opponent adj</span>'+
           '<span class="market-value">'+(p.opp_adjustment!=null?Number(p.opp_adjustment).toFixed(2)+"\u00d7":"\u2014")+'</span>'+

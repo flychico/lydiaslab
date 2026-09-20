@@ -67,7 +67,26 @@ const ApiKey = {
 const Sport = {
   KEY: "leo_selected_sport",
   SPORTS: ["MLB", "NFL"],
-  get() { try { return localStorage.getItem(this.KEY) || "MLB"; } catch (e) { return "MLB"; } },
+  // The URL wins when it names a sport. Without this, landing straight on an
+  // /nfl/ page (search result, shared link, bookmark) read the stored value --
+  // which defaults to MLB -- and rendered MLB nav, MLB links and an MLB-active
+  // toggle on top of an NFL page. Only /nfl/ and /mlb/ are unambiguous; MLB
+  // also lives at the root, so every other path falls through to the stored
+  // preference. Matching the URL also PERSISTS it, so the rest of the session
+  // follows the sport you actually navigated into.
+  fromPath() {
+    try {
+      const p = String(location.pathname || "").toLowerCase();
+      if (p.startsWith("/nfl/")) return "NFL";
+      if (p.startsWith("/mlb/")) return "MLB";
+    } catch (e) {}
+    return null;
+  },
+  get() {
+    const fromUrl = this.fromPath();
+    if (fromUrl) { this.set(fromUrl); return fromUrl; }
+    try { return localStorage.getItem(this.KEY) || "MLB"; } catch (e) { return "MLB"; }
+  },
   set(v) { try { localStorage.setItem(this.KEY, v); } catch (e) {} },
   prefix() { const sport = this.get(); return sport === "MLB" ? "/" : "/" + sport.toLowerCase() + "/"; }
 };
