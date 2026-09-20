@@ -123,6 +123,16 @@ function matchupUrl(g){
   return "/nfl/"+sl(g.away_team)+"-vs-"+sl(g.home_team)+"-prediction-odds-"+g.gameday+"/";
 }
 
+// Whole card is clickable, like MLB. Real anchors inside it still win, so the
+// CTA and any future links keep their own behaviour.
+function openMatchup(event, card){
+  if (event.target.closest("a")) return;
+  if (event.type === "keydown" && event.key !== "Enter" && event.key !== " ") return;
+  if (event.type === "keydown") event.preventDefault();
+  const url = card && card.dataset && card.dataset.matchupUrl;
+  if (url) window.location.href = url;
+}
+
 function stateKey(g){return (g.away_score!==""&&g.home_score!=="")?"final":"preview";}
 
 async function loadScoreboard(opts={}){
@@ -214,7 +224,12 @@ function renderCards(){
           '</div></div>'
       : "";
 
-    return '<div class="score-card" style="--away-color:'+awayColor+';--home-color:'+homeColor+'">'+
+    const cardUrl = matchupUrl(g);
+    return '<div class="score-card" style="--away-color:'+awayColor+';--home-color:'+homeColor+'"'+
+      ' role="link" tabindex="0"'+
+      ' aria-label="'+escapeHtml(TEAM_NAMES[g.away_team]||g.away_team)+' at '+escapeHtml(TEAM_NAMES[g.home_team]||g.home_team)+' stats and matchup"'+
+      ' data-matchup-url="'+cardUrl+'"'+
+      ' onclick="openMatchup(event,this)" onkeydown="openMatchup(event,this)">'+
       '<div class="card-body">'+
         '<div class="card-top">'+
           '<div class="game-meta">'+

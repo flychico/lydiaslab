@@ -1,15 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-XVWTMDNBJK"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-XVWTMDNBJK');
-</script>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JAX vs DEN — Stats, Odds and Matchup | Leo</title>
@@ -91,6 +82,21 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
 .rpl{font-weight:800;text-transform:uppercase;letter-spacing:.07em;font-size:.62rem}
 .rr{justify-content:flex-end;text-align:right}
 .vs td.lead{color:var(--accent2);font-weight:800}
+/* Column heads repeat at every band and carry the logo, so a number is never
+   ambiguous about which team it belongs to. */
+.vs tr.vshead th{position:sticky;top:0;z-index:2;background:var(--bg-elev)}
+.vst{display:inline-flex;align-items:center;gap:7px;font-size:.78rem;font-weight:800;color:var(--text);letter-spacing:.02em;text-transform:none}
+.vst img{width:22px;height:22px;object-fit:contain}
+.vst.vsr{flex-direction:row}
+.vs .vsband{color:var(--text-dim)}
+/* Player tables: centre everything except the name column. */
+.sc-body table{text-align:center}
+.sc-body th,.sc-body td{text-align:center}
+.sc-body td.pl,.sc-body thead th:first-child{text-align:left}
+.sc-body h4{display:flex;align-items:center;gap:10px}
+.qbr{margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:var(--bg-elev);border:1px solid var(--border);border-radius:999px;padding:3px 10px}
+.qbr em{font-style:normal;font-size:.58rem;font-weight:800;letter-spacing:.07em;color:var(--text-dim)}
+.qbr b{font-size:.92rem;font-weight:800;color:var(--accent2);letter-spacing:0}
 @media(max-width:820px){.grid2,.tdgrid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -161,7 +167,10 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
   <h2 class="sec">The turnover battle</h2>
   <p class="sub">Interceptions thrown against interceptions caught, and the same for fumbles. Bold is the better side of each line.</p>
   <table class="vs">
-    <tr><th>JAX</th><th>Per game, this season</th><th>DEN</th></tr>
+    <tr class="vshead">
+    <th><span class="vst"><img src="/img/nfl/JAX.png" alt="">JAX</span></th>
+    <th class="vsband">Per game, this season</th>
+    <th><span class="vst vsr">DEN<img src="/img/nfl/DEN.png" alt=""></span></th></tr>
     <tr><td class="lead">0.00</td><th>Interceptions thrown</th><td class="">1.00</td></tr>
     <tr><td class="">1.00</td><th>Interceptions caught</th><td class="">1.00</td></tr>
     <tr><td class="lead">0.00</td><th>Fumbles lost</th><td class="">1.00</td></tr>
@@ -174,14 +183,20 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
   <h2 class="sec">Efficiency detail</h2>
   <p class="sub">The inputs behind the ratings above, shown raw so you can check the work.</p>
   <table class="vs">
-    <tr><th>JAX</th><th>Offense</th><th>DEN</th></tr>
+    <tr class="vshead">
+    <th><span class="vst"><img src="/img/nfl/JAX.png" alt="">JAX</span></th>
+    <th class="vsband">Offense</th>
+    <th><span class="vst vsr">DEN<img src="/img/nfl/DEN.png" alt=""></span></th></tr>
     <tr><td class="lead">+0.211</td><th>EPA per dropback</th><td class="">-0.038</td></tr>
     <tr><td class="lead">+3.0</td><th>Completion % over expected</th><td class="">-2.9</td></tr>
     <tr><td class="lead">1.9%</td><th>Interception rate</th><td class="">2.2%</td></tr>
     <tr><td class="">6.1%</td><th>Sack rate taken</th><td class="lead">5.4%</td></tr>
     <tr><td class="lead">-0.017</td><th>Rush EPA per carry</th><td class="">-0.043</td></tr>
     <tr><td class="lead">6.3%</td><th>Explosive play rate</th><td class="">4.2%</td></tr>
-    <tr><th>JAX</th><th>Defense</th><th>DEN</th></tr>
+    <tr class="vshead">
+    <th><span class="vst"><img src="/img/nfl/JAX.png" alt="">JAX</span></th>
+    <th class="vsband">Defense</th>
+    <th><span class="vst vsr">DEN<img src="/img/nfl/DEN.png" alt=""></span></th></tr>
     <tr><td class="lead">-0.083</td><th>EPA allowed per play</th><td class="">-0.046</td></tr>
     <tr><td class="">5.37</td><th>Yards allowed per play</th><td class="lead">5.09</td></tr>
     <tr><td class="">4.4%</td><th>Sack rate</th><td class="lead">5.7%</td></tr>
@@ -191,22 +206,28 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
   <h2 class="sec">Team comparison</h2>
   <p class="sub">Season totals on both sides of the ball. Left column is JAX, right is DEN.</p>
   <table class="vs">
-    <tr><th>JAX</th><th>This season</th><th>DEN</th></tr>
-    <tr><td>1</td><th>Games</th><td>1</td></tr>
-    <tr><td>245</td><th>Pass yards/g</th><td>131</td></tr>
-    <tr><td>126</td><th>Rush yards/g</th><td>61</td></tr>
-    <tr><td>4</td><th>Passing TD</th><td>1</td></tr>
-    <tr><td>0</td><th>Interceptions thrown</th><td>1</td></tr>
-    <tr><td>205</td><th>Pass yards allowed/g</th><td>184</td></tr>
-    <tr><td>87</td><th>Rush yards allowed/g</th><td>220</td></tr>
-    <tr><td>1</td><th>Interceptions forced</th><td>1</td></tr>
-    <tr><th>JAX</th><th>Last season</th><th>DEN</th></tr>
-    <tr><td>235.2</td><th>Pass yards/g</th><td>228.6</td></tr>
-    <tr><td>117.2</td><th>Rush yards/g</th><td>114.1</td></tr>
-    <tr><td>32</td><th>Passing TD</th><td>29</td></tr>
-    <tr><td>14</td><th>Interceptions thrown</th><td>13</td></tr>
-    <tr><td>233.7</td><th>Pass yards allowed/g</th><td>209.2</td></tr>
-    <tr><td>85.2</td><th>Rush yards allowed/g</th><td>98.5</td></tr>
+    <tr class="vshead">
+    <th><span class="vst"><img src="/img/nfl/JAX.png" alt="">JAX</span></th>
+    <th class="vsband">This season</th>
+    <th><span class="vst vsr">DEN<img src="/img/nfl/DEN.png" alt=""></span></th></tr>
+    <tr><td class="">1</td><th>Games</th><td class="">1</td></tr>
+    <tr><td class="lead">245</td><th>Pass yards/g</th><td class="">131</td></tr>
+    <tr><td class="lead">126</td><th>Rush yards/g</th><td class="">61</td></tr>
+    <tr><td class="lead">4</td><th>Passing TD</th><td class="">1</td></tr>
+    <tr><td class="">0</td><th>Interceptions thrown</th><td class="lead">1</td></tr>
+    <tr><td class="lead">205</td><th>Pass yards allowed/g</th><td class="">184</td></tr>
+    <tr><td class="">87</td><th>Rush yards allowed/g</th><td class="lead">220</td></tr>
+    <tr><td class="">1</td><th>Interceptions forced</th><td class="">1</td></tr>
+    <tr class="vshead">
+    <th><span class="vst"><img src="/img/nfl/JAX.png" alt="">JAX</span></th>
+    <th class="vsband">Last season</th>
+    <th><span class="vst vsr">DEN<img src="/img/nfl/DEN.png" alt=""></span></th></tr>
+    <tr><td class="lead">235.2</td><th>Pass yards/g</th><td class="">228.6</td></tr>
+    <tr><td class="lead">117.2</td><th>Rush yards/g</th><td class="">114.1</td></tr>
+    <tr><td class="lead">32</td><th>Passing TD</th><td class="">29</td></tr>
+    <tr><td class="lead">14</td><th>Interceptions thrown</th><td class="">13</td></tr>
+    <tr><td class="lead">233.7</td><th>Pass yards allowed/g</th><td class="">209.2</td></tr>
+    <tr><td class="">85.2</td><th>Rush yards allowed/g</th><td class="lead">98.5</td></tr>
   </table>
 
   <h2 class="sec">This season</h2>
@@ -216,7 +237,8 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
     <div class="sc-head"><img src="/img/nfl/JAX.png" alt=""><b>JAX</b>
       <span class="sc-season">2026</span></div>
     <div class="sc-body">
-      <h4>Quarterback</h4>
+      <h4>Quarterback <span class="qbr" title="Leo QB rating: 50 is league average, 15 points per standard deviation">
+         <em>Leo QB</em><b>69</b></span></h4>
       <div class="tw"><table><thead><tr><th>Player</th><th>G</th><th>C/ATT</th><th>Comp%</th><th>Yards</th><th>Y/G</th><th>TD/INT</th><th>Y/A</th></tr></thead>
       <tbody><tr><td class="pl">Trevor Lawrence</td><td>1</td><td>18/23</td>
     <td>78.3%</td><td><b>245</b></td><td>245</td>
@@ -243,7 +265,8 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
     <div class="sc-head"><img src="/img/nfl/DEN.png" alt=""><b>DEN</b>
       <span class="sc-season">2026</span></div>
     <div class="sc-body">
-      <h4>Quarterback</h4>
+      <h4>Quarterback <span class="qbr" title="Leo QB rating: 50 is league average, 15 points per standard deviation">
+         <em>Leo QB</em><b>42</b></span></h4>
       <div class="tw"><table><thead><tr><th>Player</th><th>G</th><th>C/ATT</th><th>Comp%</th><th>Yards</th><th>Y/G</th><th>TD/INT</th><th>Y/A</th></tr></thead>
       <tbody><tr><td class="pl">Bo Nix</td><td>1</td><td>17/28</td>
     <td>60.7%</td><td><b>131</b></td><td>131</td>
@@ -274,7 +297,8 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
     <div class="sc-head"><img src="/img/nfl/JAX.png" alt=""><b>JAX</b>
       <span class="sc-season">2025</span></div>
     <div class="sc-body">
-      <h4>Quarterback</h4>
+      <h4>Quarterback <span class="qbr" title="Leo QB rating: 50 is league average, 15 points per standard deviation">
+         <em>Leo QB</em><b>52</b></span></h4>
       <div class="tw"><table><thead><tr><th>Player</th><th>G</th><th>C/ATT</th><th>Comp%</th><th>Yards</th><th>Y/G</th><th>TD/INT</th><th>Y/A</th></tr></thead>
       <tbody><tr><td class="pl">Trevor Lawrence</td><td>18</td><td>359/590</td>
     <td>60.8%</td><td><b>4214</b></td><td>234.1</td>
@@ -301,7 +325,8 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
     <div class="sc-head"><img src="/img/nfl/DEN.png" alt=""><b>DEN</b>
       <span class="sc-season">2025</span></div>
     <div class="sc-body">
-      <h4>Quarterback</h4>
+      <h4>Quarterback <span class="qbr" title="Leo QB rating: 50 is league average, 15 points per standard deviation">
+         <em>Leo QB</em><b>52</b></span></h4>
       <div class="tw"><table><thead><tr><th>Player</th><th>G</th><th>C/ATT</th><th>Comp%</th><th>Yards</th><th>Y/G</th><th>TD/INT</th><th>Y/A</th></tr></thead>
       <tbody><tr><td class="pl">Bo Nix</td><td>18</td><td>414/658</td>
     <td>62.9%</td><td><b>4210</b></td><td>233.9</td>
@@ -347,7 +372,7 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
 
   <p class="data-note">Player and team statistics from the open nflverse dataset. Roles assigned by actual usage &mdash; most attempts, carries and targets &mdash; not depth chart.</p>
 </main>
-<footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/articles/"); renderFooter();</script>
-
+<footer id="footer"></footer><script src="/js/app.js"></script>
+<script>renderNav("/nfl/scoreboard/"); renderFooter();</script>
 </body>
 </html>

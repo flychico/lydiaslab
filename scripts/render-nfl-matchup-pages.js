@@ -34,14 +34,19 @@ function wrRow(p,label){
     <td>${v(p.rec_ypg)}</td><td>${v(p.rec_td)}</td></tr>`;
 }
 
-function sideBlock(side, seasonKey, seasonLabel){
+function sideBlock(side, seasonKey, seasonLabel, rating){
   const p=side[seasonKey];
+  // Leo's QB rating sits beside the passer's line so the two sides can be
+  // compared directly without scrolling back up to the ratings band.
+  const qbBadge = (rating && rating.qb_rating!=null)
+    ? `<span class="qbr" title="Leo QB rating: 50 is league average, 15 points per standard deviation">
+         <em>Leo QB</em><b>${rating.qb_rating.toFixed(0)}</b></span>` : "";
   return `
   <div class="statcard">
     <div class="sc-head"><img src="/img/nfl/${encodeURIComponent(side.team)}.png" alt=""><b>${esc(side.team)}</b>
       <span class="sc-season">${esc(seasonLabel)}</span></div>
     <div class="sc-body">
-      <h4>Quarterback</h4>
+      <h4>Quarterback ${qbBadge}</h4>
       <div class="tw"><table><thead><tr><th>Player</th><th>G</th><th>C/ATT</th><th>Comp%</th><th>Yards</th><th>Y/G</th><th>TD/INT</th><th>Y/A</th></tr></thead>
       <tbody>${qbRow(p.qb)}</tbody></table></div>
 
@@ -68,6 +73,19 @@ function scorers(side, label){
       <span class="tdd">${x.rush_td} rush &middot; ${x.rec_td} rec</span></li>`).join("")}</ol></div>`;
 }
 
+
+/**
+ * Column heads for any comparison table: logo + abbreviation on each side,
+ * repeated at every band. Module scope because both page() and
+ * ratingsSection() emit these tables — a page-scoped helper was invisible to
+ * the latter.
+ */
+function vsHead(m, band){
+  return `<tr class="vshead">
+    <th><span class="vst"><img src="/img/nfl/${encodeURIComponent(m.away)}.png" alt="">${esc(m.away)}</span></th>
+    <th class="vsband">${esc(band)}</th>
+    <th><span class="vst vsr">${esc(m.home)}<img src="/img/nfl/${encodeURIComponent(m.home)}.png" alt=""></span></th></tr>`;
+}
 
 /** One rating row: two 0-100 scores facing each other with a shared bar. */
 function ratingRow(label, a, h, hint){
@@ -121,7 +139,7 @@ function ratingsSection(m){
   <h2 class="sec">The turnover battle</h2>
   <p class="sub">Interceptions thrown against interceptions caught, and the same for fumbles. Bold is the better side of each line.</p>
   <table class="vs">
-    <tr><th>${esc(m.away)}</th><th>Per game, this season</th><th>${esc(m.home)}</th></tr>
+    ${vsHead(m, "Per game, this season")}
     ${statRow("Interceptions thrown", A.ints_thrown_pg, H.ints_thrown_pg, d2, true)}
     ${statRow("Interceptions caught", A.ints_caught_pg, H.ints_caught_pg, d2)}
     ${statRow("Fumbles lost", A.fum_lost_pg, H.fum_lost_pg, d2, true)}
@@ -134,14 +152,14 @@ function ratingsSection(m){
   <h2 class="sec">Efficiency detail</h2>
   <p class="sub">The inputs behind the ratings above, shown raw so you can check the work.</p>
   <table class="vs">
-    <tr><th>${esc(m.away)}</th><th>Offense</th><th>${esc(m.home)}</th></tr>
+    ${vsHead(m, "Offense")}
     ${statRow("EPA per dropback", A.epa_per_dropback, H.epa_per_dropback, x=>x==null?"—":(x>0?"+":"")+x.toFixed(3))}
     ${statRow("Completion % over expected", A.cpoe, H.cpoe, x=>x==null?"—":(x>0?"+":"")+x.toFixed(1))}
     ${statRow("Interception rate", A.int_rate, H.int_rate, pc, true)}
     ${statRow("Sack rate taken", A.sack_rate_taken, H.sack_rate_taken, pc, true)}
     ${statRow("Rush EPA per carry", A.rush_epa_per_carry, H.rush_epa_per_carry, x=>x==null?"—":(x>0?"+":"")+x.toFixed(3))}
     ${statRow("Explosive play rate", A.explosive_rate, H.explosive_rate, pc)}
-    <tr><th>${esc(m.away)}</th><th>Defense</th><th>${esc(m.home)}</th></tr>
+    ${vsHead(m, "Defense")}
     ${statRow("EPA allowed per play", A.def_epa_per_play, H.def_epa_per_play, x=>x==null?"—":(x>0?"+":"")+x.toFixed(3), true)}
     ${statRow("Yards allowed per play", A.def_yards_per_play, H.def_yards_per_play, v, true)}
     ${statRow("Sack rate", A.def_sack_rate, H.def_sack_rate, pc)}
@@ -151,9 +169,15 @@ function ratingsSection(m){
 
 function page(m){
   const A=m.sides.away, H=m.sides.home;
+  const cur=(m.ratings&&m.ratings.this_season)||null;
+  const pri=(m.ratings&&m.ratings.last_season)||null;
   const title=`${m.away} vs ${m.home} — Stats, Odds and Matchup | Leo`;
   const spread = m.spread_line==null?"—":(m.spread_line>0?`${m.home} -${m.spread_line}`:(m.spread_line<0?`${m.away} -${Math.abs(m.spread_line)}`:"PK"));
-  const cmp=(label,a,h,fmt=x=>v(x))=>`<tr><td>${fmt(a)}</td><th>${esc(label)}</th><td>${fmt(h)}</td></tr>`;
+  const cmp=(label,a,h,fmt=x=>v(x))=>{
+    const lead = (a==null||h==null||a===h) ? "" : (Number(a)>Number(h) ? "a" : "h");
+    return `<tr><td class="${lead==="a"?"lead":""}">${fmt(a)}</td><th>${esc(label)}</th><td class="${lead==="h"?"lead":""}">${fmt(h)}</td></tr>`;
+  };
+
   const ao=A.team_offense, ho=H.team_offense, ad=A.team_defense, hd=H.team_defense;
   return `<!DOCTYPE html>
 <html lang="en">
@@ -239,6 +263,21 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
 .rpl{font-weight:800;text-transform:uppercase;letter-spacing:.07em;font-size:.62rem}
 .rr{justify-content:flex-end;text-align:right}
 .vs td.lead{color:var(--accent2);font-weight:800}
+/* Column heads repeat at every band and carry the logo, so a number is never
+   ambiguous about which team it belongs to. */
+.vs tr.vshead th{position:sticky;top:0;z-index:2;background:var(--bg-elev)}
+.vst{display:inline-flex;align-items:center;gap:7px;font-size:.78rem;font-weight:800;color:var(--text);letter-spacing:.02em;text-transform:none}
+.vst img{width:22px;height:22px;object-fit:contain}
+.vst.vsr{flex-direction:row}
+.vs .vsband{color:var(--text-dim)}
+/* Player tables: centre everything except the name column. */
+.sc-body table{text-align:center}
+.sc-body th,.sc-body td{text-align:center}
+.sc-body td.pl,.sc-body thead th:first-child{text-align:left}
+.sc-body h4{display:flex;align-items:center;gap:10px}
+.qbr{margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:var(--bg-elev);border:1px solid var(--border);border-radius:999px;padding:3px 10px}
+.qbr em{font-style:normal;font-size:.58rem;font-weight:800;letter-spacing:.07em;color:var(--text-dim)}
+.qbr b{font-size:.92rem;font-weight:800;color:var(--accent2);letter-spacing:0}
 @media(max-width:820px){.grid2,.tdgrid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -268,7 +307,7 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
   <h2 class="sec">Team comparison</h2>
   <p class="sub">Season totals on both sides of the ball. Left column is ${esc(m.away)}, right is ${esc(m.home)}.</p>
   <table class="vs">
-    <tr><th>${esc(m.away)}</th><th>This season</th><th>${esc(m.home)}</th></tr>
+    ${vsHead(m, "This season")}
     ${cmp("Games", ao.this_season.games, ho.this_season.games)}
     ${cmp("Pass yards/g", ao.this_season.pass_ypg, ho.this_season.pass_ypg)}
     ${cmp("Rush yards/g", ao.this_season.rush_ypg, ho.this_season.rush_ypg)}
@@ -277,7 +316,7 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
     ${cmp("Pass yards allowed/g", ad.this_season.pass_ypg, hd.this_season.pass_ypg)}
     ${cmp("Rush yards allowed/g", ad.this_season.rush_ypg, hd.this_season.rush_ypg)}
     ${cmp("Interceptions forced", ad.this_season.ints_forced, hd.this_season.ints_forced)}
-    <tr><th>${esc(m.away)}</th><th>Last season</th><th>${esc(m.home)}</th></tr>
+    ${vsHead(m, "Last season")}
     ${cmp("Pass yards/g", ao.last_season.pass_ypg, ho.last_season.pass_ypg)}
     ${cmp("Rush yards/g", ao.last_season.rush_ypg, ho.last_season.rush_ypg)}
     ${cmp("Passing TD", ao.last_season.pass_td, ho.last_season.pass_td)}
@@ -288,11 +327,11 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
 
   <h2 class="sec">This season</h2>
   <p class="sub">Starting quarterback, lead backs and top receivers, by actual usage this season.</p>
-  <div class="grid2">${sideBlock(A,"this_season",m.date.slice(0,4))}${sideBlock(H,"this_season",m.date.slice(0,4))}</div>
+  <div class="grid2">${sideBlock(A,"this_season",m.date.slice(0,4),cur&&cur.away)}${sideBlock(H,"this_season",m.date.slice(0,4),cur&&cur.home)}</div>
 
   <h2 class="sec">Last season</h2>
   <p class="sub">The same players' full prior season, for a baseline the early-season sample cannot give you.</p>
-  <div class="grid2">${sideBlock(A,"last_season",String(Number(m.date.slice(0,4))-1))}${sideBlock(H,"last_season",String(Number(m.date.slice(0,4))-1))}</div>
+  <div class="grid2">${sideBlock(A,"last_season",String(Number(m.date.slice(0,4))-1),pri&&pri.away)}${sideBlock(H,"last_season",String(Number(m.date.slice(0,4))-1),pri&&pri.home)}</div>
 
   <h2 class="sec">Touchdown leaders</h2>
   <p class="sub">Top three scrimmage touchdown scorers on each side this season, rushing and receiving.</p>
