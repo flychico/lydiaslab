@@ -55,14 +55,39 @@ const ROLLING = path.join(DIR, "prop-odds-today.json");
 const backup = new Map();
 for (const f of [TARGET, ROLLING]) if (fs.existsSync(f)) backup.set(f, fs.readFileSync(f));
 
+/*
+  Sandbox EVERY write under data/nfl/, not just the prop-odds snapshots.
+
+  The first version of this test intercepted only paths containing
+  "prop-odds" -- so when the script gained an append-only history log at
+  data/nfl/odds-history-props.csv, the test happily wrote three rows of
+  FABRICATED Patrick Mahomes lines into the permanent, immutable, never-pruned
+  record that the backtest will one day read as ground truth.
+
+  An append-only log is exactly the wrong place to discover test pollution,
+  because nothing ever cleans it. So the rule here is absolute: this test
+  writes nothing under data/. It is enforced below by path prefix, not by
+  filename matching, so a future new output file is caught by default.
+*/
 const realWrite = fs.writeFileSync;
+const realAppend = fs.appendFileSync;
+const inDataDir = f => String(f).replace(/\\/g, "/").includes("/data/nfl/");
 let captured = null;
-fs.writeFileSync = (f, d, ...r) => { if (String(f).includes("prop-odds")) { captured = JSON.parse(d); return; } return realWrite(f, d, ...r); };
+fs.writeFileSync = (f, d, ...r) => {
+  if (String(f).includes("prop-odds")) { captured = JSON.parse(d); return; }
+  if (inDataDir(f)) return;                    // swallow: never touch real data
+  return realWrite(f, d, ...r);
+};
+fs.appendFileSync = (f, d, ...r) => {
+  if (inDataDir(f)) return;                    // swallow: never touch real data
+  return realAppend(f, d, ...r);
+};
 
 require(path.join(__dirname, "..", "update-nfl-props-odds.js"));
 
 setTimeout(() => {
   fs.writeFileSync = realWrite;
+  fs.appendFileSync = realAppend;
   for (const [f, d] of backup.entries()) realWrite(f, d);
 
   let pass = 0, fail = 0;

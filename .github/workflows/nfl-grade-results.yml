@@ -1,0 +1,109 @@
+name: NFL grade results
+
+# The NFL counterpart to MLB's live-results-grading.yml. Until this existed,
+# the NFL side made predictions and never looked back at them: nfl-props-log.csv
+# had `result` and `actual_value` columns that were written empty every single
+# slate and never filled by anything.
+#
+# WHAT IT DOES
+#   grade-nfl-results.js  final scores  -> moneyline / total / spread ledger
+#   grade-nfl-props.js    player stats  -> prop ledger with beat-line
+#
+# WHY IT RUNS SO OFTEN
+# Both scripts are idempotent and cost nothing: no API key, no credits, open
+# nflverse data only. Each refuses to write a date already in its ledger, and
+# writes nothing at all when results are not posted yet. So the cheap, robust
+# strategy is to try repeatedly and let the no-op path handle timing, rather
+# than guess when nflverse publishes.
+#
+# It grades YESTERDAY and TODAY on every run. nflverse posts weekly player
+# stats on a lag that varies, and late windows (Sunday night, Monday night)
+# land on the following calendar day in UTC.
+#
+# UTC/DST: same caveat as every other workflow here. These crons are Eastern
+# DAYLIGHT time; after the November change each fires an hour earlier in ET.
+
+on:
+  schedule:
+    - cron: "0 10 * * *"    # 6:00am ET  daily  — catches overnight stat posts
+    - cron: "0 15 * * 1,2"  # 11:00am ET Mon/Tue — Sunday + Monday night games
+    - cron: "0 4 * * 1"     # 12:00am ET Mon    — late Sunday windows
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "YYYY-MM-DD to grade. Blank = grade yesterday and today."
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nfl-grade-results
+  cancel-in-progress: false
+
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Resolve dates to grade
+        id: dates
+        run: |
+          set -euo pipefail
+          echo "UTC:";     date -u
+          echo "Eastern:"; TZ="America/New_York" date
+          DATE_INPUT="${{ github.event.inputs.date }}"
+          if [ -n "$DATE_INPUT" ]; then
+            echo "list=$DATE_INPUT" >> "$GITHUB_OUTPUT"
+          else
+            TODAY=$(TZ="America/New_York" date +%F)
+            YEST=$(TZ="America/New_York" date -d "yesterday" +%F)
+            echo "list=$YEST $TODAY" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Grading: $(cat "$GITHUB_OUTPUT" | grep '^list=' | cut -d= -f2-)"
+
+      # No `|| true` on the loop body itself: a genuine crash should be
+      # visible. Both scripts already exit cleanly when there is nothing to
+      # grade, so a failure here means something is actually wrong.
+      - name: Grade game results
+        run: |
+          set -euo pipefail
+          for D in ${{ steps.dates.outputs.list }}; do
+            echo "--- game grading $D ---"
+            node scripts/grade-nfl-results.js --date="$D"
+          done
+
+      - name: Grade player props
+        run: |
+          set -euo pipefail
+          for D in ${{ steps.dates.outputs.list }}; do
+            echo "--- prop grading $D ---"
+            node scripts/grade-nfl-props.js --date="$D"
+          done
+
+      - name: Health check
+        run: node scripts/nfl-healthcheck.js
+
+      - name: Commit and push if changed
+        run: |
+          set -euo pipefail
+          git config user.name "lydia-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No new grades to commit."
+            exit 0
+          fi
+          git commit -m "NFL grade results ${{ steps.dates.outputs.list }}"
+          git pull --rebase
+          git push

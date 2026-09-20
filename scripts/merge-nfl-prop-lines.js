@@ -84,6 +84,26 @@ function main() {
     groups.get(k).push(p);
   }
 
+  /*
+    INJURY CROSS-REFERENCE.
+
+    An unmatched name has two very different causes that look identical in the
+    output (NFL_WATCH_LIST #23):
+      - the player is Out/Doubtful, so no book posted a line  -> EXPECTED
+      - our name failed to match a line that does exist       -> A BUG
+
+    Without this split the unmatched list is 19 names of undifferentiated
+    noise and nobody reads it. With it, the list that matters is usually
+    empty, so when it isn't, it means something.
+  */
+  const injStatus = new Map();
+  try {
+    const inj = readJson(path.join(DIR, "injuries-today.json"));
+    const rows = Array.isArray(inj) ? inj : (inj && inj.players) || [];
+    for (const r of rows) if (r && r.player) injStatus.set(String(r.player).toLowerCase(), r.status || "");
+  } catch (e) { /* injuries are optional; absence just means no split */ }
+  const isSidelined = name => /out|doubtful/i.test(injStatus.get(String(name).toLowerCase()) || "");
+
   let linked = 0, leaned = 0, noFloor = 0, noDevig = 0;
   const allUnmatched = [], allAmbiguous = [], noGroup = [];
 
@@ -101,6 +121,12 @@ function main() {
     ambiguous.forEach(a => allAmbiguous.push(`${k} :: ${a.player} -> ${a.candidates.join(" | ")}`));
 
     for (const p of ours) {
+      // Flag regardless of whether a line attached: a projection for a player
+      // who will not play is not a prediction, and must never be graded.
+      const st = injStatus.get(String(p.player).toLowerCase());
+      if (st) p.injury_status = st;
+      if (isSidelined(p.player)) p.sidelined = true;
+
       const b = matched.get(p.player);
       if (!b) continue;
       linked++;
@@ -144,6 +170,8 @@ function main() {
   console.log(`  unmatched names         ${allUnmatched.length}`);
   console.log(`  ambiguous names         ${allAmbiguous.length}`);
   console.log(`  no lines for game+market ${noGroup.length}`);
+  const sidelined = props.filter(x => x.sidelined).length;
+  if (sidelined) console.log(`  !! ${sidelined} projection(s) are for players listed Out/Doubtful — flagged, excluded from grading`);
   const accounted = linked + allUnmatched.length + allAmbiguous.length + noGroup.length;
   console.log(`  ${"-".repeat(40)}`);
   console.log(`  accounted for           ${accounted} / ${props.length}` +
@@ -152,9 +180,14 @@ function main() {
   // WATCH LIST #23: an unmatched name looks identical to "no line posted".
   // Print them. Never swallow them.
   if (allUnmatched.length) {
-    console.log(`\n  UNMATCHED (no line attached — verify these are genuinely unposted):`);
-    allUnmatched.slice(0, 25).forEach(u => console.log(`    ${u}`));
-    if (allUnmatched.length > 25) console.log(`    ... and ${allUnmatched.length - 25} more`);
+    const nameOf = u => u.split(" :: ")[1] || "";
+    const expected = allUnmatched.filter(u => isSidelined(nameOf(u)));
+    const suspect  = allUnmatched.filter(u => !isSidelined(nameOf(u)));
+    console.log(`\n  unmatched, explained by injury  ${expected.length}`);
+    expected.forEach(u => console.log(`    ok   ${u}  [${injStatus.get(nameOf(u).toLowerCase())}]`));
+    console.log(`\n  UNMATCHED AND ACTIVE            ${suspect.length}  <-- these are the ones to check`);
+    suspect.slice(0, 25).forEach(u => console.log(`    ??   ${u}`));
+    if (suspect.length > 25) console.log(`    ... and ${suspect.length - 25} more`);
   }
   if (noGroup.length) {
     console.log(`\n  NO LINES POSTED for these game+market groups (${noGroup.length} projections):`);

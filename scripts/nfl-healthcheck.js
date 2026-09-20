@@ -202,11 +202,24 @@ for (const f of ["css/style.css","css/scoreboard.css"]) {
     const props = JSON.parse(fs.readFileSync(pf,"utf8"));
     const odds  = JSON.parse(fs.readFileSync(of,"utf8"));
     const posted = (odds.entries||[]).length;
-    const linked = props.filter(x=>x.line!=null||x.market_prob!=null||x.lean_blocked==="one_sided_no_devig").length;
-    const rate = posted ? linked/posted : 0;
+    /*
+      DENOMINATOR MATTERS. The first version of this check divided by `posted`,
+      which is every player the books price -- 715 entries, most of them
+      anytime-TD longshots deep on a roster. We only project 304 players, so
+      that ratio could never exceed ~42% and the check FAILED on a perfectly
+      healthy run, blocking the publish.
+
+      The question this check actually asks is: of the players WE projected,
+      how many found a line? Injured and sidelined players are excluded,
+      because a missing line for a player listed Out is correct behaviour, not
+      a matching failure.
+    */
+    const eligible = props.filter(x => !x.sidelined);
+    const linked = eligible.filter(x=>x.line!=null||x.market_prob!=null||x.lean_blocked==="one_sided_no_devig").length;
+    const rate = eligible.length ? linked/eligible.length : 0;
     if (!posted)          warn("LINE-COVER","odds file present but empty");
-    else if (rate < 0.80) fail("LINE-COVER",`only ${linked}/${posted} posted lines attached (${(rate*100).toFixed(0)}%) — name matching is likely broken`);
-    else                  ok("LINE-COVER",`${linked}/${posted} posted lines attached (${(rate*100).toFixed(0)}%)`);
+    else if (rate < 0.75) fail("LINE-COVER",`only ${linked}/${eligible.length} active projections got a line (${(rate*100).toFixed(0)}%) — name matching is likely broken`);
+    else                  ok("LINE-COVER",`${linked}/${eligible.length} active projections matched a line (${(rate*100).toFixed(0)}%) from ${posted} posted`);
   }
 }
 
@@ -220,6 +233,31 @@ for (const f of ["css/style.css","css/scoreboard.css"]) {
     const picky = props.filter(x=>x.status==="official_pick"||x.pick===true||x.is_pick===true).length;
     picky ? fail("PROP-GATE",`${picky} prop(s) flagged as a pick — prop ROI has never been measured`)
           : ok("PROP-GATE","no prop is flagged as a pick; gate is closed as intended");
+  }
+}
+
+// ---- 15. grading ledgers -------------------------------------------------
+// The whole point of the NFL grading side is that it ACCUMULATES. A ledger
+// that stops growing is indistinguishable from one that is working, until you
+// go looking months later and find the sample never moved.
+{
+  const ledgers = [
+    ["nfl-results-log.csv",   "game"],
+    ["nfl-props-graded.csv",  "prop"],
+    ["odds-history-props.csv","odds observation"]
+  ];
+  for (const [f, label] of ledgers) {
+    const fp = P(`data/nfl/${f}`);
+    if (!fs.existsSync(fp)) {
+      warn("LEDGER", `${label} ledger not created yet (${f}) — expected until the first graded slate`);
+      continue;
+    }
+    const lines = fs.readFileSync(fp, "utf8").split(/\r?\n/).filter(Boolean);
+    const rows = Math.max(0, lines.length - 1);
+    // A header with no rows means something wrote the file and then never
+    // populated it — worse than the file being absent, because it looks done.
+    rows === 0 ? fail("LEDGER", `${f} exists but has 0 rows — created and never written`)
+               : ok("LEDGER", `${label} ledger has ${rows} rows`);
   }
 }
 

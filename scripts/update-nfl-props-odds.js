@@ -32,6 +32,7 @@
 const fs = require("fs");
 const path = require("path");
 const { fetchOddsApi, getLastQuota } = require("./lib/odds-api-core");
+const { appendObservations } = require("./lib/odds-history");
 
 const SPORT = "americanfootball_nfl";
 const REGIONS = "us";
@@ -136,6 +137,7 @@ async function main() {
           out.push({
             date: DATE, market: spec.ours, name,
             game: `${ev.away_team} @ ${ev.home_team}`,
+            kickoff: ev.commence_time,
             line,
             over_price:  bestOver  ? bestOver.over   : null,
             under_price: bestUnder ? bestUnder.under : null,
@@ -160,6 +162,7 @@ async function main() {
           out.push({
             date: DATE, market: spec.ours, name,
             game: `${ev.away_team} @ ${ev.home_team}`,
+            kickoff: ev.commence_time,
             line: null,
             yes_price: bestYes ? bestYes.yes : null,
             implied_prob_raw: rawYes == null ? null : Number(rawYes.toFixed(4)),
@@ -192,6 +195,29 @@ async function main() {
     events_fetched: fetched,
     entries: out
   };
+  // PERMANENT RECORD. The snapshots below get overwritten by the next run of
+  // the day; this does not. Closing line = the last row here whose captured_at
+  // precedes that game's kickoff.
+  const capturedAt = new Date().toISOString();
+  const HIST_COLS = ["captured_at","date","kickoff","game","market","player",
+                     "line","over_price","under_price","implied_prob","implied_prob_raw",
+                     "vig_removed","books"];
+  const hist = appendObservations(
+    path.join(DIR, "odds-history-props.csv"),
+    HIST_COLS,
+    out.map(r => ({
+      captured_at: capturedAt, date: r.date, kickoff: r.kickoff || "",
+      game: r.game, market: r.market, player: r.name,
+      line: r.line ?? "", over_price: r.over_price ?? "", under_price: r.under_price ?? "",
+      implied_prob: r.implied_prob ?? "", implied_prob_raw: r.implied_prob_raw ?? "",
+      vig_removed: r.vig_removed ?? "", books: r.books ?? ""
+    })),
+    ["date","game","market","player"],
+    ["line","over_price","under_price","implied_prob","implied_prob_raw"]
+  );
+  console.log(`  history: +${hist.appended} moved/new, ${hist.unchanged} unchanged` +
+              (hist.created ? " (created odds-history-props.csv)" : ""));
+
   fs.mkdirSync(DIR, { recursive: true });
   fs.writeFileSync(path.join(DIR, `prop-odds-${DATE}.json`), JSON.stringify(payload, null, 2));
   fs.writeFileSync(path.join(DIR, `prop-odds-today.json`),   JSON.stringify(payload, null, 2));

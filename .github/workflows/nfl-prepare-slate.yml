@@ -27,6 +27,13 @@ on:
     - cron: "0 13 * * *"    # 9:00am ET  daily
     - cron: "0 21 * * 4"    # 5:00pm ET  Thursday
     - cron: "0 14 * * 0"    # 10:00am ET Sunday
+    # PRE-KICKOFF CAPTURE. Added 2026-09-20 after the first live run showed
+    # the 9:39am ET fetch was too early: books had not posted full prop menus
+    # yet (Ladd McConkey, a front-line receiver, had no receiving line at all
+    # -- the book listed only 9 players for that game). A line captured 3+
+    # hours before kickoff is not a closing line, and CLV measured against it
+    # is measuring the wrong number.
+    - cron: "30 16 * * 0"   # 12:30pm ET Sunday — last capture before 1pm kicks
     - cron: "0 18 * * 0"    # 2:00pm ET  Sunday
     - cron: "0 22 * * 0"    # 6:00pm ET  Sunday
     - cron: "0 21 * * 1"    # 5:00pm ET  Monday
