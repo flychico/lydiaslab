@@ -114,6 +114,12 @@ function renderNav(active) {
   });
   navHtml += '</div>';
   
+  // The hamburger and the .nav-links wrapper are what style.css's
+  // @media (max-width:760px) block targets. Without them the mobile rules
+  // never apply and the tabs overflow the viewport sideways.
+  navHtml += '<button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">\u2630</button>';
+  navHtml += '<div class="nav-links">';
+
   navHtml += links.map(function (l) {
         if (l[0] === prefix + "tools/") {
           var tools = sport === "MLB" 
@@ -139,7 +145,8 @@ function renderNav(active) {
         return '<a class="navlink' + (isActive(l[0]) ? ' active' : '') + '" href="' + l[0] + '">' + l[1] + '</a>';
       }).join("")
     + '<a class="navlink navlink-cta' + (current === "/membership/" ? ' active' : '') + '" href="/membership/">Join $30/mo</a>'
-    + '</div>';
+    + '</div>'      // .nav-links
+    + '</div>';     // .nav-inner
 
   el.innerHTML = navHtml;
 
@@ -166,6 +173,20 @@ function renderNav(active) {
       window.location.href = newPrefix + slug;
     });
   });
+
+  // Hamburger: open/close the stacked link panel on phones.
+  var navToggle = el.querySelector(".nav-toggle");
+  var navLinks  = el.querySelector(".nav-links");
+  if (navToggle && navLinks) {
+    navToggle.addEventListener("click", function () {
+      var open = navLinks.classList.toggle("open");
+      navToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    // Tapping any destination closes the panel behind you.
+    navLinks.addEventListener("click", function (e) {
+      if (e.target.closest("a")) { navLinks.classList.remove("open"); navToggle.setAttribute("aria-expanded","false"); }
+    });
+  }
 
   // Mobile/touch: first tap on "Lab ▾" opens the menu instead of navigating;
   // tapping elsewhere closes it. Desktop hover keeps working via CSS.

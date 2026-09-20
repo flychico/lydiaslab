@@ -249,3 +249,24 @@ footer {
 /* Display type: serif headings against the sans UI, matching the reference. */
 h1, h2, .score-hero h1 { font-family:"EB Garamond", Georgia, "Times New Roman", serif; font-weight:600; letter-spacing:-.01em; }
 .eyebrow { font-family:"Onest",sans-serif; letter-spacing:.14em; text-transform:uppercase; font-size:.7rem; font-weight:700; color:var(--gold-deep); }
+
+
+/* Phones: nothing may drag the page sideways. The nav used to do exactly that
+   because renderNav never emitted the .nav-toggle / .nav-links markup this
+   file's mobile rules target, so every tab laid out inline past the viewport.
+   Markup is fixed; these are the guards that keep it fixed. */
+html, body { max-width: 100%; overflow-x: hidden; }
+.nav-inner { max-width: 100%; }
+@media (max-width: 760px) {
+  .nav-inner { padding: 0 14px; gap: 6px; }
+  .brand { margin-right: 10px; }
+  .nav-toggle { display: inline-block; margin-left: auto; }
+  .nav-links { z-index: 40; max-height: calc(100vh - 60px); overflow-y: auto; }
+  /* .nav-drop is a wrapper span around the Lab link, so without this it sits
+     at a different rhythm than its siblings in the stacked panel. */
+  .nav-drop, .nav-drop > .navlink { display: block; width: 100%; }
+  .nav-links > .navlink, .nav-drop > .navlink { padding: 12px 10px; }
+  .nav-links { gap: 0; }
+  .nav-links > .navlink:not(.navlink-cta), .nav-drop { border-bottom: 1px solid var(--border); }
+  .nav-links > .navlink-cta { margin-top: 12px; padding: 14px 10px; }
+}
