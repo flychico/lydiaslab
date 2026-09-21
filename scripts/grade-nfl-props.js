@@ -36,6 +36,7 @@ const path = require("path");
 const { execFileSync } = require("child_process");
 const { splitCsv } = require("./lib/odds-history");
 const { keyFull, keyInitialLast } = require("./lib/nfl-names");
+const { frozenProps } = require("./lib/prediction-history");
 
 const SEASON = 2026;
 const REL = "https://github.com/nflverse/nflverse-data/releases/download";
@@ -51,7 +52,20 @@ const r3 = x => x == null ? null : Math.round(x * 1000) / 1000;
 
 const COLS = ["date","graded_at","week","game_id","matchup","team","opponent","player","position","depth",
               "market","model_version","projection","line","lean","actual","result","abs_error",
-              "line_abs_error","beat_line","brier","variance_class","excluded","exclude_reason"];
+              "line_abs_error","beat_line","brier","variance_class","excluded","exclude_reason",
+              // FACTORS — the inputs the projection was built from, frozen at
+              // prediction time, plus what actually happened to each of them.
+              // This is what makes error attributable instead of just measured.
+              "rate_used","expected_volume","opp_adjustment","games_played",
+              "actual_rate","actual_volume","rate_effect","volume_effect",
+              "frozen_minutes_before_kickoff"];
+
+// The volume stat each market's rate is per-unit-of.
+const VOLUME = {
+  QB_PASS_YARDS: r => n(r.attempts),
+  RB_RUSH_YARDS: r => n(r.carries),
+  WR_REC_YARDS:  r => n(r.targets)
+};
 
 // Our market -> the nflverse weekly column that realises it.
 const ACTUAL = {
@@ -72,10 +86,35 @@ function parseCSV(text) {
 }
 
 function main() {
-  const propsFile = path.join(DIR, `props-${DATE}.json`);
-  if (!fs.existsSync(propsFile)) { console.log(`No props-${DATE}.json — nothing to grade.`); return; }
-  const props = JSON.parse(fs.readFileSync(propsFile, "utf8"));
-  if (!Array.isArray(props) || !props.length) { console.log("Props file empty."); return; }
+  /*
+    GRADE THE FROZEN PROJECTION. props-{date}.json is rebuilt by every
+    prepare-slate run from that week's player stats -- so a rerun after
+    kickoff projects players whose numbers it has already seen. On 2026-09-20
+    that rewrote 198 of 290 projections, moving Tyler Shough from 297 to 269
+    after he threw for 252 and turning a 45-yard miss into an apparent 17.
+  */
+  let props = frozenProps(path.join(DIR, "prop-prediction-history.csv"), DATE);
+  let source = "";
+  if (props.length) {
+    const lead = props.map(p => p.minutes_before_kickoff);
+    source = `frozen pre-kickoff projections (${props.length}, ${Math.min(...lead)}-${Math.max(...lead)} min before kickoff)`;
+    // Line / lean / injury flags live on the merged file, not the frozen one.
+    const live = fs.existsSync(path.join(DIR, `props-${DATE}.json`))
+      ? JSON.parse(fs.readFileSync(path.join(DIR, `props-${DATE}.json`), "utf8")) : [];
+    const byKey = new Map(live.map(r => [`${r.matchup}|${r.market}|${r.player}`, r]));
+    props = props.map(p => {
+      const m = byKey.get(`${p.matchup}|${p.market}|${p.player}`) || {};
+      return { ...p, line: m.line, lean: m.lean, market_prob: m.market_prob,
+               lean_blocked: m.lean_blocked, sidelined: m.sidelined,
+               injury_status: m.injury_status };
+    });
+  } else {
+    const propsFile = path.join(DIR, `props-${DATE}.json`);
+    if (!fs.existsSync(propsFile)) { console.log(`No frozen projections and no props-${DATE}.json — nothing to grade.`); return; }
+    props = JSON.parse(fs.readFileSync(propsFile, "utf8"));
+    if (!Array.isArray(props) || !props.length) { console.log("Props file empty."); return; }
+    source = `props-${DATE}.json — WARNING: rewritten by every prepare-slate run, may contain post-kickoff revisions`;
+  }
 
   if (fs.existsSync(LEDGER) && !FORCE) {
     if (fs.readFileSync(LEDGER, "utf8").split(/\r?\n/).some(l => l.startsWith(DATE + ","))) {
@@ -128,7 +167,11 @@ function main() {
       date: DATE, graded_at: gradedAt, week, game_id: p.game_id, matchup: p.matchup,
       team: p.team, opponent: p.opponent, player: p.player, position: p.position,
       depth: p.depth || "", market: p.market, model_version: p.model_version,
-      projection: p.projection, line: p.line ?? (p.market_prob ?? ""), lean: p.lean || ""
+      projection: p.projection, line: p.line ?? (p.market_prob ?? ""), lean: p.lean || "",
+      rate_used: p.rate_used ?? "", expected_volume: p.expected_volume ?? "",
+      opp_adjustment: p.opp_adjustment ?? "", games_played: p.games_played ?? "",
+      frozen_minutes_before_kickoff: p.minutes_before_kickoff ?? "",
+      actual_rate: "", actual_volume: "", rate_effect: "", volume_effect: ""
     };
 
     if (p.sidelined) {
@@ -163,6 +206,24 @@ function main() {
                       : res === "L" ? (Math.abs(p.projection - actual) >= 0.6 ? "good_pick_lost" : "bad_pick_lost") : "",
         excluded: "", exclude_reason: "" });
     } else {
+      /*
+        ERROR ATTRIBUTION. A projection is rate x volume. Knowing it missed by
+        45 yards says nothing useful; knowing the RATE was right and the
+        VOLUME was wrong says which half of the model to fix.
+
+        Exact decomposition, since both terms sum to the total miss:
+          volume_effect = (actual_vol  - proj_vol)  * proj_rate
+          rate_effect   = (actual_rate - proj_rate) * actual_vol
+      */
+      const volFn = VOLUME[p.market];
+      const aVol = volFn ? volFn(stat) : null;
+      const aRate = (aVol != null && aVol > 0) ? actual / aVol : null;
+      if (aVol != null) base.actual_volume = r3(aVol);
+      if (aRate != null) base.actual_rate = r3(aRate);
+      if (aVol != null && aRate != null && p.rate_used != null && p.expected_volume != null) {
+        base.volume_effect = r3((aVol - p.expected_volume) * p.rate_used);
+        base.rate_effect   = r3((aRate - p.rate_used) * aVol);
+      }
       const err = Math.abs(p.projection - actual);
       const line = p.line;
       const lineErr = line == null ? null : Math.abs(line - actual);
@@ -183,6 +244,7 @@ function main() {
   }
 
   console.log(`\nNFL PROP GRADING — ${DATE} (week ${week})\n${"=".repeat(58)}`);
+  console.log(`  source: ${source}`);
   console.log(`  projections        ${props.length}`);
   console.log(`  graded             ${graded}`);
   console.log(`  excluded (injury)  ${excluded}`);

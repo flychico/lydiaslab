@@ -128,4 +128,75 @@ function frozenPredictions(file, date) {
   return out;
 }
 
-module.exports = { record, frozenPredictions, kickoffUtc, COLS };
+/*
+  PROP PREDICTIONS — same freeze, same reason.
+
+  generate-nfl-props.js rebuilds every projection from weekly player stats,
+  and a rerun after kickoff has that week's stats in hand. On 2026-09-20, 198
+  of 290 projections were rewritten post-kickoff; Tyler Shough's passing
+  projection moved from 297 to 269 once the model could see he threw for 252,
+  turning a 45-yard miss into an apparent 17-yard one.
+
+  The FACTORS are frozen alongside the projection -- rate_used,
+  expected_volume, opp_adjustment, games_played. Those are the inputs the
+  learning system attributes error to, so a revised factor is exactly as
+  corrupting as a revised projection, and harder to notice.
+*/
+const PROP_COLS = [
+  "captured_at","date","game_id","matchup","kickoff_utc","team","opponent",
+  "player","position","depth","market","model_version","projection",
+  "rate_used","expected_volume","opp_adjustment","games_played"
+];
+const PROP_VALUES = ["projection","rate_used","expected_volume","opp_adjustment","games_played"];
+
+function recordProps(dir, props, kickoffByMatchup) {
+  if (!Array.isArray(props) || !props.length) return { appended: 0, unchanged: 0 };
+  const capturedAt = new Date().toISOString();
+  const rows = props.map(p => ({
+    captured_at: capturedAt, date: p.date, game_id: p.game_id, matchup: p.matchup,
+    kickoff_utc: (kickoffByMatchup && kickoffByMatchup[p.matchup]) || "",
+    team: p.team, opponent: p.opponent, player: p.player,
+    position: p.position, depth: p.depth || "", market: p.market,
+    model_version: p.model_version, projection: p.projection,
+    rate_used: p.rate_used ?? "", expected_volume: p.expected_volume ?? "",
+    opp_adjustment: p.opp_adjustment ?? "", games_played: p.games_played ?? ""
+  }));
+  return appendObservations(path.join(dir, "prop-prediction-history.csv"), PROP_COLS, rows,
+                            ["date","matchup","market","player"], PROP_VALUES);
+}
+
+function frozenProps(file, date) {
+  if (!fs.existsSync(file)) return [];
+  const lines = fs.readFileSync(file, "utf8").split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) return [];
+  const header = splitCsv(lines[0]);
+  const best = new Map();
+  let afterKick = 0, noKick = 0;
+  for (let i = 1; i < lines.length; i++) {
+    const c = splitCsv(lines[i]);
+    const row = {}; header.forEach((h, j) => row[h] = c[j]);
+    if (date && row.date !== date) continue;
+    const cap = Date.parse(row.captured_at), kick = Date.parse(row.kickoff_utc);
+    if (!Number.isFinite(kick)) { noKick++; continue; }
+    if (!(cap < kick)) { afterKick++; continue; }
+    const k = `${row.matchup}\u0001${row.market}\u0001${row.player}`;
+    const prev = best.get(k);
+    if (!prev || cap > prev._cap) { row._cap = cap; best.set(k, row); }
+  }
+  const num = v => { const x = parseFloat(v); return Number.isFinite(x) ? x : null; };
+  const out = [...best.values()].map(r => ({
+    date: r.date, game_id: r.game_id, matchup: r.matchup,
+    team: r.team, opponent: r.opponent, player: r.player,
+    position: r.position, depth: r.depth || null, market: r.market,
+    model_version: r.model_version, projection: num(r.projection),
+    rate_used: num(r.rate_used), expected_volume: num(r.expected_volume),
+    opp_adjustment: num(r.opp_adjustment), games_played: num(r.games_played),
+    captured_at: r.captured_at, kickoff_utc: r.kickoff_utc,
+    minutes_before_kickoff: Math.round((Date.parse(r.kickoff_utc) - r._cap) / 60000)
+  }));
+  out._skippedAfterKickoff = afterKick;
+  out._skippedNoKickoff = noKick;
+  return out;
+}
+
+module.exports = { record, frozenPredictions, recordProps, frozenProps, kickoffUtc, COLS, PROP_COLS };

@@ -96,6 +96,11 @@ jobs:
       - name: Build head-to-head tracker
         run: node scripts/generate-nfl-tracker.js
 
+      # Factor attribution per market, from frozen pre-kickoff projections.
+      # Answers WHICH input made a projection wrong, not just that it was.
+      - name: Learning — factor reports
+        run: node scripts/generate-nfl-learning.js
+
       - name: Health check
         run: node scripts/nfl-healthcheck.js
 

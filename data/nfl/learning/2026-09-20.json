@@ -1,0 +1,219 @@
+{
+  "generated_at": "2026-09-21T00:53:39.897Z",
+  "through": "2026-09-20",
+  "slates": 1,
+  "graded_rows": 272,
+  "markets": [
+    {
+      "market": "QB_PASS_YARDS",
+      "label": "QB passing",
+      "n": 26,
+      "rate_unit": "yards per attempt",
+      "volume_unit": "attempts",
+      "projection": {
+        "mae": 66,
+        "bias": -8.38
+      },
+      "rate": {
+        "projected": 7.18,
+        "actual": 7.26,
+        "bias": 0.08,
+        "mae": 1.94
+      },
+      "volume": {
+        "projected": 29.47,
+        "actual": 29.42,
+        "bias": -0.05,
+        "mae": 7
+      },
+      "attribution": {
+        "rate_yards": 55.04,
+        "volume_yards": 49.86,
+        "dominant": "rate"
+      },
+      "opponent_adjustment": {
+        "mean": 1,
+        "mae_with": 66,
+        "mae_without": 63.92,
+        "helps": false
+      },
+      "by_sample": [
+        {
+          "bucket": "1 game",
+          "n": 26,
+          "mae": 66
+        }
+      ],
+      "vs_line": {
+        "beat": 7,
+        "compared": 26,
+        "beat_pct": 26.92,
+        "our_mae": 66,
+        "line_mae": 54.69
+      }
+    },
+    {
+      "market": "RB_RUSH_YARDS",
+      "label": "RB rushing",
+      "n": 49,
+      "rate_unit": "yards per carry",
+      "volume_unit": "carries",
+      "projection": {
+        "mae": 24.53,
+        "bias": -13.51
+      },
+      "rate": {
+        "projected": 4.07,
+        "actual": 3.37,
+        "bias": -0.71,
+        "mae": 1.54
+      },
+      "volume": {
+        "projected": 10.34,
+        "actual": 9.39,
+        "bias": -0.95,
+        "mae": 3.61
+      },
+      "attribution": {
+        "rate_yards": 12.07,
+        "volume_yards": 14.42,
+        "dominant": "volume"
+      },
+      "opponent_adjustment": {
+        "mean": 0.99,
+        "mae_with": 24.53,
+        "mae_without": 24.79,
+        "helps": true
+      },
+      "by_sample": [
+        {
+          "bucket": "1 game",
+          "n": 49,
+          "mae": 24.53
+        }
+      ],
+      "vs_line": {
+        "beat": 16,
+        "compared": 44,
+        "beat_pct": 36.36,
+        "our_mae": 25.3,
+        "line_mae": 19.95
+      }
+    },
+    {
+      "market": "WR_REC_YARDS",
+      "label": "WR receiving",
+      "n": 74,
+      "rate_unit": "yards per target",
+      "volume_unit": "targets",
+      "projection": {
+        "mae": 26.86,
+        "bias": -1.73
+      },
+      "rate": {
+        "projected": 8.31,
+        "actual": 8.24,
+        "bias": -0.07,
+        "mae": 4.81
+      },
+      "volume": {
+        "projected": 5.29,
+        "actual": 5.3,
+        "bias": 0.01,
+        "mae": 2.35
+      },
+      "attribution": {
+        "rate_yards": 22.25,
+        "volume_yards": 20.4,
+        "dominant": "rate"
+      },
+      "opponent_adjustment": {
+        "mean": 0.99,
+        "mae_with": 26.86,
+        "mae_without": 26.99,
+        "helps": true
+      },
+      "by_sample": [
+        {
+          "bucket": "1 game",
+          "n": 74,
+          "mae": 26.86
+        }
+      ],
+      "vs_line": {
+        "beat": 27,
+        "compared": 68,
+        "beat_pct": 39.71,
+        "our_mae": 27.66,
+        "line_mae": 23.06
+      }
+    }
+  ],
+  "findings": [
+    {
+      "market": "QB passing",
+      "title": "Where the error lives",
+      "read": "Rate is the larger source of error (49.86 yds from volume vs 55.04 from rate). Fix the rate model first; tuning the other half cannot recover this."
+    },
+    {
+      "market": "QB passing",
+      "title": "Volume bias",
+      "read": "We OVER-project attempts by 0.05 per player (projected 29.47, actual 29.42)."
+    },
+    {
+      "market": "QB passing",
+      "title": "Rate bias",
+      "read": "yards per attempt is under-projected by 0.08 (projected 7.18, actual 7.26)."
+    },
+    {
+      "market": "QB passing",
+      "title": "Opponent adjustment is costing accuracy",
+      "read": "Error with the adjustment 66, without it 63.92. Removing it would be more accurate on this sample."
+    },
+    {
+      "market": "QB passing",
+      "title": "Against the closing line",
+      "read": "Beat the line on 7/26 (26.92%). Our MAE 66 vs the line's 54.69. The book is the better projection."
+    },
+    {
+      "market": "RB rushing",
+      "title": "Where the error lives",
+      "read": "Volume is the larger source of error (14.42 yds from volume vs 12.07 from rate). Fix the volume model first; tuning the other half cannot recover this."
+    },
+    {
+      "market": "RB rushing",
+      "title": "Volume bias",
+      "read": "We OVER-project carries by 0.95 per player (projected 10.34, actual 9.39)."
+    },
+    {
+      "market": "RB rushing",
+      "title": "Rate bias",
+      "read": "yards per carry is over-projected by 0.71 (projected 4.07, actual 3.37)."
+    },
+    {
+      "market": "RB rushing",
+      "title": "Against the closing line",
+      "read": "Beat the line on 16/44 (36.36%). Our MAE 25.3 vs the line's 19.95. The book is the better projection."
+    },
+    {
+      "market": "WR receiving",
+      "title": "Where the error lives",
+      "read": "Rate is the larger source of error (20.4 yds from volume vs 22.25 from rate). Fix the rate model first; tuning the other half cannot recover this."
+    },
+    {
+      "market": "WR receiving",
+      "title": "Volume bias",
+      "read": "We under-project targets by 0.01 per player (projected 5.29, actual 5.3)."
+    },
+    {
+      "market": "WR receiving",
+      "title": "Rate bias",
+      "read": "yards per target is over-projected by 0.07 (projected 8.31, actual 8.24)."
+    },
+    {
+      "market": "WR receiving",
+      "title": "Against the closing line",
+      "read": "Beat the line on 27/68 (39.71%). Our MAE 27.66 vs the line's 23.06. The book is the better projection."
+    }
+  ]
+}

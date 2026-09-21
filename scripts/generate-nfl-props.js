@@ -244,6 +244,26 @@ function anytimeTD(e, field, base, adj) {
     console.log("  props: empty for this date, leaving props-today.json untouched");
   }
 
+  /*
+    FREEZE THE PROJECTION AND ITS FACTORS before anything can revise them.
+    A prepare-slate rerun after kickoff has that week's player stats in hand
+    and rebuilds every projection from them -- 198 of 290 were rewritten this
+    way on 2026-09-20. The factors move with the projection, which matters
+    more: they are what the learning system attributes error to.
+  */
+  try {
+    const { recordProps, kickoffUtc } = require("./lib/prediction-history");
+    const kickoffs = {};
+    for (const g of slate) {
+      kickoffs[`${g.away_team} @ ${g.home_team}`] = kickoffUtc(g.gameday, g.gametime);
+    }
+    const h = recordProps(path.join(ROOT, "data/nfl"), props, kickoffs);
+    console.log(`  prop history: +${h.appended} new/changed, ${h.unchanged} unchanged` +
+                (h.created ? " (created prop-prediction-history.csv)" : ""));
+  } catch (e) {
+    console.warn(`  prop history NOT written: ${e.message}`);
+  }
+
   // unified log schema (claude/MODEL_IMPROVEMENT_FRAMEWORK.md)
   const logPath = path.join(ROOT, "data/nfl/nfl-props-log.csv");
   const header = "date,game_id,matchup,market,model_version,status,player,position,model_value,opp_adjustment,games_played,result,actual_value\n";

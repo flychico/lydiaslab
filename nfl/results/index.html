@@ -139,6 +139,7 @@
       <button class="control-btn" type="button" data-grp="WR">WR</button>
       <button class="control-btn" type="button" data-grp="ML">Moneyline</button>
     </div>
+    <div class="view-controls filters" role="group" aria-label="Filter by week" id="weekFilter"></div>
     <div class="view-controls filters" role="group" aria-label="Filter by outcome">
       <button class="control-btn active" type="button" data-res="all">Both</button>
       <button class="control-btn" type="button" data-res="W">Right</button>
@@ -158,7 +159,7 @@ renderNav("/articles/"); renderFooter();
 const statusEl=document.getElementById("status"),
       bodyEl=document.getElementById("body"),
       recEl=document.getElementById("records");
-let data=null, grp="all", res="all";
+let data=null, grp="all", res="all", wk="all";
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 async function tryJson(u){try{const r=await fetch(u,{cache:"no-store"});return r.ok?await r.json():null;}catch(e){return null;}}
@@ -176,6 +177,21 @@ document.querySelectorAll("[data-res]").forEach(b=>b.addEventListener("click",()
   render();
 }));
 
+/* Week chips are built from the feed rather than hardcoded, so the row grows
+   with the season and never offers a week with nothing behind it. */
+function renderWeekFilter(){
+  const el=document.getElementById("weekFilter");
+  const weeks=(data.weeks||[]).slice().sort((a,b)=>Number(a)-Number(b));
+  if(weeks.length<2){ el.remove(); return; }   // one week is not a filter
+  el.innerHTML='<button class="control-btn active" type="button" data-wk="all">All weeks</button>'+
+    weeks.map(w=>'<button class="control-btn" type="button" data-wk="'+esc(w)+'">Wk '+esc(w)+'</button>').join("");
+  el.querySelectorAll("[data-wk]").forEach(b=>b.addEventListener("click",()=>{
+    wk=b.dataset.wk;
+    el.querySelectorAll("[data-wk]").forEach(x=>x.classList.toggle("active",x===b));
+    renderRecords(); render();
+  }));
+}
+
 (async function(){
   data=await tryJson("/data/nfl/tracker.json");
   if(!data||!data.summary){
@@ -183,8 +199,25 @@ document.querySelectorAll("[data-res]").forEach(b=>b.addEventListener("click",()
     return;
   }
   statusEl.style.display="none";
-  renderRecords(); render();
+  renderWeekFilter(); renderRecords(); render();
 })();
+
+const inWeek=r=>wk==="all"||String(r.week)===String(wk);
+
+/* When a week is selected the headline records must describe THAT week, not
+   the season. Showing a season record above a single week's rows is the kind
+   of quiet mismatch nobody notices and everybody misreads. */
+function tallyFor(rows){
+  const s={w:0,l:0,p:0,beat:0,cmp:0};
+  for(const r of rows){
+    if(r.result==="W")s.w++; else if(r.result==="L")s.l++; else if(r.result==="P")s.p++;
+    if(r.beat){s.cmp++; if(r.beat==="Y")s.beat++;}
+  }
+  const dec=s.w+s.l;
+  return {w:s.w,l:s.l,p:s.p,decided:dec,
+    win_pct:dec?100*s.w/dec:null,
+    beat:s.beat,compared:s.cmp,beat_pct:s.cmp?100*s.beat/s.cmp:null};
+}
 
 /* A record tile shows two different things and the difference matters:
    win-loss is how often the side was right; beat-line is how often Leo's
@@ -202,7 +235,15 @@ function recTile(label,s,note){
 }
 
 function renderRecords(){
-  const p=data.summary.props, m=data.summary.moneyline;
+  // Season totals come precomputed; a week view is tallied on the spot.
+  const all=data.props.filter(inWeek);
+  const p = wk==="all" ? data.summary.props : {
+    all: tallyFor(all),
+    QB:  tallyFor(all.filter(r=>r.group==="QB")),
+    RB:  tallyFor(all.filter(r=>r.group==="RB")),
+    WR:  tallyFor(all.filter(r=>r.group==="WR"))
+  };
+  const m = wk==="all" ? data.summary.moneyline : tallyFor(data.games.filter(inWeek));
   recEl.innerHTML=
     recTile("All prop calls",p.all)+
     recTile("Quarterbacks",p.QB)+
@@ -251,13 +292,13 @@ function section(title,count,rowsHtml){
 }
 
 function render(){
-  const keep=r=>res==="all"||r.result===res;
+  const keep=r=>(res==="all"||r.result===res)&&inWeek(r);
   let html="";
 
   if(grp==="ML"||grp==="all"){
     const g=data.games.filter(keep);
     if(g.length){
-      const s=data.summary.moneyline;
+      const s=wk==="all"?data.summary.moneyline:tallyFor(g);
       html+=section("Moneyline",s.w+"–"+s.l+(s.beat_pct!=null?"  ·  beat the market "+s.beat_pct.toFixed(0)+"%":""),
                     g.map(gameRow).join(""));
     }
@@ -266,7 +307,7 @@ function render(){
     if(grp!=="all"&&grp!==key) continue;
     const rows=data.props.filter(p=>p.group===key).filter(keep);
     if(!rows.length) continue;
-    const s=data.summary.props[key];
+    const s=wk==="all"?data.summary.props[key]:tallyFor(rows);
     const label={QB:"Quarterbacks · passing yards",RB:"Running backs · rushing yards",WR:"Receivers · receiving yards"}[key];
     html+=section(label, s.w+"–"+s.l+(s.beat_pct!=null?"  ·  beat the line "+s.beat_pct.toFixed(0)+"%":""),
                   rows.map(propRow).join(""));
