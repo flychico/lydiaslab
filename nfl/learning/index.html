@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XVWTMDNBJK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XVWTMDNBJK');
+</script>
+
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NFL Learning | Leo</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Leo">
+<meta property="og:title" content="NFL Learning | Leo">
+<meta property="og:description" content="Where Leo's NFL yardage projections miss, and why: rate versus volume, opponent adjustment, and the book's line.">
+<meta property="og:url" content="https://ndhorizon.com/nfl/learning/">
+<meta property="og:image" content="https://ndhorizon.com/img/og-card.png">
+<meta name="description" content="Where Leo's NFL yardage projections miss, and why: rate versus volume, opponent adjustment, and the book's line.">
+<link rel="canonical" href="https://ndhorizon.com/nfl/learning/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127944;</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/scoreboard.css">
+<style>
+/* Scoped to this page: scoreboard.css is shared with MLB (NFL_WATCH_LIST #18).
+   Gold fails as text on cream (#16) -- values are navy, green or red only. */
+.lrn-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;}
+.mk{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:15px 17px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:12px;min-width:0;}
+.mk h2{margin:0;font-size:1.05rem;}
+.mk .n{font-size:.76rem;color:var(--text-dim);}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.stat{background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;padding:9px 11px;}
+.stat .k{font-size:.62rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--text-dim);}
+.stat .v{font-size:1.25rem;font-weight:800;font-variant-numeric:tabular-nums;color:var(--accent2);line-height:1.2;}
+.stat .s{font-size:.72rem;color:var(--text-dim);}
+.good{color:var(--good)!important}.bad{color:var(--danger)!important}
+.split .lab{display:flex;justify-content:space-between;font-size:.74rem;color:var(--text-dim);margin-bottom:4px;}
+.bar{display:flex;height:12px;border-radius:999px;overflow:hidden;border:1px solid var(--border);background:var(--bg-elev);}
+.bar .r{background:var(--navy-deep);}.bar .vv{background:var(--gold-deep);}
+table.fx{width:100%;border-collapse:collapse;font-size:.82rem;}
+table.fx th,table.fx td{padding:6px 4px;border-bottom:1px solid var(--border);text-align:right;font-variant-numeric:tabular-nums;}
+table.fx th:first-child,table.fx td:first-child{text-align:left;}
+table.fx th{font-size:.66rem;letter-spacing:.07em;text-transform:uppercase;color:var(--text-dim);font-weight:800;}
+.reads{margin:0;padding-left:18px;font-size:.84rem;line-height:1.5;}
+.reads li{margin:3px 0;}
+.honest{background:var(--bg-elev);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:12px;padding:13px 16px;font-size:.86rem;color:var(--text-dim);line-height:1.55;}
+.honest b{color:var(--text);}
+.hist-wrap{overflow-x:auto;}
+h2.sec{font-size:1.02rem;margin:22px 0 8px;}
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main class="scoreboard-shell">
+  <section class="score-hero">
+    <p class="eyebrow">Graded from frozen, pre-kickoff projections only.</p>
+    <h1>NFL Learning</h1>
+    <p class="subtitle">Every yardage projection is <b>rate &times; volume &times; opponent adjustment</b>. When one misses, this page splits the miss into its parts so we know which half of the model to fix, and compares Leo to the sportsbook's line.</p>
+  </section>
+
+  <div id="status" class="loading">Loading&hellip;</div>
+  <div id="summary"></div>
+  <section class="lrn-grid" id="markets" aria-live="polite"></section>
+  <div id="history"></div>
+
+  <p class="data-note">Rate is yards per attempt (QB), per carry (RB) or per target (WR). Volume is attempts, carries or targets. "Error from rate" is how many yards the miss would have been if only the rate had been wrong; the same for volume. Updated after every graded slate by the NFL grading workflow.</p>
+</main>
+<footer id="footer"></footer><script src="/js/app.js"></script>
+<script>
+renderNav("/articles/"); renderFooter();
+
+const $ = id => document.getElementById(id);
+const fmt = (x, d = 1) => x == null || isNaN(x) ? "&ndash;" : Number(x).toFixed(d);
+const sign = (x, d = 1) => x == null ? "&ndash;" : (x > 0 ? "+" : "") + Number(x).toFixed(d);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+
+function card(m, reads) {
+  const vl = m.vs_line || {}, oa = m.opponent_adjustment || {}, at = m.attribution || {};
+  const ahead = vl.our_mae != null && vl.line_mae != null && vl.our_mae < vl.line_mae;
+  const tot = (at.rate_yards || 0) + (at.volume_yards || 0);
+  const rp = tot ? Math.round(100 * at.rate_yards / tot) : 50;
+  const unitR = m.rate_unit, unitV = m.volume_unit;
+  return `<article class="mk">
+    <div><h2>${esc(m.label)} yards</h2><span class="n">${m.n} players graded</span></div>
+    <div class="pair">
+      <div class="stat"><div class="k">Leo average miss</div><div class="v ${ahead ? "good" : "bad"}">${fmt(vl.our_mae ?? m.projection.mae)} yds</div><div class="s">Book's line missed by ${fmt(vl.line_mae)}</div></div>
+      <div class="stat"><div class="k">Closer than the book</div><div class="v ${vl.beat_pct >= 50 ? "good" : "bad"}">${fmt(vl.beat_pct, 0)}%</div><div class="s">${vl.beat ?? 0} of ${vl.compared ?? 0} players</div></div>
+    </div>
+    <div class="split">
+      <div class="lab"><span>Error from rate: <b>${fmt(at.rate_yards)} yds</b></span><span>from volume: <b>${fmt(at.volume_yards)} yds</b></span></div>
+      <div class="bar" aria-hidden="true"><span class="r" style="width:${rp}%"></span><span class="vv" style="width:${100 - rp}%"></span></div>
+    </div>
+    <table class="fx">
+      <thead><tr><th></th><th>Leo said</th><th>Actual</th><th>Off by</th></tr></thead>
+      <tbody>
+        <tr><td>${esc(unitR)}</td><td>${fmt(m.rate.projected, 2)}</td><td>${fmt(m.rate.actual, 2)}</td><td>${sign(m.rate.bias, 2)}</td></tr>
+        <tr><td>${esc(unitV)}</td><td>${fmt(m.volume.projected)}</td><td>${fmt(m.volume.actual)}</td><td>${sign(m.volume.bias)}</td></tr>
+        <tr><td>Total yards (average)</td><td colspan="2"></td><td>${sign(m.projection.bias)}</td></tr>
+        <tr><td>Opponent adjustment</td><td>with ${fmt(oa.mae_with)}</td><td>without ${fmt(oa.mae_without)}</td><td class="${oa.helps ? "good" : "bad"}">${oa.helps ? "helps" : "hurts"}</td></tr>
+      </tbody>
+    </table>
+    ${reads.length ? `<ul class="reads">${reads.map(r => `<li><b>${esc(r.title)}.</b> ${esc(r.read)}</li>`).join("")}</ul>` : ""}
+  </article>`;
+}
+
+function history(csv) {
+  const lines = csv.trim().split(/\r?\n/); if (lines.length < 2) return "";
+  const h = lines[0].split(","); const rows = lines.slice(1).map(l => { const c = l.split(","); const o = {}; h.forEach((k, i) => o[k] = c[i]); return o; });
+  const runs = [...new Set(rows.map(r => r.through))];
+  if (runs.length < 2) return "";
+  const lab = { QB_PASS_YARDS: "QB passing", RB_RUSH_YARDS: "RB rushing", WR_REC_YARDS: "WR receiving" };
+  return `<h2 class="sec">Run by run</h2><div class="hist-wrap"><table class="fx"><thead><tr><th>Through</th><th>Market</th><th>n</th><th>Leo miss</th><th>Book miss</th><th>Closer %</th><th>Main error</th></tr></thead><tbody>`
+    + rows.slice().reverse().map(r => `<tr><td>${esc(r.through)}</td><td>${esc(lab[r.market] || r.market)}</td><td>${esc(r.n)}</td><td>${esc(r.our_mae || r.proj_mae)}</td><td>${esc(r.line_mae)}</td><td>${esc(r.beat_line_pct)}</td><td>${esc(r.dominant)}</td></tr>`).join("")
+    + `</tbody></table></div>`;
+}
+
+Promise.all([
+  fetch("/data/nfl/nfl-learning.json", { cache: "no-store" }).then(r => r.ok ? r.json() : null),
+  fetch("/data/nfl/learning_factors.csv", { cache: "no-store" }).then(r => r.ok ? r.text() : "").catch(() => "")
+]).then(([j, csv]) => {
+  if (!j || !j.markets || !j.markets.length) { $("status").textContent = "Nothing graded yet. This fills in after the first slate is graded."; return; }
+  $("status").remove();
+  const behind = j.markets.filter(m => m.vs_line && m.vs_line.our_mae > m.vs_line.line_mae).length;
+  $("summary").innerHTML = `<div class="honest" style="margin-bottom:14px"><b>Through ${esc(j.through)}</b> &middot; ${j.slates} graded slate${j.slates === 1 ? "" : "s"} &middot; ${j.graded_rows} graded player lines. `
+    + (behind ? `The book's line is the better projection in ${behind} of ${j.markets.length} markets right now. Small sample: one slate is not enough to change the model, and nothing here is changed without the test in the Model Improvement Framework.` : `Leo is closer than the book in every market so far, on a small sample.`)
+    + `</div>`;
+  $("markets").innerHTML = j.markets.map(m => card(m, (j.findings || []).filter(f => f.market === m.label && f.title !== "Against the closing line"))).join("");
+  $("history").innerHTML = history(csv);
+}).catch(() => { $("status").textContent = "Could not load the learning data."; });
+</script>
+</body>
+</html>

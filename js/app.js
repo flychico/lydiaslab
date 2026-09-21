@@ -79,6 +79,10 @@ const Sport = {
       const p = String(location.pathname || "").toLowerCase();
       if (p.startsWith("/nfl/")) return "NFL";
       if (p.startsWith("/mlb/")) return "MLB";
+      // MLB's own sections live at the root. Treat them as MLB too, or a
+      // visitor coming back from NFL got NFL nav on an MLB page and the
+      // toggle did nothing. Home, membership and articles stay neutral.
+      if (/^\/(scoreboard|previews|picks|stats|results|recaps|tools|member-brief|learning|matchups)\//.test(p)) return "MLB";
     } catch (e) {}
     return null;
   },
@@ -177,11 +181,15 @@ function renderNav(active) {
       e.preventDefault();
       var newSport = btn.getAttribute("data-sport");
       if (newSport === sport) return;
-      // MLB lives at the site root, NFL under /nfl/. Derive the page slug by
-      // stripping the CURRENT sport's prefix, then re-prefix it for the new one.
+      // Go to the same page in the other sport when one exists, otherwise to
+      // that sport's scoreboard. MLB sections live at the site root but MLB
+      // game pages live under /mlb/, NFL everything under /nfl/ -- so strip
+      // whichever prefix the URL actually has, not the sport's nav prefix
+      // (that is what sent /mlb/<game>/ to /nfl/mlb/<game>/).
       var newPrefix = newSport === "MLB" ? "/" : "/" + newSport.toLowerCase() + "/";
+      var board = newPrefix + "scoreboard/";
       var path = window.location.pathname;
-      var slug = path.indexOf(prefix) === 0 ? path.slice(prefix.length) : path.replace(/^\//, "");
+      var slug = path.replace(/^\/(nfl|mlb)\//i, "").replace(/^\//, "");
       // Pages whose route genuinely differs between the two sports.
       var XWALK = {
         "MLB>NFL": { "tools/strikeout-projections/": "tools/player-props/" },
@@ -190,7 +198,21 @@ function renderNav(active) {
       var map = XWALK[sport + ">" + newSport] || {};
       if (map[slug]) slug = map[slug];
       Sport.set(newSport);
-      window.location.href = newPrefix + slug;
+      // A game page never has a twin in the other sport; home has no sport.
+      if (!slug || slug === "index.html" || /-prediction-odds-/.test(slug)) {
+        window.location.href = board; return;
+      }
+      var target = newPrefix + slug;
+      // Ask the server whether the twin exists; anything but a 2xx (404,
+      // offline, timeout) falls back to the scoreboard.
+      var done = false;
+      var go = function (url) { if (!done) { done = true; window.location.href = url; } };
+      setTimeout(function () { go(board); }, 2500);
+      try {
+        fetch(target, { method: "HEAD", cache: "no-store" })
+          .then(function (r) { go(r.ok ? target : board); })
+          .catch(function () { go(board); });
+      } catch (err) { go(board); }
     });
   });
 
