@@ -32,12 +32,28 @@ const COLS = [
   "captured_at","date","game_id","matchup","away","home","week","kickoff_utc",
   "model_version","pick","model_prob","raw_model_prob","market_prob","price","edge",
   "value_side","proj_total","total_line","total_side","proj_spread","spread_line",
-  "spread_side","exp_margin"
+  "spread_side","exp_margin",
+  /*
+    THE FACTORS BEHIND THE GAME NUMBER, frozen with it.
+
+    The first version stored only the outputs, so when the per-projection
+    factor report was built the component ratings had to be recovered from a
+    git commit. That worked once; it is not a process. Ratings are rebuilt
+    from completed games on every run, so an unfrozen rating is exactly as
+    contaminated as an unfrozen projection -- and being inputs, they are the
+    ones the learning system reasons about.
+  */
+  "away_rating","home_rating","model_weight",
+  "away_qb","away_off","away_def","away_epa_db","away_def_epa",
+  "home_qb","home_off","home_def","home_epa_db","home_def_epa",
+  "h2h_net_home","h2h_qb_edge_home","h2h_turnover_edge_home",
+  "away_exp_points","home_exp_points","roof_adj","wind_adj","over_prob","cover_prob"
 ];
 
 // The values whose change constitutes a new prediction. Anything derived from
 // these (edge, value_side) is along for the ride.
-const VALUES = ["pick","model_prob","raw_model_prob","proj_total","proj_spread","market_prob","price"];
+const VALUES = ["pick","model_prob","raw_model_prob","proj_total","proj_spread","market_prob","price",
+                "away_rating","home_rating"];
 
 /*
   gameday + a "HH:MM" Eastern gametime -> a real UTC instant.
@@ -69,7 +85,9 @@ function kickoffUtc(dateStr, hhmm) {
 function record(dir, picks) {
   if (!Array.isArray(picks) || !picks.length) return { appended: 0, unchanged: 0 };
   const capturedAt = new Date().toISOString();
-  const rows = picks.map(g => ({
+  const rows = picks.map(g => {
+    const aR = g.away_ratings || {}, hR = g.home_ratings || {}, h2 = g.h2h || {};
+    return {
     captured_at: capturedAt, date: g.date, game_id: g.game_id, matchup: g.matchup,
     away: g.away, home: g.home, week: g.week,
     kickoff_utc: kickoffUtc(g.date, g.kickoff),
@@ -79,8 +97,18 @@ function record(dir, picks) {
     value_side: g.value_side ?? "",
     proj_total: g.proj_total ?? "", total_line: g.total_line ?? "", total_side: g.total_side ?? "",
     proj_spread: g.proj_spread ?? "", spread_line: g.spread_line ?? "", spread_side: g.spread_side ?? "",
-    exp_margin: g.exp_margin ?? ""
-  }));
+    exp_margin: g.exp_margin ?? "",
+    away_rating: g.away_rating ?? "", home_rating: g.home_rating ?? "", model_weight: g.model_weight ?? "",
+    away_qb: aR.qb ?? "", away_off: aR.off ?? "", away_def: aR.def ?? "",
+    away_epa_db: aR.epa_per_dropback ?? "", away_def_epa: aR.def_epa_per_play ?? "",
+    home_qb: hR.qb ?? "", home_off: hR.off ?? "", home_def: hR.def ?? "",
+    home_epa_db: hR.epa_per_dropback ?? "", home_def_epa: hR.def_epa_per_play ?? "",
+    h2h_net_home: h2.net_home ?? "", h2h_qb_edge_home: h2.qb_edge_home ?? "",
+    h2h_turnover_edge_home: h2.turnover_edge_home ?? "",
+    away_exp_points: g.away_exp_points ?? "", home_exp_points: g.home_exp_points ?? "",
+    roof_adj: g.roof_adj ?? "", wind_adj: g.wind_adj ?? "",
+    over_prob: g.over_prob ?? "", cover_prob: g.cover_prob ?? ""
+  };});
   return appendObservations(path.join(dir, "prediction-history.csv"), COLS, rows,
                             ["date","game_id"], VALUES);
 }
