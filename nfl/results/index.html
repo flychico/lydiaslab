@@ -12,101 +12,285 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NFL Results and Closing Lines | Leo</title>
+<title>Leo vs the Sportsbooks | Leo</title>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Leo">
-<meta property="og:title" content="NFL Results and Closing Lines | Leo">
-<meta property="og:description" content="Every completed NFL game with final score, closing total, spread result and whether the underdog won.">
+<meta property="og:title" content="Leo vs the Sportsbooks | Leo">
+<meta property="og:description" content="Every call Leo made against a posted NFL line, graded. Quarterbacks, running backs, receivers and moneyline, with a running record.">
 <meta property="og:url" content="https://lydiaslab.com/nfl/results/">
 <meta property="og:image" content="https://lydiaslab.com/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="NFL Results and Closing Lines | Leo">
-<meta name="twitter:description" content="Every completed NFL game with final score, closing total, spread result and whether the underdog won.">
+<meta name="twitter:title" content="Leo vs the Sportsbooks | Leo">
+<meta name="twitter:description" content="Every call Leo made against a posted NFL line, graded. Quarterbacks, running backs, receivers and moneyline, with a running record.">
 <meta name="twitter:image" content="https://lydiaslab.com/img/og-card.png">
 
-<meta name="description" content="Every completed NFL game with final score, closing total, spread result and whether the underdog won.">
+<meta name="description" content="Every call Leo made against a posted NFL line, graded. Quarterbacks, running backs, receivers and moneyline, with a running record.">
 <link rel="canonical" href="https://lydiaslab.com/nfl/results/">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127944;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/scoreboard.css">
 <style>
-.res-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:15px;}
-.res-card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-sm);}
-.res-top{display:flex;justify-content:space-between;align-items:center;padding:10px 15px;border-bottom:1px solid var(--border);background:var(--bg-elev);font-size:.8rem;color:var(--text-dim);}
-.res-body{padding:13px 15px;}
-.res-row{display:flex;align-items:center;gap:10px;padding:6px 0;}
-.res-row img{width:30px;height:30px;object-fit:contain;flex:none;}
-.res-row .nm{flex:1;font-weight:600;font-size:.93rem;}
-.res-row .sc{font-size:1.3rem;font-weight:800;}
-.res-row.win .nm,.res-row.win .sc{font-weight:800;}
-.res-row.lose{opacity:.6;}
-.tag{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;border-radius:999px;}
-.t-over{background:rgba(26,37,53,.13);color:var(--accent);}
-.t-under{background:rgba(217,70,143,.13);color:var(--accent2);}
-.t-push{background:rgba(31,35,40,.10);color:var(--text-dim);}
-@media(max-width:760px){.res-grid{grid-template-columns:1fr;}}
+/* --- head-to-head tracker ------------------------------------------------
+   Scoped here on purpose: css/scoreboard.css is shared with MLB and a change
+   there hits both sports (NFL_WATCH_LIST #18).
+   Gold (#C9A84C) is 2.0:1 on cream and fails as text (#16), so every value
+   below is navy, deep green or deep red -- gold is used only as a fill. */
+
+.trk-list{display:flex;flex-direction:column;gap:9px;}
+
+.trk{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:14px;
+  padding:12px 15px;display:grid;gap:10px;
+  grid-template-columns:34px minmax(0,1.15fr) minmax(0,2fr) auto;
+  align-items:center;box-shadow:var(--shadow-sm);
+}
+.trk > img{width:34px;height:34px;object-fit:contain;}
+
+.trk-who{display:flex;flex-direction:column;gap:1px;min-width:0;}
+.trk-name{font-weight:700;font-size:.95rem;line-height:1.25;}
+.trk-meta{font-size:.72rem;color:var(--text-dim);}
+
+/* the call, read left to right: what the book said, what Leo said, the side */
+.trk-call{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.cell{display:flex;flex-direction:column;gap:1px;min-width:52px;}
+.cell .k{
+  font-size:.62rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--text-dim);
+}
+.cell .v{font-size:.98rem;font-weight:800;font-variant-numeric:tabular-nums;color:var(--accent2);}
+.cell .v.muted{color:var(--text-dim);font-weight:700;}
+
+.side{
+  font-size:.66rem;font-weight:800;letter-spacing:.07em;
+  padding:4px 10px;border-radius:999px;white-space:nowrap;
+  border:1px solid var(--border);background:var(--bg-elev);color:var(--accent2);
+}
+
+.verdict{
+  font-size:.68rem;font-weight:800;letter-spacing:.08em;
+  padding:6px 13px;border-radius:999px;white-space:nowrap;justify-self:end;
+}
+.verdict.w{background:rgba(47,110,74,.13);color:var(--good);border:1px solid rgba(47,110,74,.34);}
+.verdict.l{background:rgba(166,58,46,.13);color:var(--danger);border:1px solid rgba(166,58,46,.34);}
+.verdict.p{background:var(--bg-elev);color:var(--text-dim);border:1px solid var(--border);}
+
+.trk.is-l{opacity:.82;}
+
+/* running record strip */
+.rec-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;}
+.rec{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:14px;
+  padding:13px 15px;display:flex;flex-direction:column;gap:3px;
+}
+.rec .lab{font-size:.64rem;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--text-dim);}
+.rec .big{font-size:1.5rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1;}
+.rec .beat{font-size:.74rem;color:var(--text-dim);}
+.rec .beat b{color:var(--accent2);font-weight:800;}
+.rec.lead{border-color:rgba(47,110,74,.4);}
+
+.honest{
+  background:var(--bg-elev);border:1px solid var(--border);
+  border-left:3px solid var(--accent);border-radius:12px;
+  padding:13px 16px;font-size:.86rem;color:var(--text-dim);line-height:1.55;
+}
+.honest b{color:var(--text);}
+
+.grp-head{
+  display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+  margin:8px 0 2px;padding-bottom:7px;border-bottom:1.5px solid var(--border);
+}
+.grp-head h2{font-size:1.02rem;margin:0;}
+.grp-head .cnt{font-size:.78rem;color:var(--text-dim);font-variant-numeric:tabular-nums;}
+
+@media(max-width:820px){
+  /* Three explicit cells on row 1 (badge, name, verdict) with the call
+     spanning row 2. Without pinning the verdict, auto-placement pushed it to
+     a THIRD row inside the 30px logo column, where justify-self:end threw it
+     off the left edge of the card. */
+  .trk{grid-template-columns:30px minmax(0,1fr) auto;}
+  .trk > img{width:30px;height:30px;}
+  .trk-call{grid-column:1 / -1;grid-row:2;gap:12px;}
+  .verdict{grid-column:3;grid-row:1;justify-self:end;}
+}
+@media(max-width:420px){
+  .trk-call{gap:9px;}
+  .cell{min-width:46px;}
+  .cell .v{font-size:.9rem;}
+}
 </style>
 </head>
 <body>
 <nav id="nav"></nav>
 <main class="scoreboard-shell">
   <section class="score-hero">
-    <p class="eyebrow">Every final. Every closing line.</p>
-    <h1>NFL Results and Closing Lines</h1>
-    <p class="subtitle">Completed games with final scores measured against the closing total and spread, so you can see how the market read each game before it kicked off.</p>
-    <div class="score-hero-chips"><span class="hero-chip">&#127944; Every final</span><span class="hero-chip">&#128200; Over / under</span><span class="hero-chip">&#129514; Spread outcomes</span></div>
+    <p class="eyebrow">Every call, graded against the closing line.</p>
+    <h1>Leo vs the Sportsbooks</h1>
+    <p class="subtitle">Each row is one decision: what the book posted, what Leo projected, which side that put him on, and what actually happened. Nothing here is a wager &mdash; the pick gate is closed until the record says otherwise.</p>
+    <div class="score-hero-chips"><span class="hero-chip">&#127944; Head to head</span><span class="hero-chip">&#128202; Running record</span><span class="hero-chip">&#129517; Closing lines only</span></div>
   </section>
-  <section class="kpis" id="kpis" aria-label="Results summary"></section>
-  <div id="status" class="loading">Loading NFL results&hellip;</div>
-  <section class="res-grid" id="res" aria-live="polite"></section>
-  <p class="data-note">Final scores and closing market numbers from the open nflverse dataset.</p>
+
+  <section class="rec-row" id="records" aria-label="Running record"></section>
+
+  <section class="score-controls" aria-label="Tracker filters">
+    <div class="view-controls filters" role="group" aria-label="Filter by market">
+      <button class="control-btn active" type="button" data-grp="all">All</button>
+      <button class="control-btn" type="button" data-grp="QB">QB</button>
+      <button class="control-btn" type="button" data-grp="RB">RB</button>
+      <button class="control-btn" type="button" data-grp="WR">WR</button>
+      <button class="control-btn" type="button" data-grp="ML">Moneyline</button>
+    </div>
+    <div class="view-controls filters" role="group" aria-label="Filter by outcome">
+      <button class="control-btn active" type="button" data-res="all">Both</button>
+      <button class="control-btn" type="button" data-res="W">Right</button>
+      <button class="control-btn" type="button" data-res="L">Wrong</button>
+    </div>
+  </section>
+
+  <div id="status" class="loading">Loading the tracker&hellip;</div>
+  <section id="body" aria-live="polite"></section>
+
+  <p class="data-note">Lines are the last price posted before each game kicked off, captured from the US market consensus. Actuals from the open nflverse dataset. Projections that never had a posted line, and touchdown markets where books posted one side only, are not calls and do not appear here.</p>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script>
 renderNav("/articles/"); renderFooter();
 
+const statusEl=document.getElementById("status"),
+      bodyEl=document.getElementById("body"),
+      recEl=document.getElementById("records");
+let data=null, grp="all", res="all";
+
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 async function tryJson(u){try{const r=await fetch(u,{cache:"no-store"});return r.ok?await r.json():null;}catch(e){return null;}}
-async function loadFirst(base){
-  for(const u of ["/data/nfl/"+base+"-"+iso(new Date())+".json",
-                  "/data/nfl/"+base+"-"+iso(new Date(Date.now()+864e5))+".json",
-                  "/data/nfl/"+base+"-today.json"]){
-    const j=await tryJson(u); if(Array.isArray(j)&&j.length) return j;
-  }
-  return null;
-}
 function logo(t){return '<img src="/img/nfl/'+encodeURIComponent(t)+'.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">';}
+const signed=v=>(v>0?"+":"")+v;
+
+document.querySelectorAll("[data-grp]").forEach(b=>b.addEventListener("click",()=>{
+  grp=b.dataset.grp;
+  document.querySelectorAll("[data-grp]").forEach(x=>x.classList.toggle("active",x===b));
+  render();
+}));
+document.querySelectorAll("[data-res]").forEach(b=>b.addEventListener("click",()=>{
+  res=b.dataset.res;
+  document.querySelectorAll("[data-res]").forEach(x=>x.classList.toggle("active",x===b));
+  render();
+}));
 
 (async function(){
-  const el=document.getElementById("res"), st=document.getElementById("status");
-  const r=await loadFirst("results");
-  if(!r){st.innerHTML='<div class="score-empty">No completed NFL games yet this season.</div>';return;}
-  st.style.display="none";
-  const ov=r.filter(x=>x.total_result==="Over").length, un=r.filter(x=>x.total_result==="Under").length;
-  const dogs=r.filter(x=>x.underdog_won===true).length;
-  const avg=(r.reduce((s,x)=>s+x.total,0)/r.length).toFixed(1);
-  document.getElementById("kpis").innerHTML=
-    '<article class="kpi"><div class="label">Games played</div><div class="value">'+r.length+'</div><div class="sub">this season</div></article>'+
-    '<article class="kpi"><div class="label">Over / Under</div><div class="value">'+ov+' &ndash; '+un+'</div><div class="sub">vs closing total</div></article>'+
-    '<article class="kpi"><div class="label">Underdog wins</div><div class="value">'+dogs+'</div><div class="sub">of '+r.length+' games</div></article>'+
-    '<article class="kpi"><div class="label">Avg points</div><div class="value">'+avg+'</div><div class="sub">combined</div></article>';
-  el.innerHTML=r.map(x=>{
-    const aw=x.away_score>x.home_score, hw=x.home_score>x.away_score;
-    const tc=x.total_result==="Over"?"t-over":(x.total_result==="Under"?"t-under":"t-push");
-    return '<article class="res-card">'+
-      '<div class="res-top"><span>Week '+x.week+' &middot; '+esc(x.date)+'</span>'+
-        (x.total_result?'<span class="tag '+tc+'">'+x.total_result+' '+(x.total_line??"")+'</span>':"")+'</div>'+
-      '<div class="res-body">'+
-        '<div class="res-row '+(aw?"win":(hw?"lose":""))+'">'+logo(x.away)+'<span class="nm">'+esc(x.away)+'</span><span class="sc">'+x.away_score+'</span></div>'+
-        '<div class="res-row '+(hw?"win":(aw?"lose":""))+'">'+logo(x.home)+'<span class="nm">'+esc(x.home)+'</span><span class="sc">'+x.home_score+'</span></div>'+
-        '<div class="market-grid" style="grid-template-columns:1fr 1fr 1fr;margin-top:10px">'+
-          '<div class="market-box"><span class="market-label">Margin</span><span class="market-value">'+x.margin+'</span><span class="market-sub">points</span></div>'+
-          '<div class="market-box"><span class="market-label">Total</span><span class="market-value">'+x.total+'</span><span class="market-sub">line '+(x.total_line??"\u2014")+'</span></div>'+
-          '<div class="market-box"><span class="market-label">Spread</span><span class="market-value">'+(x.spread_line==null?"\u2014":(x.spread_line>0?x.home+" -"+x.spread_line:x.away+" -"+Math.abs(x.spread_line)))+'</span><span class="market-sub">'+(x.favorite_covered==null?"\u2014":(x.favorite_covered?"Favorite covered":"Dog covered"))+'</span></div>'+
-        '</div></div></article>';
-  }).join("");
+  data=await tryJson("/data/nfl/tracker.json");
+  if(!data||!data.summary){
+    statusEl.innerHTML='<div class="score-empty">No graded calls yet. The tracker fills in once a slate has been played and graded.</div>';
+    return;
+  }
+  statusEl.style.display="none";
+  renderRecords(); render();
 })();
+
+/* A record tile shows two different things and the difference matters:
+   win-loss is how often the side was right; beat-line is how often Leo's
+   number was CLOSER TO THE TRUTH than the book's. Only the second implies
+   edge, so it gets its own line rather than being buried. */
+function recTile(label,s,note){
+  if(!s||!s.decided) return '<article class="rec"><span class="lab">'+esc(label)+'</span>'+
+    '<span class="big">&mdash;</span><span class="beat">no graded calls yet</span></article>';
+  const lead=s.beat_pct!=null&&s.beat_pct>50;
+  return '<article class="rec'+(lead?" lead":"")+'"><span class="lab">'+esc(label)+'</span>'+
+    '<span class="big">'+s.w+'&ndash;'+s.l+(s.p?'&ndash;'+s.p:'')+'</span>'+
+    '<span class="beat">'+(s.win_pct!=null?s.win_pct.toFixed(0)+'% right':'')+
+      (s.beat_pct!=null?' &middot; beat the line <b>'+s.beat_pct.toFixed(0)+'%</b>':'')+
+      (note?' &middot; '+note:'')+'</span></article>';
+}
+
+function renderRecords(){
+  const p=data.summary.props, m=data.summary.moneyline;
+  recEl.innerHTML=
+    recTile("All prop calls",p.all)+
+    recTile("Quarterbacks",p.QB)+
+    recTile("Running backs",p.RB)+
+    recTile("Receivers",p.WR)+
+    recTile("Moneyline",m);
+}
+
+function propRow(p){
+  const right=p.result==="W", push=p.result==="P";
+  return '<article class="trk'+(p.result==="L"?" is-l":"")+'">'+
+    logo(p.team)+
+    '<span class="trk-who"><span class="trk-name">'+esc(p.player)+'</span>'+
+      '<span class="trk-meta">'+esc(p.depth||p.group)+' &middot; '+esc(p.matchup)+' &middot; Wk '+esc(p.week)+'</span></span>'+
+    '<span class="trk-call">'+
+      '<span class="cell"><span class="k">Line</span><span class="v muted">'+p.line+'</span></span>'+
+      '<span class="cell"><span class="k">Leo</span><span class="v">'+p.leo+'</span></span>'+
+      '<span class="side">'+esc(String(p.lean).toUpperCase())+'</span>'+
+      '<span class="cell"><span class="k">Actual</span><span class="v">'+p.actual+'</span></span>'+
+      '<span class="cell"><span class="k">vs line</span><span class="v muted">'+signed(p.margin)+'</span></span>'+
+    '</span>'+
+    '<span class="verdict '+(push?"p":right?"w":"l")+'">'+(push?"PUSH":right?"RIGHT":"WRONG")+'</span>'+
+  '</article>';
+}
+
+function gameRow(g){
+  const right=g.result==="W", push=g.result==="P";
+  const price=g.price==null?"—":signed(g.price)+(g.price_is_implied?"*":"");
+  return '<article class="trk'+(g.result==="L"?" is-l":"")+'">'+
+    logo(g.pick)+
+    '<span class="trk-who"><span class="trk-name">'+esc(g.pick)+' to win</span>'+
+      '<span class="trk-meta">'+esc(g.matchup)+' &middot; Wk '+esc(g.week)+'</span></span>'+
+    '<span class="trk-call">'+
+      '<span class="cell"><span class="k">Price</span><span class="v muted">'+price+'</span></span>'+
+      '<span class="cell"><span class="k">Leo</span><span class="v">'+Math.round(g.leo_prob*100)+'%</span></span>'+
+      '<span class="cell"><span class="k">Market</span><span class="v muted">'+(g.market_prob==null?"—":Math.round(g.market_prob*100)+"%")+'</span></span>'+
+      '<span class="cell"><span class="k">Won</span><span class="v">'+esc(g.winner)+'</span></span>'+
+    '</span>'+
+    '<span class="verdict '+(push?"p":right?"w":"l")+'">'+(push?"PUSH":right?"RIGHT":"WRONG")+'</span>'+
+  '</article>';
+}
+
+function section(title,count,rowsHtml){
+  return '<div class="grp-head"><h2>'+esc(title)+'</h2><span class="cnt">'+count+'</span></div>'+
+         '<div class="trk-list">'+rowsHtml+'</div>';
+}
+
+function render(){
+  const keep=r=>res==="all"||r.result===res;
+  let html="";
+
+  if(grp==="ML"||grp==="all"){
+    const g=data.games.filter(keep);
+    if(g.length){
+      const s=data.summary.moneyline;
+      html+=section("Moneyline",s.w+"–"+s.l+(s.beat_pct!=null?"  ·  beat the market "+s.beat_pct.toFixed(0)+"%":""),
+                    g.map(gameRow).join(""));
+    }
+  }
+  for(const key of ["QB","RB","WR"]){
+    if(grp!=="all"&&grp!==key) continue;
+    const rows=data.props.filter(p=>p.group===key).filter(keep);
+    if(!rows.length) continue;
+    const s=data.summary.props[key];
+    const label={QB:"Quarterbacks · passing yards",RB:"Running backs · rushing yards",WR:"Receivers · receiving yards"}[key];
+    html+=section(label, s.w+"–"+s.l+(s.beat_pct!=null?"  ·  beat the line "+s.beat_pct.toFixed(0)+"%":""),
+                  rows.map(propRow).join(""));
+  }
+
+  if(!html){ bodyEl.innerHTML='<div class="score-empty">No calls match this filter.</div>'; return; }
+
+  /* The sample warning is part of the page, not a footnote. A 77% record over
+     13 games is indistinguishable from luck, and the tracker should say so
+     while that is still true rather than wait to be asked. */
+  const n=data.counts.prop_calls+data.counts.games;
+  const warn=n<400
+    ? '<div class="honest"><b>'+n+' graded calls so far, through '+esc(data.through||"")+'.</b> '+
+      'That is far too few to mean anything &mdash; a 60% stretch over this many decisions happens by chance often enough '+
+      'to be unremarkable. The number worth watching is <b>beat the line</b>: how often Leo&rsquo;s projection landed closer '+
+      'to the actual result than the sportsbook&rsquo;s did. At 50% the book is just as good as we are. '+
+      'No pick is published until that number holds above 50% across a real sample.</div>'
+    : "";
+
+  bodyEl.innerHTML=warn+html+
+    (data.games.some(g=>g.price_is_implied)
+      ? '<p class="data-note">* Price derived from the market&rsquo;s implied probability where the posted number was not captured at grading time.</p>'
+      : "");
+}
 </script>
 </body>
 </html>

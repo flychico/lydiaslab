@@ -91,6 +91,11 @@ jobs:
             node scripts/grade-nfl-props.js --date="$D"
           done
 
+      # Roll both ledgers into the feed /nfl/results/ reads. Cheap, local,
+      # and reads the WHOLE ledger -- the tracker is cumulative, not per-slate.
+      - name: Build head-to-head tracker
+        run: node scripts/generate-nfl-tracker.js
+
       - name: Health check
         run: node scripts/nfl-healthcheck.js
 

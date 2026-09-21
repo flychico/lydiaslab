@@ -261,6 +261,30 @@ for (const f of ["css/style.css","css/scoreboard.css"]) {
   }
 }
 
+// ---- 16. tracker feed matches the ledger ---------------------------------
+// /nfl/results/ reads tracker.json, not the CSVs. If the generator stops
+// running, the page keeps serving a stale record that looks perfectly healthy
+// -- the worst failure mode on a page whose whole job is an honest count.
+{
+  const tf = P("data/nfl/tracker.json"), pf = P("data/nfl/nfl-props-graded.csv");
+  if (!fs.existsSync(pf)) {
+    warn("TRACKER", "no graded props yet — tracker not expected");
+  } else if (!fs.existsSync(tf)) {
+    fail("TRACKER", "graded props exist but tracker.json was never built — /nfl/results/ will be empty");
+  } else {
+    const t = JSON.parse(fs.readFileSync(tf, "utf8"));
+    const ledgerDates = new Set(fs.readFileSync(pf, "utf8").split(/\r?\n/).slice(1)
+      .filter(Boolean).map(l => l.split(",")[0]));
+    const newest = [...ledgerDates].sort().pop();
+    if (t.through !== newest) {
+      fail("TRACKER", `tracker covers through ${t.through} but the ledger has ${newest} — rebuild it`);
+    } else {
+      const calls = (t.counts && t.counts.prop_calls) || 0;
+      ok("TRACKER", `tracker current through ${t.through} (${calls} prop calls, ${(t.games||[]).length} games)`);
+    }
+  }
+}
+
 console.log("=".repeat(58));
 console.log(`  ${passes} passed · ${warns} warnings · ${fails} failures\n`);
 process.exit(fails ? 1 : 0);

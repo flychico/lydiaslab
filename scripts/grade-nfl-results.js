@@ -50,7 +50,7 @@ const r3 = x => x == null ? null : Math.round(x * 1000) / 1000;
 
 const COLS = [
   "date","graded_at","game_id","matchup","away","home","week","model_version",
-  "market","status","leo_side","leo_value","market_value","edge",
+  "market","status","leo_side","leo_value","market_value","market_price","edge",
   "actual_value","result","market_result","beat_market","abs_error","brier","variance_class"
 ];
 
@@ -137,6 +137,7 @@ function main() {
       const res = winner === "TIE" ? "P" : (p.pick === winner ? "W" : "L");
       rows.push({ ...base, market: "moneyline", status: p.status,
         leo_side: p.pick, leo_value: r3(p.model_prob), market_value: r3(p.market_prob),
+        market_price: p.price ?? "",
         edge: r3(p.edge), actual_value: winner, result: res,
         market_result: mktHome == null ? "" : (mktHome >= 0.5) === (homeOutcome === 1) ? "W" : "L",
         beat_market: mktBrier == null ? "" : (leoBrier < mktBrier ? "Y" : "N"),
@@ -198,6 +199,15 @@ function main() {
     fs.mkdirSync(DIR, { recursive: true });
     fs.writeFileSync(LEDGER, COLS.join(",") + "\n");
     console.log(`  created ${path.basename(LEDGER)}`);
+  } else if (FORCE) {
+    // --force means REPAIR this date, not append a second copy of it. Without
+    // this, re-running to fix a grade silently doubles the sample and every
+    // rate computed from the ledger is quietly wrong. (Same bug was caught and
+    // fixed in grade-nfl-props.js; this file had it too.)
+    const kept = fs.readFileSync(LEDGER, "utf8").split(/\r?\n/)
+      .filter((l, i) => i === 0 || (l && !l.startsWith(DATE + ",")));
+    fs.writeFileSync(LEDGER, kept.join("\n").replace(/\n*$/, "\n"));
+    console.log(`  --force: cleared existing ${DATE} rows before rewriting`);
   }
   fs.appendFileSync(LEDGER, rows.map(r => COLS.map(c => q(r[c])).join(",")).join("\n") + "\n");
 
