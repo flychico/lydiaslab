@@ -112,12 +112,24 @@ function main() {
              `prepare-slate run and may contain post-kickoff revisions`;
   }
 
-  // Already graded? Do not rewrite history.
+  /*
+    INCREMENTAL BY GAME, NOT BY DATE.
+
+    This used to refuse any date already in the ledger. But a Sunday slate is
+    graded the next morning while the 8:20pm game is often still missing from
+    nflverse -- and once the date was marked done, that game could never be
+    added. Every Sunday-night and Monday-night game would have been
+    permanently absent, and the ledger would have looked complete.
+
+    So: skip the (game, market) rows already present, grade whatever is new.
+    Still no double-counting, and late finishers land on the next run.
+  */
+  const alreadyGraded = new Set();
   if (fs.existsSync(LEDGER) && !FORCE) {
-    const existing = fs.readFileSync(LEDGER, "utf8");
-    if (existing.split(/\r?\n/).some(l => l.startsWith(DATE + ","))) {
-      console.log(`${DATE} is already in the ledger — refusing to double-count. Use --force only to repair.`);
-      return;
+    for (const l of fs.readFileSync(LEDGER, "utf8").split(/\r?\n/).slice(1)) {
+      if (!l) continue;
+      const c = splitCsv(l);
+      if (c[0] === DATE) alreadyGraded.add(`${c[2]}|${c[8]}`);   // game_id | market
     }
   }
 
@@ -125,21 +137,37 @@ function main() {
     ["-sSL","--fail","--max-time","120", FEED],
     { maxBuffer: 1024*1024*512, encoding: "utf8" }));
 
+  /*
+    NEVER GRADE A LIVE GAME.
+
+    Scores alone are not proof a game is over -- a feed that publishes
+    in-progress scores would hand us a partial total and we would grade it as
+    final, permanently, in an append-only ledger. nflverse fills `result` (the
+    final margin) only once a game is complete, so both must be present.
+
+    This is not hypothetical: IND @ KC was still being played while this
+    slate's other 13 games were graded.
+  */
   const byId = new Map();
+  let live = 0;
   for (const g of games) {
     const as = n(g.away_score), hs = n(g.home_score);
-    if (as == null || hs == null) continue;          // not final yet
+    if (as == null || hs == null) continue;              // no score posted
+    if (String(g.result ?? "").trim() === "") { live++; continue; }  // in progress
     byId.set(g.game_id, { ...g, as, hs });
   }
+  if (live) console.log(`  ${live} game(s) have scores but no final result — in progress, not graded.`);
 
   const rows = [];
   const gradedAt = new Date().toISOString();
-  let finished = 0, pending = 0;
+  let finished = 0, pending = 0, skipped = 0;
 
   for (const p of picks) {
     const g = byId.get(p.game_id);
     if (!g) { pending++; continue; }
     finished++;
+    const done = m => alreadyGraded.has(`${p.game_id}|${m}`);
+    if (done("moneyline") && done("total") && done("spread")) { skipped++; continue; }
 
     const margin = g.hs - g.as;                  // positive = home won by
     const total  = g.hs + g.as;
@@ -153,7 +181,7 @@ function main() {
     // ---- moneyline ------------------------------------------------------
     // Brier is computed on Leo's probability for the HOME side so it is
     // directly comparable to the market's home probability. Lower is better.
-    if (p.model_prob != null) {
+    if (p.model_prob != null && !done("moneyline")) {
       const homeOutcome = margin > 0 ? 1 : 0;
       const leoHome = p.pick === p.home ? p.model_prob : 1 - p.model_prob;
       const mktHome = p.market_prob == null ? null
@@ -172,7 +200,7 @@ function main() {
     }
 
     // ---- total ----------------------------------------------------------
-    if (p.proj_total != null) {
+    if (p.proj_total != null && !done("total")) {
       const line = n(p.total_line);
       const side = p.total_side;                       // "Over" / "Under"
       const res = line == null || total === line ? "P"
@@ -190,7 +218,7 @@ function main() {
     // ---- spread ---------------------------------------------------------
     // spread_line is stated from the HOME side (NFL_WATCH_LIST #3): positive
     // means the home team is favoured by that many.
-    if (p.proj_spread != null) {
+    if (p.proj_spread != null && !done("spread")) {
       const line = n(p.spread_line);
       const side = p.spread_side;
       let res = "P";
@@ -214,6 +242,7 @@ function main() {
   console.log(`  games on slate     ${picks.length}`);
   console.log(`  final              ${finished}`);
   console.log(`  not yet final      ${pending}`);
+  if (skipped) console.log(`  already graded     ${skipped} (skipped, not re-counted)`);
 
   if (!rows.length) {
     console.log(`  nothing to write — no game is final yet.`);

@@ -18,12 +18,17 @@ const LEDGER = path.join(DIR, "nfl-results-log.csv");
 const DATE = "1999-01-01";                      // impossible date: never collides with real data
 
 // Games CSV the script will "fetch".
+// `result` is the final margin and nflverse fills it only once a game is
+// complete. The grader requires it, so a live game with a partial score is
+// never graded as final -- the fixture carries it for the same reason.
 const GAMES = [
-  "game_id,season,week,gameday,away_team,home_team,away_score,home_score",
+  "game_id,season,week,gameday,away_team,home_team,away_score,home_score,result",
   // home ATL loses by 1 while getting +2.5 -> HOME COVERS
-  "T_COVER,2026,2,1999-01-01,CAR,ATL,24,23",
-  // home KC wins by 10 as a 6.5 favourite -> HOME COVERS, total 41 under 44.5
-  "T_FAV,2026,2,1999-01-01,IND,KC,17,27"
+  "T_COVER,2026,2,1999-01-01,CAR,ATL,24,23,-1",
+  // home KC wins by 10 as a 6.5 favourite -> HOME COVERS, total 44 under 44.5
+  "T_FAV,2026,2,1999-01-01,IND,KC,17,27,10",
+  // scores posted but NO result -> still being played, must be ignored
+  "T_LIVE,2026,2,1999-01-01,GB,CHI,7,3,"
 ].join("\n");
 
 const PICKS = [
@@ -116,6 +121,11 @@ console.log("\nNFL GRADING MATH TEST\n" + "=".repeat(58));
   const r = get("T_FAV", "spread");    // W, error 3.0 <= 7 -> skill
   ck("win with small error classed good_pick_won", r && r.variance_class === "good_pick_won", r && `got ${r.variance_class}`);
 }
+
+// A game still in progress must not appear in the ledger at all.
+ck("live game (score, no final result) is NOT graded",
+   !rows.some(r => r.game_id === "T_LIVE"),
+   "T_LIVE was graded while in progress");
 
 console.log("=".repeat(58));
 console.log(`  ${pass} passed · ${fail} failed\n`);

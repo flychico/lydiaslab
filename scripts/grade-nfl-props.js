@@ -116,10 +116,20 @@ function main() {
     source = `props-${DATE}.json — WARNING: rewritten by every prepare-slate run, may contain post-kickoff revisions`;
   }
 
+  /*
+    INCREMENTAL BY PLAYER, NOT BY DATE -- same reason as the game grader.
+    A late game's props would otherwise never be graded, because the date was
+    already marked done by the morning run.
+  */
+  const alreadyGraded = new Set();
   if (fs.existsSync(LEDGER) && !FORCE) {
-    if (fs.readFileSync(LEDGER, "utf8").split(/\r?\n/).some(l => l.startsWith(DATE + ","))) {
-      console.log(`${DATE} already graded — refusing to double-count. Use --force only to repair.`);
-      return;
+    const lines = fs.readFileSync(LEDGER, "utf8").split(/\r?\n/);
+    const head = splitCsv(lines[0] || "");
+    const iM = head.indexOf("matchup"), iP = head.indexOf("player"), iK = head.indexOf("market");
+    for (const l of lines.slice(1)) {
+      if (!l) continue;
+      const c = splitCsv(l);
+      if (c[0] === DATE) alreadyGraded.add(`${c[iM]}|${c[iK]}|${c[iP]}`);
     }
   }
 
@@ -159,7 +169,9 @@ function main() {
   const gradedAt = new Date().toISOString();
   let graded = 0, excluded = 0, noActual = 0;
 
+  let skipped = 0;
   for (const p of props) {
+    if (alreadyGraded.has(`${p.matchup}|${p.market}|${p.player}`)) { skipped++; continue; }
     const stat = byKey.get(`${p.team}|${keyFull(p.player)}`)
               || byKey.get(`${p.team}|${keyInitialLast(p.player)}`);
 
@@ -249,6 +261,7 @@ function main() {
   console.log(`  graded             ${graded}`);
   console.log(`  excluded (injury)  ${excluded}`);
   console.log(`  no stat line       ${noActual}`);
+  if (skipped) console.log(`  already graded     ${skipped} (skipped, not re-counted)`);
 
   /*
     DO NOT RECORD A SLATE THAT HAS NOT BEEN PLAYED.

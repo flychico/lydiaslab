@@ -182,7 +182,10 @@ document.querySelectorAll("[data-res]").forEach(b=>b.addEventListener("click",()
 function renderWeekFilter(){
   const el=document.getElementById("weekFilter");
   const weeks=(data.weeks||[]).slice().sort((a,b)=>Number(a)-Number(b));
-  if(weeks.length<2){ el.remove(); return; }   // one week is not a filter
+  if(!weeks.length){ el.remove(); return; }
+  /* Shown even with a single week. Hiding it made the control vanish exactly
+     when someone went looking for it, and it reappears on its own as weeks
+     accumulate -- which is worse than a one-item filter. */
   el.innerHTML='<button class="control-btn active" type="button" data-wk="all">All weeks</button>'+
     weeks.map(w=>'<button class="control-btn" type="button" data-wk="'+esc(w)+'">Wk '+esc(w)+'</button>').join("");
   el.querySelectorAll("[data-wk]").forEach(b=>b.addEventListener("click",()=>{
@@ -318,6 +321,12 @@ function render(){
   /* The sample warning is part of the page, not a footnote. A 77% record over
      13 games is indistinguishable from luck, and the tracker should say so
      while that is still true rather than wait to be asked. */
+  const wks=(data.weeks||[]).slice().sort((a,b)=>Number(a)-Number(b));
+  const coverage=wks.length
+    ? '<p class="data-note">Graded weeks: '+wks.map(w=>"Week "+esc(w)).join(", ")+
+      '. Earlier weeks are not shown because Leo made no pre-kickoff projections for them &mdash; '+
+      'grading them now would mean scoring the model on games it has already seen.</p>'
+    : "";
   const n=data.counts.prop_calls+data.counts.games;
   const warn=n<400
     ? '<div class="honest"><b>'+n+' graded calls so far, through '+esc(data.through||"")+'.</b> '+
@@ -327,7 +336,7 @@ function render(){
       'No pick is published until that number holds above 50% across a real sample.</div>'
     : "";
 
-  bodyEl.innerHTML=warn+html+
+  bodyEl.innerHTML=warn+coverage+html+
     (data.games.some(g=>g.price_is_implied)
       ? '<p class="data-note">* Price derived from the market&rsquo;s implied probability where the posted number was not captured at grading time.</p>'
       : "");
