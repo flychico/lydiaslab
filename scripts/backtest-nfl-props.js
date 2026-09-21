@@ -16,6 +16,7 @@
  */
 const { execFileSync } = require("child_process");
 const fs=require("fs"), path=require("path");
+const PROPS=require("./lib/nfl-props-model");
 const REL="https://github.com/nflverse/nflverse-data/releases/download";
 const argv=process.argv.slice(2);
 const flag=(n,d)=>{const i=argv.indexOf("--"+n);return i>=0?argv[i+1]:d;};
@@ -65,7 +66,11 @@ const MARKETS=[
   const norm=r=>({player:r.player_display_name,pos:r.position,team:r.team,opp:r.opponent_team,
     week:n(r.week),att:n(r.attempts),pyds:n(r.passing_yards),car:n(r.carries),ryds:n(r.rushing_yards),
     tgt:n(r.targets),recy:n(r.receiving_yards)});
-  const C=cur.map(norm), P=pri.map(norm);
+  // Regular season only: a playoff game is not part of "last season" for the
+  // live model either, and post-season weeks are not projected.
+  const REG=r=>!r.season_type||r.season_type==="REG";
+  const C=cur.filter(REG).map(norm), P=pri.filter(REG).map(norm);
+  const qbLeague=PROPS.qbLeagueBaseline(P.filter(r=>r.pos==="QB"));
   const priorBy={}; P.forEach(r=>{(priorBy[r.player]=priorBy[r.player]||[]).push(r);});
   const weeks=[...new Set(C.map(r=>r.week))].filter(w=>w>0).sort((a,b)=>a-b);
 
@@ -81,11 +86,19 @@ const MARKETS=[
     const lgPass=mean(Object.values(def).map(d=>mean(d.pass)));
     const lgRush=mean(Object.values(def).map(d=>mean(d.rush)));
     const histBy={}; hist.forEach(r=>{(histBy[r.player]=histBy[r.player]||[]).push(r);});
+    const qbStarter={}; { const best={};
+      Object.entries(histBy).forEach(([pl,gs])=>{ const last=gs[gs.length-1]; if(last.pos!=="QB") return;
+        const onTeam=gs.filter(x=>x.team===last.team); const use=mean(onTeam.map(x=>x.att));
+        if(!best[last.team]||use>best[last.team]){best[last.team]=use;qbStarter[last.team]=pl;} }); }
 
     for(const g of slate){
       for(const m of MARKETS){
         if(g.pos!==m.pos) continue;
         const h=histBy[g.player]||[]; if(h.length<1) continue;
+        // QB: same starter rule as the live model -- the team's QB with the
+        // most attempts per game so far. Scoring backups' cameo games would
+        // measure a population the live model never projects.
+        if(m.key==="QB_PASS_YARDS" && qbStarter[g.team]!==g.player) continue;
         if(m.vol(g)<=0) continue;                       // did not participate in that market
         const d=def[g.opp]||{pass:[],rush:[]};
         const lg=m.def==="pass"?lgPass:lgRush;
@@ -93,8 +106,13 @@ const MARKETS=[
         const blended=(0.6*(mean(arr.slice(-3))||mean(arr)))+(0.4*mean(arr));
         const adj=lg?Math.max(CLAMP_LO,Math.min(CLAMP_HI,shrink(blended,arr.length,lg)/lg)):1;
         const pr=priorBy[g.player]||[];
-        const rate=blend(h.map(m.rate), pr.map(m.rate));
-        const vol =blend(h.map(m.vol),  pr.map(m.vol));
+        let rate, vol;
+        if(m.key==="QB_PASS_YARDS"){            // v2: shared with the live model
+          const q=PROPS.qbProjection(h,pr,qbLeague); rate=q.rate; vol=q.att;
+        } else {
+          rate=blend(h.map(m.rate), pr.map(m.rate));
+          vol =blend(h.map(m.vol),  pr.map(m.vol));
+        }
         const proj=Math.max(0, rate*vol*adj);
         const actual=m.act(g);
         res[m.key].err.push(Math.abs(proj-actual));

@@ -364,6 +364,21 @@ for (const f of ["css/style.css","css/scoreboard.css"]) {
                   : ok("TUNER-SYNC", "Model Tuner runs the live moneyline code and reproduces today's published numbers");
 }
 
+// ---- 21. one copy of the prop model constants -----------------------------
+// generate-nfl-props.js, backtest-nfl-props.js and the Model Tuner must all
+// read scripts/lib/nfl-props-model.js; a hand-typed copy anywhere drifts.
+{
+  const problems = [];
+  const read = f => fs.existsSync(P(f)) ? fs.readFileSync(P(f), "utf8") : "";
+  if (!read("scripts/generate-nfl-props.js").includes('require("./lib/nfl-props-model")')) problems.push("generator does not load lib/nfl-props-model.js");
+  if (!read("scripts/backtest-nfl-props.js").includes('require("./lib/nfl-props-model")')) problems.push("backtest does not load lib/nfl-props-model.js");
+  const tuner = read("nfl/tools/model-tuner/index.html");
+  if (!tuner.includes('src="/scripts/lib/nfl-props-model.js"')) problems.push("tuner does not load scripts/lib/nfl-props-model.js");
+  if (/QB\s*:\s*-?\d/.test(tuner.match(/const CAL = \{[^}]*\}/)?.[0] || "")) problems.push("tuner hard-codes its own calibration");
+  problems.length ? fail("PROPS-SYNC", problems.join("; "))
+                  : ok("PROPS-SYNC", "Generator, backtest and Model Tuner share one prop model file");
+}
+
 console.log("=".repeat(58));
 console.log(`  ${passes} passed · ${warns} warnings · ${fails} failures\n`);
 process.exit(fails ? 1 : 0);

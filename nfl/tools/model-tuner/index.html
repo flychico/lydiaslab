@@ -106,6 +106,7 @@
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <!-- The live moneyline model code itself. The tuner runs this, never a copy. -->
 <script src="/scripts/lib/nfl-moneyline.js"></script>
+<script src="/scripts/lib/nfl-props-model.js"></script>
 <script>
 renderNav("/articles/"); renderFooter();
 
@@ -122,7 +123,9 @@ async function csv(u){try{const r=await fetch(u,{cache:"no-store"});return r.ok?
 
 // Leo's shipped calibration constants. Each row also carries a residual, so if
 // these drift from the model the default settings still reproduce Leo exactly.
-const CAL = { QB:8.4, RB:3.4, WR:1.1 };
+// Read from the SAME file the live generator uses (scripts/lib/nfl-props-model.js),
+// so the tuner can never hold a stale copy of these numbers.
+const CAL = { QB:LeoProps.CALIBRATION.QB_PASS_YARDS, RB:LeoProps.CALIBRATION.RB_RUSH_YARDS, WR:LeoProps.CALIBRATION.WR_REC_YARDS };
 const GROUP = { QB_PASS_YARDS:"QB", RB_RUSH_YARDS:"RB", WR_REC_YARDS:"WR" };
 const UNIT = { QB:["attempt","attempts","QB1"], RB:["carry","carries","RB1 / RB2"], WR:["target","targets","WR1 / WR2 / WR3"] };
 

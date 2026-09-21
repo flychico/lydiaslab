@@ -25,17 +25,10 @@ const FEED = "https://raw.githubusercontent.com/nflverse/nfldata/master/data/gam
 
 const SEASON = 2026, PRIOR = 2025;
 const CLAMP_LO = 0.85, CLAMP_HI = 1.15;   // opponent multiplier bounds (K-props spec)
-// Calibration bias, MEASURED — not guessed and not zero.
-// scripts/backtest-nfl-props.js walked the full 3828-projection 2025 season
-// walk-forward and found the raw model under-projects every yardage market.
-// These correct that measured bias. Re-derive them by re-running the backtest;
-// do NOT hand-tune.
-const CALIBRATION = {
-  QB_PASS_YARDS: +8.4,   // 2025 bias -8.4 yds over n=590
-  RB_RUSH_YARDS: +3.4,   // 2025 bias -3.4 yds over n=1221
-  WR_REC_YARDS:  +1.1,   // 2025 bias -1.1 yds over n=2017
-  ANYTIME_TD:     0.0     // probability market; bias handled by the TD_CEILING cap
-};
+// Calibration and the QB method live in ONE shared file, also loaded by the
+// backtest and the public Model Tuner. Change them there, nowhere else.
+const PROPS = require("./lib/nfl-props-model");
+const CALIBRATION = PROPS.CALIBRATION;
 const CALIBRATION_BIAS = 0.0;  // retained so existing references still resolve
 
 // --- blend weights by games played (shrinkage toward prior season) -----------
@@ -156,7 +149,10 @@ function anytimeTD(e, field, base, adj) {
     });
   };
   wk26.forEach(r => add("cur", r));
-  wk25.forEach(r => add("prior", r));
+  // Regular season only: a playoff game is not part of "last season".
+  wk25.filter(r => !r.season_type || r.season_type === "REG").forEach(r => add("prior", r));
+  const qbLeague = PROPS.qbLeagueBaseline(
+    [...logs.values()].filter(e => e.pos === "QB").flatMap(e => e.prior));
 
   // ---- team defense: yards allowed per game --------------------------------
   const def = new Map(); // team -> {pass:[], rush:[]} per week
@@ -207,11 +203,13 @@ function anytimeTD(e, field, base, adj) {
       const adjRush = oppAdjustment(mean(d.rush.slice(-3)), mean(d.rush), leagueRush, d.rush.length);
 
       for (const [i, { name, e }] of s.qb.entries()) {
-        const ypa = blend(e.cur.map(x => x.att ? x.pyds / x.att : 0), e.cur.map(x => x.att ? x.pyds / x.att : 0), e.prior.map(x => x.att ? x.pyds / x.att : 0));
-        const att = blend(e.cur.map(x => x.att), e.cur.map(x => x.att), e.prior.map(x => x.att));
+        // v2 (DEC-20260921-12): last season counts as 2 games, so one game
+        // this season is 1/3 of the projection, not 1/2.
+        const q = PROPS.qbProjection(e.cur, e.prior, qbLeague);
+        const ypa = q.rate, att = q.att;
         const proj = (ypa * att * adjPass) + CALIBRATION.QB_PASS_YARDS;
         push(g, { name, pos: "QB", depth: `QB${i + 1}`, team, opp, gp: e.cur.length, adj: adjPass },
-             "QB_PASS_YARDS", Math.max(0, Math.round(proj)), { rate_used: r1(ypa), expected_volume: r1(att) });
+             "QB_PASS_YARDS", Math.max(0, Math.round(proj)), { rate_used: r1(ypa), expected_volume: r1(att), model_version: "leo-nflprop-v2" });
       }
       for (const [i, { name, e }] of s.rb.entries()) {
         const ypc = blend(e.cur.map(x => x.car ? x.ryds / x.car : 0), e.cur.map(x => x.car ? x.ryds / x.car : 0), e.prior.map(x => x.car ? x.ryds / x.car : 0));
