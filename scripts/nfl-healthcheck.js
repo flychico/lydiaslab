@@ -285,6 +285,46 @@ for (const f of ["css/style.css","css/scoreboard.css"]) {
   }
 }
 
+// ---- 17. predictions are frozen before kickoff ---------------------------
+// picks-{date}.json is rewritten by every prepare-slate run, including reruns
+// that fire after kickoff with the results already in the ratings. Grading
+// that file turned a real 6-7 into a published 10-3. The frozen history is the
+// only honest source, so verify it is actually being written.
+{
+  const hf = P("data/nfl/prediction-history.csv");
+  const pf = P("data/nfl/picks-today.json");
+  if (!fs.existsSync(pf)) {
+    warn("FREEZE", "no picks-today.json to check against");
+  } else if (!fs.existsSync(hf)) {
+    fail("FREEZE", "prediction-history.csv missing — grading would fall back to the rewritable picks file");
+  } else {
+    const picks = JSON.parse(fs.readFileSync(pf, "utf8"));
+    const rows = fs.readFileSync(hf, "utf8").split(/\r?\n/).slice(1).filter(Boolean);
+    const dates = new Set(rows.map(l => l.split(",")[1]));
+    const slateDate = picks[0] && picks[0].date;
+    if (slateDate && !dates.has(slateDate)) {
+      fail("FREEZE", `today's slate (${slateDate}) has no frozen prediction — it would be graded from the rewritable file`);
+    } else {
+      ok("FREEZE", `prediction history covers ${dates.size} slate date(s), ${rows.length} rows`);
+    }
+  }
+}
+
+// ---- 18. no published pick contradicts the model -------------------------
+// The pick is the side Leo's own probability favours. A pick below 50% means
+// the market crept back into the selection, which is exactly what produced
+// six cards on teams Leo expected to lose.
+{
+  const pf = P("data/nfl/picks-today.json");
+  if (fs.existsSync(pf)) {
+    const picks = JSON.parse(fs.readFileSync(pf, "utf8"));
+    const wrong = picks.filter(p => p.model_prob != null && p.model_prob < 0.5);
+    wrong.length
+      ? fail("PICK-SIDE", `${wrong.length} pick(s) are on a side Leo gives under 50% (e.g. ${wrong[0].pick} ${Math.round(wrong[0].model_prob*100)}%)`)
+      : ok("PICK-SIDE", `all ${picks.length} picks are on the side Leo favours`);
+  }
+}
+
 console.log("=".repeat(58));
 console.log(`  ${passes} passed · ${warns} warnings · ${fails} failures\n`);
 process.exit(fails ? 1 : 0);

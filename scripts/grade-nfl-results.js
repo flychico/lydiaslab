@@ -36,6 +36,7 @@ const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
 const { splitCsv } = require("./lib/odds-history");
+const { frozenPredictions } = require("./lib/prediction-history");
 
 const FEED = "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv";
 const DIR  = path.join(__dirname, "..", "data", "nfl");
@@ -78,13 +79,38 @@ function varianceClass(result, absError, tight, loose) {
 }
 
 function main() {
-  const picksFile = path.join(DIR, `picks-${DATE}.json`);
-  if (!fs.existsSync(picksFile)) {
-    console.log(`No picks-${DATE}.json — nothing to grade for ${DATE}.`);
-    return;
+  /*
+    GRADE THE FROZEN PREDICTION, NOT THE LIVE FILE.
+
+    picks-{date}.json is rewritten by every prepare-slate run. The runs that
+    fire after kickoff recompute team ratings from completed games and then
+    re-project games those results came from. Grading that file on 2026-09-20
+    produced 10-3 / 8-5 / 10-3; the genuine pre-kickoff numbers were
+    6-7 / 6-7 / 6-7 on all three markets.
+
+    prediction-history.csv is append-only and carries the time each prediction
+    was made, so the prediction of record is the last one before kickoff.
+    The live file is only a fallback for a slate predicted before this history
+    existed -- and that fallback is announced loudly, because it is not
+    trustworthy for a date whose games have already been played.
+  */
+  let picks = frozenPredictions(path.join(DIR, "prediction-history.csv"), DATE);
+  let source = "";
+  if (picks.length) {
+    const lead = picks.map(p => p.minutes_before_kickoff);
+    source = `frozen pre-kickoff predictions (${picks.length} games, ` +
+             `${Math.min(...lead)}-${Math.max(...lead)} min before kickoff)`;
+  } else {
+    const picksFile = path.join(DIR, `picks-${DATE}.json`);
+    if (!fs.existsSync(picksFile)) {
+      console.log(`No frozen predictions and no picks-${DATE}.json — nothing to grade for ${DATE}.`);
+      return;
+    }
+    picks = JSON.parse(fs.readFileSync(picksFile, "utf8"));
+    if (!Array.isArray(picks) || !picks.length) { console.log("Picks file empty."); return; }
+    source = `picks-${DATE}.json — WARNING: this file is rewritten by every ` +
+             `prepare-slate run and may contain post-kickoff revisions`;
   }
-  const picks = JSON.parse(fs.readFileSync(picksFile, "utf8"));
-  if (!Array.isArray(picks) || !picks.length) { console.log("Picks file empty."); return; }
 
   // Already graded? Do not rewrite history.
   if (fs.existsSync(LEDGER) && !FORCE) {
@@ -184,6 +210,7 @@ function main() {
   }
 
   console.log(`\nNFL GAME GRADING — ${DATE}\n${"=".repeat(58)}`);
+  console.log(`  source: ${source}`);
   console.log(`  games on slate     ${picks.length}`);
   console.log(`  final              ${finished}`);
   console.log(`  not yet final      ${pending}`);

@@ -220,11 +220,34 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
     const awayProb = 1-homeProb;
     const edgeHome = mktHome!=null ? homeProb-mktHome : null;
     const edgeAway = mktAway!=null ? awayProb-mktAway : null;
+    /*
+      PICK THE WINNER. The side is whichever team Leo's own probability
+      favours -- the market plays no part in choosing it.
+
+      It used to be chosen by the larger market edge, i.e. whichever team the
+      book priced furthest from Leo's number. That is coherent betting logic
+      but it is not a prediction, and it produced published cards Leo did not
+      believe: on 2026-09-20 it named CLE at 35% while Leo had TB at 65%, and
+      named CIN at 49% while Leo had HOU at 51%. Six of thirteen picks that
+      day were on the side Leo expected to LOSE. It also put the sportsbook
+      back in the moneyline decision through the back door -- Leo's number was
+      never blended, but the book still decided which team we named.
+
+      The graded record moved from 10-3 to 8-5 when this changed. The 10-3 was
+      a value-betting record being displayed as a forecasting record.
+
+      The market edge is still computed and published as context -- it is what
+      a bet would hinge on -- but it no longer selects the side.
+    */
     let side=null, edge=null, prob=null, price=null, mkt=null;
-    if(edgeHome!=null&&edgeAway!=null){
-      if(edgeHome>=edgeAway){side=g.home_team;edge=edgeHome;prob=homeProb;price=n(g.home_moneyline);mkt=mktHome;}
-      else {side=g.away_team;edge=edgeAway;prob=awayProb;price=n(g.away_moneyline);mkt=mktAway;}
+    if(homeProb>=0.5){
+      side=g.home_team; prob=homeProb; price=n(g.home_moneyline); mkt=mktHome; edge=edgeHome;
+    } else {
+      side=g.away_team; prob=awayProb; price=n(g.away_moneyline); mkt=mktAway; edge=edgeAway;
     }
+    // Edge on the side we actually named. Null when the market has no price.
+    const valueSide = (edgeHome!=null&&edgeAway!=null)
+      ? (edgeHome>=edgeAway ? g.home_team : g.away_team) : null;
     // Cards carry two states only: official_pick or pass. Nuance about WHY a
     // game passes belongs on the matchup page, not on a card.
     const rawDisagree = (mktHome!=null) ? Math.abs(rawHome-mktHome) : null;
@@ -272,6 +295,9 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
       week:g.week, model_version:"leo-nflml-v1", status,
       pick:side, model_prob:prob!=null?r3(prob):null, market_prob:mkt!=null?r3(mkt):null,
       edge:edge!=null?r3(edge):null, price,
+      // The side the market underprices, which may differ from the side Leo
+      // expects to win. Reported, never picked.
+      value_side:valueSide, value_side_differs: valueSide!=null && valueSide!==side,
       exp_margin:r1(expMargin), raw_model_prob:r3(rawHome), model_flagged:suspect,
       model_weight:r3(w), raw_disagreement:rawDisagree!=null?r3(rawDisagree):null,
       spread_line:n(g.spread_line), total_line:n(g.total_line),
@@ -360,6 +386,24 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
       console.log(`  ${name}: empty for ${target}, leaving -today.json untouched`);
     }
   }
+  /*
+    FREEZE THE PREDICTION. picks-{target}.json is rewritten by every
+    prepare-slate run, including the ones that fire after kickoff -- and those
+    reruns recompute ratings from completed games, so a post-kickoff rerun
+    "predicts" a game it has already seen. Grading read that file and produced
+    a 10-3 moneyline record that was really 6-7.
+    The append-only history below is what grading reads instead. Nothing here
+    is ever rewritten.
+  */
+  try {
+    const { record } = require("./lib/prediction-history");
+    const h = record(dir, picks);
+    console.log(`  prediction history: +${h.appended} new/changed, ${h.unchanged} unchanged` +
+                (h.created ? " (created prediction-history.csv)" : ""));
+  } catch(e) {
+    console.warn(`  prediction history NOT written: ${e.message}`);
+  }
+
   const official=picks.filter(p=>p.status==="official_pick").length;
   const flagged=picks.filter(p=>p.status==="model_flag").length;
   console.log(`  model weight this week: ${(picks[0]?picks[0].model_weight:0)} (rest is market prior)`);
