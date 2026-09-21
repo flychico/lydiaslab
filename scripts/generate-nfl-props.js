@@ -128,29 +128,54 @@ function anytimeTD(e, field, base, adj) {
     get(`${REL}/stats_player/stats_player_week_${PRIOR}.csv`),
     get(`${REL}/rosters/roster_${SEASON}.csv`)
   ]);
+  // Injury report: a player listed Out or Doubtful for this week is never
+  // projected and never counted as a starter -- the next man up is. Before
+  // 2026-09-21 Nico Collins (Out, Week 2) was projected for 79 yds and his
+  // replacement got nothing. Optional: a failed fetch projects as before.
+  let injuries = [];
+  try { injuries = await get(`${REL}/injuries/injuries_${SEASON}.csv`); }
+  catch (e) { console.log(`  injuries unavailable (${e.message}); no one skipped`); }
 
   const slate = games.filter(g => g.gameday === targetDate);
   if (!slate.length) { console.log("No games on that date. Nothing written."); return; }
   console.log(`  slate: ${slate.length} games`);
 
   const active = new Set(roster.filter(r => r.status === "ACT").map(r => r.full_name));
+  const slateWeek = Math.max(...slate.map(g => n(g.week)));
+  const sidelinedIds = new Set(injuries
+    .filter(r => n(r.week) === slateWeek && (!r.game_type || r.game_type === "REG") && PROPS.SIDELINED.test(r.report_status || ""))
+    .map(r => r.gsis_id));
+  console.log(`  injury report week ${slateWeek}: ${sidelinedIds.size} players Out or Doubtful`);
 
   // ---- per-player game logs -------------------------------------------------
   const logs = new Map();  // key -> {pos, team, cur:[], prior:[]}
   const add = (bucket, r) => {
     const k = r.player_display_name;
-    if (!logs.has(k)) logs.set(k, { pos: r.position, team: r.team, cur: [], prior: [] });
+    if (!logs.has(k)) logs.set(k, { id: r.player_id, pos: r.position, team: r.team, cur: [], prior: [] });
     const e = logs.get(k);
     if (bucket === "cur") e.team = r.team;
     e[bucket].push({
       att: n(r.attempts), pyds: n(r.passing_yards), ptd: n(r.passing_tds),
       car: n(r.carries), ryds: n(r.rushing_yards), rtd: n(r.rushing_tds),
-      tgt: n(r.targets), recy: n(r.receiving_yards), rectd: n(r.receiving_tds)
+      tgt: n(r.targets), recy: n(r.receiving_yards), rectd: n(r.receiving_tds),
+      wk: n(r.week), tm: r.team
     });
   };
   wk26.forEach(r => add("cur", r));
   // Regular season only: a playoff game is not part of "last season".
   wk25.filter(r => !r.season_type || r.season_type === "REG").forEach(r => add("prior", r));
+  // Team targets per game, both seasons, attached to every player-game so a
+  // receiver's share is his targets over his team's targets in his games.
+  const teamTgt = rows => { const m = new Map(); rows.forEach(r => { const k = `${r.team}|${n(r.week)}`; m.set(k, (m.get(k) || 0) + n(r.targets)); }); return m; };
+  const TC = teamTgt(wk26), TP = teamTgt(wk25.filter(r => !r.season_type || r.season_type === "REG"));
+  for (const e of logs.values()) {
+    e.cur.forEach(x => x.team_tgt = TC.get(`${x.tm}|${x.wk}`) || 0);
+    e.prior.forEach(x => x.team_tgt = TP.get(`${x.tm}|${x.wk}`) || 0);
+  }
+  const teamGames = new Map(), priorTeam = new Map();
+  TC.forEach((v, k) => { const t = k.split("|")[0]; (teamGames.get(t) || teamGames.set(t, []).get(t)).push(v); });
+  TP.forEach((v, k) => { const t = k.split("|")[0]; (priorTeam.get(t) || priorTeam.set(t, []).get(t)).push(v); });
+  const lgTeamTgt = mean([...TP.values()]);
   const qbLeague = PROPS.qbLeagueBaseline(
     [...logs.values()].filter(e => e.pos === "QB").flatMap(e => e.prior));
 
@@ -175,7 +200,7 @@ function anytimeTD(e, field, base, adj) {
   // ---- pick real starters by actual usage ----------------------------------
   function starters(team) {
     const onTeam = [...logs.entries()]
-      .filter(([name, e]) => e.team === team && e.cur.length && active.has(name));
+      .filter(([name, e]) => e.team === team && e.cur.length && active.has(name) && !sidelinedIds.has(e.id));
     const top = (pos, field, count) => onTeam
       .filter(([, e]) => e.pos === pos)
       .map(([name, e]) => ({ name, e, use: mean(e.cur.map(g => g[field])) }))
@@ -222,10 +247,12 @@ function anytimeTD(e, field, base, adj) {
       }
       for (const [i, { name, e }] of s.wr.entries()) {
         const ypt = blend(e.cur.map(x => x.tgt ? x.recy / x.tgt : 0), e.cur.map(x => x.tgt ? x.recy / x.tgt : 0), e.prior.map(x => x.tgt ? x.recy / x.tgt : 0));
-        const tgt = blend(e.cur.map(x => x.tgt), e.cur.map(x => x.tgt), e.prior.map(x => x.tgt));
+        // v2 volume (DEC-20260921-13): share of team targets x expected team targets.
+        const tgt = PROPS.wrTargets(e.cur.filter(x => x.tm === team), e.prior, teamGames.get(team) || [],
+                                    priorTeam.has(team) ? mean(priorTeam.get(team)) : lgTeamTgt).targets;
         const proj = (ypt * tgt * adjPass) + CALIBRATION.WR_REC_YARDS;
         push(g, { name, pos: "WR", depth: `WR${i + 1}`, team, opp, gp: e.cur.length, adj: adjPass },
-             "WR_REC_YARDS", Math.max(0, Math.round(proj)), { rate_used: r1(ypt), expected_volume: r1(tgt) });
+             "WR_REC_YARDS", Math.max(0, Math.round(proj)), { rate_used: r1(ypt), expected_volume: r1(tgt), model_version: "leo-nflprop-v2" });
         push(g, { name, pos: "WR", depth: `WR${i + 1}`, team, opp, gp: e.cur.length, adj: adjPass },
              "ANYTIME_TD", anytimeTD(e, "rectd", TD_BASE_WR, adjPass));
       }

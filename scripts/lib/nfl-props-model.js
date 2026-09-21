@@ -24,14 +24,16 @@
 
 // Measured, not hand-tuned. Re-derive with scripts/backtest-nfl-props.js.
 const CALIBRATION = {
-  // v2 method, 2025 walk-forward on STARTERS only (the population the live
-  // model projects), n=422: raw bias +9.5 yds high. The old +8.4 was measured
-  // on every QB incl. backups' cameo games and pushed starters ~15 yds high.
-  QB_PASS_YARDS: -9.5,
-  // RB and WR were measured on every player who touched the ball, not the
-  // live starters only. Re-measure on starters before trusting (open item).
+  // Measured on the players the live model projects (2025 walk-forward):
+  // QB = each team's top passer not listed Out/Doubtful (n=445, raw +7.2 high);
+  // WR = top 3 by targets, same rule, v2 target-share volume (n=1310, +1.2 high).
+  // The old +8.4 / +1.1 came from every player incl. backups and pushed
+  // starters high (QB about 15 yds, WR about 2).
+  QB_PASS_YARDS: -7.2,
+  // RB is still measured on every back who touched the ball, not the live
+  // top two. Re-measure on starters before trusting (open item).
   RB_RUSH_YARDS: 3.4,    // 2025 bias -3.4 yds over n=1221
-  WR_REC_YARDS:  1.1,    // 2025 bias -1.1 yds over n=2017
+  WR_REC_YARDS: -1.2,
   ANYTIME_TD:    0.0
 };
 
@@ -65,7 +67,42 @@ function qbProjection(cur, prior, league) {
   return { yds, att, rate: att ? yds / att : 0, prior_source: real.length >= QB_MIN_PRIOR_STARTS ? "player" : "league" };
 }
 
-const api = { CALIBRATION, QB_PRIOR_GAMES, QB_REAL_START_ATT, QB_MIN_PRIOR_STARTS, qbLeagueBaseline, qbProjection };
+/*
+ * WR TARGETS (leo-nflprop-v2 for WR, DEC-20260921-13)
+ *   targets = share of team targets x expected team targets
+ *   share: this season's targets / team targets in his games, with last
+ *     season's share counted as WR_SHARE_PRIOR_GAMES games of evidence.
+ *   team targets: this season's team targets per game, with last season's
+ *     team average counted as TEAM_TARGETS_PRIOR_GAMES games.
+ *   Tested on 2025 walk-forward (top-3 WRs): average miss 26.7 -> 26.4,
+ *   weeks 2-4 24.6 -> 23.8. Rate (yards per target) is unchanged.
+ *   Redistributing an injured teammate's targets was tested and REJECTED:
+ *   it fixed the average (-7 yds low) but made each player's miss worse.
+ */
+const WR_SHARE_PRIOR_GAMES = 3;
+const TEAM_TARGETS_PRIOR_GAMES = 3;
+
+/**
+ * games: this season [{tgt, team_tgt}], prior: last season (REG) [{tgt, team_tgt}],
+ * teamGames: this team's targets per game this season [n], teamPriorAvg: the
+ * team's (or league's) last-season targets per game. Returns {share, team_targets, targets}.
+ */
+function wrTargets(games, prior, teamGames, teamPriorAvg) {
+  const tMean = teamGames.length ? mean(teamGames) : teamPriorAvg;
+  const tg = sum(games.map(g => g.tgt)), tt = sum(games.map(g => g.team_tgt));
+  const ptt = sum(prior.map(g => g.team_tgt));
+  const pShare = ptt > 0 ? sum(prior.map(g => g.tgt)) / ptt : null;
+  const K = WR_SHARE_PRIOR_GAMES;
+  const share = pShare != null ? (tg + K * pShare * tMean) / (tt + K * tMean) : (tt > 0 ? tg / tt : 0);
+  const KT = TEAM_TARGETS_PRIOR_GAMES;
+  const team_targets = (sum(teamGames) + KT * teamPriorAvg) / (teamGames.length + KT);
+  return { share, team_targets, targets: share * team_targets };
+}
+
+/** Statuses that mean "will not play": never project, never pick as a starter. */
+const SIDELINED = /^(out|doubtful)$/i;
+
+const api = { CALIBRATION, WR_SHARE_PRIOR_GAMES, TEAM_TARGETS_PRIOR_GAMES, wrTargets, SIDELINED, QB_PRIOR_GAMES, QB_REAL_START_ATT, QB_MIN_PRIOR_STARTS, qbLeagueBaseline, qbProjection };
 if (typeof module === 'object' && module.exports) module.exports = api;
 else (typeof window !== 'undefined' ? window : this).LeoProps = api;
 })();
