@@ -38,7 +38,7 @@ function parseCSV(filePath) {
   }
 
   const content = fs.readFileSync(filePath, "utf8");
-  const lines = content.split("\n");
+  const lines = content.split(/\r?\n/);
   const header = lines[0].split(",");
 
   const rows = [];

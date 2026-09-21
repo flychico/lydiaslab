@@ -53,7 +53,7 @@ async function getSignupEmails(listName) {
   if (res.status === 404) { console.log(`No "${listName}" signups yet (${csvPath} not found on ${SIGNUPS_BRANCH}).`); return []; }
   if (!res.ok) { console.warn(`Signup CSV lookup failed for "${listName}": HTTP ${res.status}`); return []; }
   const text = await res.text();
-  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   const emails = new Set();
   // First line is the header (email,submitted_at) — skip it.
   for (const line of lines.slice(1)) {

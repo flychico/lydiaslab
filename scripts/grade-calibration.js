@@ -168,7 +168,7 @@ async function main() {
     }
   }
   const existing = new Set(
-    fs.readFileSync(LOG, "utf8").split("\n").slice(1)
+    fs.readFileSync(LOG, "utf8").split(/\r?\n/).slice(1)
       .map(l => { const p = l.split(","); return p.length >= 2 ? `${normDate(p[0])},${p[1]}` : ""; })
       .filter(Boolean)
   );
@@ -319,7 +319,7 @@ async function main() {
     }
   }
   const aSeen = alogHeaderOk
-    ? new Set(fs.readFileSync(ALOG, "utf8").split("\n").slice(1).map(l => { const p = l.split(","); return p.length >= 2 ? `${normDate(p[0])},${p[1]}` : ""; }).filter(Boolean))
+    ? new Set(fs.readFileSync(ALOG, "utf8").split(/\r?\n/).slice(1).map(l => { const p = l.split(","); return p.length >= 2 ? `${normDate(p[0])},${p[1]}` : ""; }).filter(Boolean))
     : new Set();
   const aRows = [];
   // 2026-08-13, Lynold's explicit instruction: "ensure everything is rounded
@@ -524,7 +524,7 @@ async function main() {
         console.warn(`K-props ${DATE}: only ${withLine.length} of ${allRecs.length} pitchers carry a market line `
           + `(events_fetched: ${kp.events_fetched ?? "unknown"}) — partial odds capture, grading what exists.`);
       }
-      const kSeen = new Set(fs.readFileSync(KLOG, "utf8").split("\n").slice(1).map(l => { const p = l.split(","); return p.length >= 2 ? `${normDate(p[0])},${p[1]}` : ""; }).filter(Boolean));
+      const kSeen = new Set(fs.readFileSync(KLOG, "utf8").split(/\r?\n/).slice(1).map(l => { const p = l.split(","); return p.length >= 2 ? `${normDate(p[0])},${p[1]}` : ""; }).filter(Boolean));
       const kRows = [];
       // Collected alongside kRows so the data/k-props/<date>.xlsx refresh
       // below can include EVERY pitcher captured that day (graded or not),
@@ -614,7 +614,7 @@ async function main() {
         const iDate = KLOG_COLUMNS.indexOf("date"), iPitcher = KLOG_COLUMNS.indexOf("pitcher");
         const iActualK = KLOG_COLUMNS.indexOf("actual_k"), iOu = KLOG_COLUMNS.indexOf("ou_result");
         const iLean = KLOG_COLUMNS.indexOf("lean"), iLeanRes = KLOG_COLUMNS.indexOf("lean_result");
-        const existingRows = fs.readFileSync(KLOG, "utf8").trim().split("\n").slice(1).map(l => l.split(","));
+        const existingRows = fs.readFileSync(KLOG, "utf8").trim().split(/\r?\n/).slice(1).map(l => l.split(","));
         for (const r of existingRows) {
           if (r.length <= Math.max(iDate, iPitcher, iActualK, iOu, iLean, iLeanRes)) continue;
           if (normDate(r[iDate]) !== DATE || !r[iPitcher]) continue;
@@ -657,7 +657,7 @@ async function main() {
     // still graded and simply tagged "unknown".
     if (tp && tp.games) {
       if (!fs.existsSync(TLOG)) fs.writeFileSync(TLOG, THEAD);
-      const tSeen = new Set(fs.readFileSync(TLOG, "utf8").split("\n").slice(1).map(l => { const p = l.split(","); return p.length >= 2 ? `${normDate(p[0])},${p[1]}` : ""; }).filter(Boolean));
+      const tSeen = new Set(fs.readFileSync(TLOG, "utf8").split(/\r?\n/).slice(1).map(l => { const p = l.split(","); return p.length >= 2 ? `${normDate(p[0])},${p[1]}` : ""; }).filter(Boolean));
       const tRows = [];
       const totalsPolicy = tp.policy || {};
       const minEdge = Number.isFinite(totalsPolicy.research_min_edge) ? totalsPolicy.research_min_edge : 0.7;
@@ -721,7 +721,7 @@ async function main() {
       console.log(`Shadow-model ledger header upgraded (+component columns).`);
     }
   }
-  const sExisting = new Set(fs.readFileSync(SLOG, "utf8").split("\n").slice(1).map(l => { const p = l.split(","); return p.length >= 2 ? `${normDate(p[0])},${p[1]}` : ""; }).filter(Boolean));
+  const sExisting = new Set(fs.readFileSync(SLOG, "utf8").split(/\r?\n/).slice(1).map(l => { const p = l.split(","); return p.length >= 2 ? `${normDate(p[0])},${p[1]}` : ""; }).filter(Boolean));
   const sRows = [];
   // risk_index falls back to the older raw fatigue `score` for any bullpen
   // record generated before the efficiency/risk split existed — same fallback
@@ -765,7 +765,7 @@ async function main() {
     // in this file, so a re-run recognizes today's own already-voided rows
     // regardless of which date format they were written under.
     const seen = new Set(
-      fs.readFileSync(VOIDLOG, "utf8").split("\n").slice(1)
+      fs.readFileSync(VOIDLOG, "utf8").split(/\r?\n/).slice(1)
         .map(l => { const p = l.split(","); return p.length >= 3 ? `${normDate(p[0])},${p[1]},${p[2]}` : ""; })
         .filter(Boolean)
     );
@@ -809,7 +809,7 @@ function writeHealth() {
     for (const [name, file] of Object.entries(ledgers)) {
       const p = path.join(dir, file);
       if (!fs.existsSync(p)) { out.ledgers[name] = { file, present: false }; continue; }
-      const lines = fs.readFileSync(p, "utf8").trim().split("\n").slice(1).filter(Boolean);
+      const lines = fs.readFileSync(p, "utf8").trim().split(/\r?\n/).slice(1).filter(Boolean);
       const last = lines.length ? lines[lines.length - 1].split(",")[0] : null;
       const stale = last ? daysBetween(last, today) : null;
       out.ledgers[name] = {

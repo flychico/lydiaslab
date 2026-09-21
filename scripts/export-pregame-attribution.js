@@ -219,7 +219,7 @@ function main() {
 
   let existingLines = [];
   if (fs.existsSync(OUT)) {
-    existingLines = fs.readFileSync(OUT, "utf8").split("\n").filter(Boolean);
+    existingLines = fs.readFileSync(OUT, "utf8").split(/\r?\n/).filter(Boolean);
     if (existingLines.length && existingLines[0].startsWith("date,")) existingLines.shift(); // drop old header
   }
   // Upsert: drop any existing row for (date, gamePk) we're about to rewrite,

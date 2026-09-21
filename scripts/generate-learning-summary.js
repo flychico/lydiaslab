@@ -801,7 +801,7 @@ function pct(v) {
 function buildCalibration() {
   const logPath = path.join(ROOT, "data", "calibration", "calibration_model_log.csv");
   if (!fs.existsSync(logPath)) return { status: "no_data", games_graded: 0 };
-  const lines = fs.readFileSync(logPath, "utf8").split("\n").slice(1).filter(Boolean);
+  const lines = fs.readFileSync(logPath, "utf8").split(/\r?\n/).slice(1).filter(Boolean);
   const parsed = [];
   for (const line of lines) {
     const cols = splitCsvLine(line);
@@ -849,7 +849,7 @@ function buildCalibration() {
   let shadow = { status: "no_data" };
   const sPath = path.join(ROOT, "data", "calibration", "shadow_model_log.csv");
   if (fs.existsSync(sPath)) {
-    const parsed = fs.readFileSync(sPath, "utf8").split("\n").slice(1).filter(Boolean).map(l => {
+    const parsed = fs.readFileSync(sPath, "utf8").split(/\r?\n/).slice(1).filter(Boolean).map(l => {
       const [d, pk, officialVersion, shadowVersion, pOfficial, pShadow, hw] = l.split(",");
       return { date: d, game_pk: pk, official_version: officialVersion, shadow_version: shadowVersion, p_official: parseFloat(pOfficial), p_shadow: parseFloat(pShadow), hw: Number(hw) };
     }).filter(r => isFinite(r.p_official) && isFinite(r.p_shadow) && (r.hw === 0 || r.hw === 1));
@@ -898,12 +898,12 @@ function buildCalibration() {
     // already permanently empty. Dropped both rather than re-map them to
     // unrelated data. Offense form is now covered by home_woba_gap (the
     // real, currently-logged offense-form gap column, wOBA-based).
-    const aHead = fs.readFileSync(aPath, "utf8").split("\n")[0].split(",");
+    const aHead = fs.readFileSync(aPath, "utf8").split(/\r?\n/)[0].split(",");
     const aIdx = name => aHead.indexOf(name);
     const iModelVer = aIdx("model_version"), iPickTeam = aIdx("pick_team"), iWinner = aIdx("winner");
     const iHomeProb = aIdx("home_model_prob"), iHomePitcherGap = aIdx("home_pitcher_gap");
     const iHomeWobaGap = aIdx("home_woba_gap"), iHomeBullpenGap = aIdx("home_bullpen_gap");
-    const aRows = iModelVer === -1 ? [] : fs.readFileSync(aPath, "utf8").trim().split("\n").slice(1).map(splitCsvLine)
+    const aRows = iModelVer === -1 ? [] : fs.readFileSync(aPath, "utf8").trim().split(/\r?\n/).slice(1).map(splitCsvLine)
       .filter(r => r.length === aHead.length && r[iModelVer] === latestModelVersion && (r[iWinner] === "home" || r[iWinner] === "away"))
       .map(r => ({ r, pickIsHome: r[iPickTeam] === "home team", won: (r[iPickTeam] === "home team") === (r[iWinner] === "home") }));
     attribution.games = aRows.length;
@@ -945,7 +945,7 @@ function buildCalibration() {
   let kprops = { status: "no_data" };
   const kPath = path.join(ROOT, "data", "calibration", "kprops_log.csv");
   if (fs.existsSync(kPath)) {
-    const kLines = fs.readFileSync(kPath, "utf8").trim().split("\n");
+    const kLines = fs.readFileSync(kPath, "utf8").trim().split(/\r?\n/);
     // 2026-08-14: kprops_log.csv's columns were reordered/renamed/trimmed to
     // Lynold's exact spec. This reader used to address the file POSITIONALLY
     // (r[5]=projection, r[6]=actual_k, r[8]=lean, r[9]=lean_result) — the same

@@ -66,7 +66,7 @@ require(path.join(__dirname, "..", "grade-nfl-results.js"));
 
 // --- assertions -----------------------------------------------------------
 const { splitCsv } = require(path.join(__dirname, "..", "lib", "odds-history.js"));
-const lines = fs.readFileSync(LEDGER, "utf8").trim().split("\n");
+const lines = fs.readFileSync(LEDGER, "utf8").trim().split(/\r?\n/);
 const head = splitCsv(lines[0]);
 const rows = lines.slice(1).map(l => { const c = splitCsv(l); const o = {}; head.forEach((h,i)=>o[h]=c[i]); return o; })
                   .filter(r => r.date === DATE);

@@ -75,7 +75,7 @@ function loadOutcomes() {
     console.error(`No graded ledger at ${f}. Run grade-calibration.js first.`);
     process.exit(1);
   }
-  const lines = fs.readFileSync(f, "utf8").split("\n").filter(l => l.trim());
+  const lines = fs.readFileSync(f, "utf8").split(/\r?\n/).filter(l => l.trim());
   const head = lines[0].split(",");
   const iDate = head.indexOf("date"), iPk = head.indexOf("gamePk"), iRes = head.indexOf("result");
   const out = new Map();

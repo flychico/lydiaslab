@@ -283,7 +283,7 @@ async function getMemberEmails() {
   if (res.status === 404) { console.log(`No member signups yet (${MEMBER_EMAIL_CSV_PATH} not found on ${SIGNUPS_BRANCH}).`); return []; }
   if (!res.ok) { console.warn("Member signup CSV lookup failed: HTTP", res.status); return []; }
   const text = await res.text();
-  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   const emails = new Set();
   for (const line of lines.slice(1)) { // skip header row
     const email = (line.split(",")[0] || "").trim();

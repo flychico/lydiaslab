@@ -72,7 +72,7 @@ const csvField = s => {
 };
 function readCsv(file) {
   if (!fs.existsSync(file)) return null;
-  const lines = fs.readFileSync(file, "utf8").split("\n").filter(l => l.trim() !== "");
+  const lines = fs.readFileSync(file, "utf8").split(/\r?\n/).filter(l => l.trim() !== "");
   if (!lines.length) return null;
   return { header: splitCsvLine(lines[0]), rows: lines.slice(1).map(splitCsvLine) };
 }

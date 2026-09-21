@@ -485,7 +485,7 @@ async function main() {
   try {
     const tlog = path.join(ROOT, "data", "calibration", "totals_model_log.csv");
     if (fs.existsSync(tlog)) {
-      const rows2 = fs.readFileSync(tlog, "utf8").trim().split("\n").slice(1).map(l => l.split(","))
+      const rows2 = fs.readFileSync(tlog, "utf8").trim().split(/\r?\n/).slice(1).map(l => l.split(","))
         .filter(r => r.length >= 8 && r[2] === TOTALS_MODEL_VERSION && r[6] !== "" && r[7] !== "" && isFinite(Number(r[6])) && isFinite(Number(r[7]))).slice(-100);
       learnedN = rows2.length;
       if (learnedN >= 25) {

@@ -59,7 +59,7 @@ process.argv = [process.argv[0], "script", `--date=${DATE}`, "--week=2", "--forc
 require(path.join(__dirname, "..", "grade-nfl-props.js"));
 
 const { splitCsv } = require(path.join(__dirname, "..", "lib", "odds-history.js"));
-const L = fs.readFileSync(LEDGER, "utf8").trim().split("\n");
+const L = fs.readFileSync(LEDGER, "utf8").trim().split(/\r?\n/);
 const h = splitCsv(L[0]);
 const rows = L.slice(1).map(l => { const c = splitCsv(l); const o = {}; h.forEach((x,i)=>o[x]=c[i]); return o; })
               .filter(r => r.date === DATE);

@@ -128,7 +128,7 @@ async function main() {
   const seenKeys = new Set();
   let ledgerExists = fs.existsSync(LEDGER_PATH);
   if (ledgerExists) {
-    for (const line of fs.readFileSync(LEDGER_PATH, "utf8").split("\n")) {
+    for (const line of fs.readFileSync(LEDGER_PATH, "utf8").split(/\r?\n/)) {
       const [date, pk] = line.split(",");
       if (date && pk) seenKeys.add(`${date}|${pk}`);
     }

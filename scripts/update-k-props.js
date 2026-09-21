@@ -396,7 +396,7 @@ async function main() {
   try {
     const klog = path.join(ROOT, "data", "calibration", "kprops_log.csv");
     if (fs.existsSync(klog)) {
-      const lines = fs.readFileSync(klog, "utf8").trim().split("\n");
+      const lines = fs.readFileSync(klog, "utf8").trim().split(/\r?\n/);
       // 2026-08-14: kprops_log.csv's columns were reordered/renamed/trimmed
       // (43 -> 38 cols) to Lynold's exact spec. This reader used to address the
       // file POSITIONALLY (r[5]=projection, r[6]=actual_k, r[10]=projection_raw)

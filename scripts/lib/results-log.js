@@ -60,7 +60,7 @@ function parseLine(line) {
 
 function readAllRows() {
   if (!fs.existsSync(LOG_PATH)) return [];
-  const lines = fs.readFileSync(LOG_PATH, "utf8").trim().split("\n");
+  const lines = fs.readFileSync(LOG_PATH, "utf8").trim().split(/\r?\n/);
   if (lines.length < 2) return [];
   return lines.slice(1).filter(Boolean).map(line => {
     const vals = parseLine(line);
