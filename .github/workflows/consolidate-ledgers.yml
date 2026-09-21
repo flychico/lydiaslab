@@ -52,6 +52,9 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Refuse merge-conflict markers
+        run: bash scripts/check-conflict-markers.sh
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:

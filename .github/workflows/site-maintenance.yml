@@ -19,6 +19,9 @@ jobs:
         with:
           persist-credentials: true
 
+      - name: Refuse merge-conflict markers
+        run: bash scripts/check-conflict-markers.sh
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
