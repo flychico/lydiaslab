@@ -164,26 +164,47 @@ function axpick(){
   }));
 }
 
+/*
+  Drawn at the chart's real on-screen width, not a fixed 1000-unit canvas.
+  The old viewBox was 1000 wide with 26-unit logos, so on a phone the whole
+  drawing scaled to about a third and every logo rendered near 9px. Working
+  in true pixels keeps logos a legible size at every width, and the chart
+  redraws when the width changes.
+*/
 function drawMap(){
+  const host=document.getElementById("map");
   const xs=D.map(t=>t[AXX]).filter(v=>v!=null), ys=D.map(t=>t[AXY]).filter(v=>v!=null);
-  if(!xs.length||!ys.length){document.getElementById("map").innerHTML="";return;}
+  if(!xs.length||!ys.length){host.innerHTML="";return;}
+  const W=Math.max(300, Math.round(host.clientWidth||1000));
+  const narrow=W<560;
+  const H=Math.round(narrow ? W*0.95 : Math.min(620, W*0.56));
+  const L=narrow ? 30 : 40;                         // logo edge, in real px
+  const padL=narrow?30:46, padR=L/2+8, padT=L/2+8, padB=narrow?34:40;
   const xmin=Math.min(...xs),xmax=Math.max(...xs),ymin=Math.min(...ys),ymax=Math.max(...ys);
-  const px=v=>((v-xmin)/((xmax-xmin)||1))*880+60;
-  const py=v=>500-((v-ymin)/((ymax-ymin)||1))*430-40;
+  const px=v=>padL+((v-xmin)/((xmax-xmin)||1))*(W-padL-padR);
+  const py=v=>padT+(1-((v-ymin)/((ymax-ymin)||1)))*(H-padT-padB);
   const xmid=px((xmin+xmax)/2), ymid=py((ymin+ymax)/2);
   const pts=D.filter(t=>t[AXX]!=null&&t[AXY]!=null).map(t=>
-    '<image href="/img/nfl/'+encodeURIComponent(t.team)+'.png" x="'+(px(t[AXX])-13)+'" y="'+(py(t[AXY])-13)+
-    '" width="26" height="26"><title>'+esc(t.team)+" · "+AX[AXX][0]+" "+t[AXX]+" · "+AX[AXY][0]+" "+t[AXY]+'</title></image>').join("");
-  document.getElementById("map").innerHTML=
-    '<svg viewBox="0 0 1000 520" role="img" aria-label="Team map">'+
-    '<line x1="'+xmid+'" y1="20" x2="'+xmid+'" y2="480" stroke="var(--border)" stroke-dasharray="5 5"/>'+
-    '<line x1="50" y1="'+ymid+'" x2="960" y2="'+ymid+'" stroke="var(--border)" stroke-dasharray="5 5"/>'+
-    '<text class="axl" x="505" y="515" text-anchor="middle">'+esc(AX[AXX][0])+' →</text>'+
-    '<text class="axl" x="16" y="255" text-anchor="middle" transform="rotate(-90 16 255)">'+esc(AX[AXY][0])+' →</text>'+
+    '<image href="/img/nfl/'+encodeURIComponent(t.team)+'.png" x="'+(px(t[AXX])-L/2).toFixed(1)+'" y="'+(py(t[AXY])-L/2).toFixed(1)+
+    '" width="'+L+'" height="'+L+'"><title>'+esc(t.team)+" · "+AX[AXX][0]+" "+t[AXX]+" · "+AX[AXY][0]+" "+t[AXY]+'</title></image>').join("");
+  host.innerHTML=
+    '<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Team map" style="display:block;max-width:100%;height:auto">'+
+    '<line x1="'+xmid+'" y1="'+padT+'" x2="'+xmid+'" y2="'+(H-padB)+'" stroke="var(--border)" stroke-dasharray="5 5"/>'+
+    '<line x1="'+padL+'" y1="'+ymid+'" x2="'+(W-padR)+'" y2="'+ymid+'" stroke="var(--border)" stroke-dasharray="5 5"/>'+
+    '<text class="axl" x="'+((padL+W-padR)/2)+'" y="'+(H-10)+'" text-anchor="middle">'+esc(AX[AXX][0])+' &#8594;</text>'+
+    '<text class="axl" x="14" y="'+((padT+H-padB)/2)+'" text-anchor="middle" transform="rotate(-90 14 '+((padT+H-padB)/2)+')">'+esc(AX[AXY][0])+' &#8594;</text>'+
     pts+'</svg>';
   document.getElementById("mapnote").textContent=
     "Horizontal: "+AX[AXX][0]+" ("+xmin+" to "+xmax+"). Vertical: "+AX[AXY][0]+" ("+ymin+" to "+ymax+"). Dashed lines mark the league midpoint on each axis.";
 }
+// Redraw at the new true size when the chart's width changes (rotation, resize).
+(function(){
+  let last=0,tm=null;
+  window.addEventListener("resize",()=>{clearTimeout(tm);tm=setTimeout(()=>{
+    const w=(document.getElementById("map")||{}).clientWidth||0;
+    if(Math.abs(w-last)>20){last=w; if(typeof D!=="undefined"&&D&&D.length) drawMap();}
+  },150);});
+})();
 
 const COLS=[["rank","#"],["team","Team"],["conf","Conf"],["division","Division"],["record","Rec"],
  ["rating","Rating"],["points_for","PF/G"],["points_against","PA/G"],["point_diff","Diff"],

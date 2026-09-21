@@ -167,6 +167,89 @@ function ratingsSection(m){
   </table>`;
 }
 
+const MK={QB_PASS_YARDS:["Passing yards","yds/att","att"],RB_RUSH_YARDS:["Rushing yards","yds/carry","car"],
+          WR_REC_YARDS:["Receiving yards","yds/tgt","tgt"]};
+const sg=x=>x==null?"\u2014":(x>0?"+":"")+(Math.round(x*10)/10);
+const pct=x=>x==null?"\u2014":Math.round(x*100)+"%";
+const r1=x=>x==null?"\u2014":Math.round(x*10)/10;
+// spread is stated from the HOME side (positive = home favoured). Say it the
+// way a person reads it: "BAL by 9.2", "BAL -8.5".
+const fav=(m,x)=>x==null?"\u2014":(x===0?"Pick'em":(x>0?m.home:m.away)+" by "+Math.abs(Math.round(x*10)/10));
+const lineTxt=(m,x)=>x==null?"\u2014":(x===0?"Pick'em":(x>0?m.home:m.away)+" \u2212"+Math.abs(x));
+const verdict=r=>r==="W"?'<span class="vd w">RIGHT</span>':r==="L"?'<span class="vd l">WRONG</span>':r==="P"?'<span class="vd p">PUSH</span>':"";
+
+/*
+  LEO'S READ — pre-game analysis. Every number here was frozen before kickoff
+  (prediction-history.csv), so this section reads the same before and after the
+  game. The point of the page is to be able to look back at what Leo expected
+  and why, which only works if what Leo expected cannot be revised.
+*/
+function leoSection(m){
+  const L=m.leo; if(!L) return "";
+  const g=L.game;
+  const when=L.captured_at?new Date(L.captured_at).toLocaleString("en-US",{timeZone:"America/New_York",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})+" ET":"";
+  const game=g?`
+  <div class="leo-grid">
+    <div class="box"><span class="lbl">Leo winner</span><span class="val">${esc(g.pick)} ${pct(g.prob)}</span><span class="lbl2">market ${pct(g.market_prob)}</span></div>
+    <div class="box"><span class="lbl">Leo total</span><span class="val">${v(g.proj_total)}</span><span class="lbl2">line ${v(g.total_line)} &middot; leans ${esc(g.total_side||"\u2014")}</span></div>
+    <div class="box"><span class="lbl">Leo spread</span><span class="val">${esc(fav(m,g.proj_spread))}</span><span class="lbl2">line ${esc(lineTxt(m,g.spread_line))} &middot; leans ${esc(g.spread_side||"\u2014")}</span></div>
+  </div>`:"";
+  const byMk={};
+  for(const p of (L.props||[])) (byMk[p.market]=byMk[p.market]||[]).push(p);
+  const props=Object.keys(MK).filter(k=>byMk[k]).map(k=>{
+    const [label,ru,vu]=MK[k];
+    return `<h3 class="sec3">${label}</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>${ru}</th><th>${vu}</th><th>opp adj</th><th>games</th><th>Leo</th></tr></thead><tbody>`+
+    byMk[k].sort((a,b)=>b.projection-a.projection).map(p=>`<tr>
+      <td><b>${esc(p.player)}</b> <span class="mut">${esc(p.team)} ${esc(p.depth||"")}</span></td>
+      <td>${r1(p.rate)}</td><td>${r1(p.volume)}</td><td>${r1(p.adj)}</td><td>${v(p.games_played)}</td>
+      <td><b>${v(p.projection)}</b></td></tr>`).join("")+`</tbody></table></div>`;
+  }).join("");
+  return `
+  <h2 class="sec">Leo&rsquo;s read</h2>
+  <p class="sub">What the model expected, frozen before kickoff${when?" ("+esc(when)+")":""}. Each player projection is rate &times; volume &times; opponent adjustment &mdash; the columns show every input. None of this is a wager.</p>
+  ${game}${props}`;
+}
+
+/*
+  FINAL REPORT — the only place the game's own result appears. Rendered only
+  once nflverse marks the game complete. It sets the frozen expectation beside
+  what happened, and splits each player miss into the rate half and the volume
+  half so the page says what to learn, not just whether Leo was right.
+*/
+function finalReport(m){
+  const F=m.final_report; if(!F) return "";
+  const line=(label,p,fmtLeo)=>p?`<tr><td>${label}</td><td>${fmtLeo(p)}</td><td>${v(p.market)}</td><td>${esc(p.actual)}</td><td>${verdict(p.result)}</td><td>${p.beat==="Y"?"Leo":p.beat==="N"?"Market":"\u2014"}</td></tr>`:"";
+  const games=`<div class="fxw"><table class="fx"><thead><tr><th>Market</th><th>Leo</th><th>Market</th><th>Actual</th><th>Side</th><th>Closer</th></tr></thead><tbody>
+    ${line("Winner",F.moneyline?{...F.moneyline,market:pct(F.moneyline.market)}:null,p=>esc(p.side)+" "+pct(p.leo))}
+    ${line("Total",F.total_pick,p=>v(p.leo)+" "+esc(p.side||""))}
+    ${line("Spread",F.spread?{...F.spread,market:lineTxt(m,F.spread.market),actual:fav(m,Number(F.spread.actual))}:null,p=>esc(fav(m,p.leo)))}
+  </tbody></table></div>`;
+  const byMk={};
+  for(const p of (F.props||[])) (byMk[p.market]=byMk[p.market]||[]).push(p);
+  const props=Object.keys(MK).filter(k=>byMk[k]).map(k=>{
+    const [label,ru,vu]=MK[k];
+    return `<h3 class="sec3">${label}</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Leo</th><th>Line</th><th>Actual</th><th>${ru}<br><span class="mut">proj &rarr; actual</span></th><th>${vu}<br><span class="mut">proj &rarr; actual</span></th><th>Miss from<br><span class="mut">rate / volume</span></th><th></th></tr></thead><tbody>`+
+    byMk[k].sort((a,b)=>Math.abs(b.actual-b.projection)-Math.abs(a.actual-a.projection)).map(p=>`<tr>
+      <td><b>${esc(p.player)}</b> <span class="mut">${esc(p.team)}</span></td>
+      <td>${v(p.projection)}</td><td>${v(p.line)}</td><td><b>${v(p.actual)}</b></td>
+      <td>${r1(p.rate)} &rarr; ${r1(p.actual_rate)}</td>
+      <td>${r1(p.volume)} &rarr; ${r1(p.actual_volume)}</td>
+      <td class="fxsplit"><span class="fxr">${sg(p.rate_effect)}</span> / <span class="fxv">${sg(p.volume_effect)}</span></td>
+      <td>${p.lean?verdict(p.result):""}</td></tr>`).join("")+`</tbody></table></div>`;
+  }).join("");
+  return `
+  <section class="final">
+    <h2 class="sec">Final report</h2>
+    <p class="final-score"><img src="/img/nfl/${encodeURIComponent(m.away)}.png" alt=""> ${esc(m.away)} <b>${F.away_score}</b>
+      &ndash; <b>${F.home_score}</b> ${esc(m.home)} <img src="/img/nfl/${encodeURIComponent(m.home)}.png" alt="">${F.overtime?' <span class="mut">(OT)</span>':""}</p>
+    <p class="sub">Leo&rsquo;s frozen pre-kickoff numbers beside the result. &ldquo;Closer&rdquo; says whose number landed nearer the outcome &mdash; that, not right or wrong, is what tells us whether the model is learning anything the market does not already know.</p>
+    ${F.graded?games:'<p class="sub">Grading runs the morning after the game; the detailed comparison appears once it has.</p>'}
+    ${props?`<p class="sub" style="margin-top:14px">Every player miss is split into the part caused by the rate being wrong and the part caused by the volume being wrong. The two add up to the full miss.</p>`+props:""}
+  </section>`;
+}
+
 function page(m){
   const A=m.sides.away, H=m.sides.home;
   const cur=(m.ratings&&m.ratings.this_season)||null;
@@ -279,6 +362,25 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
 .qbr em{font-style:normal;font-size:.58rem;font-weight:800;letter-spacing:.07em;color:var(--text-dim)}
 .qbr b{font-size:.92rem;font-weight:800;color:var(--accent2);letter-spacing:0}
 @media(max-width:820px){.grid2,.tdgrid{grid-template-columns:1fr}}
+/* pre-game read + final report */
+.leo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:6px 0 12px}
+.leo-grid .box{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:11px 13px;display:flex;flex-direction:column;gap:2px}
+.leo-grid .lbl{font-size:.64rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--text-dim)}
+.leo-grid .val{font-size:1.15rem;font-weight:800;font-variant-numeric:tabular-nums}
+.leo-grid .lbl2{font-size:.74rem;color:var(--text-dim)}
+.sec3{font-size:.9rem;margin:16px 0 6px}
+.fxw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:4px}
+.fx{width:100%;border-collapse:collapse;font-size:.84rem;font-variant-numeric:tabular-nums;background:transparent}
+.fx th{font-size:.62rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--text-dim);text-align:right;padding:6px 8px;border-bottom:1.5px solid var(--border);white-space:nowrap}
+.fx td{text-align:right;padding:7px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
+.fx th:first-child,.fx td:first-child{text-align:left;padding-left:0}
+.fx .mut,.mut{color:var(--text-dim);font-weight:500;font-size:.78em;text-transform:none;letter-spacing:0}
+.fx .fxsplit{white-space:nowrap}.fx .fxr{color:#4A6478;font-weight:700;font-size:inherit}.fx .fxv{color:#8A6D3B;font-weight:700;font-size:inherit}
+.vd{font-size:.62rem;font-weight:800;letter-spacing:.06em;padding:3px 9px;border-radius:999px}
+.vd.w{background:rgba(47,110,74,.13);color:var(--good)}.vd.l{background:rgba(166,58,46,.13);color:var(--danger)}.vd.p{background:var(--bg-elev);color:var(--text-dim)}
+.final{margin-top:34px;padding-top:6px;border-top:3px double var(--border)}
+.final-score{display:flex;align-items:center;gap:8px;font-size:1.25rem;font-weight:700;flex-wrap:wrap;margin:4px 0 8px}
+.final-score img{width:34px;height:34px;object-fit:contain}
 </style>
 </head>
 <body>
@@ -300,7 +402,9 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
     <div class="box"><span class="lbl">Spread</span><span class="val">${esc(spread)}</span></div>
     <div class="box"><span class="lbl">Total</span><span class="val">${v(m.total_line)}</span></div>
   </section>
-  <div class="notice note">Market numbers are the closing line, shown for context. Leo does not publish a pick on this game &mdash; testing against the 2025 season showed the model does not beat the closing price, so these pages report stats rather than projections.</div>
+  <div class="notice note">This is a pre-game analysis page. Every stat above the Final report comes from games played <b>before</b> this one${m.pregame_through_week?" (through Week "+m.pregame_through_week+")":""}, and Leo&rsquo;s numbers were frozen before kickoff. Market numbers are the closing line. Nothing here is a wager &mdash; the pick gate stays closed until Leo shows it can beat that line.</div>
+
+  ${leoSection(m)}
 
   ${ratingsSection(m)}
 
@@ -326,7 +430,7 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
   </table>
 
   <h2 class="sec">This season</h2>
-  <p class="sub">Starting quarterback, lead backs and top receivers, by actual usage this season.</p>
+  <p class="sub">Starting quarterback, lead backs and top receivers, by actual usage this season &mdash; games before this one only.</p>
   <div class="grid2">${sideBlock(A,"this_season",m.date.slice(0,4),cur&&cur.away)}${sideBlock(H,"this_season",m.date.slice(0,4),cur&&cur.home)}</div>
 
   <h2 class="sec">Last season</h2>
@@ -336,6 +440,8 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
   <h2 class="sec">Touchdown leaders</h2>
   <p class="sub">Top three scrimmage touchdown scorers on each side this season, rushing and receiving.</p>
   <div class="tdgrid">${scorers(A,m.date.slice(0,4))}${scorers(H,m.date.slice(0,4))}</div>
+
+  ${finalReport(m)}
 
   <p class="data-note">Player and team statistics from the open nflverse dataset. Roles assigned by actual usage &mdash; most attempts, carries and targets &mdash; not depth chart.</p>
 </main>

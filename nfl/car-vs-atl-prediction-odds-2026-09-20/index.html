@@ -98,6 +98,25 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
 .qbr em{font-style:normal;font-size:.58rem;font-weight:800;letter-spacing:.07em;color:var(--text-dim)}
 .qbr b{font-size:.92rem;font-weight:800;color:var(--accent2);letter-spacing:0}
 @media(max-width:820px){.grid2,.tdgrid{grid-template-columns:1fr}}
+/* pre-game read + final report */
+.leo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:6px 0 12px}
+.leo-grid .box{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:11px 13px;display:flex;flex-direction:column;gap:2px}
+.leo-grid .lbl{font-size:.64rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--text-dim)}
+.leo-grid .val{font-size:1.15rem;font-weight:800;font-variant-numeric:tabular-nums}
+.leo-grid .lbl2{font-size:.74rem;color:var(--text-dim)}
+.sec3{font-size:.9rem;margin:16px 0 6px}
+.fxw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:4px}
+.fx{width:100%;border-collapse:collapse;font-size:.84rem;font-variant-numeric:tabular-nums;background:transparent}
+.fx th{font-size:.62rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--text-dim);text-align:right;padding:6px 8px;border-bottom:1.5px solid var(--border);white-space:nowrap}
+.fx td{text-align:right;padding:7px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
+.fx th:first-child,.fx td:first-child{text-align:left;padding-left:0}
+.fx .mut,.mut{color:var(--text-dim);font-weight:500;font-size:.78em;text-transform:none;letter-spacing:0}
+.fx .fxsplit{white-space:nowrap}.fx .fxr{color:#4A6478;font-weight:700;font-size:inherit}.fx .fxv{color:#8A6D3B;font-weight:700;font-size:inherit}
+.vd{font-size:.62rem;font-weight:800;letter-spacing:.06em;padding:3px 9px;border-radius:999px}
+.vd.w{background:rgba(47,110,74,.13);color:var(--good)}.vd.l{background:rgba(166,58,46,.13);color:var(--danger)}.vd.p{background:var(--bg-elev);color:var(--text-dim)}
+.final{margin-top:34px;padding-top:6px;border-top:3px double var(--border)}
+.final-score{display:flex;align-items:center;gap:8px;font-size:1.25rem;font-weight:700;flex-wrap:wrap;margin:4px 0 8px}
+.final-score img{width:34px;height:34px;object-fit:contain}
 </style>
 </head>
 <body>
@@ -110,7 +129,7 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
       <span class="at">at</span>
       <span class="t"><img src="/img/nfl/ATL.png" alt="ATL"><b>ATL</b></span>
     </div>
-    <p class="subtitle">Mercedes-Benz Stadium &middot; closed &middot; Division game</p>
+    <p class="subtitle">Mercedes-Benz Stadium &middot; closed &middot; fieldturf &middot; Division game</p>
   </section>
 
   <section class="mkt">
@@ -119,7 +138,56 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
     <div class="box"><span class="lbl">Spread</span><span class="val">CAR -2.5</span></div>
     <div class="box"><span class="lbl">Total</span><span class="val">43.5</span></div>
   </section>
-  <div class="notice note">Market numbers are the closing line, shown for context. Leo does not publish a pick on this game &mdash; testing against the 2025 season showed the model does not beat the closing price, so these pages report stats rather than projections.</div>
+  <div class="notice note">This is a pre-game analysis page. Every stat above the Final report comes from games played <b>before</b> this one (through Week 1), and Leo&rsquo;s numbers were frozen before kickoff. Market numbers are the closing line. Nothing here is a wager &mdash; the pick gate stays closed until Leo shows it can beat that line.</div>
+
+  
+  <h2 class="sec">Leo&rsquo;s read</h2>
+  <p class="sub">What the model expected, frozen before kickoff (Sep 20, 12:36 PM ET). Each player projection is rate &times; volume &times; opponent adjustment &mdash; the columns show every input. None of this is a wager.</p>
+  
+  <div class="leo-grid">
+    <div class="box"><span class="lbl">Leo winner</span><span class="val">ATL 69%</span><span class="lbl2">market 42%</span></div>
+    <div class="box"><span class="lbl">Leo total</span><span class="val">49</span><span class="lbl2">line 43.5 &middot; leans Over</span></div>
+    <div class="box"><span class="lbl">Leo spread</span><span class="val">ATL by 6.6</span><span class="lbl2">line CAR −2.5 &middot; leans ATL</span></div>
+  </div><h3 class="sec3">Passing yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>yds/att</th><th>att</th><th>opp adj</th><th>games</th><th>Leo</th></tr></thead><tbody><tr>
+      <td><b>Bryce Young</b> <span class="mut">CAR QB1</span></td>
+      <td>8</td><td>33.7</td><td>1</td><td>1</td>
+      <td><b>277</b></td></tr><tr>
+      <td><b>Cooper Rush</b> <span class="mut">ATL QB1</span></td>
+      <td>5.3</td><td>17.5</td><td>1</td><td>1</td>
+      <td><b>106</b></td></tr></tbody></table></div><h3 class="sec3">Rushing yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>yds/carry</th><th>car</th><th>opp adj</th><th>games</th><th>Leo</th></tr></thead><tbody><tr>
+      <td><b>Bijan Robinson</b> <span class="mut">ATL RB1</span></td>
+      <td>4.4</td><td>18.9</td><td>1.2</td><td>1</td>
+      <td><b>99</b></td></tr><tr>
+      <td><b>Chuba Hubbard</b> <span class="mut">CAR RB1</span></td>
+      <td>4.4</td><td>9.6</td><td>0.9</td><td>1</td>
+      <td><b>41</b></td></tr><tr>
+      <td><b>Brian Robinson</b> <span class="mut">ATL RB2</span></td>
+      <td>3.7</td><td>7</td><td>1.2</td><td>1</td>
+      <td><b>33</b></td></tr><tr>
+      <td><b>AJ Dillon</b> <span class="mut">CAR RB2</span></td>
+      <td>4.7</td><td>3.5</td><td>0.9</td><td>1</td>
+      <td><b>18</b></td></tr></tbody></table></div><h3 class="sec3">Receiving yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>yds/tgt</th><th>tgt</th><th>opp adj</th><th>games</th><th>Leo</th></tr></thead><tbody><tr>
+      <td><b>Jalen Coker</b> <span class="mut">CAR WR1</span></td>
+      <td>12.1</td><td>6.8</td><td>1</td><td>1</td>
+      <td><b>83</b></td></tr><tr>
+      <td><b>Tetairoa McMillan</b> <span class="mut">CAR WR2</span></td>
+      <td>9</td><td>7.6</td><td>1</td><td>1</td>
+      <td><b>69</b></td></tr><tr>
+      <td><b>Drake London</b> <span class="mut">ATL WR1</span></td>
+      <td>7.7</td><td>6.7</td><td>1</td><td>1</td>
+      <td><b>54</b></td></tr><tr>
+      <td><b>Jahan Dotson</b> <span class="mut">ATL WR2</span></td>
+      <td>6.2</td><td>2.7</td><td>1</td><td>1</td>
+      <td><b>18</b></td></tr><tr>
+      <td><b>Olamide Zaccheaus</b> <span class="mut">ATL WR3</span></td>
+      <td>4.7</td><td>2.7</td><td>1</td><td>1</td>
+      <td><b>14</b></td></tr><tr>
+      <td><b>Xavier Legette</b> <span class="mut">CAR WR3</span></td>
+      <td>2.5</td><td>3.1</td><td>1</td><td>1</td>
+      <td><b>9</b></td></tr></tbody></table></div>
 
   
   <h2 class="sec">Leo ratings &mdash; head to head</h2>
@@ -133,28 +201,28 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
     </div>
     <div class="rbody">
       <div class="rrow">
-    <span class="rv rva lead">58</span>
+    <span class="rv rva lead">52</span>
     <span class="rlab">Quarterback<em>EPA, accuracy, giveaways</em></span>
-    <span class="rv rvh ">23</span>
-    <span class="rbar"><i class="ra" style="width:29.1%"></i><i class="rh" style="width:11.4%"></i></span>
+    <span class="rv rvh ">33</span>
+    <span class="rbar"><i class="ra" style="width:26.05%"></i><i class="rh" style="width:16.35%"></i></span>
   </div>
       <div class="rrow">
-    <span class="rv rva lead">54</span>
+    <span class="rv rva lead">50</span>
     <span class="rlab">Offense<em>efficiency, explosives, ball security</em></span>
-    <span class="rv rvh ">31</span>
-    <span class="rbar"><i class="ra" style="width:26.75%"></i><i class="rh" style="width:15.25%"></i></span>
+    <span class="rv rvh ">41</span>
+    <span class="rbar"><i class="ra" style="width:25.15%"></i><i class="rh" style="width:20.6%"></i></span>
   </div>
       <div class="rrow">
-    <span class="rv rva ">44</span>
+    <span class="rv rva ">31</span>
     <span class="rlab">Defense<em>EPA allowed, pressure, takeaways</em></span>
-    <span class="rv rvh lead">56</span>
-    <span class="rbar"><i class="ra" style="width:21.85%"></i><i class="rh" style="width:28.15%"></i></span>
+    <span class="rv rvh lead">61</span>
+    <span class="rbar"><i class="ra" style="width:15.7%"></i><i class="rh" style="width:30.55%"></i></span>
   </div>
       <div class="rrow">
-    <span class="rv rva lead">49</span>
+    <span class="rv rva ">41</span>
     <span class="rlab">Overall</span>
-    <span class="rv rvh ">43</span>
-    <span class="rbar"><i class="ra" style="width:24.3%"></i><i class="rh" style="width:21.7%"></i></span>
+    <span class="rv rvh lead">51</span>
+    <span class="rbar"><i class="ra" style="width:20.45%"></i><i class="rh" style="width:25.55%"></i></span>
   </div>
     </div>
     <div class="rprior">
@@ -171,13 +239,13 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
     <th><span class="vst"><img src="/img/nfl/CAR.png" alt="">CAR</span></th>
     <th class="vsband">Per game, this season</th>
     <th><span class="vst vsr">ATL<img src="/img/nfl/ATL.png" alt=""></span></th></tr>
-    <tr><td class="lead">0.50</td><th>Interceptions thrown</th><td class="">2.50</td></tr>
-    <tr><td class="lead">1.50</td><th>Interceptions caught</th><td class="">0.00</td></tr>
-    <tr><td class="lead">0.50</td><th>Fumbles lost</th><td class="">1.00</td></tr>
+    <tr><td class="lead">1.00</td><th>Interceptions thrown</th><td class="">2.00</td></tr>
+    <tr><td class="">0.00</td><th>Interceptions caught</th><td class="">0.00</td></tr>
+    <tr><td class="">1.00</td><th>Fumbles lost</th><td class="lead">0.00</td></tr>
     <tr><td class="">1.00</td><th>Fumbles forced</th><td class="">1.00</td></tr>
-    <tr><td class="lead">2.50</td><th>Takeaways</th><td class="">1.00</td></tr>
-    <tr><td class="lead">1.00</td><th>Giveaways</th><td class="">3.50</td></tr>
-    <tr><td class="lead">+1.5</td><th>Net turnover margin</th><td class="">-2.5</td></tr>
+    <tr><td class="">1.00</td><th>Takeaways</th><td class="">1.00</td></tr>
+    <tr><td class="">2.00</td><th>Giveaways</th><td class="">2.00</td></tr>
+    <tr><td class="">-1</td><th>Net turnover margin</th><td class="">-1</td></tr>
   </table>
 
   <h2 class="sec">Efficiency detail</h2>
@@ -187,20 +255,20 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
     <th><span class="vst"><img src="/img/nfl/CAR.png" alt="">CAR</span></th>
     <th class="vsband">Offense</th>
     <th><span class="vst vsr">ATL<img src="/img/nfl/ATL.png" alt=""></span></th></tr>
-    <tr><td class="lead">+0.072</td><th>EPA per dropback</th><td class="">-0.218</td></tr>
-    <tr><td class="lead">+3.3</td><th>Completion % over expected</th><td class="">-7.3</td></tr>
-    <tr><td class="lead">2.0%</td><th>Interception rate</th><td class="">4.1%</td></tr>
-    <tr><td class="lead">5.9%</td><th>Sack rate taken</th><td class="">6.9%</td></tr>
-    <tr><td class="lead">-0.051</td><th>Rush EPA per carry</th><td class="">-0.076</td></tr>
-    <tr><td class="lead">6.4%</td><th>Explosive play rate</th><td class="">4.6%</td></tr>
+    <tr><td class="lead">+0.027</td><th>EPA per dropback</th><td class="">-0.115</td></tr>
+    <tr><td class="lead">+1.7</td><th>Completion % over expected</th><td class="">-4.6</td></tr>
+    <tr><td class="lead">2.4%</td><th>Interception rate</th><td class="">3.0%</td></tr>
+    <tr><td class="lead">6.0%</td><th>Sack rate taken</th><td class="">6.7%</td></tr>
+    <tr><td class="lead">-0.015</td><th>Rush EPA per carry</th><td class="">-0.049</td></tr>
+    <tr><td class="lead">6.0%</td><th>Explosive play rate</th><td class="">5.7%</td></tr>
     <tr class="vshead">
     <th><span class="vst"><img src="/img/nfl/CAR.png" alt="">CAR</span></th>
     <th class="vsband">Defense</th>
     <th><span class="vst vsr">ATL<img src="/img/nfl/ATL.png" alt=""></span></th></tr>
-    <tr><td class="">+0.042</td><th>EPA allowed per play</th><td class="lead">-0.027</td></tr>
-    <tr><td class="">5.88</td><th>Yards allowed per play</th><td class="lead">5.46</td></tr>
-    <tr><td class="">2.9%</td><th>Sack rate</th><td class="lead">4.7%</td></tr>
-    <tr><td class="lead">1.7%</td><th>Interception rate forced</th><td class="">1.0%</td></tr>
+    <tr><td class="">+0.140</td><th>EPA allowed per play</th><td class="lead">-0.051</td></tr>
+    <tr><td class="">6.14</td><th>Yards allowed per play</th><td class="lead">5.37</td></tr>
+    <tr><td class="">2.9%</td><th>Sack rate</th><td class="lead">5.0%</td></tr>
+    <tr><td class="">1.2%</td><th>Interception rate forced</th><td class="">1.2%</td></tr>
   </table>
 
   <h2 class="sec">Team comparison</h2>
@@ -210,14 +278,14 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
     <th><span class="vst"><img src="/img/nfl/CAR.png" alt="">CAR</span></th>
     <th class="vsband">This season</th>
     <th><span class="vst vsr">ATL<img src="/img/nfl/ATL.png" alt=""></span></th></tr>
-    <tr><td class="">2</td><th>Games</th><td class="">2</td></tr>
-    <tr><td class="lead">324</td><th>Pass yards/g</th><td class="">144</td></tr>
-    <tr><td class="">96.5</td><th>Rush yards/g</th><td class="lead">138.5</td></tr>
-    <tr><td class="lead">6</td><th>Passing TD</th><td class="">1</td></tr>
-    <tr><td class="">1</td><th>Interceptions thrown</th><td class="lead">5</td></tr>
-    <tr><td class="">207</td><th>Pass yards allowed/g</th><td class="lead">254</td></tr>
-    <tr><td class="lead">224</td><th>Rush yards allowed/g</th><td class="">63</td></tr>
-    <tr><td class="lead">3</td><th>Interceptions forced</th><td class="">0</td></tr>
+    <tr><td class="">1</td><th>Games</th><td class="">1</td></tr>
+    <tr><td class="lead">361</td><th>Pass yards/g</th><td class="">143</td></tr>
+    <tr><td class="lead">125</td><th>Rush yards/g</th><td class="">120</td></tr>
+    <tr><td class="lead">3</td><th>Passing TD</th><td class="">1</td></tr>
+    <tr><td class="">1</td><th>Interceptions thrown</th><td class="lead">2</td></tr>
+    <tr><td class="lead">269</td><th>Pass yards allowed/g</th><td class="">221</td></tr>
+    <tr><td class="lead">291</td><th>Rush yards allowed/g</th><td class="">58</td></tr>
+    <tr><td class="">0</td><th>Interceptions forced</th><td class="">0</td></tr>
     <tr class="vshead">
     <th><span class="vst"><img src="/img/nfl/CAR.png" alt="">CAR</span></th>
     <th class="vsband">Last season</th>
@@ -231,34 +299,34 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
   </table>
 
   <h2 class="sec">This season</h2>
-  <p class="sub">Starting quarterback, lead backs and top receivers, by actual usage this season.</p>
+  <p class="sub">Starting quarterback, lead backs and top receivers, by actual usage this season &mdash; games before this one only.</p>
   <div class="grid2">
   <div class="statcard">
     <div class="sc-head"><img src="/img/nfl/CAR.png" alt=""><b>CAR</b>
       <span class="sc-season">2026</span></div>
     <div class="sc-body">
       <h4>Quarterback <span class="qbr" title="Leo QB rating: 50 is league average, 15 points per standard deviation">
-         <em>Leo QB</em><b>58</b></span></h4>
+         <em>Leo QB</em><b>52</b></span></h4>
       <div class="tw"><table><thead><tr><th>Player</th><th>G</th><th>C/ATT</th><th>Comp%</th><th>Yards</th><th>Y/G</th><th>TD/INT</th><th>Y/A</th></tr></thead>
-      <tbody><tr><td class="pl">Bryce Young</td><td>2</td><td>46/73</td>
-    <td>63%</td><td><b>648</b></td><td>324</td>
-    <td>6 / 1</td><td>8.9</td></tr></tbody></table></div>
+      <tbody><tr><td class="pl">Bryce Young</td><td>1</td><td>23/37</td>
+    <td>62.2%</td><td><b>361</b></td><td>361</td>
+    <td>3 / 1</td><td>9.8</td></tr></tbody></table></div>
 
       <h4>Running back</h4>
       <div class="tw"><table><thead><tr><th>Player</th><th>G</th><th>Car</th><th>Yards</th><th>Y/C</th><th>TD</th></tr></thead>
-      <tbody><tr><td class="pl">Chuba Hubbard</td><td>2</td><td>22</td>
-    <td><b>102</b></td><td>4.6</td><td>1</td></tr><tr><td class="pl">Jonathon Brooks</td><td>2</td><td>9</td>
-    <td><b>30</b></td><td>3.3</td><td>0</td></tr></tbody></table></div>
+      <tbody><tr><td class="pl">Chuba Hubbard</td><td>1</td><td>10</td>
+    <td><b>49</b></td><td>4.9</td><td>1</td></tr><tr><td class="pl">AJ Dillon</td><td>1</td><td>5</td>
+    <td><b>28</b></td><td>5.6</td><td>0</td></tr></tbody></table></div>
 
       <h4>Receivers</h4>
       <div class="tw"><table><thead><tr><th>Player</th><th>G</th><th>Rec/Tgt</th><th>Catch%</th><th>Yards</th><th>Y/G</th><th>TD</th></tr></thead>
-      <tbody><tr><td class="pl">Jalen Coker <span class="rl">WR1</span></td><td>2</td>
-    <td>16/18</td><td>88.9%</td><td><b>204</b></td>
-    <td>102</td><td>2</td></tr><tr><td class="pl">Tetairoa McMillan <span class="rl">WR2</span></td><td>2</td>
-    <td>10/18</td><td>55.6%</td><td><b>176</b></td>
-    <td>88</td><td>0</td></tr><tr><td class="pl">Tommy Tremble <span class="rl">TE</span></td><td>2</td>
-    <td>4/7</td><td>57.1%</td><td><b>29</b></td>
-    <td>14.5</td><td>0</td></tr></tbody></table></div>
+      <tbody><tr><td class="pl">Jalen Coker <span class="rl">WR1</span></td><td>1</td>
+    <td>8/9</td><td>88.9%</td><td><b>138</b></td>
+    <td>138</td><td>2</td></tr><tr><td class="pl">Tetairoa McMillan <span class="rl">WR2</span></td><td>1</td>
+    <td>5/8</td><td>62.5%</td><td><b>75</b></td>
+    <td>75</td><td>0</td></tr><tr><td class="pl">Tommy Tremble <span class="rl">TE</span></td><td>1</td>
+    <td>3/5</td><td>60%</td><td><b>25</b></td>
+    <td>25</td><td>0</td></tr></tbody></table></div>
     </div>
   </div>
   <div class="statcard">
@@ -266,27 +334,27 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
       <span class="sc-season">2026</span></div>
     <div class="sc-body">
       <h4>Quarterback <span class="qbr" title="Leo QB rating: 50 is league average, 15 points per standard deviation">
-         <em>Leo QB</em><b>23</b></span></h4>
+         <em>Leo QB</em><b>33</b></span></h4>
       <div class="tw"><table><thead><tr><th>Player</th><th>G</th><th>C/ATT</th><th>Comp%</th><th>Yards</th><th>Y/G</th><th>TD/INT</th><th>Y/A</th></tr></thead>
-      <tbody><tr><td class="pl">Cooper Rush</td><td>2</td><td>22/39</td>
-    <td>56.4%</td><td><b>229</b></td><td>114.5</td>
-    <td>1 / 4</td><td>5.9</td></tr></tbody></table></div>
+      <tbody><tr><td class="pl">Cooper Rush</td><td>1</td><td>12/22</td>
+    <td>54.5%</td><td><b>143</b></td><td>143</td>
+    <td>1 / 2</td><td>6.5</td></tr></tbody></table></div>
 
       <h4>Running back</h4>
       <div class="tw"><table><thead><tr><th>Player</th><th>G</th><th>Car</th><th>Yards</th><th>Y/C</th><th>TD</th></tr></thead>
-      <tbody><tr><td class="pl">Bijan Robinson</td><td>2</td><td>37</td>
-    <td><b>155</b></td><td>4.2</td><td>0</td></tr><tr><td class="pl">Brian Robinson</td><td>2</td><td>20</td>
-    <td><b>82</b></td><td>4.1</td><td>0</td></tr></tbody></table></div>
+      <tbody><tr><td class="pl">Bijan Robinson</td><td>1</td><td>21</td>
+    <td><b>83</b></td><td>4</td><td>0</td></tr><tr><td class="pl">Brian Robinson</td><td>1</td><td>9</td>
+    <td><b>31</b></td><td>3.4</td><td>0</td></tr></tbody></table></div>
 
       <h4>Receivers</h4>
       <div class="tw"><table><thead><tr><th>Player</th><th>G</th><th>Rec/Tgt</th><th>Catch%</th><th>Yards</th><th>Y/G</th><th>TD</th></tr></thead>
-      <tbody><tr><td class="pl">Drake London <span class="rl">WR1</span></td><td>2</td>
-    <td>6/9</td><td>66.7%</td><td><b>80</b></td>
-    <td>40</td><td>0</td></tr><tr><td class="pl">Jahan Dotson <span class="rl">WR2</span></td><td>2</td>
-    <td>3/7</td><td>42.9%</td><td><b>30</b></td>
-    <td>15</td><td>0</td></tr><tr><td class="pl">Kyle Pitts <span class="rl">TE</span></td><td>2</td>
-    <td>1/4</td><td>25%</td><td><b>15</b></td>
-    <td>7.5</td><td>0</td></tr></tbody></table></div>
+      <tbody><tr><td class="pl">Drake London <span class="rl">WR1</span></td><td>1</td>
+    <td>2/4</td><td>50%</td><td><b>29</b></td>
+    <td>29</td><td>0</td></tr><tr><td class="pl">Jahan Dotson <span class="rl">WR2</span></td><td>1</td>
+    <td>1/3</td><td>33.3%</td><td><b>19</b></td>
+    <td>19</td><td>0</td></tr><tr><td class="pl">Kyle Pitts <span class="rl">TE</span></td><td>1</td>
+    <td>0/1</td><td>0%</td><td><b>0</b></td>
+    <td>0</td><td>0</td></tr></tbody></table></div>
     </div>
   </div></div>
 
@@ -356,19 +424,108 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
       <span class="sc-season">2026</span></div>
     <ol class="tdlist"><li><span class="tdn">Chuba Hubbard</span>
       <span class="tdp">RB</span>
-      <span class="tdc">3</span>
-      <span class="tdd">1 rush &middot; 2 rec</span></li><li><span class="tdn">Darren Waller</span>
-      <span class="tdp">TE</span>
       <span class="tdc">2</span>
-      <span class="tdd">0 rush &middot; 2 rec</span></li><li><span class="tdn">Jalen Coker</span>
+      <span class="tdd">1 rush &middot; 1 rec</span></li><li><span class="tdn">Jalen Coker</span>
       <span class="tdp">WR</span>
       <span class="tdc">2</span>
-      <span class="tdd">0 rush &middot; 2 rec</span></li></ol></div><div class="tdcard"><div class="td-head"><img src="/img/nfl/ATL.png" alt=""><b>ATL</b>
+      <span class="tdd">0 rush &middot; 2 rec</span></li><li><span class="tdn">Bryce Young</span>
+      <span class="tdp">QB</span>
+      <span class="tdc">1</span>
+      <span class="tdd">1 rush &middot; 0 rec</span></li></ol></div><div class="tdcard"><div class="td-head"><img src="/img/nfl/ATL.png" alt=""><b>ATL</b>
       <span class="sc-season">2026</span></div>
     <ol class="tdlist"><li><span class="tdn">Bijan Robinson</span>
       <span class="tdp">RB</span>
       <span class="tdc">1</span>
       <span class="tdd">0 rush &middot; 1 rec</span></li></ol></div></div>
+
+  
+  <section class="final">
+    <h2 class="sec">Final report</h2>
+    <p class="final-score"><img src="/img/nfl/CAR.png" alt=""> CAR <b>34</b>
+      &ndash; <b>3</b> ATL <img src="/img/nfl/ATL.png" alt=""></p>
+    <p class="sub">Leo&rsquo;s frozen pre-kickoff numbers beside the result. &ldquo;Closer&rdquo; says whose number landed nearer the outcome &mdash; that, not right or wrong, is what tells us whether the model is learning anything the market does not already know.</p>
+    <div class="fxw"><table class="fx"><thead><tr><th>Market</th><th>Leo</th><th>Market</th><th>Actual</th><th>Side</th><th>Closer</th></tr></thead><tbody>
+    <tr><td>Winner</td><td>ATL 69%</td><td>42%</td><td>CAR</td><td><span class="vd l">WRONG</span></td><td>Market</td></tr>
+    <tr><td>Total</td><td>49 Over</td><td>43.5</td><td>37</td><td><span class="vd l">WRONG</span></td><td>Market</td></tr>
+    <tr><td>Spread</td><td>ATL by 6.6</td><td>CAR −2.5</td><td>CAR by 31</td><td><span class="vd l">WRONG</span></td><td>Market</td></tr>
+  </tbody></table></div>
+    <p class="sub" style="margin-top:14px">Every player miss is split into the part caused by the rate being wrong and the part caused by the volume being wrong. The two add up to the full miss.</p><h3 class="sec3">Passing yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Leo</th><th>Line</th><th>Actual</th><th>yds/att<br><span class="mut">proj &rarr; actual</span></th><th>att<br><span class="mut">proj &rarr; actual</span></th><th>Miss from<br><span class="mut">rate / volume</span></th><th></th></tr></thead><tbody><tr>
+      <td><b>Cooper Rush</b> <span class="mut">ATL</span></td>
+      <td>106</td><td>182.5</td><td><b>86</b></td>
+      <td>5.3 &rarr; 5.1</td>
+      <td>17.5 &rarr; 17</td>
+      <td class="fxsplit"><span class="fxr">-4.1</span> / <span class="fxv">-2.6</span></td>
+      <td><span class="vd w">RIGHT</span></td></tr><tr>
+      <td><b>Bryce Young</b> <span class="mut">CAR</span></td>
+      <td>277</td><td>221.5</td><td><b>287</b></td>
+      <td>8 &rarr; 8</td>
+      <td>33.7 &rarr; 36</td>
+      <td class="fxsplit"><span class="fxr">-1</span> / <span class="fxv">+18.4</span></td>
+      <td><span class="vd w">RIGHT</span></td></tr></tbody></table></div><h3 class="sec3">Rushing yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Leo</th><th>Line</th><th>Actual</th><th>yds/carry<br><span class="mut">proj &rarr; actual</span></th><th>car<br><span class="mut">proj &rarr; actual</span></th><th>Miss from<br><span class="mut">rate / volume</span></th><th></th></tr></thead><tbody><tr>
+      <td><b>Bijan Robinson</b> <span class="mut">ATL</span></td>
+      <td>99</td><td>83.5</td><td><b>72</b></td>
+      <td>4.4 &rarr; 4.5</td>
+      <td>18.9 &rarr; 16</td>
+      <td class="fxsplit"><span class="fxr">+1.6</span> / <span class="fxv">-12.8</span></td>
+      <td><span class="vd l">WRONG</span></td></tr><tr>
+      <td><b>AJ Dillon</b> <span class="mut">CAR</span></td>
+      <td>18</td><td>—</td><td><b>-3</b></td>
+      <td>4.7 &rarr; -1</td>
+      <td>3.5 &rarr; 3</td>
+      <td class="fxsplit"><span class="fxr">-17.1</span> / <span class="fxv">-2.3</span></td>
+      <td></td></tr><tr>
+      <td><b>Brian Robinson</b> <span class="mut">ATL</span></td>
+      <td>33</td><td>25.5</td><td><b>51</b></td>
+      <td>3.7 &rarr; 4.6</td>
+      <td>7 &rarr; 11</td>
+      <td class="fxsplit"><span class="fxr">+10.3</span> / <span class="fxv">+14.8</span></td>
+      <td><span class="vd w">RIGHT</span></td></tr><tr>
+      <td><b>Chuba Hubbard</b> <span class="mut">CAR</span></td>
+      <td>41</td><td>56.5</td><td><b>53</b></td>
+      <td>4.4 &rarr; 4.4</td>
+      <td>9.6 &rarr; 12</td>
+      <td class="fxsplit"><span class="fxr">+0.2</span> / <span class="fxv">+10.6</span></td>
+      <td><span class="vd w">RIGHT</span></td></tr></tbody></table></div><h3 class="sec3">Receiving yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Leo</th><th>Line</th><th>Actual</th><th>yds/tgt<br><span class="mut">proj &rarr; actual</span></th><th>tgt<br><span class="mut">proj &rarr; actual</span></th><th>Miss from<br><span class="mut">rate / volume</span></th><th></th></tr></thead><tbody><tr>
+      <td><b>Xavier Legette</b> <span class="mut">CAR</span></td>
+      <td>9</td><td>15.5</td><td><b>64</b></td>
+      <td>2.5 &rarr; 16</td>
+      <td>3.1 &rarr; 4</td>
+      <td class="fxsplit"><span class="fxr">+54</span> / <span class="fxv">+2.3</span></td>
+      <td><span class="vd l">WRONG</span></td></tr><tr>
+      <td><b>Tetairoa McMillan</b> <span class="mut">CAR</span></td>
+      <td>69</td><td>58.5</td><td><b>101</b></td>
+      <td>9 &rarr; 10.1</td>
+      <td>7.6 &rarr; 10</td>
+      <td class="fxsplit"><span class="fxr">+11</span> / <span class="fxv">+21.6</span></td>
+      <td><span class="vd w">RIGHT</span></td></tr><tr>
+      <td><b>Jalen Coker</b> <span class="mut">CAR</span></td>
+      <td>83</td><td>50.5</td><td><b>66</b></td>
+      <td>12.1 &rarr; 7.3</td>
+      <td>6.8 &rarr; 9</td>
+      <td class="fxsplit"><span class="fxr">-42.9</span> / <span class="fxv">+26.6</span></td>
+      <td><span class="vd w">RIGHT</span></td></tr><tr>
+      <td><b>Olamide Zaccheaus</b> <span class="mut">ATL</span></td>
+      <td>14</td><td>8.5</td><td><b>3</b></td>
+      <td>4.7 &rarr; 1</td>
+      <td>2.7 &rarr; 3</td>
+      <td class="fxsplit"><span class="fxr">-11.1</span> / <span class="fxv">+1.4</span></td>
+      <td><span class="vd l">WRONG</span></td></tr><tr>
+      <td><b>Jahan Dotson</b> <span class="mut">ATL</span></td>
+      <td>18</td><td>17.5</td><td><b>11</b></td>
+      <td>6.2 &rarr; 2.8</td>
+      <td>2.7 &rarr; 4</td>
+      <td class="fxsplit"><span class="fxr">-13.8</span> / <span class="fxv">+8.1</span></td>
+      <td></td></tr><tr>
+      <td><b>Drake London</b> <span class="mut">ATL</span></td>
+      <td>54</td><td>57.5</td><td><b>51</b></td>
+      <td>7.7 &rarr; 10.2</td>
+      <td>6.7 &rarr; 5</td>
+      <td class="fxsplit"><span class="fxr">+12.5</span> / <span class="fxv">-13.1</span></td>
+      <td><span class="vd w">RIGHT</span></td></tr></tbody></table></div>
+  </section>
 
   <p class="data-note">Player and team statistics from the open nflverse dataset. Roles assigned by actual usage &mdash; most attempts, carries and targets &mdash; not depth chart.</p>
 </main>

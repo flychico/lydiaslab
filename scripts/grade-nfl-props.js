@@ -98,13 +98,37 @@ function main() {
   if (props.length) {
     const lead = props.map(p => p.minutes_before_kickoff);
     source = `frozen pre-kickoff projections (${props.length}, ${Math.min(...lead)}-${Math.max(...lead)} min before kickoff)`;
-    // Line / lean / injury flags live on the merged file, not the frozen one.
+    /*
+      Only MARKET data and injury flags come from the merged file: the closing
+      line (itself reconstructed from the append-only odds history) and who was
+      ruled out.
+
+      The LEAN is recomputed here from the frozen projection. It used to be
+      copied from the merged file, but that lean was computed against whatever
+      projection sat in props-{date}.json at merge time -- i.e. the revised,
+      post-kickoff number. On 2026-09-20 that put 9 graded leans on the
+      OPPOSITE side of what Leo actually projected, and called 6 more where
+      the real projection never cleared the threshold. A frozen projection
+      graded with a revised lean is still a revised grade.
+    */
     const live = fs.existsSync(path.join(DIR, `props-${DATE}.json`))
       ? JSON.parse(fs.readFileSync(path.join(DIR, `props-${DATE}.json`), "utf8")) : [];
     const byKey = new Map(live.map(r => [`${r.matchup}|${r.market}|${r.player}`, r]));
+    const FLOOR = { QB_PASS_YARDS:0.05, RB_RUSH_YARDS:0.05, WR_REC_YARDS:0.05 };   // same provisional floors as the merge
     props = props.map(p => {
       const m = byKey.get(`${p.matchup}|${p.market}|${p.player}`) || {};
-      return { ...p, line: m.line, lean: m.lean, market_prob: m.market_prob,
+      let lean = null;
+      if (p.market === "ANYTIME_TD") {
+        // needs a de-vigged market probability; one-sided prices never get a lean
+        if (m.market_prob != null && m.vig_removed !== false) {
+          const gap = p.projection - m.market_prob;
+          if (Math.abs(gap) >= 0.03) lean = gap > 0 ? "over" : "under";
+        }
+      } else if (m.line != null && Number.isFinite(p.projection)) {
+        const gap = p.projection - m.line;
+        if (gap !== 0 && Math.abs(gap) >= FLOOR[p.market] * Math.abs(m.line)) lean = gap > 0 ? "over" : "under";
+      }
+      return { ...p, line: m.line, lean, market_prob: m.market_prob,
                lean_blocked: m.lean_blocked, sidelined: m.sidelined,
                injury_status: m.injury_status };
     });

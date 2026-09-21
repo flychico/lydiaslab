@@ -45,14 +45,14 @@
 
   <section class="score-controls" aria-label="Scoreboard controls">
     <div class="date-controls">
-      <button class="control-btn" type="button" onclick="shiftSelectedDay(-1)" aria-label="Previous day">&larr;</button>
+      <button class="control-btn" type="button" data-nav="prev" onclick="shiftSelectedDay(-1)" aria-label="Previous game day">&larr;</button>
       <div class="field">
-        <label for="date-pick">Scoreboard date</label>
-        <input type="date" id="date-pick">
+        <label for="date-pick">Game day</label>
+        <select id="date-pick"><option>Loading schedule&hellip;</option></select>
       </div>
-      <button class="control-btn" type="button" onclick="setToday()">Today</button>
-      <button class="control-btn" type="button" onclick="shiftSelectedDay(1)" aria-label="Next day">&rarr;</button>
-      <button class="control-btn" type="button" onclick="loadScoreboard({force:true})">Refresh</button>
+      <button class="control-btn" type="button" data-nav="today" onclick="setToday()">Today</button>
+      <button class="control-btn" type="button" data-nav="next" onclick="shiftSelectedDay(1)" aria-label="Next game day">&rarr;</button>
+      <button class="control-btn" type="button" data-nav="refresh" onclick="loadScoreboard({force:true})">Refresh</button>
     </div>
     <div class="view-controls" role="group" aria-label="Filter games">
       <button class="control-btn active" type="button" data-filter="all">All</button>
@@ -84,7 +84,10 @@ const kpisEl=document.getElementById("kpis");
 let allRows=null, renderedGames=[], activeFilter="all";
 let LEO={}, REC={};   // model reads and W-L, keyed by matchup / team
 
-datePick.value = localISODate(new Date());
+/* The picker lists only dates that have NFL games. A free calendar let you
+   land on any Tuesday and read "No NFL games are scheduled", which is most of
+   the calendar. The arrows now step game day to game day for the same reason. */
+let GAME_DAYS = [];
 datePick.addEventListener("change", () => loadScoreboard());
 document.querySelectorAll("[data-filter]").forEach(b => b.addEventListener("click", () => {
   activeFilter = b.dataset.filter;
@@ -95,8 +98,35 @@ loadScoreboard();
 
 function localISODate(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function parseLocalDate(v){const[y,m,d]=v.split("-").map(Number);return new Date(y,m-1,d,12,0,0);}
-function setToday(){datePick.value=localISODate(new Date());loadScoreboard();}
-function shiftSelectedDay(n){const d=parseLocalDate(datePick.value);d.setDate(d.getDate()+n);datePick.value=localISODate(d);loadScoreboard();}
+function currentSeason(){const d=new Date();return d.getMonth()>=2?d.getFullYear():d.getFullYear()-1;}
+// Today if there is a game today, otherwise the next game day, otherwise the last one.
+function defaultGameDay(){
+  const t=localISODate(new Date());
+  return GAME_DAYS.find(d=>d.date>=t)?.date || (GAME_DAYS.length?GAME_DAYS[GAME_DAYS.length-1].date:t);
+}
+function buildGameDays(){
+  const season=String(currentSeason());
+  const seen=new Map();
+  for(const g of allRows){
+    if(String(g.season)!==season||!g.gameday) continue;
+    if(!seen.has(g.gameday)) seen.set(g.gameday,{date:g.gameday,week:g.week,type:g.game_type,n:0});
+    seen.get(g.gameday).n++;
+  }
+  GAME_DAYS=[...seen.values()].sort((a,b)=>a.date.localeCompare(b.date));
+  const lab=d=>{
+    const dt=parseLocalDate(d.date);
+    const day=dt.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+    const wk=d.type&&d.type!=="REG"?d.type:("Wk "+d.week);
+    return wk+" \u00b7 "+day+" \u00b7 "+d.n+(d.n===1?" game":" games");
+  };
+  datePick.innerHTML=GAME_DAYS.map(d=>'<option value="'+d.date+'">'+escapeHtml(lab(d))+'</option>').join("");
+}
+function setToday(){datePick.value=defaultGameDay();loadScoreboard();}
+function shiftSelectedDay(n){
+  const i=GAME_DAYS.findIndex(d=>d.date===datePick.value);
+  const j=Math.max(0,Math.min(GAME_DAYS.length-1,(i<0?0:i)+n));
+  if(GAME_DAYS[j]){datePick.value=GAME_DAYS[j].date;loadScoreboard();}
+}
 function escapeHtml(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 
 function parseCSV(text){
@@ -143,6 +173,9 @@ async function loadScoreboard(opts={}){
       const r=await fetch(FEED, opts.force?{cache:"reload"}:{});
       if(!r.ok) throw new Error("Feed HTTP "+r.status);
       allRows=parseCSV(await r.text());
+      const keep=datePick.value;
+      buildGameDays();
+      datePick.value = GAME_DAYS.some(d=>d.date===keep) ? keep : defaultGameDay();
     }
     const date=datePick.value;
     // Leo's own numbers and team records. Absent for most dates; the card

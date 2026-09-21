@@ -14,6 +14,8 @@
  */
 const { execFileSync } = require("child_process");
 const { buildRatings, headToHead } = require("./lib/nfl-ratings.js");
+const { frozenPredictions, frozenProps } = require("./lib/prediction-history.js");
+const { splitCsv } = require("./lib/odds-history.js");
 const fs=require("fs"), path=require("path");
 const ROOT=path.join(__dirname,"..");
 const FEED="https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv";
@@ -99,7 +101,17 @@ function teamProfile(rows, team, active){
                   .sort((a,b)=>String(a.gametime).localeCompare(String(b.gametime)));
   if(!games.length){ console.log("No games on that date. Nothing written."); return; }
 
-  const wkCur=get(`${REL}/stats_player/stats_player_week_${SEASON}.csv`);
+  /*
+    PRE-GAME DATA ONLY. The weekly file holds every 2026 stat line, so a rerun
+    after kickoff folded THIS game into "this season", the team comparison and
+    the Leo ratings -- the page described a game using the game itself.
+    Everything in the analysis body now stops at the week before. What
+    happened in the game lives only in the Final report at the bottom.
+  */
+  const gameWeek = Math.min(...games.map(g=>n(g.week)).filter(Number.isFinite));
+  const wkCurAll=get(`${REL}/stats_player/stats_player_week_${SEASON}.csv`);
+  const wkCur=wkCurAll.filter(r=>Number(r.week) < gameWeek);
+  console.log(`  pre-game stats: weeks before ${gameWeek} (${wkCur.length} of ${wkCurAll.length} stat lines)`);
   const wkPri=get(`${REL}/stats_player/stats_player_week_${PRIOR}.csv`);
   let active=null;
   try{
@@ -136,6 +148,60 @@ function teamProfile(rows, team, active){
     console.log(`  ratings: ${Object.keys(RTG).length} teams this season, ${Object.keys(RTG_PRI).length} last`);
   }catch(e){ console.log("  ratings unavailable: "+e.message); }
 
+  // Leo's numbers as they stood BEFORE kickoff -- never the revised file.
+  const DATA=path.join(ROOT,"data/nfl");
+  const FROZEN_GAMES=frozenPredictions(path.join(DATA,"prediction-history.csv"), target);
+  const FROZEN_PROPS=frozenProps(path.join(DATA,"prop-prediction-history.csv"), target);
+  const readLedger=f=>{
+    const fp=path.join(DATA,f); if(!fs.existsSync(fp)) return [];
+    const L=fs.readFileSync(fp,"utf8").split(/\r?\n/).filter(Boolean); if(L.length<2) return [];
+    const h=splitCsv(L[0]);
+    return L.slice(1).map(l=>{const c=splitCsv(l);const o={};h.forEach((k,i)=>o[k]=c[i]);return o;})
+            .filter(r=>r.date===target);
+  };
+  const GRADED_GAMES=readLedger("nfl-results-log.csv");
+  const GRADED_PROPS=readLedger("nfl-props-graded.csv");
+  const num=v=>{const x=parseFloat(v);return Number.isFinite(x)?x:null;};
+
+  const leoRead=(g,matchup)=>{
+    const fg=FROZEN_GAMES.find(x=>x.game_id===g.game_id);
+    const fp=FROZEN_PROPS.filter(x=>x.matchup===matchup && x.market!=="ANYTIME_TD");
+    if(!fg && !fp.length) return null;
+    return {
+      captured_at: fg?fg.captured_at:(fp[0]&&fp[0].captured_at)||null,
+      minutes_before_kickoff: fg?fg.minutes_before_kickoff:null,
+      game: fg ? { pick:fg.pick, prob:fg.model_prob, market_prob:fg.market_prob, price:fg.price,
+                   proj_total:fg.proj_total, total_line:fg.total_line, total_side:fg.total_side,
+                   proj_spread:fg.proj_spread, spread_line:fg.spread_line, spread_side:fg.spread_side,
+                   exp_margin:fg.exp_margin } : null,
+      props: fp.map(x=>({ player:x.player, team:x.team, depth:x.depth, market:x.market,
+                          projection:x.projection, rate:x.rate_used, volume:x.expected_volume,
+                          adj:x.opp_adjustment, games_played:x.games_played }))
+    };
+  };
+
+  // Only once the game is actually over -- nflverse fills `result` on completion.
+  const finalReport=(g,matchup)=>{
+    if(String(g.result??"").trim()==="") return null;
+    const as=n(g.away_score), hs=n(g.home_score);
+    if(as==null||hs==null) return null;
+    const gg=GRADED_GAMES.filter(x=>x.game_id===g.game_id);
+    const pick=m=>{const r=gg.find(x=>x.market===m); return r?{side:r.leo_side, leo:num(r.leo_value),
+                   market:num(r.market_value), actual:r.actual_value, result:r.result, beat:r.beat_market}:null;};
+    const props=GRADED_PROPS.filter(x=>x.matchup===matchup && x.market!=="ANYTIME_TD" && x.excluded!=="Y" && x.actual!=="")
+      .map(x=>({ player:x.player, team:x.team, depth:x.depth, market:x.market,
+                 projection:num(x.projection), line:num(x.line), lean:x.lean, actual:num(x.actual),
+                 result:x.result, beat:x.beat_line,
+                 rate:num(x.rate_used), actual_rate:num(x.actual_rate),
+                 volume:num(x.expected_volume), actual_volume:num(x.actual_volume),
+                 rate_effect:num(x.rate_effect), volume_effect:num(x.volume_effect) }));
+    return { away_score:as, home_score:hs, total:as+hs, margin:hs-as,
+             winner: hs>as?g.home_team:(as>hs?g.away_team:"TIE"),
+             overtime: g.overtime==="1",
+             moneyline:pick("moneyline"), total_pick:pick("total"), spread:pick("spread"),
+             props, graded: gg.length>0 || props.length>0 };
+  };
+
   const out=games.map(g=>{
     const pageSlug=`${slug(g.away_team)}-vs-${slug(g.home_team)}-prediction-odds-${target}`;
     const build=(team)=>({
@@ -158,6 +224,9 @@ function teamProfile(rows, team, active){
       away_qb_name:g.away_qb_name, home_qb_name:g.home_qb_name,
       away_coach:g.away_coach, home_coach:g.home_coach,
       sides:{ away: build(g.away_team), home: build(g.home_team) },
+      pregame_through_week: gameWeek-1,
+      leo: leoRead(g, `${g.away_team} @ ${g.home_team}`),
+      final_report: finalReport(g, `${g.away_team} @ ${g.home_team}`),
       ratings:{
         this_season:{ away: RTG[g.away_team]||null, home: RTG[g.home_team]||null },
         last_season:{ away: RTG_PRI[g.away_team]||null, home: RTG_PRI[g.home_team]||null },
@@ -174,6 +243,7 @@ function teamProfile(rows, team, active){
   const withQb=out.filter(m=>m.sides.away.this_season.qb&&m.sides.home.this_season.qb).length;
   const withScorers=out.filter(m=>m.sides.away.this_season.top_scorers.length).length;
   console.log(`  ${out.length} matchups  ·  ${withQb} with both starting QBs  ·  ${withScorers} with TD scorers`);
+  console.log(`  Leo pre-kickoff read on ${out.filter(m=>m.leo).length}  ·  final report on ${out.filter(m=>m.final_report).length}`);
   console.log(`  wrote data/nfl/matchups/${target}.json`);
   out.slice(0,2).forEach(m=>console.log(`    ${m.url}`));
 })();

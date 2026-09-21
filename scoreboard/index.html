@@ -45,14 +45,14 @@
 
   <section class="score-controls" aria-label="Scoreboard controls">
     <div class="date-controls">
-      <button class="control-btn" type="button" onclick="shiftSelectedDay(-1)" aria-label="Previous day">←</button>
+      <button class="control-btn" type="button" data-nav="prev" onclick="shiftSelectedDay(-1)" aria-label="Previous day">←</button>
       <div class="field">
         <label for="date-pick">Scoreboard date</label>
         <input type="date" id="date-pick">
       </div>
-      <button class="control-btn" type="button" onclick="setToday()">Today</button>
-      <button class="control-btn" type="button" onclick="shiftSelectedDay(1)" aria-label="Next day">→</button>
-      <button class="control-btn" type="button" onclick="loadScoreboard()">Refresh</button>
+      <button class="control-btn" type="button" data-nav="today" onclick="setToday()">Today</button>
+      <button class="control-btn" type="button" data-nav="next" onclick="shiftSelectedDay(1)" aria-label="Next day">→</button>
+      <button class="control-btn" type="button" data-nav="refresh" onclick="loadScoreboard()">Refresh</button>
     </div>
     <div class="view-controls" role="group" aria-label="Filter games">
       <button class="control-btn active" type="button" data-filter="all">All</button>

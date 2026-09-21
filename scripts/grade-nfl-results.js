@@ -245,7 +245,9 @@ function main() {
   if (skipped) console.log(`  already graded     ${skipped} (skipped, not re-counted)`);
 
   if (!rows.length) {
-    console.log(`  nothing to write — no game is final yet.`);
+    console.log(skipped && skipped===finished
+      ? `  nothing to write — every final game is already graded.`
+      : `  nothing to write — no game is final yet.`);
     console.log("=".repeat(58) + "\n");
     return;
   }
