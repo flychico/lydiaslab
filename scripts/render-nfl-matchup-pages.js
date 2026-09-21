@@ -186,12 +186,12 @@ function page(m){
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(m.away)} at ${esc(m.home)} on ${esc(m.date)}: starting quarterbacks, running backs, top receivers and touchdown leaders for this season and last, with the closing market numbers.">
-<link rel="canonical" href="https://lydiaslab.com${m.url}">
+<link rel="canonical" href="https://ndhorizon.com${m.url}">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Leo">
 <meta property="og:title" content="${esc(title)}">
-<meta property="og:url" content="https://lydiaslab.com${m.url}">
-<meta property="og:image" content="https://lydiaslab.com/img/og-card.png">
+<meta property="og:url" content="https://ndhorizon.com${m.url}">
+<meta property="og:image" content="https://ndhorizon.com/img/og-card.png">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127944;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/scoreboard.css">

@@ -169,7 +169,7 @@ function sanitizePublicLanguage(html) {
 // --- Head tags: analytics + social cards, single source of truth ---
 function ensureHeadTags(html, rel) {
   const GA_ID = "G-XVWTMDNBJK";
-  const OG_IMAGE = "https://lydiaslab.com/img/og-card.png";
+  const OG_IMAGE = "https://ndhorizon.com/img/og-card.png";
   let out = html;
   if (!/<head[\s>]/i.test(out)) return out;
 
@@ -191,7 +191,7 @@ function ensureHeadTags(html, rel) {
   if (!/property=["']og:title["']/i.test(out)) {
     const title = (out.match(/<title>([\s\S]*?)<\/title>/i) || [,"Leo \u2014 Daily MLB Model"])[1].trim();
     const desc = (out.match(/<meta name=["']description["'] content=["']([^"']*)["']/i) || [,"Daily MLB moneyline model previews, transparent results, and research tools."])[1];
-    const canon = (out.match(/<link rel=["']canonical["'] href=["']([^"']*)["']/i) || [,"https://lydiaslab.com/" + rel.replace(/index\.html$/, "")])[1];
+    const canon = (out.match(/<link rel=["']canonical["'] href=["']([^"']*)["']/i) || [,"https://ndhorizon.com/" + rel.replace(/index\.html$/, "")])[1];
     const block = `<meta property="og:type" content="website">
 <meta property="og:site_name" content="Leo">
 <meta property="og:title" content="${escAttr(title)}">

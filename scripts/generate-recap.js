@@ -20,7 +20,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const SITE = "https://lydiaslab.com";
+const SITE = "https://ndhorizon.com";
 const ROOT = path.join(__dirname, "..");
 const RECAP_DIR = path.join(ROOT, "recaps");
 

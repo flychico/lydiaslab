@@ -288,7 +288,7 @@ function rebuildResultsPage(results) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Results — verified official pick record | Leo</title>
 <meta name="description" content="Leo verified official results by market: moneyline, game totals, and pitcher strikeout props. Every official pick stays public, including losses, pushes, and voids.">
-<link rel="canonical" href="https://lydiaslab.com/results/">
+<link rel="canonical" href="https://ndhorizon.com/results/">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
 </head>

@@ -27,7 +27,7 @@
   DEPLOY.md in this folder):
     GITHUB_TOKEN     -- fine-grained PAT, Contents: Read and write, scoped
                         to this one repo only.
-    ALLOWED_ORIGIN    -- e.g. "https://lydiaslab.com" (CORS + _next safety)
+    ALLOWED_ORIGIN    -- e.g. "https://ndhorizon.com" (CORS + _next safety)
 
   Non-secret config below (edit directly, no need to keep out of git):
 */
@@ -71,7 +71,7 @@ function thanksPage(message) {
 <style>body{font-family:system-ui,-apple-system,sans-serif;background:#0b1220;color:#e8edf5;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
 .card{max-width:420px;padding:32px;text-align:center}
 a{color:#6db4ff}</style></head>
-<body><div class="card"><h1>&#9993; ${message}</h1><p><a href="https://lydiaslab.com/">Back to Leo</a></p></div></body></html>`;
+<body><div class="card"><h1>&#9993; ${message}</h1><p><a href="https://ndhorizon.com/">Back to Leo</a></p></div></body></html>`;
 }
 
 // GitHub Contents API: fetch current file (sha + decoded content), or null if it doesn't exist yet.
@@ -179,7 +179,7 @@ async function appendSignup(env, path, email, subscriptionId) {
 export default {
   async fetch(request, env) {
     const origin = request.headers.get("origin") || "";
-    const allowedOrigin = env.ALLOWED_ORIGIN || "https://lydiaslab.com";
+    const allowedOrigin = env.ALLOWED_ORIGIN || "https://ndhorizon.com";
 
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders(origin, allowedOrigin) });

@@ -8,7 +8,7 @@ const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
-const SITE = "https://lydiaslab.com";
+const SITE = "https://ndhorizon.com";
 const FIX = process.argv.includes("--fix");
 const issues = [];
 const deleted = [];

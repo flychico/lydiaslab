@@ -7,7 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const LeoRead = require("../js/client-facing-read.js");
 
-const SITE = "https://lydiaslab.com";
+const SITE = "https://ndhorizon.com";
 const ROOT = path.join(__dirname, "..");
 const DATE = process.argv[2] || etToday();
 

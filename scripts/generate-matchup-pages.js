@@ -23,7 +23,7 @@ const MatchupCopy = require("./lib/matchup-copy-core");
 const RecapReview = require("./lib/recap-review-core");
 const RecapBuild = require("./lib/recap-build-core");
 
-const SITE = "https://lydiaslab.com";
+const SITE = "https://ndhorizon.com";
 const AUTHOR_URL = `${SITE}/writers/lynold/`;
 const AUTHOR_ID = `${AUTHOR_URL}#person`;
 const DEFAULT_ROOT = path.join(__dirname, "..");
