@@ -99,4 +99,77 @@ function splitCsv(line) {
   return out;
 }
 
-module.exports = { appendObservations, splitCsv };
+/*
+  Reconstruct CLOSING LINES from the observation history.
+
+  WHY THIS IS NOT THE SNAPSHOT
+  ----------------------------
+  prop-odds-{date}.json holds the LATEST fetch, and as a Sunday progresses the
+  books PULL lines for games that have started. By the 7:38pm capture on
+  2026-09-20 the snapshot held 62 entries -- only the 8:20pm game -- because
+  every earlier game's market had closed. Merging against it left 11 of 306
+  projections with a line, the published page looked empty, and LINE-COVER
+  (correctly) failed the publish.
+
+  The snapshot also drifts the other way: the 1:14pm capture rewrote 387 lines
+  for games that kicked at 1:02pm. Those are LIVE in-game prices. Grading a
+  pre-game projection against them would be scoring it against a line that
+  already knew part of the answer.
+
+  So the closing line is defined per game, not per file:
+
+      the last observation whose captured_at precedes THAT GAME's kickoff
+
+  which is exactly what the append-on-change history preserves and what no
+  single snapshot can.
+*/
+function closingLines(file, date) {
+  if (!fs.existsSync(file)) return [];
+  const text = fs.readFileSync(file, "utf8");
+  const lines = text.split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) return [];
+  const header = splitCsv(lines[0]);
+  const idx = {}; header.forEach((h, i) => idx[h] = i);
+
+  const best = new Map();   // key -> { row, capturedAt }
+  let afterKick = 0, noKick = 0;
+
+  for (let i = 1; i < lines.length; i++) {
+    const c = splitCsv(lines[i]);
+    const row = {}; header.forEach((h, j) => row[h] = c[j]);
+    if (date && row.date !== date) continue;
+
+    const cap = Date.parse(row.captured_at);
+    const kick = Date.parse(row.kickoff);
+    if (!Number.isFinite(kick)) { noKick++; continue; }
+    // Strictly before kickoff. An observation at or after kickoff is a live
+    // in-game price, never a closing line.
+    if (!(cap < kick)) { afterKick++; continue; }
+
+    const k = `${row.game}\u0001${row.market}\u0001${row.player}`;
+    const prev = best.get(k);
+    if (!prev || cap > prev.capturedAt) best.set(k, { row, capturedAt: cap });
+  }
+
+  const out = [...best.values()].map(({ row, capturedAt }) => ({
+    date: row.date,
+    market: row.market,
+    name: row.player,
+    game: row.game,
+    kickoff: row.kickoff,
+    captured_at: row.captured_at,
+    minutes_before_kickoff: Math.round((Date.parse(row.kickoff) - capturedAt) / 60000),
+    line: row.line === "" ? null : Number(row.line),
+    over_price:  row.over_price  === "" ? null : Number(row.over_price),
+    under_price: row.under_price === "" ? null : Number(row.under_price),
+    implied_prob:     row.implied_prob     === "" ? null : Number(row.implied_prob),
+    implied_prob_raw: row.implied_prob_raw === "" ? null : Number(row.implied_prob_raw),
+    vig_removed: row.vig_removed === "true",
+    books: row.books === "" ? null : Number(row.books)
+  }));
+  out._skippedAfterKickoff = afterKick;
+  out._skippedNoKickoff = noKick;
+  return out;
+}
+
+module.exports = { appendObservations, splitCsv, closingLines };

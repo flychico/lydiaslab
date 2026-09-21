@@ -29,6 +29,7 @@
 const fs = require("fs");
 const path = require("path");
 const { matchPlayers, gameKeyFromFullNames } = require("./lib/nfl-names");
+const { closingLines } = require("./lib/odds-history");
 
 const DIR = path.join(__dirname, "..", "data", "nfl");
 const argDate = (process.argv.find(a => a.startsWith("--date=")) || "").split("=")[1];
@@ -52,16 +53,41 @@ function main() {
   if (!Array.isArray(props) || !props.length) {
     console.error(`No props to merge at ${propsFile}`); process.exit(1);
   }
-  const odds = readJson(oddsFile);
-  if (!odds || !Array.isArray(odds.entries) || !odds.entries.length) {
-    // Not an error: odds may simply not be fetched yet. Props stay publishable
-    // without lines -- they just carry no lean.
-    console.log("No prop odds file yet — props left unchanged (no lines, no lean).");
-    process.exit(0);
+  /*
+    PREFER THE CLOSING LINE OVER THE LATEST SNAPSHOT.
+
+    The snapshot is whatever the last fetch returned, and books PULL lines for
+    games that have started. On 2026-09-20 the 7:38pm snapshot held 62 entries
+    -- only the 8:20pm game -- so merging against it left 11 of 306
+    projections with a line and the published page looked empty.
+
+    The history knows better: for each player it holds the last price seen
+    BEFORE that game's kickoff, which is both the right number to display
+    after kickoff and the only defensible one to grade against.
+
+    Snapshot remains the fallback for a slate with no history yet (e.g. the
+    very first fetch of a new day, before any game has kicked).
+  */
+  let entries = [], source = "";
+  const closing = closingLines(path.join(DIR, "odds-history-props.csv"), DATE);
+  if (closing.length) {
+    entries = closing;
+    source = `closing lines from history (${closing.length} entries; ${closing._skippedAfterKickoff || 0} post-kickoff observations ignored)`;
+  } else {
+    const odds = readJson(oddsFile);
+    if (!odds || !Array.isArray(odds.entries) || !odds.entries.length) {
+      // Not an error: odds may simply not be fetched yet. Props stay
+      // publishable without lines -- they just carry no lean.
+      console.log("No prop odds history or snapshot yet — props left unchanged (no lines, no lean).");
+      process.exit(0);
+    }
+    if (odds.date !== DATE) {
+      console.warn(`WARNING: odds snapshot is dated ${odds.date}, merging for ${DATE}. Stale lines are worse than none.`);
+    }
+    entries = odds.entries;
+    source = `latest snapshot (${entries.length} entries) — no history for this date yet`;
   }
-  if (odds.date !== DATE) {
-    console.warn(`WARNING: odds file is dated ${odds.date}, merging for ${DATE}. Stale lines are worse than none.`);
-  }
+  const odds = { entries };
 
   // Index book entries by "GAME|MARKET" -> Map<bookName, entry>
   const bookIdx = new Map();
@@ -132,6 +158,8 @@ function main() {
       linked++;
       p.book_name  = b.name;
       p.books      = b.books;
+      if (b.captured_at) p.line_captured_at = b.captured_at;
+      if (b.minutes_before_kickoff != null) p.line_minutes_before_kickoff = b.minutes_before_kickoff;
 
       if (p.market === "ANYTIME_TD") {
         p.market_prob_raw = b.implied_prob_raw ?? null;
@@ -162,6 +190,7 @@ function main() {
   }
 
   console.log(`\nNFL PROP LINE MERGE — ${DATE}\n${"=".repeat(58)}`);
+  console.log(`  source: ${source}`);
   console.log(`  projections            ${props.length}`);
   console.log(`  linked to a market line ${linked}`);
   console.log(`  lean stated             ${leaned}`);
