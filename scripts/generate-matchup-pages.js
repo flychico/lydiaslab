@@ -200,7 +200,15 @@ const PARKS = {
   "Washington Nationals": { venue: "Nationals Park", lat: 38.873, lon: -77.007, roof: false }
 };
 
-main().catch(error => fail(error.stack || error.message));
+if (args.archiveOnly) {
+  // Rebuild /mlb/matchups/, /recaps/ and /articles/ from the manifests and the
+  // sitemap from disk, without touching any game page or fetching anything.
+  buildArchive();
+  require("./lib/sitemap").writeSitemap(ROOT);
+  console.log("Rebuilt matchup archives and sitemap.");
+} else {
+  main().catch(error => fail(error.stack || error.message));
+}
 
 async function main() {
   if (!fs.existsSync(MEMBER_BRIEF_PATH)) {
@@ -473,6 +481,7 @@ function parseArgs(argv) {
     if (/^\d{4}-\d{2}-\d{2}$/.test(arg) && !out.date) out.date = arg;
     else if (arg === "--root") out.root = argv[++i];
     else if (arg === "--offline") out.offline = true;
+    else if (arg === "--archive-only") out.archiveOnly = true;
     else if (arg === "--skip-weather") out.skipWeather = true;
     else if (arg === "--help" || arg === "-h") {
       console.log("Usage: node scripts/generate-matchup-pages.js [YYYY-MM-DD] [--root PATH] [--offline] [--skip-weather]");
@@ -1384,6 +1393,7 @@ function renderMatchupPage(context) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
+${require("./lib/ga").GA_HEAD}
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${esc(title)}</title>
@@ -2124,7 +2134,10 @@ function buildArchive() {
   const manifests = fs.existsSync(MANIFEST_DIR)
     ? fs.readdirSync(MANIFEST_DIR).filter(name => /^\d{4}-\d{2}-\d{2}\.json$/.test(name)).map(name => readJsonSafe(path.join(MANIFEST_DIR, name))).filter(Boolean)
     : [];
-  const allPages = manifests.flatMap(manifest => manifest.pages || []).sort((a, b) =>
+  // Only list pages that still exist on disk (2026-09-21: 618 archive links
+  // pointed at pages deleted on 2026-09-05).
+  const allPages = manifests.flatMap(manifest => manifest.pages || [])
+    .filter(p => p.output && fs.existsSync(path.join(ROOT, p.output))).sort((a, b) =>
     b.date.localeCompare(a.date) || String(a.game || "").localeCompare(String(b.game || ""))
   );
 
@@ -2222,7 +2235,7 @@ function updateSitemap(manifest) {
   urls = [...new Set(urls)].sort();
 
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(url => `  <url><loc>${escXml(url)}</loc></url>`).join("\n")}\n</urlset>\n`;
-  fs.writeFileSync(SITEMAP_PATH, sitemap, "utf8");
+  void sitemap; require("./lib/sitemap").writeSitemap(ROOT); // built from pages on disk, see scripts/lib/sitemap.js
 }
 
 function escXml(value) {

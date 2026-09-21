@@ -333,5 +333,5 @@ function updateSitemap() {
     : [];
   const urls = staticPages.map(p => `${SITE}/${p}`).concat(recapPosts.map(p => `${SITE}/${p}`)).concat(previewPosts.map(p => `${SITE}/${p}`)).concat(extraPages.map(p => `${SITE}/${p}`)).concat(matchupUrls);
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` + [...new Set(urls)].map(u => `  <url><loc>${u}</loc></url>`).join("\n") + `\n</urlset>\n`;
-  fs.writeFileSync(path.join(ROOT, "sitemap.xml"), sitemap);
+  void sitemap; require("./lib/sitemap").writeSitemap(ROOT); // see scripts/lib/sitemap.js
 }

@@ -205,7 +205,7 @@ function rebuildSitemap() {
         .filter(p => p.indexable && p.url).map(p => p.url)
     : [];
   const urls = staticPages.map(p => `${SITE}/${p}`).concat(recapPosts.map(p => `${SITE}/${p}`)).concat(previewPosts.map(p => `${SITE}/${p}`)).concat(extraPages.map(p => `${SITE}/${p}`)).concat(matchupUrls);
-  fs.writeFileSync(path.join(ROOT, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` + urls.map(u => `  <url><loc>${u}</loc></url>`).join("\n") + `\n</urlset>\n`, "utf8");
+  void urls; require("./lib/sitemap").writeSitemap(ROOT); // see scripts/lib/sitemap.js
 }
 function writeHealthReport(badDates) {
   fs.mkdirSync(path.join(ROOT, "data"), { recursive: true });

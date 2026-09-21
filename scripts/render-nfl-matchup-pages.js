@@ -295,6 +295,7 @@ function page(m){
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
+${require("./lib/ga").GA_HEAD}
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${esc(title)}</title>
@@ -495,5 +496,6 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
     wrote++;
   }
   console.log(`rendered ${wrote} matchup pages for ${target}`);
+  console.log(`sitemap.xml: ${require("./lib/sitemap").writeSitemap(ROOT)} pages`);
   data.slice(0,3).forEach(m=>console.log(`  ${m.url}`));
 })();
