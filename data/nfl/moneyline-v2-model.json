@@ -1,0 +1,40 @@
+{
+  "model_version": "leo-nflml-v2",
+  "trained_at": "2026-09-21T16:48:12.417Z",
+  "trained_seasons": [
+    2021,
+    2025
+  ],
+  "training_rows": 1355,
+  "features": [
+    "qb_diff",
+    "off_diff",
+    "def_diff"
+  ],
+  "lambda": 10,
+  "intercept": 0.1842971001490972,
+  "beta": [
+    0.3348326736059973,
+    0.38195321777286056,
+    0.21140423719013457
+  ],
+  "scaler": {
+    "mean": {
+      "qb_diff": -0.011911020002270945,
+      "off_diff": 0.011489432482737745,
+      "def_diff": -0.00601201586594846
+    },
+    "sd": {
+      "qb_diff": 1.3624007792987765,
+      "off_diff": 1.0259727955882805,
+      "def_diff": 1.129475836607345
+    }
+  },
+  "coefficients": {
+    "qb_diff": 0.3348326736059973,
+    "off_diff": 0.38195321777286056,
+    "def_diff": 0.21140423719013457
+  },
+  "pick_rule": "Leo Pick only when one team is strictly above 60%; 40% to 60% inclusive is Too Close to Call",
+  "evidence": "data/nfl/backtest-moneyline-v2.json"
+}

@@ -171,6 +171,8 @@ function teamProfile(rows, team, active){
       captured_at: fg?fg.captured_at:(fp[0]&&fp[0].captured_at)||null,
       minutes_before_kickoff: fg?fg.minutes_before_kickoff:null,
       game: fg ? { pick:fg.pick, prob:fg.model_prob, market_prob:fg.market_prob, price:fg.price,
+                   // leo-nflml-v2: a Leo Pick only above 60%, else Too Close to Call
+                   call: String(fg.model_version||"").startsWith("leo-nflml-v2") ? (fg.model_prob>0.60?"leo_pick":"too_close_to_call") : null,
                    proj_total:fg.proj_total, total_line:fg.total_line, total_side:fg.total_side,
                    proj_spread:fg.proj_spread, spread_line:fg.spread_line, spread_side:fg.spread_side,
                    exp_margin:fg.exp_margin } : null,

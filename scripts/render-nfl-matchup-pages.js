@@ -190,7 +190,9 @@ function leoSection(m){
   const when=L.captured_at?new Date(L.captured_at).toLocaleString("en-US",{timeZone:"America/New_York",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})+" ET":"";
   const game=g?`
   <div class="leo-grid">
-    <div class="box"><span class="lbl">Leo winner</span><span class="val">${esc(g.pick)} ${pct(g.prob)}</span><span class="lbl2">market ${pct(g.market_prob)}</span></div>
+    ${g.call==="too_close_to_call"
+      ? `<div class="box"><span class="lbl">Leo pick</span><span class="val">Too Close to Call</span><span class="lbl2">leans ${esc(g.pick)} ${pct(g.prob)} &middot; market ${pct(g.market_prob)}</span></div>`
+      : `<div class="box"><span class="lbl">${g.call==="leo_pick"?"Leo pick":"Leo winner"}</span><span class="val">${esc(g.pick)} ${pct(g.prob)}</span><span class="lbl2">market ${pct(g.market_prob)}</span></div>`}
     <div class="box"><span class="lbl">Leo total</span><span class="val">${v(g.proj_total)}</span><span class="lbl2">line ${v(g.total_line)} &middot; leans ${esc(g.total_side||"\u2014")}</span></div>
     <div class="box"><span class="lbl">Leo spread</span><span class="val">${esc(fav(m,g.proj_spread))}</span><span class="lbl2">line ${esc(lineTxt(m,g.spread_line))} &middot; leans ${esc(g.spread_side||"\u2014")}</span></div>
   </div>`:"";
@@ -252,7 +254,7 @@ function finalReport(m){
   const row=(label,expected,line,side,actual,result)=>`<tr><td>${label}</td><td>${expected}</td><td>${line}</td><td>${side}</td><td><b>${actual}</b></td><td>${result}</td></tr>`;
   const ml=F.moneyline, tp=F.total_pick, sp=F.spread;
   const rows=[
-    ml?row("Winner", esc(ml.side)+" "+pct(ml.leo), esc(ml.side)+" "+pct(ml.market), esc(ml.side), esc(ml.actual), verdict(ml.result)):"",
+    ml?row("Winner", esc(ml.side)+" "+pct(ml.leo), esc(ml.side)+" "+pct(ml.market), ml.result===""?'<span class="mut">Too Close to Call (60% or less)</span>':esc(ml.side), esc(ml.actual), ml.result===""?'<span class="vd p">NO PICK</span>':verdict(ml.result)):"",
     tp?row("Total", v(tp.leo), v(tp.market), tp.side?esc(tp.side)+" "+v(tp.market):'<span class="mut">within 1.5 of the line</span>', v(tp.actual), tp.side?verdict(tp.result):noLean):"",
     sp?row("Spread", esc(fav(m,sp.leo)), esc(lineTxt(m,sp.market)), sp.side?sideLine(m,sp.side,sp.market):'<span class="mut">within 1 pt of the line</span>', esc(fav(m,Number(sp.actual))), sp.side?verdict(sp.result):noLean):""
   ].join("");

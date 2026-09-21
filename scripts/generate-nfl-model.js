@@ -17,6 +17,7 @@ const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
 const { buildRatings, headToHead } = require("./lib/nfl-ratings.js");
+const ML = require("./lib/nfl-moneyline.js");
 const ROOT = path.join(__dirname, "..");
 const FEED = "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv";
 const REL  = "https://github.com/nflverse/nflverse-data/releases/download";
@@ -132,8 +133,10 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
   // NOT feed model_prob. Wiring it in would make picks worse. Revisit only
   // with FITTED weights, not the hand-assigned ones in lib/nfl-ratings.js.
   let RATINGS = {};
+  let WK_PRIOR = [];
   try{
     const wkPrior = get(`${REL}/stats_player/stats_player_week_${PRIOR}.csv`);
+    WK_PRIOR = wkPrior;
     RATINGS = buildRatings(wk, wkPrior);
     console.log(`  component ratings: ${Object.keys(RATINGS).length} teams (context only)`);
   }catch(e){ console.log("  component ratings unavailable: "+e.message); }
@@ -199,9 +202,45 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
   // ---- picks for the target slate -----------------------------------------
   const slate = games.filter(g=>g.gameday===target)
                      .sort((a,b)=>String(a.gametime).localeCompare(String(b.gametime)));
+  /*
+    MONEYLINE = leo-nflml-v2 (live since 2026-09-21, DEC-20260921-10).
+    Win probability from a fitted logistic model: expected starting QB
+    rating, supporting offense, defense, fitted home field. No sportsbook
+    input. Coefficients come from data/nfl/moneyline-v2-model.json (fit by
+    scripts/train-nfl-moneyline.js); inputs use only weeks before the slate.
+    A Leo Pick needs one side strictly above 60%; otherwise Too Close to Call.
+    Spread and total still use the v1 point-margin rating (expMargin).
+  */
+  const ML_MODEL = JSON.parse(fs.readFileSync(path.join(ROOT,"data/nfl/moneyline-v2-model.json"),"utf8"));
+  const mlByWeek = {};
+  const mlInputs = week => mlByWeek[week] || (mlByWeek[week] = (() => {
+    const pre = wk.filter(r => (n(r.week)||0) < week);
+    return { pre, qb: ML.buildQbRatings(pre, WK_PRIOR), team: ML.buildTeamRatings(pre, WK_PRIOR) };
+  })());
+  // Expected starter: games.csv names him for the coming week; otherwise the
+  // team's QB with the most attempts this season, then last season.
+  const starterQb = (named, team, pre) => {
+    if (named) return named;
+    for (const rows of [pre, WK_PRIOR]) {
+      const att = {};
+      rows.forEach(r => { if (r.position==="QB" && r.team===team) {
+        const nm = r.player_display_name || r.player_name; att[nm] = (att[nm]||0) + (n(r.attempts)||0); } });
+      const best = Object.entries(att).sort((a,b)=>b[1]-a[1])[0];
+      if (best) return best[0];
+    }
+    return "";
+  };
   const picks = slate.map(g=>{
     const expMargin = (rating[g.home_team]??0) - (rating[g.away_team]??0) + HFA;
-    const rawHome = normCdf(expMargin/SD);
+    const v1Home = normCdf(expMargin/SD);
+    const inp = mlInputs(n(g.week)||1);
+    const homeQb = starterQb(g.home_qb_name, g.home_team, inp.pre);
+    const awayQb = starterQb(g.away_qb_name, g.away_team, inp.pre);
+    const h2h3 = ML.h2hRecord(games, g.away_team, g.home_team, g.gameday, 3);
+    const feats = ML.featureRow({ homeTeam:g.home_team, awayTeam:g.away_team, homeQb, awayQb,
+      qbRatings:inp.qb, teamRatings:inp.team, h2h:h2h3 });
+    const rawHome = ML.predict(ML_MODEL, feats);
+    const call = ML.classifyPick(rawHome, g.home_team, g.away_team);
     const [mktAway,mktHome] = devig(g.away_moneyline,g.home_moneyline);
 
     // LEO'S NUMBER IS LEO'S. No market blending anywhere in this file.
@@ -292,7 +331,13 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
     return {
       date:target, game_id:g.game_id, matchup:`${g.away_team} @ ${g.home_team}`,
       away:g.away_team, home:g.home_team, kickoff:g.gametime, stadium:g.stadium,
-      week:g.week, model_version:"leo-nflml-v1", status,
+      week:g.week, model_version:"leo-nflml-v2", status,
+      // Leo Pick only above 60%. The favoured side and its probability stay
+      // in pick/model_prob; ml_call says whether it counts as a pick.
+      ml_call: call.status, v1_model_prob: r3(v1Home >= 0.5 ? v1Home : 1-v1Home),
+      home_qb: homeQb, away_qb: awayQb,
+      home_qb_rating: feats.home_qb_rating, away_qb_rating: feats.away_qb_rating,
+      h2h_3yr: { home_wins:h2h3.home_wins, away_wins:h2h3.away_wins, ties:h2h3.ties, games:h2h3.games },
       pick:side, model_prob:prob!=null?r3(prob):null, market_prob:mkt!=null?r3(mkt):null,
       edge:edge!=null?r3(edge):null, price,
       // The side the market underprices, which may differ from the side Leo

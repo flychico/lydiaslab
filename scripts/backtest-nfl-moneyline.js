@@ -271,7 +271,7 @@ function runSpec(allRows, features, name) {
   };
 }
 
-(function main() {
+function main() {
   console.log(`\nLEO NFL MONEYLINE V2 RESEARCH — through ${THROUGH}\n${'='.repeat(72)}`);
   console.log('Loading games and weekly player data...');
   const allGames = get(FEED);
@@ -332,4 +332,9 @@ function runSpec(allRows, features, name) {
   const out = path.join(dir, 'backtest-moneyline-v2.json');
   fs.writeFileSync(out, JSON.stringify(result, null, 2));
   console.log(`\nwrote ${path.relative(ROOT, out)}`);
-})();
+}
+
+// Exported so scripts/train-nfl-moneyline.js fits the live model with the
+// exact same pregame feature rows the backtest evaluated.
+module.exports = { get, buildRows, chooseLambda, CORE_FEATURES, H2H_FEATURES, START };
+if (require.main === module) main();

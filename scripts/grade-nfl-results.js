@@ -72,7 +72,7 @@ function parseCSV(text) {
   market's own units so they mean the same thing across markets.
 */
 function varianceClass(result, absError, tight, loose) {
-  if (result == null || absError == null) return "";
+  if (result == null || result === "" || absError == null) return "";
   if (result === "W") return absError <= tight ? "good_pick_won"  : "lucky_win";
   if (result === "L") return absError >= loose ? "good_pick_lost" : "bad_pick_lost";
   return "push";
@@ -188,8 +188,12 @@ function main() {
                     : (p.pick === p.home ? p.market_prob : 1 - p.market_prob);
       const leoBrier = Math.pow(leoHome - homeOutcome, 2);
       const mktBrier = mktHome == null ? null : Math.pow(mktHome - homeOutcome, 2);
-      const res = winner === "TIE" ? "P" : (p.pick === winner ? "W" : "L");
-      rows.push({ ...base, market: "moneyline", status: p.status,
+      // leo-nflml-v2: only a Leo Pick (favoured side strictly above 60%)
+      // counts toward the record. Too Close to Call keeps its row and Brier,
+      // with an empty result, the same way no-lean spreads and totals do.
+      const tooClose = String(p.model_version||"").startsWith("leo-nflml-v2") && p.model_prob <= 0.60;
+      const res = tooClose ? "" : winner === "TIE" ? "P" : (p.pick === winner ? "W" : "L");
+      rows.push({ ...base, market: "moneyline", status: tooClose ? "too_close_to_call" : p.status,
         leo_side: p.pick, leo_value: r3(p.model_prob), market_value: r3(p.market_prob),
         market_price: p.price ?? "",
         edge: r3(p.edge), actual_value: winner, result: res,

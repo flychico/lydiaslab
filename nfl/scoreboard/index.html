@@ -289,12 +289,18 @@ function renderCards(){
                 : (leo&&leo.proj_total!=null ? "Leo "+leo.proj_total : ""))+'</span></div>'+
           // Two states only. Any nuance about WHY belongs on the matchup page.
           '<div class="market-box rating"><span class="market-label">Leo</span>'+
-            '<span class="market-value">'+(leo&&leo.status==="official_pick"
-                ? escapeHtml(leo.pick) : "Pass")+'</span>'+
+            // leo-nflml-v2: Leo Pick only above 60%, otherwise Too Close to Call
+            '<span class="market-value">'+(leo&&leo.ml_call
+                ? (leo.ml_call==="leo_pick" ? escapeHtml(leo.pick) : "Too Close")
+                : (leo&&leo.status==="official_pick" ? escapeHtml(leo.pick) : "Pass"))+'</span>'+
             '<span class="market-sub">'+(leo
-                ? (leo.status==="official_pick"
-                    ? "Official pick \u00b7 "+(leo.edge*100).toFixed(1)+"% edge"
-                    : "No official pick")
+                ? (leo.ml_call
+                    ? (leo.ml_call==="leo_pick"
+                        ? "Leo Pick \u00b7 "+Math.round(leo.model_prob*100)+"%"
+                        : "Leans "+escapeHtml(leo.pick)+" "+Math.round(leo.model_prob*100)+"%")
+                    : (leo.status==="official_pick"
+                        ? "Official pick \u00b7 "+(leo.edge*100).toFixed(1)+"% edge"
+                        : "No official pick"))
                 : "Model pending")+'</span></div>'+
         '</div>'+
         ((g.away_qb_name&&g.home_qb_name)

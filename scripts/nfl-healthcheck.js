@@ -325,6 +325,22 @@ for (const f of ["css/style.css","css/scoreboard.css"]) {
   }
 }
 
+// ---- 19. moneyline v2 labels match the 60% rule ---------------------------
+// A Leo Pick must be strictly above 60%; 60% or less must read Too Close to Call.
+{
+  const pf = P("data/nfl/picks-today.json");
+  if (fs.existsSync(pf)) {
+    const picks = JSON.parse(fs.readFileSync(pf, "utf8"));
+    const v2 = picks.filter(p => String(p.model_version||"").startsWith("leo-nflml-v2"));
+    const bad = v2.filter(p => p.model_prob == null
+      || (p.ml_call === "leo_pick") !== (p.model_prob > 0.60)
+      || !["leo_pick","too_close_to_call"].includes(p.ml_call));
+    if (!v2.length) warn("ML-V2", "picks-today.json is not on leo-nflml-v2 yet");
+    else if (bad.length) fail("ML-V2", `${bad.length} game(s) labelled against the 60% rule (e.g. ${bad[0].matchup} ${bad[0].ml_call} at ${Math.round((bad[0].model_prob||0)*100)}%)`);
+    else ok("ML-V2", `${v2.length} games on leo-nflml-v2: ${v2.filter(p=>p.ml_call==="leo_pick").length} Leo Picks, ${v2.filter(p=>p.ml_call!=="leo_pick").length} Too Close to Call`);
+  }
+}
+
 console.log("=".repeat(58));
 console.log(`  ${passes} passed · ${warns} warnings · ${fails} failures\n`);
 process.exit(fails ? 1 : 0);
