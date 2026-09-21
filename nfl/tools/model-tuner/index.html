@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XVWTMDNBJK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XVWTMDNBJK');
+</script>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NFL Model Tuner | Leo</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Leo">
+<meta property="og:title" content="NFL Model Tuner | Leo">
+<meta property="og:description" content="Change Leo's NFL model settings and see every projection rebuilt from its frozen pre-kickoff inputs and regraded against what actually happened.">
+<meta property="og:url" content="https://ndhorizon.com/nfl/tools/model-tuner/">
+<meta property="og:image" content="https://ndhorizon.com/img/og-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="NFL Model Tuner | Leo">
+<meta name="twitter:description" content="Change Leo's NFL model settings and see every projection rebuilt from its frozen pre-kickoff inputs and regraded against what actually happened.">
+<meta name="twitter:image" content="https://ndhorizon.com/img/og-card.png">
+<meta name="description" content="Change Leo's NFL model settings and see every projection rebuilt from its frozen pre-kickoff inputs and regraded against what actually happened.">
+<link rel="canonical" href="https://ndhorizon.com/nfl/tools/model-tuner/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127944;</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/scoreboard.css">
+<style>
+/* --- model tuner ---------------------------------------------------------
+   Scoped to this page: css/scoreboard.css is shared with MLB (NFL_WATCH_LIST #18).
+   Series colours were run through the dataviz validator against the cream
+   card surface: umber = Leo as shipped, blue = your settings. */
+:root{ --base:#A0672A; --tune:#2C68A6; --grid:#E7DFD0; }
+
+.tn-warn{background:var(--bg-card);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:12px;padding:13px 16px;font-size:.88rem;color:var(--text-dim);line-height:1.55}
+.tn-warn b{color:var(--text)}
+.tn-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.tn-layout{display:grid;grid-template-columns:310px minmax(0,1fr);gap:16px;align-items:start}
+@media(max-width:880px){.tn-layout{grid-template-columns:1fr}}
+
+.tn-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow-sm)}
+.tn-panel h2{font-size:1.05rem;margin:0}
+.knob{display:flex;flex-direction:column;gap:4px}
+.knob .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.knob label{font-size:.8rem;font-weight:700}
+.knob output{font-size:.84rem;font-weight:800;font-variant-numeric:tabular-nums;color:var(--tune);white-space:nowrap}
+.knob output.at-base{color:var(--text-dim)}
+.knob .hint{font-size:.72rem;color:var(--text-dim);line-height:1.35}
+.knob input[type=range]{width:100%;accent-color:var(--tune)}
+.tn-code{font-family:ui-monospace,Menlo,monospace;font-size:.72rem;background:var(--bg-elev);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text-dim);white-space:pre-wrap;word-break:break-word}
+
+.tn-main{display:flex;flex-direction:column;gap:14px;min-width:0}
+.tn-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tn-tile{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:11px 13px;display:flex;flex-direction:column;gap:2px}
+.tn-tile .k{font-size:.62rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--text-dim)}
+.tn-tile .v{font-size:1.35rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.15}
+.tn-tile .s{font-size:.74rem;color:var(--text-dim);font-variant-numeric:tabular-nums}
+.delta{font-size:.72rem;font-weight:800;padding:1px 7px;border-radius:999px;margin-left:5px;vertical-align:middle}
+.delta.up{background:rgba(47,110,74,.14);color:var(--good)}
+.delta.dn{background:rgba(166,58,46,.14);color:var(--danger)}
+.delta.eq{background:var(--bg-elev);color:var(--text-dim)}
+
+.tn-chart{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:14px 14px 8px;position:relative}
+.tn-chart h3{font-size:.9rem;margin:0 0 2px}
+.tn-chart .sub{font-size:.76rem;color:var(--text-dim);margin:0 0 6px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.76rem;color:var(--text-dim);margin-bottom:4px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.tn-tip{position:absolute;pointer-events:none;background:var(--accent2);color:#fff;font-size:.74rem;line-height:1.4;padding:7px 9px;border-radius:7px;max-width:230px;opacity:0;transition:opacity .08s;z-index:3;font-variant-numeric:tabular-nums}
+
+.tn-tbl{overflow-x:auto;background:var(--bg-card);border:1px solid var(--border);border-radius:16px}
+.tn-tbl table{width:100%;border-collapse:collapse;font-size:.8rem;font-variant-numeric:tabular-nums}
+.tn-tbl th{font-size:.6rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--text-dim);text-align:right;padding:8px 10px;border-bottom:1.5px solid var(--border);white-space:nowrap}
+.tn-tbl td{text-align:right;padding:7px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.tn-tbl th:first-child,.tn-tbl td:first-child{text-align:left}
+.tn-tbl .m{color:var(--text-dim);font-size:.9em}
+.better{color:var(--good);font-weight:800}.worse{color:var(--danger);font-weight:800}
+.base-c{color:var(--base);font-weight:700}.tune-c{color:var(--tune);font-weight:800}
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main class="scoreboard-shell">
+  <section class="score-hero">
+    <p class="eyebrow">Frozen pre-kickoff inputs, real results.</p>
+    <h1>NFL Model Tuner</h1>
+    <p class="subtitle">Move a setting and every projection is rebuilt from the exact inputs Leo used before kickoff, then graded against what happened. Brown is Leo as shipped; blue is your settings. It reads the live grading files, so each new week lands here on its own.</p>
+  </section>
+
+  <div class="tn-warn" id="warn">Loading graded weeks&hellip;</div>
+
+  <section class="score-controls tn-bar" aria-label="Tuner controls">
+    <div class="view-controls filters" role="tablist" aria-label="Model" id="tabs"></div>
+    <div class="view-controls filters" role="group" aria-label="Weeks" id="weeks"></div>
+  </section>
+
+  <div class="tn-layout">
+    <aside class="tn-panel" id="knobs" aria-label="Model settings"></aside>
+    <section class="tn-main" id="main"></section>
+  </div>
+
+  <p class="data-note">Player projection = rate &times; volume &times; opponent adjustment + calibration. Win probability = normal CDF of expected margin &divide; margin spread, where expected margin = rating gap &times; strength + home-field. Lines are the last price before kickoff. Nothing here changes the live model &mdash; copy the settings box to ask for a change to be tested properly.</p>
+</main>
+<footer id="footer"></footer><script src="/js/app.js"></script>
+<script>
+renderNav("/nfl/tools/"); renderFooter();
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = v => { const x=parseFloat(v); return Number.isFinite(x)?x:null; };
+const r1 = x => x==null||!isFinite(x) ? "—" : String(Math.round(x*10)/10);
+const sg = x => x==null||!isFinite(x) ? "—" : (x>0?"+":"")+(Math.round(x*10)/10);
+const pct = x => x==null||!isFinite(x) ? "—" : Math.round(x*100)+"%";
+function ncdf(z){const t=1/(1+0.2316419*Math.abs(z));const d=0.3989423*Math.exp(-z*z/2);const p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return z>0?1-p:p;}
+function splitCsv(line){const out=[];let cur="",q=false;for(let i=0;i<line.length;i++){const ch=line[i];if(q){if(ch==='"'){if(line[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=ch;}else if(ch==='"')q=true;else if(ch===","){out.push(cur);cur="";}else cur+=ch;}out.push(cur);return out;}
+function parseCsv(text){const L=text.split(/\r?\n/).filter(Boolean);if(L.length<2)return[];const h=splitCsv(L[0]);return L.slice(1).map(l=>{const c=splitCsv(l);const o={};h.forEach((k,i)=>o[k]=c[i]);return o;});}
+async function csv(u){try{const r=await fetch(u,{cache:"no-store"});return r.ok?parseCsv(await r.text()):[];}catch(e){return[];}}
+
+// Leo's shipped calibration constants. Each row also carries a residual, so if
+// these drift from the model the default settings still reproduce Leo exactly.
+const CAL = { QB:8.4, RB:3.4, WR:1.1 };
+const GROUP = { QB_PASS_YARDS:"QB", RB_RUSH_YARDS:"RB", WR_REC_YARDS:"WR" };
+const UNIT = { QB:["attempt","attempts","QB1"], RB:["carry","carries","RB1 / RB2"], WR:["target","targets","WR1 / WR2 / WR3"] };
+
+const PROP_KNOBS = g => [
+  { id:"rateMult",  label:"Rate multiplier", min:.7, max:1.3, step:.01, base:1, fmt:v=>"×"+v.toFixed(2), hint:`Scales every player's yards per ${UNIT[g][0]}.` },
+  { id:"rateShrink",label:"Pull rate toward average", min:0, max:1, step:.05, base:0, fmt:v=>Math.round(v*100)+"%", hint:"Blends each player's rate toward the position average. Guards against one-game hot or cold rates." },
+  { id:"volMult",   label:"Volume multiplier", min:.7, max:1.3, step:.01, base:1, fmt:v=>"×"+v.toFixed(2), hint:`Scales expected ${UNIT[g][1]}.` },
+  { id:"volShrink", label:"Pull volume toward role average", min:0, max:1, step:.05, base:0, fmt:v=>Math.round(v*100)+"%", hint:`Blends volume toward the average for the depth slot (${UNIT[g][2]}).` },
+  { id:"oppStr",    label:"Opponent adjustment strength", min:0, max:1.5, step:.05, base:1, fmt:v=>Math.round(v*100)+"%", hint:"0% ignores the defense faced. 100% is Leo as shipped." },
+  { id:"cal",       label:"Calibration (yards added)", min:g==="QB"?-30:-15, max:g==="QB"?30:15, step:.5, base:CAL[g], fmt:v=>sg(v)+" yds", hint:"The flat correction added to every projection." },
+  { id:"floor",     label:"Lean threshold", min:0, max:.15, step:.01, base:.05, fmt:v=>Math.round(v*100)+"% of line", hint:"How far from the line Leo must be before calling a side." }
+];
+const GAME_KNOBS = [
+  { id:"hfa",   label:"Home-field advantage", min:0, max:4, step:.1, base:2, fmt:v=>v.toFixed(1)+" pts", hint:"Points added to the home side's expected margin." },
+  { id:"scale", label:"Rating strength", min:0, max:1.5, step:.05, base:1, fmt:v=>Math.round(v*100)+"%", hint:"How much the power-rating gap counts. Lower trusts early-season ratings less." },
+  { id:"sd",    label:"Margin spread (confidence)", min:8, max:18, step:.2, base:13.2, fmt:v=>v.toFixed(1)+" pts", hint:"Higher = less confident win probabilities." },
+  { id:"tMult", label:"Scoring multiplier", min:.8, max:1.2, step:.01, base:1, fmt:v=>"×"+v.toFixed(2), hint:"Scales both teams' expected points." },
+  { id:"tOff",  label:"Total offset", min:-10, max:10, step:.5, base:0, fmt:v=>sg(v)+" pts", hint:"Flat points added to every projected total." },
+  { id:"sFloor",label:"Spread threshold", min:0, max:4, step:.5, base:1, fmt:v=>v.toFixed(1)+" pts", hint:"Points from the spread before Leo takes a side. 1.0 is the model's playable threshold." },
+  { id:"tFloor",label:"Total threshold", min:0, max:5, step:.5, base:1.5, fmt:v=>v.toFixed(1)+" pts", hint:"Points from the total before Leo calls over or under. 1.5 is the model's threshold." }
+];
+const TABS = [{id:"QB",label:"QB passing"},{id:"RB",label:"RB rushing"},{id:"WR",label:"WR receiving"},{id:"G",label:"Moneyline, total & spread"}];
+const baseOf = knobs => Object.fromEntries(knobs.map(k=>[k.id,k.base]));
+let S = { QB:baseOf(PROP_KNOBS("QB")), RB:baseOf(PROP_KNOBS("RB")), WR:baseOf(PROP_KNOBS("WR")), G:baseOf(GAME_KNOBS) };
+let tab = "QB", week = "all";
+try { const s = JSON.parse(localStorage.getItem("leo-nfl-tuner")||"null"); if(s&&s.S){ for(const k in S) Object.assign(S[k], s.S[k]||{}); if(s.tab) tab=s.tab; } } catch(e){}
+const save = () => { try { localStorage.setItem("leo-nfl-tuner", JSON.stringify({S,tab})); } catch(e){} };
+
+let PROPS = [], GAMES = [], WEEKS = [];
+
+// ------------------------------------------------------------------- data
+async function load(){
+  const [graded, hist, results] = await Promise.all([
+    csv("/data/nfl/nfl-props-graded.csv"),
+    csv("/data/nfl/prediction-history.csv"),
+    csv("/data/nfl/nfl-results-log.csv")
+  ]);
+  PROPS = graded.filter(r => GROUP[r.market] && r.excluded!=="Y" && r.actual!=="" && num(r.rate_used)!=null && num(r.expected_volume)!=null)
+    .map(r => {
+      const g = GROUP[r.market], rt=num(r.rate_used), v=num(r.expected_volume), a=num(r.opp_adjustment)??1, pr=num(r.projection);
+      return { g, wk:r.week, date:r.date, pl:r.player, tm:r.team, d:r.depth||g, r:rt, v, a, pr,
+               ln:num(r.line), ac:num(r.actual), res: pr-(rt*v*a+CAL[g]) };
+    });
+  // The prediction of record for each game is the last one captured before kickoff.
+  const best = new Map();
+  for(const h of hist){
+    const cap=Date.parse(h.captured_at), kick=Date.parse(h.kickoff_utc);
+    if(!(cap<kick) || num(h.home_rating)==null) continue;
+    const k=h.date+"|"+h.game_id, prev=best.get(k);
+    if(!prev || cap>prev._c) best.set(k,{...h,_c:cap});
+  }
+  const R = (gid,date,mk) => results.find(x=>x.game_id===gid&&x.date===date&&x.market===mk);
+  GAMES = [...best.values()].map(h => {
+    const ml=R(h.game_id,h.date,"moneyline"), tot=R(h.game_id,h.date,"total"), sp=R(h.game_id,h.date,"spread");
+    if(!ml) return null;                                   // not final yet
+    const mv=num(ml.market_value);
+    const hr=num(h.home_rating), ar=num(h.away_rating), em=num(h.exp_margin);
+    return { wk:h.week, date:h.date, gm:h.matchup, aw:h.away, hm:h.home, hr, ar, hfaG: em-(hr-ar),
+             ae:num(h.away_exp_points), he:num(h.home_exp_points), pt:num(h.proj_total),
+             tl:num(h.total_line), sl:num(h.spread_line),
+             win:ml.actual_value, mh: mv==null?null:(ml.leo_side===h.home?mv:1-mv),
+             at: tot?num(tot.actual_value):null, amg: sp?num(sp.actual_value):null };
+  }).filter(Boolean);
+  WEEKS = [...new Set([...PROPS.map(p=>p.wk),...GAMES.map(g=>g.wk)])].filter(Boolean).sort((a,b)=>Number(a)-Number(b));
+}
+
+// ------------------------------------------------------------- prop model
+const inWeek = x => week==="all" || String(x.wk)===String(week);
+function projectProp(p, k, RM, VM){
+  const r = (p.r*(1-k.rateShrink) + RM[p.g]*k.rateShrink) * k.rateMult;
+  const v = (p.v*(1-k.volShrink)  + VM[p.g+"|"+p.d]*k.volShrink) * k.volMult;
+  const a = 1 + (p.a-1)*k.oppStr;
+  return Math.max(0, r*v*a + k.cal + p.res);
+}
+function grade(rows, key, floor){
+  let err=0,lerr=0,n=0,cmp=0,beat=0,w=0,l=0,p=0,bias=0;
+  for(const x of rows){
+    const pr=x[key], ac=x.ac; err+=Math.abs(pr-ac); bias+=ac-pr; n++;
+    if(x.ln==null) continue;
+    const le=Math.abs(x.ln-ac); lerr+=le; cmp++; if(Math.abs(pr-ac)<le) beat++;
+    const gap=pr-x.ln;
+    if(gap!==0 && Math.abs(gap)>=floor*Math.abs(x.ln)){ if(ac===x.ln) p++; else if((ac>x.ln)===(gap>0)) w++; else l++; }
+  }
+  return { mae:n?err/n:null, lineMae:cmp?lerr/cmp:null, beat, cmp, beatPct:cmp?beat/cmp:null, w, l, p, bias:n?bias/n:null, n };
+}
+
+// ------------------------------------------------------------- game model
+function gradeGames(k, games){
+  let w=0,l=0,br=0,mbr=0,mn=0,sw=0,sl=0,sp=0,tw=0,tl=0,tp=0,serr=0,slerr=0,terr=0,tlerr=0,sn=0,tn=0;
+  const rows = games.map(g=>{
+    const em=(g.hr-g.ar)*k.scale + g.hfaG + (k.hfa-2);
+    const ph=ncdf(em/k.sd);
+    const tot=(g.ae+g.he)*k.tMult + (g.pt-(g.ae+g.he)) + k.tOff;   // keeps any roof/wind term Leo applied
+    const homeWon = g.win===g.hm ? 1 : 0;
+    const pick = ph>=.5 ? g.hm : g.aw;
+    if(pick===g.win) w++; else l++;
+    br += (ph-homeWon)**2; if(g.mh!=null){ mbr += (g.mh-homeWon)**2; mn++; }
+    let sSide="", tSide="";
+    if(g.sl!=null && g.amg!=null){
+      serr+=Math.abs(em-g.amg); slerr+=Math.abs(g.sl-g.amg); sn++;
+      if(Math.abs(em-g.sl)>=k.sFloor && em!==g.sl){ sSide = em>g.sl?"home":"away";
+        if(g.amg===g.sl) sp++; else if((g.amg>g.sl)===(sSide==="home")) sw++; else sl++; }
+    }
+    if(g.tl!=null && g.at!=null){
+      terr+=Math.abs(tot-g.at); tlerr+=Math.abs(g.tl-g.at); tn++;
+      if(Math.abs(tot-g.tl)>=k.tFloor && tot!==g.tl){ tSide = tot>g.tl?"Over":"Under";
+        if(g.at===g.tl) tp++; else if((g.at>g.tl)===(tSide==="Over")) tw++; else tl++; }
+    }
+    return { g, em, ph, tot, pick, sSide, tSide };
+  });
+  const n=games.length||1;
+  return { rows, w, l, brier:br/n, mBrier:mn?mbr/mn:null, sw, sl, sp, tw, tl, tp,
+           sMae:sn?serr/sn:null, sLineMae:sn?slerr/sn:null, tMae:tn?terr/tn:null, tLineMae:tn?tlerr/tn:null };
+}
+
+// -------------------------------------------------------------- rendering
+function renderBar(){
+  $("#tabs").innerHTML = TABS.map(t=>`<button class="control-btn${t.id===tab?" active":""}" type="button" role="tab" aria-selected="${t.id===tab}" data-t="${t.id}">${esc(t.label)}</button>`).join("");
+  document.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{ tab=b.dataset.t; save(); renderAll(); });
+  $("#weeks").innerHTML = `<button class="control-btn${week==="all"?" active":""}" type="button" data-w="all">All weeks</button>` +
+    WEEKS.map(w=>`<button class="control-btn${String(week)===String(w)?" active":""}" type="button" data-w="${esc(w)}">Wk ${esc(w)}</button>`).join("");
+  document.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{ week=b.dataset.w; renderAll(); });
+}
+function renderWarn(){
+  const games=GAMES.filter(inWeek), props=PROPS.filter(inWeek);
+  const n = tab==="G" ? `${games.length} game${games.length===1?"":"s"}` : `${props.filter(p=>p.g===tab).length} ${({QB:"quarterback",RB:"running back",WR:"receiver"})[tab]} projections`;
+  const wks = week==="all" ? `${WEEKS.length} graded week${WEEKS.length===1?"":"s"}` : `Week ${week}`;
+  $("#warn").innerHTML = `<b>${esc(wks)} &mdash; ${esc(n)}.</b> A setting that makes these numbers look great is mostly fitting luck and usually gives it back later. Find a <b>direction</b> here, then check it on a week you did not tune on: tune on one week, click the next, and see if it still helps.`;
+}
+function renderKnobs(){
+  const knobs = tab==="G" ? GAME_KNOBS : PROP_KNOBS(tab), st = S[tab];
+  $("#knobs").innerHTML = `<h2>${tab==="G"?"Game model":esc(TABS.find(t=>t.id===tab).label)} settings</h2>` +
+    knobs.map(k=>`<div class="knob">
+      <div class="top"><label for="k-${tab}-${k.id}">${esc(k.label)}</label><output id="o-${k.id}" class="${Math.abs(st[k.id]-k.base)<1e-9?"at-base":""}">${esc(k.fmt(st[k.id]))}</output></div>
+      <input type="range" id="k-${tab}-${k.id}" data-k="${k.id}" min="${k.min}" max="${k.max}" step="${k.step}" value="${st[k.id]}">
+      <span class="hint">${esc(k.hint)}</span></div>`).join("") +
+    `<div><button class="control-btn" type="button" id="reset">Reset to Leo</button></div>
+     <div><div class="hint" style="font-size:.72rem;color:var(--text-dim);margin-bottom:4px">Settings to send when asking for a change to be tested:</div><div class="tn-code" id="code"></div></div>`;
+  document.querySelectorAll("[data-k]").forEach(inp => inp.oninput = () => {
+    const k = knobs.find(x=>x.id===inp.dataset.k); st[k.id]=Number(inp.value);
+    const o=$("#o-"+k.id); o.textContent=k.fmt(st[k.id]); o.classList.toggle("at-base",Math.abs(st[k.id]-k.base)<1e-9);
+    save(); renderMain(); renderCode();
+  });
+  $("#reset").onclick = () => { S[tab]=baseOf(knobs); save(); renderAll(); };
+  renderCode();
+}
+function renderCode(){
+  const knobs = tab==="G" ? GAME_KNOBS : PROP_KNOBS(tab), st=S[tab];
+  const ch = knobs.filter(k=>Math.abs(st[k.id]-k.base)>1e-9).map(k=>`${k.label}: ${k.fmt(k.base)} → ${k.fmt(st[k.id])}`);
+  $("#code").textContent = (tab==="G"?"Game model":TABS.find(t=>t.id===tab).label) + (week==="all"?" (all weeks)":` (Week ${week})`) + "\n" + (ch.length?ch.join("\n"):"(no changes — Leo as shipped)");
+}
+function delta(t,b,lowerBetter,fmt){
+  const d=t-b; if(!isFinite(d)||Math.abs(d)<1e-9) return `<span class="delta eq">no change</span>`;
+  return `<span class="delta ${(lowerBetter?d<0:d>0)?"up":"dn"}">${d>0?"+":""}${fmt(d)}</span>`;
+}
+const tile=(k,v,s,d)=>`<div class="tn-tile"><span class="k">${k}</span><span class="v">${v}${d||""}</span><span class="s">${s}</span></div>`;
+
+function scatter(rows, unit){
+  const W=640,H=380,L=48,R=14,T=12,B=40;
+  const vals=rows.flatMap(x=>[x.b,x.t,x.ac]);
+  let lo=Math.min(...vals), hi=Math.max(...vals);
+  const step=(hi-lo)>200?100:(hi-lo)>80?25:10;
+  lo=Math.floor(lo/step)*step; hi=Math.ceil(hi/step)*step; if(hi===lo) hi=lo+step;
+  const sx=v=>L+(v-lo)/(hi-lo)*(W-L-R), sy=v=>H-B-(v-lo)/(hi-lo)*(H-T-B);
+  let ticks=""; for(let v=lo; v<=hi+1e-9; v+=step){
+    ticks+=`<line x1="${L}" x2="${W-R}" y1="${sy(v)}" y2="${sy(v)}" stroke="var(--grid)"/><text x="${L-7}" y="${sy(v)+4}" text-anchor="end" font-size="11" fill="var(--text-dim)">${v}</text><text x="${sx(v)}" y="${H-B+16}" text-anchor="middle" font-size="11" fill="var(--text-dim)">${v}</text>`;
+  }
+  const dots=rows.map(x=>{
+    const tip=`<b>${esc(x.pl)}</b> (${esc(x.tm)})<br>actual ${r1(x.ac)}${x.ln!=null?" &middot; line "+r1(x.ln):""}<br>Leo ${r1(x.b)} &rarr; yours ${r1(x.t)}`;
+    return `<g class="pt" data-tip="${esc(tip)}"><circle cx="${sx(x.b)}" cy="${sy(x.ac)}" r="4.5" fill="var(--base)" stroke="var(--bg-card)" stroke-width="2" opacity=".75"/><circle cx="${sx(x.t)}" cy="${sy(x.ac)}" r="4.5" fill="var(--tune)" stroke="var(--bg-card)" stroke-width="2"/><circle cx="${sx(x.t)}" cy="${sy(x.ac)}" r="11" fill="transparent"/></g>`;
+  }).join("");
+  return `<div class="tn-chart"><h3>Projected vs actual ${esc(unit)}</h3><p class="sub">Dots on the diagonal are perfect projections. Settings that help pull the blue dots toward it.</p>
+    <div class="legend"><span><i style="background:var(--base)"></i>Leo as shipped</span><span><i style="background:var(--tune)"></i>Your settings</span></div>
+    <svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Projected versus actual">${ticks}
+      <line x1="${sx(lo)}" y1="${sy(lo)}" x2="${sx(hi)}" y2="${sy(hi)}" stroke="var(--text-dim)" stroke-width="1.5" stroke-dasharray="5 4"/>
+      <text x="${(L+W-R)/2}" y="${H-6}" text-anchor="middle" font-size="11" fill="var(--text-dim)" font-weight="700">Projected</text>
+      <text x="13" y="${(T+H-B)/2}" text-anchor="middle" font-size="11" fill="var(--text-dim)" font-weight="700" transform="rotate(-90 13 ${(T+H-B)/2})">Actual</text>${dots}</svg>
+    <div class="tn-tip" id="tip"></div></div>`;
+}
+function wireTips(){
+  const tip=$("#tip"); if(!tip) return; const card=tip.parentElement;
+  document.querySelectorAll(".pt").forEach(g=>{
+    g.addEventListener("mousemove",e=>{const r=card.getBoundingClientRect();tip.innerHTML=g.dataset.tip;tip.style.opacity=1;let x=e.clientX-r.left+14;if(x+230>r.width)x-=250;tip.style.left=x+"px";tip.style.top=(e.clientY-r.top+12)+"px";});
+    g.addEventListener("mouseleave",()=>tip.style.opacity=0);
+  });
+}
+
+function renderMain(){
+  if(tab==="G") return renderGames();
+  const all=PROPS.filter(p=>p.g===tab);
+  // Averages for the shrink targets come from every graded week, so picking a
+  // single week does not quietly change what "average" means.
+  const RM={}, VM={};
+  { const a={},b={}; for(const p of PROPS){(a[p.g]=a[p.g]||[]).push(p.r);(b[p.g+"|"+p.d]=b[p.g+"|"+p.d]||[]).push(p.v);}
+    for(const k in a) RM[k]=a[k].reduce((x,y)=>x+y,0)/a[k].length; for(const k in b) VM[k]=b[k].reduce((x,y)=>x+y,0)/b[k].length; }
+  const st=S[tab], base=baseOf(PROP_KNOBS(tab));
+  const rows=all.filter(inWeek).map(p=>({...p, b:projectProp(p,base,RM,VM), t:projectProp(p,st,RM,VM)}));
+  if(!rows.length){ $("#main").innerHTML='<div class="score-empty">No graded projections for this selection yet.</div>'; return; }
+  const B=grade(rows,"b",base.floor), T=grade(rows,"t",st.floor);
+  const unit={QB:"passing yards",RB:"rushing yards",WR:"receiving yards"}[tab];
+  $("#main").innerHTML =
+    `<div class="tn-tiles">
+      ${tile("Beat the line", pct(T.beatPct), `Leo ${pct(B.beatPct)} &middot; ${T.beat}/${T.cmp} closer than the book`, delta(T.beatPct*100,B.beatPct*100,false,d=>Math.round(d)+" pts"))}
+      ${tile("Average miss", r1(T.mae)+" yds", `Leo ${r1(B.mae)} &middot; the line misses by ${r1(T.lineMae)}`, delta(T.mae,B.mae,true,d=>r1(d)))}
+      ${tile("Lean record", T.w+"–"+T.l+(T.p?"–"+T.p:""), `Leo ${B.w}–${B.l} &middot; sides called vs the line`, "")}
+      ${tile("Bias", sg(T.bias)+" yds", `Leo ${sg(B.bias)} &middot; positive = projecting too low`, delta(Math.abs(T.bias),Math.abs(B.bias),true,d=>r1(d)))}
+    </div>` + scatter(rows,unit) +
+    `<div class="tn-tbl"><table><thead><tr><th>Player</th><th>Wk</th><th>Line</th><th>Actual</th><th>Leo</th><th>Yours</th><th>Leo miss</th><th>Your miss</th></tr></thead><tbody>`+
+    rows.slice().sort((a,b)=>(Math.abs(b.b-b.ac)-Math.abs(b.t-b.ac))-(Math.abs(a.b-a.ac)-Math.abs(a.t-a.ac))).map(x=>{
+      const bm=Math.abs(x.b-x.ac), tm=Math.abs(x.t-x.ac);
+      return `<tr><td><b>${esc(x.pl)}</b> <span class="m">${esc(x.tm)} ${esc(x.d)}</span></td><td>${esc(x.wk)}</td><td>${r1(x.ln)}</td><td><b>${r1(x.ac)}</b></td><td class="base-c">${r1(x.b)}</td><td class="tune-c">${r1(x.t)}</td><td>${r1(bm)}</td><td class="${tm<bm-.05?"better":tm>bm+.05?"worse":""}">${r1(tm)}</td></tr>`;
+    }).join("")+`</tbody></table></div>`;
+  wireTips();
+}
+function renderGames(){
+  const games=GAMES.filter(inWeek);
+  if(!games.length){ $("#main").innerHTML='<div class="score-empty">No graded games for this selection yet.</div>'; return; }
+  const B=gradeGames(baseOf(GAME_KNOBS),games), T=gradeGames(S.G,games);
+  const side=(g,x)=>x==null?"—":x===0?"Pick'em":(x>0?g.hm:g.aw)+" by "+r1(Math.abs(x));
+  $("#main").innerHTML =
+    `<div class="tn-tiles">
+      ${tile("Winner picks", T.w+"–"+T.l, `Leo ${B.w}–${B.l}`, delta(T.w,B.w,false,d=>d))}
+      ${tile("Win-probability error", T.brier.toFixed(3), `Brier &middot; Leo ${B.brier.toFixed(3)} &middot; market ${T.mBrier==null?"—":T.mBrier.toFixed(3)}`, delta(T.brier,B.brier,true,d=>d.toFixed(3)))}
+      ${tile("Spread record", T.sw+"–"+T.sl+(T.sp?"–"+T.sp:""), `Leo ${B.sw}–${B.sl} &middot; miss ${r1(T.sMae)} vs line ${r1(T.sLineMae)}`, "")}
+      ${tile("Total record", T.tw+"–"+T.tl+(T.tp?"–"+T.tp:""), `Leo ${B.tw}–${B.tl} &middot; miss ${r1(T.tMae)} vs line ${r1(T.tLineMae)}`, "")}
+    </div>` +
+    `<div class="tn-tbl"><table><thead><tr><th>Game</th><th>Wk</th><th>Leo home win</th><th>Yours</th><th>Market</th><th>Winner</th><th>Your spread</th><th>Line</th><th>Result</th><th>Your total</th><th>Line</th><th>Actual</th></tr></thead><tbody>`+
+    T.rows.map((r,i)=>{ const g=r.g, b=B.rows[i];
+      return `<tr><td><b>${esc(g.gm)}</b></td><td>${esc(g.wk)}</td><td class="base-c">${pct(b.ph)}</td><td class="tune-c">${pct(r.ph)}</td><td>${pct(g.mh)}</td>
+        <td class="${r.pick===g.win?"better":"worse"}">${esc(g.win)}</td>
+        <td class="tune-c">${esc(side(g,r.em))}</td><td>${esc(side(g,g.sl))}</td><td><b>${esc(side(g,g.amg))}</b></td>
+        <td class="tune-c">${r1(r.tot)}</td><td>${r1(g.tl)}</td><td><b>${r1(g.at)}</b></td></tr>`;
+    }).join("")+`</tbody></table></div>
+    <p class="data-note" style="margin-top:0">Home win probabilities are for the home team. Market is the de-vigged closing moneyline. Winner shows green when your pick was right.</p>`;
+}
+function renderAll(){ renderBar(); renderWarn(); renderKnobs(); renderMain(); }
+
+load().then(()=>{
+  if(!PROPS.length && !GAMES.length){ $("#warn").innerHTML="No graded weeks yet. The tuner fills in the morning after the first graded slate."; return; }
+  renderAll();
+});
+</script>
+</body>
+</html>

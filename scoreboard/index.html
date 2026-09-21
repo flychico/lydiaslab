@@ -45,13 +45,13 @@
 
   <section class="score-controls" aria-label="Scoreboard controls">
     <div class="date-controls">
-      <button class="control-btn" type="button" data-nav="prev" onclick="shiftSelectedDay(-1)" aria-label="Previous day">←</button>
+      <button class="control-btn" type="button" data-nav="prev" onclick="shiftSelectedDay(-1)" aria-label="Previous game day">←</button>
       <div class="field">
-        <label for="date-pick">Scoreboard date</label>
-        <input type="date" id="date-pick">
+        <label for="date-pick">Game day</label>
+        <select id="date-pick"><option>Loading schedule&hellip;</option></select>
       </div>
       <button class="control-btn" type="button" data-nav="today" onclick="setToday()">Today</button>
-      <button class="control-btn" type="button" data-nav="next" onclick="shiftSelectedDay(1)" aria-label="Next day">→</button>
+      <button class="control-btn" type="button" data-nav="next" onclick="shiftSelectedDay(1)" aria-label="Next game day">→</button>
       <button class="control-btn" type="button" data-nav="refresh" onclick="loadScoreboard()">Refresh</button>
     </div>
     <div class="view-controls" role="group" aria-label="Filter games">
@@ -102,8 +102,11 @@ const oddsNoteEl = document.getElementById("odds-note");
 let activeFilter = "all";
 let renderedGames = [];
 
-datePick.value = localISODate(new Date());
-datePick.addEventListener("change", loadScoreboard);
+/* Only dates that have MLB games are offered, same as the NFL scoreboard.
+   The season's dates come from one small request to MLB's own schedule
+   service; the arrows step game day to game day. */
+let GAME_DAYS = [];
+datePick.addEventListener("change", () => loadScoreboard());
 document.querySelectorAll("[data-filter]").forEach(button => {
   button.addEventListener("click", () => {
     activeFilter = button.dataset.filter;
@@ -112,7 +115,7 @@ document.querySelectorAll("[data-filter]").forEach(button => {
   });
 });
 
-loadScoreboard();
+initGameDays().then(() => loadScoreboard());
 setInterval(() => {
   if (datePick.value === localISODate(new Date())) loadScoreboard({ quiet: true });
 }, 120000);
@@ -145,16 +148,46 @@ function dfmt(s){
   return m ? `${m[2]}/${m[3]}/${m[1]}` : String(s || "");
 }
 
+async function initGameDays() {
+  const year = new Date().getFullYear();
+  const today = localISODate(new Date());
+  const seasons = [year - 1, year];            // previous season too, so the offseason still has something to show
+  const days = [];
+  for (const season of seasons) {
+    try {
+      const r = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&season=${season}&gameType=R,F,D,L,W&fields=dates,date,totalGames`, { cache:"no-store" });
+      if (!r.ok) continue;
+      const j = await r.json();
+      for (const d of (j.dates || [])) if (d.totalGames > 0) days.push({ date:d.date, n:d.totalGames });
+    } catch (e) { /* fall through to the fallback below */ }
+  }
+  GAME_DAYS = days.sort((a,b) => a.date.localeCompare(b.date));
+  if (!GAME_DAYS.length) GAME_DAYS = [{ date: today, n: null }];   // schedule unreachable: still usable
+  const lab = d => {
+    const dt = parseLocalDate(d.date);
+    return dt.toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric", year: dt.getFullYear()!==new Date().getFullYear() ? "numeric" : undefined }) +
+           (d.n ? ` \u00b7 ${d.n} game${d.n===1?"":"s"}` : "");
+  };
+  datePick.innerHTML = GAME_DAYS.map(d => `<option value="${d.date}">${escapeHtml(lab(d))}</option>`).join("");
+  datePick.value = defaultGameDay();
+}
+// Today if there are games today, else the next game day, else the most recent one.
+function defaultGameDay() {
+  const t = localISODate(new Date());
+  if (GAME_DAYS.some(d => d.date === t)) return t;
+  const next = GAME_DAYS.find(d => d.date > t);
+  return next ? next.date : GAME_DAYS[GAME_DAYS.length-1].date;
+}
+
 function setToday() {
-  datePick.value = localISODate(new Date());
+  datePick.value = defaultGameDay();
   loadScoreboard();
 }
 
 function shiftSelectedDay(amount) {
-  const date = parseLocalDate(datePick.value);
-  date.setDate(date.getDate() + amount);
-  datePick.value = localISODate(date);
-  loadScoreboard();
+  const i = GAME_DAYS.findIndex(d => d.date === datePick.value);
+  const j = Math.max(0, Math.min(GAME_DAYS.length-1, (i < 0 ? 0 : i) + amount));
+  if (GAME_DAYS[j]) { datePick.value = GAME_DAYS[j].date; loadScoreboard(); }
 }
 
 async function loadJson(url) {

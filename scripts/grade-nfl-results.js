@@ -199,11 +199,25 @@ function main() {
         variance_class: varianceClass(res, Math.abs(leoHome - homeOutcome), 0.35, 0.65) });
     }
 
+    /*
+      NO-LEAN FLOOR for totals and spreads, using the model's own playable
+      thresholds (TOTAL_EDGE_MIN 1.5, SPREAD_EDGE_MIN 1.0 in
+      generate-nfl-model.js). Without it every sliver of disagreement was
+      graded as a call: on 2026-09-20 Leo had CHI by 4.1 against CHI -4.5 --
+      0.4 points from the book, i.e. agreement -- and it was booked as a
+      spread WIN. Props already work this way (5% of the line); games now
+      match. Inside the floor the row is kept, with an empty result.
+      The side is derived from Leo's number against the line, so it can never
+      disagree with the projection it came from.
+    */
+    const TOTAL_FLOOR = 1.5, SPREAD_FLOOR = 1.0;
+
     // ---- total ----------------------------------------------------------
     if (p.proj_total != null && !done("total")) {
       const line = n(p.total_line);
-      const side = p.total_side;                       // "Over" / "Under"
-      const res = line == null || total === line ? "P"
+      const gap = line == null ? null : p.proj_total - line;
+      const side = gap == null || Math.abs(gap) < TOTAL_FLOOR ? "" : (gap > 0 ? "Over" : "Under");
+      const res = !side ? "" : total === line ? "P"
                 : ((total > line) === (side === "Over") ? "W" : "L");
       const leoErr = Math.abs(p.proj_total - total);
       const mktErr = line == null ? null : Math.abs(line - total);
@@ -220,11 +234,14 @@ function main() {
     // means the home team is favoured by that many.
     if (p.proj_spread != null && !done("spread")) {
       const line = n(p.spread_line);
-      const side = p.spread_side;
-      let res = "P";
-      if (line != null) {
-        const homeCovered = margin > line;
-        if (margin !== line) res = ((side === p.home) === homeCovered) ? "W" : "L";
+      // both numbers are stated from the home side: Leo takes the home team
+      // when he expects them to beat the line, the away team when he doesn't
+      const gap = line == null ? null : p.proj_spread - line;
+      const side = gap == null || Math.abs(gap) < SPREAD_FLOOR ? "" : (gap > 0 ? p.home : p.away);
+      let res = "";
+      if (side) {
+        res = "P";
+        if (margin !== line) res = ((side === p.home) === (margin > line)) ? "W" : "L";
       }
       const leoErr = Math.abs(p.proj_spread - margin);
       const mktErr = line == null ? null : Math.abs(line - margin);

@@ -111,6 +111,7 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
 .fx td{text-align:right;padding:7px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
 .fx th:first-child,.fx td:first-child{text-align:left;padding-left:0}
 .fx .mut,.mut{color:var(--text-dim);font-weight:500;font-size:.78em;text-transform:none;letter-spacing:0}
+.fx td.why{text-align:left;white-space:normal;min-width:190px;color:var(--text-dim)}
 .fx .fxsplit{white-space:nowrap}.fx .fxr{color:#4A6478;font-weight:700;font-size:inherit}.fx .fxv{color:#8A6D3B;font-weight:700;font-size:inherit}
 .vd{font-size:.62rem;font-weight:800;letter-spacing:.06em;padding:3px 9px;border-radius:999px}
 .vd.w{background:rgba(47,110,74,.13);color:var(--good)}.vd.l{background:rgba(166,58,46,.13);color:var(--danger)}.vd.p{background:var(--bg-elev);color:var(--text-dim)}
@@ -440,87 +441,59 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
     <h2 class="sec">Final report</h2>
     <p class="final-score"><img src="/img/nfl/GB.png" alt=""> GB <b>20</b>
       &ndash; <b>17</b> NYJ <img src="/img/nfl/NYJ.png" alt=""> <span class="mut">(OT)</span></p>
-    <p class="sub">Leo&rsquo;s frozen pre-kickoff numbers beside the result. &ldquo;Closer&rdquo; says whose number landed nearer the outcome &mdash; that, not right or wrong, is what tells us whether the model is learning anything the market does not already know.</p>
-    <div class="fxw"><table class="fx"><thead><tr><th>Market</th><th>Leo</th><th>Market</th><th>Actual</th><th>Side</th><th>Closer</th></tr></thead><tbody>
-    <tr><td>Winner</td><td>GB 51%</td><td>62%</td><td>GB</td><td><span class="vd w">RIGHT</span></td><td>Market</td></tr>
-    <tr><td>Total</td><td>47.2 Over</td><td>44.5</td><td>37</td><td><span class="vd l">WRONG</span></td><td>Market</td></tr>
-    <tr><td>Spread</td><td>GB by 0.2</td><td>GB −3.5</td><td>GB by 3</td><td><span class="vd w">RIGHT</span></td><td>Market</td></tr>
-  </tbody></table></div>
-    <p class="sub" style="margin-top:14px">Every player miss is split into the part caused by the rate being wrong and the part caused by the volume being wrong. The two add up to the full miss.</p><h3 class="sec3">Passing yards</h3>
-    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Leo</th><th>Line</th><th>Actual</th><th>yds/att<br><span class="mut">proj &rarr; actual</span></th><th>att<br><span class="mut">proj &rarr; actual</span></th><th>Miss from<br><span class="mut">rate / volume</span></th><th></th></tr></thead><tbody><tr>
+    <p class="sub">What Leo expected before kickoff, the side that put him on against the line, and what happened. When Leo&rsquo;s number sits too close to the line to be a real disagreement, there is no side and nothing is graded.</p>
+    <div class="fxw"><table class="fx"><thead><tr><th>Market</th><th>Leo expected</th><th>Line</th><th>Leo&rsquo;s side</th><th>Actual</th><th>Result</th></tr></thead><tbody><tr><td>Winner</td><td>GB 51%</td><td>GB 62%</td><td>GB</td><td><b>GB</b></td><td><span class="vd w">RIGHT</span></td></tr><tr><td>Total</td><td>47.2</td><td>44.5</td><td>Over 44.5</td><td><b>37</b></td><td><span class="vd l">WRONG</span></td></tr><tr><td>Spread</td><td>GB by 0.2</td><td>GB −3.5</td><td>NYJ +3.5</td><td><b>GB by 3</b></td><td><span class="vd w">RIGHT</span></td></tr></tbody></table></div>
+    <p class="sub" style="margin-top:14px">&ldquo;Main reason&rdquo; names which of Leo&rsquo;s two inputs was further off &mdash; how much the player was used, or how efficient he was when he was.</p><h3 class="sec3">Passing yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Leo</th><th>Line</th><th>Actual</th><th>Main reason</th><th>Result</th></tr></thead><tbody><tr>
       <td><b>Jordan Love</b> <span class="mut">GB</span></td>
       <td>290</td><td>254.5</td><td><b>145</b></td>
-      <td>8.4 &rarr; 5</td>
-      <td>36.2 &rarr; 29</td>
-      <td class="fxsplit"><span class="fxr">-98.6</span> / <span class="fxv">-60.5</span></td>
+      <td class="why">Less efficient (5 vs 8.4 yds/att)</td>
       <td><span class="vd l">WRONG</span></td></tr><tr>
       <td><b>Geno Smith</b> <span class="mut">NYJ</span></td>
       <td>206</td><td>207.5</td><td><b>247</b></td>
-      <td>7.8 &rarr; 6</td>
-      <td>26.9 &rarr; 41</td>
-      <td class="fxsplit"><span class="fxr">-72.8</span> / <span class="fxv">+110</span></td>
-      <td></td></tr></tbody></table></div><h3 class="sec3">Rushing yards</h3>
-    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Leo</th><th>Line</th><th>Actual</th><th>yds/carry<br><span class="mut">proj &rarr; actual</span></th><th>car<br><span class="mut">proj &rarr; actual</span></th><th>Miss from<br><span class="mut">rate / volume</span></th><th></th></tr></thead><tbody><tr>
+      <td class="why">More attempts (41 vs 26.9 expected)</td>
+      <td><span class="vd p">NO LEAN</span></td></tr></tbody></table></div><h3 class="sec3">Rushing yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Leo</th><th>Line</th><th>Actual</th><th>Main reason</th><th>Result</th></tr></thead><tbody><tr>
       <td><b>Breece Hall</b> <span class="mut">NYJ</span></td>
       <td>85</td><td>63.5</td><td><b>29</b></td>
-      <td>4.5 &rarr; 1.8</td>
-      <td>18.6 &rarr; 16</td>
-      <td class="fxsplit"><span class="fxr">-43</span> / <span class="fxv">-11.7</span></td>
+      <td class="why">Less efficient (1.8 vs 4.5 yds/carry)</td>
       <td><span class="vd l">WRONG</span></td></tr><tr>
       <td><b>Braelon Allen</b> <span class="mut">NYJ</span></td>
       <td>34</td><td>24.5</td><td><b>7</b></td>
-      <td>4.3 &rarr; 1.4</td>
-      <td>7.3 &rarr; 5</td>
-      <td class="fxsplit"><span class="fxr">-14.5</span> / <span class="fxv">-9.9</span></td>
+      <td class="why">Less efficient (1.4 vs 4.3 yds/carry)</td>
       <td><span class="vd l">WRONG</span></td></tr><tr>
       <td><b>MarShawn Lloyd</b> <span class="mut">GB</span></td>
       <td>37</td><td>49.5</td><td><b>20</b></td>
-      <td>2.8 &rarr; 3.3</td>
-      <td>13 &rarr; 6</td>
-      <td class="fxsplit"><span class="fxr">+3.2</span> / <span class="fxv">-19.6</span></td>
+      <td class="why">Fewer carries (6 vs 13 expected)</td>
       <td><span class="vd w">RIGHT</span></td></tr><tr>
       <td><b>Chris Brooks</b> <span class="mut">GB</span></td>
       <td>16</td><td>24.5</td><td><b>11</b></td>
-      <td>3.2 &rarr; 2.8</td>
-      <td>4.3 &rarr; 4</td>
-      <td class="fxsplit"><span class="fxr">-1.8</span> / <span class="fxv">-1</span></td>
+      <td class="why"><span class="mut">On target</span></td>
       <td><span class="vd w">RIGHT</span></td></tr></tbody></table></div><h3 class="sec3">Receiving yards</h3>
-    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Leo</th><th>Line</th><th>Actual</th><th>yds/tgt<br><span class="mut">proj &rarr; actual</span></th><th>tgt<br><span class="mut">proj &rarr; actual</span></th><th>Miss from<br><span class="mut">rate / volume</span></th><th></th></tr></thead><tbody><tr>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Leo</th><th>Line</th><th>Actual</th><th>Main reason</th><th>Result</th></tr></thead><tbody><tr>
       <td><b>Christian Watson</b> <span class="mut">GB</span></td>
       <td>95</td><td>61.5</td><td><b>41</b></td>
-      <td>14.9 &rarr; 3.7</td>
-      <td>6.8 &rarr; 11</td>
-      <td class="fxsplit"><span class="fxr">-122.9</span> / <span class="fxv">+62.6</span></td>
+      <td class="why">Less efficient (3.7 vs 14.9 yds/tgt)</td>
       <td><span class="vd l">WRONG</span></td></tr><tr>
       <td><b>Jayden Reed</b> <span class="mut">GB</span></td>
       <td>34</td><td>37.5</td><td><b>4</b></td>
-      <td>5.9 &rarr; 4</td>
-      <td>5.9 &rarr; 1</td>
-      <td class="fxsplit"><span class="fxr">-1.9</span> / <span class="fxv">-28.9</span></td>
+      <td class="why">Fewer targets (1 vs 5.9 expected)</td>
       <td><span class="vd w">RIGHT</span></td></tr><tr>
       <td><b>Isaiah Williams</b> <span class="mut">NYJ</span></td>
       <td>9</td><td>11.5</td><td><b>34</b></td>
-      <td>5 &rarr; 5.7</td>
-      <td>1.7 &rarr; 6</td>
-      <td class="fxsplit"><span class="fxr">+4</span> / <span class="fxv">+21.5</span></td>
+      <td class="why">More targets (6 vs 1.7 expected)</td>
       <td><span class="vd l">WRONG</span></td></tr><tr>
       <td><b>Adonai Mitchell</b> <span class="mut">NYJ</span></td>
       <td>47</td><td>33.5</td><td><b>63</b></td>
-      <td>12.8 &rarr; 5.3</td>
-      <td>3.8 &rarr; 12</td>
-      <td class="fxsplit"><span class="fxr">-90.6</span> / <span class="fxv">+105</span></td>
+      <td class="why">More targets (12 vs 3.8 expected)</td>
       <td><span class="vd w">RIGHT</span></td></tr><tr>
       <td><b>Garrett Wilson</b> <span class="mut">NYJ</span></td>
       <td>64</td><td>68.5</td><td><b>57</b></td>
-      <td>8.7 &rarr; 8.1</td>
-      <td>7.7 &rarr; 7</td>
-      <td class="fxsplit"><span class="fxr">-3.9</span> / <span class="fxv">-6.1</span></td>
+      <td class="why"><span class="mut">On target</span></td>
       <td><span class="vd w">RIGHT</span></td></tr><tr>
       <td><b>Matthew Golden</b> <span class="mut">GB</span></td>
       <td>54</td><td>49.5</td><td><b>58</b></td>
-      <td>7.5 &rarr; 9.7</td>
-      <td>7.6 &rarr; 6</td>
-      <td class="fxsplit"><span class="fxr">+13</span> / <span class="fxv">-12</span></td>
+      <td class="why"><span class="mut">On target</span></td>
       <td><span class="vd w">RIGHT</span></td></tr></tbody></table></div>
   </section>
 

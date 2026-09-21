@@ -217,36 +217,66 @@ function leoSection(m){
   what happened, and splits each player miss into the rate half and the volume
   half so the page says what to learn, not just whether Leo was right.
 */
+/*
+  FINAL REPORT — the only place the game's own result appears. Rendered only
+  once nflverse marks the game complete. Shows what Leo expected, the side
+  that implied against the line, and what happened -- in that order, so a
+  "CHI by 4.1" projection against "CHI -4.5" reads as the MIN +4.5 side it
+  actually was. Inside the model's playable threshold (1 pt spread, 1.5 pts
+  total, 5% of the line on props) there is no call, and none is graded.
+*/
+const noLean='<span class="vd p">NO LEAN</span>';
+// A side's own number against a home-stated spread line.
+function sideLine(m, side, line){
+  if(line==null) return "—";
+  if(line===0) return esc(side)+" pick'em";
+  const homeFav=line>0, x=Math.abs(line);
+  if(side===m.home) return esc(m.home)+(homeFav?" −":" +")+x;
+  return esc(m.away)+(homeFav?" +":" −")+x;
+}
+// One short reason in words: which of Leo's two inputs was further off.
+function why(p){
+  if(p.projection==null||p.actual==null) return "";
+  const miss=Math.abs(p.actual-p.projection);
+  if(miss<=Math.max(8,0.1*p.projection)) return '<span class="mut">On target</span>';
+  if(p.rate_effect==null||p.volume_effect==null) return "";
+  const [, ru, vu] = MK[p.market] || [];
+  const unit={att:"attempts",car:"carries",tgt:"targets"}[vu]||vu;
+  if(Math.abs(p.volume_effect)>=Math.abs(p.rate_effect)){
+    return (p.actual_volume<p.volume?"Fewer ":"More ")+unit+` (${r1(p.actual_volume)} vs ${r1(p.volume)} expected)`;
+  }
+  return (p.actual_rate<p.rate?"Less ":"More ")+`efficient (${r1(p.actual_rate)} vs ${r1(p.rate)} ${ru})`;
+}
 function finalReport(m){
   const F=m.final_report; if(!F) return "";
-  const line=(label,p,fmtLeo)=>p?`<tr><td>${label}</td><td>${fmtLeo(p)}</td><td>${v(p.market)}</td><td>${esc(p.actual)}</td><td>${verdict(p.result)}</td><td>${p.beat==="Y"?"Leo":p.beat==="N"?"Market":"\u2014"}</td></tr>`:"";
-  const games=`<div class="fxw"><table class="fx"><thead><tr><th>Market</th><th>Leo</th><th>Market</th><th>Actual</th><th>Side</th><th>Closer</th></tr></thead><tbody>
-    ${line("Winner",F.moneyline?{...F.moneyline,market:pct(F.moneyline.market)}:null,p=>esc(p.side)+" "+pct(p.leo))}
-    ${line("Total",F.total_pick,p=>v(p.leo)+" "+esc(p.side||""))}
-    ${line("Spread",F.spread?{...F.spread,market:lineTxt(m,F.spread.market),actual:fav(m,Number(F.spread.actual))}:null,p=>esc(fav(m,p.leo)))}
-  </tbody></table></div>`;
+  const row=(label,expected,line,side,actual,result)=>`<tr><td>${label}</td><td>${expected}</td><td>${line}</td><td>${side}</td><td><b>${actual}</b></td><td>${result}</td></tr>`;
+  const ml=F.moneyline, tp=F.total_pick, sp=F.spread;
+  const rows=[
+    ml?row("Winner", esc(ml.side)+" "+pct(ml.leo), esc(ml.side)+" "+pct(ml.market), esc(ml.side), esc(ml.actual), verdict(ml.result)):"",
+    tp?row("Total", v(tp.leo), v(tp.market), tp.side?esc(tp.side)+" "+v(tp.market):'<span class="mut">within 1.5 of the line</span>', v(tp.actual), tp.side?verdict(tp.result):noLean):"",
+    sp?row("Spread", esc(fav(m,sp.leo)), esc(lineTxt(m,sp.market)), sp.side?sideLine(m,sp.side,sp.market):'<span class="mut">within 1 pt of the line</span>', esc(fav(m,Number(sp.actual))), sp.side?verdict(sp.result):noLean):""
+  ].join("");
+  const games=`<div class="fxw"><table class="fx"><thead><tr><th>Market</th><th>Leo expected</th><th>Line</th><th>Leo&rsquo;s side</th><th>Actual</th><th>Result</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   const byMk={};
   for(const p of (F.props||[])) (byMk[p.market]=byMk[p.market]||[]).push(p);
   const props=Object.keys(MK).filter(k=>byMk[k]).map(k=>{
-    const [label,ru,vu]=MK[k];
+    const [label]=MK[k];
     return `<h3 class="sec3">${label}</h3>
-    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Leo</th><th>Line</th><th>Actual</th><th>${ru}<br><span class="mut">proj &rarr; actual</span></th><th>${vu}<br><span class="mut">proj &rarr; actual</span></th><th>Miss from<br><span class="mut">rate / volume</span></th><th></th></tr></thead><tbody>`+
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Leo</th><th>Line</th><th>Actual</th><th>Main reason</th><th>Result</th></tr></thead><tbody>`+
     byMk[k].sort((a,b)=>Math.abs(b.actual-b.projection)-Math.abs(a.actual-a.projection)).map(p=>`<tr>
       <td><b>${esc(p.player)}</b> <span class="mut">${esc(p.team)}</span></td>
       <td>${v(p.projection)}</td><td>${v(p.line)}</td><td><b>${v(p.actual)}</b></td>
-      <td>${r1(p.rate)} &rarr; ${r1(p.actual_rate)}</td>
-      <td>${r1(p.volume)} &rarr; ${r1(p.actual_volume)}</td>
-      <td class="fxsplit"><span class="fxr">${sg(p.rate_effect)}</span> / <span class="fxv">${sg(p.volume_effect)}</span></td>
-      <td>${p.lean?verdict(p.result):""}</td></tr>`).join("")+`</tbody></table></div>`;
+      <td class="why">${why(p)}</td>
+      <td>${p.line==null?"":(p.lean?verdict(p.result):noLean)}</td></tr>`).join("")+`</tbody></table></div>`;
   }).join("");
   return `
   <section class="final">
     <h2 class="sec">Final report</h2>
     <p class="final-score"><img src="/img/nfl/${encodeURIComponent(m.away)}.png" alt=""> ${esc(m.away)} <b>${F.away_score}</b>
       &ndash; <b>${F.home_score}</b> ${esc(m.home)} <img src="/img/nfl/${encodeURIComponent(m.home)}.png" alt="">${F.overtime?' <span class="mut">(OT)</span>':""}</p>
-    <p class="sub">Leo&rsquo;s frozen pre-kickoff numbers beside the result. &ldquo;Closer&rdquo; says whose number landed nearer the outcome &mdash; that, not right or wrong, is what tells us whether the model is learning anything the market does not already know.</p>
+    <p class="sub">What Leo expected before kickoff, the side that put him on against the line, and what happened. When Leo&rsquo;s number sits too close to the line to be a real disagreement, there is no side and nothing is graded.</p>
     ${F.graded?games:'<p class="sub">Grading runs the morning after the game; the detailed comparison appears once it has.</p>'}
-    ${props?`<p class="sub" style="margin-top:14px">Every player miss is split into the part caused by the rate being wrong and the part caused by the volume being wrong. The two add up to the full miss.</p>`+props:""}
+    ${props?`<p class="sub" style="margin-top:14px">&ldquo;Main reason&rdquo; names which of Leo&rsquo;s two inputs was further off &mdash; how much the player was used, or how efficient he was when he was.</p>`+props:""}
   </section>`;
 }
 
@@ -375,6 +405,7 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
 .fx td{text-align:right;padding:7px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
 .fx th:first-child,.fx td:first-child{text-align:left;padding-left:0}
 .fx .mut,.mut{color:var(--text-dim);font-weight:500;font-size:.78em;text-transform:none;letter-spacing:0}
+.fx td.why{text-align:left;white-space:normal;min-width:190px;color:var(--text-dim)}
 .fx .fxsplit{white-space:nowrap}.fx .fxr{color:#4A6478;font-weight:700;font-size:inherit}.fx .fxv{color:#8A6D3B;font-weight:700;font-size:inherit}
 .vd{font-size:.62rem;font-weight:800;letter-spacing:.06em;padding:3px 9px;border-radius:999px}
 .vd.w{background:rgba(47,110,74,.13);color:var(--good)}.vd.l{background:rgba(166,58,46,.13);color:var(--danger)}.vd.p{background:var(--bg-elev);color:var(--text-dim)}

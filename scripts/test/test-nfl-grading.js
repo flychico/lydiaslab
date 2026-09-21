@@ -28,10 +28,18 @@ const GAMES = [
   // home KC wins by 10 as a 6.5 favourite -> HOME COVERS, total 44 under 44.5
   "T_FAV,2026,2,1999-01-01,IND,KC,17,27,10",
   // scores posted but NO result -> still being played, must be ignored
-  "T_LIVE,2026,2,1999-01-01,GB,CHI,7,3,"
+  "T_LIVE,2026,2,1999-01-01,GB,CHI,7,3,",
+  // The real MIN @ CHI case: Leo CHI by 4.1 vs line CHI -4.5 (0.4 pts apart),
+  // MIN won 9-3. Inside the 1-point floor -> no spread call at all.
+  "T_THIN,2026,2,1999-01-01,MIN,CHI,9,3,-6"
 ].join("\n");
 
 const PICKS = [
+  { date: DATE, game_id: "T_THIN", matchup: "MIN @ CHI", away: "MIN", home: "CHI",
+    week: "2", model_version: "test", status: "pass",
+    pick: "CHI", model_prob: 0.62, market_prob: 0.65, edge: -0.03,
+    total_status: "pass", total_side: "Over", proj_total: 47.0, total_line: 46.5, total_edge: 0.5,
+    spread_status: "pass", spread_side: "MIN", proj_spread: 4.1, spread_line: 4.5, spread_edge: -0.4 },
   { date: DATE, game_id: "T_COVER", matchup: "CAR @ ATL", away: "CAR", home: "ATL",
     week: "2", model_version: "test", status: "pass",
     pick: "ATL", model_prob: 0.70, market_prob: 0.60, edge: 0.10,
@@ -41,7 +49,7 @@ const PICKS = [
     week: "2", model_version: "test", status: "pass",
     pick: "KC", model_prob: 0.75, market_prob: 0.70, edge: 0.05,
     total_status: "pass", total_side: "Under", proj_total: 42, total_line: 44.5, total_edge: 2.5,
-    spread_status: "pass", spread_side: "KC",  proj_spread: 7.0, spread_line: 6.5, spread_edge: 0.5 }
+    spread_status: "pass", spread_side: "KC",  proj_spread: 8.0, spread_line: 6.5, spread_edge: 1.5 }
 ];
 
 // --- sandbox: intercept the fetch, and keep every write out of data/ --------
@@ -87,7 +95,7 @@ console.log("\nNFL GRADING MATH TEST\n" + "=".repeat(58));
 {
   const r = get("T_FAV", "spread");
   ck("home favourite winning by 10 as -6.5 COVERS", r && r.result === "W", r && `result=${r.result}`);
-  // Leo 7.0 vs actual 10 -> 3.0. Market 6.5 vs 10 -> 3.5. Leo closer.
+  // Leo 8.0 vs actual 10 -> 2.0. Market 6.5 vs 10 -> 3.5. Leo closer.
   ck("  beat_market=Y when Leo was closer", r && r.beat_market === "Y", r && `got ${r.beat_market}`);
 }
 // MONEYLINE — Brier, from the HOME side.
@@ -122,6 +130,13 @@ console.log("\nNFL GRADING MATH TEST\n" + "=".repeat(58));
   ck("win with small error classed good_pick_won", r && r.variance_class === "good_pick_won", r && `got ${r.variance_class}`);
 }
 
+// Inside the floor: graded row kept, but no side and no result.
+{
+  const sp = get("T_THIN","spread"), tt = get("T_THIN","total");
+  ck("spread 0.4 pts from the line is NOT a call", sp && sp.result === "" && sp.leo_side === "",
+     sp && `result=${sp.result} side=${sp.leo_side}`);
+  ck("total 0.5 pts from the line is NOT a call", tt && tt.result === "", tt && `result=${tt.result}`);
+}
 // A game still in progress must not appear in the ledger at all.
 ck("live game (score, no final result) is NOT graded",
    !rows.some(r => r.game_id === "T_LIVE"),

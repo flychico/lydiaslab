@@ -151,6 +151,7 @@ function renderNav(active) {
                 [prefix + "tools/totals-projections/", "Totals Projections"]
               ]
             : [
+                [prefix + "tools/model-tuner/", "Model Tuner"],
                 [prefix + "member-brief/", "Daily Member Brief"],
                 [prefix + "tools/player-props/", "Player Props"],
                 [prefix + "tools/injury-tracker/", "Injury Tracker"]
