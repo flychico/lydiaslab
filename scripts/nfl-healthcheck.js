@@ -341,6 +341,29 @@ for (const f of ["css/style.css","css/scoreboard.css"]) {
   }
 }
 
+// ---- 20. the Model Tuner runs the live moneyline, not a copy ---------------
+// The tuner must load scripts/lib/nfl-moneyline.js and the live model file,
+// and at 100% it must reproduce every published probability.
+{
+  const tuner = P("nfl/tools/model-tuner/index.html");
+  const html = fs.existsSync(tuner) ? fs.readFileSync(tuner, "utf8") : "";
+  const pf = P("data/nfl/picks-today.json");
+  const problems = [];
+  if (!html.includes('src="/scripts/lib/nfl-moneyline.js"')) problems.push("tuner does not load scripts/lib/nfl-moneyline.js");
+  if (!html.includes("/data/nfl/moneyline-v2-model.json")) problems.push("tuner does not load moneyline-v2-model.json");
+  if (fs.existsSync(pf)) {
+    const ML = require(P("scripts/lib/nfl-moneyline.js"));
+    const model = JSON.parse(fs.readFileSync(P("data/nfl/moneyline-v2-model.json"), "utf8"));
+    for (const g of JSON.parse(fs.readFileSync(pf, "utf8")).filter(g => g.ml_inputs)) {
+      const home = ML.predictWeighted(model, g.ml_inputs, {});
+      const pub = g.pick === g.home ? g.model_prob : 1 - g.model_prob;
+      if (Math.abs(home - pub) > 0.0006) problems.push(`${g.matchup}: tuner ${home.toFixed(3)} vs published ${pub.toFixed(3)}`);
+    }
+  }
+  problems.length ? fail("TUNER-SYNC", problems[0] + (problems.length > 1 ? ` (+${problems.length-1} more)` : ""))
+                  : ok("TUNER-SYNC", "Model Tuner runs the live moneyline code and reproduces today's published numbers");
+}
+
 console.log("=".repeat(58));
 console.log(`  ${passes} passed · ${warns} warnings · ${fails} failures\n`);
 process.exit(fails ? 1 : 0);

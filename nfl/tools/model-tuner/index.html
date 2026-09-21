@@ -104,6 +104,8 @@
   <p class="data-note">Player projection = rate &times; volume &times; opponent adjustment + calibration. Win probability = normal CDF of expected margin &divide; margin spread, where expected margin = rating gap &times; strength + home-field. Lines are the last price before kickoff. Nothing here changes the live model &mdash; copy the settings box to ask for a change to be tested properly.</p>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
+<!-- The live moneyline model code itself. The tuner runs this, never a copy. -->
+<script src="/scripts/lib/nfl-moneyline.js"></script>
 <script>
 renderNav("/articles/"); renderFooter();
 
@@ -136,28 +138,41 @@ const PROP_KNOBS = g => [
 const GAME_KNOBS = [
   { id:"hfa",   label:"Home-field advantage", min:0, max:4, step:.1, base:2, fmt:v=>v.toFixed(1)+" pts", hint:"Points added to the home side's expected margin." },
   { id:"scale", label:"Rating strength", min:0, max:1.5, step:.05, base:1, fmt:v=>Math.round(v*100)+"%", hint:"How much the power-rating gap counts. Lower trusts early-season ratings less." },
-  { id:"sd",    label:"Margin spread (confidence)", min:8, max:18, step:.2, base:13.2, fmt:v=>v.toFixed(1)+" pts", hint:"Higher = less confident win probabilities." },
   { id:"tMult", label:"Scoring multiplier", min:.8, max:1.2, step:.01, base:1, fmt:v=>"×"+v.toFixed(2), hint:"Scales both teams' expected points." },
   { id:"tOff",  label:"Total offset", min:-10, max:10, step:.5, base:0, fmt:v=>sg(v)+" pts", hint:"Flat points added to every projected total." },
   { id:"sFloor",label:"Spread threshold", min:0, max:4, step:.5, base:1, fmt:v=>v.toFixed(1)+" pts", hint:"Points from the spread before Leo takes a side. 1.0 is the model's playable threshold." },
   { id:"tFloor",label:"Total threshold", min:0, max:5, step:.5, base:1.5, fmt:v=>v.toFixed(1)+" pts", hint:"Points from the total before Leo calls over or under. 1.5 is the model's threshold." }
 ];
-const TABS = [{id:"QB",label:"QB passing"},{id:"RB",label:"RB rushing"},{id:"WR",label:"WR receiving"},{id:"G",label:"Moneyline, total & spread"}];
+// Moneyline = leo-nflml-v2. Each slider scales one fitted input; 100% is Leo as shipped.
+const ML_KNOBS = [
+  { id:"qb",  label:"Starting QB weight", min:0, max:2, step:.05, base:1, fmt:v=>Math.round(v*100)+"%", hint:"How much the gap between the two starting quarterbacks counts." },
+  { id:"off", label:"Offense weight", min:0, max:2, step:.05, base:1, fmt:v=>Math.round(v*100)+"%", hint:"Supporting offense: run game, first downs, explosive plays, sacks and fumbles." },
+  { id:"def", label:"Defense weight", min:0, max:2, step:.05, base:1, fmt:v=>Math.round(v*100)+"%", hint:"EPA and yards allowed, sacks, interceptions, forced fumbles." },
+  { id:"hfa", label:"Home-field weight", min:0, max:2, step:.05, base:1, fmt:v=>Math.round(v*100)+"%", hint:"The fitted home-field edge. 0% treats every game as neutral." },
+  { id:"thr", label:"Leo Pick threshold", min:.5, max:.75, step:.01, base:.6, fmt:v=>"above "+Math.round(v*100)+"%", hint:"A side needs more than this to be a Leo Pick. Below it the game is Too Close to Call." }
+];
+const TABS = [{id:"QB",label:"QB passing"},{id:"RB",label:"RB rushing"},{id:"WR",label:"WR receiving"},{id:"ML",label:"Moneyline"},{id:"G",label:"Total & spread"}];
+const knobsFor = t => t==="G" ? GAME_KNOBS : t==="ML" ? ML_KNOBS : PROP_KNOBS(t);
 const baseOf = knobs => Object.fromEntries(knobs.map(k=>[k.id,k.base]));
-let S = { QB:baseOf(PROP_KNOBS("QB")), RB:baseOf(PROP_KNOBS("RB")), WR:baseOf(PROP_KNOBS("WR")), G:baseOf(GAME_KNOBS) };
+let S = { QB:baseOf(PROP_KNOBS("QB")), RB:baseOf(PROP_KNOBS("RB")), WR:baseOf(PROP_KNOBS("WR")), ML:baseOf(ML_KNOBS), G:baseOf(GAME_KNOBS) };
 let tab = "QB", week = "all";
 try { const s = JSON.parse(localStorage.getItem("leo-nfl-tuner")||"null"); if(s&&s.S){ for(const k in S) Object.assign(S[k], s.S[k]||{}); if(s.tab) tab=s.tab; } } catch(e){}
 const save = () => { try { localStorage.setItem("leo-nfl-tuner", JSON.stringify({S,tab})); } catch(e){} };
 
-let PROPS = [], GAMES = [], WEEKS = [];
+let PROPS = [], GAMES = [], ML = [], WEEKS = [], MODEL = null;
 
 // ------------------------------------------------------------------- data
 async function load(){
-  const [graded, hist, results] = await Promise.all([
+  const js = u => fetch(u,{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null);
+  const [graded, hist, results, mlHist, replay, model] = await Promise.all([
     csv("/data/nfl/nfl-props-graded.csv"),
     csv("/data/nfl/prediction-history.csv"),
-    csv("/data/nfl/nfl-results-log.csv")
+    csv("/data/nfl/nfl-results-log.csv"),
+    csv("/data/nfl/ml-inputs-history.csv"),
+    js("/data/nfl/ml-v2-replay.json"),
+    js("/data/nfl/moneyline-v2-model.json")
   ]);
+  MODEL = model;
   PROPS = graded.filter(r => GROUP[r.market] && r.excluded!=="Y" && r.actual!=="" && num(r.rate_used)!=null && num(r.expected_volume)!=null)
     .map(r => {
       const g = GROUP[r.market], rt=num(r.rate_used), v=num(r.expected_volume), a=num(r.opp_adjustment)??1, pr=num(r.projection);
@@ -184,7 +199,27 @@ async function load(){
              win:ml.actual_value, mh: mv==null?null:(ml.leo_side===h.home?mv:1-mv),
              at: tot?num(tot.actual_value):null, amg: sp?num(sp.actual_value):null };
   }).filter(Boolean);
-  WEEKS = [...new Set([...PROPS.map(p=>p.wk),...GAMES.map(g=>g.wk)])].filter(Boolean).sort((a,b)=>Number(a)-Number(b));
+  // Moneyline v2 games: frozen live captures (last before kickoff) plus the
+  // labelled replay of games played before the model went live.
+  const bestML = new Map();
+  for(const h of mlHist){
+    const cap=Date.parse(h.captured_at), kick=Date.parse(h.kickoff_utc);
+    if(!(cap<kick)) continue;
+    const k=h.date+"|"+h.game_id, prev=bestML.get(k);
+    if(!prev || cap>prev._c) bestML.set(k,{...h,_c:cap});
+  }
+  const x = r => ({ qb_diff:num(r.qb_diff), off_diff:num(r.off_diff), def_diff:num(r.def_diff),
+                    h2h_edge:num(r.h2h_edge)||0, h2h_repeat:num(r.h2h_repeat)||0 });
+  const live = [...bestML.values()].map(h=>{
+    const ml=R(h.game_id,h.date,"moneyline"); if(!ml) return null;
+    const mv=num(ml.market_value);
+    return { src:"Live", wk:h.week, date:h.date, gm:h.matchup, hm:h.home, aw:h.away, x:x(h),
+             hw: ml.actual_value===h.home?1:0, win:ml.actual_value, mh: mv==null?null:(ml.leo_side===h.home?mv:1-mv) };
+  }).filter(Boolean);
+  const rep = ((replay&&replay.games)||[]).map(r=>({ src:"Replay", wk:String(r.week), date:r.date, gm:r.matchup,
+    hm:r.home, aw:r.away, x:x(r), hw:r.home_win, win:r.home_win?r.home:r.away, mh:r.market_home_prob }));
+  ML = MODEL && window.LeoML ? [...rep, ...live] : [];
+  WEEKS = [...new Set([...PROPS.map(p=>p.wk),...GAMES.map(g=>g.wk),...ML.map(g=>g.wk)])].filter(Boolean).sort((a,b)=>Number(a)-Number(b));
 }
 
 // ------------------------------------------------------------- prop model
@@ -212,7 +247,7 @@ function gradeGames(k, games){
   let w=0,l=0,br=0,mbr=0,mn=0,sw=0,sl=0,sp=0,tw=0,tl=0,tp=0,serr=0,slerr=0,terr=0,tlerr=0,sn=0,tn=0;
   const rows = games.map(g=>{
     const em=(g.hr-g.ar)*k.scale + g.hfaG + (k.hfa-2);
-    const ph=ncdf(em/k.sd);
+    const ph=ncdf(em/13.2);   // v1 moneyline, no longer shown; spread and total only
     const tot=(g.ae+g.he)*k.tMult + (g.pt-(g.ae+g.he)) + k.tOff;   // keeps any roof/wind term Leo applied
     const homeWon = g.win===g.hm ? 1 : 0;
     const pick = ph>=.5 ? g.hm : g.aw;
@@ -246,13 +281,16 @@ function renderBar(){
 }
 function renderWarn(){
   const games=GAMES.filter(inWeek), props=PROPS.filter(inWeek);
-  const n = tab==="G" ? `${games.length} game${games.length===1?"":"s"}` : `${props.filter(p=>p.g===tab).length} ${({QB:"quarterback",RB:"running back",WR:"receiver"})[tab]} projections`;
+  const mlg=ML.filter(inWeek), rp=mlg.filter(g=>g.src==="Replay").length;
+  const n = tab==="G" ? `${games.length} game${games.length===1?"":"s"}`
+          : tab==="ML" ? `${mlg.length} game${mlg.length===1?"":"s"}${rp?` (${rp} replayed from before the model went live)`:""}`
+          : `${props.filter(p=>p.g===tab).length} ${({QB:"quarterback",RB:"running back",WR:"receiver"})[tab]} projections`;
   const wks = week==="all" ? `${WEEKS.length} graded week${WEEKS.length===1?"":"s"}` : `Week ${week}`;
   $("#warn").innerHTML = `<b>${esc(wks)} &mdash; ${esc(n)}.</b> A setting that makes these numbers look great is mostly fitting luck and usually gives it back later. Find a <b>direction</b> here, then check it on a week you did not tune on: tune on one week, click the next, and see if it still helps.`;
 }
 function renderKnobs(){
-  const knobs = tab==="G" ? GAME_KNOBS : PROP_KNOBS(tab), st = S[tab];
-  $("#knobs").innerHTML = `<h2>${tab==="G"?"Game model":esc(TABS.find(t=>t.id===tab).label)} settings</h2>` +
+  const knobs = knobsFor(tab), st = S[tab];
+  $("#knobs").innerHTML = `<h2>${tab==="G"?"Total & spread":esc(TABS.find(t=>t.id===tab).label)} settings</h2>` +
     knobs.map(k=>`<div class="knob">
       <div class="top"><label for="k-${tab}-${k.id}">${esc(k.label)}</label><output id="o-${k.id}" class="${Math.abs(st[k.id]-k.base)<1e-9?"at-base":""}">${esc(k.fmt(st[k.id]))}</output></div>
       <input type="range" id="k-${tab}-${k.id}" data-k="${k.id}" min="${k.min}" max="${k.max}" step="${k.step}" value="${st[k.id]}">
@@ -268,9 +306,9 @@ function renderKnobs(){
   renderCode();
 }
 function renderCode(){
-  const knobs = tab==="G" ? GAME_KNOBS : PROP_KNOBS(tab), st=S[tab];
+  const knobs = knobsFor(tab), st=S[tab];
   const ch = knobs.filter(k=>Math.abs(st[k.id]-k.base)>1e-9).map(k=>`${k.label}: ${k.fmt(k.base)} → ${k.fmt(st[k.id])}`);
-  $("#code").textContent = (tab==="G"?"Game model":TABS.find(t=>t.id===tab).label) + (week==="all"?" (all weeks)":` (Week ${week})`) + "\n" + (ch.length?ch.join("\n"):"(no changes — Leo as shipped)");
+  $("#code").textContent = (TABS.find(t=>t.id===tab).label) + (week==="all"?" (all weeks)":` (Week ${week})`) + "\n" + (ch.length?ch.join("\n"):"(no changes — Leo as shipped)");
 }
 function delta(t,b,lowerBetter,fmt){
   const d=t-b; if(!isFinite(d)||Math.abs(d)<1e-9) return `<span class="delta eq">no change</span>`;
@@ -310,6 +348,7 @@ function wireTips(){
 
 function renderMain(){
   if(tab==="G") return renderGames();
+  if(tab==="ML") return renderML();
   const all=PROPS.filter(p=>p.g===tab);
   // Averages for the shrink targets come from every graded week, so picking a
   // single week does not quietly change what "average" means.
@@ -342,24 +381,56 @@ function renderGames(){
   const side=(g,x)=>x==null?"—":x===0?"Pick'em":(x>0?g.hm:g.aw)+" by "+r1(Math.abs(x));
   $("#main").innerHTML =
     `<div class="tn-tiles">
-      ${tile("Winner picks", T.w+"–"+T.l, `Leo ${B.w}–${B.l}`, delta(T.w,B.w,false,d=>d))}
-      ${tile("Win-probability error", T.brier.toFixed(3), `Brier &middot; Leo ${B.brier.toFixed(3)} &middot; market ${T.mBrier==null?"—":T.mBrier.toFixed(3)}`, delta(T.brier,B.brier,true,d=>d.toFixed(3)))}
       ${tile("Spread record", T.sw+"–"+T.sl+(T.sp?"–"+T.sp:""), `Leo ${B.sw}–${B.sl} &middot; miss ${r1(T.sMae)} vs line ${r1(T.sLineMae)}`, "")}
       ${tile("Total record", T.tw+"–"+T.tl+(T.tp?"–"+T.tp:""), `Leo ${B.tw}–${B.tl} &middot; miss ${r1(T.tMae)} vs line ${r1(T.tLineMae)}`, "")}
     </div>` +
-    `<div class="tn-tbl"><table><thead><tr><th>Game</th><th>Wk</th><th>Leo home win</th><th>Yours</th><th>Market</th><th>Winner</th><th>Your spread</th><th>Line</th><th>Result</th><th>Your total</th><th>Line</th><th>Actual</th></tr></thead><tbody>`+
+    `<div class="tn-tbl"><table><thead><tr><th>Game</th><th>Wk</th><th>Your spread</th><th>Line</th><th>Result</th><th>Your total</th><th>Line</th><th>Actual</th></tr></thead><tbody>`+
     T.rows.map((r,i)=>{ const g=r.g, b=B.rows[i];
-      return `<tr><td><b>${esc(g.gm)}</b></td><td>${esc(g.wk)}</td><td class="base-c">${pct(b.ph)}</td><td class="tune-c">${pct(r.ph)}</td><td>${pct(g.mh)}</td>
-        <td class="${r.pick===g.win?"better":"worse"}">${esc(g.win)}</td>
+      return `<tr><td><b>${esc(g.gm)}</b></td><td>${esc(g.wk)}</td>
         <td class="tune-c">${esc(side(g,r.em))}</td><td>${esc(side(g,g.sl))}</td><td><b>${esc(side(g,g.amg))}</b></td>
         <td class="tune-c">${r1(r.tot)}</td><td>${r1(g.tl)}</td><td><b>${r1(g.at)}</b></td></tr>`;
     }).join("")+`</tbody></table></div>
-    <p class="data-note" style="margin-top:0">Home win probabilities are for the home team. Market is the de-vigged closing moneyline. Winner shows green when your pick was right.</p>`;
+    <p class="data-note" style="margin-top:0">Spread and total still run on the point-margin rating. The moneyline has its own tab.</p>`;
+}
+// ------------------------------------------------------------- moneyline v2
+function gradeML(k, games){
+  let w=0,l=0,close=0,br=0,mbr=0,mn=0;
+  const rows = games.map(g=>{
+    const ph = window.LeoML.predictWeighted(MODEL, g.x, k);
+    const c = window.LeoML.classifyPick(ph, g.hm, g.aw, k.thr);
+    if(c.pick){ if(c.pick===g.win) w++; else l++; } else close++;
+    br += (ph-g.hw)**2; if(g.mh!=null){ mbr += (g.mh-g.hw)**2; mn++; }
+    return { g, ph, c };
+  });
+  const n=games.length||1;
+  return { rows, w, l, close, brier:br/n, mBrier:mn?mbr/mn:null };
+}
+function renderML(){
+  if(!MODEL || !window.LeoML){ $("#main").innerHTML='<div class="score-empty">The moneyline model file could not be loaded.</div>'; return; }
+  const games=ML.filter(inWeek);
+  if(!games.length){ $("#main").innerHTML='<div class="score-empty">No graded moneyline games for this selection yet.</div>'; return; }
+  const B=gradeML(baseOf(ML_KNOBS),games), T=gradeML(S.ML,games);
+  const hit = X => X.w+X.l ? Math.round(100*X.w/(X.w+X.l))+"%" : "—";
+  const call = r => r.c.pick ? `${esc(r.c.pick)} ${pct(r.c.probability)}` : `<span class="m">Too close</span>`;
+  $("#main").innerHTML =
+    `<div class="tn-tiles">
+      ${tile("Leo Pick record", T.w+"–"+T.l, `Leo ${B.w}–${B.l} &middot; hit ${hit(T)} (Leo ${hit(B)})`, delta(T.w-T.l,B.w-B.l,false,d=>d+" net"))}
+      ${tile("Too Close to Call", String(T.close), `Leo ${B.close} of ${games.length} games`, "")}
+      ${tile("Win-probability error", T.brier.toFixed(3), `Brier &middot; Leo ${B.brier.toFixed(3)} &middot; market ${T.mBrier==null?"—":T.mBrier.toFixed(3)}`, delta(T.brier,B.brier,true,d=>d.toFixed(3)))}
+    </div>` +
+    `<div class="tn-tbl"><table><thead><tr><th>Game</th><th>Wk</th><th>Source</th><th>Leo home win</th><th>Yours</th><th>Market</th><th>Leo call</th><th>Your call</th><th>Winner</th></tr></thead><tbody>`+
+    T.rows.map((r,i)=>{ const g=r.g, b=B.rows[i];
+      return `<tr><td><b>${esc(g.gm)}</b></td><td>${esc(g.wk)}</td><td>${esc(g.src)}</td>
+        <td class="base-c">${pct(b.ph)}</td><td class="tune-c">${pct(r.ph)}</td><td>${pct(g.mh)}</td>
+        <td class="base-c">${call(b)}</td><td class="tune-c ${r.c.pick?(r.c.pick===g.win?"better":"worse"):""}">${call(r)}</td>
+        <td><b>${esc(g.win)}</b></td></tr>`;
+    }).join("")+`</tbody></table></div>
+    <p class="data-note" style="margin-top:0">This tab runs Leo's live moneyline code (scripts/lib/nfl-moneyline.js) with the live model file, so at 100% every slider reproduces Leo exactly. Live games use the inputs frozen before kickoff. Replay games were played before the model went live on Sept 21 and are not part of Leo's record.</p>`;
 }
 function renderAll(){ renderBar(); renderWarn(); renderKnobs(); renderMain(); }
 
 load().then(()=>{
-  if(!PROPS.length && !GAMES.length){ $("#warn").innerHTML="No graded weeks yet. The tuner fills in the morning after the first graded slate."; return; }
+  if(!PROPS.length && !GAMES.length && !ML.length){ $("#warn").innerHTML="No graded weeks yet. The tuner fills in the morning after the first graded slate."; return; }
   renderAll();
 });
 </script>

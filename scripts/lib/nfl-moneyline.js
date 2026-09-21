@@ -13,6 +13,9 @@
  * This module is pure: no network, filesystem, or clock reads.
  */
 
+(function () {
+'use strict';
+
 const PICK_THRESHOLD = 0.60;
 const TEAM_K_GAMES = 4;
 const QB_PRIOR_DB = 160;
@@ -407,20 +410,36 @@ function predict(model, row) {
   return sigmoid(eta);
 }
 
-/** Strict >60%. Exactly 60.0% is Too Close to Call. */
-function classifyPick(homeProb, homeTeam = 'HOME', awayTeam = 'AWAY') {
+/** Strict >60% by default. Exactly 60.0% is Too Close to Call. */
+function classifyPick(homeProb, homeTeam = 'HOME', awayTeam = 'AWAY', threshold = PICK_THRESHOLD) {
   const p = clamp(homeProb, 0, 1);
-  if (p > PICK_THRESHOLD) return { pick: homeTeam, probability: p, status: 'leo_pick' };
-  if ((1 - p) > PICK_THRESHOLD) return { pick: awayTeam, probability: 1 - p, status: 'leo_pick' };
+  if (p > threshold) return { pick: homeTeam, probability: p, status: 'leo_pick' };
+  if ((1 - p) > threshold) return { pick: awayTeam, probability: 1 - p, status: 'leo_pick' };
   return { pick: null, probability: Math.max(p, 1 - p), status: 'too_close_to_call' };
+}
+
+/**
+ * The model with each input's weight scaled, for the public Model Tuner.
+ * mult = { qb, off, def, hfa }; 1 = as shipped, and with every value at 1
+ * this returns exactly predict(model, row). The tuner loads THIS file, so the
+ * tuner and the live generator can never run different math.
+ */
+function predictWeighted(model, row, mult = {}) {
+  const x = vectorize(row, model.features, model.scaler);
+  const m = { qb_diff: mult.qb ?? 1, off_diff: mult.off ?? 1, def_diff: mult.def ?? 1,
+              h2h_edge: mult.h2h ?? 1, h2h_repeat: mult.h2h ?? 1 };
+  let eta = model.intercept * (mult.hfa ?? 1);
+  for (let j = 0; j < model.beta.length; j++) eta += model.beta[j] * x[j] * (m[model.features[j]] ?? 1);
+  return sigmoid(eta);
 }
 
 function brier(rows, probabilityKey = 'prob') {
   return mean(rows.map(r => (r[probabilityKey] - (r.home_win ? 1 : 0)) ** 2));
 }
 
-module.exports = {
+const API = {
   PICK_THRESHOLD,
+  predictWeighted,
   buildQbRatings,
   buildTeamRatings,
   h2hRecord,
@@ -432,3 +451,8 @@ module.exports = {
   sigmoid,
   _test: { aggregateQb, qbRates, teamWeeks, standardizer, vectorize, shrink, z }
 };
+
+// Works in Node (require) and in the browser (<script src>, as window.LeoML).
+if (typeof module !== 'undefined' && module.exports) module.exports = API;
+if (typeof window !== 'undefined') window.LeoML = API;
+})();

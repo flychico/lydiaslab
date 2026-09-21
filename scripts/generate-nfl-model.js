@@ -336,6 +336,10 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
       // in pick/model_prob; ml_call says whether it counts as a pick.
       ml_call: call.status, v1_model_prob: r3(v1Home >= 0.5 ? v1Home : 1-v1Home),
       home_qb: homeQb, away_qb: awayQb,
+      // The exact inputs behind model_prob, frozen in ml-inputs-history.csv
+      // so the Model Tuner replays this game with the live model code.
+      ml_inputs: { qb_diff:feats.qb_diff, off_diff:feats.off_diff, def_diff:feats.def_diff,
+                   h2h_edge:feats.h2h_edge, h2h_repeat:feats.h2h_repeat, home_prob:rawHome },
       home_qb_rating: feats.home_qb_rating, away_qb_rating: feats.away_qb_rating,
       h2h_3yr: { home_wins:h2h3.home_wins, away_wins:h2h3.away_wins, ties:h2h3.ties, games:h2h3.games },
       pick:side, model_prob:prob!=null?r3(prob):null, market_prob:mkt!=null?r3(mkt):null,
@@ -447,6 +451,26 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
                 (h.created ? " (created prediction-history.csv)" : ""));
   } catch(e) {
     console.warn(`  prediction history NOT written: ${e.message}`);
+  }
+  // Moneyline v2 inputs, append-only, same "last capture before kickoff" rule.
+  // A separate file so prediction-history.csv keeps its column layout.
+  try {
+    const { appendObservations } = require("./lib/odds-history");
+    const { kickoffUtc } = require("./lib/prediction-history");
+    const at = new Date().toISOString();
+    const COLS = ["captured_at","date","game_id","matchup","away","home","week","kickoff_utc","model_version",
+                  "home_qb_name","away_qb_name","qb_diff","off_diff","def_diff","h2h_edge","h2h_repeat","home_prob"];
+    const rowsML = picks.filter(p=>p.ml_inputs).map(p=>({
+      captured_at:at, date:p.date, game_id:p.game_id, matchup:p.matchup, away:p.away, home:p.home, week:p.week,
+      kickoff_utc:kickoffUtc(p.date, p.kickoff), model_version:p.model_version,
+      home_qb_name:p.home_qb, away_qb_name:p.away_qb,
+      qb_diff:p.ml_inputs.qb_diff, off_diff:p.ml_inputs.off_diff, def_diff:p.ml_inputs.def_diff,
+      h2h_edge:p.ml_inputs.h2h_edge, h2h_repeat:p.ml_inputs.h2h_repeat, home_prob:p.ml_inputs.home_prob }));
+    const hm = appendObservations(path.join(dir,"ml-inputs-history.csv"), COLS, rowsML, ["date","game_id"],
+                                  ["qb_diff","off_diff","def_diff","home_prob","home_qb_name","away_qb_name"]);
+    console.log(`  moneyline inputs history: +${hm.appended} new/changed`);
+  } catch(e) {
+    console.warn(`  moneyline inputs history NOT written: ${e.message}`);
   }
 
   const official=picks.filter(p=>p.status==="official_pick").length;
