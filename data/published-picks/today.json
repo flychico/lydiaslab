@@ -1010,7 +1010,215 @@
         "modelVersion": "leo"
       },
       "total": null,
-      "strikeouts": []
+      "strikeouts": [
+        {
+          "pitcher": "Janson Junk",
+          "pick": "Under",
+          "line": 3.5,
+          "bestAm": -174,
+          "projection": 2.8,
+          "edge": -0.7,
+          "books": 6,
+          "expectedInnings": 4.9,
+          "pitcherRole": "traditional_starter",
+          "lineupSource": "posted",
+          "modelVersion": "leo-kprop",
+          "valueTag": "OFFICIAL PICK"
+        }
+      ]
+    },
+    {
+      "gamePk": 822840,
+      "away": "New York Mets",
+      "home": "Texas Rangers",
+      "time": "2026-09-23T00:05:00Z",
+      "labScore": 38,
+      "labScoreBreakdown": {
+        "score": 38,
+        "version": "lab-rating-v3-measured-components",
+        "conviction_points": 0,
+        "agreement_points": 0,
+        "pitching_plan_points": 12,
+        "bullpen_points": 0,
+        "offense_points": 26,
+        "completeness_points": 0,
+        "pitcher_edge_points": 12,
+        "model_agreement_gap": 0.4381,
+        "model_agreement_credit": 0,
+        "assigned_bullpen_innings": 3.4,
+        "offense_delta": 0.0024,
+        "offense_delta_15d": 0.0255,
+        "offense_delta_30d": -0.0207,
+        "completeness_checks_passed": 5,
+        "completeness_checks_total": 5,
+        "data_complete": true,
+        "market_points": 0,
+        "model_edge_points": 0,
+        "base_points": 0,
+        "note": "Lab Rating grades Leo's analysis quality only. It contains no market or price input."
+      },
+      "status": "official_pick",
+      "modelVersion": "multi-market-v1",
+      "pitcherEdge": {
+        "team": "No clear SP edge",
+        "gap": 1,
+        "conflict": false,
+        "away_score": 59,
+        "home_score": 58,
+        "away_pitcher": "Sean Manaea",
+        "home_pitcher": "MacKenzie Gore",
+        "away_pitcher_id": 640455,
+        "home_pitcher_id": 669022,
+        "away_era": 4.74,
+        "home_era": 4.67,
+        "away_whip": 1.32,
+        "home_whip": 1.35,
+        "away_advanced": {
+          "w": 5,
+          "l": 7,
+          "kbb_pct": 0.1514,
+          "gb_pct": 0.4522,
+          "babip": 0.3075,
+          "hr9": 1.49,
+          "ip_per_start": 5.6,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 5.6,
+          "bullpen_innings": 3.4
+        },
+        "home_advanced": {
+          "w": 8,
+          "l": 11,
+          "kbb_pct": 0.1431,
+          "gb_pct": 0.4511,
+          "babip": 0.3016,
+          "hr9": 1.03,
+          "ip_per_start": 5.2,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 5.2,
+          "bullpen_innings": 3.8
+        }
+      },
+      "bullpen": {
+        "pick_team": {
+          "score": 67,
+          "label": "Tired",
+          "last_game_bp_ip": 4.3,
+          "last7_bp_ip": 26.3,
+          "last7_bp_runs": 12,
+          "last_game_relievers": 4,
+          "last7_relievers": 20,
+          "back_to_back_arms": 5,
+          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+          "score_reason": "Tired (6.7/10): 26.3 recent relief innings, recency-weighted — 4.3 in the last game (2 days since last game), 5 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 4,
+            "last7_relievers": 20,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 10.2,
+            "back_to_back_arms": 11.8,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 67
+          },
+          "efficiency_score": 61,
+          "efficiency_label": "Effective",
+          "efficiency_reason": "Effective (6.1/10): 3.08 ERA and 0.99 WHIP over 26.3 relief innings (9 ER, 14 H, 12 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": 6.7,
+            "whip_term": 4.7,
+            "confidence": 1,
+            "raw_score": 61.4
+          },
+          "era_7d": 3.08,
+          "whip_7d": 0.99,
+          "last15_bp_ip": 49.3,
+          "last15_bp_runs": 26,
+          "era_15d": 4.2,
+          "whip_15d": 1.28,
+          "recent15_games_tracked": 13,
+          "risk_index": 62,
+          "risk_label": "Tired",
+          "days_rest": 2,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "opponent": {
+          "score": 91,
+          "label": "High risk",
+          "last_game_bp_ip": 4.7,
+          "last7_bp_ip": 36.3,
+          "last7_bp_runs": 10,
+          "last_game_relievers": 4,
+          "last7_relievers": 25,
+          "back_to_back_arms": 6,
+          "workload_read": "Heavy recent workload. Late-game pitching condition could materially affect the read.",
+          "score_reason": "High risk (9.1/10): 36.3 recent relief innings, recency-weighted — 4.7 in the last game (2 days since last game), 6 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 4,
+            "last7_relievers": 25,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 28.9,
+            "back_to_back_arms": 16.8,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 90.7
+          },
+          "efficiency_score": 66,
+          "efficiency_label": "Effective",
+          "efficiency_reason": "Effective (6.6/10): 2.48 ERA and 0.91 WHIP over 36.3 relief innings (10 ER, 23 H, 10 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": 10.3,
+            "whip_term": 5.9,
+            "confidence": 1,
+            "raw_score": 66.2
+          },
+          "era_7d": 2.48,
+          "whip_7d": 0.91,
+          "last15_bp_ip": 57.3,
+          "last15_bp_runs": 26,
+          "era_15d": 3.92,
+          "whip_15d": 1.15,
+          "recent15_games_tracked": 12,
+          "risk_index": 83,
+          "risk_label": "High risk",
+          "days_rest": 2,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "label": "Supports Leo side",
+        "major_caution": false,
+        "absolute_risk": "Opponent high"
+      },
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Sean Manaea",
+          "pick": "Over",
+          "line": 4.5,
+          "bestAm": -122,
+          "projection": 5.48,
+          "edge": 0.98,
+          "books": 6,
+          "expectedInnings": 5.6,
+          "pitcherRole": "traditional_starter",
+          "lineupSource": "posted",
+          "modelVersion": "leo-kprop",
+          "valueTag": "OFFICIAL PICK"
+        }
+      ]
     },
     {
       "gamePk": 824302,
@@ -1220,5 +1428,5 @@
       ]
     }
   ],
-  "last_appended_at": "2026-09-22T19:45:18.409Z"
+  "last_appended_at": "2026-09-22T20:55:15.494Z"
 }
