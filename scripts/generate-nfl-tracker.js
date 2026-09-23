@@ -75,7 +75,29 @@ function finish(s) {
   };
 }
 
+/*
+  Final scores are not in either ledger -- they live in the per-slate
+  results-<date>.json the grader writes. The tracker groups by game, so a row
+  without its score reads as an unfinished thought.
+*/
+function scoreIndex() {
+  const idx = {};
+  for (const f of fs.readdirSync(DIR)) {
+    const m = /^results-(\d{4}-\d{2}-\d{2})\.json$/.exec(f);
+    if (!m) continue;
+    let rows; try { rows = JSON.parse(fs.readFileSync(path.join(DIR, f), "utf8")); } catch (e) { continue; }
+    for (const g of Array.isArray(rows) ? rows : []) {
+      if (g.away_score == null || g.home_score == null) continue;
+      // Keyed by week, not date: a game whose only calls are props (no graded
+      // moneyline) still needs its score, and Monday games are graded a day late.
+      if (g.week != null) idx[`${g.week}|${g.matchup}`] = { away: g.away_score, home: g.home_score };
+    }
+  }
+  return idx;
+}
+
 function main() {
+  const scores = scoreIndex();
   const propRows = readCsv(PROPS);
   const gameRows = readCsv(GAMES);
   if (!propRows.length && !gameRows.length) {
@@ -128,7 +150,8 @@ function main() {
       price_is_implied: posted == null,
       edge: n(r.edge),
       winner: r.actual_value, result: r.result,
-      beat: r.beat_market || "", brier: n(r.brier)
+      beat: r.beat_market || "", brier: n(r.brier),
+      score: scores[`${r.week}|${r.matchup}`] || null
     });
   }
   games.sort((a, b) => b.date.localeCompare(a.date) || a.matchup.localeCompare(b.matchup));
@@ -157,6 +180,9 @@ function main() {
       moneyline: finish(ml)
     },
     counts: { prop_calls: props.length, games: games.length, excluded, no_line: noLine, no_call: noLean },
+    // Final scores by "<week>|<matchup>", so a game whose only calls are props
+    // still shows how it finished.
+    scores,
     props, games
   };
 

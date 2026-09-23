@@ -30,51 +30,51 @@
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/scoreboard.css">
 <style>
-/* --- head-to-head tracker ------------------------------------------------
-   Scoped here on purpose: css/scoreboard.css is shared with MLB and a change
-   there hits both sports (NFL_WATCH_LIST #18).
+/* --- call table ----------------------------------------------------------
+   Scoped here on purpose: css/style.css and scoreboard.css are shared with
+   MLB and a change there hits both sports (NFL_WATCH_LIST #18).
    Gold (#C9A84C) is 2.0:1 on cream and fails as text (#16), so every value
    below is navy, deep green or deep red -- gold is used only as a fill. */
 
-.trk-list{display:flex;flex-direction:column;gap:9px;}
+.tbl-card{padding:0;overflow-x:auto;}
+table.calls{width:100%;border-collapse:collapse;font-size:.9rem;background:transparent;}
+table.calls th{white-space:nowrap;}
+table.calls td{vertical-align:top;padding:11px 12px;}
+table.calls tbody tr:last-child td{border-bottom:0;}
+table.calls tbody tr:hover{background:var(--bg-elev);}
 
-.trk{
-  background:var(--bg-card);border:1px solid var(--border);border-radius:14px;
-  padding:12px 15px;display:grid;gap:10px;
-  grid-template-columns:34px minmax(0,1.15fr) minmax(0,2fr) auto;
-  align-items:center;box-shadow:var(--shadow-sm);
+.gm-cell{display:flex;align-items:center;gap:8px;min-width:190px;}
+.gm-cell img{width:26px;height:26px;object-fit:contain;flex:none;}
+.gm-cell > span{display:flex;flex-direction:column;gap:1px;min-width:0;}
+.gm-name{font-weight:800;white-space:nowrap;}
+
+.call{padding:3px 0;line-height:1.45;}
+.call + .call{border-top:1px dashed var(--border);}
+.ok{color:var(--good);font-weight:800;}
+.no{color:var(--danger);font-weight:800;}
+
+.tag-beat{display:inline-block;padding:1px 7px;border-radius:999px;font-size:.68rem;font-weight:800;
+  letter-spacing:.04em;background:rgba(201,168,76,.18);color:var(--navy-deep);white-space:nowrap;}
+
+.res-cell{white-space:nowrap;}
+.res-cell b{display:block;color:var(--accent2);}
+.res-cell span{display:block;font-variant-numeric:tabular-nums;}
+
+/* Phones: three narrow columns squeeze every call onto four lines, so each
+   game becomes a block instead -- game, calls, result stacked. */
+@media(max-width:760px){
+  .tbl-card{overflow-x:visible;}
+  table.calls thead{display:none;}
+  table.calls,table.calls tbody,table.calls tr,table.calls td{display:block;width:100%;}
+  table.calls tr{border-bottom:1px solid var(--border);padding:12px 13px;}
+  table.calls tr:hover{background:transparent;}
+  table.calls td{border:0;padding:0;}
+  .gm-cell{margin-bottom:8px;}
+  .res-cell{display:flex;gap:9px;align-items:baseline;margin-top:8px;
+    padding-top:7px;border-top:1px dashed var(--border);}
+  .res-cell b,.res-cell span{display:inline-block;}
+  .call{font-size:.86rem;}
 }
-.trk > img{width:34px;height:34px;object-fit:contain;}
-
-.trk-who{display:flex;flex-direction:column;gap:1px;min-width:0;}
-.trk-name{font-weight:700;font-size:.95rem;line-height:1.25;}
-.trk-meta{font-size:.72rem;color:var(--text-dim);}
-
-/* the call, read left to right: what the book said, what Leo said, the side */
-.trk-call{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
-.cell{display:flex;flex-direction:column;gap:1px;min-width:52px;}
-.cell .k{
-  font-size:.62rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
-  color:var(--text-dim);
-}
-.cell .v{font-size:.98rem;font-weight:800;font-variant-numeric:tabular-nums;color:var(--accent2);}
-.cell .v.muted{color:var(--text-dim);font-weight:700;}
-
-.side{
-  font-size:.66rem;font-weight:800;letter-spacing:.07em;
-  padding:4px 10px;border-radius:999px;white-space:nowrap;
-  border:1px solid var(--border);background:var(--bg-elev);color:var(--accent2);
-}
-
-.verdict{
-  font-size:.68rem;font-weight:800;letter-spacing:.08em;
-  padding:6px 13px;border-radius:999px;white-space:nowrap;justify-self:end;
-}
-.verdict.w{background:rgba(47,110,74,.13);color:var(--good);border:1px solid rgba(47,110,74,.34);}
-.verdict.l{background:rgba(166,58,46,.13);color:var(--danger);border:1px solid rgba(166,58,46,.34);}
-.verdict.p{background:var(--bg-elev);color:var(--text-dim);border:1px solid var(--border);}
-
-.trk.is-l{opacity:.82;}
 
 /* running record strip */
 .rec-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;}
@@ -255,72 +255,79 @@ function renderRecords(){
     recTile("Moneyline",m);
 }
 
-function propRow(p){
-  const right=p.result==="W", push=p.result==="P";
-  return '<article class="trk'+(p.result==="L"?" is-l":"")+'">'+
-    logo(p.team)+
-    '<span class="trk-who"><span class="trk-name">'+esc(p.player)+'</span>'+
-      '<span class="trk-meta">'+esc(p.depth||p.group)+' &middot; '+esc(p.matchup)+' &middot; Wk '+esc(p.week)+'</span></span>'+
-    '<span class="trk-call">'+
-      '<span class="cell"><span class="k">Line</span><span class="v muted">'+p.line+'</span></span>'+
-      '<span class="cell"><span class="k">Leo</span><span class="v">'+p.leo+'</span></span>'+
-      '<span class="side">'+esc(String(p.lean).toUpperCase())+'</span>'+
-      '<span class="cell"><span class="k">Actual</span><span class="v">'+p.actual+'</span></span>'+
-      '<span class="cell"><span class="k">vs line</span><span class="v muted">'+signed(p.margin)+'</span></span>'+
-    '</span>'+
-    '<span class="verdict '+(push?"p":right?"w":"l")+'">'+(push?"PUSH":right?"RIGHT":"WRONG")+'</span>'+
-  '</article>';
+/* ---------------------------------------------------------------------------
+   One row per GAME, the way the MLB results page reads: what was played, what
+   Leo called, how it finished. The old one-card-per-call list made 149 calls
+   into 149 cards and buried which game they belonged to.
+--------------------------------------------------------------------------- */
+const MONTH=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function prettyDate(d){const p=String(d).split("-");return p.length===3?MONTH[+p[1]-1]+" "+(+p[2]):d;}
+const cls=r=>r==="W"?"ok":r==="L"?"no":"dim";
+const mark=r=>r==="W"?"&#10004;":r==="L"?"&#10008;":"&#8213;";
+
+function callLine(c){
+  return '<div class="call"><span class="'+cls(c.result)+'">'+mark(c.result)+'</span> '+c.html+'</div>';
 }
 
-function gameRow(g){
-  const right=g.result==="W", push=g.result==="P";
-  const price=g.price==null?"—":signed(g.price)+(g.price_is_implied?"*":"");
-  return '<article class="trk'+(g.result==="L"?" is-l":"")+'">'+
-    logo(g.pick)+
-    '<span class="trk-who"><span class="trk-name">'+esc(g.pick)+' to win</span>'+
-      '<span class="trk-meta">'+esc(g.matchup)+' &middot; Wk '+esc(g.week)+'</span></span>'+
-    '<span class="trk-call">'+
-      '<span class="cell"><span class="k">Price</span><span class="v muted">'+price+'</span></span>'+
-      '<span class="cell"><span class="k">Leo</span><span class="v">'+Math.round(g.leo_prob*100)+'%</span></span>'+
-      '<span class="cell"><span class="k">Market</span><span class="v muted">'+(g.market_prob==null?"—":Math.round(g.market_prob*100)+"%")+'</span></span>'+
-      '<span class="cell"><span class="k">Won</span><span class="v">'+esc(g.winner)+'</span></span>'+
-    '</span>'+
-    '<span class="verdict '+(push?"p":right?"w":"l")+'">'+(push?"PUSH":right?"RIGHT":"WRONG")+'</span>'+
-  '</article>';
+function propCall(p){
+  return { result:p.result, group:p.group, html:
+    '<b>'+esc(p.group)+' Prop</b> '+esc(p.player)+' '+esc(String(p.lean).toUpperCase())+' '+p.line+
+    ' <span class="dim">(Leo '+p.leo+')</span> &middot; '+p.actual+' '+esc(p.unit||"")+
+    ' &middot; <span class="'+cls(p.result)+'">'+(p.result==="P"?"PUSH":p.result)+'</span>'+
+    (p.beat==="Y"?' <span class="tag-beat">closer than the book</span>':'') };
 }
 
-function section(title,count,rowsHtml){
-  return '<div class="grp-head"><h2>'+esc(title)+'</h2><span class="cnt">'+count+'</span></div>'+
-         '<div class="trk-list">'+rowsHtml+'</div>';
+function mlCall(g){
+  const price=g.price==null?"":", "+signed(g.price)+(g.price_is_implied?"*":"");
+  return { result:g.result, group:"ML", html:
+    '<b>ML</b> '+esc(g.pick)+' to win <span class="dim">('+Math.round(g.leo_prob*100)+'%'+price+
+    (g.market_prob==null?"":" &middot; market "+Math.round(g.market_prob*100)+"%")+')</span> &middot; '+
+    esc(g.winner)+' won &middot; <span class="'+cls(g.result)+'">'+g.result+'</span>'+
+    (g.beat==="Y"?' <span class="tag-beat">beat the market</span>':'') };
+}
+
+/* Games, newest first, with every call that belongs to them. */
+function groupGames(){
+  const keep=r=>(res==="all"||r.result===res)&&inWeek(r);
+  const inGrp=k=>grp==="all"||grp===k;
+  const map=new Map();
+  /* Keyed by WEEK + matchup, never by date: a Monday nighter has calls graded
+     on two different dates and was splitting into two rows for one game. */
+  const slot=r=>{
+    const k=r.week+"|"+r.matchup;
+    if(!map.has(k)) map.set(k,{date:r.date,week:r.week,matchup:r.matchup,
+      away:r.away||String(r.matchup).split(" @ ")[0],home:r.home||String(r.matchup).split(" @ ")[1],
+      score:r.score||(data.scores?data.scores[r.week+"|"+r.matchup]:null)||null,calls:[]});
+    const e=map.get(k);
+    if(r.date<e.date) e.date=r.date;      // the game's own date, not the grading run's
+    return e;
+  };
+  data.games.filter(g=>inWeek(g)).forEach(g=>{ const e=slot(g); if(e.score==null&&g.score) e.score=g.score;
+    if(inGrp("ML")&&keep(g)) e.calls.push(mlCall(g)); });
+  data.props.filter(p=>inWeek(p)).forEach(p=>{ const e=slot(p); if(inGrp(p.group)&&keep(p)) e.calls.push(propCall(p)); });
+  return [...map.values()].filter(e=>e.calls.length)
+    .sort((a,b)=>b.date.localeCompare(a.date)||a.matchup.localeCompare(b.matchup));
+}
+
+function gameRow(e){
+  const w=e.calls.filter(c=>c.result==="W").length, l=e.calls.filter(c=>c.result==="L").length;
+  const order={ML:0,QB:1,RB:2,WR:3};
+  const calls=e.calls.slice().sort((a,b)=>(order[a.group]??9)-(order[b.group]??9));
+  return '<tr>'+
+    '<td class="gm-cell">'+logo(e.away)+logo(e.home)+
+      '<span><span class="gm-name">'+esc(e.matchup)+'</span>'+
+      '<span class="small dim">Wk '+esc(e.week)+' &middot; '+esc(prettyDate(e.date))+'</span></span></td>'+
+    '<td>'+calls.map(callLine).join("")+'</td>'+
+    '<td class="res-cell"><b>Final</b>'+
+      (e.score?'<span class="small">'+e.score.away+'&ndash;'+e.score.home+'</span>':'')+
+      '<span class="small dim">calls '+w+'&ndash;'+l+'</span></td>'+
+  '</tr>';
 }
 
 function render(){
-  const keep=r=>(res==="all"||r.result===res)&&inWeek(r);
-  let html="";
+  const games=groupGames();
+  if(!games.length){ bodyEl.innerHTML='<div class="score-empty">No calls match this filter.</div>'; return; }
 
-  if(grp==="ML"||grp==="all"){
-    const g=data.games.filter(keep);
-    if(g.length){
-      const s=wk==="all"?data.summary.moneyline:tallyFor(g);
-      html+=section("Moneyline",s.w+"–"+s.l+(s.beat_pct!=null?"  ·  beat the market "+s.beat_pct.toFixed(0)+"%":""),
-                    g.map(gameRow).join(""));
-    }
-  }
-  for(const key of ["QB","RB","WR"]){
-    if(grp!=="all"&&grp!==key) continue;
-    const rows=data.props.filter(p=>p.group===key).filter(keep);
-    if(!rows.length) continue;
-    const s=wk==="all"?data.summary.props[key]:tallyFor(rows);
-    const label={QB:"Quarterbacks · passing yards",RB:"Running backs · rushing yards",WR:"Receivers · receiving yards"}[key];
-    html+=section(label, s.w+"–"+s.l+(s.beat_pct!=null?"  ·  beat the line "+s.beat_pct.toFixed(0)+"%":""),
-                  rows.map(propRow).join(""));
-  }
-
-  if(!html){ bodyEl.innerHTML='<div class="score-empty">No calls match this filter.</div>'; return; }
-
-  /* The sample warning is part of the page, not a footnote. A 77% record over
-     13 games is indistinguishable from luck, and the tracker should say so
-     while that is still true rather than wait to be asked. */
   const wks=(data.weeks||[]).slice().sort((a,b)=>Number(a)-Number(b));
   const coverage=wks.length
     ? '<p class="data-note">Graded weeks: '+wks.map(w=>"Week "+esc(w)).join(", ")+
@@ -336,7 +343,9 @@ function render(){
       'No pick is published until that number holds above 50% across a real sample.</div>'
     : "";
 
-  bodyEl.innerHTML=warn+coverage+html+
+  bodyEl.innerHTML=warn+coverage+
+    '<div class="card tbl-card"><table class="calls"><thead><tr><th>Game</th><th>Leo&rsquo;s calls</th><th>Result</th></tr></thead>'+
+    '<tbody>'+games.map(gameRow).join("")+'</tbody></table></div>'+
     (data.games.some(g=>g.price_is_implied)
       ? '<p class="data-note">* Price derived from the market&rsquo;s implied probability where the posted number was not captured at grading time.</p>'
       : "");
