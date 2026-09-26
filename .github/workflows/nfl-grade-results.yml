@@ -96,6 +96,17 @@ jobs:
 
       # Roll both ledgers into the feed /nfl/results/ reads. Cheap, local,
       # and reads the WHOLE ledger -- the tracker is cumulative, not per-slate.
+      # The matchup page's Final result section is built from the graded
+      # ledgers, so it only exists if the page is re-rendered AFTER grading.
+      # Without this the Thursday game (2026-09-24) sat graded for two days
+      # with no result on its own page.
+      - name: Rebuild matchup data and pages for the graded dates
+        run: |
+          for d in ${{ steps.dates.outputs.list }}; do
+            node scripts/generate-nfl-matchups.js "$d" || true
+            node scripts/render-nfl-matchup-pages.js "$d" || true
+          done
+
       - name: Build head-to-head tracker
         run: node scripts/generate-nfl-tracker.js
 

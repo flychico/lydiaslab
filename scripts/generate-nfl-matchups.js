@@ -182,6 +182,48 @@ function teamProfile(rows, team, active){
     };
   };
 
+  /*
+    BOX SCORE. What the people who came for the projection actually want the
+    morning after: what the quarterbacks, backs and receivers did. Built from
+    the same weekly rows the pre-game profile uses, filtered to this game's
+    week, so no new feed and no new failure mode.
+  */
+  const boxFor=(team, week)=>{
+    // wkCurAll, not wkCur: the pre-game profile deliberately stops at the week
+    // before kickoff, and the box score is the one place we want THIS game.
+    const rows=wkCurAll.filter(r=>r.team===team && n(r.week)===n(week));
+    const line=r=>({
+      name:r.player_display_name, pos:r.position,
+      att:n(r.attempts), cmp:n(r.completions), pass_yds:n(r.passing_yards),
+      pass_td:n(r.passing_tds), ints:n(r.passing_interceptions),
+      car:n(r.carries), rush_yds:n(r.rushing_yards), rush_td:n(r.rushing_tds),
+      tgt:n(r.targets), rec:n(r.receptions), rec_yds:n(r.receiving_yards), rec_td:n(r.receiving_tds)
+    });
+    const top=(f,k)=>rows.map(line).filter(f).sort((a,b)=>b[k]-a[k]).slice(0,3);
+    return {
+      team,
+      qb: top(x=>x.att>0,"att")[0]||null,
+      rb: top(x=>x.car>0 && x.pos!=="QB","car"),   // a QB kneel is not a rushing leader
+      wr: top(x=>x.tgt>0 && x.pos!=="QB","rec_yds")
+    };
+  };
+
+  /*
+    TOUCHDOWN PROPS, not touchdown leaders: who Leo gives the best chance of
+    scoring IN THIS GAME. Read from the frozen pre-kickoff capture, so the
+    page never quietly re-prices itself after kickoff.
+  */
+  const tdProps=(matchup, teams)=>{
+    const rows=FROZEN_PROPS.filter(x=>x.matchup===matchup && x.market==="ANYTIME_TD");
+    if(!rows.length) return null;
+    const bySide={};
+    for(const t of teams) bySide[t]=rows.filter(x=>x.team===t)
+      .map(x=>({player:x.player, team:x.team, depth:x.depth, prob:num(x.projection)}))
+      .filter(x=>x.prob!=null)
+      .sort((a,b)=>b.prob-a.prob).slice(0,3);
+    return (bySide[teams[0]].length||bySide[teams[1]].length) ? bySide : null;
+  };
+
   // Only once the game is actually over -- nflverse fills `result` on completion.
   const finalReport=(g,matchup)=>{
     if(String(g.result??"").trim()==="") return null;
@@ -197,7 +239,13 @@ function teamProfile(rows, team, active){
                  rate:num(x.rate_used), actual_rate:num(x.actual_rate),
                  volume:num(x.expected_volume), actual_volume:num(x.actual_volume),
                  rate_effect:num(x.rate_effect), volume_effect:num(x.volume_effect) }));
+    const tdScored={};
+    for(const side of [g.away_team, g.home_team])
+      for(const r of wkCurAll.filter(r=>r.team===side && n(r.week)===n(g.week)))
+        tdScored[r.player_display_name]=n(r.rushing_tds)+n(r.receiving_tds);
     return { away_score:as, home_score:hs, total:as+hs, margin:hs-as,
+             box:{ away: boxFor(g.away_team, g.week), home: boxFor(g.home_team, g.week) },
+             td_scored: tdScored,
              winner: hs>as?g.home_team:(as>hs?g.away_team:"TIE"),
              overtime: g.overtime==="1",
              moneyline:pick("moneyline"), total_pick:pick("total"), spread:pick("spread"),
@@ -229,6 +277,7 @@ function teamProfile(rows, team, active){
       pregame_through_week: gameWeek-1,
       leo: leoRead(g, `${g.away_team} @ ${g.home_team}`),
       final_report: finalReport(g, `${g.away_team} @ ${g.home_team}`),
+      td_props: tdProps(`${g.away_team} @ ${g.home_team}`, [g.away_team, g.home_team]),
       ratings:{
         this_season:{ away: RTG[g.away_team]||null, home: RTG[g.home_team]||null },
         last_season:{ away: RTG_PRI[g.away_team]||null, home: RTG_PRI[g.home_team]||null },

@@ -17,10 +17,10 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Leo">
 <meta property="og:title" content="NFL Learning | Leo">
-<meta property="og:description" content="Where Leo's NFL yardage projections miss, and why: rate versus volume, opponent adjustment, and the book's line.">
+<meta property="og:description" content="Where Leo's NFL yardage projections miss, and why: rate versus volume, and the opponent adjustment.">
 <meta property="og:url" content="https://ndhorizon.com/nfl/learning/">
 <meta property="og:image" content="https://ndhorizon.com/img/og-card.png">
-<meta name="description" content="Where Leo's NFL yardage projections miss, and why: rate versus volume, opponent adjustment, and the book's line.">
+<meta name="description" content="Where Leo's NFL yardage projections miss, and why: rate versus volume, and the opponent adjustment.">
 <link rel="canonical" href="https://ndhorizon.com/nfl/learning/">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127944;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
@@ -59,7 +59,7 @@ h2.sec{font-size:1.02rem;margin:22px 0 8px;}
   <section class="score-hero">
     <p class="eyebrow">Graded from frozen, pre-kickoff projections only.</p>
     <h1>NFL Learning</h1>
-    <p class="subtitle">Every yardage projection is <b>rate &times; volume &times; opponent adjustment</b>. When one misses, this page splits the miss into its parts so we know which half of the model to fix, and compares Leo to the sportsbook's line.</p>
+    <p class="subtitle">Every yardage projection is <b>rate &times; volume &times; opponent adjustment</b>. When one misses, this page splits the miss into its parts, so we know which half of the model to fix.</p>
   </section>
 
   <div id="status" class="loading">Loading&hellip;</div>
@@ -80,15 +80,14 @@ const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&":"&amp
 
 function card(m, reads) {
   const vl = m.vs_line || {}, oa = m.opponent_adjustment || {}, at = m.attribution || {};
-  const ahead = vl.our_mae != null && vl.line_mae != null && vl.our_mae < vl.line_mae;
-  const tot = (at.rate_yards || 0) + (at.volume_yards || 0);
+    const tot = (at.rate_yards || 0) + (at.volume_yards || 0);
   const rp = tot ? Math.round(100 * at.rate_yards / tot) : 50;
   const unitR = m.rate_unit, unitV = m.volume_unit;
   return `<article class="mk">
     <div><h2>${esc(m.label)} yards</h2><span class="n">${m.n} players graded</span></div>
     <div class="pair">
-      <div class="stat"><div class="k">Leo average miss</div><div class="v ${ahead ? "good" : "bad"}">${fmt(vl.our_mae ?? m.projection.mae)} yds</div><div class="s">Book's line missed by ${fmt(vl.line_mae)}</div></div>
-      <div class="stat"><div class="k">Closer than the book</div><div class="v ${vl.beat_pct >= 50 ? "good" : "bad"}">${fmt(vl.beat_pct, 0)}%</div><div class="s">${vl.beat ?? 0} of ${vl.compared ?? 0} players</div></div>
+      <div class="stat"><div class="k">Average miss</div><div class="v">${fmt(m.projection.mae)} yds</div><div class="s">across ${m.n} players</div></div>
+      <div class="stat"><div class="k">Running high or low</div><div class="v ${Math.abs(m.projection.bias) < 3 ? "good" : "bad"}">${sign(m.projection.bias)}</div><div class="s">yards per player on average</div></div>
     </div>
     <div class="split">
       <div class="lab"><span>Error from rate: <b>${fmt(at.rate_yards)} yds</b></span><span>from volume: <b>${fmt(at.volume_yards)} yds</b></span></div>
@@ -113,8 +112,8 @@ function history(csv) {
   const runs = [...new Set(rows.map(r => r.through))];
   if (runs.length < 2) return "";
   const lab = { QB_PASS_YARDS: "QB passing", RB_RUSH_YARDS: "RB rushing", WR_REC_YARDS: "WR receiving" };
-  return `<h2 class="sec">Run by run</h2><div class="hist-wrap"><table class="fx"><thead><tr><th>Through</th><th>Market</th><th>n</th><th>Leo miss</th><th>Book miss</th><th>Closer %</th><th>Main error</th></tr></thead><tbody>`
-    + rows.slice().reverse().map(r => `<tr><td>${esc(r.through)}</td><td>${esc(lab[r.market] || r.market)}</td><td>${esc(r.n)}</td><td>${esc(r.our_mae || r.proj_mae)}</td><td>${esc(r.line_mae)}</td><td>${esc(r.beat_line_pct)}</td><td>${esc(r.dominant)}</td></tr>`).join("")
+  return `<h2 class="sec">Run by run</h2><div class="hist-wrap"><table class="fx"><thead><tr><th>Through</th><th>Market</th><th>n</th><th>Leo miss</th><th>High/low</th><th>Main error</th></tr></thead><tbody>`
+    + rows.slice().reverse().map(r => `<tr><td>${esc(r.through)}</td><td>${esc(lab[r.market] || r.market)}</td><td>${esc(r.n)}</td><td>${esc(r.proj_mae)}</td><td>${esc(r.proj_bias)}</td><td>${esc(r.dominant)}</td></tr>`).join("")
     + `</tbody></table></div>`;
 }
 
@@ -124,11 +123,11 @@ Promise.all([
 ]).then(([j, csv]) => {
   if (!j || !j.markets || !j.markets.length) { $("status").textContent = "Nothing graded yet. This fills in after the first slate is graded."; return; }
   $("status").remove();
-  const behind = j.markets.filter(m => m.vs_line && m.vs_line.our_mae > m.vs_line.line_mae).length;
+  const worst = j.markets.slice().sort((a, b) => (b.projection.mae || 0) - (a.projection.mae || 0))[0];
   $("summary").innerHTML = `<div class="honest" style="margin-bottom:14px"><b>Through ${esc(j.through)}</b> &middot; ${j.slates} graded slate${j.slates === 1 ? "" : "s"} &middot; ${j.graded_rows} graded player lines. `
-    + (behind ? `The book's line is the better projection in ${behind} of ${j.markets.length} markets right now. Small sample: one slate is not enough to change the model, and nothing here is changed without the test in the Model Improvement Framework.` : `Leo is closer than the book in every market so far, on a small sample.`)
+    + (worst ? `Biggest miss right now: ${esc(worst.label)}, off by ${fmt(worst.projection.mae)} yards a player. Small sample: one slate is not enough to change the model, and nothing here is changed without the test in the Model Improvement Framework.` : "")
     + `</div>`;
-  $("markets").innerHTML = j.markets.map(m => card(m, (j.findings || []).filter(f => f.market === m.label && f.title !== "Against the closing line"))).join("");
+  $("markets").innerHTML = j.markets.map(m => card(m, (j.findings || []).filter(f => f.market === m.label && !/line|book/i.test(f.title)))).join("");
   $("history").innerHTML = history(csv);
 }).catch(() => { $("status").textContent = "Could not load the learning data."; });
 </script>

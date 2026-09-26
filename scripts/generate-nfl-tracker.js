@@ -129,6 +129,25 @@ function main() {
       margin: r2(actual - line)      // how far past the line it landed
     });
   }
+  /*
+    DEDUPE. A game graded twice (the Monday nighter is graded on the Monday
+    and again on the Tuesday sweep) appends a second row per player, and the
+    page then showed every call twice. Last grade for a player+market+week
+    wins; the ledger stays append-only.
+  */
+  {
+    const seen=new Map();
+    for(const p of props) {
+      const k=`${p.week}|${p.matchup}|${p.player}|${p.group}`;
+      const prev=seen.get(k);
+      // Latest grade wins, but keep the EARLIEST date: a re-grade the next
+      // day must not make the game look like it was played then.
+      if(prev && prev.date < p.date) p.date=prev.date;
+      seen.set(k, p);
+    }
+    props.length=0; props.push(...seen.values());
+  }
+
   // Newest first, then biggest call first within a day.
   props.sort((a, b) => b.date.localeCompare(a.date) ||
                        a.group.localeCompare(b.group) ||
@@ -153,6 +172,15 @@ function main() {
       beat: r.beat_market || "", brier: n(r.brier),
       score: scores[`${r.week}|${r.matchup}`] || null
     });
+  }
+  {
+    const seen=new Map();
+    for(const g of games) {
+      const k=`${g.week}|${g.matchup}`, prev=seen.get(k);
+      if(prev && prev.date < g.date) g.date=prev.date;
+      seen.set(k, g);
+    }
+    games.length=0; games.push(...seen.values());
   }
   games.sort((a, b) => b.date.localeCompare(a.date) || a.matchup.localeCompare(b.matchup));
 

@@ -130,8 +130,8 @@ function ratingsSection(m){
       ${ratingRow("Overall", A.overall, H.overall)}
     </div>
     ${Ap&&Hp?`<div class="rprior">
-      <span class="rpl">Last season</span>
       <span class="rpv">QB ${Ap.qb_rating.toFixed(0)} &middot; OFF ${Ap.off_rating.toFixed(0)} &middot; DEF ${Ap.def_rating.toFixed(0)}</span>
+      <span class="rpl">Last season</span>
       <span class="rpv rr">QB ${Hp.qb_rating.toFixed(0)} &middot; OFF ${Hp.off_rating.toFixed(0)} &middot; DEF ${Hp.def_rating.toFixed(0)}</span>
     </div>`:""}
   </div>
@@ -191,10 +191,10 @@ function leoSection(m){
   const game=g?`
   <div class="leo-grid">
     ${g.call==="too_close_to_call"
-      ? `<div class="box"><span class="lbl">Leo pick</span><span class="val">Too Close to Call</span><span class="lbl2">leans ${esc(g.pick)} ${pct(g.prob)} &middot; market ${pct(g.market_prob)}</span></div>`
-      : `<div class="box"><span class="lbl">${g.call==="leo_pick"?"Leo pick":"Leo winner"}</span><span class="val">${esc(g.pick)} ${pct(g.prob)}</span><span class="lbl2">market ${pct(g.market_prob)}</span></div>`}
-    <div class="box"><span class="lbl">Leo total</span><span class="val">${v(g.proj_total)}</span><span class="lbl2">line ${v(g.total_line)} &middot; leans ${esc(g.total_side||"\u2014")}</span></div>
-    <div class="box"><span class="lbl">Leo spread</span><span class="val">${esc(fav(m,g.proj_spread))}</span><span class="lbl2">line ${esc(lineTxt(m,g.spread_line))} &middot; leans ${esc(g.spread_side||"\u2014")}</span></div>
+      ? `<div class="box"><span class="lbl">Leo pick</span><span class="val">Too Close to Call</span><span class="lbl2">leans ${esc(g.pick)} ${pct(g.prob)}, under the 60% bar</span></div>`
+      : `<div class="box"><span class="lbl">${g.call==="leo_pick"?"Leo pick":"Leo winner"}</span><span class="val">${esc(g.pick)} ${pct(g.prob)}</span><span class="lbl2">above the 60% bar</span></div>`}
+    <div class="box"><span class="lbl">Leo total</span><span class="val">${v(g.proj_total)}</span><span class="lbl2">points, both teams</span></div>
+    <div class="box"><span class="lbl">Leo margin</span><span class="val">${esc(fav(m,g.proj_spread))}</span><span class="lbl2">expected winning margin</span></div>
   </div>`:"";
   const byMk={};
   for(const p of (L.props||[])) (byMk[p.market]=byMk[p.market]||[]).push(p);
@@ -249,35 +249,103 @@ function why(p){
   }
   return (p.actual_rate<p.rate?"Less ":"More ")+`efficient (${r1(p.actual_rate)} vs ${r1(p.rate)} ${ru})`;
 }
+/*
+  TOUCHDOWN PROPS, not season leaders. Leo's chance that each player scores in
+  THIS game, from the frozen pre-kickoff capture, top three a side. Once the
+  game is final each line says whether he actually scored, so the page grades
+  itself in public. Falls back to season scorers on older pages that have no
+  prop capture.
+*/
+function tdCard(m, team, rows){
+  const F=m.final_report, scored=F&&F.td_scored||null;
+  return `<div class="tdcard"><div class="td-head"><img src="/img/nfl/${encodeURIComponent(team)}.png" alt=""><b>${esc(team)}</b>
+      <span class="sc-season">Leo&rsquo;s chance</span></div>
+    <ol class="tdlist tdprops">${rows.map(x=>{
+      const n = scored ? (scored[x.player]||0) : null;
+      const tag = n==null ? "" : (n>0
+        ? `<span class="td-hit">scored${n>1?` ${n}`:""}</span>`
+        : `<span class="td-miss">no TD</span>`);
+      return `<li><span class="tdn">${esc(x.player)}</span>
+        <span class="tdp">${esc(x.depth||"")}</span>
+        <span class="tdc">${Math.round(x.prob*100)}%</span>
+        <span class="tdd">${tag}</span></li>`;
+    }).join("")}</ol></div>`;
+}
+
+function tdSection(m){
+  const T=m.td_props;
+  if(!T) return `
+  <h2 class="sec">Touchdown leaders</h2>
+  <p class="sub">Top three scrimmage touchdown scorers on each side this season, rushing and receiving.</p>
+  <div class="tdgrid">${scorers(m.sides.away,m.date.slice(0,4))}${scorers(m.sides.home,m.date.slice(0,4))}</div>`;
+  const a=T[m.away]||[], h=T[m.home]||[];
+  if(!a.length && !h.length) return "";
+  return `
+  <h2 class="sec">Touchdown props</h2>
+  <p class="sub">Leo&rsquo;s chance that each player scores a touchdown in this game &mdash; the three most likely on each side, from his last read before kickoff.</p>
+  <div class="tdgrid">${tdCard(m,m.away,a)}${tdCard(m,m.home,h)}</div>`;
+}
+
+/* The morning-after box score: what the quarterbacks, backs and receivers did. */
+function boxTable(side){
+  if(!side) return "";
+  const q=side.qb, rb=side.rb||[], wr=side.wr||[];
+  const rows=[];
+  if(q) rows.push(`<tr><td class="bxp"><b>${esc(q.name)}</b> <span class="mut">QB</span></td>
+    <td>${q.cmp}/${q.att}</td><td><b>${q.pass_yds}</b> yds</td><td>${q.pass_td} TD</td><td>${q.ints} INT</td></tr>`);
+  rb.forEach(x=>rows.push(`<tr><td class="bxp"><b>${esc(x.name)}</b> <span class="mut">${esc(x.pos)}</span></td>
+    <td>${x.car} car</td><td><b>${x.rush_yds}</b> yds</td><td>${x.rush_td} TD</td><td>${x.rec?`${x.rec} rec, ${x.rec_yds} yds`:""}</td></tr>`));
+  wr.forEach(x=>rows.push(`<tr><td class="bxp"><b>${esc(x.name)}</b> <span class="mut">${esc(x.pos)}</span></td>
+    <td>${x.rec}/${x.tgt}</td><td><b>${x.rec_yds}</b> yds</td><td>${x.rec_td} TD</td><td></td></tr>`));
+  if(!rows.length) return "";
+  return `<div class="bxcard"><div class="td-head"><img src="/img/nfl/${encodeURIComponent(side.team)}.png" alt=""><b>${esc(side.team)}</b></div>
+    <table class="bx"><tbody>${rows.join("")}</tbody></table></div>`;
+}
+
+function boxScore(F){
+  if(!F||!F.box) return "";
+  const a=boxTable(F.box.away), h=boxTable(F.box.home);
+  if(!a && !h) return "";
+  return `<h3 class="sec3">How the game was played</h3>
+  <p class="sub">Quarterback, the backs who carried it and the receivers who caught it.</p>
+  <div class="bxgrid">${a}${h}</div>`;
+}
+
 function finalReport(m){
   const F=m.final_report; if(!F) return "";
-  const row=(label,expected,line,side,actual,result)=>`<tr><td>${label}</td><td>${expected}</td><td>${line}</td><td>${side}</td><td><b>${actual}</b></td><td>${result}</td></tr>`;
   const ml=F.moneyline, tp=F.total_pick, sp=F.spread;
+  const off=(leo,act)=>leo==null||act==null?"":`<span class="mut">off by ${r1(Math.abs(act-leo))}</span>`;
+  const row=(label,leo,actual,verd)=>`<tr><td>${label}</td><td>${leo}</td><td><b>${actual}</b></td><td>${verd}</td></tr>`;
   const rows=[
-    ml?row("Winner", esc(ml.side)+" "+pct(ml.leo), esc(ml.side)+" "+pct(ml.market), ml.result===""?'<span class="mut">Too Close to Call (60% or less)</span>':esc(ml.side), esc(ml.actual), ml.result===""?'<span class="vd p">NO PICK</span>':verdict(ml.result)):"",
-    tp?row("Total", v(tp.leo), v(tp.market), tp.side?esc(tp.side)+" "+v(tp.market):'<span class="mut">within 1.5 of the line</span>', v(tp.actual), tp.side?verdict(tp.result):noLean):"",
-    sp?row("Spread", esc(fav(m,sp.leo)), esc(lineTxt(m,sp.market)), sp.side?sideLine(m,sp.side,sp.market):'<span class="mut">within 1 pt of the line</span>', esc(fav(m,Number(sp.actual))), sp.side?verdict(sp.result):noLean):""
+    ml?row("Winner", esc(ml.side)+" "+pct(ml.leo), esc(ml.actual)+" won",
+           ml.result===""?'<span class="vd p">NO PICK &middot; too close to call</span>':verdict(ml.result)):"",
+    tp?row("Total points", v(tp.leo), v(tp.actual), off(tp.leo,tp.actual)):"",
+    sp?row("Margin", esc(fav(m,sp.leo)), esc(fav(m,Number(sp.actual))), off(sp.leo,Number(sp.actual))):""
   ].join("");
-  const games=`<div class="fxw"><table class="fx"><thead><tr><th>Market</th><th>Leo expected</th><th>Line</th><th>Leo&rsquo;s side</th><th>Actual</th><th>Result</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  const games=`<div class="fxw"><table class="fx"><thead><tr><th>Market</th><th>Leo expected</th><th>Actual</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+
   const byMk={};
   for(const p of (F.props||[])) (byMk[p.market]=byMk[p.market]||[]).push(p);
   const props=Object.keys(MK).filter(k=>byMk[k]).map(k=>{
     const [label]=MK[k];
     return `<h3 class="sec3">${label}</h3>
-    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Leo</th><th>Line</th><th>Actual</th><th>Main reason</th><th>Result</th></tr></thead><tbody>`+
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Leo</th><th>Actual</th><th>Off by</th><th>Main reason</th></tr></thead><tbody>`+
     byMk[k].sort((a,b)=>Math.abs(b.actual-b.projection)-Math.abs(a.actual-a.projection)).map(p=>`<tr>
       <td><b>${esc(p.player)}</b> <span class="mut">${esc(p.team)}</span></td>
-      <td>${v(p.projection)}</td><td>${v(p.line)}</td><td><b>${v(p.actual)}</b></td>
-      <td class="why">${why(p)}</td>
-      <td>${p.line==null?"":(p.lean?verdict(p.result):noLean)}</td></tr>`).join("")+`</tbody></table></div>`;
+      <td>${v(p.projection)}</td><td><b>${v(p.actual)}</b></td>
+      <td>${p.projection==null||p.actual==null?"":r1(Math.abs(p.actual-p.projection))}</td>
+      <td class="why">${why(p)}</td></tr>`).join("")+`</tbody></table></div>`;
   }).join("");
+
   return `
   <section class="final">
-    <h2 class="sec">Final report</h2>
+    <h2 class="sec">Final result</h2>
     <p class="final-score"><img src="/img/nfl/${encodeURIComponent(m.away)}.png" alt=""> ${esc(m.away)} <b>${F.away_score}</b>
       &ndash; <b>${F.home_score}</b> ${esc(m.home)} <img src="/img/nfl/${encodeURIComponent(m.home)}.png" alt="">${F.overtime?' <span class="mut">(OT)</span>':""}</p>
-    <p class="sub">What Leo expected before kickoff, the side that put him on against the line, and what happened. When Leo&rsquo;s number sits too close to the line to be a real disagreement, there is no side and nothing is graded.</p>
-    ${F.graded?games:'<p class="sub">Grading runs the morning after the game; the detailed comparison appears once it has.</p>'}
+    ${boxScore(F)}
+    <h3 class="sec3">How Leo&rsquo;s read held up</h3>
+    <p class="sub">What Leo expected before kickoff and what actually happened. A winner call is only made when one side is above 60%.</p>
+    ${F.graded?games:'<p class="sub">Grading runs the morning after the game; the comparison appears once it has.</p>'}
     ${props?`<p class="sub" style="margin-top:14px">&ldquo;Main reason&rdquo; names which of Leo&rsquo;s two inputs was further off &mdash; how much the player was used, or how efficient he was when he was.</p>`+props:""}
   </section>`;
 }
@@ -301,7 +369,7 @@ ${require("./lib/ga").GA_HEAD}
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${esc(title)}</title>
-<meta name="description" content="${esc(m.away)} at ${esc(m.home)} on ${esc(m.date)}: starting quarterbacks, running backs, top receivers and touchdown leaders for this season and last, with the closing market numbers.">
+<meta name="description" content="${esc(m.away)} at ${esc(m.home)} on ${esc(m.date)}: starting quarterbacks, running backs, top receivers and touchdown props for this game and last, with the closing market numbers.">
 <link rel="canonical" href="https://ndhorizon.com${m.url}">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Leo">
@@ -375,7 +443,22 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
 .rbar i{display:block;height:100%}
 .rbar .ra{background:var(--accent2);margin-right:auto}
 .rbar .rh{background:var(--accent)}
-.rprior{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 16px;border-top:1px solid var(--border);background:var(--bg-elev);font-size:.76rem;color:var(--text-dim)}
+.bxgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:10px 0 6px}
+@media(max-width:760px){.bxgrid{grid-template-columns:1fr}}
+.bxcard{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+table.bx{width:100%;border-collapse:collapse;font-size:.85rem}
+table.bx td{padding:7px 10px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums}
+table.bx td.bxp{text-align:left;white-space:normal}
+table.bx tr:last-child td{border-bottom:0}
+.tdprops .tdc{color:var(--accent2);font-weight:800}
+.td-hit{color:var(--good);font-weight:800}
+.td-miss{color:var(--text-dim)}
+.rprior{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:9px 16px;border-top:1px solid var(--border);background:var(--bg-elev);font-size:.76rem;color:var(--text-dim)}
+.rprior .rpv{text-align:left}
+.rprior .rpv.rr{text-align:right}
+.rprior .rpl{text-align:center}
+@media(max-width:560px){.rprior{grid-template-columns:1fr;gap:3px;text-align:center}
+  .rprior .rpv,.rprior .rpv.rr,.rprior .rpl{text-align:center}.rprior .rpl{order:-1}}
 .rpl{font-weight:800;text-transform:uppercase;letter-spacing:.07em;font-size:.62rem}
 .rr{justify-content:flex-end;text-align:right}
 .vs td.lead{color:var(--accent2);font-weight:800}
@@ -436,7 +519,7 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
     <div class="box"><span class="lbl">Spread</span><span class="val">${esc(spread)}</span></div>
     <div class="box"><span class="lbl">Total</span><span class="val">${v(m.total_line)}</span></div>
   </section>
-  <div class="notice note">This is a pre-game analysis page. Every stat above the Final report comes from games played <b>before</b> this one${m.pregame_through_week?" (through Week "+m.pregame_through_week+")":""}, and Leo&rsquo;s numbers were frozen before kickoff. Market numbers are the closing line. Nothing here is a wager &mdash; the pick gate stays closed until Leo shows it can beat that line.</div>
+  <div class="notice note">This is a pre-game analysis page. Every stat above the Final result comes from games played <b>before</b> this one${m.pregame_through_week?" (through Week "+m.pregame_through_week+")":""}, and Leo&rsquo;s numbers were frozen before kickoff. Market numbers are the closing line. Nothing here is a wager &mdash; the pick gate stays closed until Leo shows it can beat that line.</div>
 
   ${leoSection(m)}
 
@@ -471,9 +554,7 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
   <p class="sub">The same players' full prior season, for a baseline the early-season sample cannot give you.</p>
   <div class="grid2">${sideBlock(A,"last_season",String(Number(m.date.slice(0,4))-1),pri&&pri.away)}${sideBlock(H,"last_season",String(Number(m.date.slice(0,4))-1),pri&&pri.home)}</div>
 
-  <h2 class="sec">Touchdown leaders</h2>
-  <p class="sub">Top three scrimmage touchdown scorers on each side this season, rushing and receiving.</p>
-  <div class="tdgrid">${scorers(A,m.date.slice(0,4))}${scorers(H,m.date.slice(0,4))}</div>
+  ${tdSection(m)}
 
   ${finalReport(m)}
 
