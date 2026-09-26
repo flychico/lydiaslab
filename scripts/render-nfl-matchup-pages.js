@@ -315,26 +315,31 @@ function finalReport(m){
   const F=m.final_report; if(!F) return "";
   const ml=F.moneyline, tp=F.total_pick, sp=F.spread;
   const off=(leo,act)=>leo==null||act==null?"":`<span class="mut">off by ${r1(Math.abs(act-leo))}</span>`;
-  const row=(label,leo,actual,verd)=>`<tr><td>${label}</td><td>${leo}</td><td><b>${actual}</b></td><td>${verd}</td></tr>`;
+  const row=(label,leo,line,actual,verd)=>`<tr><td>${label}</td><td>${leo}</td><td>${line}</td><td><b>${actual}</b></td><td>${verd}</td></tr>`;
   const rows=[
-    ml?row("Winner", esc(ml.side)+" "+pct(ml.leo), esc(ml.actual)+" won",
+    ml?row("Winner", esc(ml.side)+" "+pct(ml.leo), "&mdash;", esc(ml.actual)+" won",
            ml.result===""?'<span class="vd p">NO PICK &middot; too close to call</span>':verdict(ml.result)):"",
-    tp?row("Total points", v(tp.leo), v(tp.actual), off(tp.leo,tp.actual)):"",
-    sp?row("Margin", esc(fav(m,sp.leo)), esc(fav(m,Number(sp.actual))), off(sp.leo,Number(sp.actual))):""
+    tp?row("Total points", v(tp.leo), v(tp.market), v(tp.actual),
+           tp.side?`${esc(String(tp.side).toUpperCase())} &middot; ${verdict(tp.result)}`:'<span class="mut">no side &middot; within 1.5 pts</span>'):"",
+    sp?row("Margin", esc(fav(m,sp.leo)), esc(lineTxt(m,sp.market)), esc(fav(m,Number(sp.actual))),
+           sp.side?`${esc(sideLine(m,sp.side,sp.market))} &middot; ${verdict(sp.result)}`:'<span class="mut">no side &middot; within 1 pt</span>'):""
   ].join("");
-  const games=`<div class="fxw"><table class="fx"><thead><tr><th>Market</th><th>Leo expected</th><th>Actual</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  const games=`<div class="fxw"><table class="fx"><thead><tr><th>Market</th><th>Leo expected</th><th>Line</th><th>Actual</th><th>Leo&rsquo;s side and result</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 
   const byMk={};
   for(const p of (F.props||[])) (byMk[p.market]=byMk[p.market]||[]).push(p);
   const props=Object.keys(MK).filter(k=>byMk[k]).map(k=>{
     const [label]=MK[k];
     return `<h3 class="sec3">${label}</h3>
-    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Leo</th><th>Actual</th><th>Off by</th><th>Main reason</th></tr></thead><tbody>`+
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Line</th><th>Leo</th><th>Side</th><th>Actual</th><th>Off by</th><th>Main reason</th><th>Result</th></tr></thead><tbody>`+
     byMk[k].sort((a,b)=>Math.abs(b.actual-b.projection)-Math.abs(a.actual-a.projection)).map(p=>`<tr>
       <td><b>${esc(p.player)}</b> <span class="mut">${esc(p.team)}</span></td>
-      <td>${v(p.projection)}</td><td><b>${v(p.actual)}</b></td>
+      <td>${v(p.line)}</td><td>${v(p.projection)}</td>
+      <td>${p.lean?esc(String(p.lean).toUpperCase()):'<span class="mut">no side</span>'}</td>
+      <td><b>${v(p.actual)}</b></td>
       <td>${p.projection==null||p.actual==null?"":r1(Math.abs(p.actual-p.projection))}</td>
-      <td class="why">${why(p)}</td></tr>`).join("")+`</tbody></table></div>`;
+      <td class="why">${why(p)}</td>
+      <td>${p.line==null?"":(p.lean?verdict(p.result):noLean)}</td></tr>`).join("")+`</tbody></table></div>`;
   }).join("");
 
   return `
@@ -344,7 +349,7 @@ function finalReport(m){
       &ndash; <b>${F.home_score}</b> ${esc(m.home)} <img src="/img/nfl/${encodeURIComponent(m.home)}.png" alt="">${F.overtime?' <span class="mut">(OT)</span>':""}</p>
     ${boxScore(F)}
     <h3 class="sec3">How Leo&rsquo;s read held up</h3>
-    <p class="sub">What Leo expected before kickoff and what actually happened. A winner call is only made when one side is above 60%.</p>
+    <p class="sub">What Leo expected before kickoff, the posted number he was calling against, and what happened. A winner call is only made when one side is above 60%; a yardage or points call needs a real gap from the line before Leo takes a side.</p>
     ${F.graded?games:'<p class="sub">Grading runs the morning after the game; the comparison appears once it has.</p>'}
     ${props?`<p class="sub" style="margin-top:14px">&ldquo;Main reason&rdquo; names which of Leo&rsquo;s two inputs was further off &mdash; how much the player was used, or how efficient he was when he was.</p>`+props:""}
   </section>`;

@@ -53,8 +53,8 @@ table.calls tbody tr:hover{background:var(--bg-elev);}
 .ok{color:var(--good);font-weight:800;}
 .no{color:var(--danger);font-weight:800;}
 
-.tag-beat{display:inline-block;padding:1px 7px;border-radius:999px;font-size:.68rem;font-weight:800;
-  letter-spacing:.04em;background:rgba(201,168,76,.18);color:var(--navy-deep);white-space:nowrap;}
+.side-tag{display:inline-block;padding:1px 7px;border-radius:999px;font-size:.68rem;font-weight:800;
+  letter-spacing:.04em;background:var(--bg-elev);border:1px solid var(--border);color:var(--accent2);white-space:nowrap;}
 
 .res-cell{white-space:nowrap;}
 .res-cell b{display:block;color:var(--accent2);}
@@ -125,7 +125,7 @@ table.calls tbody tr:hover{background:var(--bg-elev);}
   <section class="score-hero">
     <p class="eyebrow">Every call, graded against what actually happened.</p>
     <h1>Leo&rsquo;s record</h1>
-    <p class="subtitle">Each row is one game: what Leo projected, what actually happened, and how far off he was. Nothing here is a wager &mdash; the pick gate is closed until the record says otherwise.</p>
+    <p class="subtitle">Each row is one game: the line, the side Leo took, what actually happened, and how far off his number was. Nothing here is a wager &mdash; the pick gate is closed until the record says otherwise.</p>
     <div class="score-hero-chips"><span class="hero-chip">&#127944; Head to head</span><span class="hero-chip">&#128202; Running record</span><span class="hero-chip">&#128274; Frozen before kickoff</span></div>
   </section>
 
@@ -150,7 +150,7 @@ table.calls tbody tr:hover{background:var(--bg-elev);}
   <div id="status" class="loading">Loading the tracker&hellip;</div>
   <section id="body" aria-live="polite"></section>
 
-  <p class="data-note">Every projection here was frozen before kickoff and graded against the open nflverse dataset. Touchdown markets are tracked separately on each game page.</p>
+  <p class="data-note">Lines are the last posted number before kickoff. Every projection was frozen before kickoff and graded against the open nflverse dataset. Touchdown markets are tracked separately on each game page.</p>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script>
@@ -227,17 +227,12 @@ function tallyFor(rows){
    win-loss is how often Leo's call came in, average miss is how close his
    number was in the markets where "right" is a matter of degree. */
 function recTile(label,s,note){
-  if(s&&s.kind==="miss") return s.n
-    ? '<article class="rec"><span class="lab">'+esc(label)+'</span>'+
-      '<span class="big">'+s.mae.toFixed(1)+'</span>'+
-      '<span class="beat">yards off per projection &middot; '+s.n+' graded</span></article>'
-    : '<article class="rec"><span class="lab">'+esc(label)+'</span><span class="big">&mdash;</span>'+
-      '<span class="beat">nothing graded yet</span></article>';
   if(!s||!s.decided) return '<article class="rec"><span class="lab">'+esc(label)+'</span>'+
     '<span class="big">&mdash;</span><span class="beat">no graded calls yet</span></article>';
   return '<article class="rec"><span class="lab">'+esc(label)+'</span>'+
     '<span class="big">'+s.w+'&ndash;'+s.l+(s.p?'&ndash;'+s.p:'')+'</span>'+
     '<span class="beat">'+(s.win_pct!=null?s.win_pct.toFixed(0)+'% right':'')+
+      (s.mae!=null?' &middot; off by <b>'+s.mae.toFixed(1)+'</b> per projection':'')+
       (note?' &middot; '+note:'')+'</span></article>';
 }
 
@@ -246,14 +241,13 @@ function renderRecords(){
   // Always tallied here, never from summary: the feed's summary carries the
   // book comparison this page no longer shows.
   const all=data.props.filter(inWeek);
-  const miss=rows=>Object.assign(tallyFor(rows),{kind:"miss"});
-  const p = { all: miss(all),
-    QB: miss(all.filter(r=>r.group==="QB")),
-    RB: miss(all.filter(r=>r.group==="RB")),
-    WR: miss(all.filter(r=>r.group==="WR")) };
+  const p = { all: tallyFor(all),
+    QB: tallyFor(all.filter(r=>r.group==="QB")),
+    RB: tallyFor(all.filter(r=>r.group==="RB")),
+    WR: tallyFor(all.filter(r=>r.group==="WR")) };
   const m = tallyFor(data.games.filter(inWeek));
   recEl.innerHTML=
-    recTile("All projections",p.all)+
+    recTile("All calls",p.all)+
     recTile("Quarterbacks",p.QB)+
     recTile("Running backs",p.RB)+
     recTile("Receivers",p.WR)+
@@ -271,17 +265,20 @@ const cls=r=>r==="W"?"ok":r==="L"?"no":"dim";
 const mark=r=>r==="W"?"&#10004;":r==="L"?"&#10008;":"&#8213;";
 
 function callLine(c){
-  // Only a winner call is right or wrong on its own terms. A yardage
-  // projection is a number, so it shows how far off it landed instead.
-  const flag = c.group==="ML" ? '<span class="'+cls(c.result)+'">'+mark(c.result)+'</span> ' : '';
-  return '<div class="call">'+flag+c.html+'</div>';
+  return '<div class="call"><span class="'+cls(c.result)+'">'+mark(c.result)+'</span> '+c.html+'</div>';
 }
 
 function propCall(p){
+  /* The line is the question being asked, not a comparison: without it there
+     is no over or under and nothing to be right or wrong about. What stays
+     out is ranking Leo's accuracy against the book's. */
   const miss=(typeof p.err==="number")?Math.round(Math.abs(p.err)):null;
+  const side=p.lean?'<span class="side-tag">'+esc(String(p.lean).toUpperCase())+'</span> ':'';
   return { result:p.result, group:p.group, html:
-    '<b>'+esc(p.group)+'</b> '+esc(p.player)+' &middot; Leo <b>'+p.leo+'</b> &middot; actual <b>'+p.actual+'</b> '+esc(p.unit||"")+
-    (miss!=null?' <span class="dim">(off by '+miss+')</span>':'') };
+    '<b>'+esc(p.group)+'</b> '+esc(p.player)+' '+side+esc(String(p.line))+
+    ' <span class="dim">&middot; Leo '+p.leo+'</span> &middot; actual <b>'+p.actual+'</b> '+esc(p.unit||"")+
+    (miss!=null?' <span class="dim">(off by '+miss+')</span>':'')+
+    (p.result?' &middot; <span class="'+cls(p.result)+'">'+(p.result==="P"?"PUSH":p.result==="W"?"RIGHT":"WRONG")+'</span>':'') };
 }
 
 function mlCall(g){
@@ -316,9 +313,8 @@ function groupGames(){
 function gameRow(e){
   // Only the winner call has a right/wrong of its own; a per-game "5-4" was
   // counting yardage projections against a line this page no longer shows.
-  const ml=e.calls.find(c=>c.group==="ML");
-  const verdict=ml&&ml.result==="W"?'<span class="small ok">winner right</span>'
-              :ml&&ml.result==="L"?'<span class="small no">winner wrong</span>':"";
+  const w=e.calls.filter(c=>c.result==="W").length, l=e.calls.filter(c=>c.result==="L").length;
+  const verdict='<span class="small dim">calls '+w+'&ndash;'+l+'</span>';
   const order={ML:0,QB:1,RB:2,WR:3};
   const calls=e.calls.slice().sort((a,b)=>(order[a.group]??9)-(order[b.group]??9));
   return '<tr>'+
@@ -346,8 +342,8 @@ function render(){
   const warn=n<400
     ? '<div class="honest"><b>'+n+' graded calls so far, through '+esc(data.through||"")+'.</b> '+
       'That is far too few to mean anything &mdash; a 60% stretch over this many decisions happens by chance often enough '+
-      'to be unremarkable. The numbers worth watching are the win-loss on winners and <b>how far off</b> the yardage '+
-      'projections land. No pick is published until those hold up across a real sample.</div>'
+      'to be unremarkable. Watch two things: how often the side was right, and <b>how far off</b> the projection landed. '+
+      'No pick is published until those hold up across a real sample.</div>'
     : "";
 
   bodyEl.innerHTML=warn+coverage+
