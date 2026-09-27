@@ -12,7 +12,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BAL vs DAL — Stats, Odds and Matchup | Leo</title>
-<meta name="description" content="BAL at DAL on 2026-09-27: starting quarterbacks, running backs, top receivers and touchdown leaders for this season and last, with the closing market numbers.">
+<meta name="description" content="BAL at DAL on 2026-09-27: starting quarterbacks, running backs, top receivers and touchdown props for this game and last, with the closing market numbers.">
 <link rel="canonical" href="https://ndhorizon.com/nfl/bal-vs-dal-prediction-odds-2026-09-27/">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Leo">
@@ -86,7 +86,22 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
 .rbar i{display:block;height:100%}
 .rbar .ra{background:var(--accent2);margin-right:auto}
 .rbar .rh{background:var(--accent)}
-.rprior{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 16px;border-top:1px solid var(--border);background:var(--bg-elev);font-size:.76rem;color:var(--text-dim)}
+.bxgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:10px 0 6px}
+@media(max-width:760px){.bxgrid{grid-template-columns:1fr}}
+.bxcard{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+table.bx{width:100%;border-collapse:collapse;font-size:.85rem}
+table.bx td{padding:7px 10px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums}
+table.bx td.bxp{text-align:left;white-space:normal}
+table.bx tr:last-child td{border-bottom:0}
+.tdprops .tdc{color:var(--accent2);font-weight:800}
+.td-hit{color:var(--good);font-weight:800}
+.td-miss{color:var(--text-dim)}
+.rprior{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:9px 16px;border-top:1px solid var(--border);background:var(--bg-elev);font-size:.76rem;color:var(--text-dim)}
+.rprior .rpv{text-align:left}
+.rprior .rpv.rr{text-align:right}
+.rprior .rpl{text-align:center}
+@media(max-width:560px){.rprior{grid-template-columns:1fr;gap:3px;text-align:center}
+  .rprior .rpv,.rprior .rpv.rr,.rprior .rpl{text-align:center}.rprior .rpl{order:-1}}
 .rpl{font-weight:800;text-transform:uppercase;letter-spacing:.07em;font-size:.62rem}
 .rr{justify-content:flex-end;text-align:right}
 .vs td.lead{color:var(--accent2);font-weight:800}
@@ -142,22 +157,61 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
   </section>
 
   <section class="mkt">
-    <div class="box"><span class="lbl">BAL moneyline</span><span class="val">-155</span></div>
-    <div class="box"><span class="lbl">DAL moneyline</span><span class="val">+130</span></div>
-    <div class="box"><span class="lbl">Spread</span><span class="val">BAL -3</span></div>
-    <div class="box"><span class="lbl">Total</span><span class="val">52.5</span></div>
+    <div class="box"><span class="lbl">BAL moneyline</span><span class="val">-170</span></div>
+    <div class="box"><span class="lbl">DAL moneyline</span><span class="val">+142</span></div>
+    <div class="box"><span class="lbl">Spread</span><span class="val">BAL -3.5</span></div>
+    <div class="box"><span class="lbl">Total</span><span class="val">53.5</span></div>
   </section>
-  <div class="notice note">This is a pre-game analysis page. Every stat above the Final report comes from games played <b>before</b> this one (through Week 2), and Leo&rsquo;s numbers were frozen before kickoff. Market numbers are the closing line. Nothing here is a wager &mdash; the pick gate stays closed until Leo shows it can beat that line.</div>
+  <div class="notice note">This is a pre-game analysis page. Every stat above the Final result comes from games played <b>before</b> this one (through Week 2), and Leo&rsquo;s numbers were frozen before kickoff. Market numbers are the closing line. Nothing here is a wager &mdash; the pick gate stays closed until Leo shows it can beat that line.</div>
 
   
   <h2 class="sec">Leo&rsquo;s read</h2>
-  <p class="sub">What the model expected, frozen before kickoff (Sep 21, 12:50 PM ET). Each player projection is rate &times; volume &times; opponent adjustment &mdash; the columns show every input. None of this is a wager.</p>
+  <p class="sub">What the model expected, frozen before kickoff (Sep 27, 8:07 AM ET). Each player projection is rate &times; volume &times; opponent adjustment &mdash; the columns show every input. None of this is a wager.</p>
   
   <div class="leo-grid">
-    <div class="box"><span class="lbl">Leo pick</span><span class="val">Too Close to Call</span><span class="lbl2">leans DAL 51% &middot; market 42%</span></div>
-    <div class="box"><span class="lbl">Leo total</span><span class="val">51.5</span><span class="lbl2">line 52.5 &middot; leans Under</span></div>
-    <div class="box"><span class="lbl">Leo spread</span><span class="val">BAL by 0.1</span><span class="lbl2">line BAL −3 &middot; leans DAL</span></div>
-  </div>
+    <div class="box"><span class="lbl">Leo pick</span><span class="val">Too Close to Call</span><span class="lbl2">leans DAL 51%, under the 60% bar</span></div>
+    <div class="box"><span class="lbl">Leo total</span><span class="val">51.5</span><span class="lbl2">points, both teams</span></div>
+    <div class="box"><span class="lbl">Leo margin</span><span class="val">BAL by 0.1</span><span class="lbl2">expected winning margin</span></div>
+  </div><h3 class="sec3">Passing yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>yds/att</th><th>att</th><th>opp adj</th><th>games</th><th>Leo</th></tr></thead><tbody><tr>
+      <td><b>Dak Prescott</b> <span class="mut">DAL QB1</span></td>
+      <td>7.3</td><td>34.7</td><td>1</td><td>2</td>
+      <td><b>239</b></td></tr><tr>
+      <td><b>Lamar Jackson</b> <span class="mut">BAL QB1</span></td>
+      <td>9.1</td><td>26.7</td><td>1</td><td>2</td>
+      <td><b>233</b></td></tr></tbody></table></div><h3 class="sec3">Rushing yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>yds/carry</th><th>car</th><th>opp adj</th><th>games</th><th>Leo</th></tr></thead><tbody><tr>
+      <td><b>Derrick Henry</b> <span class="mut">BAL RB1</span></td>
+      <td>5.2</td><td>19</td><td>1.2</td><td>2</td>
+      <td><b>117</b></td></tr><tr>
+      <td><b>Javonte Williams</b> <span class="mut">DAL RB1</span></td>
+      <td>3.9</td><td>13.9</td><td>0.9</td><td>2</td>
+      <td><b>52</b></td></tr><tr>
+      <td><b>Emari Demercado</b> <span class="mut">DAL RB2</span></td>
+      <td>4.8</td><td>3.1</td><td>0.9</td><td>2</td>
+      <td><b>17</b></td></tr><tr>
+      <td><b>Justice Hill</b> <span class="mut">BAL RB2</span></td>
+      <td>3.1</td><td>2.9</td><td>1.2</td><td>2</td>
+      <td><b>14</b></td></tr></tbody></table></div><h3 class="sec3">Receiving yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>yds/tgt</th><th>tgt</th><th>opp adj</th><th>games</th><th>Leo</th></tr></thead><tbody><tr>
+      <td><b>Zay Flowers</b> <span class="mut">BAL WR1</span></td>
+      <td>17.8</td><td>7</td><td>1</td><td>1</td>
+      <td><b>122</b></td></tr><tr>
+      <td><b>CeeDee Lamb</b> <span class="mut">DAL WR1</span></td>
+      <td>10.2</td><td>8.8</td><td>1</td><td>2</td>
+      <td><b>86</b></td></tr><tr>
+      <td><b>George Pickens</b> <span class="mut">DAL WR2</span></td>
+      <td>7.5</td><td>7.6</td><td>1</td><td>2</td>
+      <td><b>55</b></td></tr><tr>
+      <td><b>Chris Moore</b> <span class="mut">BAL WR3</span></td>
+      <td>11.5</td><td>2.4</td><td>1</td><td>2</td>
+      <td><b>26</b></td></tr><tr>
+      <td><b>Ryan Flournoy</b> <span class="mut">DAL WR3</span></td>
+      <td>5.3</td><td>4.3</td><td>1</td><td>2</td>
+      <td><b>21</b></td></tr><tr>
+      <td><b>Rashod Bateman</b> <span class="mut">BAL WR2</span></td>
+      <td>5.2</td><td>3.6</td><td>1</td><td>2</td>
+      <td><b>17</b></td></tr></tbody></table></div>
 
   
   <h2 class="sec">Leo ratings &mdash; head to head</h2>
@@ -174,30 +228,30 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
     <span class="rv rva ">54</span>
     <span class="rlab">Quarterback<em>EPA, accuracy, giveaways</em></span>
     <span class="rv rvh lead">71</span>
-    <span class="rbar"><i class="ra" style="width:26.85%"></i><i class="rh" style="width:35.3%"></i></span>
+    <span class="rbar"><i class="ra" style="width:26.9%"></i><i class="rh" style="width:35.25%"></i></span>
   </div>
       <div class="rrow">
     <span class="rv rva ">61</span>
     <span class="rlab">Offense<em>efficiency, explosives, ball security</em></span>
     <span class="rv rvh lead">63</span>
-    <span class="rbar"><i class="ra" style="width:30.55%"></i><i class="rh" style="width:31.65%"></i></span>
+    <span class="rbar"><i class="ra" style="width:30.6%"></i><i class="rh" style="width:31.65%"></i></span>
   </div>
       <div class="rrow">
     <span class="rv rva lead">46</span>
     <span class="rlab">Defense<em>EPA allowed, pressure, takeaways</em></span>
     <span class="rv rvh ">23</span>
-    <span class="rbar"><i class="ra" style="width:23.2%"></i><i class="rh" style="width:11.4%"></i></span>
+    <span class="rbar"><i class="ra" style="width:23.1%"></i><i class="rh" style="width:11.65%"></i></span>
   </div>
       <div class="rrow">
     <span class="rv rva lead">54</span>
     <span class="rlab">Overall</span>
     <span class="rv rvh ">43</span>
-    <span class="rbar"><i class="ra" style="width:26.85%"></i><i class="rh" style="width:21.5%"></i></span>
+    <span class="rbar"><i class="ra" style="width:26.85%"></i><i class="rh" style="width:21.65%"></i></span>
   </div>
     </div>
     <div class="rprior">
-      <span class="rpl">Last season</span>
       <span class="rpv">QB 51 &middot; OFF 55 &middot; DEF 45</span>
+      <span class="rpl">Last season</span>
       <span class="rpv rr">QB 63 &middot; OFF 60 &middot; DEF 27</span>
     </div>
   </div>
@@ -388,37 +442,38 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
     </div>
   </div></div>
 
-  <h2 class="sec">Touchdown leaders</h2>
-  <p class="sub">Top three scrimmage touchdown scorers on each side this season, rushing and receiving.</p>
+  
+  <h2 class="sec">Touchdown props</h2>
+  <p class="sub">Leo&rsquo;s chance that each player scores a touchdown in this game &mdash; the three most likely on each side, from his last read before kickoff.</p>
   <div class="tdgrid"><div class="tdcard"><div class="td-head"><img src="/img/nfl/BAL.png" alt=""><b>BAL</b>
-      <span class="sc-season">2026</span></div>
-    <ol class="tdlist"><li><span class="tdn">Derrick Henry</span>
-      <span class="tdp">RB</span>
-      <span class="tdc">4</span>
-      <span class="tdd">4 rush &middot; 0 rec</span></li><li><span class="tdn">Lamar Jackson</span>
-      <span class="tdp">QB</span>
-      <span class="tdc">1</span>
-      <span class="tdd">1 rush &middot; 0 rec</span></li><li><span class="tdn">Rashod Bateman</span>
-      <span class="tdp">WR</span>
-      <span class="tdc">1</span>
-      <span class="tdd">0 rush &middot; 1 rec</span></li></ol></div><div class="tdcard"><div class="td-head"><img src="/img/nfl/DAL.png" alt=""><b>DAL</b>
-      <span class="sc-season">2026</span></div>
-    <ol class="tdlist"><li><span class="tdn">CeeDee Lamb</span>
-      <span class="tdp">WR</span>
-      <span class="tdc">3</span>
-      <span class="tdd">0 rush &middot; 3 rec</span></li><li><span class="tdn">Javonte Williams</span>
-      <span class="tdp">RB</span>
-      <span class="tdc">2</span>
-      <span class="tdd">1 rush &middot; 1 rec</span></li><li><span class="tdn">Jake Ferguson</span>
-      <span class="tdp">TE</span>
-      <span class="tdc">2</span>
-      <span class="tdd">0 rush &middot; 2 rec</span></li></ol></div></div>
+      <span class="sc-season">Leo&rsquo;s chance</span></div>
+    <ol class="tdlist tdprops"><li><span class="tdn">Derrick Henry</span>
+        <span class="tdp">RB1</span>
+        <span class="tdc">72%</span>
+        <span class="tdd"></span></li><li><span class="tdn">Zay Flowers</span>
+        <span class="tdp">WR1</span>
+        <span class="tdc">35%</span>
+        <span class="tdd"></span></li><li><span class="tdn">Rashod Bateman</span>
+        <span class="tdp">WR2</span>
+        <span class="tdc">26%</span>
+        <span class="tdd"></span></li></ol></div><div class="tdcard"><div class="td-head"><img src="/img/nfl/DAL.png" alt=""><b>DAL</b>
+      <span class="sc-season">Leo&rsquo;s chance</span></div>
+    <ol class="tdlist tdprops"><li><span class="tdn">CeeDee Lamb</span>
+        <span class="tdp">WR1</span>
+        <span class="tdc">48%</span>
+        <span class="tdd"></span></li><li><span class="tdn">Javonte Williams</span>
+        <span class="tdp">RB1</span>
+        <span class="tdc">41%</span>
+        <span class="tdd"></span></li><li><span class="tdn">George Pickens</span>
+        <span class="tdp">WR2</span>
+        <span class="tdc">26%</span>
+        <span class="tdd"></span></li></ol></div></div>
 
   
 
   <p class="data-note">Player and team statistics from the open nflverse dataset. Roles assigned by actual usage &mdash; most attempts, carries and targets &mdash; not depth chart.</p>
 </main>
-<footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/articles/"); renderFooter();</script>
-
+<footer id="footer"></footer><script src="/js/app.js"></script>
+<script>renderNav("/nfl/scoreboard/"); renderFooter();</script>
 </body>
 </html>
