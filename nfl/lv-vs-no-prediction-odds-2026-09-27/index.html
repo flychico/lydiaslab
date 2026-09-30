@@ -12,7 +12,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LV vs NO — Stats, Odds and Matchup | Leo</title>
-<meta name="description" content="LV at NO on 2026-09-27: starting quarterbacks, running backs, top receivers and touchdown leaders for this season and last, with the closing market numbers.">
+<meta name="description" content="LV at NO on 2026-09-27: starting quarterbacks, running backs, top receivers and touchdown props for this game and last, with the closing market numbers.">
 <link rel="canonical" href="https://ndhorizon.com/nfl/lv-vs-no-prediction-odds-2026-09-27/">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Leo">
@@ -86,7 +86,22 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
 .rbar i{display:block;height:100%}
 .rbar .ra{background:var(--accent2);margin-right:auto}
 .rbar .rh{background:var(--accent)}
-.rprior{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 16px;border-top:1px solid var(--border);background:var(--bg-elev);font-size:.76rem;color:var(--text-dim)}
+.bxgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:10px 0 6px}
+@media(max-width:760px){.bxgrid{grid-template-columns:1fr}}
+.bxcard{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+table.bx{width:100%;border-collapse:collapse;font-size:.85rem}
+table.bx td{padding:7px 10px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums}
+table.bx td.bxp{text-align:left;white-space:normal}
+table.bx tr:last-child td{border-bottom:0}
+.tdprops .tdc{color:var(--accent2);font-weight:800}
+.td-hit{color:var(--good);font-weight:800}
+.td-miss{color:var(--text-dim)}
+.rprior{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:9px 16px;border-top:1px solid var(--border);background:var(--bg-elev);font-size:.76rem;color:var(--text-dim)}
+.rprior .rpv{text-align:left}
+.rprior .rpv.rr{text-align:right}
+.rprior .rpl{text-align:center}
+@media(max-width:560px){.rprior{grid-template-columns:1fr;gap:3px;text-align:center}
+  .rprior .rpv,.rprior .rpv.rr,.rprior .rpl{text-align:center}.rprior .rpl{order:-1}}
 .rpl{font-weight:800;text-transform:uppercase;letter-spacing:.07em;font-size:.62rem}
 .rr{justify-content:flex-end;text-align:right}
 .vs td.lead{color:var(--accent2);font-weight:800}
@@ -142,22 +157,61 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
   </section>
 
   <section class="mkt">
-    <div class="box"><span class="lbl">LV moneyline</span><span class="val">+145</span></div>
-    <div class="box"><span class="lbl">NO moneyline</span><span class="val">-175</span></div>
-    <div class="box"><span class="lbl">Spread</span><span class="val">NO -3</span></div>
+    <div class="box"><span class="lbl">LV moneyline</span><span class="val">+160</span></div>
+    <div class="box"><span class="lbl">NO moneyline</span><span class="val">-192</span></div>
+    <div class="box"><span class="lbl">Spread</span><span class="val">NO -3.5</span></div>
     <div class="box"><span class="lbl">Total</span><span class="val">43.5</span></div>
   </section>
-  <div class="notice note">This is a pre-game analysis page. Every stat above the Final report comes from games played <b>before</b> this one (through Week 2), and Leo&rsquo;s numbers were frozen before kickoff. Market numbers are the closing line. Nothing here is a wager &mdash; the pick gate stays closed until Leo shows it can beat that line.</div>
+  <div class="notice note">This is a pre-game analysis page. Every stat above the Final result comes from games played <b>before</b> this one (through Week 2), and Leo&rsquo;s numbers were frozen before kickoff. Market numbers are the closing line. Nothing here is a wager &mdash; the pick gate stays closed until Leo shows it can beat that line.</div>
 
   
   <h2 class="sec">Leo&rsquo;s read</h2>
-  <p class="sub">What the model expected, frozen before kickoff (Sep 21, 12:50 PM ET). Each player projection is rate &times; volume &times; opponent adjustment &mdash; the columns show every input. None of this is a wager.</p>
+  <p class="sub">What the model expected, frozen before kickoff (Sep 27, 3:50 PM ET). Each player projection is rate &times; volume &times; opponent adjustment &mdash; the columns show every input. None of this is a wager.</p>
   
   <div class="leo-grid">
-    <div class="box"><span class="lbl">Leo pick</span><span class="val">Too Close to Call</span><span class="lbl2">leans NO 59% &middot; market 61%</span></div>
-    <div class="box"><span class="lbl">Leo total</span><span class="val">43.6</span><span class="lbl2">line 43.5 &middot; leans Over</span></div>
-    <div class="box"><span class="lbl">Leo spread</span><span class="val">NO by 2.8</span><span class="lbl2">line NO −3 &middot; leans LV</span></div>
-  </div>
+    <div class="box"><span class="lbl">Leo pick</span><span class="val">Too Close to Call</span><span class="lbl2">leans NO 59%, under the 60% bar</span></div>
+    <div class="box"><span class="lbl">Leo total</span><span class="val">43.5</span><span class="lbl2">points, both teams</span></div>
+    <div class="box"><span class="lbl">Leo margin</span><span class="val">NO by 2.8</span><span class="lbl2">expected winning margin</span></div>
+  </div><h3 class="sec3">Passing yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>yds/att</th><th>att</th><th>opp adj</th><th>games</th><th>Leo</th></tr></thead><tbody><tr>
+      <td><b>Tyler Shough</b> <span class="mut">NO QB1</span></td>
+      <td>7.3</td><td>38.8</td><td>1</td><td>2</td>
+      <td><b>268</b></td></tr><tr>
+      <td><b>Kirk Cousins</b> <span class="mut">LV QB1</span></td>
+      <td>6.8</td><td>30.3</td><td>1</td><td>2</td>
+      <td><b>196</b></td></tr></tbody></table></div><h3 class="sec3">Rushing yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>yds/carry</th><th>car</th><th>opp adj</th><th>games</th><th>Leo</th></tr></thead><tbody><tr>
+      <td><b>Ashton Jeanty</b> <span class="mut">LV RB1</span></td>
+      <td>3.4</td><td>18.8</td><td>1.1</td><td>2</td>
+      <td><b>72</b></td></tr><tr>
+      <td><b>Kendre Miller</b> <span class="mut">NO RB1</span></td>
+      <td>3.8</td><td>7.9</td><td>1</td><td>1</td>
+      <td><b>32</b></td></tr><tr>
+      <td><b>Alvin Kamara</b> <span class="mut">NO RB2</span></td>
+      <td>2.6</td><td>10.5</td><td>1</td><td>1</td>
+      <td><b>29</b></td></tr><tr>
+      <td><b>Mike Washington Jr.</b> <span class="mut">LV RB2</span></td>
+      <td>4.1</td><td>5</td><td>1.1</td><td>2</td>
+      <td><b>25</b></td></tr></tbody></table></div><h3 class="sec3">Receiving yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>yds/tgt</th><th>tgt</th><th>opp adj</th><th>games</th><th>Leo</th></tr></thead><tbody><tr>
+      <td><b>Chris Olave</b> <span class="mut">NO WR1</span></td>
+      <td>9.6</td><td>10.5</td><td>1</td><td>2</td>
+      <td><b>96</b></td></tr><tr>
+      <td><b>Tre Tucker</b> <span class="mut">LV WR1</span></td>
+      <td>9.8</td><td>5.4</td><td>1</td><td>2</td>
+      <td><b>52</b></td></tr><tr>
+      <td><b>Devaughn Vele</b> <span class="mut">NO WR2</span></td>
+      <td>7.5</td><td>5.6</td><td>1</td><td>2</td>
+      <td><b>39</b></td></tr><tr>
+      <td><b>Jack Bech</b> <span class="mut">LV WR3</span></td>
+      <td>8.1</td><td>2.5</td><td>1</td><td>2</td>
+      <td><b>19</b></td></tr><tr>
+      <td><b>Jalen Nailor</b> <span class="mut">LV WR2</span></td>
+      <td>5.5</td><td>3.6</td><td>1</td><td>2</td>
+      <td><b>18</b></td></tr><tr>
+      <td><b>Bryce Lance</b> <span class="mut">NO WR3</span></td>
+      <td>9.3</td><td>2.2</td><td>1</td><td>2</td>
+      <td><b>18</b></td></tr></tbody></table></div>
 
   
   <h2 class="sec">Leo ratings &mdash; head to head</h2>
@@ -174,30 +228,30 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
     <span class="rv rva ">40</span>
     <span class="rlab">Quarterback<em>EPA, accuracy, giveaways</em></span>
     <span class="rv rvh lead">48</span>
-    <span class="rbar"><i class="ra" style="width:19.85%"></i><i class="rh" style="width:23.8%"></i></span>
+    <span class="rbar"><i class="ra" style="width:19.9%"></i><i class="rh" style="width:23.95%"></i></span>
   </div>
       <div class="rrow">
-    <span class="rv rva ">28</span>
+    <span class="rv rva ">29</span>
     <span class="rlab">Offense<em>efficiency, explosives, ball security</em></span>
     <span class="rv rvh lead">43</span>
-    <span class="rbar"><i class="ra" style="width:14.15%"></i><i class="rh" style="width:21.45%"></i></span>
+    <span class="rbar"><i class="ra" style="width:14.3%"></i><i class="rh" style="width:21.6%"></i></span>
   </div>
       <div class="rrow">
     <span class="rv rva lead">62</span>
     <span class="rlab">Defense<em>EPA allowed, pressure, takeaways</em></span>
-    <span class="rv rvh ">53</span>
-    <span class="rbar"><i class="ra" style="width:31.1%"></i><i class="rh" style="width:26.25%"></i></span>
+    <span class="rv rvh ">52</span>
+    <span class="rbar"><i class="ra" style="width:30.95%"></i><i class="rh" style="width:26.1%"></i></span>
   </div>
       <div class="rrow">
     <span class="rv rva ">45</span>
     <span class="rlab">Overall</span>
     <span class="rv rvh lead">48</span>
-    <span class="rbar"><i class="ra" style="width:22.6%"></i><i class="rh" style="width:23.85%"></i></span>
+    <span class="rbar"><i class="ra" style="width:22.65%"></i><i class="rh" style="width:23.85%"></i></span>
   </div>
     </div>
     <div class="rprior">
-      <span class="rpl">Last season</span>
       <span class="rpv">QB 31 &middot; OFF 21 &middot; DEF 47</span>
+      <span class="rpl">Last season</span>
       <span class="rpv rr">QB 45 &middot; OFF 36 &middot; DEF 59</span>
     </div>
   </div>
@@ -388,37 +442,145 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
     </div>
   </div></div>
 
-  <h2 class="sec">Touchdown leaders</h2>
-  <p class="sub">Top three scrimmage touchdown scorers on each side this season, rushing and receiving.</p>
+  
+  <h2 class="sec">Touchdown props</h2>
+  <p class="sub">Leo&rsquo;s chance that each player scores a touchdown in this game &mdash; the three most likely on each side, from his last read before kickoff.</p>
   <div class="tdgrid"><div class="tdcard"><div class="td-head"><img src="/img/nfl/LV.png" alt=""><b>LV</b>
-      <span class="sc-season">2026</span></div>
-    <ol class="tdlist"><li><span class="tdn">Cody White</span>
-      <span class="tdp">WR</span>
-      <span class="tdc">2</span>
-      <span class="tdd">0 rush &middot; 2 rec</span></li><li><span class="tdn">Ashton Jeanty</span>
-      <span class="tdp">RB</span>
-      <span class="tdc">2</span>
-      <span class="tdd">0 rush &middot; 2 rec</span></li><li><span class="tdn">Tre Tucker</span>
-      <span class="tdp">WR</span>
-      <span class="tdc">1</span>
-      <span class="tdd">0 rush &middot; 1 rec</span></li></ol></div><div class="tdcard"><div class="td-head"><img src="/img/nfl/NO.png" alt=""><b>NO</b>
-      <span class="sc-season">2026</span></div>
-    <ol class="tdlist"><li><span class="tdn">Tyler Shough</span>
-      <span class="tdp">QB</span>
-      <span class="tdc">1</span>
-      <span class="tdd">1 rush &middot; 0 rec</span></li><li><span class="tdn">Noah Fant</span>
-      <span class="tdp">TE</span>
-      <span class="tdc">1</span>
-      <span class="tdd">0 rush &middot; 1 rec</span></li><li><span class="tdn">Juwan Johnson</span>
-      <span class="tdp">TE</span>
-      <span class="tdc">1</span>
-      <span class="tdd">0 rush &middot; 1 rec</span></li></ol></div></div>
+      <span class="sc-season">Leo&rsquo;s chance</span></div>
+    <ol class="tdlist tdprops"><li><span class="tdn">Tre Tucker</span>
+        <span class="tdp">WR1</span>
+        <span class="tdc">30%</span>
+        <span class="tdd"><span class="td-miss">no TD</span></span></li><li><span class="tdn">Mike Washington Jr.</span>
+        <span class="tdp">RB2</span>
+        <span class="tdc">24%</span>
+        <span class="tdd"><span class="td-hit">scored</span></span></li><li><span class="tdn">Ashton Jeanty</span>
+        <span class="tdp">RB1</span>
+        <span class="tdc">20%</span>
+        <span class="tdd"><span class="td-miss">no TD</span></span></li></ol></div><div class="tdcard"><div class="td-head"><img src="/img/nfl/NO.png" alt=""><b>NO</b>
+      <span class="sc-season">Leo&rsquo;s chance</span></div>
+    <ol class="tdlist tdprops"><li><span class="tdn">Chris Olave</span>
+        <span class="tdp">WR1</span>
+        <span class="tdc">38%</span>
+        <span class="tdd"><span class="td-miss">no TD</span></span></li><li><span class="tdn">Kendre Miller</span>
+        <span class="tdp">RB1</span>
+        <span class="tdc">32%</span>
+        <span class="tdd"><span class="td-miss">no TD</span></span></li><li><span class="tdn">Devaughn Vele</span>
+        <span class="tdp">WR2</span>
+        <span class="tdc">28%</span>
+        <span class="tdd"><span class="td-miss">no TD</span></span></li></ol></div></div>
 
   
+  <section class="final">
+    <h2 class="sec">Final result</h2>
+    <p class="final-score"><img src="/img/nfl/LV.png" alt=""> LV <b>35</b>
+      &ndash; <b>27</b> NO <img src="/img/nfl/NO.png" alt=""></p>
+    <h3 class="sec3">How the game was played</h3>
+  <p class="sub">Quarterback, the backs who carried it and the receivers who caught it.</p>
+  <div class="bxgrid"><div class="bxcard"><div class="td-head"><img src="/img/nfl/LV.png" alt=""><b>LV</b></div>
+    <table class="bx"><tbody><tr><td class="bxp"><b>Kirk Cousins</b> <span class="mut">QB</span></td>
+    <td>22/33</td><td><b>248</b> yds</td><td>3 TD</td><td>0 INT</td></tr><tr><td class="bxp"><b>Ashton Jeanty</b> <span class="mut">RB</span></td>
+    <td>19 car</td><td><b>56</b> yds</td><td>0 TD</td><td>3 rec, 37 yds</td></tr><tr><td class="bxp"><b>Mike Washington Jr.</b> <span class="mut">RB</span></td>
+    <td>5 car</td><td><b>54</b> yds</td><td>1 TD</td><td></td></tr><tr><td class="bxp"><b>Brock Bowers</b> <span class="mut">TE</span></td>
+    <td>10/13</td><td><b>116</b> yds</td><td>1 TD</td><td></td></tr><tr><td class="bxp"><b>Tre Tucker</b> <span class="mut">WR</span></td>
+    <td>4/4</td><td><b>43</b> yds</td><td>0 TD</td><td></td></tr><tr><td class="bxp"><b>Ashton Jeanty</b> <span class="mut">RB</span></td>
+    <td>3/3</td><td><b>37</b> yds</td><td>0 TD</td><td></td></tr></tbody></table></div><div class="bxcard"><div class="td-head"><img src="/img/nfl/NO.png" alt=""><b>NO</b></div>
+    <table class="bx"><tbody><tr><td class="bxp"><b>Tyler Shough</b> <span class="mut">QB</span></td>
+    <td>29/42</td><td><b>255</b> yds</td><td>4 TD</td><td>1 INT</td></tr><tr><td class="bxp"><b>Travis Etienne</b> <span class="mut">RB</span></td>
+    <td>13 car</td><td><b>57</b> yds</td><td>0 TD</td><td>2 rec, 13 yds</td></tr><tr><td class="bxp"><b>Alvin Kamara</b> <span class="mut">RB</span></td>
+    <td>9 car</td><td><b>36</b> yds</td><td>0 TD</td><td>1 rec, 5 yds</td></tr><tr><td class="bxp"><b>Kendre Miller</b> <span class="mut">RB</span></td>
+    <td>4 car</td><td><b>14</b> yds</td><td>0 TD</td><td>2 rec, 5 yds</td></tr><tr><td class="bxp"><b>Chris Olave</b> <span class="mut">WR</span></td>
+    <td>9/13</td><td><b>107</b> yds</td><td>0 TD</td><td></td></tr><tr><td class="bxp"><b>Juwan Johnson</b> <span class="mut">TE</span></td>
+    <td>8/8</td><td><b>53</b> yds</td><td>2 TD</td><td></td></tr><tr><td class="bxp"><b>Devaughn Vele</b> <span class="mut">WR</span></td>
+    <td>3/6</td><td><b>39</b> yds</td><td>0 TD</td><td></td></tr></tbody></table></div></div>
+    <h3 class="sec3">How Leo&rsquo;s read held up</h3>
+    <p class="sub">What Leo expected before kickoff, the posted number he was calling against, and what happened. A winner call is only made when one side is above 60%; a yardage or points call needs a real gap from the line before Leo takes a side.</p>
+    <div class="fxw"><table class="fx"><thead><tr><th>Market</th><th>Leo expected</th><th>Line</th><th>Actual</th><th>Leo&rsquo;s side and result</th></tr></thead><tbody><tr><td>Winner</td><td>NO 59%</td><td>&mdash;</td><td><b>LV won</b></td><td><span class="vd p">NO PICK &middot; too close to call</span></td></tr><tr><td>Total points</td><td>43.5</td><td>43.5</td><td><b>62</b></td><td><span class="mut">no side &middot; within 1.5 pts</span></td></tr><tr><td>Margin</td><td>NO by 2.8</td><td>NO −3.5</td><td><b>LV by 8</b></td><td><span class="mut">no side &middot; within 1 pt</span></td></tr></tbody></table></div>
+    <p class="sub" style="margin-top:14px">&ldquo;Main reason&rdquo; names which of Leo&rsquo;s two inputs was further off &mdash; how much the player was used, or how efficient he was when he was.</p><h3 class="sec3">Passing yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Line</th><th>Leo</th><th>Side</th><th>Actual</th><th>Off by</th><th>Main reason</th><th>Result</th></tr></thead><tbody><tr>
+      <td><b>Kirk Cousins</b> <span class="mut">LV</span></td>
+      <td>211.5</td><td>196</td>
+      <td>UNDER</td>
+      <td><b>248</b></td>
+      <td>52</td>
+      <td class="why">More efficient (7.5 vs 6.8 yds/att)</td>
+      <td><span class="vd l">WRONG</span></td></tr><tr>
+      <td><b>Tyler Shough</b> <span class="mut">NO</span></td>
+      <td>253.5</td><td>268</td>
+      <td>OVER</td>
+      <td><b>255</b></td>
+      <td>13</td>
+      <td class="why"><span class="mut">On target</span></td>
+      <td><span class="vd w">RIGHT</span></td></tr></tbody></table></div><h3 class="sec3">Rushing yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Line</th><th>Leo</th><th>Side</th><th>Actual</th><th>Off by</th><th>Main reason</th><th>Result</th></tr></thead><tbody><tr>
+      <td><b>Mike Washington Jr.</b> <span class="mut">LV</span></td>
+      <td>15.5</td><td>25</td>
+      <td>OVER</td>
+      <td><b>54</b></td>
+      <td>29</td>
+      <td class="why">More efficient (10.8 vs 4.1 yds/carry)</td>
+      <td><span class="vd w">RIGHT</span></td></tr><tr>
+      <td><b>Kendre Miller</b> <span class="mut">NO</span></td>
+      <td>—</td><td>32</td>
+      <td><span class="mut">no side</span></td>
+      <td><b>14</b></td>
+      <td>18</td>
+      <td class="why">Fewer carries (4 vs 7.9 expected)</td>
+      <td></td></tr><tr>
+      <td><b>Ashton Jeanty</b> <span class="mut">LV</span></td>
+      <td>68.5</td><td>72</td>
+      <td>OVER</td>
+      <td><b>56</b></td>
+      <td>16</td>
+      <td class="why">Less efficient (2.9 vs 3.4 yds/carry)</td>
+      <td><span class="vd l">WRONG</span></td></tr><tr>
+      <td><b>Alvin Kamara</b> <span class="mut">NO</span></td>
+      <td>24.5</td><td>29</td>
+      <td>OVER</td>
+      <td><b>36</b></td>
+      <td>7</td>
+      <td class="why"><span class="mut">On target</span></td>
+      <td><span class="vd w">RIGHT</span></td></tr></tbody></table></div><h3 class="sec3">Receiving yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Line</th><th>Leo</th><th>Side</th><th>Actual</th><th>Off by</th><th>Main reason</th><th>Result</th></tr></thead><tbody><tr>
+      <td><b>Bryce Lance</b> <span class="mut">NO</span></td>
+      <td>15.5</td><td>18</td>
+      <td>OVER</td>
+      <td><b>0</b></td>
+      <td>18</td>
+      <td class="why">Less efficient (0 vs 9.3 yds/tgt)</td>
+      <td><span class="vd l">WRONG</span></td></tr><tr>
+      <td><b>Chris Olave</b> <span class="mut">NO</span></td>
+      <td>76.5</td><td>96</td>
+      <td>OVER</td>
+      <td><b>107</b></td>
+      <td>11</td>
+      <td class="why">More targets (13 vs 10.5 expected)</td>
+      <td><span class="vd w">RIGHT</span></td></tr><tr>
+      <td><b>Tre Tucker</b> <span class="mut">LV</span></td>
+      <td>41.5</td><td>52</td>
+      <td>OVER</td>
+      <td><b>43</b></td>
+      <td>9</td>
+      <td class="why">Fewer targets (4 vs 5.4 expected)</td>
+      <td><span class="vd w">RIGHT</span></td></tr><tr>
+      <td><b>Jalen Nailor</b> <span class="mut">LV</span></td>
+      <td>24.5</td><td>18</td>
+      <td>UNDER</td>
+      <td><b>16</b></td>
+      <td>2</td>
+      <td class="why"><span class="mut">On target</span></td>
+      <td><span class="vd w">RIGHT</span></td></tr><tr>
+      <td><b>Devaughn Vele</b> <span class="mut">NO</span></td>
+      <td>50.5</td><td>39</td>
+      <td>UNDER</td>
+      <td><b>39</b></td>
+      <td>0</td>
+      <td class="why"><span class="mut">On target</span></td>
+      <td><span class="vd w">RIGHT</span></td></tr></tbody></table></div>
+  </section>
 
   <p class="data-note">Player and team statistics from the open nflverse dataset. Roles assigned by actual usage &mdash; most attempts, carries and targets &mdash; not depth chart.</p>
 </main>
-<footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/articles/"); renderFooter();</script>
-
+<footer id="footer"></footer><script src="/js/app.js"></script>
+<script>renderNav("/nfl/scoreboard/"); renderFooter();</script>
 </body>
 </html>

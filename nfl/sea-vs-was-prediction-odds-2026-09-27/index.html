@@ -12,7 +12,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SEA vs WAS — Stats, Odds and Matchup | Leo</title>
-<meta name="description" content="SEA at WAS on 2026-09-27: starting quarterbacks, running backs, top receivers and touchdown leaders for this season and last, with the closing market numbers.">
+<meta name="description" content="SEA at WAS on 2026-09-27: starting quarterbacks, running backs, top receivers and touchdown props for this game and last, with the closing market numbers.">
 <link rel="canonical" href="https://ndhorizon.com/nfl/sea-vs-was-prediction-odds-2026-09-27/">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Leo">
@@ -86,7 +86,22 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
 .rbar i{display:block;height:100%}
 .rbar .ra{background:var(--accent2);margin-right:auto}
 .rbar .rh{background:var(--accent)}
-.rprior{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 16px;border-top:1px solid var(--border);background:var(--bg-elev);font-size:.76rem;color:var(--text-dim)}
+.bxgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:10px 0 6px}
+@media(max-width:760px){.bxgrid{grid-template-columns:1fr}}
+.bxcard{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+table.bx{width:100%;border-collapse:collapse;font-size:.85rem}
+table.bx td{padding:7px 10px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums}
+table.bx td.bxp{text-align:left;white-space:normal}
+table.bx tr:last-child td{border-bottom:0}
+.tdprops .tdc{color:var(--accent2);font-weight:800}
+.td-hit{color:var(--good);font-weight:800}
+.td-miss{color:var(--text-dim)}
+.rprior{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:9px 16px;border-top:1px solid var(--border);background:var(--bg-elev);font-size:.76rem;color:var(--text-dim)}
+.rprior .rpv{text-align:left}
+.rprior .rpv.rr{text-align:right}
+.rprior .rpl{text-align:center}
+@media(max-width:560px){.rprior{grid-template-columns:1fr;gap:3px;text-align:center}
+  .rprior .rpv,.rprior .rpv.rr,.rprior .rpl{text-align:center}.rprior .rpl{order:-1}}
 .rpl{font-weight:800;text-transform:uppercase;letter-spacing:.07em;font-size:.62rem}
 .rr{justify-content:flex-end;text-align:right}
 .vs td.lead{color:var(--accent2);font-weight:800}
@@ -142,22 +157,61 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
   </section>
 
   <section class="mkt">
-    <div class="box"><span class="lbl">SEA moneyline</span><span class="val">-290</span></div>
-    <div class="box"><span class="lbl">WAS moneyline</span><span class="val">+235</span></div>
-    <div class="box"><span class="lbl">Spread</span><span class="val">SEA -6.5</span></div>
-    <div class="box"><span class="lbl">Total</span><span class="val">39.5</span></div>
+    <div class="box"><span class="lbl">SEA moneyline</span><span class="val">-410</span></div>
+    <div class="box"><span class="lbl">WAS moneyline</span><span class="val">+320</span></div>
+    <div class="box"><span class="lbl">Spread</span><span class="val">SEA -8.5</span></div>
+    <div class="box"><span class="lbl">Total</span><span class="val">40.5</span></div>
   </section>
-  <div class="notice note">This is a pre-game analysis page. Every stat above the Final report comes from games played <b>before</b> this one (through Week 2), and Leo&rsquo;s numbers were frozen before kickoff. Market numbers are the closing line. Nothing here is a wager &mdash; the pick gate stays closed until Leo shows it can beat that line.</div>
+  <div class="notice note">This is a pre-game analysis page. Every stat above the Final result comes from games played <b>before</b> this one (through Week 2), and Leo&rsquo;s numbers were frozen before kickoff. Market numbers are the closing line. Nothing here is a wager &mdash; the pick gate stays closed until Leo shows it can beat that line.</div>
 
   
   <h2 class="sec">Leo&rsquo;s read</h2>
-  <p class="sub">What the model expected, frozen before kickoff (Sep 21, 12:50 PM ET). Each player projection is rate &times; volume &times; opponent adjustment &mdash; the columns show every input. None of this is a wager.</p>
+  <p class="sub">What the model expected, frozen before kickoff (Sep 27, 8:07 AM ET). Each player projection is rate &times; volume &times; opponent adjustment &mdash; the columns show every input. None of this is a wager.</p>
   
   <div class="leo-grid">
-    <div class="box"><span class="lbl">Leo pick</span><span class="val">SEA 65%</span><span class="lbl2">market 71%</span></div>
-    <div class="box"><span class="lbl">Leo total</span><span class="val">44.6</span><span class="lbl2">line 39.5 &middot; leans Over</span></div>
-    <div class="box"><span class="lbl">Leo spread</span><span class="val">SEA by 14</span><span class="lbl2">line SEA −6.5 &middot; leans SEA</span></div>
-  </div>
+    <div class="box"><span class="lbl">Leo pick</span><span class="val">SEA 65%</span><span class="lbl2">above the 60% bar</span></div>
+    <div class="box"><span class="lbl">Leo total</span><span class="val">44.6</span><span class="lbl2">points, both teams</span></div>
+    <div class="box"><span class="lbl">Leo margin</span><span class="val">SEA by 14</span><span class="lbl2">expected winning margin</span></div>
+  </div><h3 class="sec3">Passing yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>yds/att</th><th>att</th><th>opp adj</th><th>games</th><th>Leo</th></tr></thead><tbody><tr>
+      <td><b>Drew Lock</b> <span class="mut">SEA QB1</span></td>
+      <td>7.8</td><td>27.7</td><td>1</td><td>2</td>
+      <td><b>213</b></td></tr><tr>
+      <td><b>Marcus Mariota</b> <span class="mut">WAS QB1</span></td>
+      <td>7.4</td><td>24.3</td><td>0.9</td><td>1</td>
+      <td><b>149</b></td></tr></tbody></table></div><h3 class="sec3">Rushing yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>yds/carry</th><th>car</th><th>opp adj</th><th>games</th><th>Leo</th></tr></thead><tbody><tr>
+      <td><b>Jadarian Price</b> <span class="mut">SEA RB2</span></td>
+      <td>4.6</td><td>11.5</td><td>1</td><td>2</td>
+      <td><b>54</b></td></tr><tr>
+      <td><b>Jacory Croskey-Merritt</b> <span class="mut">WAS RB1</span></td>
+      <td>4.2</td><td>12.1</td><td>0.9</td><td>2</td>
+      <td><b>51</b></td></tr><tr>
+      <td><b>Rachaad White</b> <span class="mut">WAS RB2</span></td>
+      <td>5</td><td>7.4</td><td>0.9</td><td>2</td>
+      <td><b>38</b></td></tr><tr>
+      <td><b>Emanuel Wilson</b> <span class="mut">SEA RB1</span></td>
+      <td>3.2</td><td>9.4</td><td>1</td><td>2</td>
+      <td><b>33</b></td></tr></tbody></table></div><h3 class="sec3">Receiving yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>yds/tgt</th><th>tgt</th><th>opp adj</th><th>games</th><th>Leo</th></tr></thead><tbody><tr>
+      <td><b>Jaxon Smith-Njigba</b> <span class="mut">SEA WR1</span></td>
+      <td>12</td><td>10.2</td><td>1</td><td>2</td>
+      <td><b>123</b></td></tr><tr>
+      <td><b>Stefon Diggs</b> <span class="mut">WAS WR1</span></td>
+      <td>8.2</td><td>6.2</td><td>0.9</td><td>2</td>
+      <td><b>43</b></td></tr><tr>
+      <td><b>Terry McLaurin</b> <span class="mut">WAS WR2</span></td>
+      <td>7.8</td><td>6.2</td><td>0.9</td><td>2</td>
+      <td><b>41</b></td></tr><tr>
+      <td><b>Cooper Kupp</b> <span class="mut">SEA WR3</span></td>
+      <td>10.9</td><td>3.6</td><td>1</td><td>2</td>
+      <td><b>38</b></td></tr><tr>
+      <td><b>Rashid Shaheed</b> <span class="mut">SEA WR2</span></td>
+      <td>5.1</td><td>4.5</td><td>1</td><td>2</td>
+      <td><b>22</b></td></tr><tr>
+      <td><b>Dyami Brown</b> <span class="mut">WAS WR3</span></td>
+      <td>3.3</td><td>3.1</td><td>0.9</td><td>2</td>
+      <td><b>8</b></td></tr></tbody></table></div>
 
   
   <h2 class="sec">Leo ratings &mdash; head to head</h2>
@@ -174,30 +228,30 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
     <span class="rv rva lead">68</span>
     <span class="rlab">Quarterback<em>EPA, accuracy, giveaways</em></span>
     <span class="rv rvh ">52</span>
-    <span class="rbar"><i class="ra" style="width:33.95%"></i><i class="rh" style="width:25.75%"></i></span>
+    <span class="rbar"><i class="ra" style="width:33.9%"></i><i class="rh" style="width:25.85%"></i></span>
   </div>
       <div class="rrow">
     <span class="rv rva lead">60</span>
     <span class="rlab">Offense<em>efficiency, explosives, ball security</em></span>
     <span class="rv rvh ">52</span>
-    <span class="rbar"><i class="ra" style="width:30.2%"></i><i class="rh" style="width:25.8%"></i></span>
+    <span class="rbar"><i class="ra" style="width:30.2%"></i><i class="rh" style="width:25.95%"></i></span>
   </div>
       <div class="rrow">
-    <span class="rv rva lead">77</span>
+    <span class="rv rva lead">76</span>
     <span class="rlab">Defense<em>EPA allowed, pressure, takeaways</em></span>
     <span class="rv rvh ">31</span>
-    <span class="rbar"><i class="ra" style="width:38.4%"></i><i class="rh" style="width:15.35%"></i></span>
+    <span class="rbar"><i class="ra" style="width:38%"></i><i class="rh" style="width:15.5%"></i></span>
   </div>
       <div class="rrow">
-    <span class="rv rva lead">69</span>
+    <span class="rv rva lead">68</span>
     <span class="rlab">Overall</span>
     <span class="rv rvh ">41</span>
-    <span class="rbar"><i class="ra" style="width:34.3%"></i><i class="rh" style="width:20.6%"></i></span>
+    <span class="rbar"><i class="ra" style="width:34.1%"></i><i class="rh" style="width:20.7%"></i></span>
   </div>
     </div>
     <div class="rprior">
-      <span class="rpl">Last season</span>
       <span class="rpv">QB 62 &middot; OFF 58 &middot; DEF 69</span>
+      <span class="rpl">Last season</span>
       <span class="rpv rr">QB 46 &middot; OFF 48 &middot; DEF 34</span>
     </div>
   </div>
@@ -388,34 +442,145 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
     </div>
   </div></div>
 
-  <h2 class="sec">Touchdown leaders</h2>
-  <p class="sub">Top three scrimmage touchdown scorers on each side this season, rushing and receiving.</p>
+  
+  <h2 class="sec">Touchdown props</h2>
+  <p class="sub">Leo&rsquo;s chance that each player scores a touchdown in this game &mdash; the three most likely on each side, from his last read before kickoff.</p>
   <div class="tdgrid"><div class="tdcard"><div class="td-head"><img src="/img/nfl/SEA.png" alt=""><b>SEA</b>
-      <span class="sc-season">2026</span></div>
-    <ol class="tdlist"><li><span class="tdn">Jaxon Smith-Njigba</span>
-      <span class="tdp">WR</span>
-      <span class="tdc">4</span>
-      <span class="tdd">0 rush &middot; 4 rec</span></li><li><span class="tdn">AJ Barner</span>
-      <span class="tdp">TE</span>
-      <span class="tdc">1</span>
-      <span class="tdd">1 rush &middot; 0 rec</span></li></ol></div><div class="tdcard"><div class="td-head"><img src="/img/nfl/WAS.png" alt=""><b>WAS</b>
-      <span class="sc-season">2026</span></div>
-    <ol class="tdlist"><li><span class="tdn">Stefon Diggs</span>
-      <span class="tdp">WR</span>
-      <span class="tdc">3</span>
-      <span class="tdd">0 rush &middot; 3 rec</span></li><li><span class="tdn">Jacory Croskey-Merritt</span>
-      <span class="tdp">RB</span>
-      <span class="tdc">1</span>
-      <span class="tdd">1 rush &middot; 0 rec</span></li><li><span class="tdn">Antonio Williams</span>
-      <span class="tdp">WR</span>
-      <span class="tdc">1</span>
-      <span class="tdd">0 rush &middot; 1 rec</span></li></ol></div></div>
+      <span class="sc-season">Leo&rsquo;s chance</span></div>
+    <ol class="tdlist tdprops"><li><span class="tdn">Jaxon Smith-Njigba</span>
+        <span class="tdp">WR1</span>
+        <span class="tdc">64%</span>
+        <span class="tdd"><span class="td-hit">scored 2</span></span></li><li><span class="tdn">Jadarian Price</span>
+        <span class="tdp">RB2</span>
+        <span class="tdc">22%</span>
+        <span class="tdd"><span class="td-miss">no TD</span></span></li><li><span class="tdn">Emanuel Wilson</span>
+        <span class="tdp">RB1</span>
+        <span class="tdc">14%</span>
+        <span class="tdd"><span class="td-miss">no TD</span></span></li></ol></div><div class="tdcard"><div class="td-head"><img src="/img/nfl/WAS.png" alt=""><b>WAS</b>
+      <span class="sc-season">Leo&rsquo;s chance</span></div>
+    <ol class="tdlist tdprops"><li><span class="tdn">Stefon Diggs</span>
+        <span class="tdp">WR1</span>
+        <span class="tdc">44%</span>
+        <span class="tdd"><span class="td-miss">no TD</span></span></li><li><span class="tdn">Jacory Croskey-Merritt</span>
+        <span class="tdp">RB1</span>
+        <span class="tdc">35%</span>
+        <span class="tdd"><span class="td-miss">no TD</span></span></li><li><span class="tdn">Terry McLaurin</span>
+        <span class="tdp">WR2</span>
+        <span class="tdc">16%</span>
+        <span class="tdd"><span class="td-hit">scored</span></span></li></ol></div></div>
 
   
+  <section class="final">
+    <h2 class="sec">Final result</h2>
+    <p class="final-score"><img src="/img/nfl/SEA.png" alt=""> SEA <b>31</b>
+      &ndash; <b>33</b> WAS <img src="/img/nfl/WAS.png" alt=""></p>
+    <h3 class="sec3">How the game was played</h3>
+  <p class="sub">Quarterback, the backs who carried it and the receivers who caught it.</p>
+  <div class="bxgrid"><div class="bxcard"><div class="td-head"><img src="/img/nfl/SEA.png" alt=""><b>SEA</b></div>
+    <table class="bx"><tbody><tr><td class="bxp"><b>Sam Darnold</b> <span class="mut">QB</span></td>
+    <td>31/45</td><td><b>379</b> yds</td><td>4 TD</td><td>2 INT</td></tr><tr><td class="bxp"><b>Emanuel Wilson</b> <span class="mut">RB</span></td>
+    <td>9 car</td><td><b>14</b> yds</td><td>0 TD</td><td></td></tr><tr><td class="bxp"><b>Jadarian Price</b> <span class="mut">RB</span></td>
+    <td>5 car</td><td><b>15</b> yds</td><td>0 TD</td><td>1 rec, 7 yds</td></tr><tr><td class="bxp"><b>George Holani</b> <span class="mut">RB</span></td>
+    <td>3 car</td><td><b>10</b> yds</td><td>0 TD</td><td>5 rec, 48 yds</td></tr><tr><td class="bxp"><b>Jaxon Smith-Njigba</b> <span class="mut">WR</span></td>
+    <td>10/14</td><td><b>128</b> yds</td><td>2 TD</td><td></td></tr><tr><td class="bxp"><b>AJ Barner</b> <span class="mut">TE</span></td>
+    <td>5/9</td><td><b>69</b> yds</td><td>0 TD</td><td></td></tr><tr><td class="bxp"><b>George Holani</b> <span class="mut">RB</span></td>
+    <td>5/5</td><td><b>48</b> yds</td><td>0 TD</td><td></td></tr></tbody></table></div><div class="bxcard"><div class="td-head"><img src="/img/nfl/WAS.png" alt=""><b>WAS</b></div>
+    <table class="bx"><tbody><tr><td class="bxp"><b>Marcus Mariota</b> <span class="mut">QB</span></td>
+    <td>19/31</td><td><b>183</b> yds</td><td>3 TD</td><td>0 INT</td></tr><tr><td class="bxp"><b>Jacory Croskey-Merritt</b> <span class="mut">RB</span></td>
+    <td>19 car</td><td><b>36</b> yds</td><td>0 TD</td><td>1 rec, 7 yds</td></tr><tr><td class="bxp"><b>Rachaad White</b> <span class="mut">RB</span></td>
+    <td>8 car</td><td><b>35</b> yds</td><td>0 TD</td><td>1 rec, 6 yds</td></tr><tr><td class="bxp"><b>Terry McLaurin</b> <span class="mut">WR</span></td>
+    <td>6/9</td><td><b>77</b> yds</td><td>1 TD</td><td></td></tr><tr><td class="bxp"><b>Stefon Diggs</b> <span class="mut">WR</span></td>
+    <td>4/7</td><td><b>33</b> yds</td><td>0 TD</td><td></td></tr><tr><td class="bxp"><b>Jaylin Lane</b> <span class="mut">WR</span></td>
+    <td>1/1</td><td><b>21</b> yds</td><td>0 TD</td><td></td></tr></tbody></table></div></div>
+    <h3 class="sec3">How Leo&rsquo;s read held up</h3>
+    <p class="sub">What Leo expected before kickoff, the posted number he was calling against, and what happened. A winner call is only made when one side is above 60%; a yardage or points call needs a real gap from the line before Leo takes a side.</p>
+    <div class="fxw"><table class="fx"><thead><tr><th>Market</th><th>Leo expected</th><th>Line</th><th>Actual</th><th>Leo&rsquo;s side and result</th></tr></thead><tbody><tr><td>Winner</td><td>SEA 65%</td><td>&mdash;</td><td><b>WAS won</b></td><td><span class="vd l">WRONG</span></td></tr><tr><td>Total points</td><td>44.6</td><td>40.5</td><td><b>64</b></td><td>OVER &middot; <span class="vd w">RIGHT</span></td></tr><tr><td>Margin</td><td>SEA by 14</td><td>SEA −8.5</td><td><b>WAS by 2</b></td><td>SEA −8.5 &middot; <span class="vd l">WRONG</span></td></tr></tbody></table></div>
+    <p class="sub" style="margin-top:14px">&ldquo;Main reason&rdquo; names which of Leo&rsquo;s two inputs was further off &mdash; how much the player was used, or how efficient he was when he was.</p><h3 class="sec3">Passing yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Line</th><th>Leo</th><th>Side</th><th>Actual</th><th>Off by</th><th>Main reason</th><th>Result</th></tr></thead><tbody><tr>
+      <td><b>Marcus Mariota</b> <span class="mut">WAS</span></td>
+      <td>173.5</td><td>149</td>
+      <td>UNDER</td>
+      <td><b>183</b></td>
+      <td>34</td>
+      <td class="why">More attempts (31 vs 24.3 expected)</td>
+      <td><span class="vd l">WRONG</span></td></tr></tbody></table></div><h3 class="sec3">Rushing yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Line</th><th>Leo</th><th>Side</th><th>Actual</th><th>Off by</th><th>Main reason</th><th>Result</th></tr></thead><tbody><tr>
+      <td><b>Jadarian Price</b> <span class="mut">SEA</span></td>
+      <td>55.5</td><td>54</td>
+      <td><span class="mut">no side</span></td>
+      <td><b>15</b></td>
+      <td>39</td>
+      <td class="why">Fewer carries (5 vs 11.5 expected)</td>
+      <td><span class="vd p">NO LEAN</span></td></tr><tr>
+      <td><b>Emanuel Wilson</b> <span class="mut">SEA</span></td>
+      <td>30.5</td><td>33</td>
+      <td>OVER</td>
+      <td><b>14</b></td>
+      <td>19</td>
+      <td class="why">Less efficient (1.6 vs 3.2 yds/carry)</td>
+      <td><span class="vd l">WRONG</span></td></tr><tr>
+      <td><b>Jacory Croskey-Merritt</b> <span class="mut">WAS</span></td>
+      <td>38.5</td><td>51</td>
+      <td>OVER</td>
+      <td><b>36</b></td>
+      <td>15</td>
+      <td class="why">Less efficient (1.9 vs 4.2 yds/carry)</td>
+      <td><span class="vd l">WRONG</span></td></tr><tr>
+      <td><b>Rachaad White</b> <span class="mut">WAS</span></td>
+      <td>19.5</td><td>38</td>
+      <td>OVER</td>
+      <td><b>35</b></td>
+      <td>3</td>
+      <td class="why"><span class="mut">On target</span></td>
+      <td><span class="vd w">RIGHT</span></td></tr></tbody></table></div><h3 class="sec3">Receiving yards</h3>
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Line</th><th>Leo</th><th>Side</th><th>Actual</th><th>Off by</th><th>Main reason</th><th>Result</th></tr></thead><tbody><tr>
+      <td><b>Terry McLaurin</b> <span class="mut">WAS</span></td>
+      <td>42.5</td><td>41</td>
+      <td><span class="mut">no side</span></td>
+      <td><b>77</b></td>
+      <td>36</td>
+      <td class="why">More targets (9 vs 6.2 expected)</td>
+      <td><span class="vd p">NO LEAN</span></td></tr><tr>
+      <td><b>Stefon Diggs</b> <span class="mut">WAS</span></td>
+      <td>34.5</td><td>43</td>
+      <td>OVER</td>
+      <td><b>33</b></td>
+      <td>10</td>
+      <td class="why">Less efficient (4.7 vs 8.2 yds/tgt)</td>
+      <td><span class="vd l">WRONG</span></td></tr><tr>
+      <td><b>Rashid Shaheed</b> <span class="mut">SEA</span></td>
+      <td>28.5</td><td>22</td>
+      <td>UNDER</td>
+      <td><b>14</b></td>
+      <td>8</td>
+      <td class="why"><span class="mut">On target</span></td>
+      <td><span class="vd w">RIGHT</span></td></tr><tr>
+      <td><b>Cooper Kupp</b> <span class="mut">SEA</span></td>
+      <td>20.5</td><td>38</td>
+      <td>OVER</td>
+      <td><b>46</b></td>
+      <td>8</td>
+      <td class="why"><span class="mut">On target</span></td>
+      <td><span class="vd w">RIGHT</span></td></tr><tr>
+      <td><b>Dyami Brown</b> <span class="mut">WAS</span></td>
+      <td>—</td><td>8</td>
+      <td><span class="mut">no side</span></td>
+      <td><b>0</b></td>
+      <td>8</td>
+      <td class="why"><span class="mut">On target</span></td>
+      <td></td></tr><tr>
+      <td><b>Jaxon Smith-Njigba</b> <span class="mut">SEA</span></td>
+      <td>92.5</td><td>123</td>
+      <td>OVER</td>
+      <td><b>128</b></td>
+      <td>5</td>
+      <td class="why"><span class="mut">On target</span></td>
+      <td><span class="vd w">RIGHT</span></td></tr></tbody></table></div>
+  </section>
 
   <p class="data-note">Player and team statistics from the open nflverse dataset. Roles assigned by actual usage &mdash; most attempts, carries and targets &mdash; not depth chart.</p>
 </main>
-<footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/articles/"); renderFooter();</script>
-
+<footer id="footer"></footer><script src="/js/app.js"></script>
+<script>renderNav("/nfl/scoreboard/"); renderFooter();</script>
 </body>
 </html>
