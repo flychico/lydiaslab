@@ -1,0 +1,32 @@
+#!/usr/bin/env node
+/*
+  How many REGULAR-SEASON MLB games are scheduled on a date.
+
+  Prints a single number, or "unknown" if the schedule could not be read.
+  Used by the workflows to tell two things apart that look identical in a
+  failed run: a day with no games (clean skip) and a pipeline that broke.
+
+  This pipeline is regular season only (gameType "R"), the same filter the
+  models use, so the postseason counts as zero here by design.
+
+  USAGE
+    node scripts/mlb-slate-size.js 2026-09-30
+*/
+const DATE = process.argv[2] || new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10);
+
+(async () => {
+  try {
+    const r = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${DATE}`,
+                          { signal: AbortSignal.timeout(20000) });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    const games = (j.dates || []).flatMap(d => d.games || [])
+      .filter(g => g.gameType === "R" || g.gameType === undefined);
+    console.log(String(games.length));
+  } catch (e) {
+    // Never fail the caller: an unreadable schedule must not be read as
+    // "no games", which would skip a real slate silently.
+    console.error(`schedule unavailable: ${e.message}`);
+    console.log("unknown");
+  }
+})();

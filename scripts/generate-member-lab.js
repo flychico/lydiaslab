@@ -202,7 +202,16 @@ async function main() {
   // separate gates in officialEligible() logic.
   const gamesToProcess = allGames;
   if (!gamesToProcess.length && !previousRows.length) {
-    throw new Error(`No games found for ${DATE}.`);
+    /*
+      NOT AN ERROR. The schedule fetch succeeded and the day simply has no
+      regular-season games -- an off day, or the season is over (this pipeline
+      is regular season only: gameType "R"). Throwing here failed Prepare
+      slate on every run from 2026-09-28, which then failed Publish picks,
+      five red runs a day that hid anything real. A failed FETCH still throws,
+      above, so a genuine outage is still loud.
+    */
+    console.log(`No regular-season MLB games on ${DATE}. Nothing to gather.`);
+    return;
   }
 
   const generatedAt = new Date().toISOString();

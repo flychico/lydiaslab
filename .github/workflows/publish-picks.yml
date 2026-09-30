@@ -107,7 +107,13 @@ jobs:
 
       # Publish depends on Prepare slate having run. Say so plainly rather
       # than letting the model silently build on a missing or stale capture.
+      # A missing slate has two very different causes and they must not look
+      # the same: there were no games to prepare (off day, or the regular
+      # season is over -- this pipeline is regular season only), or Prepare
+      # slate genuinely failed. The first is a clean skip, the second is an
+      # error. Games on the day are the tell.
       - name: Confirm the slate was prepared
+        id: confirm
         run: |
           DATE="${{ steps.publish_date.outputs.date }}"
           MISSING=""
@@ -115,6 +121,13 @@ jobs:
             [ -f "$f" ] || MISSING="$MISSING $f"
           done
           if [ -n "$MISSING" ]; then
+            GAMES=$(node scripts/mlb-slate-size.js "$DATE" || echo unknown)
+            echo "Games scheduled for $DATE: $GAMES"
+            if [ "$GAMES" = "0" ]; then
+              echo "No regular-season games on $DATE. Nothing to publish."
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
             echo "::error::Slate not prepared for $DATE. Missing:$MISSING"
             echo "Run 'Prepare slate (gather data)' first, then re-run this workflow."
             exit 1
@@ -125,14 +138,17 @@ jobs:
           done
 
       - name: Clean invalid generated artifacts
+        if: steps.confirm.outputs.skip != 'true'
         run: node scripts/site-health-cleanup.js --fix
 
       - name: Normalize Pitcher Matchup Tool source
+        if: steps.confirm.outputs.skip != 'true'
         run: node scripts/normalize-pitcher-tool-source.js
 
       # The only model pass. Reads the committed slate, runs the moneyline
       # model, appends to the day's card and writes the member brief.
       - name: Run the moneyline model and lock picks
+        if: steps.confirm.outputs.skip != 'true'
         run: |
           SNAPSHOT_INPUT="${{ github.event.inputs.snapshot }}"
           node scripts/generate-member-lab.js \
@@ -145,24 +161,31 @@ jobs:
       # Captured same-day, before tomorrow's recap grades anything. See the
       # header note above for why these three specifically survived the trim.
       - name: Export pregame attribution snapshot
+        if: steps.confirm.outputs.skip != 'true'
         run: node scripts/export-pregame-attribution.js "${{ steps.publish_date.outputs.date }}"
 
       - name: Export daily pitcher data
+        if: steps.confirm.outputs.skip != 'true'
         run: node scripts/export-pitcher-data.js "${{ steps.publish_date.outputs.date }}"
 
       - name: Export daily Lab Rating inputs
+        if: steps.confirm.outputs.skip != 'true'
         run: node scripts/export-lab-rating-inputs.js "${{ steps.publish_date.outputs.date }}"
 
       - name: Generate canonical Pitcher Matchup Tool data
+        if: steps.confirm.outputs.skip != 'true'
         run: node scripts/generate-pitcher-matchup-data.js "${{ steps.publish_date.outputs.date }}"
 
       - name: Render bettor-friendly previews
+        if: steps.confirm.outputs.skip != 'true'
         run: node scripts/generate-previews.js "${{ steps.publish_date.outputs.date }}"
 
       - name: Generate matchup pages with indexing quality gate
+        if: steps.confirm.outputs.skip != 'true'
         run: node scripts/generate-matchup-pages.js "${{ steps.publish_date.outputs.date }}"
 
       - name: Normalize public shell and language
+        if: steps.confirm.outputs.skip != 'true'
         run: node scripts/normalize-public-shell.js
 
       # Minimal safety net -- confirms the two files nothing else can recover
@@ -170,6 +193,7 @@ jobs:
       # much larger cross-check block; see the header note on what that
       # traded away.
       - name: Confirm the core published files exist
+        if: steps.confirm.outputs.skip != 'true'
         run: |
           DATE_INPUT="${{ steps.publish_date.outputs.date }}"
           test -f "data/member-brief/$DATE_INPUT.json" || { echo "::error::member brief missing for $DATE_INPUT"; exit 1; }
@@ -177,6 +201,7 @@ jobs:
           echo "Core published files present for $DATE_INPUT."
 
       - name: Commit and push if changed
+        if: steps.confirm.outputs.skip != 'true'
         run: |
           DATE_INPUT="${{ steps.publish_date.outputs.date }}"
           git config user.name "lydia-bot"
@@ -221,6 +246,7 @@ jobs:
       # Only the first scheduled run of the day emails; later runs update the
       # card and pages silently. The marker is committed so this survives runs.
       - name: Check if today's member emails already went out
+        if: steps.confirm.outputs.skip != 'true'
         id: email_gate
         run: |
           DATE_INPUT="${{ steps.publish_date.outputs.date }}"
@@ -234,7 +260,7 @@ jobs:
           fi
 
       - name: Email picks to paid members
-        if: ${{ (github.event_name == 'schedule' && steps.email_gate.outputs.already_sent != 'true') || github.event.inputs.send_email == 'true' }}
+        if: ${{ steps.confirm.outputs.skip != 'true' && ((github.event_name == 'schedule' && steps.email_gate.outputs.already_sent != 'true') || github.event.inputs.send_email == 'true') }}
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
@@ -242,7 +268,7 @@ jobs:
         run: node scripts/send-member-emails.js "${{ steps.publish_date.outputs.date }}"
 
       - name: Email free daily preview to the free list
-        if: ${{ (github.event_name == 'schedule' && steps.email_gate.outputs.already_sent != 'true') || github.event.inputs.send_email == 'true' }}
+        if: ${{ steps.confirm.outputs.skip != 'true' && ((github.event_name == 'schedule' && steps.email_gate.outputs.already_sent != 'true') || github.event.inputs.send_email == 'true') }}
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
@@ -250,7 +276,7 @@ jobs:
         run: node scripts/send-free-preview-emails.js "${{ steps.publish_date.outputs.date }}"
 
       - name: Record that today's emails went out
-        if: ${{ (github.event_name == 'schedule' && steps.email_gate.outputs.already_sent != 'true') || github.event.inputs.send_email == 'true' }}
+        if: ${{ steps.confirm.outputs.skip != 'true' && ((github.event_name == 'schedule' && steps.email_gate.outputs.already_sent != 'true') || github.event.inputs.send_email == 'true') }}
         run: |
           DATE_INPUT="${{ steps.publish_date.outputs.date }}"
           mkdir -p data/email-log
