@@ -23,6 +23,7 @@ const MatchupCopy = require("./lib/matchup-copy-core");
 const RecapReview = require("./lib/recap-review-core");
 const RecapBuild = require("./lib/recap-build-core");
 
+const { isCounted } = require("./lib/mlb-game-types");
 const SITE = "https://ndhorizon.com";
 const AUTHOR_URL = `${SITE}/writers/lynold/`;
 const AUTHOR_ID = `${AUTHOR_URL}#person`;
@@ -98,7 +99,7 @@ const TEAM_ID = {
 };
 
 async function teamSeasonGames(teamId, season, endDate) {
-  const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=${teamId}&startDate=${season}-01-01&endDate=${encodeURIComponent(endDate)}&gameType=R`;
+  const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=${teamId}&startDate=${season}-01-01&endDate=${encodeURIComponent(endDate)}`;
   const response = await fetch(url, { headers: { "user-agent": "Leo matchup generator" } });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   const data = await response.json();
@@ -108,12 +109,12 @@ async function teamSeasonGames(teamId, season, endDate) {
 }
 
 // Last 10 completed games at one venue for one team, oldest-to-newest then the
-// tail. Only final regular-season games with both scores count.
+// tail. Only final games with both scores count, postseason included.
 function venueLastTen(games, teamId, venue) {
   const rows = [];
   for (const g of games || []) {
     if (!(g.status && g.status.abstractGameState === "Final")) continue;
-    if (g.gameType !== "R") continue;
+    if (!isCounted(g)) continue;   // postseason counts too (DEC-20260930-02)
     const side = g.teams.home.team.id === teamId ? "home" : (g.teams.away.team.id === teamId ? "away" : null);
     if (side !== venue) continue;
     const me = g.teams[side], opp = g.teams[side === "home" ? "away" : "home"];

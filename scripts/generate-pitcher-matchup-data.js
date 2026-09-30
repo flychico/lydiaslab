@@ -6,6 +6,7 @@ const path = require("path");
 const PitcherCore = require("../js/pitcher-matchup-core.js");
 const PitchingPlan = require("./lib/pitching-plan-core.js");
 
+const { isCounted } = require("./lib/mlb-game-types");
 const ROOT = path.join(__dirname, "..");
 const DATE = process.argv[2] || easternDate();
 
@@ -50,7 +51,7 @@ async function main() {
     `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${DATE}&hydrate=probablePitcher`
   );
   const games = ((((schedule.dates || [])[0]) || {}).games || [])
-    .filter(game => game.gameType === "R" || game.gameType === undefined)
+    .filter(isCounted)   // regular season and postseason alike (DEC-20260930-02)
     .sort((a, b) => new Date(a.gameDate) - new Date(b.gameDate));
 
   if (!games.length) throw new Error(`No MLB games found for ${DATE}.`);

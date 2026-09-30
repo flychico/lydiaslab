@@ -25,6 +25,7 @@ const { OFFICIAL_MODEL_PROB, OFFICIAL_LAB_SCORE } = require("./lib/gate-constant
 // live copy was retuned to 0.15. See scripts/lib/pitcher-boost-constants.js.
 const { ERA_K, PITCHER_SCORE_GAP_CLAMP } = require("./lib/pitcher-boost-constants");
 const { fetchOddsApi, loadKeys } = require("./lib/odds-api-core");
+const { isCounted } = require("./lib/mlb-game-types");
 const ROOT = path.join(__dirname, "..");
 // 2026-08-14, Lynold's explicit instruction: log5 (and the flat league-wide
 // HFA it applied) removed from the moneyline model. team_strength_blend now
@@ -183,7 +184,7 @@ async function main() {
   ]);
 
   const allGames = ((((sched.dates || [])[0]) || {}).games || [])
-    .filter(g => g.gameType === "R" || g.gameType === undefined)
+    .filter(isCounted)   // regular season and postseason alike (DEC-20260930-02)
     .sort((a, b) => new Date(a.gameDate) - new Date(b.gameDate));
 
   if (!allGames.length) {
@@ -204,13 +205,12 @@ async function main() {
   if (!gamesToProcess.length && !previousRows.length) {
     /*
       NOT AN ERROR. The schedule fetch succeeded and the day simply has no
-      regular-season games -- an off day, or the season is over (this pipeline
-      is regular season only: gameType "R"). Throwing here failed Prepare
+      games -- an off day, or the season is fully over. Throwing here failed Prepare
       slate on every run from 2026-09-28, which then failed Publish picks,
       five red runs a day that hid anything real. A failed FETCH still throws,
       above, so a genuine outage is still loud.
     */
-    console.log(`No regular-season MLB games on ${DATE}. Nothing to gather.`);
+    console.log(`No MLB games on ${DATE}. Nothing to gather.`);
     return;
   }
 
