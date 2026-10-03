@@ -188,7 +188,17 @@ async function main() {
     .sort((a, b) => new Date(a.gameDate) - new Date(b.gameDate));
 
   if (!allGames.length) {
-    throw new Error(`No MLB games found for ${DATE}. No files were written.`);
+    /*
+      NOT AN ERROR. The schedule fetch succeeded and the day simply has no
+      games -- an off day, a gap between postseason rounds, or the season is
+      over. Throwing here failed Prepare slate on every such day, which then
+      failed Publish picks. A failed FETCH still throws, inside fetchJson,
+      so a genuine outage is still loud.
+      (2026-09-30 patched the second guard below, which this check made
+      unreachable. This is the one that was firing.)
+    */
+    console.log(`No MLB games on ${DATE}. Nothing to gather, no files written.`);
+    return;
   }
 
   const previousBrief = readJsonSafe(`data/member-brief/${DATE}.json`) || { games: [] };

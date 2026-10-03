@@ -12,6 +12,7 @@
   USAGE
     node scripts/mlb-slate-size.js 2026-09-30
 */
+const { isCounted } = require("./lib/mlb-game-types");
 const DATE = process.argv[2] || new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10);
 
 (async () => {
