@@ -168,10 +168,19 @@ function anytimeTD(e, field, base, adj) {
   // receiver's share is his targets over his team's targets in his games.
   const teamTgt = rows => { const m = new Map(); rows.forEach(r => { const k = `${r.team}|${n(r.week)}`; m.set(k, (m.get(k) || 0) + n(r.targets)); }); return m; };
   const TC = teamTgt(wk26), TP = teamTgt(wk25.filter(r => !r.season_type || r.season_type === "REG"));
+  // Same for carries: a back's share of the backfield is the stable number,
+  // not his raw carry count (DEC-20261003-01).
+  const teamCar = rows => { const m = new Map(); rows.forEach(r => { const k = `${r.team}|${n(r.week)}`; m.set(k, (m.get(k) || 0) + n(r.carries)); }); return m; };
+  const CC = teamCar(wk26), CP = teamCar(wk25.filter(r => !r.season_type || r.season_type === "REG"));
   for (const e of logs.values()) {
-    e.cur.forEach(x => x.team_tgt = TC.get(`${x.tm}|${x.wk}`) || 0);
-    e.prior.forEach(x => x.team_tgt = TP.get(`${x.tm}|${x.wk}`) || 0);
+    e.cur.forEach(x => { x.team_tgt = TC.get(`${x.tm}|${x.wk}`) || 0; x.team_car = CC.get(`${x.tm}|${x.wk}`) || 0; });
+    e.prior.forEach(x => { x.team_tgt = TP.get(`${x.tm}|${x.wk}`) || 0; x.team_car = CP.get(`${x.tm}|${x.wk}`) || 0; });
   }
+  const teamCarGames = new Map(), priorTeamCar = new Map();
+  CC.forEach((v, k) => { const t = k.split("|")[0]; (teamCarGames.get(t) || teamCarGames.set(t, []).get(t)).push(v); });
+  CP.forEach((v, k) => { const t = k.split("|")[0]; (priorTeamCar.get(t) || priorTeamCar.set(t, []).get(t)).push(v); });
+  const lgTeamCar = mean([...CP.values()]);
+  const rbLeagueRate = PROPS.rbLeagueRate([...logs.values()].filter(e => e.pos === "RB").flatMap(e => e.prior));
   const teamGames = new Map(), priorTeam = new Map();
   TC.forEach((v, k) => { const t = k.split("|")[0]; (teamGames.get(t) || teamGames.set(t, []).get(t)).push(v); });
   TP.forEach((v, k) => { const t = k.split("|")[0]; (priorTeam.get(t) || priorTeam.set(t, []).get(t)).push(v); });
@@ -236,12 +245,31 @@ function anytimeTD(e, field, base, adj) {
         push(g, { name, pos: "QB", depth: `QB${i + 1}`, team, opp, gp: e.cur.length, adj: adjPass },
              "QB_PASS_YARDS", Math.max(0, Math.round(proj)), { rate_used: r1(ypa), expected_volume: r1(att), model_version: "leo-nflprop-v2" });
       }
+      // Backfield shares: who is out, and who is left to absorb the carries.
+      const rbRoom = [...logs.entries()].filter(([nm, x]) => x.team === team && x.pos === "RB" && x.cur.length);
+      const teamLastWk = Math.max(0, ...rbRoom.flatMap(([, x]) => x.cur.filter(g => g.tm === team).map(g => g.wk)));
+      const rbPriorAvg = priorTeamCar.has(team) ? mean(priorTeamCar.get(team)) : lgTeamCar;
+      const shareOf = x => PROPS.rbCarries(x.cur.filter(g => g.tm === team), x.prior,
+                                           teamCarGames.get(team) || [], rbPriorAvg, rbLeagueRate).share;
+      let shareOut = 0, shareAvailable = 0;
+      for (const [nm, x] of rbRoom) {
+        const sidelined = sidelinedIds.has(x.id);
+        // "Newly out" only: a back who was already out last week has had his
+        // carries absorbed in the numbers above, and counting him again
+        // double-counts the transfer.
+        const playedLast = x.cur.some(g => g.tm === team && g.wk === teamLastWk);
+        if (sidelined && playedLast) shareOut += shareOf(x);
+        else if (!sidelined) shareAvailable += shareOf(x);
+      }
+
       for (const [i, { name, e }] of s.rb.entries()) {
-        const ypc = blend(e.cur.map(x => x.car ? x.ryds / x.car : 0), e.cur.map(x => x.car ? x.ryds / x.car : 0), e.prior.map(x => x.car ? x.ryds / x.car : 0));
-        const car = blend(e.cur.map(x => x.car), e.cur.map(x => x.car), e.prior.map(x => x.car));
+        const q = PROPS.rbCarries(e.cur.filter(x => x.tm === team), e.prior,
+                                  teamCarGames.get(team) || [], rbPriorAvg, rbLeagueRate,
+                                  shareOut, shareAvailable);
+        const ypc = q.rate, car = q.carries;
         const proj = (ypc * car * adjRush) + CALIBRATION.RB_RUSH_YARDS;
         push(g, { name, pos: "RB", depth: `RB${i + 1}`, team, opp, gp: e.cur.length, adj: adjRush },
-             "RB_RUSH_YARDS", Math.max(0, Math.round(proj)), { rate_used: r1(ypc), expected_volume: r1(car) });
+             "RB_RUSH_YARDS", Math.max(0, Math.round(proj)), { rate_used: r1(ypc), expected_volume: r1(car), model_version: "leo-nflprop-v2" });
         push(g, { name, pos: "RB", depth: `RB${i + 1}`, team, opp, gp: e.cur.length, adj: adjRush },
              "ANYTIME_TD", anytimeTD(e, "rtd", TD_BASE_RB, adjRush));
       }

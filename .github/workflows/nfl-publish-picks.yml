@@ -10,18 +10,19 @@ name: NFL publish picks
 #
 # WEEKLY RHYTHM (15 min after each gather wave)
 #   Daily     9:15am ET
-#   Thursday  5:15pm ET
-#   Sunday   10:15am / 2:15pm / 6:15pm ET
-#   Monday    5:15pm ET
+#   Thursday  1:15pm ET
+#   Sunday    7:15am, 10:15am / 2:15pm / 6:15pm ET
+#   Monday    1:15pm ET
 
 on:
   schedule:
     - cron: "15 13 * * *"   # 9:15am ET  daily
-    - cron: "15 21 * * 4"   # 5:15pm ET  Thursday
+    - cron: "15 17 * * 4"   # 1:15pm ET  Thursday
+    - cron: "15 11 * * 0"   # 7:15am ET  Sunday
     - cron: "15 14 * * 0"   # 10:15am ET Sunday
     - cron: "15 18 * * 0"   # 2:15pm ET  Sunday
     - cron: "15 22 * * 0"   # 6:15pm ET  Sunday
-    - cron: "15 21 * * 1"   # 5:15pm ET  Monday
+    - cron: "15 17 * * 1"   # 1:15pm ET  Monday
   workflow_dispatch:
     inputs:
       date:

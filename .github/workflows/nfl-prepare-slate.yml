@@ -16,16 +16,17 @@ name: NFL prepare slate (gather data)
 #   NFL prepare slate  ->  NFL publish picks (fires 15 min after each wave)
 #
 #   Daily     9:00am ET   line movement through the week
-#   Thursday  5:00pm ET   before TNF
-#   Sunday   10:00am ET   before the 1:00pm ET block
+#   Thursday  1:00pm ET   before TNF
+#   Sunday    7:00am, 10:00am ET   before the 1:00pm ET block
 #   Sunday    2:00pm ET   before the 4:05/4:25 block
 #   Sunday    6:00pm ET   before SNF
-#   Monday    5:00pm ET   before MNF
+#   Monday    1:00pm ET   before MNF
 
 on:
   schedule:
     - cron: "0 13 * * *"    # 9:00am ET  daily
-    - cron: "0 21 * * 4"    # 5:00pm ET  Thursday
+    - cron: "0 17 * * 4"    # 1:00pm ET  Thursday -- 7h before an 8:15pm kickoff
+    - cron: "0 11 * * 0"    # 7:00am ET  Sunday -- first wave, 6h before the 1pm games
     - cron: "0 14 * * 0"    # 10:00am ET Sunday
     # PRE-KICKOFF CAPTURE. Added 2026-09-20 after the first live run showed
     # the 9:39am ET fetch was too early: books had not posted full prop menus
@@ -36,7 +37,7 @@ on:
     - cron: "30 16 * * 0"   # 12:30pm ET Sunday — last capture before 1pm kicks
     - cron: "0 18 * * 0"    # 2:00pm ET  Sunday
     - cron: "0 22 * * 0"    # 6:00pm ET  Sunday
-    - cron: "0 21 * * 1"    # 5:00pm ET  Monday
+    - cron: "0 17 * * 1"    # 1:00pm ET  Monday -- 7h before an 8:15pm kickoff
   workflow_dispatch:
     inputs:
       date:

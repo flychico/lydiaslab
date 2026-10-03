@@ -56,13 +56,28 @@ jobs:
           echo "date=$DATE_INPUT" >> "$GITHUB_OUTPUT"
           echo "Backfilling recaps for: $DATE_INPUT"
 
+      # Was there anything played? A scheduled run always starts -- GitHub
+      # gives no way to skip the trigger -- so the job asks first and stops in
+      # seconds on a day with no games. "unknown" (schedule unreadable) runs
+      # as usual rather than skipping a real day.
+      - name: Any games that day?
+        id: slate
+        run: |
+          GAMES=$(node scripts/mlb-slate-size.js "${{ steps.backfill_date.outputs.date }}" || echo unknown)
+          echo "Games scheduled: $GAMES"
+          echo "games=$GAMES" >> "$GITHUB_OUTPUT"
+          if [ "$GAMES" = "0" ]; then echo "Nothing played that day. Nothing to backfill."; fi
+
       - name: Grade pregame reasoning vs boxscore (reviews + learning ledger)
+        if: steps.slate.outputs.games != '0'
         run: node scripts/backfill-recaps.js "${{ steps.backfill_date.outputs.date }}"
 
       - name: Render the recaps onto the matchup pages
+        if: steps.slate.outputs.games != '0'
         run: node scripts/generate-matchup-pages.js "${{ steps.backfill_date.outputs.date }}"
 
       - name: Commit and push if changed
+        if: steps.slate.outputs.games != '0'
         run: |
           git config user.name "lydia-bot"
           git config user.email "actions@users.noreply.github.com"

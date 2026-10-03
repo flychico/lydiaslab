@@ -67,44 +67,68 @@ jobs:
           echo "date=$DATE_INPUT" >> "$GITHUB_OUTPUT"
           echo "Resolved recap date: $DATE_INPUT"
 
+      # Was there anything played? A scheduled run always starts -- GitHub
+      # gives no way to skip the trigger -- so the job asks first and stops in
+      # seconds on a day with no games. "unknown" (schedule unreadable) runs
+      # as usual rather than skipping a real day.
+      - name: Any games that day?
+        id: slate
+        run: |
+          GAMES=$(node scripts/mlb-slate-size.js "${{ steps.recap_date.outputs.date }}" || echo unknown)
+          echo "Games scheduled: $GAMES"
+          echo "games=$GAMES" >> "$GITHUB_OUTPUT"
+          if [ "$GAMES" = "0" ]; then echo "Nothing played that day. Nothing to recap."; fi
+
       - name: Normalize public truth and model ownership
+        if: steps.slate.outputs.games != '0'
         run: node scripts/normalize-public-truth.js
 
       - name: Grade selected date picks
+        if: steps.slate.outputs.games != '0'
         run: node scripts/grade-results.js "${{ steps.recap_date.outputs.date }}"
 
       - name: Generate true-game recap
+        if: steps.slate.outputs.games != '0'
         run: node scripts/generate-recap.js "${{ steps.recap_date.outputs.date }}"
 
       - name: Refresh matchup pages with final scores and grades
+        if: steps.slate.outputs.games != '0'
         run: node scripts/generate-matchup-pages.js "${{ steps.recap_date.outputs.date }}" --skip-weather
 
       - name: Verify matchup pages still use Pitcher Matchup Tool data
+        if: steps.slate.outputs.games != '0'
         run: node scripts/verify-pitcher-matchup-alignment.js "${{ steps.recap_date.outputs.date }}"
 
       - name: Grade full-slate calibration ledger
+        if: steps.slate.outputs.games != '0'
         run: node scripts/grade-calibration.js "${{ steps.recap_date.outputs.date }}"
 
       - name: Grade confidence — does the rating predict the outcome?
+        if: steps.slate.outputs.games != '0'
         run: node scripts/grade-confidence.js "${{ steps.recap_date.outputs.date }}"
         
       - name: Generate learning summary
+        if: steps.slate.outputs.games != '0'
         run: node scripts/generate-learning-summary.js --date "${{ steps.recap_date.outputs.date }}"
 
       - name: Generate Leo Coach
+        if: steps.slate.outputs.games != '0'
         run: node scripts/generate-coach.js
 
       - name: Normalize public shell and head tags
+        if: steps.slate.outputs.games != '0'
         run: |
           node scripts/normalize-public-shell.js
           node scripts/verify-google-analytics.js
 
       - name: Keep live results block on Results page
+        if: steps.slate.outputs.games != '0'
         run: |
           node scripts/dedupe-clv.js
           node scripts/inject-live-results.js
 
       - name: Verify recap, matchup pages, learning, Coach and research generated
+        if: steps.slate.outputs.games != '0'
         shell: bash
         run: |
           DATE_INPUT="${{ steps.recap_date.outputs.date }}"
@@ -132,6 +156,7 @@ jobs:
           "
 
       - name: Commit and push if changed
+        if: steps.slate.outputs.games != '0'
         shell: bash
         run: |
           set -euo pipefail

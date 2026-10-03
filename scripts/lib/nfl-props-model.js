@@ -30,10 +30,16 @@ const CALIBRATION = {
   // The old +8.4 / +1.1 came from every player incl. backups and pushed
   // starters high (QB about 15 yds, WR about 2).
   QB_PASS_YARDS: -7.2,
-  // RB is still measured on every back who touched the ball, not the live
-  // top two. Re-measure on starters before trusting (open item).
-  RB_RUSH_YARDS: 3.4,    // 2025 bias -3.4 yds over n=1221
-  WR_REC_YARDS: -1.2,
+  // RB v2 (share of the backfield), measured on the live population -- each
+  // team's top two backs, injury skip applied, 2025 walk-forward n=857:
+  // projections ran 1.4 yds low. The old +3.4 came from every back who
+  // touched the ball, a population Leo never projects.
+  RB_RUSH_YARDS: 1.4,
+  // WR: the 2025 backtest said +1.2 high; 78 graded rows of live 2026 say
+  // 9.8 LOW (standard error 3.7). Moved halfway rather than all the way --
+  // one season of 78 rows is not enough to overwrite the backtest. Re-check
+  // at n=150. (2026-10-03)
+  WR_REC_YARDS: 3.6,
   ANYTIME_TD:    0.0
 };
 
@@ -102,7 +108,66 @@ function wrTargets(games, prior, teamGames, teamPriorAvg) {
 /** Statuses that mean "will not play": never project, never pick as a starter. */
 const SIDELINED = /^(out|doubtful)$/i;
 
-const api = { CALIBRATION, WR_SHARE_PRIOR_GAMES, TEAM_TARGETS_PRIOR_GAMES, wrTargets, SIDELINED, QB_PRIOR_GAMES, QB_REAL_START_ATT, QB_MIN_PRIOR_STARTS, qbLeagueBaseline, qbProjection };
+/*
+ * RB RUSHING YARDS (leo-nflprop-v2 for RB, DEC-20261003-01)
+ *   carries = share of team carries x expected team carries, the same shape
+ *   that worked for receivers. A back's share of the backfield holds up far
+ *   better week to week than his raw carry count, which swings with the
+ *   score. Rate is yards per carry over his own history, shrunk toward the
+ *   league back (RB_RATE_PRIOR_CARRIES carries of evidence).
+ *
+ *   BACKFIELD-MATE OUT. Unlike receivers, a backfield is two or three men
+ *   deep and the carries genuinely transfer. 2025: backs whose mate was
+ *   newly out ran 15.9 yds BELOW projection. Half-strength redistribution
+ *   cuts that to 6.1 and lowers their miss (25.8 -> 25.0), so here the boost
+ *   is applied where the receiver version was rejected.
+ *
+ *   Tested on 2025 walk-forward, top-2 backs, each with its own calibration:
+ *   average miss 25.73 (old blend) -> 24.95. Settings tuned out of sample.
+ */
+const RB_SHARE_PRIOR_GAMES = 1;      // last season's share = 1 game of evidence
+const RB_RATE_PRIOR_CARRIES = 80;    // shrink yards per carry toward the league back
+const TEAM_CARRIES_PRIOR_GAMES = 2;
+const RB_ROLE_MIN_CARRIES = 8;       // a prior game counts as a real role at 8+
+const RB_MATE_OUT_STRENGTH = 0.5;    // half of an absent mate's share transfers
+
+/**
+ * games/prior: [{car, ryds, team_car}] this season / last season (REG).
+ * teamGames: this team's carries per game this season. teamPriorAvg: last
+ * season's team average. shareOut: combined share of backfield mates newly
+ * listed Out or Doubtful; shareAvailable: combined share of those playing.
+ * leagueRate: league yards per carry among real-role backs.
+ * Returns {share, team_carries, carries, rate}.
+ */
+function rbCarries(games, prior, teamGames, teamPriorAvg, leagueRate, shareOut = 0, shareAvailable = 0) {
+  const tMean = teamGames.length ? mean(teamGames) : teamPriorAvg;
+  const car = sum(games.map(g => g.car)), tt = sum(games.map(g => g.team_car));
+  const ptt = sum(prior.map(g => g.team_car));
+  const pShare = ptt > 0 ? sum(prior.map(g => g.car)) / ptt : null;
+  const K = RB_SHARE_PRIOR_GAMES;
+  let share = pShare != null ? (car + K * pShare * tMean) / (tt + K * tMean) : (tt > 0 ? car / tt : 0);
+  if (shareOut > 0 && shareAvailable > 0) share *= 1 + RB_MATE_OUT_STRENGTH * (shareOut / shareAvailable);
+
+  const KT = TEAM_CARRIES_PRIOR_GAMES;
+  const team_carries = (sum(teamGames) + KT * teamPriorAvg) / (teamGames.length + KT);
+
+  const real = prior.filter(g => g.car >= RB_ROLE_MIN_CARRIES);
+  const kR = RB_RATE_PRIOR_CARRIES;
+  const yards = sum(games.map(g => g.ryds)) + sum(real.map(g => g.ryds));
+  const carries = car + sum(real.map(g => g.car));
+  const rate = (yards + kR * leagueRate) / (carries + kR);
+
+  return { share, team_carries, carries: share * team_carries, rate };
+}
+
+/** League yards per carry among real-role backs, from last season's games. */
+function rbLeagueRate(priorGames) {
+  const real = priorGames.filter(g => g.car >= RB_ROLE_MIN_CARRIES);
+  const c = sum(real.map(g => g.car));
+  return c ? sum(real.map(g => g.ryds)) / c : 4.2;
+}
+
+const api = { CALIBRATION, RB_SHARE_PRIOR_GAMES, RB_RATE_PRIOR_CARRIES, TEAM_CARRIES_PRIOR_GAMES, RB_ROLE_MIN_CARRIES, RB_MATE_OUT_STRENGTH, rbCarries, rbLeagueRate, WR_SHARE_PRIOR_GAMES, TEAM_TARGETS_PRIOR_GAMES, wrTargets, SIDELINED, QB_PRIOR_GAMES, QB_REAL_START_ATT, QB_MIN_PRIOR_STARTS, qbLeagueBaseline, qbProjection };
 if (typeof module === 'object' && module.exports) module.exports = api;
 else (typeof window !== 'undefined' ? window : this).LeoProps = api;
 })();

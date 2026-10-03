@@ -78,7 +78,14 @@ const MARKETS=[
   const qbLeague=PROPS.qbLeagueBaseline(P.filter(r=>r.pos==="QB"));
   // team targets per game, both seasons; attached to every player-game row
   const teamTgt=rows=>{const m={};rows.forEach(r=>{const k=r.team+"|"+r.week;m[k]=(m[k]||0)+r.tgt;});return m;};
+  const teamCar=rows=>{const m={};rows.forEach(r=>{const k=r.team+"|"+r.week;m[k]=(m[k]||0)+r.car;});return m;};
   const TC=teamTgt(C), TP=teamTgt(P);
+  const CC=teamCar(C), CP=teamCar(P);
+  C.forEach(r=>r.team_car=CC[r.team+"|"+r.week]||0); P.forEach(r=>r.team_car=CP[r.team+"|"+r.week]||0);
+  const priorTeamCarAvg={}; { const acc={}; Object.entries(CP).forEach(([k,v])=>{const t=k.split("|")[0];(acc[t]=acc[t]||[]).push(v);});
+    Object.entries(acc).forEach(([t,a])=>priorTeamCarAvg[t]=mean(a)); }
+  const lgTeamCar=mean(Object.values(CP));
+  const rbLeagueRate=PROPS.rbLeagueRate(P.filter(r=>r.pos==="RB"));
   C.forEach(r=>r.team_tgt=TC[r.team+"|"+r.week]||0); P.forEach(r=>r.team_tgt=TP[r.team+"|"+r.week]||0);
   const priorTeamAvg={}; { const acc={}; Object.entries(TP).forEach(([k,v])=>{const t=k.split("|")[0];(acc[t]=acc[t]||[]).push(v);});
     Object.entries(acc).forEach(([t,a])=>priorTeamAvg[t]=mean(a)); }
@@ -100,15 +107,34 @@ const MARKETS=[
     const histBy={}; hist.forEach(r=>{(histBy[r.player]=histBy[r.player]||[]).push(r);});
     // Starters exactly as the live model picks them: by usage on his current
     // team so far, skipping anyone listed Out or Doubtful for this week.
-    const qbStarter={}, wrStarters={}; { const cand={QB:{},WR:{}};
+    const qbStarter={}, wrStarters={}, rbStarters={}; { const cand={QB:{},WR:{},RB:{}};
       Object.entries(histBy).forEach(([pl,gs])=>{ const last=gs[gs.length-1]; if(!cand[last.pos]) return;
         if(sidelined.has(last.team+"|"+wk+"|"+last.id)) return;
         const onTeam=gs.filter(x=>x.team===last.team);
-        const use=mean(onTeam.map(x=>last.pos==="QB"?x.att:x.tgt)); if(use<=0) return;
+        const use=mean(onTeam.map(x=>last.pos==="QB"?x.att:(last.pos==="RB"?x.car:x.tgt))); if(use<=0) return;
         (cand[last.pos][last.team]=cand[last.pos][last.team]||[]).push([pl,use]); });
       Object.entries(cand.QB).forEach(([t,a])=>qbStarter[t]=a.sort((x,y)=>y[1]-x[1])[0][0]);
-      Object.entries(cand.WR).forEach(([t,a])=>wrStarters[t]=new Set(a.sort((x,y)=>y[1]-x[1]).slice(0,3).map(x=>x[0]))); }
+      Object.entries(cand.WR).forEach(([t,a])=>wrStarters[t]=new Set(a.sort((x,y)=>y[1]-x[1]).slice(0,3).map(x=>x[0])));
+      Object.entries(cand.RB).forEach(([t,a])=>rbStarters[t]=new Set(a.sort((x,y)=>y[1]-x[1]).slice(0,2).map(x=>x[0]))); }
     const teamGames={}; Object.entries(TC).forEach(([k,v])=>{const [t,w]=k.split("|");if(Number(w)<wk)(teamGames[t]=teamGames[t]||[]).push(v);});
+    const teamCarGames={}; Object.entries(CC).forEach(([k,v])=>{const [t,w]=k.split("|");if(Number(w)<wk)(teamCarGames[t]=teamCarGames[t]||[]).push(v);});
+    // backfield shares per team, mirroring the live model
+    const rbShares={};
+    { const byTeam={};
+      Object.entries(histBy).forEach(([pl,gs])=>{ const last=gs[gs.length-1]; if(last.pos!=="RB") return;
+        (byTeam[last.team]=byTeam[last.team]||[]).push([pl,gs,last]); });
+      Object.entries(byTeam).forEach(([t,list])=>{
+        const lastWk=Math.max(0,...list.flatMap(([,gs])=>gs.filter(x=>x.team===t).map(x=>x.week)));
+        let out=0, avail=0;
+        for(const [pl,gs,last] of list){
+          const own=gs.filter(x=>x.team===t);
+          const sh=PROPS.rbCarries(own,(priorBy[pl]||[]),teamCarGames[t]||[],priorTeamCarAvg[t]||lgTeamCar,rbLeagueRate).share;
+          const sidelinedNow=sidelined.has(t+"|"+wk+"|"+last.id);
+          const playedLast=own.some(x=>x.week===lastWk);
+          if(sidelinedNow && playedLast) out+=sh; else if(!sidelinedNow) avail+=sh;
+        }
+        rbShares[t]={out,avail};
+      }); }
 
     for(const g of slate){
       for(const m of MARKETS){
@@ -119,6 +145,7 @@ const MARKETS=[
         // measure a population the live model never projects.
         if(m.key==="QB_PASS_YARDS" && qbStarter[g.team]!==g.player) continue;
         if(m.key==="WR_REC_YARDS" && !(wrStarters[g.team]&&wrStarters[g.team].has(g.player))) continue;
+        if(m.key==="RB_RUSH_YARDS" && !(rbStarters[g.team]&&rbStarters[g.team].has(g.player))) continue;
         if(m.vol(g)<=0) continue;                       // did not participate in that market
         const d=def[g.opp]||{pass:[],rush:[]};
         const lg=m.def==="pass"?lgPass:lgRush;
@@ -132,6 +159,11 @@ const MARKETS=[
         } else if(m.key==="WR_REC_YARDS"){      // v2 volume: share of team targets
           rate=blend(h.map(m.rate), pr.map(m.rate));
           vol=PROPS.wrTargets(h.filter(x=>x.team===g.team),pr,teamGames[g.team]||[],priorTeamAvg[g.team]||lgTeamTgt).targets;
+        } else if(m.key==="RB_RUSH_YARDS"){      // v2: share of the backfield
+          const sh=rbShares[g.team]||{out:0,avail:0};
+          const q=PROPS.rbCarries(h.filter(x=>x.team===g.team),pr,teamCarGames[g.team]||[],
+                                  priorTeamCarAvg[g.team]||lgTeamCar,rbLeagueRate,sh.out,sh.avail);
+          rate=q.rate; vol=q.carries;
         } else {
           rate=blend(h.map(m.rate), pr.map(m.rate));
           vol =blend(h.map(m.vol),  pr.map(m.vol));
