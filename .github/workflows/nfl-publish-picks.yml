@@ -66,7 +66,22 @@ jobs:
 
       # Regenerate rather than trusting whatever is on disk, so a publish is
       # always reproducible from source data.
+      # Is there anything to do today? A scheduled run always starts -- GitHub
+      # gives no way to skip the trigger -- so the job asks first and stops in
+      # seconds on a day with no games, spending no odds credits. "unknown"
+      # (feed unreadable) runs the slate as usual rather than skipping a real one.
+      - name: Any games today?
+        id: slate
+        run: |
+          GAMES=$(node scripts/nfl-slate-size.js "${{ steps.slate_date.outputs.date }}" || echo unknown)
+          echo "Games scheduled: $GAMES"
+          echo "games=$GAMES" >> "$GITHUB_OUTPUT"
+          if [ "$GAMES" = "0" ]; then
+            echo "Nothing to do today. Nothing to publish."
+          fi
+
       - name: Rebuild models for the slate
+        if: steps.slate.outputs.games != '0'
         run: |
           node scripts/generate-nfl-model.js "${{ steps.slate_date.outputs.date }}"
           node scripts/generate-nfl-props.js "${{ steps.slate_date.outputs.date }}" || true
@@ -76,11 +91,13 @@ jobs:
       # Regenerating props above strips the line fields, so without this the
       # published page would lose every line it had.
       - name: Re-attach prop lines
+        if: steps.slate.outputs.games != '0'
         run: node scripts/merge-nfl-prop-lines.js --date="${{ steps.slate_date.outputs.date }}" || true
 
       # Permanent per-game stat pages: last season beside this season, the
       # starting QB, RB / WR1 / WR2 and each side's touchdown leaders.
       - name: Matchup data and pages
+        if: steps.slate.outputs.games != '0'
         run: |
           node scripts/generate-nfl-matchups.js "${{ steps.slate_date.outputs.date }}"
           node scripts/render-nfl-matchup-pages.js "${{ steps.slate_date.outputs.date }}"
@@ -90,6 +107,7 @@ jobs:
       # error -- most days have no NFL games -- it just exits without
       # promoting anything.
       - name: Validate before publishing
+        if: steps.slate.outputs.games != '0'
         id: gate
         run: |
           set -euo pipefail
@@ -117,10 +135,11 @@ jobs:
       # box, and models claiming an edge an efficient market would not leave.
       # See claude/NFL_WATCH_LIST.md. Fails the publish; warnings do not.
       - name: Health check
+        if: steps.slate.outputs.games != '0'
         run: node scripts/nfl-healthcheck.js
 
       - name: Commit and push if changed
-        if: steps.gate.outcome == 'success'
+        if: ${{ steps.slate.outputs.games != '0' && steps.gate.outcome == 'success' }}
         run: |
           set -euo pipefail
           git config user.name "lydia-bot"

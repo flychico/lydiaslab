@@ -89,11 +89,27 @@ jobs:
 
       # Ratings, moneyline / totals / spread picks, team stats by division,
       # the injury report and completed results. Writes data/nfl/*.json.
+      # Is there anything to do today? A scheduled run always starts -- GitHub
+      # gives no way to skip the trigger -- so the job asks first and stops in
+      # seconds on a day with no games, spending no odds credits. "unknown"
+      # (feed unreadable) runs the slate as usual rather than skipping a real one.
+      - name: Any games today?
+        id: slate
+        run: |
+          GAMES=$(node scripts/nfl-slate-size.js "${{ steps.slate_date.outputs.date }}" || echo unknown)
+          echo "Games scheduled: $GAMES"
+          echo "games=$GAMES" >> "$GITHUB_OUTPUT"
+          if [ "$GAMES" = "0" ]; then
+            echo "Nothing to do today. Skipping the gather."
+          fi
+
       - name: Team ratings, game models, injuries and results
+        if: steps.slate.outputs.games != '0'
         run: node scripts/generate-nfl-model.js "${{ steps.slate_date.outputs.date }}"
 
       # Player props: passing, rushing, receiving yards and anytime TD.
       - name: Player prop projections
+        if: steps.slate.outputs.games != '0'
         run: node scripts/generate-nfl-props.js "${{ steps.slate_date.outputs.date }}"
 
       # Permanent per-game stat pages: last season beside this season, the
@@ -108,6 +124,7 @@ jobs:
       # the whole gather. Props stay publishable without lines; they simply
       # carry no lean, and the merge step below no-ops when the file is absent.
       - name: Player prop market lines
+        if: steps.slate.outputs.games != '0'
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           ODDS_API_KEY_2: ${{ secrets.ODDS_API_KEY_2 }}
@@ -119,14 +136,17 @@ jobs:
       # Costs nothing -- pure local join. Prints every unmatched name rather
       # than swallowing it (NFL_WATCH_LIST #23).
       - name: Attach lines to projections
+        if: steps.slate.outputs.games != '0'
         run: node scripts/merge-nfl-prop-lines.js --date="${{ steps.slate_date.outputs.date }}" || true
 
       - name: Matchup data and pages
+        if: steps.slate.outputs.games != '0'
         run: |
           node scripts/generate-nfl-matchups.js "${{ steps.slate_date.outputs.date }}"
           node scripts/render-nfl-matchup-pages.js "${{ steps.slate_date.outputs.date }}"
 
       - name: Commit and push if changed
+        if: steps.slate.outputs.games != '0'
         run: |
           set -euo pipefail
           git config user.name "lydia-bot"
