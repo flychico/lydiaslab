@@ -252,6 +252,52 @@ function teamProfile(rows, team, active){
              props, graded: gg.length>0 || props.length>0 };
   };
 
+  /*
+    INJURY REPORT, per team. Read from data/nfl/injuries-<date>.json, which
+    generate-nfl-model.js writes from the nflverse feed earlier in the same
+    gather. Kept only when the report is for THIS game's week. Once a report
+    has been captured for a game it is never replaced by a worse one: if a
+    later rerun finds no usable report (feed down, or the feed has rolled to
+    next week), the copy already in matchups/<date>.json is carried forward.
+    Game statuses (Out / Doubtful / Questionable) come with Friday's final
+    report; before then a team shows its practice report instead.
+  */
+  const INJ_ORDER={Out:0,Doubtful:1,Questionable:2};
+  const POS_ORDER=["QB","RB","WR","TE","FB","T","G","C","OL","DE","DT","NT","DL","LB","OLB","ILB","MLB","CB","S","FS","SS","DB","K","P","LS"];
+  const posRank=p=>{const i=POS_ORDER.indexOf(p);return i<0?99:i;};
+  let INJ=null;
+  try{
+    const fp=path.join(DATA,`injuries-${target}.json`);
+    if(fs.existsSync(fp)) INJ=JSON.parse(fs.readFileSync(fp,"utf8"));
+  }catch(e){ console.log("  injuries: unreadable ("+e.message+")"); }
+  let PREV={};
+  try{
+    const pf=path.join(ROOT,"data/nfl/matchups",`${target}.json`);
+    if(fs.existsSync(pf)) for(const m of JSON.parse(fs.readFileSync(pf,"utf8"))) if(m.injuries) PREV[m.game_id]=m.injuries;
+  }catch(e){}
+  const injuryReport=g=>{
+    const wk=n(g.week);
+    const rows=Array.isArray(INJ)?INJ.filter(r=>n(r.week)===wk):[];
+    const side=team=>{
+      const mine=rows.filter(r=>r.team===team);
+      const listed=mine.filter(r=>r.status in INJ_ORDER)
+        .sort((a,b)=>INJ_ORDER[a.status]-INJ_ORDER[b.status] || posRank(a.position)-posRank(b.position) || a.player.localeCompare(b.player))
+        .map(r=>({player:r.player, pos:r.position, status:r.status, injury:r.injury||"", practice:r.practice||""}));
+      const practice=mine.filter(r=>!(r.status in INJ_ORDER))
+        .sort((a,b)=>posRank(a.position)-posRank(b.position) || a.player.localeCompare(b.player))
+        .map(r=>({player:r.player, pos:r.position, practice:r.practice||"", injury:r.injury||""}));
+      return { team, final: listed.length>0, listed, practice };
+    };
+    const now={ week:wk, captured_at:new Date().toISOString(), away:side(g.away_team), home:side(g.home_team) };
+    const usable=rows.length>0;
+    const prev=PREV[g.game_id];
+    if(!usable) return prev||null;
+    // never trade a final report for a practice-only one
+    const finals=r=>(r.away.final?1:0)+(r.home.final?1:0);
+    if(prev && finals(prev)>finals(now)) return prev;
+    return now;
+  };
+
   const out=games.map(g=>{
     const pageSlug=`${slug(g.away_team)}-vs-${slug(g.home_team)}-prediction-odds-${target}`;
     const build=(team)=>({
@@ -278,6 +324,7 @@ function teamProfile(rows, team, active){
       leo: leoRead(g, `${g.away_team} @ ${g.home_team}`),
       final_report: finalReport(g, `${g.away_team} @ ${g.home_team}`),
       td_props: tdProps(`${g.away_team} @ ${g.home_team}`, [g.away_team, g.home_team]),
+      injuries: injuryReport(g),
       ratings:{
         this_season:{ away: RTG[g.away_team]||null, home: RTG[g.home_team]||null },
         last_season:{ away: RTG_PRI[g.away_team]||null, home: RTG_PRI[g.home_team]||null },
@@ -294,6 +341,7 @@ function teamProfile(rows, team, active){
   const withQb=out.filter(m=>m.sides.away.this_season.qb&&m.sides.home.this_season.qb).length;
   const withScorers=out.filter(m=>m.sides.away.this_season.top_scorers.length).length;
   console.log(`  ${out.length} matchups  ·  ${withQb} with both starting QBs  ·  ${withScorers} with TD scorers`);
+  console.log(`  injury report on ${out.filter(m=>m.injuries).length} (final game statuses on ${out.filter(m=>m.injuries&&m.injuries.away.final&&m.injuries.home.final).length})`);
   console.log(`  Leo pre-kickoff read on ${out.filter(m=>m.leo).length}  ·  final report on ${out.filter(m=>m.final_report).length}`);
   console.log(`  wrote data/nfl/matchups/${target}.json`);
   out.slice(0,2).forEach(m=>console.log(`    ${m.url}`));

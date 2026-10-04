@@ -272,6 +272,40 @@ function tdCard(m, team, rows){
     }).join("")}</ol></div>`;
 }
 
+/* Injury report, one card per team. Final game statuses when the team has
+   filed them; otherwise that week's practice report, labelled as such. */
+const injCls=st=>st==="Out"?"out":st==="Doubtful"?"dbt":"q";
+const prac=t=>String(t||"").replace(/ in Practice$/i,"").replace(/ Participation$/i,"")
+  .replace(/^Did Not Participate$/i,"DNP").replace(/^Limited$/i,"Limited").replace(/^Full$/i,"Full");
+function injCard(side){
+  const head=`<div class="td-head"><img src="/img/nfl/${encodeURIComponent(side.team)}.png" alt=""><b>${esc(side.team)}</b>
+      <span class="sc-season">${side.final?"Game status":"Practice report"}</span></div>`;
+  if(side.final){
+    const cnt=st=>side.listed.filter(x=>x.status===st).length;
+    const sum=["Out","Doubtful","Questionable"].filter(st=>cnt(st)).map(st=>`${cnt(st)} ${st.toLowerCase()}`).join(" &middot; ");
+    return `<div class="tdcard injcard">${head}
+    <p class="injsum">${sum}</p>
+    <ul class="injlist">${side.listed.map(x=>`<li><span class="ijs ${injCls(x.status)}">${esc(x.status)}</span>
+      <span class="ijn">${esc(x.player)}</span><span class="tdp">${esc(x.pos)}</span>
+      <span class="iji">${esc(x.injury)}</span></li>`).join("")}</ul></div>`;
+  }
+  if(!side.practice.length) return `<div class="tdcard injcard">${head}<p class="none injsum">No players listed.</p></div>`;
+  return `<div class="tdcard injcard">${head}
+    <p class="injsum">No game statuses on file &mdash; latest practice report shown</p>
+    <ul class="injlist">${side.practice.map(x=>`<li><span class="ijs p">${esc(prac(x.practice)||"Listed")}</span>
+      <span class="ijn">${esc(x.player)}</span><span class="tdp">${esc(x.pos)}</span>
+      <span class="iji">${esc(x.injury)}</span></li>`).join("")}</ul></div>`;
+}
+function injurySection(m){
+  const I=m.injuries;
+  if(!I) return "";
+  const when=I.captured_at?new Date(I.captured_at).toLocaleString("en-US",{timeZone:"America/New_York",weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})+" ET":"";
+  return `
+  <h2 class="sec">Injury report</h2>
+  <p class="sub">The official Week ${esc(I.week)} report for each side${when?", as captured "+esc(when):""}. Teams file game statuses on the last practice day; anyone not listed is expected to play. Final inactives come 90 minutes before kickoff.</p>
+  <div class="tdgrid">${injCard(I.away)}${injCard(I.home)}</div>`;
+}
+
 function tdSection(m){
   const T=m.td_props;
   if(!T) return `
@@ -430,6 +464,16 @@ p.sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px}
 .tdc{grid-area:c;font-size:1.5rem;font-weight:800;color:var(--accent2)}
 .tdd{grid-area:d;color:var(--text-dim);font-size:.74rem}
 .note{margin-top:8px}
+.injsum{margin:0;padding:9px 15px 0;color:var(--text-dim);font-size:.78rem;font-weight:700}
+.injlist{list-style:none;margin:0;padding:6px 0}
+.injlist li{display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"s n p" "s i i";gap:2px 10px;padding:9px 15px;align-items:center}
+.injlist li+li{border-top:1px solid var(--border)}
+.ijn{grid-area:n;font-weight:700}.injlist .tdp{grid-area:p}
+.iji{grid-area:i;color:var(--text-dim);font-size:.74rem}
+.ijs{grid-area:s;align-self:center;min-width:92px;text-align:center;font-size:.62rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:var(--bg-elev);color:var(--text-dim)}
+.ijs.out{background:rgba(166,58,46,.13);color:var(--danger)}
+.ijs.dbt{background:rgba(196,120,30,.16);color:var(--warn,#b0651a)}
+.ijs.q{background:var(--bg-elev);color:var(--text)}
 .rcard{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-sm)}
 .rhead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px;background:var(--bg-elev);border-bottom:1px solid var(--border)}
 .rt{display:flex;align-items:center;gap:9px;font-size:.98rem}
@@ -527,6 +571,8 @@ table.bx tr:last-child td{border-bottom:0}
   <div class="notice note">This is a pre-game analysis page. Every stat above the Final result comes from games played <b>before</b> this one${m.pregame_through_week?" (through Week "+m.pregame_through_week+")":""}, and Leo&rsquo;s numbers were frozen before kickoff. Market numbers are the closing line. Nothing here is a wager &mdash; the pick gate stays closed until Leo shows it can beat that line.</div>
 
   ${leoSection(m)}
+
+  ${injurySection(m)}
 
   ${ratingsSection(m)}
 
