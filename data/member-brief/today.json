@@ -1,6 +1,6 @@
 {
   "date": "2026-10-07",
-  "generated_at": "2026-10-07T20:13:15.753Z",
+  "generated_at": "2026-10-07T20:33:47.023Z",
   "snapshot_type": "posted",
   "source_of_truth": "Leo Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -11,7 +11,7 @@
     "minimum_lab_score": 72,
     "note": "Lab Rating grades Leo's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
   },
-  "summary": "2 official picks cleared their market gates: 2 moneyline. 0 value-watch setups had good price math but did not clear official-pick rules.",
+  "summary": "Brief generated without live market pricing. Treat the card as research-only until pricing is checked.",
   "official_card": [
     {
       "game_pk": 849822,
@@ -27,7 +27,16 @@
         "best_price": -143
       },
       "total": null,
-      "strikeouts": []
+      "strikeouts": [
+        {
+          "pitcher": "Tyler Mahle",
+          "pick": "Over",
+          "line": 3.5,
+          "best_price": -150,
+          "projection": 4.56,
+          "edge": 1.06
+        }
+      ]
     },
     {
       "game_pk": 849838,
@@ -43,7 +52,24 @@
         "best_price": -165
       },
       "total": null,
-      "strikeouts": []
+      "strikeouts": [
+        {
+          "pitcher": "Nick Martinez",
+          "pick": "Over",
+          "line": 2.5,
+          "best_price": -150,
+          "projection": 4.01,
+          "edge": 1.51
+        },
+        {
+          "pitcher": "Max Fried",
+          "pick": "Under",
+          "line": 4.5,
+          "best_price": -109,
+          "projection": 3.7,
+          "edge": -0.8
+        }
+      ]
     }
   ],
   "games": [
@@ -64,11 +90,72 @@
       "model_probability": 0.6265,
       "model_source": "leo",
       "projected_runs": null,
-      "pitching_plan": null,
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 607192,
+              "pitcher": "Tyler Glasnow",
+              "expected_innings": 5.6923076923076925,
+              "fip_lite": 2.85,
+              "pitcher_score": 75,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.3076923076923075
+            }
+          ],
+          "expected_innings": 5.7,
+          "bullpen_innings": 3.3,
+          "effective_era": 2.51,
+          "pitcher_score": 75,
+          "bullpen_carries_game": false,
+          "description": "Tyler Glasnow 5.7 IP + remaining bullpen 3.3 IP",
+          "pitcher": "Tyler Glasnow",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 641816,
+              "pitcher": "Tyler Mahle",
+              "expected_innings": 5.518518518518518,
+              "fip_lite": 3.98,
+              "pitcher_score": 66,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.481481481481482
+            }
+          ],
+          "expected_innings": 5.5,
+          "bullpen_innings": 3.5,
+          "effective_era": 4.11,
+          "pitcher_score": 66,
+          "bullpen_carries_game": false,
+          "description": "Tyler Mahle 5.5 IP + remaining bullpen 3.5 IP",
+          "pitcher": "Tyler Mahle",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.753,
-      "model_effective_era_away": 3.51,
-      "model_effective_era_home": 3.99,
+      "model_effective_era_away": 2.51,
+      "model_effective_era_home": 4.11,
       "model_pitcher_score_away": 75,
       "model_pitcher_score_home": 66,
       "team_strength_blend_away": 0.6773,
@@ -87,7 +174,7 @@
       "run_model_probability": null,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.7451,
-      "edge": 0.0484,
+      "edge": 0.0485,
       "status": "official_pick",
       "value_tag": "OFFICIAL PICK",
       "lab_score": 83,
@@ -103,13 +190,13 @@
         "pitcher_edge_points": 33.33,
         "model_agreement_gap": null,
         "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "assigned_bullpen_innings": 3.3,
         "offense_delta": 0.0508,
         "offense_delta_15d": 0.0416,
         "offense_delta_30d": 0.0599,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -330,12 +417,77 @@
       "side": "home",
       "model_probability": 0.6148,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
+      "projected_runs": {
+        "away": 2.1,
+        "home": 5.7,
+        "total": 8.4
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 607259,
+              "pitcher": "Nick Martinez",
+              "expected_innings": 5.806451612903226,
+              "fip_lite": 3.96,
+              "pitcher_score": 74,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.193548387096774
+            }
+          ],
+          "expected_innings": 5.8,
+          "bullpen_innings": 3.2,
+          "effective_era": 3.65,
+          "pitcher_score": 74,
+          "bullpen_carries_game": false,
+          "description": "Nick Martinez 5.8 IP + remaining bullpen 3.2 IP",
+          "pitcher": "Nick Martinez",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 608331,
+              "pitcher": "Max Fried",
+              "expected_innings": 5.633333333333334,
+              "fip_lite": 2.75,
+              "pitcher_score": 79,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.3666666666666663
+            }
+          ],
+          "expected_innings": 5.6,
+          "bullpen_innings": 3.4,
+          "effective_era": 2.57,
+          "pitcher_score": 79,
+          "bullpen_carries_game": false,
+          "description": "Max Fried 5.6 IP + remaining bullpen 3.4 IP",
+          "pitcher": "Max Fried",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.7296,
-      "model_effective_era_away": 3.04,
-      "model_effective_era_home": 2.77,
+      "model_effective_era_away": 3.65,
+      "model_effective_era_home": 2.57,
       "model_pitcher_score_away": 74,
       "model_pitcher_score_home": 79,
       "team_strength_blend_away": 0.5272,
@@ -351,7 +503,7 @@
         "applied_home": -0.0104,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.9037,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.7291,
       "edge": 0.0087,
@@ -368,15 +520,15 @@
         "offense_points": 30.79,
         "completeness_points": 0,
         "pitcher_edge_points": 38.67,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.1741,
+        "model_agreement_credit": 0,
+        "assigned_bullpen_innings": 3.4,
         "offense_delta": 0.0139,
         "offense_delta_15d": 0.0121,
         "offense_delta_30d": 0.0157,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -389,7 +541,7 @@
         "lab_score_passed": true
       },
       "pass_reason": null,
-      "read": "New York Yankees is an official moneyline pick because it clears both gates: 61.5% model win probability and 7.3/10 Lab Rating. Leo projects 61.5% against a 60.6% no-vig market number, a 0.9% model edge at -165. New York Yankees owns the starting pitcher edge by 5 points. Bullpen read: Neutral. New York Yankees's pen efficiency: Dominant (7.8/10). Bullpen fatigue moved this probability down 11.4 points from 72.9% (starting pitcher and team strength only) to 61.5%. Lineup check: New York Yankees is a touch below its season form (-0.033 OPS); Tampa Bay Rays is in a cold stretch (-0.072 OPS).",
+      "read": "New York Yankees is an official moneyline pick because it clears both gates: 61.5% model win probability and 7.3/10 Lab Rating. Leo projects 61.5% against a 60.6% no-vig market number, a 0.9% model edge at -165. New York Yankees owns the starting pitcher edge by 5 points. Bullpen read: Neutral. New York Yankees's pen efficiency: Dominant (7.8/10). Lineup check: New York Yankees is a touch below its season form (-0.033 OPS); Tampa Bay Rays is in a cold stretch (-0.072 OPS).",
       "pitcher_edge": {
         "team": "New York Yankees",
         "gap": 5,
@@ -864,12 +1016,77 @@
       "side": "home",
       "model_probability": 0.6685,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
-      "bullpen_game": false,
+      "projected_runs": {
+        "away": 3.5,
+        "home": 5.6,
+        "total": 9.6
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "opener_bullpen",
+          "confidence": "low",
+          "reported": false,
+          "segments": [
+            {
+              "role": "opener",
+              "pitcher_id": null,
+              "pitcher": "TBD",
+              "expected_innings": 4.5,
+              "fip_lite": 4.2,
+              "pitcher_score": 50,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.5
+            }
+          ],
+          "expected_innings": 4.5,
+          "bullpen_innings": 4.5,
+          "effective_era": 3.4,
+          "pitcher_score": 50,
+          "bullpen_carries_game": false,
+          "description": "TBD 4.5 IP + remaining bullpen 4.5 IP",
+          "pitcher": "TBD",
+          "role": "unknown",
+          "label": "Role unknown",
+          "bullpen_game": true
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 621111,
+              "pitcher": "Walker Buehler",
+              "expected_innings": 4.802083333333333,
+              "fip_lite": 4.42,
+              "pitcher_score": 58,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.197916666666667
+            }
+          ],
+          "expected_innings": 4.8,
+          "bullpen_innings": 4.2,
+          "effective_era": 3.91,
+          "pitcher_score": 58,
+          "bullpen_carries_game": false,
+          "description": "Walker Buehler 4.8 IP + remaining bullpen 4.2 IP",
+          "pitcher": "Walker Buehler",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
+      "bullpen_game": true,
       "legacy_strength_probability": 0.8371,
-      "model_effective_era_away": 4.2,
-      "model_effective_era_home": 4.58,
+      "model_effective_era_away": 3.4,
+      "model_effective_era_home": 3.91,
       "model_pitcher_score_away": 50,
       "model_pitcher_score_home": 58,
       "team_strength_blend_away": 0.6697,
@@ -885,7 +1102,7 @@
         "applied_home": 0.0131,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.7552,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.8375,
       "edge": 0.1621,
@@ -902,13 +1119,13 @@
         "offense_points": 26.85,
         "completeness_points": 0,
         "pitcher_edge_points": 10.67,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.0819,
+        "model_agreement_credit": 0.524,
+        "assigned_bullpen_innings": 4.2,
         "offense_delta": 0.0044,
         "offense_delta_15d": -0.0168,
         "offense_delta_30d": 0.0257,
-        "completeness_checks_passed": 2,
+        "completeness_checks_passed": 4,
         "completeness_checks_total": 5,
         "data_complete": false,
         "market_points": 0,
@@ -922,8 +1139,8 @@
         "model_probability_passed": true,
         "lab_score_passed": false
       },
-      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
-      "read": "The combined Lab Rating did not clear the official threshold.",
+      "pass_reason": "This is a bullpen game -- no confirmed traditional starter, so Leo does not publish an official pick here.",
+      "read": "This is a bullpen game -- no confirmed traditional starter, so Leo does not publish an official pick here.",
       "pitcher_edge": {
         "team": "San Diego Padres",
         "gap": 8,
