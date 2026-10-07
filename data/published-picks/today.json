@@ -461,6 +461,200 @@
           "valueTag": "OFFICIAL PICK"
         }
       ]
+    },
+    {
+      "gamePk": 849827,
+      "away": "Milwaukee Brewers",
+      "home": "San Diego Padres",
+      "time": "2026-10-08T02:00:00Z",
+      "labScore": 51,
+      "labScoreBreakdown": {
+        "score": 51,
+        "version": "lab-rating-v3-measured-components",
+        "conviction_points": 3.58,
+        "agreement_points": 0,
+        "pitching_plan_points": 24,
+        "bullpen_points": 0,
+        "offense_points": 23.15,
+        "completeness_points": 0,
+        "pitcher_edge_points": 24,
+        "model_agreement_gap": 0.6306,
+        "model_agreement_credit": 0,
+        "assigned_bullpen_innings": 3.8,
+        "offense_delta": -0.0044,
+        "offense_delta_15d": 0.0168,
+        "offense_delta_30d": -0.0257,
+        "completeness_checks_passed": 5,
+        "completeness_checks_total": 5,
+        "data_complete": true,
+        "market_points": 0,
+        "model_edge_points": 0,
+        "base_points": 0,
+        "note": "Lab Rating grades Leo's analysis quality only. It contains no market or price input."
+      },
+      "status": "official_pick",
+      "modelVersion": "multi-market-v1",
+      "pitcherEdge": {
+        "team": "Milwaukee Brewers",
+        "gap": 10,
+        "conflict": false,
+        "away_score": 68,
+        "home_score": 58,
+        "away_pitcher": "Robert Gasser",
+        "home_pitcher": "Walker Buehler",
+        "away_pitcher_id": 688107,
+        "home_pitcher_id": 621111,
+        "away_era": 3.87,
+        "home_era": 4.63,
+        "away_whip": 1.19,
+        "home_whip": 1.35,
+        "away_advanced": {
+          "w": 5,
+          "l": 5,
+          "kbb_pct": 0.1469,
+          "gb_pct": 0.3773,
+          "babip": 0.2685,
+          "hr9": 1.23,
+          "ip_per_start": 5.2,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 5.2,
+          "bullpen_innings": 3.8
+        },
+        "home_advanced": {
+          "w": 9,
+          "l": 6,
+          "kbb_pct": 0.1137,
+          "gb_pct": 0.5229,
+          "babip": 0.2956,
+          "hr9": 1.29,
+          "ip_per_start": 4.8,
+          "role": "traditional_starter",
+          "role_label": "Traditional starter",
+          "expected_innings": 4.8,
+          "bullpen_innings": 4.2
+        }
+      },
+      "bullpen": {
+        "pick_team": {
+          "score": 71,
+          "label": "Tired",
+          "last_game_bp_ip": 5,
+          "last7_bp_ip": 14,
+          "last7_bp_runs": 3,
+          "last_game_relievers": 4,
+          "last7_relievers": 13,
+          "back_to_back_arms": 3,
+          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+          "score_reason": "Tired (7.1/10): 14 recent relief innings, recency-weighted — 5 in the last game (pitched yesterday), 3 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 4,
+            "last7_relievers": 13,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 14.5,
+            "back_to_back_arms": 12,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 71.5
+          },
+          "efficiency_score": 74,
+          "efficiency_label": "Effective",
+          "efficiency_reason": "Effective (7.4/10): 0.64 ERA and 1.14 WHIP over 14 relief innings (1 ER, 11 H, 5 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": 21.3,
+            "whip_term": 2.4,
+            "confidence": 1,
+            "raw_score": 73.7
+          },
+          "era_7d": 0.64,
+          "whip_7d": 1.14,
+          "last15_bp_ip": 45,
+          "last15_bp_runs": 16,
+          "era_15d": 2.6,
+          "whip_15d": 0.96,
+          "recent15_games_tracked": 9,
+          "risk_index": 59,
+          "risk_label": "Normal",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "opponent": {
+          "score": 67,
+          "label": "Tired",
+          "last_game_bp_ip": 4.7,
+          "last7_bp_ip": 19.3,
+          "last7_bp_runs": 5,
+          "last_game_relievers": 4,
+          "last7_relievers": 15,
+          "back_to_back_arms": 6,
+          "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+          "score_reason": "Tired (6.7/10): 19.3 recent relief innings, recency-weighted — 4.7 in the last game (pitched yesterday), 6 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+          "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+          "context_only": {
+            "last_game_relievers": 4,
+            "last7_relievers": 15,
+            "note": "Reliever counts are displayed for context only and do not add score points."
+          },
+          "component_scores": {
+            "baseline": 45,
+            "weighted_bp_ip": 13.6,
+            "back_to_back_arms": 8.7,
+            "reliever_counts_context_only": 0,
+            "no_recent_games_credit": 0,
+            "raw_score": 67.3
+          },
+          "efficiency_score": 65,
+          "efficiency_label": "Effective",
+          "efficiency_reason": "Effective (6.5/10): 1.86 ERA and 1.24 WHIP over 19.3 relief innings (4 ER, 13 H, 11 BB) in the last 7 days.",
+          "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+          "efficiency_component_scores": {
+            "baseline": 50,
+            "era_term": 14,
+            "whip_term": 0.9,
+            "confidence": 1,
+            "raw_score": 64.9
+          },
+          "era_7d": 1.86,
+          "whip_7d": 1.24,
+          "last15_bp_ip": 48.7,
+          "last15_bp_runs": 19,
+          "era_15d": 3.33,
+          "whip_15d": 1.36,
+          "recent15_games_tracked": 11,
+          "risk_index": 60,
+          "risk_label": "Normal",
+          "days_rest": 1,
+          "source_version": "bullpen-fatigue-v5-recency-weighted"
+        },
+        "label": "Elevated volatility",
+        "major_caution": false,
+        "absolute_risk": "Elevated"
+      },
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Robert Gasser",
+          "pick": "Over",
+          "line": 2.5,
+          "bestAm": 110,
+          "projection": 4.93,
+          "edge": 2.43,
+          "books": 6,
+          "expectedInnings": 5.2,
+          "pitcherRole": "traditional_starter",
+          "lineupSource": "posted",
+          "modelVersion": "leo-kprop",
+          "valueTag": "OFFICIAL PICK"
+        }
+      ]
     }
-  ]
+  ],
+  "last_appended_at": "2026-10-07T21:19:37.095Z"
 }

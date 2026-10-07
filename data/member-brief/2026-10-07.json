@@ -1,6 +1,6 @@
 {
   "date": "2026-10-07",
-  "generated_at": "2026-10-07T21:14:36.947Z",
+  "generated_at": "2026-10-07T21:19:29.184Z",
   "snapshot_type": "posted",
   "source_of_truth": "Leo Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -11,7 +11,7 @@
     "minimum_lab_score": 72,
     "note": "Lab Rating grades Leo's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
   },
-  "summary": "5 official picks cleared their market gates: 2 moneyline and 3 pitcher strikeout props. 0 value-watch setups had good price math but did not clear official-pick rules.",
+  "summary": "Brief generated without live market pricing. Treat the card as research-only until pricing is checked.",
   "official_card": [
     {
       "game_pk": 849822,
@@ -23,8 +23,8 @@
       "moneyline": {
         "pick": "Los Angeles Dodgers",
         "prob": 0.6265,
-        "mkt_prob": 0.5814,
-        "best_price": -147
+        "mkt_prob": 0.578,
+        "best_price": -143
       },
       "total": null,
       "strikeouts": [
@@ -48,7 +48,7 @@
       "moneyline": {
         "pick": "New York Yankees",
         "prob": 0.6148,
-        "mkt_prob": 0.606,
+        "mkt_prob": 0.6061,
         "best_price": -165
       },
       "total": null,
@@ -68,6 +68,26 @@
           "best_price": -109,
           "projection": 3.7,
           "edge": -0.8
+        }
+      ]
+    },
+    {
+      "game_pk": 849827,
+      "game": "Milwaukee Brewers @ San Diego Padres",
+      "away": "Milwaukee Brewers",
+      "home": "San Diego Padres",
+      "time": "2026-10-08T02:00:00Z",
+      "lab_score": 51,
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Robert Gasser",
+          "pick": "Over",
+          "line": 2.5,
+          "best_price": 110,
+          "projection": 4.93,
+          "edge": 2.43
         }
       ]
     }
@@ -1018,39 +1038,39 @@
       "model_source": "leo",
       "projected_runs": {
         "away": 3.5,
-        "home": 5.6,
-        "total": 9.6
+        "home": 7.5,
+        "total": 11.5
       },
       "pitching_plan": {
         "away": {
-          "type": "opener_bullpen",
-          "confidence": "low",
+          "type": "starter_bullpen",
+          "confidence": "high",
           "reported": false,
           "segments": [
             {
-              "role": "opener",
-              "pitcher_id": null,
-              "pitcher": "TBD",
-              "expected_innings": 4.5,
-              "fip_lite": 4.2,
-              "pitcher_score": 50,
+              "role": "starter",
+              "pitcher_id": 688107,
+              "pitcher": "Robert Gasser",
+              "expected_innings": 5.2,
+              "fip_lite": 4.01,
+              "pitcher_score": 68,
               "role_stats": null
             },
             {
               "role": "bullpen",
-              "expected_innings": 4.5
+              "expected_innings": 3.8
             }
           ],
-          "expected_innings": 4.5,
-          "bullpen_innings": 4.5,
-          "effective_era": 3.4,
-          "pitcher_score": 50,
+          "expected_innings": 5.2,
+          "bullpen_innings": 3.8,
+          "effective_era": 3.41,
+          "pitcher_score": 68,
           "bullpen_carries_game": false,
-          "description": "TBD 4.5 IP + remaining bullpen 4.5 IP",
-          "pitcher": "TBD",
-          "role": "unknown",
-          "label": "Role unknown",
-          "bullpen_game": true
+          "description": "Robert Gasser 5.2 IP + remaining bullpen 3.8 IP",
+          "pitcher": "Robert Gasser",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
         },
         "home": {
           "type": "starter_bullpen",
@@ -1083,9 +1103,9 @@
           "bullpen_game": false
         }
       },
-      "bullpen_game": true,
+      "bullpen_game": false,
       "legacy_strength_probability": 0.7433,
-      "model_effective_era_away": 3.89,
+      "model_effective_era_away": 3.41,
       "model_effective_era_home": 3.91,
       "model_pitcher_score_away": 68,
       "model_pitcher_score_home": 58,
@@ -1102,26 +1122,26 @@
         "applied_home": 0.0131,
         "weight": 0.5
       },
-      "run_model_probability": 0.2448,
+      "run_model_probability": 0.1127,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.7427,
       "edge": 0.1262,
       "status": "pass",
       "value_tag": "PASS",
-      "lab_score": 27,
+      "lab_score": 51,
       "lab_score_breakdown": {
-        "score": 27,
+        "score": 51,
         "version": "lab-rating-v3-measured-components",
         "conviction_points": 3.58,
         "agreement_points": 0,
-        "pitching_plan_points": 0,
+        "pitching_plan_points": 24,
         "bullpen_points": 0,
         "offense_points": 23.15,
         "completeness_points": 0,
-        "pitcher_edge_points": 0,
-        "model_agreement_gap": 0.4985,
+        "pitcher_edge_points": 24,
+        "model_agreement_gap": 0.6306,
         "model_agreement_credit": 0,
-        "assigned_bullpen_innings": 4.5,
+        "assigned_bullpen_innings": 3.8,
         "offense_delta": -0.0044,
         "offense_delta_15d": 0.0168,
         "offense_delta_30d": -0.0257,
@@ -1139,13 +1159,13 @@
         "model_probability_passed": true,
         "lab_score_passed": false
       },
-      "pass_reason": "This is a bullpen game -- no confirmed traditional starter, so Leo does not publish an official pick here.",
-      "read": "This is a bullpen game -- no confirmed traditional starter, so Leo does not publish an official pick here.",
+      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
+      "read": "The combined Lab Rating did not clear the official threshold.",
       "pitcher_edge": {
-        "team": "San Diego Padres",
-        "gap": 8,
-        "conflict": true,
-        "away_score": 50,
+        "team": "Milwaukee Brewers",
+        "gap": 10,
+        "conflict": false,
+        "away_score": 68,
         "home_score": 58,
         "away_pitcher": "Robert Gasser",
         "home_pitcher": "Walker Buehler",
