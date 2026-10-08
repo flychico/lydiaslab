@@ -106324,21 +106324,21 @@
     },
     "2026-10-07": {
       "date": "2026-10-07",
-      "wins": 0,
-      "losses": 0,
-      "ungraded": 3,
+      "wins": 4,
+      "losses": 3,
+      "ungraded": 0,
       "voided": 0,
-      "units": null,
+      "units": 0.13,
       "source": "published-picks",
       "current_official_model": "multi_market_v1",
       "model_version": "multi-market-v1",
       "market_records": {
         "moneyline": {
-          "wins": 0,
-          "losses": 0,
+          "wins": 1,
+          "losses": 1,
           "pushes": 0,
           "voids": 0,
-          "units": 0
+          "units": -0.3
         },
         "game_total": {
           "wins": 0,
@@ -106348,11 +106348,11 @@
           "units": 0
         },
         "pitcher_strikeouts": {
-          "wins": 0,
-          "losses": 0,
+          "wins": 3,
+          "losses": 2,
           "pushes": 0,
           "voids": 0,
-          "units": 0
+          "units": 0.43
         }
       },
       "picks": [
@@ -106562,7 +106562,21 @@
               "valueTag": "OFFICIAL PICK"
             }
           ],
-          "result": "NG",
+          "mlResult": "W",
+          "totResult": "NG",
+          "kResults": [
+            {
+              "pitcher": "Tyler Mahle",
+              "pick": "Over",
+              "line": 3.5,
+              "bestAm": -150,
+              "actual": 4,
+              "result": "W"
+            }
+          ],
+          "rlResult": "NG",
+          "finalAway": 4,
+          "finalHome": 1,
           "learning": {
             "model_version": "leo",
             "official_model": "moneyline_only",
@@ -106580,8 +106594,8 @@
             "current_price": null,
             "closing_price": null,
             "clv_result": "not_tracked",
-            "result": "NG",
-            "lesson_tag": "not_graded"
+            "result": "W",
+            "lesson_tag": "win_needs_more_sample"
           }
         },
         {
@@ -106804,7 +106818,29 @@
               "valueTag": "OFFICIAL PICK"
             }
           ],
-          "result": "NG",
+          "mlResult": "L",
+          "totResult": "NG",
+          "kResults": [
+            {
+              "pitcher": "Nick Martinez",
+              "pick": "Over",
+              "line": 2.5,
+              "bestAm": -150,
+              "actual": 3,
+              "result": "W"
+            },
+            {
+              "pitcher": "Max Fried",
+              "pick": "Under",
+              "line": 4.5,
+              "bestAm": -109,
+              "actual": 7,
+              "result": "L"
+            }
+          ],
+          "rlResult": "NG",
+          "finalAway": 4,
+          "finalHome": 3,
           "learning": {
             "model_version": "leo",
             "official_model": "moneyline_only",
@@ -106822,8 +106858,8 @@
             "current_price": null,
             "closing_price": null,
             "clv_result": "not_tracked",
-            "result": "NG",
-            "lesson_tag": "not_graded"
+            "result": "L",
+            "lesson_tag": "loss_needs_review"
           }
         },
         {
@@ -107016,9 +107052,45 @@
               "lineupSource": "posted",
               "modelVersion": "leo-kprop",
               "valueTag": "OFFICIAL PICK"
+            },
+            {
+              "pitcher": "Walker Buehler",
+              "pick": "Over",
+              "line": 2.5,
+              "bestAm": -140,
+              "projection": 4.32,
+              "edge": 1.82,
+              "books": 6,
+              "expectedInnings": 4.8,
+              "pitcherRole": "traditional_starter",
+              "lineupSource": "posted",
+              "modelVersion": "leo-kprop",
+              "valueTag": "OFFICIAL PICK"
             }
           ],
-          "result": "NG",
+          "mlResult": "NG",
+          "totResult": "NG",
+          "kResults": [
+            {
+              "pitcher": "Robert Gasser",
+              "pick": "Over",
+              "line": 2.5,
+              "bestAm": 110,
+              "actual": 3,
+              "result": "W"
+            },
+            {
+              "pitcher": "Walker Buehler",
+              "pick": "Over",
+              "line": 2.5,
+              "bestAm": -140,
+              "actual": 0,
+              "result": "L"
+            }
+          ],
+          "rlResult": "NG",
+          "finalAway": 3,
+          "finalHome": 1,
           "learning": {
             "model_version": "multi-market-v1",
             "official_model": "moneyline_only",
