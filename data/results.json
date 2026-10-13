@@ -108409,6 +108409,255 @@
           }
         }
       ]
+    },
+    "2026-10-13": {
+      "date": "2026-10-13",
+      "wins": 0,
+      "losses": 0,
+      "ungraded": 1,
+      "voided": 0,
+      "units": null,
+      "source": "published-picks",
+      "current_official_model": "multi_market_v1",
+      "model_version": "multi-market-v1",
+      "market_records": {
+        "moneyline": {
+          "wins": 0,
+          "losses": 0,
+          "pushes": 0,
+          "voids": 0,
+          "units": 0
+        },
+        "game_total": {
+          "wins": 0,
+          "losses": 0,
+          "pushes": 0,
+          "voids": 0,
+          "units": 0
+        },
+        "pitcher_strikeouts": {
+          "wins": 0,
+          "losses": 0,
+          "pushes": 0,
+          "voids": 0,
+          "units": 0
+        }
+      },
+      "picks": [
+        {
+          "gamePk": 849813,
+          "away": "Cleveland Guardians",
+          "home": "Tampa Bay Rays",
+          "time": "2026-10-14T00:00:00Z",
+          "labScore": 96,
+          "labScoreBreakdown": {
+            "score": 96,
+            "version": "lab-rating-v3-measured-components",
+            "conviction_points": 8.48,
+            "agreement_points": 0,
+            "pitching_plan_points": 40,
+            "bullpen_points": 0,
+            "offense_points": 47.71,
+            "completeness_points": 0,
+            "pitcher_edge_points": 40,
+            "model_agreement_gap": 0.0058,
+            "model_agreement_credit": 1,
+            "assigned_bullpen_innings": 3.2,
+            "offense_delta": 0.0545,
+            "offense_delta_15d": null,
+            "offense_delta_30d": 0.0545,
+            "completeness_checks_passed": 5,
+            "completeness_checks_total": 5,
+            "data_complete": true,
+            "market_points": 0,
+            "model_edge_points": 0,
+            "base_points": 0,
+            "note": "Lab Rating grades Leo's analysis quality only. It contains no market or price input."
+          },
+          "status": "official_pick",
+          "modelVersion": "multi-market-v1",
+          "pitcherEdge": {
+            "team": "Cleveland Guardians",
+            "gap": 20,
+            "conflict": false,
+            "away_score": 80,
+            "home_score": 60,
+            "away_pitcher": "Parker Messick",
+            "home_pitcher": "Freddy Peralta",
+            "away_pitcher_id": 800048,
+            "home_pitcher_id": 642547,
+            "away_era": 2.56,
+            "home_era": 4.42,
+            "away_whip": 1.06,
+            "home_whip": 1.33,
+            "away_advanced": {
+              "w": 12,
+              "l": 9,
+              "kbb_pct": 0.1928,
+              "gb_pct": 0.4972,
+              "babip": 0.2744,
+              "hr9": 0.82,
+              "ip_per_start": 5.8,
+              "role": "traditional_starter",
+              "role_label": "Traditional starter",
+              "expected_innings": 5.8,
+              "bullpen_innings": 3.2
+            },
+            "home_advanced": {
+              "w": 10,
+              "l": 11,
+              "kbb_pct": 0.1274,
+              "gb_pct": 0.4474,
+              "babip": 0.2899,
+              "hr9": 1.22,
+              "ip_per_start": 5.3,
+              "role": "traditional_starter",
+              "role_label": "Traditional starter",
+              "expected_innings": 5.3,
+              "bullpen_innings": 3.7
+            }
+          },
+          "bullpen": {
+            "pick_team": {
+              "score": 71,
+              "label": "Tired",
+              "last_game_bp_ip": 5,
+              "last7_bp_ip": 24,
+              "last7_bp_runs": 7,
+              "last_game_relievers": 5,
+              "last7_relievers": 22,
+              "back_to_back_arms": 4,
+              "workload_read": "Elevated recent workload. Full-game angles deserve extra late-inning caution.",
+              "score_reason": "Tired (7.1/10): 24 recent relief innings, recency-weighted — 5 in the last game (pitched yesterday), 4 arms worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+              "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+              "context_only": {
+                "last_game_relievers": 5,
+                "last7_relievers": 22,
+                "note": "Reliever counts are displayed for context only and do not add score points."
+              },
+              "component_scores": {
+                "baseline": 45,
+                "weighted_bp_ip": 18.1,
+                "back_to_back_arms": 8,
+                "reliever_counts_context_only": 0,
+                "no_recent_games_credit": 0,
+                "raw_score": 71.1
+              },
+              "efficiency_score": 63,
+              "efficiency_label": "Effective",
+              "efficiency_reason": "Effective (6.3/10): 2.63 ERA and 1.04 WHIP over 24 relief innings (7 ER, 16 H, 9 BB) in the last 7 days.",
+              "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+              "efficiency_component_scores": {
+                "baseline": 50,
+                "era_term": 9.5,
+                "whip_term": 3.9,
+                "confidence": 1,
+                "raw_score": 63.3
+              },
+              "era_7d": 2.63,
+              "whip_7d": 1.04,
+              "last15_bp_ip": 32.7,
+              "last15_bp_runs": 10,
+              "era_15d": 2.76,
+              "whip_15d": 0.98,
+              "recent15_games_tracked": 6,
+              "risk_index": 65,
+              "risk_label": "Tired",
+              "days_rest": 1,
+              "source_version": "bullpen-fatigue-v5-recency-weighted"
+            },
+            "opponent": {
+              "score": 47,
+              "label": "Normal",
+              "last_game_bp_ip": 3,
+              "last7_bp_ip": 8.3,
+              "last7_bp_runs": 6,
+              "last_game_relievers": 5,
+              "last7_relievers": 10,
+              "back_to_back_arms": 1,
+              "workload_read": "Manageable recent workload. Bullpen should still be part of the full-game read.",
+              "score_reason": "Normal (4.7/10): 8.3 recent relief innings, recency-weighted (pitched yesterday), 1 arm worked back-to-back days. Recent innings count more; rest days lower the score. Workload only — see efficiency for how well the pen has pitched.",
+              "formula": "45 + (recency-weighted (BP IP - 3/game) x 4.2) + (recency-weighted back-to-back arms x 8). Each game decays by half every 2 days, so rest days lower the score.",
+              "context_only": {
+                "last_game_relievers": 5,
+                "last7_relievers": 10,
+                "note": "Reliever counts are displayed for context only and do not add score points."
+              },
+              "component_scores": {
+                "baseline": 45,
+                "weighted_bp_ip": 2,
+                "back_to_back_arms": 0,
+                "reliever_counts_context_only": 0,
+                "no_recent_games_credit": 0,
+                "raw_score": 47
+              },
+              "efficiency_score": 36,
+              "efficiency_label": "Below average",
+              "efficiency_reason": "Below average (3.6/10): 6.48 ERA and 1.32 WHIP over 8.3 relief innings (6 ER, 8 H, 3 BB) in the last 7 days.",
+              "efficiency_formula": "50 - clamp((ERA - 4.20) x 6, -25, 25) x confidence - clamp((WHIP - 1.30) x 15, -20, 20) x confidence, confidence = clamp(BP IP / 6, 0.35, 1)",
+              "efficiency_component_scores": {
+                "baseline": 50,
+                "era_term": -13.7,
+                "whip_term": -0.3,
+                "confidence": 1,
+                "raw_score": 36
+              },
+              "era_7d": 6.48,
+              "whip_7d": 1.32,
+              "last15_bp_ip": 13.7,
+              "last15_bp_runs": 7,
+              "era_15d": 4.61,
+              "whip_15d": 0.95,
+              "recent15_games_tracked": 4,
+              "risk_index": 54,
+              "risk_label": "Normal",
+              "days_rest": 1,
+              "source_version": "bullpen-fatigue-v5-recency-weighted"
+            },
+            "label": "Elevated volatility",
+            "major_caution": false,
+            "absolute_risk": "Elevated"
+          },
+          "moneyline": {
+            "pick": "Cleveland Guardians",
+            "side": "away",
+            "prob": 0.7195,
+            "mktProb": 0.4521,
+            "bestAm": 116,
+            "valueTag": "OFFICIAL PICK",
+            "isPass": false,
+            "tier": "Elite Setup",
+            "edgeScore": 96,
+            "rawEdge": 0.2674,
+            "why": "Cleveland Guardians is an official moneyline pick because it clears both gates: 72.0% model win probability and 9.6/10 Lab Rating. Leo projects 72.0% against a 45.2% no-vig market number, a 26.7% model edge at +116. Cleveland Guardians owns the starting pitcher edge by 20 points. Bullpen read: Elevated volatility. Cleveland Guardians's pen efficiency: Effective (6.3/10).",
+            "risk": "Primary caution: bullpen workload adds late-game volatility. Recheck official news before first pitch.",
+            "modelVersion": "leo"
+          },
+          "total": null,
+          "strikeouts": [],
+          "result": "NG",
+          "learning": {
+            "model_version": "leo",
+            "official_model": "moneyline_only",
+            "result_source": "published-picks",
+            "lab_score": 96,
+            "model_probability": 0.7195,
+            "market_probability": 0.4521,
+            "raw_edge": 0.2674,
+            "pitcher_edge_team": "Cleveland Guardians",
+            "pitcher_gap": 20,
+            "bullpen_label": "Elevated volatility",
+            "pick_side_bullpen_score": 71,
+            "opponent_bullpen_score": 47,
+            "posted_price": 120,
+            "current_price": null,
+            "closing_price": null,
+            "clv_result": "not_tracked",
+            "result": "NG",
+            "lesson_tag": "not_graded"
+          }
+        }
+      ]
     }
   }
 }
