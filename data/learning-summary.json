@@ -1,23 +1,23 @@
 {
-  "generated_at": "2026-10-13T15:13:04.607Z",
+  "generated_at": "2026-10-14T12:59:38.687Z",
   "status": "ready",
-  "latest_date": "2026-10-12",
-  "days_reviewed": 66,
+  "latest_date": "2026-10-13",
+  "days_reviewed": 67,
   "source_files": {
     "results": "data/results.json",
     "clv": "data/clv/clv_log.csv"
   },
-  "current_official_model": "multi-market-v1",
-  "headline": "Learning summary for 2026-10-12: no new moneyline picks graded today. Leo's current record: 385-247 (60.9%) across 632 graded games (all statuses, model leo).",
+  "current_official_model": "leo",
+  "headline": "Learning summary for 2026-10-13: moneyline record 0-1 (0.0%).",
   "day": {
-    "date": "2026-10-12",
+    "date": "2026-10-13",
     "source": "published-picks",
-    "record_all_markets": "0-3",
-    "units_all_markets": -3,
+    "record_all_markets": "0-1",
+    "units_all_markets": -1,
     "ungraded": 0,
-    "moneyline_record": "0-0",
-    "moneyline_win_rate": null,
-    "official_moneyline_picks": 0,
+    "moneyline_record": "0-1",
+    "moneyline_win_rate": 0,
+    "official_moneyline_picks": 1,
     "legacy_market_entries": 0
   },
   "gates": {
@@ -26,20 +26,24 @@
     "note": "Official picks require high model probability and strong setup quality. A high Lab Rating alone is not enough. (Market edge is no longer a gate -- a picked side with a lower market-implied probability than the model's read can still qualify, as long as market data exists for the game at all.)"
   },
   "process_metrics": {
-    "average_model_probability": null,
-    "average_lab_score": null,
-    "average_raw_edge": null,
-    "clv_counts": {},
-    "lesson_counts": {},
-    "strong_official_count": 80,
+    "average_model_probability": 0.7195,
+    "average_lab_score": 96,
+    "average_raw_edge": 0.2674,
+    "clv_counts": {
+      "not_tracked": 1
+    },
+    "lesson_counts": {
+      "loss_needs_review": 1
+    },
+    "strong_official_count": 81,
     "protected_by_probability_gate_count": 0,
     "high_bullpen_risk_count": 23,
     "pitcher_conflict_count": 0
   },
   "findings": [
     {
-      "title": "No new moneyline picks graded today",
-      "read": "No moneyline picks finished grading for this date. The findings below draw on the full graded history instead."
+      "title": "Official-pick discipline",
+      "read": "1 moneyline pick was graded today. Record: 0-1 (0.0%)."
     },
     {
       "title": "Probability gate",
@@ -47,55 +51,55 @@
     },
     {
       "title": "What's working: Lab Rating components",
-      "read": "Over 631 graded picks with a reconciling breakdown, pitching plan is the strongest working piece of Lab Rating right now -- picks scoring above its median win 64.2% of the time vs. 57.7% below (lift +6.5%, correlation to winning +0.096)."
+      "read": "Over 632 graded picks with a reconciling breakdown, pitching plan is the strongest working piece of Lab Rating right now -- picks scoring above its median win 64.0% of the time vs. 57.7% below (lift +6.2%, correlation to winning +0.093)."
     },
     {
       "title": "What's not working: Lab Rating components",
-      "read": "bullpen -- correlation to winning -0.065, lift -3.5% over 631 picks. Currently not earning its points -- moves the score without moving the record. Bullpen no longer scores Lab Rating (removed 2026-08-30, folded into pitching plan) -- this is its pre-change record, not a live component."
+      "read": "bullpen -- correlation to winning -0.063, lift -3.3% over 632 picks. Currently not earning its points -- moves the score without moving the record. Bullpen no longer scores Lab Rating (removed 2026-08-30, folded into pitching plan) -- this is its pre-change record, not a live component."
     },
     {
       "title": "Bullpen learning",
-      "read": "Across all reviewed days, 23 graded moneyline picks carried a meaningful bullpen caution. Bullpen was removed from Lab Rating's own scoring on 2026-08-30 (folded into pitching plan) -- this caution count is a separate, still-live read from the bullpen-fatigue system, unaffected by that change. For reference, its PRE-CHANGE scoring history correlated -0.065 with winning over 631 picks (lift -3.5%). Currently not earning its points -- moves the score without moving the record."
+      "read": "Across all reviewed days, 23 graded moneyline picks carried a meaningful bullpen caution. Bullpen was removed from Lab Rating's own scoring on 2026-08-30 (folded into pitching plan) -- this caution count is a separate, still-live read from the bullpen-fatigue system, unaffected by that change. For reference, its PRE-CHANGE scoring history correlated -0.063 with winning over 632 picks (lift -3.3%). Currently not earning its points -- moves the score without moving the record."
     },
     {
       "title": "Pitcher learning",
-      "read": "No major starting-pitcher conflicts showed up in the graded moneyline set. Statistically, the pitching-plan component correlates +0.096 with winning over 631 picks (lift +6.5%)."
+      "read": "No major starting-pitcher conflicts showed up in the graded moneyline set. Statistically, the pitching-plan component correlates +0.093 with winning over 632 picks (lift +6.2%)."
     },
     {
       "title": "Rating calibration",
-      "read": "Actual win rate by Lab Rating band: 0-49 → 58.5% (n=207), 50-64 → 59.7% (n=206), 65-74 → 62.6% (n=123), 75-84 → 62.2% (n=74), 85-100 → 81.0% (n=21). Widest predicted-vs-actual gap is the 75-84 band (-7.7%)."
+      "read": "Actual win rate by Lab Rating band: 0-49 → 58.5% (n=207), 50-64 → 59.7% (n=206), 65-74 → 62.6% (n=123), 75-84 → 62.2% (n=74), 85-100 → 77.3% (n=22). Widest predicted-vs-actual gap is the 75-84 band (-7.7%)."
     }
   ],
   "calibration": {
     "status": "ready",
     "model_version": "leo",
-    "games_graded": 632,
+    "games_graded": 633,
     "wins": 385,
-    "losses": 247,
-    "brier_score": 0.2417,
+    "losses": 248,
+    "brier_score": 0.2421,
     "shadow_model": {
       "status": "ready",
-      "games": 702,
+      "games": 703,
       "official_model_version": "leo",
       "shadow_model_version": "v3.2-woba",
-      "brier_official": 0.2426,
-      "brier_shadow": 0.2472,
+      "brier_official": 0.243,
+      "brier_shadow": 0.2471,
       "leader": "official",
-      "disagreements": 184,
-      "shadow_wins_disagreements": 75,
+      "disagreements": 185,
+      "shadow_wins_disagreements": 76,
       "note": "Only rows from the latest matching official/shadow model-version pair are compared. Promote nothing from a mixed-version sample."
     },
     "attribution": {
       "status": "ready",
-      "games": 776,
+      "games": 777,
       "factors": [
         {
           "factor": "Model probability",
           "tertiles": [
             {
               "band": "low",
-              "games": 259,
-              "win_rate": 0.556
+              "games": 260,
+              "win_rate": 0.558
             },
             {
               "band": "mid",
@@ -105,18 +109,18 @@
             {
               "band": "high",
               "games": 258,
-              "win_rate": 0.628
+              "win_rate": 0.624
             }
           ],
-          "spread": 0.072
+          "spread": 0.066
         },
         {
           "factor": "Bullpen fatigue gap (opp − pick)",
           "tertiles": [
             {
               "band": "low",
-              "games": 263,
-              "win_rate": 0.616
+              "games": 264,
+              "win_rate": 0.614
             },
             {
               "band": "mid",
@@ -129,7 +133,7 @@
               "win_rate": 0.551
             }
           ],
-          "spread": -0.065
+          "spread": -0.063
         },
         {
           "factor": "Pitcher score gap (pick − opp)",
@@ -141,16 +145,16 @@
             },
             {
               "band": "mid",
-              "games": 234,
-              "win_rate": 0.607
+              "games": 254,
+              "win_rate": 0.594
             },
             {
               "band": "high",
-              "games": 258,
-              "win_rate": 0.597
+              "games": 239,
+              "win_rate": 0.607
             }
           ],
-          "spread": -0.012
+          "spread": -0.002
         },
         {
           "factor": "Offense form gap (pick − opp, wOBA)",
@@ -179,14 +183,14 @@
     "kprops": {
       "status": "ready",
       "self_calibration": "no correction needed yet",
-      "graded": 1254,
-      "with_projection": 1245,
+      "graded": 1256,
+      "with_projection": 1247,
       "bias": -0.12,
       "mae": 1.8,
       "lean_record": "311-219",
       "over_lean_record": "176-139",
       "under_lean_record": "135-80",
-      "no_lean": 708,
+      "no_lean": 710,
       "note": "Bias = actual minus projection (positive means we under-project). Leans only counted at 0.7+ strikeout edges. Small samples early — a lean record means little before ~100 graded pitchers."
     },
     "note": "Shadow ledger for learning only — never part of the public record. Official picks stay the only published record.",
@@ -221,17 +225,17 @@
       },
       {
         "range": "70-75%",
-        "games": 259,
+        "games": 260,
         "wins": 163,
         "expected_win_rate": 0.725,
-        "actual_win_rate": 0.629
+        "actual_win_rate": 0.627
       }
     ],
     "shadow_by_status": {
       "official_pick": {
-        "games": 75,
+        "games": 76,
         "wins": 45,
-        "units": 4.64
+        "units": 3.64
       },
       "pass": {
         "games": 426,
@@ -1771,6 +1775,25 @@
         "bullpen_label": "Neutral",
         "pick_side_bullpen_score": 56,
         "opponent_bullpen_score": 55
+      },
+      {
+        "game_pk": 849813,
+        "date": "2026-10-13",
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Cleveland Guardians @ Tampa Bay Rays",
+        "pick": "Cleveland Guardians",
+        "result": "L",
+        "model_probability": 0.7195,
+        "lab_score": 96,
+        "raw_edge": 0.2674,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Cleveland Guardians",
+        "pitcher_gap": 20,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 71,
+        "opponent_bullpen_score": 47
       }
     ],
     "protected_by_probability_gate": [],
@@ -2214,13 +2237,33 @@
       }
     ],
     "pitcher_conflicts": [],
-    "all_moneyline": []
+    "all_moneyline": [
+      {
+        "game_pk": 849813,
+        "date": null,
+        "status": "official_pick",
+        "model_version": "leo",
+        "game": "Cleveland Guardians @ Tampa Bay Rays",
+        "pick": "Cleveland Guardians",
+        "result": "L",
+        "model_probability": 0.7195,
+        "lab_score": 96,
+        "raw_edge": 0.2674,
+        "clv_result": "not_tracked",
+        "lesson_tag": "loss_needs_review",
+        "pitcher_edge_team": "Cleveland Guardians",
+        "pitcher_gap": 20,
+        "bullpen_label": "Elevated volatility",
+        "pick_side_bullpen_score": 71,
+        "opponent_bullpen_score": 47
+      }
+    ]
   },
   "multi_day": {
-    "moneyline_record": "49-31",
-    "moneyline_win_rate": 0.6125,
-    "official_moneyline_entries": 80,
-    "strict_gate_candidates": 80,
+    "moneyline_record": "49-32",
+    "moneyline_win_rate": 0.6049,
+    "official_moneyline_entries": 81,
+    "strict_gate_candidates": 81,
     "high_lab_low_probability_entries": 0,
     "note": "Multi-day view includes whatever historical data exists. Older days may include legacy model behavior."
   },
@@ -2233,13 +2276,22 @@
   "coach": {
     "status": "review_ready",
     "title": "First evidence-based model review is ready",
-    "summary": "Leo has 46 current-model graded days and 80 current-model official picks. The coach can now identify review questions, but it cannot change the model automatically.",
-    "current_model_days": 46,
-    "current_model_picks": 80,
+    "summary": "Leo has 47 current-model graded days and 81 current-model official picks. The coach can now identify review questions, but it cannot change the model automatically.",
+    "current_model_days": 47,
+    "current_model_picks": 81,
     "minimum_days": 7,
     "minimum_picks": 20,
     "bullpen_model_owner": "bullpen-fatigue-v3-runs-aware",
     "game_log": [
+      {
+        "date": "2026-10-13",
+        "gamePk": 849813,
+        "matchup": "Cleveland Guardians @ Tampa Bay Rays",
+        "pick": "Cleveland Guardians",
+        "result": "L",
+        "model_probability": 0.7195,
+        "lab_score": 96
+      },
       {
         "date": "2026-10-11",
         "gamePk": 849809,
@@ -2962,25 +3014,25 @@
       }
     ],
     "history": {
-      "n": 776,
+      "n": 777,
       "ready": true,
       "minimum_n": 20,
       "record": {
         "wins": 469,
-        "losses": 307,
-        "rate": 0.604381443298969
+        "losses": 308,
+        "rate": 0.6036036036036037
       },
       "recommendations": [
-        "Full-history record across every analyzed game (all tiers, all dates): 469-307 (60.4%), n=776. This is what the correlations below are measured against -- not just the 22 current-model official picks.",
-        "Team strength blend edge, before any pitcher/bullpen adjustment (picked side minus opponent): r=0.069 (n=631) -- little to no relationship. Bottom quarter (-0.25 to -0.04): 94-63 (59.9%). Top quarter (0.10 to 0.30): 102-58 (63.7%).",
-        "Lab Rating's pitching-plan component score: r=0.066 (n=776) -- little to no relationship. Bottom quarter (0.00 to 10.20): 110-84 (56.7%). Top quarter (28.00 to 40.00): 121-73 (62.4%).",
-        "Lab Rating's pitcher-edge component score: r=0.066 (n=776) -- little to no relationship. Bottom quarter (0.00 to 8.00): 112-82 (57.7%). Top quarter (28.00 to 40.00): 121-73 (62.4%).",
-        "Leo's own win probability for this pick: r=0.065 (n=776) -- little to no relationship. Bottom quarter (0.44 to 0.56): 101-93 (52.1%). Top quarter (0.72 to 0.74): 119-75 (61.3%).",
-        "Model edge over the market (model prob minus no-vig market prob): r=-0.064 (n=765) -- little to no relationship. Bottom quarter (-0.32 to 0.02): 109-82 (57.1%). Top quarter (0.17 to 0.50): 101-91 (52.6%).",
-        "Lab Rating's bullpen component score (retired 2026-08-30 -- pre-change history only): r=-0.059 (n=776) -- little to no relationship. Bottom quarter (0.00 to 0.00): 120-74 (61.9%). Top quarter (9.38 to 20.00): 117-77 (60.3%).",
-        "Pick tier (official / value watch / watchlist / pass): value_watch 18-8 (69.2%, n=26) vs. watchlist 79-46 (63.2%, n=125) vs. official_pick 48-31 (60.8%, n=79) vs. pass 324-222 (59.3%, n=546).",
-        "Picked the home team vs. the road team: Home 263-151 (63.5%, n=414) vs. Road 206-156 (56.9%, n=362).",
-        "Day of the week: Sun 77-43 (64.2%, n=120) vs. Thu 44-27 (62.0%, n=71) vs. Mon 48-30 (61.5%, n=78) vs. Wed 79-50 (61.2%, n=129) vs. Sat 79-55 (59.0%, n=134) vs. Tue 71-51 (58.2%, n=122) vs. Fri 71-51 (58.2%, n=122).",
+        "Full-history record across every analyzed game (all tiers, all dates): 469-308 (60.4%), n=777. This is what the correlations below are measured against -- not just the 22 current-model official picks.",
+        "Team strength blend edge, before any pitcher/bullpen adjustment (picked side minus opponent): r=0.069 (n=632) -- little to no relationship. Bottom quarter (-0.25 to -0.04): 94-64 (59.5%). Top quarter (0.10 to 0.30): 101-57 (63.9%).",
+        "Model edge over the market (model prob minus no-vig market prob): r=-0.066 (n=766) -- little to no relationship. Bottom quarter (-0.32 to 0.02): 109-82 (57.1%). Top quarter (0.17 to 0.50): 101-92 (52.3%).",
+        "Lab Rating's pitching-plan component score: r=0.063 (n=777) -- little to no relationship. Bottom quarter (0.00 to 10.20): 110-84 (56.7%). Top quarter (28.00 to 40.00): 121-74 (62.1%).",
+        "Lab Rating's pitcher-edge component score: r=0.063 (n=777) -- little to no relationship. Bottom quarter (0.00 to 8.00): 112-82 (57.7%). Top quarter (28.00 to 40.00): 121-74 (62.1%).",
+        "Leo's own win probability for this pick: r=0.063 (n=777) -- little to no relationship. Bottom quarter (0.44 to 0.56): 101-93 (52.1%). Top quarter (0.72 to 0.74): 119-76 (61.0%).",
+        "Lab Rating's bullpen component score (retired 2026-08-30 -- pre-change history only): r=-0.058 (n=777) -- little to no relationship. Bottom quarter (0.00 to 0.00): 120-74 (61.9%). Top quarter (9.36 to 20.00): 118-77 (60.5%).",
+        "Pick tier (official / value watch / watchlist / pass): value_watch 18-8 (69.2%, n=26) vs. watchlist 79-46 (63.2%, n=125) vs. official_pick 48-32 (60.0%, n=80) vs. pass 324-222 (59.3%, n=546).",
+        "Picked the home team vs. the road team: Home 263-151 (63.5%, n=414) vs. Road 206-157 (56.7%, n=363).",
+        "Day of the week: Sun 77-43 (64.2%, n=120) vs. Thu 44-27 (62.0%, n=71) vs. Mon 48-30 (61.5%, n=78) vs. Wed 79-50 (61.2%, n=129) vs. Sat 79-55 (59.0%, n=134) vs. Fri 71-51 (58.2%, n=122) vs. Tue 71-52 (57.7%, n=123).",
         "These are correlations across Leo's own analyzed history, not causal proof and not a signal to change any model weight or gate on their own -- human review still required for any actual change."
       ],
       "correlations": {
@@ -2988,168 +3040,48 @@
           {
             "key": "pick_team_strength_edge",
             "label": "Team strength blend edge, before any pitcher/bullpen adjustment (picked side minus opponent)",
-            "n": 631,
-            "r": 0.06900881331811869,
+            "n": 632,
+            "r": 0.06877395608159738,
             "quartiles": [
               {
-                "n": 157,
+                "n": 158,
                 "w": 94,
-                "l": 63,
-                "rate": 0.5987261146496815,
+                "l": 64,
+                "rate": 0.5949367088607594,
                 "min": -0.24870000000000003,
-                "max": -0.04239999999999999
+                "max": -0.042200000000000015
               },
               {
-                "n": 157,
+                "n": 158,
                 "w": 89,
-                "l": 68,
-                "rate": 0.5668789808917197,
-                "min": -0.042200000000000015,
-                "max": 0.0252
+                "l": 69,
+                "rate": 0.5632911392405063,
+                "min": -0.0403,
+                "max": 0.02629999999999999
               },
               {
-                "n": 157,
-                "w": 99,
+                "n": 158,
+                "w": 100,
                 "l": 58,
-                "rate": 0.6305732484076433,
-                "min": 0.0262,
-                "max": 0.09649999999999997
+                "rate": 0.6329113924050633,
+                "min": 0.026499999999999968,
+                "max": 0.09670000000000006
               },
               {
-                "n": 160,
-                "w": 102,
-                "l": 58,
-                "rate": 0.6375,
-                "min": 0.09670000000000001,
-                "max": 0.29969999999999997
-              }
-            ]
-          },
-          {
-            "key": "lab_pitching_plan_points",
-            "label": "Lab Rating's pitching-plan component score",
-            "n": 776,
-            "r": 0.06627259494473799,
-            "quartiles": [
-              {
-                "n": 194,
-                "w": 110,
-                "l": 84,
-                "rate": 0.5670103092783505,
-                "min": 0,
-                "max": 10.2
-              },
-              {
-                "n": 194,
-                "w": 116,
-                "l": 78,
-                "rate": 0.5979381443298969,
-                "min": 10.2,
-                "max": 19.3
-              },
-              {
-                "n": 194,
-                "w": 122,
-                "l": 72,
-                "rate": 0.6288659793814433,
-                "min": 19.5,
-                "max": 28
-              },
-              {
-                "n": 194,
-                "w": 121,
-                "l": 73,
-                "rate": 0.6237113402061856,
-                "min": 28,
-                "max": 40
-              }
-            ]
-          },
-          {
-            "key": "lab_pitcher_edge_points",
-            "label": "Lab Rating's pitcher-edge component score",
-            "n": 776,
-            "r": 0.06601160514729679,
-            "quartiles": [
-              {
-                "n": 194,
-                "w": 112,
-                "l": 82,
-                "rate": 0.5773195876288659,
-                "min": 0,
-                "max": 8
-              },
-              {
-                "n": 194,
-                "w": 108,
-                "l": 86,
-                "rate": 0.5567010309278351,
-                "min": 8,
-                "max": 18
-              },
-              {
-                "n": 194,
-                "w": 128,
-                "l": 66,
-                "rate": 0.6597938144329897,
-                "min": 18,
-                "max": 28
-              },
-              {
-                "n": 194,
-                "w": 121,
-                "l": 73,
-                "rate": 0.6237113402061856,
-                "min": 28,
-                "max": 40
-              }
-            ]
-          },
-          {
-            "key": "pick_model_prob",
-            "label": "Leo's own win probability for this pick",
-            "n": 776,
-            "r": 0.0645723345464546,
-            "quartiles": [
-              {
-                "n": 194,
+                "n": 158,
                 "w": 101,
-                "l": 93,
-                "rate": 0.520618556701031,
-                "min": 0.442,
-                "max": 0.5593
-              },
-              {
-                "n": 194,
-                "w": 127,
-                "l": 67,
-                "rate": 0.654639175257732,
-                "min": 0.5601,
-                "max": 0.6371
-              },
-              {
-                "n": 194,
-                "w": 122,
-                "l": 72,
-                "rate": 0.6288659793814433,
-                "min": 0.6371,
-                "max": 0.718
-              },
-              {
-                "n": 194,
-                "w": 119,
-                "l": 75,
-                "rate": 0.6134020618556701,
-                "min": 0.7181,
-                "max": 0.7449
+                "l": 57,
+                "rate": 0.6392405063291139,
+                "min": 0.09710000000000008,
+                "max": 0.29969999999999997
               }
             ]
           },
           {
             "key": "edge_vs_market",
             "label": "Model edge over the market (model prob minus no-vig market prob)",
-            "n": 765,
-            "r": -0.06396114478885921,
+            "n": 766,
+            "r": -0.06634406511477894,
             "quartiles": [
               {
                 "n": 191,
@@ -3176,20 +3108,140 @@
                 "max": 0.16920000000000002
               },
               {
-                "n": 192,
+                "n": 193,
                 "w": 101,
-                "l": 91,
-                "rate": 0.5260416666666666,
+                "l": 92,
+                "rate": 0.5233160621761658,
                 "min": 0.1693,
                 "max": 0.5022
               }
             ]
           },
           {
+            "key": "lab_pitching_plan_points",
+            "label": "Lab Rating's pitching-plan component score",
+            "n": 777,
+            "r": 0.06309926628927663,
+            "quartiles": [
+              {
+                "n": 194,
+                "w": 110,
+                "l": 84,
+                "rate": 0.5670103092783505,
+                "min": 0,
+                "max": 10.2
+              },
+              {
+                "n": 194,
+                "w": 116,
+                "l": 78,
+                "rate": 0.5979381443298969,
+                "min": 10.2,
+                "max": 19.3
+              },
+              {
+                "n": 194,
+                "w": 122,
+                "l": 72,
+                "rate": 0.6288659793814433,
+                "min": 19.5,
+                "max": 28
+              },
+              {
+                "n": 195,
+                "w": 121,
+                "l": 74,
+                "rate": 0.6205128205128205,
+                "min": 28,
+                "max": 40
+              }
+            ]
+          },
+          {
+            "key": "lab_pitcher_edge_points",
+            "label": "Lab Rating's pitcher-edge component score",
+            "n": 777,
+            "r": 0.06292003279373297,
+            "quartiles": [
+              {
+                "n": 194,
+                "w": 112,
+                "l": 82,
+                "rate": 0.5773195876288659,
+                "min": 0,
+                "max": 8
+              },
+              {
+                "n": 194,
+                "w": 108,
+                "l": 86,
+                "rate": 0.5567010309278351,
+                "min": 8,
+                "max": 18
+              },
+              {
+                "n": 194,
+                "w": 128,
+                "l": 66,
+                "rate": 0.6597938144329897,
+                "min": 18,
+                "max": 28
+              },
+              {
+                "n": 195,
+                "w": 121,
+                "l": 74,
+                "rate": 0.6205128205128205,
+                "min": 28,
+                "max": 40
+              }
+            ]
+          },
+          {
+            "key": "pick_model_prob",
+            "label": "Leo's own win probability for this pick",
+            "n": 777,
+            "r": 0.06280186442736721,
+            "quartiles": [
+              {
+                "n": 194,
+                "w": 101,
+                "l": 93,
+                "rate": 0.520618556701031,
+                "min": 0.442,
+                "max": 0.5593
+              },
+              {
+                "n": 194,
+                "w": 127,
+                "l": 67,
+                "rate": 0.654639175257732,
+                "min": 0.5601,
+                "max": 0.6371
+              },
+              {
+                "n": 194,
+                "w": 122,
+                "l": 72,
+                "rate": 0.6288659793814433,
+                "min": 0.6371,
+                "max": 0.718
+              },
+              {
+                "n": 195,
+                "w": 119,
+                "l": 76,
+                "rate": 0.6102564102564103,
+                "min": 0.7181,
+                "max": 0.7449
+              }
+            ]
+          },
+          {
             "key": "lab_bullpen_points",
             "label": "Lab Rating's bullpen component score (retired 2026-08-30 -- pre-change history only)",
-            "n": 776,
-            "r": -0.05936052096309856,
+            "n": 777,
+            "r": -0.05776776107902321,
             "quartiles": [
               {
                 "n": 194,
@@ -3201,35 +3253,155 @@
               },
               {
                 "n": 194,
-                "w": 125,
-                "l": 69,
-                "rate": 0.6443298969072165,
+                "w": 124,
+                "l": 70,
+                "rate": 0.6391752577319587,
                 "min": 0,
-                "max": 4.19
+                "max": 4.17
               },
               {
                 "n": 194,
                 "w": 107,
                 "l": 87,
                 "rate": 0.5515463917525774,
-                "min": 4.22,
-                "max": 9.36
+                "min": 4.19,
+                "max": 9.33
+              },
+              {
+                "n": 195,
+                "w": 118,
+                "l": 77,
+                "rate": 0.6051282051282051,
+                "min": 9.36,
+                "max": 20
+              }
+            ]
+          },
+          {
+            "key": "pick_bullpen_adj",
+            "label": "Probability points bullpen risk moved this pick's number",
+            "n": 777,
+            "r": -0.04068122043234292,
+            "quartiles": [
+              {
+                "n": 194,
+                "w": 124,
+                "l": 70,
+                "rate": 0.6391752577319587,
+                "min": -0.15,
+                "max": -0.033
               },
               {
                 "n": 194,
-                "w": 117,
-                "l": 77,
-                "rate": 0.6030927835051546,
-                "min": 9.38,
-                "max": 20
+                "w": 113,
+                "l": 81,
+                "rate": 0.5824742268041238,
+                "min": -0.033,
+                "max": 0.009
+              },
+              {
+                "n": 194,
+                "w": 122,
+                "l": 72,
+                "rate": 0.6288659793814433,
+                "min": 0.009,
+                "max": 0.051
+              },
+              {
+                "n": 195,
+                "w": 110,
+                "l": 85,
+                "rate": 0.5641025641025641,
+                "min": 0.051,
+                "max": 0.165
+              }
+            ]
+          },
+          {
+            "key": "pick_bullpen_gap",
+            "label": "Bullpen risk edge (positive = the picked side's bullpen is the safer one)",
+            "n": 777,
+            "r": -0.04064218141935311,
+            "quartiles": [
+              {
+                "n": 194,
+                "w": 124,
+                "l": 70,
+                "rate": 0.6391752577319587,
+                "min": -51,
+                "max": -11
+              },
+              {
+                "n": 194,
+                "w": 113,
+                "l": 81,
+                "rate": 0.5824742268041238,
+                "min": -11,
+                "max": 3
+              },
+              {
+                "n": 194,
+                "w": 122,
+                "l": 72,
+                "rate": 0.6288659793814433,
+                "min": 3,
+                "max": 17
+              },
+              {
+                "n": 195,
+                "w": 110,
+                "l": 85,
+                "rate": 0.5641025641025641,
+                "min": 17,
+                "max": 55
+              }
+            ]
+          },
+          {
+            "key": "lab_conviction_points",
+            "label": "Lab Rating's conviction component score",
+            "n": 777,
+            "r": 0.040408358367504116,
+            "quartiles": [
+              {
+                "n": 194,
+                "w": 111,
+                "l": 83,
+                "rate": 0.5721649484536082,
+                "min": 0,
+                "max": 2.26
+              },
+              {
+                "n": 194,
+                "w": 115,
+                "l": 79,
+                "rate": 0.5927835051546392,
+                "min": 2.36,
+                "max": 7.25
+              },
+              {
+                "n": 194,
+                "w": 116,
+                "l": 78,
+                "rate": 0.5979381443298969,
+                "min": 7.25,
+                "max": 9.22
+              },
+              {
+                "n": 195,
+                "w": 127,
+                "l": 68,
+                "rate": 0.6512820512820513,
+                "min": 9.23,
+                "max": 35
               }
             ]
           },
           {
             "key": "pick_lab_score",
             "label": "Lab Rating (Leo's own analysis-quality score for this pick)",
-            "n": 776,
-            "r": 0.04348913365902308,
+            "n": 777,
+            "r": 0.03952828095205262,
             "quartiles": [
               {
                 "n": 194,
@@ -3256,140 +3428,20 @@
                 "max": 67
               },
               {
-                "n": 194,
+                "n": 195,
                 "w": 120,
-                "l": 74,
-                "rate": 0.6185567010309279,
+                "l": 75,
+                "rate": 0.6153846153846154,
                 "min": 67,
                 "max": 99
               }
             ]
           },
           {
-            "key": "pick_bullpen_adj",
-            "label": "Probability points bullpen risk moved this pick's number",
-            "n": 776,
-            "r": -0.04182155772579192,
-            "quartiles": [
-              {
-                "n": 194,
-                "w": 124,
-                "l": 70,
-                "rate": 0.6391752577319587,
-                "min": -0.15,
-                "max": -0.033
-              },
-              {
-                "n": 194,
-                "w": 114,
-                "l": 80,
-                "rate": 0.5876288659793815,
-                "min": -0.033,
-                "max": 0.009
-              },
-              {
-                "n": 194,
-                "w": 122,
-                "l": 72,
-                "rate": 0.6288659793814433,
-                "min": 0.012,
-                "max": 0.051
-              },
-              {
-                "n": 194,
-                "w": 109,
-                "l": 85,
-                "rate": 0.5618556701030928,
-                "min": 0.051,
-                "max": 0.165
-              }
-            ]
-          },
-          {
-            "key": "pick_bullpen_gap",
-            "label": "Bullpen risk edge (positive = the picked side's bullpen is the safer one)",
-            "n": 776,
-            "r": -0.04178232027196472,
-            "quartiles": [
-              {
-                "n": 194,
-                "w": 124,
-                "l": 70,
-                "rate": 0.6391752577319587,
-                "min": -51,
-                "max": -11
-              },
-              {
-                "n": 194,
-                "w": 114,
-                "l": 80,
-                "rate": 0.5876288659793815,
-                "min": -11,
-                "max": 3
-              },
-              {
-                "n": 194,
-                "w": 122,
-                "l": 72,
-                "rate": 0.6288659793814433,
-                "min": 4,
-                "max": 17
-              },
-              {
-                "n": 194,
-                "w": 109,
-                "l": 85,
-                "rate": 0.5618556701030928,
-                "min": 17,
-                "max": 55
-              }
-            ]
-          },
-          {
-            "key": "lab_conviction_points",
-            "label": "Lab Rating's conviction component score",
-            "n": 776,
-            "r": 0.04059220073339756,
-            "quartiles": [
-              {
-                "n": 194,
-                "w": 111,
-                "l": 83,
-                "rate": 0.5721649484536082,
-                "min": 0,
-                "max": 2.26
-              },
-              {
-                "n": 194,
-                "w": 115,
-                "l": 79,
-                "rate": 0.5927835051546392,
-                "min": 2.36,
-                "max": 7.25
-              },
-              {
-                "n": 194,
-                "w": 116,
-                "l": 78,
-                "rate": 0.5979381443298969,
-                "min": 7.25,
-                "max": 9.23
-              },
-              {
-                "n": 194,
-                "w": 127,
-                "l": 67,
-                "rate": 0.654639175257732,
-                "min": 9.23,
-                "max": 35
-              }
-            ]
-          },
-          {
             "key": "pick_pitcher_score",
             "label": "Starting pitcher's own score (picked side, judged on its own merits, not against the opponent)",
-            "n": 776,
-            "r": 0.0370461109901957,
+            "n": 777,
+            "r": 0.03520074280610492,
             "quartiles": [
               {
                 "n": 194,
@@ -3416,10 +3468,10 @@
                 "max": 76
               },
               {
-                "n": 194,
+                "n": 195,
                 "w": 120,
-                "l": 74,
-                "rate": 0.6185567010309279,
+                "l": 75,
+                "rate": 0.6153846153846154,
                 "min": 76,
                 "max": 92
               }
@@ -3428,8 +3480,8 @@
           {
             "key": "pick_era_edge",
             "label": "Starting pitcher ERA edge (opponent's ERA minus the picked pitcher's)",
-            "n": 776,
-            "r": 0.03063493813014947,
+            "n": 777,
+            "r": 0.029166083524964224,
             "quartiles": [
               {
                 "n": 194,
@@ -3456,10 +3508,10 @@
                 "max": 1.1800000000000006
               },
               {
-                "n": 194,
+                "n": 195,
                 "w": 121,
-                "l": 73,
-                "rate": 0.6237113402061856,
+                "l": 74,
+                "rate": 0.6205128205128205,
                 "min": 1.1899999999999995,
                 "max": 4.49
               }
@@ -3468,8 +3520,8 @@
           {
             "key": "lab_offense_points",
             "label": "Lab Rating's offense component score",
-            "n": 776,
-            "r": 0.026901995236553164,
+            "n": 777,
+            "r": 0.02342336169609189,
             "quartiles": [
               {
                 "n": 194,
@@ -3496,10 +3548,10 @@
                 "max": 30.44
               },
               {
-                "n": 194,
+                "n": 195,
                 "w": 118,
-                "l": 76,
-                "rate": 0.6082474226804123,
+                "l": 77,
+                "rate": 0.6051282051282051,
                 "min": 30.5,
                 "max": 50
               }
@@ -3548,8 +3600,8 @@
           {
             "key": "pick_own_bullpen_risk",
             "label": "Picked team's own bullpen fatigue score (regardless of the opponent's)",
-            "n": 776,
-            "r": 0.005206843468633567,
+            "n": 777,
+            "r": 0.005394640865501672,
             "quartiles": [
               {
                 "n": 194,
@@ -3561,11 +3613,11 @@
               },
               {
                 "n": 194,
-                "w": 116,
-                "l": 78,
-                "rate": 0.5979381443298969,
+                "w": 115,
+                "l": 79,
+                "rate": 0.5927835051546392,
                 "min": 55,
-                "max": 66
+                "max": 65
               },
               {
                 "n": 194,
@@ -3576,10 +3628,10 @@
                 "max": 77
               },
               {
-                "n": 194,
-                "w": 121,
+                "n": 195,
+                "w": 122,
                 "l": 73,
-                "rate": 0.6237113402061856,
+                "rate": 0.6256410256410256,
                 "min": 77,
                 "max": 100
               }
@@ -3588,8 +3640,8 @@
           {
             "key": "best_price_abs",
             "label": "Size of the price (how big a favorite or underdog this pick was)",
-            "n": 765,
-            "r": 0.002554766503596022,
+            "n": 766,
+            "r": 0.003373834945252339,
             "quartiles": [
               {
                 "n": 191,
@@ -3601,9 +3653,9 @@
               },
               {
                 "n": 191,
-                "w": 108,
-                "l": 83,
-                "rate": 0.5654450261780105,
+                "w": 107,
+                "l": 84,
+                "rate": 0.5602094240837696,
                 "min": 115,
                 "max": 133
               },
@@ -3616,10 +3668,10 @@
                 "max": 160
               },
               {
-                "n": 192,
-                "w": 125,
+                "n": 193,
+                "w": 126,
                 "l": 67,
-                "rate": 0.6510416666666666,
+                "rate": 0.6528497409326425,
                 "min": 160,
                 "max": 850
               }
@@ -3628,8 +3680,8 @@
           {
             "key": "pick_pitcher_gap",
             "label": "Starting pitcher score edge (picked side minus opponent)",
-            "n": 776,
-            "r": -0.0006329975633088661,
+            "n": 777,
+            "r": -0.0017159795585610206,
             "quartiles": [
               {
                 "n": 194,
@@ -3656,10 +3708,10 @@
                 "max": 19
               },
               {
-                "n": 194,
+                "n": 195,
                 "w": 114,
-                "l": 80,
-                "rate": 0.5876288659793815,
+                "l": 81,
+                "rate": 0.5846153846153846,
                 "min": 19,
                 "max": 53
               }
@@ -3687,10 +3739,10 @@
               },
               {
                 "label": "official_pick",
-                "n": 79,
+                "n": 80,
                 "w": 48,
-                "l": 31,
-                "rate": 0.6075949367088608
+                "l": 32,
+                "rate": 0.6
               },
               {
                 "label": "pass",
@@ -3714,10 +3766,10 @@
               },
               {
                 "label": "Road",
-                "n": 362,
+                "n": 363,
                 "w": 206,
-                "l": 156,
-                "rate": 0.569060773480663
+                "l": 157,
+                "rate": 0.5674931129476584
               }
             ]
           },
@@ -3761,18 +3813,18 @@
                 "rate": 0.5895522388059702
               },
               {
-                "label": "Tue",
+                "label": "Fri",
                 "n": 122,
                 "w": 71,
                 "l": 51,
                 "rate": 0.5819672131147541
               },
               {
-                "label": "Fri",
-                "n": 122,
+                "label": "Tue",
+                "n": 123,
                 "w": 71,
-                "l": 51,
-                "rate": 0.5819672131147541
+                "l": 52,
+                "rate": 0.5772357723577236
               }
             ]
           }

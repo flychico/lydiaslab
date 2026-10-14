@@ -1,23 +1,23 @@
 {
- "generated_at": "2026-10-13T15:13:04.478Z",
- "n_graded": 631,
- "n_with_usable_breakdown": 631,
+ "generated_at": "2026-10-14T12:59:38.561Z",
+ "n_graded": 632,
+ "n_with_usable_breakdown": 632,
  "n_excluded_from_component_analysis": 0,
  "exclusion_reason": null,
  "coverage": {
   "from": "2026-08-13",
-  "to": "2026-10-12"
+  "to": "2026-10-13"
  },
  "overall": {
-  "mean_lab": 57.14,
-  "mean_model_prob": 0.6525,
-  "actual_win_rate": 0.6086,
-  "corr_lab_win": 0.0523
+  "mean_lab": 57.21,
+  "mean_model_prob": 0.6526,
+  "actual_win_rate": 0.6076,
+  "corr_lab_win": 0.0474
  },
  "by_lab_version": {
   "lab-rating-v3-measured-components": {
-   "n": 631,
-   "corr_lab_win": 0.0523
+   "n": 632,
+   "corr_lab_win": 0.0474
   }
  },
  "rating_bands": [
@@ -51,10 +51,10 @@
   },
   {
    "band": "85-100",
-   "n": 21,
-   "mean_model_prob": 0.7134,
-   "actual_win_rate": 0.8095,
-   "gap": 0.0961
+   "n": 22,
+   "mean_model_prob": 0.7137,
+   "actual_win_rate": 0.7727,
+   "gap": 0.059
   }
  ],
  "components": [
@@ -62,20 +62,20 @@
    "component": "conviction",
    "key": "conviction_points",
    "max_points": 10,
-   "n": 631,
-   "median_points": 7.1,
+   "n": 632,
+   "median_points": 7.11,
    "mean_points": 7.13,
    "n_above": 315,
    "win_rate_above": 0.6095,
-   "n_below": 316,
-   "win_rate_below": 0.6076,
-   "lift": 0.0019,
-   "corr_with_win": -0.0044
+   "n_below": 317,
+   "win_rate_below": 0.6057,
+   "lift": 0.0038,
+   "corr_with_win": -0.0048
   },
   {
    "component": "agreement",
    "key": "agreement_points",
-   "n": 631,
+   "n": 632,
    "constant": true,
    "note": "never varies in this sample — contributes nothing to discrimination"
   },
@@ -83,54 +83,71 @@
    "component": "pitching plan",
    "key": "pitching_plan_points",
    "max_points": 40,
-   "n": 631,
+   "n": 632,
    "median_points": 20,
-   "mean_points": 20.71,
-   "n_above": 307,
-   "win_rate_above": 0.6417,
+   "mean_points": 20.74,
+   "n_above": 308,
+   "win_rate_above": 0.6396,
    "n_below": 324,
    "win_rate_below": 0.5772,
-   "lift": 0.0645,
-   "corr_with_win": 0.0964
+   "lift": 0.0624,
+   "corr_with_win": 0.0928
   },
   {
    "component": "bullpen",
    "key": "bullpen_points",
    "max_points": 0,
-   "n": 631,
+   "n": 632,
    "median_points": 0,
    "mean_points": 3.87,
    "n_above": 308,
    "win_rate_above": 0.5909,
-   "n_below": 323,
-   "win_rate_below": 0.6254,
-   "lift": -0.0345,
-   "corr_with_win": -0.065
+   "n_below": 324,
+   "win_rate_below": 0.6235,
+   "lift": -0.0325,
+   "corr_with_win": -0.0633
   },
   {
    "component": "offense",
    "key": "offense_points",
    "max_points": 50,
-   "n": 631,
-   "median_points": 25.1,
-   "mean_points": 25.42,
+   "n": 632,
+   "median_points": 25.17,
+   "mean_points": 25.46,
    "n_above": 315,
-   "win_rate_above": 0.619,
-   "n_below": 316,
-   "win_rate_below": 0.5981,
-   "lift": 0.0209,
-   "corr_with_win": 0.0105
+   "win_rate_above": 0.6159,
+   "n_below": 317,
+   "win_rate_below": 0.5994,
+   "lift": 0.0165,
+   "corr_with_win": 0.0065
   },
   {
    "component": "completeness",
    "key": "completeness_points",
-   "n": 631,
+   "n": 632,
    "constant": true,
    "note": "never varies in this sample — contributes nothing to discrimination"
   }
  ],
- "components_note": "computed on 631 game(s) whose breakdown reconciles with its score",
+ "components_note": "computed on 632 game(s) whose breakdown reconciles with its score",
  "worst_misses": [
+  {
+   "date": "2026-10-13",
+   "game": "Cleveland Guardians @ Tampa Bay Rays",
+   "pick": "Cleveland Guardians",
+   "status": "official_pick",
+   "lab_score": 96,
+   "model_prob": 0.7195,
+   "result": "L",
+   "points_from": {
+    "conviction": 8.48,
+    "agreement": 0,
+    "pitching plan": 40,
+    "bullpen": 0,
+    "offense": 47.71,
+    "completeness": 0
+   }
+  },
   {
    "date": "2026-09-05",
    "game": "Detroit Tigers @ Cleveland Guardians",
@@ -317,46 +334,21 @@
     "offense": 42.35,
     "completeness": 0
    }
-  },
-  {
-   "date": "2026-09-16",
-   "game": "Los Angeles Dodgers @ Cincinnati Reds",
-   "pick": "Los Angeles Dodgers",
-   "status": "value_watch",
-   "lab_score": 82,
-   "model_prob": 0.7374,
-   "result": "L",
-   "points_from": {
-    "conviction": 9.37,
-    "agreement": 0,
-    "pitching plan": 36,
-    "bullpen": 0,
-    "offense": 36.42,
-    "completeness": 0
-   }
   }
  ],
  "focus": {
-  "date": "2026-10-12",
-  "n": 2,
-  "mean_lab": 65,
-  "mean_model_prob": 0.6529,
-  "actual_win_rate": 0.5,
+  "date": "2026-10-13",
+  "n": 1,
+  "mean_lab": 96,
+  "mean_model_prob": 0.7195,
+  "actual_win_rate": 0,
   "games": [
    {
-    "game": "Los Angeles Dodgers @ Milwaukee Brewers",
-    "pick": "Milwaukee Brewers",
-    "status": "watchlist",
-    "lab_score": 65,
-    "model_prob": 0.6028,
-    "result": "W"
-   },
-   {
     "game": "Cleveland Guardians @ Tampa Bay Rays",
-    "pick": "Tampa Bay Rays",
-    "status": "watchlist",
-    "lab_score": 65,
-    "model_prob": 0.7031,
+    "pick": "Cleveland Guardians",
+    "status": "official_pick",
+    "lab_score": 96,
+    "model_prob": 0.7195,
     "result": "L"
    }
   ]
