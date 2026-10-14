@@ -1,6 +1,6 @@
 {
   "date": "2026-10-14",
-  "generated_at": "2026-10-14T18:58:49.526Z",
+  "generated_at": "2026-10-14T19:17:39.773Z",
   "snapshot_type": "posted",
   "source_of_truth": "Leo Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -11,7 +11,7 @@
     "minimum_lab_score": 72,
     "note": "Lab Rating grades Leo's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
   },
-  "summary": "1 official pick cleared their market gates: 1 moneyline. 0 value-watch setups had good price math but did not clear official-pick rules.",
+  "summary": "Brief generated without live market pricing. Treat the card as research-only until pricing is checked.",
   "official_card": [
     {
       "game_pk": 849811,
@@ -47,12 +47,77 @@
       "side": "home",
       "model_probability": 0.6906,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
+      "projected_runs": {
+        "away": 3,
+        "home": 3,
+        "total": 6.3
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 688107,
+              "pitcher": "Robert Gasser",
+              "expected_innings": 5.2,
+              "fip_lite": 4.01,
+              "pitcher_score": 68,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.8
+            }
+          ],
+          "expected_innings": 5.2,
+          "bullpen_innings": 3.8,
+          "effective_era": 2.45,
+          "pitcher_score": 68,
+          "bullpen_carries_game": false,
+          "description": "Robert Gasser 5.2 IP + remaining bullpen 3.8 IP",
+          "pitcher": "Robert Gasser",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 605483,
+              "pitcher": "Blake Snell",
+              "expected_innings": 4.7407407407407405,
+              "fip_lite": 2.87,
+              "pitcher_score": 77,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.2592592592592595
+            }
+          ],
+          "expected_innings": 4.7,
+          "bullpen_innings": 4.3,
+          "effective_era": 2.99,
+          "pitcher_score": 77,
+          "bullpen_carries_game": false,
+          "description": "Blake Snell 4.7 IP + remaining bullpen 4.3 IP",
+          "pitcher": "Blake Snell",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.8811,
-      "model_effective_era_away": 3.89,
-      "model_effective_era_home": 2.75,
+      "model_effective_era_away": 2.45,
+      "model_effective_era_home": 2.99,
       "model_pitcher_score_away": 68,
       "model_pitcher_score_home": 77,
       "team_strength_blend_away": 0.6697,
@@ -68,7 +133,7 @@
         "applied_home": -0.0054,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.5,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.8852,
       "edge": 0.0752,
@@ -85,15 +150,15 @@
         "offense_points": 44.92,
         "completeness_points": 0,
         "pitcher_edge_points": 36,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.3811,
+        "model_agreement_credit": 0,
+        "assigned_bullpen_innings": 4.3,
         "offense_delta": 0.0478,
         "offense_delta_15d": null,
         "offense_delta_30d": 0.0478,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -106,7 +171,7 @@
         "lab_score_passed": true
       },
       "pass_reason": null,
-      "read": "Los Angeles Dodgers is an official moneyline pick because it clears both gates: 69.1% model win probability and 8.8/10 Lab Rating. Leo projects 69.1% against a 61.5% no-vig market number, a 7.5% model edge at -174. Los Angeles Dodgers owns the starting pitcher edge by 9 points. Bullpen read: Elevated volatility. Los Angeles Dodgers's pen efficiency: Effective (5.6/10). Bullpen fatigue moved this probability down 19.5 points from 88.5% (starting pitcher and team strength only) to 69.1%.",
+      "read": "Los Angeles Dodgers is an official moneyline pick because it clears both gates: 69.1% model win probability and 8.8/10 Lab Rating. Leo projects 69.1% against a 61.5% no-vig market number, a 7.5% model edge at -174. Los Angeles Dodgers owns the starting pitcher edge by 9 points. Bullpen read: Elevated volatility. Los Angeles Dodgers's pen efficiency: Effective (5.6/10).",
       "pitcher_edge": {
         "team": "Los Angeles Dodgers",
         "gap": 9,
