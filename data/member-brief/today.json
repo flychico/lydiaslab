@@ -1,6 +1,6 @@
 {
   "date": "2026-10-16",
-  "generated_at": "2026-10-16T18:26:29.729Z",
+  "generated_at": "2026-10-16T18:45:12.938Z",
   "snapshot_type": "posted",
   "source_of_truth": "Leo Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -11,7 +11,7 @@
     "minimum_lab_score": 72,
     "note": "Lab Rating grades Leo's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
   },
-  "summary": "No official picks cleared the stricter rules in any market — moneyline, game totals or pitcher strikeouts. 0 value-watch setups and 0 watchlist games remain research-only. 0 games reached a Lab Rating of 7.5+/10 but did not clear every official gate.",
+  "summary": "Brief generated without live market pricing. Treat the card as research-only until pricing is checked.",
   "official_card": [],
   "games": [
     {
@@ -30,12 +30,77 @@
       "side": "away",
       "model_probability": 0.7181,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
-      "bullpen_game": false,
+      "projected_runs": {
+        "away": 2.1,
+        "home": 3,
+        "total": 5.3
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 607259,
+              "pitcher": "Nick Martinez",
+              "expected_innings": 5.806451612903226,
+              "fip_lite": 3.96,
+              "pitcher_score": 74,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.193548387096774
+            }
+          ],
+          "expected_innings": 5.8,
+          "bullpen_innings": 3.2,
+          "effective_era": 3.79,
+          "pitcher_score": 74,
+          "bullpen_carries_game": false,
+          "description": "Nick Martinez 5.8 IP + remaining bullpen 3.2 IP",
+          "pitcher": "Nick Martinez",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "opener_bullpen",
+          "confidence": "low",
+          "reported": false,
+          "segments": [
+            {
+              "role": "opener",
+              "pitcher_id": 542888,
+              "pitcher": "Shawn Armstrong",
+              "expected_innings": 4.5,
+              "fip_lite": 4.25,
+              "pitcher_score": 53,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.5
+            }
+          ],
+          "expected_innings": 4.5,
+          "bullpen_innings": 4.5,
+          "effective_era": 3.26,
+          "pitcher_score": 53,
+          "bullpen_carries_game": false,
+          "description": "Shawn Armstrong 4.5 IP + remaining bullpen 4.5 IP",
+          "pitcher": "Shawn Armstrong",
+          "role": "unknown",
+          "label": "Role unknown",
+          "bullpen_game": true
+        }
+      },
+      "bullpen_game": true,
       "legacy_strength_probability": 0.9361,
-      "model_effective_era_away": 3.04,
-      "model_effective_era_home": 4.51,
+      "model_effective_era_away": 3.79,
+      "model_effective_era_home": 3.26,
       "model_pitcher_score_away": 74,
       "model_pitcher_score_home": 53,
       "team_strength_blend_away": 0.5272,
@@ -51,7 +116,7 @@
         "applied_home": -0.0158,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.3484,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.9393,
       "edge": 0.2174,
@@ -68,15 +133,15 @@
         "offense_points": 0,
         "completeness_points": 0,
         "pitcher_edge_points": 32,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.5878,
+        "model_agreement_credit": 0,
+        "assigned_bullpen_innings": 3.2,
         "offense_delta": -0.0646,
         "offense_delta_15d": null,
         "offense_delta_30d": -0.0646,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -88,8 +153,8 @@
         "model_probability_passed": true,
         "lab_score_passed": false
       },
-      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
-      "read": "The combined Lab Rating did not clear the official threshold.",
+      "pass_reason": "This is a bullpen game -- no confirmed traditional starter, so Leo does not publish an official pick here.",
+      "read": "This is a bullpen game -- no confirmed traditional starter, so Leo does not publish an official pick here.",
       "pitcher_edge": {
         "team": "Tampa Bay Rays",
         "gap": 21,
