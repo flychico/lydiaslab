@@ -87,15 +87,15 @@ function buildEmail({ brief, picks }) {
     <h2 style="color:#0d1220">Leo — free daily card, ${nice}</h2>
     <p><strong>${games.length}</strong> games on today's slate. The model labeled <strong>${official.length}</strong> official pick${official.length === 1 ? "" : "s"} today${official.length === 0 ? " — discipline is the product, not volume" : ""}.</p>
     ${gameLines ? `<ul style="padding-left:18px">${gameLines}</ul>` : ""}
-    <p><a href="https://lydiaslab.com/previews/${DATE}.html" style="color:#4d9fdc;font-weight:bold">Read every model read, price, and reasoning free →</a></p>
-    <p style="font-size:13px;color:#888">Want the picks delivered with full analysis and market-movement notes? <a href="https://lydiaslab.com/membership/" style="color:#4d9fdc">Founding membership is $30/mo</a> — rate locked for as long as you stay.</p>
+    <p><a href="https://ndhorizon.com/previews/${DATE}.html" style="color:#4d9fdc;font-weight:bold">Read every model read, price, and reasoning free →</a></p>
+    <p style="font-size:13px;color:#888">Want the picks delivered with full analysis and market-movement notes? <a href="https://ndhorizon.com/membership/" style="color:#4d9fdc">Founding membership is $30/mo</a> — rate locked for as long as you stay.</p>
     <p style="font-size:12px;color:#aaa;margin-top:24px;border-top:1px solid #eee;padding-top:10px">
-      Leo — analysis and education only, not betting advice. 1-800-GAMBLER.<br>
+      Leo — analysis and education only, not betting advice. 1-800-MY-RESET.<br>
       To unsubscribe, reply with "unsubscribe".
     </p>
   </div>`;
 
-  const text = `Leo free daily card — ${nice}\n\n${games.length} games today, ${official.length} official pick(s).\n\nFull previews: https://lydiaslab.com/previews/${DATE}.html\nMembership: https://lydiaslab.com/membership/\n\nReply "unsubscribe" to stop these.`;
+  const text = `Leo free daily card — ${nice}\n\n${games.length} games today, ${official.length} official pick(s).\n\nFull previews: https://ndhorizon.com/previews/${DATE}.html\nMembership: https://ndhorizon.com/membership/\n\nReply "unsubscribe" to stop these.`;
   return { subject, html, text };
 }
 

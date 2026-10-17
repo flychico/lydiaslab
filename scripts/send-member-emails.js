@@ -183,14 +183,14 @@ function buildFromBrief(dateStr, brief, isPreview) {
     ${watchHtml}
     ${passHtml}
     <p style="font-size:13px;color:#888;margin-top:20px">
-      Full member brief: <a href="https://lydiaslab.com/member-brief/" style="color:#4d9fdc">lydiaslab.com/member-brief/</a><br>
-      Public preview: <a href="https://lydiaslab.com/previews/${dateStr}.html" style="color:#4d9fdc">lydiaslab.com/previews/${dateStr}.html</a><br>
-      Results history: <a href="https://lydiaslab.com/results/" style="color:#4d9fdc">lydiaslab.com/results/</a>
+      Full member brief: <a href="https://ndhorizon.com/member-brief/" style="color:#4d9fdc">ndhorizon.com/member-brief/</a><br>
+      Public preview: <a href="https://ndhorizon.com/previews/${dateStr}.html" style="color:#4d9fdc">ndhorizon.com/previews/${dateStr}.html</a><br>
+      Results history: <a href="https://ndhorizon.com/results/" style="color:#4d9fdc">ndhorizon.com/results/</a>
     </p>
-    <p style="font-size:12px;color:#888;margin-top:14px">Your Lab: <a href="https://lydiaslab.com/member-brief/" style="color:#4d9fdc">Member Brief</a> · <a href="https://lydiaslab.com/tools/pitcher-matchups/" style="color:#4d9fdc">Pitchers</a> · <a href="https://lydiaslab.com/tools/offense-matchups/" style="color:#4d9fdc">Offense</a> · <a href="https://lydiaslab.com/tools/bullpen-fatigue/" style="color:#4d9fdc">Bullpens</a> · <a href="https://lydiaslab.com/tools/strikeout-projections/" style="color:#4d9fdc">Strikeouts</a> · <a href="https://lydiaslab.com/tools/totals-projections/" style="color:#4d9fdc">Totals</a></p>
+    <p style="font-size:12px;color:#888;margin-top:14px">Your Lab: <a href="https://ndhorizon.com/member-brief/" style="color:#4d9fdc">Member Brief</a> · <a href="https://ndhorizon.com/tools/pitcher-matchups/" style="color:#4d9fdc">Pitchers</a> · <a href="https://ndhorizon.com/tools/offense-matchups/" style="color:#4d9fdc">Offense</a> · <a href="https://ndhorizon.com/tools/bullpen-fatigue/" style="color:#4d9fdc">Bullpens</a> · <a href="https://ndhorizon.com/tools/strikeout-projections/" style="color:#4d9fdc">Strikeouts</a> · <a href="https://ndhorizon.com/tools/totals-projections/" style="color:#4d9fdc">Totals</a></p>
     <p style="font-size:12px;color:#aaa;margin-top:24px;border-top:1px solid #eee;padding-top:10px">
       Leo — analysis and education only, not betting advice. No win rate is guaranteed. Please bet responsibly;
-      if gambling stops being fun, call 1-800-GAMBLER. Manage your subscription from your PayPal account.
+      if gambling stops being fun, call 1-800-MY-RESET. Manage your subscription from your PayPal account.
       Questions? Just reply to this email.
     </p>
   </div>`;
@@ -219,11 +219,11 @@ ${officialText}${watchText}
 
 Passes / no clear setup: ${passes.length}
 
-Full member brief: https://lydiaslab.com/member-brief/
-Public preview: https://lydiaslab.com/previews/${dateStr}.html
-Results history: https://lydiaslab.com/results/
+Full member brief: https://ndhorizon.com/member-brief/
+Public preview: https://ndhorizon.com/previews/${dateStr}.html
+Results history: https://ndhorizon.com/results/
 
-Leo — analysis and education only, not betting advice. 1-800-GAMBLER.`;
+Leo — analysis and education only, not betting advice. 1-800-MY-RESET.`;
 
   return { subject, html, text };
 }
@@ -255,12 +255,12 @@ function buildFromLegacyPicks(dateStr, picksFile, isPreview) {
     <p style="color:#666;font-size:14px">${active.length ? `${active.length} official pick${active.length > 1 ? "s" : ""}.` : `No official picks today.`}</p>
     ${rowsHtml || `<p style="color:#888;font-style:italic">Nothing cleared the bar today.</p>`}
     <p style="font-size:13px;color:#888;margin-top:20px">
-      Full reasoning: <a href="https://lydiaslab.com/previews/${dateStr}.html" style="color:#4d9fdc">lydiaslab.com/previews/${dateStr}.html</a><br>
-      Results history: <a href="https://lydiaslab.com/results/" style="color:#4d9fdc">lydiaslab.com/results/</a>
+      Full reasoning: <a href="https://ndhorizon.com/previews/${dateStr}.html" style="color:#4d9fdc">ndhorizon.com/previews/${dateStr}.html</a><br>
+      Results history: <a href="https://ndhorizon.com/results/" style="color:#4d9fdc">ndhorizon.com/results/</a>
     </p>
-    <p style="font-size:12px;color:#888;margin-top:14px">Your Lab: <a href="https://lydiaslab.com/member-brief/" style="color:#4d9fdc">Member Brief</a> · <a href="https://lydiaslab.com/tools/pitcher-matchups/" style="color:#4d9fdc">Pitchers</a> · <a href="https://lydiaslab.com/tools/offense-matchups/" style="color:#4d9fdc">Offense</a> · <a href="https://lydiaslab.com/tools/bullpen-fatigue/" style="color:#4d9fdc">Bullpens</a> · <a href="https://lydiaslab.com/tools/strikeout-projections/" style="color:#4d9fdc">Strikeouts</a> · <a href="https://lydiaslab.com/tools/totals-projections/" style="color:#4d9fdc">Totals</a></p>
+    <p style="font-size:12px;color:#888;margin-top:14px">Your Lab: <a href="https://ndhorizon.com/member-brief/" style="color:#4d9fdc">Member Brief</a> · <a href="https://ndhorizon.com/tools/pitcher-matchups/" style="color:#4d9fdc">Pitchers</a> · <a href="https://ndhorizon.com/tools/offense-matchups/" style="color:#4d9fdc">Offense</a> · <a href="https://ndhorizon.com/tools/bullpen-fatigue/" style="color:#4d9fdc">Bullpens</a> · <a href="https://ndhorizon.com/tools/strikeout-projections/" style="color:#4d9fdc">Strikeouts</a> · <a href="https://ndhorizon.com/tools/totals-projections/" style="color:#4d9fdc">Totals</a></p>
     <p style="font-size:12px;color:#aaa;margin-top:24px;border-top:1px solid #eee;padding-top:10px">
-      Leo — analysis and education only, not betting advice. 1-800-GAMBLER.
+      Leo — analysis and education only, not betting advice. 1-800-MY-RESET.
     </p>
   </div>`;
 
@@ -268,7 +268,7 @@ function buildFromLegacyPicks(dateStr, picksFile, isPreview) {
     (active.length
       ? active.map(p => `${p.away} @ ${p.home}\n  Moneyline: ${p.moneyline.pick} (${pct(p.moneyline.prob)}, ${fmtAm(p.moneyline.bestAm)})`).join("\n\n")
       : "Nothing cleared the bar today.") +
-    `\n\nFull reasoning: https://lydiaslab.com/previews/${dateStr}.html\nResults history: https://lydiaslab.com/results/`;
+    `\n\nFull reasoning: https://ndhorizon.com/previews/${dateStr}.html\nResults history: https://ndhorizon.com/results/`;
 
   return { subject, html, text };
 }

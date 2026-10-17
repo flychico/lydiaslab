@@ -346,3 +346,10 @@ function main() {
 }
 
 main();
+
+// Any frozen game from the last two weeks that is still ungraded (stats posted
+// after the yesterday/today window) gets its date graded now.
+require("./lib/nfl-catchup").catchUp({
+  script: __filename, label: "props", today: DATE,
+  historyFile: path.join(DIR, "prop-prediction-history.csv"), ledgerFile: LEDGER
+});

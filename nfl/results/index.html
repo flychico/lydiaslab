@@ -131,6 +131,17 @@ table.calls tbody tr:hover{background:var(--bg-elev);}
 
   <section class="rec-row" id="records" aria-label="Running record"></section>
 
+  <details class="card how-graded" style="margin:4px 0 16px;padding:12px 16px">
+    <summary style="cursor:pointer;font-weight:700">How Leo is graded</summary>
+    <ul class="small" style="margin:10px 0 2px;padding-left:18px;line-height:1.55">
+      <li>Every number is frozen before kickoff and never changed after. Only that frozen read is graded.</li>
+      <li><b>Leo Picks:</b> a team Leo gives more than a 60% chance to win. Games at 60% or under are Too Close to Call and are not graded as picks.</li>
+      <li><b>Prop calls:</b> Leo&rsquo;s side of the posted line for QB passing, RB rushing and WR receiving yards. Inside 5% of the line there is no call.</li>
+      <li>Losses stay on the record. Players ruled out are marked excluded, never deleted.</li>
+      <li>Touchdown chances and projected totals are shown on each game page and graded there; they carry no over or under call.</li>
+    </ul>
+  </details>
+
   <section class="score-controls" aria-label="Tracker filters">
     <div class="view-controls filters" role="group" aria-label="Filter by market">
       <button class="control-btn active" type="button" data-grp="all">All</button>
@@ -149,6 +160,15 @@ table.calls tbody tr:hover{background:var(--bg-elev);}
 
   <div id="status" class="loading">Loading the tracker&hellip;</div>
   <section id="body" aria-live="polite"></section>
+
+  <div class="card" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin:22px 0 6px;padding:14px 16px">
+    <div><b>Get Leo&rsquo;s NFL card by email</b><div class="small dim">Every game and the most likely touchdown scorers, before kickoff. Free.</div></div>
+    <form class="lydia-signup-form" data-list="free-preview" data-thanks="You&rsquo;re on the list. The next NFL card goes to that inbox." style="display:flex;gap:8px;flex:1;min-width:260px;max-width:420px">
+      <input type="email" name="email" required placeholder="you@email.com" aria-label="Email address" style="flex:1;min-width:0">
+      <input type="hidden" name="bot-field">
+      <button class="btn blue" type="submit">Send me the card</button>
+    </form>
+  </div>
 
   <p class="data-note">Lines are the last posted number before kickoff. Every projection was frozen before kickoff and graded against the open nflverse dataset. Touchdown markets are tracked separately on each game page.</p>
 </main>
@@ -245,13 +265,19 @@ function renderRecords(){
     QB: tallyFor(all.filter(r=>r.group==="QB")),
     RB: tallyFor(all.filter(r=>r.group==="RB")),
     WR: tallyFor(all.filter(r=>r.group==="WR")) };
-  const m = tallyFor(data.games.filter(inWeek));
+  /* Two winner models, two records. From Week 3 the live model (leo-nflml-v2)
+     grades only Leo Picks above 60%. Week 2 ran the retired v1, which graded
+     every game at 50%+; it stays on the record, shown on its own. */
+  const g = data.games.filter(inWeek);
+  const v1 = g.filter(x=>x.model_version==="leo-nflml-v1");
+  const v2 = g.filter(x=>x.model_version!=="leo-nflml-v1");
   recEl.innerHTML=
-    recTile("All calls",p.all)+
+    recTile("Leo Picks (above 60%)",tallyFor(v2))+
+    recTile("All prop calls",p.all)+
     recTile("Quarterbacks",p.QB)+
     recTile("Running backs",p.RB)+
     recTile("Receivers",p.WR)+
-    recTile("Winners",m);
+    (v1.length?recTile("Week 2 winners, retired model",tallyFor(v1),"every game counted"):"");
 }
 
 /* ---------------------------------------------------------------------------

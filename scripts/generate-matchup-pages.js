@@ -1518,7 +1518,7 @@ section.card>h2{text-align:center}
     <p style="margin-top:10px"><a class="btn blue" href="/previews/">Today's picks</a> <a class="btn secondary" href="/membership/">Membership</a></p>
   </div>
 
-  <p class="small dim" style="margin-top:18px">Model outputs are not guarantees. Leo provides analysis and education only. Every official pick remains visible on the <a href="/results/">Results page</a>. 21+. If you or someone you know has a gambling problem, call 1-800-GAMBLER.</p>
+  <p class="small dim" style="margin-top:18px">Model outputs are not guarantees. Leo provides analysis and education only. Every official pick remains visible on the <a href="/results/">Results page</a>. 21+. If you or someone you know has a gambling problem, call 1-800-MY-RESET.</p>
 </main>
 <footer id="footer"></footer>
 <script src="/js/app.js"></script>

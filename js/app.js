@@ -89,7 +89,14 @@ const Sport = {
   get() {
     const fromUrl = this.fromPath();
     if (fromUrl) { this.set(fromUrl); return fromUrl; }
-    try { return localStorage.getItem(this.KEY) || "MLB"; } catch (e) { return "MLB"; }
+    try { return localStorage.getItem(this.KEY) || this.seasonDefault(); } catch (e) { return this.seasonDefault(); }
+  },
+  // A first-time visitor lands on the sport that is in season: NFL from
+  // September 1 through mid-February, MLB the rest of the year. A visitor who
+  // has picked a sport keeps it.
+  seasonDefault() {
+    const d = new Date(), m = d.getMonth() + 1, day = d.getDate();
+    return (m >= 9 || m === 1 || (m === 2 && day <= 15)) ? "NFL" : "MLB";
   },
   set(v) { try { localStorage.setItem(this.KEY, v); } catch (e) {} },
   prefix() { const sport = this.get(); return sport === "MLB" ? "/" : "/" + sport.toLowerCase() + "/"; }
@@ -260,7 +267,12 @@ function renderNav(active) {
 // If you deploy the Worker at a different URL than the one below (e.g. you
 // skip the custom-domain step in DEPLOY.md and use the default *.workers.dev
 // address instead), this is the one line to change.
-const SIGNUP_ENDPOINT = "https://signup.lydiaslab.com/";
+// 2026-10-17: the Worker moves to signup.ndhorizon.com (lydiaslab.com is being
+// dropped). Until that route is live, a network failure on the new address
+// falls back to the old one, so no signup is lost during the switch. Once a
+// test signup lands through the new address, delete SIGNUP_FALLBACK.
+const SIGNUP_ENDPOINT = "https://signup.ndhorizon.com/";
+const SIGNUP_FALLBACK = "https://signup.lydiaslab.com/";
 
 // Wires every <form class="lydia-signup-form"> on the page (static ones already
 // in the HTML, e.g. matchup pages, previews, membership — plus any injected
@@ -297,7 +309,7 @@ function wireAllSignupForms(root) {
       if (submitBtn) submitBtn.disabled = true;
 
       try {
-        const res = await fetch(SIGNUP_ENDPOINT, {
+        const post = url => fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
           body: new URLSearchParams({
@@ -307,6 +319,12 @@ function wireAllSignupForms(root) {
             "subscription-id": subIdEl ? subIdEl.value : ""
           }).toString()
         });
+        let res;
+        try { res = await post(SIGNUP_ENDPOINT); }
+        catch (e) {
+          if (typeof SIGNUP_FALLBACK === "string" && SIGNUP_FALLBACK) res = await post(SIGNUP_FALLBACK);
+          else throw e;
+        }
 
         if (res.ok) {
           form.outerHTML = '<div class="small" style="color:#2f9e44;font-weight:600">' + thanks + '</div>';
@@ -345,13 +363,15 @@ function renderFooter() {
     + '<form class="lydia-signup-form" data-list="free-preview" style="display:flex;gap:8px">'
     + '<input type="email" name="email" required placeholder="you@email.com" style="flex:1;min-width:0">'
     + '<input type="hidden" name="bot-field">'
-    + '<button class="btn blue" type="submit">Free daily card</button>'
+    + '<button class="btn blue" type="submit">Free card by email</button>'
     + '</form>'
-    + '<div class="dim small" style="margin-top:5px">The morning slate and model reads, free by email. Unsubscribe anytime.</div>'
+    + '<div class="dim small" style="margin-top:5px">Leo&rsquo;s game-day card and model reads, free by email. Unsubscribe anytime.</div>'
     + '</div>'
-    + "Leo — analysis and education only, not betting advice. "
+    + "Leo provides analysis and education only, not betting advice. "
     + "Odds and stats can change quickly; always verify with your sportsbook. "
-    + "Please bet responsibly. If gambling stops being fun, call 1-800-GAMBLER.";
+    // 1-800-GAMBLER moved to a New Jersey operator in Jan 2026; NCPG's national
+    // helpline is now 1-800-MY-RESET (1-800-697-3738).
+    + "21+. Please bet responsibly. If gambling stops being fun, call 1-800-MY-RESET (1-800-697-3738).";
   wireAllSignupForms(el);
 }
 

@@ -11,6 +11,34 @@
  */
 const fs=require("fs"), path=require("path");
 const ROOT=path.join(__dirname,"..");
+const TEAMS=require("./lib/nfl-teams");
+const niceDate=d=>new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"});
+
+/* Leo's two most likely scorers in the game, from the frozen TD props.
+   2023-25 backtest (data/nfl/backtest-td.json): the top pick scored 47% of the
+   time and at least one of the top two scored 69%. Said on the page so
+   nobody reads a 60% as a lock. */
+function topScorers(m){
+  const T=m.td_props; if(!T) return [];
+  return [...(T[m.away]||[]),...(T[m.home]||[])].filter(x=>x.prob!=null)
+    .sort((a,b)=>b.prob-a.prob).slice(0,2);
+}
+
+/* Free email signup, in the page body. Posts to the same signup Worker and
+   list as the footer form (free-preview); scripts/send-nfl-card-emails.js
+   sends that list the NFL card on game days. */
+function signupBox(){
+  return `
+  <div class="nfl-signup">
+    <div><b>Get Leo&rsquo;s NFL card by email</b>
+    <p>Every game, Leo&rsquo;s winner and total, and the most likely touchdown scorers, before kickoff. Free. Unsubscribe anytime.</p></div>
+    <form class="lydia-signup-form" data-list="free-preview" data-thanks="You&rsquo;re on the list. The next NFL card goes to that inbox.">
+      <input type="email" name="email" required placeholder="you@email.com" aria-label="Email address">
+      <input type="hidden" name="bot-field">
+      <button class="btn blue" type="submit">Send me the card</button>
+    </form>
+  </div>`;
+}
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const v=(x,d="—")=>(x==null||x===""||Number.isNaN(x))?d:x;
 const fmtAm=x=>x==null?"—":(x>0?"+"+x:""+x);
@@ -314,9 +342,12 @@ function tdSection(m){
   <div class="tdgrid">${scorers(m.sides.away,m.date.slice(0,4))}${scorers(m.sides.home,m.date.slice(0,4))}</div>`;
   const a=T[m.away]||[], h=T[m.home]||[];
   if(!a.length && !h.length) return "";
+  const top=topScorers(m);
+  const topLine=top.length?`<div class="top2">Most likely to score: ${top.map(x=>`<b>${esc(x.player)}</b> (${esc(x.team)}, ${Math.round(x.prob*100)}%)`).join(" and ")}. In 2023 to 2025, Leo&rsquo;s top pick in a game scored 47% of the time, and at least one of its top two scored 69% of the time.</div>`:"";
   return `
   <h2 class="sec">Touchdown props</h2>
-  <p class="sub">Leo&rsquo;s chance that each player scores a touchdown in this game &mdash; the three most likely on each side, from his last read before kickoff.</p>
+  <p class="sub">Leo&rsquo;s chance that each player scores a rushing or receiving touchdown in this game, the three most likely on each side, from its last read before kickoff.</p>
+  ${topLine}
   <div class="tdgrid">${tdCard(m,m.away,a)}${tdCard(m,m.home,h)}</div>`;
 }
 
@@ -393,7 +424,9 @@ function page(m){
   const A=m.sides.away, H=m.sides.home;
   const cur=(m.ratings&&m.ratings.this_season)||null;
   const pri=(m.ratings&&m.ratings.last_season)||null;
-  const title=`${m.away} vs ${m.home} — Stats, Odds and Matchup | Leo`;
+  // Nicknames in the title: people search "Bears vs Packers prediction".
+  const title=`${TEAMS.nick(m.away)} vs ${TEAMS.nick(m.home)} Prediction and Odds, Week ${v(m.week,"")} ${m.date.slice(0,4)} | Leo`;
+  const desc=`Leo's prediction for the ${TEAMS.full(m.away)} at the ${TEAMS.full(m.home)}, ${niceDate(m.date)}: win probability, projected total, most likely touchdown scorers, injury report and player props, graded after the game.`;
   const spread = m.spread_line==null?"—":(m.spread_line>0?`${m.home} -${m.spread_line}`:(m.spread_line<0?`${m.away} -${Math.abs(m.spread_line)}`:"PK"));
   const cmp=(label,a,h,fmt=x=>v(x))=>{
     const lead = (a==null||h==null||a===h) ? "" : (Number(a)>Number(h) ? "a" : "h");
@@ -408,11 +441,12 @@ ${require("./lib/ga").GA_HEAD}
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${esc(title)}</title>
-<meta name="description" content="${esc(m.away)} at ${esc(m.home)} on ${esc(m.date)}: starting quarterbacks, running backs, top receivers and touchdown props for this game and last, with the closing market numbers.">
+<meta name="description" content="${esc(desc)}">
 <link rel="canonical" href="https://ndhorizon.com${m.url}">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Leo">
 <meta property="og:title" content="${esc(title)}">
+<meta property="og:description" content="${esc(desc)}">
 <meta property="og:url" content="https://ndhorizon.com${m.url}">
 <meta property="og:image" content="https://ndhorizon.com/img/og-card.png">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127944;</text></svg>">
@@ -544,6 +578,14 @@ table.bx tr:last-child td{border-bottom:0}
 .fx .fxsplit{white-space:nowrap}.fx .fxr{color:#4A6478;font-weight:700;font-size:inherit}.fx .fxv{color:#8A6D3B;font-weight:700;font-size:inherit}
 .vd{font-size:.62rem;font-weight:800;letter-spacing:.06em;padding:3px 9px;border-radius:999px}
 .vd.w{background:rgba(47,110,74,.13);color:var(--good)}.vd.l{background:rgba(166,58,46,.13);color:var(--danger)}.vd.p{background:var(--bg-elev);color:var(--text-dim)}
+.mh-title{text-align:center;font-size:clamp(1.15rem,3.6vw,1.5rem);margin:6px 0 2px}
+.nfl-signup{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;align-items:center;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin:26px 0 6px;box-shadow:var(--shadow-sm)}
+.nfl-signup p{margin:4px 0 0;color:var(--text-dim);font-size:.86rem}
+.nfl-signup form{display:flex;gap:8px}.nfl-signup input[type=email]{flex:1;min-width:0}
+.top2{background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;padding:12px 15px;margin:0 0 14px;font-size:.92rem}
+.top2 b{font-weight:800}
+.wk-link{display:inline-block;margin:10px 0 0;font-weight:700}
+@media (max-width:640px){.nfl-signup{grid-template-columns:1fr}}
 .final{margin-top:34px;padding-top:6px;border-top:3px double var(--border)}
 .final-score{display:flex;align-items:center;gap:8px;font-size:1.25rem;font-weight:700;flex-wrap:wrap;margin:4px 0 8px}
 .final-score img{width:34px;height:34px;object-fit:contain}
@@ -568,9 +610,13 @@ table.bx tr:last-child td{border-bottom:0}
     <div class="box"><span class="lbl">Spread</span><span class="val">${esc(spread)}</span></div>
     <div class="box"><span class="lbl">Total</span><span class="val">${v(m.total_line)}</span></div>
   </section>
+  <h1 class="mh-title">${esc(TEAMS.full(m.away))} at ${esc(TEAMS.full(m.home))}</h1>
+  <p style="text-align:center;margin:0"><a class="wk-link" href="/nfl/week/">Every game this week on Leo&rsquo;s Week ${v(m.week,"")} card &rarr;</a></p>
   <div class="notice note">This is a pre-game analysis page. Every stat above the Final result comes from games played <b>before</b> this one${m.pregame_through_week?" (through Week "+m.pregame_through_week+")":""}, and Leo&rsquo;s numbers were frozen before kickoff. Market numbers are the closing line. Nothing here is a wager &mdash; the pick gate stays closed until Leo shows it can beat that line.</div>
 
   ${leoSection(m)}
+
+  ${signupBox()}
 
   ${injurySection(m)}
 
@@ -630,6 +676,10 @@ table.bx tr:last-child td{border-bottom:0}
     wrote++;
   }
   console.log(`rendered ${wrote} matchup pages for ${target}`);
+  // The weekly card reads the same matchup data, so it refreshes whenever
+  // any page of its week is rendered (prepare, publish and grade runs).
+  try { require("./generate-nfl-week-card").build(target); }
+  catch (e) { console.warn(`  week card NOT written: ${e.message}`); }
   console.log(`sitemap.xml: ${require("./lib/sitemap").writeSitemap(ROOT)} pages`);
   data.slice(0,3).forEach(m=>console.log(`  ${m.url}`));
 })();

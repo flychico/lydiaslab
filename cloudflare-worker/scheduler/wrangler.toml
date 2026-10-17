@@ -1,0 +1,11 @@
+name = "leo-scheduler"
+main = "scheduler-worker.js"
+compatibility_date = "2026-10-01"
+
+# One trigger, every 15 minutes (UTC). The worker decides what is due in
+# Eastern time, so daylight saving changes need no edit here.
+[triggers]
+crons = ["*/15 * * * *"]
+
+# Secret (not in git): GITHUB_TOKEN, a fine-grained token with Actions: Read and write
+# on flychico/lydiaslab only.  npx wrangler secret put GITHUB_TOKEN -c wrangler.toml

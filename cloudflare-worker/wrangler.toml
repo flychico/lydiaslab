@@ -8,10 +8,17 @@ compatibility_date = "2026-08-24"
 [vars]
 ALLOWED_ORIGIN = "https://ndhorizon.com"
 
-# Route the Worker at signup.lydiaslab.com instead of the default *.workers.dev URL.
+# Route the Worker at signup.ndhorizon.com instead of the default *.workers.dev URL.
 # Requires the DNS step in DEPLOY.md (a proxied CNAME for "signup"). If you'd rather
 # skip that and just use the workers.dev URL, delete this block and update
 # SIGNUP_ENDPOINT in js/app.js to match whatever URL `wrangler deploy` prints.
+# 2026-10-17: moved to signup.ndhorizon.com (lydiaslab.com is being dropped).
+# js/app.js posts here first and falls back to signup.lydiaslab.com until this
+# route is live. Keep the old route below until a test signup lands here.
+[[routes]]
+pattern = "signup.ndhorizon.com/*"
+custom_domain = true
+
 [[routes]]
 pattern = "signup.lydiaslab.com/*"
 custom_domain = true

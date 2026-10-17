@@ -15,14 +15,14 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Leo">
 <meta property="og:title" content="Leo — Daily MLB and NFL Predictions from a Transparent Model">
-<meta property="og:description" content="Daily MLB model predictions with win probability, market edge, and every pick graded in public. Free daily card, membership for delivery before first pitch.">
+<meta property="og:description" content="NFL and MLB predictions from a model that shows its work: win probabilities, projected totals and the most likely touchdown scorers, frozen before kickoff and graded in public.">
 <meta property="og:url" content="https://ndhorizon.com/">
 <meta property="og:image" content="https://ndhorizon.com/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Leo — Daily MLB and NFL Predictions from a Transparent Model">
-<meta name="twitter:description" content="Daily MLB model predictions with win probability and market edge. Every pick graded in public.">
+<meta name="twitter:description" content="NFL and MLB predictions with every call frozen before kickoff and graded in public.">
 <meta name="twitter:image" content="https://ndhorizon.com/img/og-card.png">
-<meta name="description" content="Leo gives daily MLB model predictions with win probability, market edge, pitcher and bullpen analysis, and every pick graded in public. Free daily card, membership for early delivery.">
+<meta name="description" content="Leo gives every NFL game a win probability, a projected total and the most likely touchdown scorers, plus daily MLB picks, all frozen before kickoff and graded in public. Free weekly card by email.">
 <link rel="canonical" href="https://ndhorizon.com/">
 <link rel="stylesheet" href="/css/style.css">
 <style>
@@ -60,7 +60,7 @@
   "@id": "https://ndhorizon.com/#website",
   "name": "Leo",
   "url": "https://ndhorizon.com/",
-  "description": "Daily MLB model predictions with win probability, market edge, and public grading.",
+  "description": "NFL and MLB model predictions, frozen before kickoff and graded in public.",
   "publisher": { "@type": "Organization", "@id": "https://ndhorizon.com/#organization", "name": "Leo", "url": "https://ndhorizon.com/" }
 }
 </script>
@@ -70,13 +70,13 @@
 <main>
 
   <section class="home-hero">
-    <p class="eyebrow">Daily MLB predictions &middot; Full NFL coverage</p>
-    <h1>Beat the market with a model that shows its work.</h1>
-    <p class="lead">Leo prices every MLB game against the market, tells you where the value is, and grades every pick in public &mdash; wins and losses alike. On the NFL side you get the full slate, team ratings and matchup pages, and an honest answer about where the model does <em>not</em> yet have an edge.</p>
+    <p class="eyebrow">NFL every week &middot; MLB through the World Series</p>
+    <h1>Predictions from a model that shows its work.</h1>
+    <p class="lead">Leo gives every NFL game a win probability, a projected total and the players most likely to score. Every number is frozen before kickoff and graded after the game, and the full record, wins and losses, stays on the site.</p>
     <div class="hero-actions">
-      <a class="btn blue" href="/previews/">Today's MLB picks</a>
-      <a class="btn secondary" href="/nfl/scoreboard/">NFL scoreboard</a>
-      <a class="btn secondary" href="/membership/">Become a member</a>
+      <a class="btn blue" href="/nfl/week/">This week&rsquo;s NFL card</a>
+      <a class="btn secondary" href="/nfl/results/">Leo&rsquo;s NFL record</a>
+      <a class="btn secondary" href="/previews/">Today&rsquo;s MLB card</a>
     </div>
     <div class="trust-row" id="trust-row">
       <span class="trust-badge">Every pick graded in public</span>
@@ -84,7 +84,13 @@
   </section>
 
   <div class="section-head">
-    <h2>Today's official picks</h2>
+    <h2>This week in the NFL</h2>
+    <a class="dim small" href="/nfl/week/">Full week card &rarr;</a>
+  </div>
+  <div id="nfl-week"><div class="dim small">Loading the NFL slate&hellip;</div></div>
+
+  <div class="section-head">
+    <h2>Today's MLB official picks</h2>
     <a class="dim small" href="/previews/">Full card &rarr;</a>
   </div>
   <div id="featured">
@@ -143,7 +149,7 @@
     </div>
   </div>
 
-  <p class="small dim" style="margin-top:26px">For entertainment and informational purposes. No outcome is guaranteed. 21+. If you or someone you know has a gambling problem, call 1-800-GAMBLER.</p>
+  <p class="small dim" style="margin-top:26px">For entertainment and informational purposes. No outcome is guaranteed. 21+. If you or someone you know has a gambling problem, call 1-800-MY-RESET.</p>
 
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
@@ -156,6 +162,35 @@ function isoToday(){ const d=new Date(); return `${d.getFullYear()}-${String(d.g
 function fmtAm(v){ return v===null||v===undefined ? "" : (v>0?"+"+v:String(v)); }
 
 async function loadJson(u){ try{ const r=await fetch(`${u}?v=${Date.now()}`,{cache:"no-store"}); return r.ok?await r.json():null; }catch(e){ return null; } }
+
+/* This week in the NFL: the current slate from the published NFL feed (the
+   same files the scoreboard reads), Leo's two most likely scorers per game
+   and the season record split the way /nfl/results/ shows it. */
+(async function nflWeek(){
+  const el=document.getElementById("nfl-week"); if(!el) return;
+  const [picks, props, tracker] = await Promise.all([
+    loadJson("/data/nfl/picks-today.json"), loadJson("/data/nfl/props-today.json"), loadJson("/data/nfl/tracker.json")]);
+  const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const pct=p=>Math.round(p*100)+"%";
+  const rec=tracker&&tracker.summary&&tracker.summary.moneyline_v2;
+  const pr=tracker&&tracker.summary&&tracker.summary.props&&tracker.summary.props.all;
+  const recHtml=rec&&rec.decided?`<p class="small dim" style="margin:0 0 10px">Leo Picks this season <b>${rec.w}-${rec.l}${rec.p?"-"+rec.p:""}</b>${pr&&pr.decided?` &middot; prop calls <b>${pr.w}-${pr.l}</b>`:""} &middot; <a href="/nfl/results/">full record</a></p>`:"";
+  if(!Array.isArray(picks)||!picks.length){ el.innerHTML=recHtml+`<div class="dim small">The next NFL slate posts on game week. <a href="/nfl/week/">See the latest week card &rarr;</a></div>`; return; }
+  const td={};
+  (Array.isArray(props)?props:[]).filter(p=>p.market==="ANYTIME_TD").forEach(p=>{(td[p.matchup]=td[p.matchup]||[]).push(p);});
+  const slug=g=>`/nfl/${g.away.toLowerCase()}-vs-${g.home.toLowerCase()}-prediction-odds-${g.date}/`;
+  const cards=picks.slice().sort((a,b)=>String(a.date+a.kickoff).localeCompare(String(b.date+b.kickoff))).slice(0,8).map(g=>{
+    const top=(td[g.matchup]||[]).sort((a,b)=>b.projection-a.projection).slice(0,2);
+    const call=g.ml_call==="leo_pick"?`<span class="badge pos">Leo Pick</span> <b>${esc(g.pick)} ${pct(g.model_prob)}</b>`
+      :`<span class="badge">Too Close to Call</span> <span class="dim">leans ${esc(g.pick)} ${pct(g.model_prob)}</span>`;
+    return `<a class="feat-card" href="${slug(g)}"><div class="teams">${esc(g.away)} @ ${esc(g.home)}</div>
+      <div class="meta">${call}</div>
+      <div class="meta">Leo total ${esc(g.proj_total)}${top.length?` &middot; most likely TD: ${top.map(x=>`${esc(x.player)} ${pct(x.projection)}`).join(", ")}`:""}</div></a>`;
+  }).join("");
+  el.innerHTML=recHtml+`<div class="feat-grid">${cards}</div>`+
+    (picks.length>8?`<p class="small dim" style="margin-top:6px"><a href="/nfl/week/">+${picks.length-8} more games on the week card &rarr;</a></p>`:"")+
+    `<p class="small dim" style="margin-top:10px">A Leo Pick means more than a 60% chance. Touchdown chances are chances, not promises: Leo&rsquo;s top pick in a game scored 47% of the time in 2023 to 2025.</p>`;
+})();
 
 /* Public record.
 
@@ -183,7 +218,7 @@ const OFFICIAL_MODELS = ["moneyline_only", "multi_market_v1"];
   if(graded && row){
     const pct=((w/graded)*100).toFixed(0);
     row.innerHTML =
-      `<span class="trust-badge"><strong>${w}-${l}</strong>&nbsp;official record</span>`+
+      `<span class="trust-badge"><strong>${w}-${l}</strong>&nbsp;MLB official record</span>`+
       `<span class="trust-badge">${pct}% across ${graded} graded picks</span>`+
       (hasUnits?`<span class="trust-badge ${u>=0?"pos-text":"neg-text"}">${u>=0?"+":""}${u.toFixed(2)}u</span>`:"")+
       `<span class="trust-badge">Moneyline, totals and strikeout props</span>`;

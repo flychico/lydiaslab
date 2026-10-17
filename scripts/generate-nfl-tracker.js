@@ -162,7 +162,7 @@ function main() {
     const posted = n(r.market_price);
     games.push({
       date: r.date, week: r.week, matchup: r.matchup,
-      away: r.away, home: r.home,
+      away: r.away, home: r.home, model_version: r.model_version || "",
       pick: r.leo_side,
       leo_prob: prob, market_prob: mprob,
       price: posted != null ? posted : toAmerican(mprob),
@@ -190,8 +190,14 @@ function main() {
   const all = blank();
   for (const p of props) { tally(byGroup[p.group], p); tally(all, p); }
 
-  const ml = blank();
-  for (const g of games) tally(ml, { result: g.result, beat: g.beat, err: null, lerr: null });
+  const ml = blank(), mlV2 = blank(), mlV1 = blank();
+  for (const g of games) {
+    const row = { result: g.result, beat: g.beat, err: null, lerr: null };
+    tally(ml, row);
+    // Two models, two records. Week 2 ran leo-nflml-v1 and graded every game
+    // at 50%+; from Week 3, leo-nflml-v2 grades only Leo Picks above 60%.
+    tally(g.model_version === "leo-nflml-v1" ? mlV1 : mlV2, row);
+  }
 
   const dates = [...new Set([...props.map(p => p.date), ...games.map(g => g.date)])].sort();
   const weeks = [...new Set([...props.map(p => p.week), ...games.map(g => g.week)])]
@@ -205,7 +211,9 @@ function main() {
     weeks,
     summary: {
       props: { all: finish(all), QB: finish(byGroup.QB), RB: finish(byGroup.RB), WR: finish(byGroup.WR) },
-      moneyline: finish(ml)
+      moneyline: finish(ml),
+      moneyline_v2: finish(mlV2),   // Leo Picks, leo-nflml-v2, above 60%
+      moneyline_v1: finish(mlV1)    // Week 2, leo-nflml-v1, every game
     },
     counts: { prop_calls: props.length, games: games.length, excluded, no_line: noLine, no_call: noLean },
     // Final scores by "<week>|<matchup>", so a game whose only calls are props
