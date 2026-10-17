@@ -2756,7 +2756,7 @@ setInterval(() => { if (document.visibilityState === "visible") syncNow(); }, 60
    them from the gist. Values arrive as text from Shortcuts, so parsing is
    forgiving ("8,432", "7 hr 12 min", "62 count/min"). Empty values never
    overwrite good ones — a run while the phone is locked sends blanks. */
-const HK_FIELDS = ["steps", "ex", "kcal", "rhr", "hrv", "vo2", "sleep", "deep", "rem"];
+const HK_FIELDS = ["steps", "ex", "kcal", "stand", "rhr", "hrv", "vo2", "sleep", "deep", "rem"];
 function hkNum(v){ if (v == null) return null; const m = String(v).replace(/,/g, "").match(/-?\d+(\.\d+)?/); return m ? +m[0] : null; }
 function hkDur(v){
   // Returns minutes. Accepts "7:12:00", "7 hr 12 min", "7h 12m", "432 min", "25920" (seconds), "7.2" (hours)
@@ -2772,7 +2772,7 @@ function hkClean(raw){
   const put = (k, v) => { if (v != null && isFinite(v) && v > 0) o[k] = Math.round(v * 10) / 10; };
   const exRaw = raw.exercise != null ? raw.exercise : raw.ex;
   put("steps", hkNum(raw.steps)); put("ex", /[a-z:]/i.test(String(exRaw || "")) ? hkDur(exRaw) : hkNum(exRaw));
-  put("kcal", hkNum(raw.active != null ? raw.active : raw.kcal)); put("rhr", hkNum(raw.rhr)); put("hrv", hkNum(raw.hrv)); put("vo2", hkNum(raw.vo2));
+  put("kcal", hkNum(raw.active != null ? raw.active : raw.kcal)); put("stand", hkNum(raw.stand)); put("rhr", hkNum(raw.rhr)); put("hrv", hkNum(raw.hrv)); put("vo2", hkNum(raw.vo2));
   put("sleep", hkDur(raw.sleep)); put("deep", hkDur(raw.deep)); put("rem", hkDur(raw.rem));
   if (o.steps) o.steps = Math.round(o.steps);
   if (o.sleep && o.sleep > 16 * 60) delete o.sleep; // a doubled-up iPhone + Watch reading; ignore rather than show 18 h
@@ -2833,7 +2833,7 @@ function healthCardHTML(compact){
   const sleepBefore = base.filter(x => trainedDays.has(x.d) && hk[x.d] && hk[x.d].sleep);
   const tiles = `<div class="statgrid" style="margin:10px 0 4px">
       ${hkTile("STEPS", y.steps != null ? y.steps.toLocaleString() : "—", y.steps != null ? vsAvg(y.steps, hkAvg(base, "steps"), "", true) : "")}
-      ${hkTile("EXERCISE", y.ex != null ? Math.round(y.ex) + " min" : "—", y.kcal != null ? Math.round(y.kcal) + " active kcal" : "")}
+      ${hkTile("RINGS", y.kcal != null ? Math.round(y.kcal) + " kcal" : "—", [y.ex != null ? Math.round(y.ex) + " exercise min" : "", y.stand != null ? Math.round(y.stand) + " stand hrs" : ""].filter(Boolean).join(" · ") || "move · exercise · stand")}
       ${hkTile("SLEEP", fmtSleep(y.sleep), y.deep || y.rem ? `deep ${fmtSleep(y.deep)} · REM ${fmtSleep(y.rem)}` : (y.sleep ? vsAvg(y.sleep, hkAvg(base, "sleep"), " min", true) : ""))}
       ${hkTile("RESTING HR", y.rhr != null ? Math.round(y.rhr) + " bpm" : "—", y.rhr != null ? vsAvg(y.rhr, hkAvg(base, "rhr"), " bpm", false) : "")}
       ${hkTile("HRV", y.hrv != null ? Math.round(y.hrv) + " ms" : "—", y.hrv != null ? vsAvg(y.hrv, hkAvg(base, "hrv"), " ms", true) : "")}
