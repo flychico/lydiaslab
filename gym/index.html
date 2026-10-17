@@ -2899,6 +2899,7 @@ function healthSetupHTML(){
       <button class="btn ghost small-btn" onclick="copyText('https://api.github.com/gists/' + syncCfg.gist, 'Gist address copied')">Copy gist address</button>
       <button class="btn ghost small-btn" onclick="copyText('Bearer ' + syncCfg.token, 'Copied — paste as the Authorization value')">Copy Authorization value</button>
       <button class="btn ghost small-btn" onclick="copyText(HK_TEMPLATE, 'Copied — paste it into the Text action')">Copy Shortcut text</button>
+      ${S.hk && Object.keys(S.hk).length ? `<button class="btn danger small-btn" onclick="if(confirm('Clear all imported Apple Health numbers? The next Shortcut run brings them back.')){S.hk={};save();render();toast('Health data cleared')}">Clear Health data</button>` : ""}
     </div>`;
 }
 
