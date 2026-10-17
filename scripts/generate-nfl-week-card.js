@@ -13,8 +13,8 @@
  * calls build() after every render, which keeps it current through the
  * prepare, publish and grade runs without a workflow change.
  *
- * Per game: kickoff, Leo's winner and chance (Leo Pick above 60%, otherwise
- * Too Close to Call), Leo's projected total, the two most likely touchdown
+ * Per game: kickoff, Leo's win chance (information only; winner picks were
+ * retired 2026-10-17), Leo's projected total, the two most likely touchdown
  * scorers, and the final score once it is in.
  */
 const fs = require("fs"), path = require("path");
@@ -69,16 +69,8 @@ function gameCard(m) {
     .sort((a, b) => b.prob - a.prob).slice(0, 2);
   const scored = F && F.td_scored || null;
   const tdTag = x => !scored ? "" : ((scored[x.player] || 0) > 0 ? ' <span class="ok">scored</span>' : ' <span class="no">no TD</span>');
-  let winner = '<span class="dim">No pre-game read</span>';
-  if (g) {
-    const right = F && F.winner ? (F.winner === g.pick ? ' <span class="ok">right</span>' : (F.winner === "TIE" ? ' <span class="dim">tie</span>' : ' <span class="no">wrong</span>')) : "";
-    winner = g.call === "too_close_to_call"
-      ? `Too Close to Call <span class="dim">(leans ${esc(TEAMS.nick(g.pick))} ${pct(g.prob)})</span>`
-      : g.call === "leo_pick"
-        ? `<b>Leo Pick: ${esc(TEAMS.nick(g.pick))} ${pct(g.prob)}</b>${right}`
-        // Week 2 ran the retired v1 model, which had no 60% Leo Pick bar.
-        : `Leo winner: ${esc(TEAMS.nick(g.pick))} ${pct(g.prob)} <span class="dim">(retired model)</span>${right}`;
-  }
+  // Win chance only. Winner picks were retired on 2026-10-17 (DEC-20261017-06).
+  const winner = g ? `${esc(TEAMS.nick(g.pick))} ${pct(g.prob)}` : '<span class="dim">No pre-game read</span>';
   const final = F && F.away_score != null
     ? `<div class="wk-final">Final: ${esc(m.away)} ${F.away_score}, ${esc(m.home)} ${F.home_score}</div>` : "";
   return `<article class="wk-game">
@@ -89,7 +81,7 @@ function gameCard(m) {
       <img src="/img/nfl/${encodeURIComponent(m.home)}.png" alt="" loading="lazy"><span>${esc(TEAMS.full(m.home))}</span>
     </a>
     <dl class="wk-read">
-      <dt>Winner</dt><dd>${winner}</dd>
+      <dt>Win chance</dt><dd>${winner}</dd>
       <dt>Leo total</dt><dd>${g && g.proj_total != null ? `${esc(g.proj_total)} points <span class="dim">(line ${esc(m.total_line ?? "n/a")})</span>` : '<span class="dim">n/a</span>'}</dd>
       <dt>Most likely TD</dt><dd>${top.length ? top.map(x => `${esc(x.player)} <span class="dim">${esc(x.team)} ${pct(x.prob)}</span>${tdTag(x)}`).join("<br>") : '<span class="dim">n/a</span>'}</dd>
     </dl>
@@ -99,12 +91,10 @@ function gameCard(m) {
 }
 
 function page({ week, season, games }, rec, canonical) {
-  const title = `NFL Week ${week} Predictions ${season}: Every Game, Winners and Touchdown Scorers | Leo`;
-  const desc = `Leo's NFL Week ${week} ${season} card: a win probability and projected total for all ${games.length} games, plus the two most likely touchdown scorers in each, frozen before kickoff and graded after.`;
-  const recLine = rec && rec.v2 && rec.v2.decided
-    ? `Leo Picks this season: <b>${rec.v2.w}-${rec.v2.l}${rec.v2.p ? "-" + rec.v2.p : ""}</b>` +
-      (rec.props && rec.props.decided ? ` &middot; prop calls <b>${rec.props.w}-${rec.props.l}</b>` : "") +
-      ` &middot; <a href="/nfl/results/">full record</a>` : "";
+  const title = `NFL Week ${week} Predictions ${season}: Every Game, Win Chances and Touchdown Scorers | Leo`;
+  const desc = `Leo's NFL Week ${week} ${season} card: a win chance and projected total for all ${games.length} games, plus the two most likely touchdown scorers in each, frozen before kickoff and graded after.`;
+  const recLine = rec && rec.props && rec.props.decided
+    ? `Prop calls this season: <b>${rec.props.w}-${rec.props.l}</b> &middot; <a href="/nfl/results/">full record</a>` : "";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -149,11 +139,11 @@ ${GA_HEAD}
   <section class="score-hero">
     <p class="eyebrow">NFL ${esc(season)} &middot; Week ${esc(week)}</p>
     <h1>Leo&rsquo;s Week ${esc(week)} card</h1>
-    <p class="subtitle">Every game this week: who Leo expects to win and how likely, its projected total, and the two players most likely to score a touchdown. Every number is frozen before kickoff and graded after the game.</p>
+    <p class="subtitle">Every game this week: each team&rsquo;s chance to win, Leo&rsquo;s projected total, and the two players most likely to score a touchdown. Every number is frozen before kickoff and graded after the game.</p>
     ${recLine ? `<p class="wk-rec small">${recLine}</p>` : ""}
   </section>
 
-  <div class="notice note">How to read it: a <b>Leo Pick</b> means Leo gives that team more than a 60% chance. Below that it is <b>Too Close to Call</b>. Leo&rsquo;s top touchdown pick in a game scored 47% of the time in 2023 to 2025, so treat these as chances, not promises. Leo&rsquo;s total is a projection with no over or under call. Nothing here is betting advice.</div>
+  <div class="notice note">How to read it: the <b>win chance</b> is how often Leo expects that team to win. It is information, not a pick. Leo&rsquo;s top touchdown pick in a game scored 47% of the time in 2023 to 2025, so treat these as chances, not promises. Leo&rsquo;s total is a projection with no over or under call. Nothing here is betting advice.</div>
 
   <div class="nfl-signup">
     <div><b>Get this card by email</b><p>Free, before kickoff on game days. Unsubscribe anytime.</p></div>

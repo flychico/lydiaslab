@@ -45,6 +45,8 @@ const LEDGER = path.join(DIR, "nfl-results-log.csv");
 const argDate = (process.argv.find(a => a.startsWith("--date=")) || "").split("=")[1];
 const FORCE = process.argv.includes("--force");
 const DATE = argDate || new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+// Winner picks are graded for slates before this date only (DEC-20261017-06).
+const ML_PICKS_RETIRED = "2026-10-17";
 
 const n = v => { const x = parseFloat(v); return Number.isFinite(x) ? x : null; };
 const r3 = x => x == null ? null : Math.round(x * 1000) / 1000;
@@ -192,8 +194,13 @@ function main() {
       // counts toward the record. Too Close to Call keeps its row and Brier,
       // with an empty result, the same way no-lean spreads and totals do.
       const tooClose = String(p.model_version||"").startsWith("leo-nflml-v2") && p.model_prob <= 0.60;
-      const res = tooClose ? "" : winner === "TIE" ? "P" : (p.pick === winner ? "W" : "L");
-      rows.push({ ...base, market: "moneyline", status: tooClose ? "too_close_to_call" : p.status,
+      // DEC-20261017-06: winner picks retired from 2026-10-17. Leo still
+      // publishes each team's win chance and the row keeps its Brier for
+      // learning, but nothing from that date on is graded as a pick.
+      const retired = DATE >= ML_PICKS_RETIRED;
+      const res = (tooClose || retired) ? "" : winner === "TIE" ? "P" : (p.pick === winner ? "W" : "L");
+      rows.push({ ...base, market: "moneyline",
+        status: retired ? "win_probability" : tooClose ? "too_close_to_call" : p.status,
         leo_side: p.pick, leo_value: r3(p.model_prob), market_value: r3(p.market_prob),
         market_price: p.price ?? "",
         edge: r3(p.edge), actual_value: winner, result: res,

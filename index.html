@@ -72,7 +72,7 @@
   <section class="home-hero">
     <p class="eyebrow">NFL every week &middot; MLB through the World Series</p>
     <h1>Predictions from a model that shows its work.</h1>
-    <p class="lead">Leo gives every NFL game a win probability, a projected total and the players most likely to score. Every number is frozen before kickoff and graded after the game, and the full record, wins and losses, stays on the site.</p>
+    <p class="lead">Leo gives every NFL game a win chance for each team, a projected total and the players most likely to score. Every number is frozen before kickoff and graded after the game, and the full record, wins and losses, stays on the site.</p>
     <div class="hero-actions">
       <a class="btn blue" href="/nfl/week/">This week&rsquo;s NFL card</a>
       <a class="btn secondary" href="/nfl/results/">Leo&rsquo;s NFL record</a>
@@ -172,24 +172,23 @@ async function loadJson(u){ try{ const r=await fetch(`${u}?v=${Date.now()}`,{cac
     loadJson("/data/nfl/picks-today.json"), loadJson("/data/nfl/props-today.json"), loadJson("/data/nfl/tracker.json")]);
   const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const pct=p=>Math.round(p*100)+"%";
-  const rec=tracker&&tracker.summary&&tracker.summary.moneyline_v2;
   const pr=tracker&&tracker.summary&&tracker.summary.props&&tracker.summary.props.all;
-  const recHtml=rec&&rec.decided?`<p class="small dim" style="margin:0 0 10px">Leo Picks this season <b>${rec.w}-${rec.l}${rec.p?"-"+rec.p:""}</b>${pr&&pr.decided?` &middot; prop calls <b>${pr.w}-${pr.l}</b>`:""} &middot; <a href="/nfl/results/">full record</a></p>`:"";
+  const recHtml=pr&&pr.decided?`<p class="small dim" style="margin:0 0 10px">Prop calls this season <b>${pr.w}-${pr.l}</b> &middot; <a href="/nfl/results/">full record</a></p>`:"";
   if(!Array.isArray(picks)||!picks.length){ el.innerHTML=recHtml+`<div class="dim small">The next NFL slate posts on game week. <a href="/nfl/week/">See the latest week card &rarr;</a></div>`; return; }
   const td={};
   (Array.isArray(props)?props:[]).filter(p=>p.market==="ANYTIME_TD").forEach(p=>{(td[p.matchup]=td[p.matchup]||[]).push(p);});
   const slug=g=>`/nfl/${g.away.toLowerCase()}-vs-${g.home.toLowerCase()}-prediction-odds-${g.date}/`;
   const cards=picks.slice().sort((a,b)=>String(a.date+a.kickoff).localeCompare(String(b.date+b.kickoff))).slice(0,8).map(g=>{
     const top=(td[g.matchup]||[]).sort((a,b)=>b.projection-a.projection).slice(0,2);
-    const call=g.ml_call==="leo_pick"?`<span class="badge pos">Leo Pick</span> <b>${esc(g.pick)} ${pct(g.model_prob)}</b>`
-      :`<span class="badge">Too Close to Call</span> <span class="dim">leans ${esc(g.pick)} ${pct(g.model_prob)}</span>`;
+    // Win chance only; winner picks retired 2026-10-17.
+    const call=`Win chance: <b>${esc(g.pick)} ${pct(g.model_prob)}</b>`;
     return `<a class="feat-card" href="${slug(g)}"><div class="teams">${esc(g.away)} @ ${esc(g.home)}</div>
       <div class="meta">${call}</div>
       <div class="meta">Leo total ${esc(g.proj_total)}${top.length?` &middot; most likely TD: ${top.map(x=>`${esc(x.player)} ${pct(x.projection)}`).join(", ")}`:""}</div></a>`;
   }).join("");
   el.innerHTML=recHtml+`<div class="feat-grid">${cards}</div>`+
     (picks.length>8?`<p class="small dim" style="margin-top:6px"><a href="/nfl/week/">+${picks.length-8} more games on the week card &rarr;</a></p>`:"")+
-    `<p class="small dim" style="margin-top:10px">A Leo Pick means more than a 60% chance. Touchdown chances are chances, not promises: Leo&rsquo;s top pick in a game scored 47% of the time in 2023 to 2025.</p>`;
+    `<p class="small dim" style="margin-top:10px">Win chances are information, not picks. Touchdown chances are chances, not promises: Leo&rsquo;s top pick in a game scored 47% of the time in 2023 to 2025.</p>`;
 })();
 
 /* Public record.

@@ -218,9 +218,7 @@ function leoSection(m){
   const when=L.captured_at?new Date(L.captured_at).toLocaleString("en-US",{timeZone:"America/New_York",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})+" ET":"";
   const game=g?`
   <div class="leo-grid">
-    ${g.call==="too_close_to_call"
-      ? `<div class="box"><span class="lbl">Leo pick</span><span class="val">Too Close to Call</span><span class="lbl2">leans ${esc(g.pick)} ${pct(g.prob)}, under the 60% bar</span></div>`
-      : `<div class="box"><span class="lbl">${g.call==="leo_pick"?"Leo pick":"Leo winner"}</span><span class="val">${esc(g.pick)} ${pct(g.prob)}</span><span class="lbl2">above the 60% bar</span></div>`}
+    <div class="box"><span class="lbl">Leo win chance</span><span class="val">${esc(g.pick)} ${pct(g.prob)}</span><span class="lbl2">chance to win; information, not a pick</span></div>
     <div class="box"><span class="lbl">Leo total</span><span class="val">${v(g.proj_total)}</span><span class="lbl2">points, both teams</span></div>
     <div class="box"><span class="lbl">Leo margin</span><span class="val">${esc(fav(m,g.proj_spread))}</span><span class="lbl2">expected winning margin</span></div>
   </div>`:"";
@@ -383,7 +381,7 @@ function finalReport(m){
   const row=(label,leo,line,actual,verd)=>`<tr><td>${label}</td><td>${leo}</td><td>${line}</td><td><b>${actual}</b></td><td>${verd}</td></tr>`;
   const rows=[
     ml?row("Winner", esc(ml.side)+" "+pct(ml.leo), "&mdash;", esc(ml.actual)+" won",
-           ml.result===""?'<span class="vd p">NO PICK &middot; too close to call</span>':verdict(ml.result)):"",
+           ml.result===""?'<span class="vd p">NO PICK</span>':verdict(ml.result)):"",
     tp?row("Total points", v(tp.leo), v(tp.market), v(tp.actual),
            tp.side?`${esc(String(tp.side).toUpperCase())} &middot; ${verdict(tp.result)}`:'<span class="mut">no side &middot; within 1.5 pts</span>'):"",
     sp?row("Margin", esc(fav(m,sp.leo)), esc(lineTxt(m,sp.market)), esc(fav(m,Number(sp.actual))),

@@ -135,7 +135,7 @@ table.calls tbody tr:hover{background:var(--bg-elev);}
     <summary style="cursor:pointer;font-weight:700">How Leo is graded</summary>
     <ul class="small" style="margin:10px 0 2px;padding-left:18px;line-height:1.55">
       <li>Every number is frozen before kickoff and never changed after. Only that frozen read is graded.</li>
-      <li><b>Leo Picks:</b> a team Leo gives more than a 60% chance to win. Games at 60% or under are Too Close to Call and are not graded as picks.</li>
+      <li><b>Winner picks were retired on October 17.</b> Leo now shows each team&rsquo;s win chance as information only. Picks graded before then (a team given more than a 60% chance) stay on the record as history.</li>
       <li><b>Prop calls:</b> Leo&rsquo;s side of the posted line for QB passing, RB rushing and WR receiving yards. Inside 5% of the line there is no call.</li>
       <li>Losses stay on the record. Players ruled out are marked excluded, never deleted.</li>
       <li>Touchdown chances and projected totals are shown on each game page and graded there; they carry no over or under call.</li>
@@ -148,7 +148,7 @@ table.calls tbody tr:hover{background:var(--bg-elev);}
       <button class="control-btn" type="button" data-grp="QB">QB</button>
       <button class="control-btn" type="button" data-grp="RB">RB</button>
       <button class="control-btn" type="button" data-grp="WR">WR</button>
-      <button class="control-btn" type="button" data-grp="ML">Winners</button>
+      <button class="control-btn" type="button" data-grp="ML">Winners (history)</button>
     </div>
     <div class="view-controls filters" role="group" aria-label="Filter by week" id="weekFilter"></div>
     <div class="view-controls filters" role="group" aria-label="Filter by outcome">
@@ -271,13 +271,16 @@ function renderRecords(){
   const g = data.games.filter(inWeek);
   const v1 = g.filter(x=>x.model_version==="leo-nflml-v1");
   const v2 = g.filter(x=>x.model_version!=="leo-nflml-v1");
+  /* Winner picks were retired on 2026-10-17 (DEC-20261017-06): Leo shows each
+     team's win chance as information only. The graded picks stay on the
+     record as history, never removed. */
   recEl.innerHTML=
-    recTile("Leo Picks (above 60%)",tallyFor(v2))+
     recTile("All prop calls",p.all)+
     recTile("Quarterbacks",p.QB)+
     recTile("Running backs",p.RB)+
     recTile("Receivers",p.WR)+
-    (v1.length?recTile("Week 2 winners, retired model",tallyFor(v1),"every game counted"):"");
+    recTile("Winner picks, retired Oct 17",tallyFor(v2),"history, above 60%")+
+    (v1.length?recTile("Week 2 winners, retired model",tallyFor(v1),"history, every game"):"");
 }
 
 /* ---------------------------------------------------------------------------
