@@ -2775,12 +2775,17 @@ function hkClean(raw){
   put("kcal", hkNum(raw.active != null ? raw.active : raw.kcal)); put("stand", hkNum(raw.stand)); put("rhr", hkNum(raw.rhr)); put("hrv", hkNum(raw.hrv)); put("vo2", hkNum(raw.vo2));
   put("sleep", hkDur(raw.sleep)); put("deep", hkDur(raw.deep)); put("rem", hkDur(raw.rem));
   if (o.steps) o.steps = Math.round(o.steps);
+  // Drop values no human produces (a mis-wired Shortcut variable, for example)
+  const MAX = { steps: 100000, ex: 1000, kcal: 6000, stand: 24, rhr: 150, hrv: 300, vo2: 90, sleep: 960, deep: 600, rem: 600 };
+  Object.keys(MAX).forEach(k => { if (o[k] != null && o[k] > MAX[k]) delete o[k]; });
+  if (o.rhr != null && o.rhr < 25) delete o.rhr;
   if (o.sleep && o.sleep > 16 * 60) delete o.sleep; // a doubled-up iPhone + Watch reading; ignore rather than show 18 h
   return o;
 }
 function hkMerge(date, vals){
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Object.keys(vals).length) return false;
-  S.hk = S.hk || {}; S.hk[date] = { ...(S.hk[date] || {}), ...vals }; return true;
+  S.hk = S.hk || {}; const prev = hkClean(S.hk[date] ? { steps: S.hk[date].steps, ex: S.hk[date].ex, active: S.hk[date].kcal, stand: S.hk[date].stand, rhr: S.hk[date].rhr, hrv: S.hk[date].hrv, vo2: S.hk[date].vo2, sleep: S.hk[date].sleep != null ? S.hk[date].sleep + " min" : null, deep: S.hk[date].deep != null ? S.hk[date].deep + " min" : null, rem: S.hk[date].rem != null ? S.hk[date].rem + " min" : null } : {});
+  S.hk[date] = { ...prev, ...vals }; return true;
 }
 /* Called from syncNow with the gist object; returns file names to delete. */
 function hkTakeFiles(g){
