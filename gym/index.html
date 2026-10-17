@@ -1081,6 +1081,7 @@ document.getElementById("tabbar").addEventListener("click", e => {
 });
 function render(){
   applyTheme();
+  Object.assign(COACH, { steps: 7500, sleep: 420, fv: 5 }, S.standards || {});
   if (!S.profile) { document.body.classList.remove("dashmode", "workout"); return renderOnboarding(); }
   const active = !!S.active;
   const showingWorkout = active && tab === "today";
@@ -1230,6 +1231,7 @@ function renderToday(){
   <h1>Today</h1>
   ${offerStrong ? `<div class="card" style="border-color:var(--gold)"><b>New program: Strong &amp; Lean</b><div class="dim small" style="margin:5px 0 10px;line-height:1.55">Strength first, muscle second, built for getting strong without getting bulky. 5 days, about 60 minutes: Upper and Lower heavy days (3–5 reps), then Push, Pull and Legs muscle days. Every muscle twice a week, every set with an effort target. Your history and progress stay; the plan is rebuilt.</div><button class="btn small-btn" onclick="switchToStrong()">Switch my plan</button> <button class="btn ghost small-btn" onclick="S.strongDismissed=true;save();render()">Not now</button></div>` : ""}
   <p class="dim small">${new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})} · ${streakText()}</p>
+  ${reviewCard()}
   ${coachCard()}
   ${doneToday ? "" : readinessCard()}
   ${doneToday ? `<div class="card"><b class="green">✓ Workout logged today.</b><div class="dim small">Muscles grow between sessions — rest is part of the program.</div>${S.health ? `<a class="btn ghost small-btn" style="margin-top:10px;display:inline-block;text-decoration:none" href="${healthWorkoutURL(doneToday.min)}">❤️ Log to Apple Health</a>` : ""}</div>` : ""}
@@ -1668,6 +1670,7 @@ function renderProgress(){
     })() : ""}
   </div>
   ${healthCardHTML()}
+  ${photosCard()}
   ${hkActive() ? "" : `  <div class="card"><h3>Apple Watch rings <span class="dim small">· type from your wrist</span></h3>
     <p class="dim small" style="margin-bottom:8px">Glance at your watch and enter today's numbers.${todayAct ? " <span class=\"green\">Logged today ✓</span>" : ""}</p>
     <div class="row3">
@@ -1895,6 +1898,7 @@ function renderSettings(){
     <input type="file" accept=".xml" onchange="importHealthWeights(this)">
   </div>
   ${syncCardHTML()}
+  ${coachSettingsHTML()}
   <div class="card"><h3>Backup & move devices</h3>
     <p class="dim small" style="margin-bottom:10px">${syncCfg ? "Sync keeps your devices up to date, so you only need this for an extra copy." : "Without sync, your data lives only on this device. Turn on sync above, or bring data across by hand here."} Clearing the browser wipes this device's copy.</p>
     <b class="small">1 · Send from this device</b>
@@ -2679,6 +2683,7 @@ async function syncNow(manual){
       syncCfg.last = at;
     }
     syncCfg.at = Date.now(); syncErr = ""; saveSyncCfg();
+    coachSync(manual === true);
     if (pulled) { safeRender(); if (manual !== "connect") toast(pulled === "health" ? "Apple Health data updated" : "Synced from your other device"); }
     else if (manual === true) { toast("Synced ✓"); if (tab === "settings") render(); }
   } catch (e) {
@@ -2964,9 +2969,13 @@ function todaysMission(){
   const ws = weekStartOf(today()), done = sessionsBetween(ws, today()), trainedToday = (S.logs || []).some(l => l.date === today());
   const daysLeft = 7 - Math.round((new Date(today() + "T12:00") - new Date(ws + "T12:00")) / 864e5); // including today
   const need = tgt - done;
-  if (!trainedToday && need > 0) m.push(need >= daysLeft ? `<b>Train today: not optional.</b> ${need} sessions left and ${daysLeft} day${daysLeft === 1 ? "" : "s"} in the week.` : `Train today: ${need} of ${tgt} sessions still to do this week.`);
+  if (!trainedToday && need > 0) m.push(need > daysLeft ? `<b>Train today: not optional.</b> ${tgt} this week is already out of reach (${done} done, ${daysLeft} day${daysLeft === 1 ? "" : "s"} left). Train every remaining day to salvage it.` : need === daysLeft ? `<b>Train today: not optional.</b> ${need} sessions left and exactly ${daysLeft} day${daysLeft === 1 ? "" : "s"} to do them.` : `Train today: ${need} of ${tgt} sessions still to do this week.`);
   if (n.p < t.protein) m.push(`Hit <b>${Math.round(t.protein - n.p)} g more protein</b>${n.n ? "" : ". Log breakfast now"}.`);
   const fv = dayFV(today()); if (fv < COACH.fv) m.push(`Eat <b>${Math.ceil(COACH.fv - fv)} more fruit/veg servings</b> (a banana, a cup of berries, a handful of greens).`);
+  const lastPhoto = (S.photos || []).map(x => x.date).sort().pop();
+  if (coachCfg && (!lastPhoto || lastPhoto < shiftDate(today(), -6))) m.push(`<b>Take this week's progress photos</b> (Progress tab). Your Sunday review compares them.`);
+  const lastW = (S.weights || []).map(x => x.date).sort().pop();
+  if (!lastW || lastW < shiftDate(today(), -6)) m.push(`<b>Weigh in</b> (Progress → Body weight), first thing in the morning.`);
   m.push(`Get to <b>${COACH.steps.toLocaleString()} steps</b>. A 20-minute walk after a meal is about 2,000.`);
   m.push("In bed by a time that gives you <b>7+ hours</b>: muscle is built while you sleep.");
   return m;
@@ -2990,11 +2999,155 @@ function coachCard(compact){
 }
 function hkActive(){ return Object.keys(S.hk || {}).some(d => d >= shiftDate(today(), -7)); }
 
+/* ---- AI coach link: private data repo ----
+   The app mirrors your data to a PRIVATE GitHub repo you own (data.json).
+   Every Sunday a scheduled Claude session reads it (plus your progress
+   photos), writes coach/review.json, and may adjust your plan, food targets
+   and daily standards. The app fetches that review, applies the changes
+   (keeping the old values so you can undo), and shows the review.
+   Uses its own fine-grained token, limited to that one repo. */
+const COACH_KEY = "mangelo-coach";
+let coachCfg = (() => { try { return JSON.parse(localStorage.getItem(COACH_KEY)) || null; } catch (e) { return null; } })();
+let coachBusy = false, photoCache = {};
+function saveCoachCfg(){ try { if (coachCfg) localStorage.setItem(COACH_KEY, JSON.stringify(coachCfg)); else localStorage.removeItem(COACH_KEY); } catch (e) {} }
+function b64(str){ return btoa(unescape(encodeURIComponent(str))); }
+function unb64(s){ return decodeURIComponent(escape(atob(String(s).replace(/\s/g, "")))); }
+function repoApi(path, opts){
+  opts = opts || {};
+  const cfg = opts.cfg || coachCfg;
+  return fetch("https://api.github.com/repos/" + cfg.repo + path, { method: opts.method || "GET", cache: "no-store", headers: { Authorization: "Bearer " + cfg.token, Accept: "application/vnd.github+json", ...(opts.body ? { "Content-Type": "application/json" } : {}) }, body: opts.body ? JSON.stringify(opts.body) : undefined })
+    .then(async r => { if (r.status === 404 && opts.allow404) return null; if (!r.ok) { const e = new Error("GitHub " + r.status); e.status = r.status; throw e; } return r.status === 204 ? null : r.json(); });
+}
+async function repoGet(path){ return repoApi("/contents/" + path, { allow404: true }); }
+async function repoPut(path, contentB64, message){
+  const cur = await repoGet(path);
+  return repoApi("/contents/" + path, { method: "PUT", body: { message, content: contentB64, ...(cur && cur.sha ? { sha: cur.sha } : {}) } });
+}
+/* Called after every successful sync (throttled) and from "Sync now". */
+async function coachSync(force){
+  if (!coachCfg || coachBusy || !navigator.onLine) return;
+  if (!force && coachCfg.at && Date.now() - coachCfg.at < 20 * 60000) return;
+  coachBusy = true;
+  try {
+    const snapshot = { ...S, active: null, exportedAt: new Date().toISOString(), catalog: EX.map(e => ({ id: e.id, n: e.n, m: e.m, p: e.p, inc: e.inc })) };
+    await repoPut("data.json", b64(JSON.stringify(snapshot)), "App sync " + today());
+    const rv = await repoGet("coach/review.json");
+    if (rv && rv.content) { let r = null; try { r = JSON.parse(unb64(rv.content)); } catch (e) {} if (r && r.id && (!S.review || S.review.id !== r.id)) { applyReview(r); toast("🗿 New weekly review from your coach"); render(); } }
+    coachCfg.at = Date.now(); coachCfg.err = ""; saveCoachCfg();
+  } catch (e) { coachCfg.err = e.status === 401 || e.status === 403 ? "token" : e.status === 404 ? "repo" : "net"; saveCoachCfg(); }
+  finally { coachBusy = false; }
+}
+function applyReview(r){
+  const prev = { plan: S.plan, targets: S.targets || null, standards: S.standards || null };
+  const applied = [];
+  if (r.plan && Array.isArray(r.plan.days) && r.plan.days.length) {
+    const days = r.plan.days.map(d => ({ name: String(d.name || "Day"), exercises: (d.exercises || []).filter(x => EXBY[x.ex]).map(x => ({ ex: x.ex, sets: Math.max(1, Math.min(8, +x.sets || 3)), lo: +x.lo || 6, hi: +x.hi || 10, ...(x.rpe ? { rpe: +x.rpe } : {}) })) })).filter(d => d.exercises.length);
+    if (days.length) { S.plan = { ...S.plan, days, nextDay: S.plan ? S.plan.nextDay : 0 }; applied.push("plan"); }
+  }
+  if (r.targets && (r.targets.cal || r.targets.protein)) { S.targets = { ...effTargets(), ...(S.targets || {}), ...r.targets }; applied.push("targets"); }
+  if (r.standards) { S.standards = { ...(S.standards || {}), ...r.standards }; applied.push("standards"); }
+  S.review = { ...r, plan: undefined, prev, applied, receivedAt: Date.now(), undone: false, dismissed: false };
+  save();
+}
+function undoReview(){
+  if (!S.review || !S.review.prev) return;
+  if (!confirm("Put back last week's plan, targets and standards?")) return;
+  S.plan = S.review.prev.plan || S.plan; S.targets = S.review.prev.targets; S.standards = S.review.prev.standards; S.review.undone = true;
+  save(); render(); toast("Changes undone");
+}
+function reviewCard(full){
+  const r = S.review; if (!r) return "";
+  if (!full && (r.dismissed || Date.now() - (r.receivedAt || 0) > 4 * 864e5)) return "";
+  const list = (title, arr, cls) => arr && arr.length ? `<div class="dim small" style="font-weight:700;margin:10px 0 4px">${title}</div><ul class="mission">${arr.map(x => `<li${cls ? ` class="${cls}"` : ""}>${esc(x)}</li>`).join("")}</ul>` : "";
+  return `<div class="card coachcard">
+    <div class="exhead"><h3>🗿 Weekly review</h3><span class="dim small">${esc(r.date || "")}${r.grade ? ` · <b>${esc(r.grade)}</b>` : ""}</span></div>
+    ${r.title ? `<div style="font-weight:700;margin-bottom:4px">${esc(r.title)}</div>` : ""}
+    <div class="small" style="line-height:1.6">${esc(r.summary || "").replace(/\n/g, "<br>")}</div>
+    ${list("WHAT WORKED", r.wins)}${list("WHERE YOU SLACKED", r.misses)}${list("CHANGES I MADE", r.changes)}${list("THIS WEEK'S FOCUS", r.focus)}
+    ${r.photos ? `<div class="dim small" style="font-weight:700;margin:10px 0 4px">PHOTOS</div><div class="small" style="line-height:1.55">${esc(r.photos)}</div>` : ""}
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      ${r.applied && r.applied.length && !r.undone ? `<button class="btn ghost small-btn" onclick="undoReview()">Undo changes</button>` : r.undone ? '<span class="dim small">Changes undone</span>' : ""}
+      ${!full ? `<button class="btn ghost small-btn" onclick="S.review.dismissed=true;save();render()">Got it</button>` : ""}
+    </div>
+  </div>`;
+}
+/* ---- Progress photos (stored in the private repo) ---- */
+let photoPose = "front";
+function compressPhoto(file){
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => { const sc = Math.min(1, 1280 / Math.max(img.width, img.height)); const cv = document.createElement("canvas"); cv.width = Math.round(img.width * sc); cv.height = Math.round(img.height * sc); cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url); res(cv.toDataURL("image/jpeg", 0.8)); };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("img")); };
+    img.src = url;
+  });
+}
+function pickPhoto(){ const i = document.getElementById("photopick"); if (i) { i.value = ""; i.click(); } }
+async function uploadPhoto(inp){
+  const f = inp.files && inp.files[0]; if (!f) return;
+  if (!coachCfg) return toast("Connect the AI coach in Settings first");
+  toast("Uploading photo…");
+  try {
+    const dataUrl = await compressPhoto(f), path = `photos/${today()}-${photoPose}.jpg`;
+    await repoPut(path, dataUrl.split(",")[1], "Progress photo " + today() + " " + photoPose);
+    photoCache[path] = dataUrl;
+    S.photos = (S.photos || []).filter(p => p.path !== path).concat([{ date: today(), pose: photoPose, path }]).sort((a, b) => a.date.localeCompare(b.date));
+    save(); render(); toast("Photo saved privately ✓");
+  } catch (e) { toast(navigator.onLine ? "Upload failed — check the coach connection in Settings" : "You're offline — try again with a connection"); }
+}
+async function loadPhoto(path, elId){
+  const el = document.getElementById(elId); if (!el) return;
+  if (photoCache[path]) { el.src = photoCache[path]; return; }
+  try { const f = await repoGet(path); if (f && f.content) { photoCache[path] = "data:image/jpeg;base64," + f.content.replace(/\s/g, ""); const e2 = document.getElementById(elId); if (e2) e2.src = photoCache[path]; } } catch (e) {}
+}
+function photosCard(){
+  if (!coachCfg) return `<div class="card"><h3>Progress photos</h3><p class="dim small" style="margin-top:6px;line-height:1.55">Weekly photos show changes the scale can't. Connect the <b>AI coach</b> in Settings first: photos are stored in your private repo, where your Sunday review can compare them.</p></div>`;
+  const ph = S.photos || [], mine = ph.filter(p => p.pose === photoPose), first = mine[0], last = mine[mine.length - 1];
+  const lastAny = ph.length ? ph[ph.length - 1].date : null, due = !lastAny || lastAny < shiftDate(today(), -6);
+  setTimeout(() => { if (first) loadPhoto(first.path, "ph-first"); if (last && last !== first) loadPhoto(last.path, "ph-last"); }, 0);
+  return `<div class="card"><div class="exhead"><h3>Progress photos</h3><span class="small ${due ? "red" : "green"}">${due ? "Due this week" : "✓ This week done"}</span></div>
+    <p class="dim small" style="margin:4px 0 8px;line-height:1.5">Same spot, same light, same time of day (morning, before eating). Relaxed, arms at your sides.</p>
+    <div>${["front", "side", "back"].map(p => `<span class="pill ${photoPose === p ? "on" : ""}" onclick="photoPose='${p}';render()">${p[0].toUpperCase() + p.slice(1)}</span>`).join("")}</div>
+    <button class="btn blue-btn small-btn" style="margin-top:6px" onclick="pickPhoto()">📸 Add ${photoPose} photo for today</button>
+    <input type="file" id="photopick" accept="image/*" class="hidden" onchange="uploadPhoto(this)">
+    ${first ? `<div class="row2" style="margin-top:12px">
+      <div><div class="dim small">${first.date}</div><img id="ph-first" alt="First ${photoPose} photo" style="width:100%;border-radius:10px;background:var(--bg2);aspect-ratio:3/4;object-fit:cover"></div>
+      <div><div class="dim small">${last === first ? "Add another to compare" : last.date}</div>${last !== first ? `<img id="ph-last" alt="Latest ${photoPose} photo" style="width:100%;border-radius:10px;background:var(--bg2);aspect-ratio:3/4;object-fit:cover">` : `<div style="aspect-ratio:3/4;border-radius:10px;border:1px dashed var(--border)"></div>`}</div>
+    </div>` : ""}
+  </div>`;
+}
+/* ---- Settings: connect the coach ---- */
+async function connectCoach(){
+  const repo = (document.getElementById("cc-repo").value || "").trim().replace(/^https?:\/\/github\.com\//, "").replace(/\.git$/, "").replace(/\/$/, "");
+  const token = (document.getElementById("cc-token").value || "").trim();
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) return toast("Repo should look like yourname/michelangelo-data");
+  if (!token) return toast("Paste the repo token");
+  const cfg = { repo, token };
+  try {
+    const info = await repoApi("", { cfg });
+    if (!info.private) { if (!confirm("That repo is PUBLIC — anyone could see your body data and photos. Continue anyway?")) return; }
+    coachCfg = { ...cfg, at: 0 }; saveCoachCfg();
+    await coachSync(true); render(); toast("AI coach connected ✓");
+  } catch (e) { toast(e.status === 404 ? "Repo not found — check the name, and that the token includes it" : e.status === 401 ? "GitHub didn't accept that token" : "Couldn't reach GitHub"); }
+}
+function coachSettingsHTML(){
+  if (!coachCfg) return `<div class="card"><h3>AI coach <span class="dim small">· weekly review</span></h3>
+    <p class="dim small" style="margin:6px 0 10px;line-height:1.55">Every Sunday Claude reads your week (workouts, food, sleep, steps, photos), writes you a straight review and adjusts your plan. Your data goes to a <b>private repo</b> only you can see.</p>
+    <label style="margin-top:0">Private repo</label><input id="cc-repo" placeholder="yourname/michelangelo-data" autocapitalize="off" spellcheck="false">
+    <label>Repo token (fine-grained)</label><input id="cc-token" type="password" placeholder="github_pat_…" autocapitalize="off" spellcheck="false">
+    <button class="btn blue-btn full" style="margin-top:10px" onclick="connectCoach()">Connect</button></div>`;
+  const warn = coachCfg.err === "token" ? "Token rejected or expired — disconnect and connect with a new one." : coachCfg.err === "repo" ? "Repo not found." : coachCfg.err === "net" ? "Couldn't reach GitHub last try." : "";
+  return `<div class="card"><h3>AI coach <span class="dim small">· weekly review</span></h3>
+    <div class="dim small" style="margin-top:6px">${esc(coachCfg.repo)} · data sent ${agoText(coachCfg.at)}${S.review ? ` · last review ${esc(S.review.date || "")}` : " · first review this Sunday"}${warn ? `<br><span class="red">${warn}</span>` : ""}</div>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn small-btn" onclick="coachSync(true).then(()=>{render();toast('Sent to coach ✓')})">Send now</button><button class="btn ghost small-btn" onclick="if(confirm('Disconnect the AI coach on this device?')){coachCfg=null;saveCoachCfg();render()}">Disconnect</button></div>
+    ${S.review ? reviewCard(true) : ""}</div>`;
+}
+
 /* ---- Init ---- */
 applyTheme();
 syncTabs();
 render();
 syncNow();
+if (!syncCfg) coachSync();
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/gym/sw.js").catch(() => {});
 </script>
 </body>
