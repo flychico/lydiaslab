@@ -147,6 +147,10 @@ details.card>summary{cursor:pointer;list-style:none}
 details.card>summary::-webkit-details-marker{display:none}
 details.card>summary::after{content:"▾";float:right;color:var(--dim)}
 details.card[open]>summary::after{content:"▴"}
+.coachcard{border-color:var(--gold)}
+.coachcard.bad{border-color:var(--red)}
+.mission{margin:0 0 0 18px;font-size:.88rem;line-height:1.6}
+.mission li{margin-bottom:2px}
 </style>
 </head>
 <body>
@@ -1101,6 +1105,7 @@ function renderDash(){
   V.innerHTML = `
   <div class="exhead"><h1><span class="mich">Michel</span><span class="angelo">Angelo</span> <span class="dim" style="font-size:1rem;font-weight:400">dashboard</span></h1><span class="dim small">${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · ${streakText()}</span></div>
   <div class="dashgrid">
+    ${coachCard(true)}
     ${healthCardHTML(true)}
     ${insightsPanel("dashwide")}
     <div class="card dashwide">
@@ -1225,6 +1230,7 @@ function renderToday(){
   <h1>Today</h1>
   ${offerStrong ? `<div class="card" style="border-color:var(--gold)"><b>New program: Strong &amp; Lean</b><div class="dim small" style="margin:5px 0 10px;line-height:1.55">Strength first, muscle second, built for getting strong without getting bulky. 5 days, about 60 minutes: Upper and Lower heavy days (3–5 reps), then Push, Pull and Legs muscle days. Every muscle twice a week, every set with an effort target. Your history and progress stay; the plan is rebuilt.</div><button class="btn small-btn" onclick="switchToStrong()">Switch my plan</button> <button class="btn ghost small-btn" onclick="S.strongDismissed=true;save();render()">Not now</button></div>` : ""}
   <p class="dim small">${new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})} · ${streakText()}</p>
+  ${coachCard()}
   ${doneToday ? "" : readinessCard()}
   ${doneToday ? `<div class="card"><b class="green">✓ Workout logged today.</b><div class="dim small">Muscles grow between sessions — rest is part of the program.</div>${S.health ? `<a class="btn ghost small-btn" style="margin-top:10px;display:inline-block;text-decoration:none" href="${healthWorkoutURL(doneToday.min)}">❤️ Log to Apple Health</a>` : ""}</div>` : ""}
   ${S.tune && S.tune.msgs && S.tune.msgs.length ? `<div class="card" style="border-color:var(--blue)"><b class="blue">🗿 Plan auto-tuned after your last session</b><div class="dim small" style="margin-top:5px;line-height:1.6">${S.tune.msgs.map(esc).join("<br>")}</div><button class="btn ghost small-btn" style="margin-top:10px" onclick="S.tune=null;save();render()">Got it</button></div>` : ""}
@@ -1662,7 +1668,7 @@ function renderProgress(){
     })() : ""}
   </div>
   ${healthCardHTML()}
-  <div class="card"><h3>Apple Watch rings <span class="dim small">· type from your wrist</span></h3>
+  ${hkActive() ? "" : `  <div class="card"><h3>Apple Watch rings <span class="dim small">· type from your wrist</span></h3>
     <p class="dim small" style="margin-bottom:8px">Glance at your watch and enter today's numbers.${todayAct ? " <span class=\"green\">Logged today ✓</span>" : ""}</p>
     <div class="row3">
       <div><label style="margin-top:0">Move (kcal)</label><input type="number" inputmode="numeric" id="act-move" placeholder="kcal" value="${todayAct ? todayAct.move || "" : ""}"></div>
@@ -1672,6 +1678,7 @@ function renderProgress(){
     <button class="btn small-btn" style="margin-top:10px" onclick="logActivity()">${todayAct ? "Update today" : "Log today"}</button>
     ${act.length ? `<div class="dim small" style="margin-top:10px">Last 7 days: <b>${wkMove}</b> kcal moved · <b>${wkEx}</b> exercise min · ${wkAct.length} day${wkAct.length === 1 ? "" : "s"} logged</div>` : ""}
   </div>
+`}
   <div id="chartmodal"></div>
   <div class="card"><h3>History</h3>
     ${logs.length ? [...logs].reverse().slice(0, 20).map(l => `<div class="exline"><span>${l.date} · <b>${esc(l.dayName || "Workout")}</b></span><span class="dim">${l.entries.reduce((a, en) => a + en.sets.length, 0)} sets · ${l.min}m${S.health ? ` · <a href="${healthWorkoutURL(l.min)}" style="color:var(--blue);text-decoration:none">❤️</a>` : ""}</span></div>`).join("") : '<p class="dim small">No workouts yet.</p>'}
@@ -2064,7 +2071,7 @@ function shiftDate(date, n){ const d = new Date(date + "T12:00"); d.setDate(d.ge
 function shiftFoodDate(n){ const d = shiftDate(fd(), n); if (d > today()) return; foodDate = d === today() ? null : d; qs = null; render(); }
 function r1(v){ return Math.round(v * 10) / 10; }
 
-function logFood(it){ S.nutrition = S.nutrition || []; S.nutrition.push({ date: fd(), n: String(it.n).slice(0, 60), cal: Math.round(+it.cal || 0), p: r1(+it.p || 0), c: r1(+it.c || 0), f: r1(+it.f || 0) }); save(); }
+function logFood(it){ S.nutrition = S.nutrition || []; S.nutrition.push({ date: fd(), n: String(it.n).slice(0, 60), cal: Math.round(+it.cal || 0), p: r1(+it.p || 0), c: r1(+it.c || 0), f: r1(+it.f || 0), ...(it.fv > 0 ? { fv: r1(+it.fv) } : {}) }); save(); }
 function logSaved(id){ const m = (S.foods || []).find(x => x.id === id); if (!m) return; logFood(m); render(); toast("Logged " + m.n); }
 function deleteMeal(id){ if (!confirm("Delete this saved meal?")) return; S.foods = (S.foods || []).filter(x => x.id !== id); save(); render(); }
 function addCustomFood(saveMeal){
@@ -2075,7 +2082,7 @@ function addCustomFood(saveMeal){
   if (saveMeal) { saveMealObj({ n: name, cal, p, c, f }); render(); toast("Saved to your meals"); }
   else { logFood({ n: name, cal, p, c, f }); render(); toast("Added"); }
 }
-function saveMealObj(m){ S.foods = S.foods || []; S.foods.push({ id: "meal-" + Date.now(), n: String(m.n).slice(0, 40), cal: Math.round(m.cal), p: r1(m.p), c: r1(m.c), f: r1(m.f) }); save(); }
+function saveMealObj(m){ S.foods = S.foods || []; S.foods.push({ id: "meal-" + Date.now(), n: String(m.n).slice(0, 40), cal: Math.round(m.cal), p: r1(m.p), c: r1(m.c), f: r1(m.f), ...(m.fv > 0 ? { fv: r1(m.fv) } : {}) }); save(); }
 function removeFood(i){ (S.nutrition || []).splice(i, 1); save(); render(); }
 function starFood(i){ const x = (S.nutrition || [])[i]; if (!x) return; if ((S.foods || []).some(m => m.n === x.n)) return toast("Already in your meals"); saveMealObj(x); render(); toast("Saved to your meals"); }
 function relogRecent(k){ const x = recentFoods()[k]; if (!x) return; logFood(x); render(); toast("Logged " + x.n); }
@@ -2308,7 +2315,7 @@ function renderPreview(){
 }
 function quickLog(){
   const rows = allRows().filter(r => r.food); if (!rows.length) return;
-  rows.forEach(r => { const m = rowMacros(r); logFood({ n: rowLabel(r), cal: m.cal, p: m.p, c: m.c, f: m.f }); });
+  rows.forEach(r => { const m = rowMacros(r); logFood({ n: rowLabel(r), cal: m.cal, p: m.p, c: m.c, f: m.f, fv: fvServings(r.food, m.g) }); });
   const skipped = allRows().length - rows.length;
   qs = null; render(); toast("Logged " + rows.length + (skipped ? " · " + skipped + " skipped" : ""));
 }
@@ -2317,7 +2324,7 @@ function quickSaveMeal(){
   const t = previewTotals();
   const def = rows.length === 1 ? rowLabel(rows[0]) : (qs.text || rows.map(r => r.food.n).join(" + "));
   const name = prompt("Name this meal", def.slice(0, 40)); if (!name) return;
-  saveMealObj({ n: name.trim(), cal: t.cal, p: t.p, c: t.c, f: t.f });
+  saveMealObj({ n: name.trim(), cal: t.cal, p: t.p, c: t.c, f: t.f, fv: rows.reduce((a, r) => a + fvServings(r.food, rowMacros(r).g), 0) });
   qs = null; render(); toast("Saved — tap ＋ to log it any time");
 }
 
@@ -2496,6 +2503,7 @@ function renderNutrition(){
     <div class="pbar"><div style="width:${pct(d.p, t.protein)}%"></div></div>
     <div style="display:flex;justify-content:space-between;font-size:.88rem;margin-top:12px"><span>Calories</span><span><b>${Math.round(d.cal)}</b> / ${t.cal} <span class="dim">· ${calLeft >= 0 ? Math.round(calLeft) + " left" : Math.round(-calLeft) + " over"}</span></span></div>
     <div class="cbar"><div style="width:${pct(d.cal, t.cal)}%"></div></div>
+    ${(() => { const fv = dayFV(date); return `<div style="display:flex;justify-content:space-between;font-size:.88rem;margin-top:12px"><span>🍎 Fruit &amp; veg</span><span><b class="${fv >= COACH.fv - 0.5 ? "green" : ""}">${fv.toFixed(1)}</b> / ${COACH.fv} servings</span></div><div class="cbar"><div style="width:${pct(fv, COACH.fv)}%;background:var(--green)"></div></div>`; })()}
     <div class="dim small" style="margin-top:8px">${Math.round(d.c)}g carbs · ${Math.round(d.f)}g fat · ${d.n} item${d.n === 1 ? "" : "s"}</div>
   </div>
 
@@ -2839,7 +2847,7 @@ function healthCardHTML(compact){
   const tiles = `<div class="statgrid" style="margin:10px 0 4px">
       ${hkTile("STEPS", y.steps != null ? y.steps.toLocaleString() : "—", y.steps != null ? vsAvg(y.steps, hkAvg(base, "steps"), "", true) : "")}
       ${hkTile("RINGS", y.kcal != null ? Math.round(y.kcal) + " kcal" : "—", [y.ex != null ? Math.round(y.ex) + " exercise min" : "", y.stand != null ? Math.round(y.stand) + " stand hrs" : y.standMin != null ? y.standMin + " stand min" : ""].filter(Boolean).join(" · ") || "move · exercise · stand")}
-      ${hkTile("SLEEP", fmtSleep(y.sleep), y.deep || y.rem ? `deep ${fmtSleep(y.deep)} · REM ${fmtSleep(y.rem)}` : (y.sleep ? vsAvg(y.sleep, hkAvg(base, "sleep"), " min", true) : ""))}
+      ${hkTile("SLEEP · LAST NIGHT", fmtSleep(y.sleep), y.deep || y.rem ? `deep ${fmtSleep(y.deep)} · REM ${fmtSleep(y.rem)}` : (y.sleep ? vsAvg(y.sleep, hkAvg(base, "sleep"), " min", true) : ""))}
       ${hkTile("RESTING HR", y.rhr != null ? Math.round(y.rhr) + " bpm" : "—", y.rhr != null ? vsAvg(y.rhr, hkAvg(base, "rhr"), " bpm", false) : "")}
       ${hkTile("HRV", y.hrv != null ? Math.round(y.hrv) + " ms" : "—", y.hrv != null ? vsAvg(y.hrv, hkAvg(base, "hrv"), " ms", true) : "")}
       ${(() => { const v = hkLatest("vo2"); return hkTile("VO₂ MAX", v ? v.v.toFixed(1) : "—", v ? "cardio fitness" + (v.d !== yd ? " · " + v.d.slice(5) : "") : ""); })()}
@@ -2902,6 +2910,85 @@ function healthSetupHTML(){
       ${S.hk && Object.keys(S.hk).length ? `<button class="btn danger small-btn" onclick="if(confirm('Clear all imported Apple Health numbers? The next Shortcut run brings them back.')){S.hk={};save();render();toast('Health data cleared')}">Clear Health data</button>` : ""}
     </div>`;
 }
+
+/* ---- Coach: daily standards, streak, no-slack callouts ----
+   Rule-based (no AI model): every morning it grades yesterday against fixed
+   standards using your own logged data + the Health import, keeps a streak,
+   and names exactly what was missed and what to do today. Standards only
+   count when there's data to judge them; a day with no food logged FAILS the
+   food standards — what isn't logged isn't coached. */
+const FV_SERVING = { leafy: 40, other: 80 }; // grams per serving (WHO/NHS 80 g portion; leafy greens count double by volume)
+const FRUITVEG = { "Banana": 1, "Apple": 1, "Orange": 1, "Blueberries": 1, "Strawberries": 1, "Grapes": 1, "Avocado": 1, "Broccoli": 1, "Spinach": 2, "Salad greens": 2, "Green beans": 1, "Carrots": 1, "Corn": 1, "Edamame": 1, "Black beans": 1, "Lentils (cooked)": 1 };
+function fvServings(food, grams){ const t = FRUITVEG[food.n]; if (!t) return 0; return grams / (t === 2 ? FV_SERVING.leafy : FV_SERVING.other); }
+function dayFV(date){ return (S.nutrition || []).filter(x => x.date === date).reduce((a, x) => a + (x.fv || 0), 0); }
+const COACH = { steps: 7500, sleep: 420, fv: 5 };
+function weekStartOf(date){ const d = new Date(date + "T12:00"); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.toLocaleDateString("en-CA"); }
+function sessionsBetween(a, b){ return new Set((S.logs || []).filter(l => l.date >= a && l.date <= b).map(l => l.date)).size; }
+/* Grade one day. Returns { items:[{k,label,ok,detail}], pass, total, won } */
+function gradeDay(date){
+  const items = [], add = (k, label, ok, detail) => items.push({ k, label, ok, detail });
+  const tgt = (S.profile && S.profile.days) || 5, ws = weekStartOf(date);
+  const elapsed = Math.round((new Date(date + "T12:00") - new Date(ws + "T12:00")) / 864e5) + 1; // days of the week through `date`
+  const done = sessionsBetween(ws, date), needBy = Math.floor(tgt * elapsed / 7);
+  const trained = (S.logs || []).some(l => l.date === date);
+  add("train", "Training", trained || done >= needBy, trained ? "Trained" : done >= needBy ? "Planned rest day" : `Skipped: ${done} of ${tgt} sessions this week, should be at ${needBy}`);
+  const n = dayNutrition(date), t = effTargets();
+  if (!n.n) add("log", "Food logged", false, "Nothing logged");
+  else {
+    add("protein", "Protein", n.p >= t.protein * 0.9, `${Math.round(n.p)} / ${t.protein} g` + (n.p < t.protein * 0.9 ? ` (${Math.round(t.protein - n.p)} g short)` : ""));
+    const off = (n.cal - t.cal) / t.cal;
+    add("cal", "Calories", Math.abs(off) <= 0.15, `${Math.round(n.cal)} / ${t.cal}` + (off > 0.15 ? " (over)" : off < -0.15 ? " (under; can't build muscle on empty)" : ""));
+    const fv = dayFV(date);
+    add("fv", "Fruit & veg", fv >= COACH.fv - 0.5, `${fv.toFixed(1)} / ${COACH.fv} servings`);
+  }
+  const h = (S.hk || {})[date] || {};
+  // The Shortcut stores the night that FOLLOWS a day on that day's date (read when you wake up)
+  if (h.sleep != null) add("sleep", "Sleep that night", h.sleep >= COACH.sleep, fmtSleep(h.sleep));
+  if (h.steps != null) add("steps", "Steps", h.steps >= COACH.steps, h.steps.toLocaleString() + " / " + COACH.steps.toLocaleString());
+  const pass = items.filter(i => i.ok).length;
+  return { items, pass, total: items.length, won: items.length >= 2 && pass / items.length >= 0.8 };
+}
+function coachStreak(){
+  let s = 0, d = shiftDate(today(), -1);
+  for (let i = 0; i < 120; i++) { const g = gradeDay(d); if (!g.won) break; s++; d = shiftDate(d, -1); }
+  return s;
+}
+function weekScore(){
+  const days = []; for (let i = 7; i >= 1; i--) days.push(gradeDay(shiftDate(today(), -i)));
+  const p = days.reduce((a, g) => a + g.pass, 0), t = days.reduce((a, g) => a + g.total, 0);
+  return { pct: t ? Math.round(p / t * 100) : null, won: days.filter(g => g.won).length };
+}
+/* Today's must-dos, ordered by what matters most for the goal. */
+function todaysMission(){
+  const m = [], t = effTargets(), n = dayNutrition(today()), tgt = (S.profile && S.profile.days) || 5;
+  const ws = weekStartOf(today()), done = sessionsBetween(ws, today()), trainedToday = (S.logs || []).some(l => l.date === today());
+  const daysLeft = 7 - Math.round((new Date(today() + "T12:00") - new Date(ws + "T12:00")) / 864e5); // including today
+  const need = tgt - done;
+  if (!trainedToday && need > 0) m.push(need >= daysLeft ? `<b>Train today: not optional.</b> ${need} sessions left and ${daysLeft} day${daysLeft === 1 ? "" : "s"} in the week.` : `Train today: ${need} of ${tgt} sessions still to do this week.`);
+  if (n.p < t.protein) m.push(`Hit <b>${Math.round(t.protein - n.p)} g more protein</b>${n.n ? "" : ". Log breakfast now"}.`);
+  const fv = dayFV(today()); if (fv < COACH.fv) m.push(`Eat <b>${Math.ceil(COACH.fv - fv)} more fruit/veg servings</b> (a banana, a cup of berries, a handful of greens).`);
+  m.push(`Get to <b>${COACH.steps.toLocaleString()} steps</b>. A 20-minute walk after a meal is about 2,000.`);
+  m.push("In bed by a time that gives you <b>7+ hours</b>: muscle is built while you sleep.");
+  return m;
+}
+function coachCard(compact){
+  if (!S.profile) return "";
+  const y = gradeDay(shiftDate(today(), -1)), streak = coachStreak(), wk = weekScore();
+  const misses = y.items.filter(i => !i.ok);
+  const head = y.total ? (misses.length === 0 ? `<b class="green">Yesterday: ${y.pass}/${y.total}. Every standard met.</b> Do it again.`
+    : misses.length <= 1 && y.won ? `<b>Yesterday: ${y.pass}/${y.total}.</b> Close. Don't let ${misses[0].label.toLowerCase()} slide two days in a row.`
+    : `<b class="red">Yesterday: ${y.pass}/${y.total}. Not good enough.</b> You missed ${misses.map(i => i.label.toLowerCase()).join(", ")}.`) : "No data for yesterday yet.";
+  const rows = y.items.map(i => `<div class="exline"><span>${i.ok ? '<b class="green">✓</b>' : '<b class="red">✗</b>'} ${i.label}</span><span class="dim small">${esc(i.detail)}</span></div>`).join("");
+  const mission = todaysMission();
+  return `<div class="card coachcard ${y.total && !y.won ? "bad" : ""}">
+    <div class="exhead"><h3>🗿 Coach</h3><span class="small">${streak ? `<b>${streak}-day streak</b> 🔥` : '<span class="dim">streak: 0</span>'}${wk.pct != null ? ` · <span class="dim">7-day ${wk.pct}%</span>` : ""}</span></div>
+    <div class="small" style="line-height:1.55;margin-bottom:6px">${head}</div>
+    ${compact ? "" : rows}
+    <div class="dim small" style="font-weight:700;margin:10px 0 4px">TODAY'S STANDARD</div>
+    <ul class="mission">${mission.map(x => `<li>${x}</li>`).join("")}</ul>
+  </div>`;
+}
+function hkActive(){ return Object.keys(S.hk || {}).some(d => d >= shiftDate(today(), -7)); }
 
 /* ---- Init ---- */
 applyTheme();
