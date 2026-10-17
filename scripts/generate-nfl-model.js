@@ -18,6 +18,9 @@ const path = require("path");
 const { execFileSync } = require("child_process");
 const { buildRatings, headToHead } = require("./lib/nfl-ratings.js");
 const ML = require("./lib/nfl-moneyline.js");
+// Totals (leo-nfltot-v2, DEC-20261017-03): fitted team-points model, shared with
+// scripts/backtest-nfl-totals.js. Evidence: data/nfl/backtest-totals.json.
+const TOT = require("./lib/nfl-totals-model.js");
 const ROOT = path.join(__dirname, "..");
 const FEED = "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv";
 const REL  = "https://github.com/nflverse/nflverse-data/releases/download";
@@ -35,6 +38,13 @@ const K_MARKET = 8;     // pseudo-games before the model outweighs the market pr
 const EDGE_CAP = 0.15;  // a disagreement past this means the MODEL is wrong, not the market
 const TOTAL_SD = 10.4;  // SD of actual combined points vs the closing total
 const TOTAL_EDGE_MIN = 1.5;   // points of disagreement before a total is playable
+// Over/under SIDES are off. leo-nfltot-v2 is more accurate than v1 (2023-25
+// out-of-sample MAE 10.30 vs 10.37; 2026 10.91 vs 11.50) but still less
+// accurate than the closing total (10.12), and taking a side at any gap went
+// about 50% (1.5+ pts 236-233, 3+ 97-104, 5+ 28-24). v1 sides were 16-30 live.
+// Leo publishes its projected total; it names no side until a backtest shows
+// one that holds across seasons. grade-nfl-results.js grades no side as no call.
+const TOTAL_SIDES_ENABLED = false;
 const TOTAL_EDGE_CAP = 7.0;   // past this the totals model is wrong, not the market
 const SPREAD_EDGE_MIN = 1.0;  // points vs the closing spread
 const ROOF_BUMP = { dome: 0.8, closed: 0.8, open: 0.0, outdoors: 0.0 };
@@ -211,6 +221,7 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
     A Leo Pick needs one side strictly above 60%; otherwise Too Close to Call.
     Spread and total still use the v1 point-margin rating (expMargin).
   */
+  const TOTALS_MODEL = JSON.parse(fs.readFileSync(path.join(ROOT,"data/nfl/totals-model.json"),"utf8"));
   const ML_MODEL = JSON.parse(fs.readFileSync(path.join(ROOT,"data/nfl/moneyline-v2-model.json"),"utf8"));
   const mlByWeek = {};
   const mlInputs = week => mlByWeek[week] || (mlByWeek[week] = (() => {
@@ -299,12 +310,20 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
     // Each side's expected points = its own scoring pace blended with what the
     // opponent's defense concedes. Both inputs are already regressed toward a
     // prior-season baseline, so one blowout cannot move a number.
-    const awayPts = ((paceFor[g.away_team]??leaguePPG) + (paceAgainst[g.home_team]??leaguePPG))/2;
-    const homePts = ((paceFor[g.home_team]??leaguePPG) + (paceAgainst[g.away_team]??leaguePPG))/2;
+    // v2: each team's points from the fitted model (QB, offense, opponent
+    // defense, points scored/allowed, home, roof, wind), same inputs and
+    // ratings as the moneyline. v1 averaged points for/against + a roof bump.
+    const totScoring = TOT.teamScoring(games, SEASON, n(g.week)||1);
+    const totSide = (team, opp, home, qb) => TOT.featureRow({ team, opp, home, qb, roof:g.roof, wind:g.wind,
+      scoring:totScoring, qbRatings:inp.qb, teamRatings:inp.team });
+    const homePts = TOT.teamPoints(TOTALS_MODEL, totSide(g.home_team, g.away_team, true, homeQb));
+    const awayPts = TOT.teamPoints(TOTALS_MODEL, totSide(g.away_team, g.home_team, false, awayQb));
     const roofKey = String(g.roof||"").toLowerCase();
-    const roofAdj = ROOF_BUMP[roofKey] ?? 0;
-    const windAdj = (n(g.wind)!=null && n(g.wind) >= 15) ? -1.6 : 0;   // heavy wind suppresses scoring
-    const rawTotal = awayPts + homePts + roofAdj + windAdj;
+    const roofAdj = 0, windAdj = 0;    // now inside the fitted model (indoor, wind)
+    const v1Total = ((paceFor[g.away_team]??leaguePPG) + (paceAgainst[g.home_team]??leaguePPG))/2
+                  + ((paceFor[g.home_team]??leaguePPG) + (paceAgainst[g.away_team]??leaguePPG))/2
+                  + (ROOF_BUMP[roofKey] ?? 0) + ((n(g.wind)!=null && n(g.wind) >= 15) ? -1.6 : 0);
+    const rawTotal = awayPts + homePts;
     const mktTotal = n(g.total_line);
     // Same market-prior discipline as the moneyline: the closing total is sharp.
     const projTotal = rawTotal;    // Leo total, unblended
@@ -314,7 +333,7 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
     const totalStatus = totalEdge==null ? "no_market"
                       : (PICKS_ENABLED && Math.abs(totalEdge)>=TOTAL_EDGE_MIN && !totalSuspect)
                         ? "official_pick" : "pass";
-    const totalSide = totalEdge==null ? null : (totalEdge>0 ? "Over" : "Under");
+    const totalSide = (!TOTAL_SIDES_ENABLED || totalEdge==null) ? null : (totalEdge>0 ? "Over" : "Under");
     // P(total clears the line), for sizing context
     const overProb = mktTotal==null ? null : 1-normCdf((mktTotal-projTotal)/TOTAL_SD);
 
@@ -370,7 +389,8 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
         def_epa_per_play:RATINGS[g.home_team].def_epa_per_play } : null,
       // totals model
       total_status:totalStatus, total_side:totalSide,
-      proj_total:r1(projTotal), raw_proj_total:r1(rawTotal),
+      proj_total:r1(projTotal), raw_proj_total:r1(rawTotal), total_model:TOTALS_MODEL.model_version,
+      v1_proj_total:r1(v1Total),
       total_edge:totalEdge==null?null:r1(totalEdge),
       over_prob:overProb==null?null:r3(overProb),
       roof_adj:roofAdj, wind_adj:windAdj,

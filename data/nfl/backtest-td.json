@@ -1,0 +1,147 @@
+{
+  "generated_at": "2026-10-17T02:50:12.533Z",
+  "model_version": "leo-nfltd-v2",
+  "features": [
+    "is_wr",
+    "is_te",
+    "is_qb",
+    "use_rb",
+    "use_wr",
+    "use_te",
+    "use_qb",
+    "td_rate",
+    "team_ppg",
+    "opp_allowed",
+    "home",
+    "depth_n"
+  ],
+  "lambda": 1,
+  "folds": [
+    {
+      "test_season": 2023,
+      "train_n": 4563,
+      "test_n": 4552,
+      "scored_rate": 0.205,
+      "brier": 0.1458,
+      "brier_constant": 0.1628,
+      "brier_position_avg": 0.1617
+    },
+    {
+      "test_season": 2024,
+      "train_n": 9115,
+      "test_n": 4592,
+      "scored_rate": 0.218,
+      "brier": 0.1543,
+      "brier_constant": 0.1706,
+      "brier_position_avg": 0.1692
+    },
+    {
+      "test_season": 2025,
+      "train_n": 13707,
+      "test_n": 4626,
+      "scored_rate": 0.212,
+      "brier": 0.1523,
+      "brier_constant": 0.167,
+      "brier_position_avg": 0.166
+    }
+  ],
+  "oos": {
+    "n": 13770,
+    "brier": 0.1508,
+    "calibration": [
+      {
+        "bin": "0-0.1",
+        "n": 2694,
+        "predicted": 0.082,
+        "actual": 0.068
+      },
+      {
+        "bin": "0.1-0.2",
+        "n": 5677,
+        "predicted": 0.143,
+        "actual": 0.151
+      },
+      {
+        "bin": "0.2-0.3",
+        "n": 2565,
+        "predicted": 0.244,
+        "actual": 0.276
+      },
+      {
+        "bin": "0.3-0.4",
+        "n": 1563,
+        "predicted": 0.346,
+        "actual": 0.367
+      },
+      {
+        "bin": "0.4-0.5",
+        "n": 849,
+        "predicted": 0.443,
+        "actual": 0.429
+      },
+      {
+        "bin": "0.5-1",
+        "n": 422,
+        "predicted": 0.576,
+        "actual": 0.54
+      }
+    ],
+    "top_picks": {
+      "games": 768,
+      "top_pick_scored": 0.473,
+      "top_two_at_least_one": 0.686
+    },
+    "by_depth": {
+      "QB1": {
+        "n": 1497,
+        "predicted": 0.162,
+        "actual": 0.16
+      },
+      "RB1": {
+        "n": 1534,
+        "predicted": 0.418,
+        "actual": 0.437
+      },
+      "RB2": {
+        "n": 1493,
+        "predicted": 0.179,
+        "actual": 0.186
+      },
+      "RB3": {
+        "n": 841,
+        "predicted": 0.092,
+        "actual": 0.065
+      },
+      "TE1": {
+        "n": 1519,
+        "predicted": 0.2,
+        "actual": 0.223
+      },
+      "TE2": {
+        "n": 1177,
+        "predicted": 0.104,
+        "actual": 0.099
+      },
+      "WR1": {
+        "n": 1536,
+        "predicted": 0.343,
+        "actual": 0.341
+      },
+      "WR2": {
+        "n": 1534,
+        "predicted": 0.219,
+        "actual": 0.255
+      },
+      "WR3": {
+        "n": 1485,
+        "predicted": 0.134,
+        "actual": 0.136
+      },
+      "WR4": {
+        "n": 1154,
+        "predicted": 0.086,
+        "actual": 0.085
+      }
+    }
+  }
+}

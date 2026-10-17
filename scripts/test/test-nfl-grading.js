@@ -31,7 +31,10 @@ const GAMES = [
   "T_LIVE,2026,2,1999-01-01,GB,CHI,7,3,",
   // The real MIN @ CHI case: Leo CHI by 4.1 vs line CHI -4.5 (0.4 pts apart),
   // MIN won 9-3. Inside the 1-point floor -> no spread call at all.
-  "T_THIN,2026,2,1999-01-01,MIN,CHI,9,3,-6"
+  "T_THIN,2026,2,1999-01-01,MIN,CHI,9,3,-6",
+  // Totals sides are off (DEC-20261017-03): a 6.5-pt gap with no side named
+  // must not be graded as an over.
+  "T_NOSIDE,2026,2,1999-01-01,NYJ,NE,30,27,-3"
 ].join("\n");
 
 const PICKS = [
@@ -49,7 +52,12 @@ const PICKS = [
     week: "2", model_version: "test", status: "pass",
     pick: "KC", model_prob: 0.75, market_prob: 0.70, edge: 0.05,
     total_status: "pass", total_side: "Under", proj_total: 42, total_line: 44.5, total_edge: 2.5,
-    spread_status: "pass", spread_side: "KC",  proj_spread: 8.0, spread_line: 6.5, spread_edge: 1.5 }
+    spread_status: "pass", spread_side: "KC",  proj_spread: 8.0, spread_line: 6.5, spread_edge: 1.5 },
+  { date: DATE, game_id: "T_NOSIDE", matchup: "NYJ @ NE", away: "NYJ", home: "NE",
+    week: "2", model_version: "test", status: "pass",
+    pick: "NE", model_prob: 0.55, market_prob: 0.55, edge: 0,
+    total_status: "pass", total_side: null, proj_total: 50, total_line: 43.5, total_edge: 6.5,
+    spread_status: "pass", spread_side: "NE", proj_spread: 3.0, spread_line: 3.0, spread_edge: 0 }
 ];
 
 // --- sandbox: intercept the fetch, and keep every write out of data/ --------
@@ -136,6 +144,12 @@ console.log("\nNFL GRADING MATH TEST\n" + "=".repeat(58));
   ck("spread 0.4 pts from the line is NOT a call", sp && sp.result === "" && sp.leo_side === "",
      sp && `result=${sp.result} side=${sp.leo_side}`);
   ck("total 0.5 pts from the line is NOT a call", tt && tt.result === "", tt && `result=${tt.result}`);
+}
+// No side named -> no total call, however big the gap.
+{
+  const tt = get("T_NOSIDE","total");
+  ck("total with no side named is NOT a call", tt && tt.result === "" && tt.leo_side === "",
+     tt && `result=${tt.result} side=${tt.leo_side}`);
 }
 // A game still in progress must not appear in the ledger at all.
 ck("live game (score, no final result) is NOT graded",

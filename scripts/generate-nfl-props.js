@@ -28,6 +28,9 @@ const CLAMP_LO = 0.85, CLAMP_HI = 1.15;   // opponent multiplier bounds (K-props
 // Calibration and the QB method live in ONE shared file, also loaded by the
 // backtest and the public Model Tuner. Change them there, nowhere else.
 const PROPS = require("./lib/nfl-props-model");
+// Anytime TD (leo-nfltd-v2, DEC-20261017-02): its own shared file + trained model.
+const TDM = require("./lib/nfl-td-model");
+const TD_MODEL = JSON.parse(fs.readFileSync(path.join(ROOT, "data/nfl/td-model.json"), "utf8"));
 const CALIBRATION = PROPS.CALIBRATION;
 const CALIBRATION_BIAS = 0.0;  // retained so existing references still resolve
 
@@ -103,20 +106,8 @@ function oppAdjustment(defRecent, defSeason, leagueAvg, nGames) {
   return Math.max(CLAMP_LO, Math.min(CLAMP_HI, regressed / leagueAvg));
 }
 
-// League-typical TDs per game by position; used as the shrinkage prior so a
-// single 2-TD game cannot imply a 90% anytime-TD probability.
-const TD_BASE_RB = 0.38, TD_BASE_WR = 0.30;
-const TD_CEILING = 0.72;   // no NFL anytime-TD price implies more than ~72%
-
-function anytimeTD(e, field, base, adj) {
-  const cur = e.cur.map(x => x[field]);
-  const prior = e.prior.map(x => x[field]);
-  // player's own prior-season rate is itself shrunk toward the position baseline
-  const priorRate = prior.length ? shrink(mean(prior), prior.length, base, 6) : base;
-  const rate = shrink(mean(cur), cur.length, priorRate) * adj;
-  const p = 1 - Math.exp(-Math.max(0, rate));
-  return Math.round(Math.min(TD_CEILING, p) * 1000) / 1000;
-}
+// Anytime TD moved to scripts/lib/nfl-td-model.js (leo-nfltd-v2). The v1
+// per-player Poisson rate here priced only RB rushing and WR receiving TDs.
 
 (async function main() {
   const targetDate = process.argv[2] || new Date(Date.now() + 864e5).toISOString().slice(0, 10);
@@ -219,6 +210,9 @@ function anytimeTD(e, field, base, adj) {
     return { qb: top("QB", "att", 1), rb: top("RB", "car", 2), wr: top("WR", "tgt", 3) };
   }
 
+  // Team points scored / allowed before this week, shrunk toward last season.
+  const tdScoring = TDM.teamScoring(games, SEASON, slateWeek);
+
   const props = [];
   const push = (g, p, market, projection, extra = {}) => props.push({
     date: targetDate, game_id: g.game_id,
@@ -270,8 +264,6 @@ function anytimeTD(e, field, base, adj) {
         const proj = (ypc * car * adjRush) + CALIBRATION.RB_RUSH_YARDS;
         push(g, { name, pos: "RB", depth: `RB${i + 1}`, team, opp, gp: e.cur.length, adj: adjRush },
              "RB_RUSH_YARDS", Math.max(0, Math.round(proj)), { rate_used: r1(ypc), expected_volume: r1(car), model_version: "leo-nflprop-v2" });
-        push(g, { name, pos: "RB", depth: `RB${i + 1}`, team, opp, gp: e.cur.length, adj: adjRush },
-             "ANYTIME_TD", anytimeTD(e, "rtd", TD_BASE_RB, adjRush));
       }
       for (const [i, { name, e }] of s.wr.entries()) {
         const ypt = blend(e.cur.map(x => x.tgt ? x.recy / x.tgt : 0), e.cur.map(x => x.tgt ? x.recy / x.tgt : 0), e.prior.map(x => x.tgt ? x.recy / x.tgt : 0));
@@ -281,8 +273,22 @@ function anytimeTD(e, field, base, adj) {
         const proj = (ypt * tgt * adjPass) + CALIBRATION.WR_REC_YARDS;
         push(g, { name, pos: "WR", depth: `WR${i + 1}`, team, opp, gp: e.cur.length, adj: adjPass },
              "WR_REC_YARDS", Math.max(0, Math.round(proj)), { rate_used: r1(ypt), expected_volume: r1(tgt), model_version: "leo-nflprop-v2" });
-        push(g, { name, pos: "WR", depth: `WR${i + 1}`, team, opp, gp: e.cur.length, adj: adjPass },
-             "ANYTIME_TD", anytimeTD(e, "rectd", TD_BASE_WR, adjPass));
+      }
+
+      // ---- anytime TD: RB1-3, WR1-4, TE1-2, QB1 (leo-nfltd-v2) -------------
+      // Same candidate rule and features as the backtest (lib/nfl-td-model.js):
+      // usage, TD rate, team points scored, opponent points allowed, home, rank.
+      const tdPool = [...logs.entries()]
+        .filter(([nm, x]) => x.team === team && x.cur.length && active.has(nm) && !sidelinedIds.has(x.id))
+        .map(([nm, x]) => ({ name: nm, pos: x.pos, cur: x.cur, prior: x.prior }));
+      for (const c of TDM.candidates(tdPool)) {
+        const row = TDM.featureRow({ pos: c.pos, cur: c.cur, prior: c.prior, team, opp,
+                                     home: team === g.home_team, scoring: tdScoring, depth: c.depth });
+        push(g, { name: c.name, pos: c.pos, depth: c.depth, team, opp, gp: c.cur.length, adj: 1 },
+             "ANYTIME_TD", Math.round(TDM.probability(TD_MODEL, row) * 1000) / 1000,
+             { model_version: TD_MODEL.model_version, expected_volume: r1(row._use),
+               rate_used: Math.round(row.td_rate * 1000) / 1000,
+               team_ppg: r1(row.team_ppg), opp_allowed: r1(row.opp_allowed) });
       }
     }
   }

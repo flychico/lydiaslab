@@ -220,7 +220,10 @@ function main() {
     if (p.proj_total != null && !done("total")) {
       const line = n(p.total_line);
       const gap = line == null ? null : p.proj_total - line;
-      const side = gap == null || Math.abs(gap) < TOTAL_FLOOR ? "" : (gap > 0 ? "Over" : "Under");
+      // No side when the frozen prediction named none (DEC-20261017-03: totals
+      // sides are off while no backtest supports them). Older captures always
+      // carried the sign of the gap here, so their grading is unchanged.
+      const side = gap == null || Math.abs(gap) < TOTAL_FLOOR || !p.total_side ? "" : (gap > 0 ? "Over" : "Under");
       const res = !side ? "" : total === line ? "P"
                 : ((total > line) === (side === "Over") ? "W" : "L");
       const leoErr = Math.abs(p.proj_total - total);
