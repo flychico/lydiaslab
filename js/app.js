@@ -278,7 +278,7 @@ const SIGNUP_FALLBACK = "https://signup.lydiaslab.com/";
 // Buttondown username and every form on the site posts there instead; it
 // stores the address, sends a confirmation email and handles unsubscribes.
 // The list name becomes a Buttondown tag ("newsletter" counts as free-preview).
-const BUTTONDOWN_USER = "";
+const BUTTONDOWN_USER = "flychico";
 
 // Wires every <form class="lydia-signup-form"> on the page (static ones already
 // in the HTML, e.g. matchup pages, previews, membership — plus any injected
