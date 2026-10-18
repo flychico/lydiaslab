@@ -326,7 +326,10 @@ function wireAllSignupForms(root) {
           }).toString()
         });
         if (BUTTONDOWN_USER) {
-          const fd = new URLSearchParams({ email: email, tag: list === "newsletter" ? "free-preview" : list });
+          // Email only: tags are a paid Buttondown feature. Everyone who signs up
+          // is on the free list (scripts/lib/subscribers.js treats untagged
+          // subscribers as free-preview). There are no paying members yet.
+          const fd = new URLSearchParams({ email: email });
           if (botEl && botEl.value) return;   // honeypot filled: a bot, drop it quietly
           // Buttondown's embed endpoint does not answer cross-site requests
           // with readable headers, so the response is opaque; a network error
