@@ -129,8 +129,9 @@ async function main() {
   if (Date.now() >= first.getTime()) { console.log(`NFL card: first kickoff (${games[0].kickoff} ET) has passed, not sending.`); return; }
   if (!RESEND_API_KEY || !EMAIL_FROM) { console.log("NFL card: RESEND_API_KEY or EMAIL_FROM not set, skipped."); return; }
 
-  const members = [...new Set(await list("member-email"))];
-  const free = [...new Set(await list("free-preview"))].filter(e => !members.includes(e));
+  const { getList } = require("./lib/subscribers");
+  const members = [...new Set(await getList("member-email"))];
+  const free = [...new Set(await getList("free-preview"))].filter(e => !members.includes(e));
   if (!members.length && !free.length) { console.log("NFL card: no recipients yet."); return; }
   let sent = 0, failed = 0;
   for (const [addr, email] of [...members.map(a => [a, memberEmail]), ...free.map(a => [a, freeEmail])]) {

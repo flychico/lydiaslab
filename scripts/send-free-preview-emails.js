@@ -106,8 +106,9 @@ async function main() {
   const day = loadDay();
   if (!day.brief && !day.picks) { console.log(`No data for ${DATE} — nothing to send.`); return; }
 
-  const free = await getSignupEmails("free-preview");
-  const paid = new Set(await getSignupEmails("member-email"));
+  const { getList } = require("./lib/subscribers");
+  const free = await getList("free-preview");
+  const paid = new Set(await getList("member-email"));
   const recipients = free.filter(e => !paid.has(e));
   if (!recipients.length) { console.log("Free list is empty (or all free subscribers are already members)."); return; }
 

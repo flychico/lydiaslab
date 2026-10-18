@@ -263,6 +263,7 @@ jobs:
         if: ${{ steps.confirm.outputs.skip != 'true' && ((github.event_name == 'schedule' && steps.email_gate.outputs.already_sent != 'true') || github.event.inputs.send_email == 'true') }}
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_REPLY_TO: ${{ secrets.EMAIL_REPLY_TO }}
         run: node scripts/send-member-emails.js "${{ steps.publish_date.outputs.date }}"
@@ -271,6 +272,7 @@ jobs:
         if: ${{ steps.confirm.outputs.skip != 'true' && ((github.event_name == 'schedule' && steps.email_gate.outputs.already_sent != 'true') || github.event.inputs.send_email == 'true') }}
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_REPLY_TO: ${{ secrets.EMAIL_REPLY_TO }}
         run: node scripts/send-free-preview-emails.js "${{ steps.publish_date.outputs.date }}"

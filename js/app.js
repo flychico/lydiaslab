@@ -273,6 +273,12 @@ function renderNav(active) {
 // test signup lands through the new address, delete SIGNUP_FALLBACK.
 const SIGNUP_ENDPOINT = "https://signup.ndhorizon.com/";
 const SIGNUP_FALLBACK = "https://signup.lydiaslab.com/";
+// 2026-10-17 (DEC-20261017-11): signups move to Buttondown, a hosted email
+// list. The Cloudflare Worker above never saved a signup. Set this to the
+// Buttondown username and every form on the site posts there instead; it
+// stores the address, sends a confirmation email and handles unsubscribes.
+// The list name becomes a Buttondown tag ("newsletter" counts as free-preview).
+const BUTTONDOWN_USER = "";
 
 // Wires every <form class="lydia-signup-form"> on the page (static ones already
 // in the HTML, e.g. matchup pages, previews, membership — plus any injected
@@ -319,6 +325,17 @@ function wireAllSignupForms(root) {
             "subscription-id": subIdEl ? subIdEl.value : ""
           }).toString()
         });
+        if (BUTTONDOWN_USER) {
+          const fd = new URLSearchParams({ email: email, tag: list === "newsletter" ? "free-preview" : list });
+          if (botEl && botEl.value) return;   // honeypot filled: a bot, drop it quietly
+          // Buttondown's embed endpoint does not answer cross-site requests
+          // with readable headers, so the response is opaque; a network error
+          // still lands in the catch below.
+          await fetch("https://buttondown.com/api/emails/embed-subscribe/" + encodeURIComponent(BUTTONDOWN_USER),
+                      { method: "POST", mode: "no-cors", body: fd });
+          form.outerHTML = '<div class="small" style="color:#2f9e44;font-weight:600">Almost there. Check your inbox and confirm your email to get the card.</div>';
+          return;
+        }
         let res;
         try { res = await post(SIGNUP_ENDPOINT); }
         catch (e) {

@@ -144,17 +144,18 @@ const GAME_KNOBS = [
   { id:"tMult", label:"Scoring multiplier", min:.8, max:1.2, step:.01, base:1, fmt:v=>"×"+v.toFixed(2), hint:"Scales both teams' expected points." },
   { id:"tOff",  label:"Total offset", min:-10, max:10, step:.5, base:0, fmt:v=>sg(v)+" pts", hint:"Flat points added to every projected total." },
   { id:"sFloor",label:"Spread threshold", min:0, max:4, step:.5, base:1, fmt:v=>v.toFixed(1)+" pts", hint:"Points from the spread before Leo takes a side. 1.0 is the model's playable threshold." },
-  { id:"tFloor",label:"Total threshold", min:0, max:5, step:.5, base:1.5, fmt:v=>v.toFixed(1)+" pts", hint:"Points from the total before Leo calls over or under. 1.5 is the model's threshold." }
+  { id:"tFloor",label:"Total threshold", min:0, max:5, step:.5, base:1.5, fmt:v=>v.toFixed(1)+" pts", hint:"Research only: Leo publishes a projected total with no over or under call. Points from the total before this tuner counts a side." }
 ];
 // Moneyline = leo-nflml-v2. Each slider scales one fitted input; 100% is Leo as shipped.
 const ML_KNOBS = [
   { id:"qb",  label:"Starting QB weight", min:0, max:2, step:.05, base:1, fmt:v=>Math.round(v*100)+"%", hint:"How much the gap between the two starting quarterbacks counts." },
   { id:"off", label:"Offense weight", min:0, max:2, step:.05, base:1, fmt:v=>Math.round(v*100)+"%", hint:"Supporting offense: run game, first downs, explosive plays, sacks and fumbles." },
   { id:"def", label:"Defense weight", min:0, max:2, step:.05, base:1, fmt:v=>Math.round(v*100)+"%", hint:"EPA and yards allowed, sacks, interceptions, forced fumbles." },
-  { id:"hfa", label:"Home-field weight", min:0, max:2, step:.05, base:1, fmt:v=>Math.round(v*100)+"%", hint:"The fitted home-field edge. 0% treats every game as neutral." },
-  { id:"thr", label:"Leo Pick threshold", min:.5, max:.75, step:.01, base:.6, fmt:v=>"above "+Math.round(v*100)+"%", hint:"A side needs more than this to be a Leo Pick. Below it the game is Too Close to Call." }
+  { id:"hfa", label:"Home-field weight", min:0, max:2, step:.05, base:1, fmt:v=>Math.round(v*100)+"%", hint:"The fitted home-field edge. 0% treats every game as neutral." }
 ];
-const TABS = [{id:"QB",label:"QB passing"},{id:"RB",label:"RB rushing"},{id:"WR",label:"WR receiving"},{id:"ML",label:"Moneyline"},{id:"G",label:"Total & spread"}];
+// Winner picks were retired on 2026-10-17 (DEC-20261017-06). This tab now
+// tunes Leo's win chance only: how accurate it is, not a pick record.
+const TABS = [{id:"QB",label:"QB passing"},{id:"RB",label:"RB rushing"},{id:"WR",label:"WR receiving"},{id:"ML",label:"Win chance"},{id:"G",label:"Total & spread"}];
 const knobsFor = t => t==="G" ? GAME_KNOBS : t==="ML" ? ML_KNOBS : PROP_KNOBS(t);
 const baseOf = knobs => Object.fromEntries(knobs.map(k=>[k.id,k.base]));
 let S = { QB:baseOf(PROP_KNOBS("QB")), RB:baseOf(PROP_KNOBS("RB")), WR:baseOf(PROP_KNOBS("WR")), ML:baseOf(ML_KNOBS), G:baseOf(GAME_KNOBS) };
@@ -400,8 +401,9 @@ function gradeML(k, games){
   let w=0,l=0,close=0,br=0,mbr=0,mn=0;
   const rows = games.map(g=>{
     const ph = window.LeoML.predictWeighted(MODEL, g.x, k);
-    const c = window.LeoML.classifyPick(ph, g.hm, g.aw, k.thr);
-    if(c.pick){ if(c.pick===g.win) w++; else l++; } else close++;
+    // The side Leo favours and its chance; no pick threshold any more.
+    const c = { pick: ph>=0.5 ? g.hm : g.aw, probability: Math.max(ph, 1-ph) };
+    if(c.pick===g.win) w++; else l++;
     br += (ph-g.hw)**2; if(g.mh!=null){ mbr += (g.mh-g.hw)**2; mn++; }
     return { g, ph, c };
   });
@@ -414,18 +416,17 @@ function renderML(){
   if(!games.length){ $("#main").innerHTML='<div class="score-empty">No graded moneyline games for this selection yet.</div>'; return; }
   const B=gradeML(baseOf(ML_KNOBS),games), T=gradeML(S.ML,games);
   const hit = X => X.w+X.l ? Math.round(100*X.w/(X.w+X.l))+"%" : "—";
-  const call = r => r.c.pick ? `${esc(r.c.pick)} ${pct(r.c.probability)}` : `<span class="m">Too close</span>`;
+  const call = r => `${esc(r.c.pick)} ${pct(r.c.probability)}`;
   $("#main").innerHTML =
     `<div class="tn-tiles">
-      ${tile("Leo Pick record", T.w+"–"+T.l, `Leo ${B.w}–${B.l} &middot; hit ${hit(T)} (Leo ${hit(B)})`, delta(T.w-T.l,B.w-B.l,false,d=>d+" net"))}
-      ${tile("Too Close to Call", String(T.close), `Leo ${B.close} of ${games.length} games`, "")}
+      ${tile("Favoured side won", T.w+" of "+(T.w+T.l), `Leo ${B.w} of ${B.w+B.l} &middot; ${hit(T)} (Leo ${hit(B)}) &middot; information, not picks`, delta(T.w-T.l,B.w-B.l,false,d=>d+" net"))}
       ${tile("Win-probability error", T.brier.toFixed(3), `Brier &middot; Leo ${B.brier.toFixed(3)} &middot; market ${T.mBrier==null?"—":T.mBrier.toFixed(3)}`, delta(T.brier,B.brier,true,d=>d.toFixed(3)))}
     </div>` +
-    `<div class="tn-tbl"><table><thead><tr><th>Game</th><th>Wk</th><th>Source</th><th>Leo home win</th><th>Yours</th><th>Market</th><th>Leo call</th><th>Your call</th><th>Winner</th></tr></thead><tbody>`+
+    `<div class="tn-tbl"><table><thead><tr><th>Game</th><th>Wk</th><th>Source</th><th>Leo home win</th><th>Yours</th><th>Market</th><th>Leo favours</th><th>You favour</th><th>Winner</th></tr></thead><tbody>`+
     T.rows.map((r,i)=>{ const g=r.g, b=B.rows[i];
       return `<tr><td><b>${esc(g.gm)}</b></td><td>${esc(g.wk)}</td><td>${esc(g.src)}</td>
         <td class="base-c">${pct(b.ph)}</td><td class="tune-c">${pct(r.ph)}</td><td>${pct(g.mh)}</td>
-        <td class="base-c">${call(b)}</td><td class="tune-c ${r.c.pick?(r.c.pick===g.win?"better":"worse"):""}">${call(r)}</td>
+        <td class="base-c">${call(b)}</td><td class="tune-c ${r.c.pick===g.win?"better":"worse"}">${call(r)}</td>
         <td><b>${esc(g.win)}</b></td></tr>`;
     }).join("")+`</tbody></table></div>
     <p class="data-note" style="margin-top:0">This tab runs Leo's live moneyline code (scripts/lib/nfl-moneyline.js) with the live model file, so at 100% every slider reproduces Leo exactly. Live games use the inputs frozen before kickoff. Replay games were played before the model went live on Sept 21 and are not part of Leo's record.</p>`;

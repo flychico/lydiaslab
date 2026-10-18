@@ -118,6 +118,19 @@ jobs:
       - name: Health check
         run: node scripts/nfl-healthcheck.js
 
+      # Owner audit (DEC-20261017-08): every game of a graded date, Leo's
+      # frozen read against the result, emailed to the AUDIT_EMAIL secret.
+      # Once per date, only when every game is final and graded.
+      - name: Email the owner audit
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          AUDIT_EMAIL: ${{ secrets.AUDIT_EMAIL }}
+        run: |
+          for d in ${{ steps.dates.outputs.list }}; do
+            node scripts/send-nfl-audit-email.js "$d" || true
+          done
+
       - name: Commit and push if changed
         run: |
           set -euo pipefail

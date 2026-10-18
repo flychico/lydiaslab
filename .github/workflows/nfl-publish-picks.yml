@@ -139,6 +139,18 @@ jobs:
         if: steps.slate.outputs.games != '0'
         run: node scripts/nfl-healthcheck.js
 
+      # The NFL card to the free list and members (DEC-20261017-07). Once per
+      # slate date (data/email-log/nfl-card-<date>.json), never after the
+      # first kickoff, and a no-op when the email secrets are missing.
+      - name: Email the NFL card (members and free list)
+        if: ${{ steps.slate.outputs.games != '0' && steps.gate.outcome == 'success' }}
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_REPLY_TO: ${{ secrets.EMAIL_REPLY_TO }}
+        run: node scripts/send-nfl-card-emails.js "${{ steps.slate_date.outputs.date }}"
+
       - name: Commit and push if changed
         if: ${{ steps.slate.outputs.games != '0' && steps.gate.outcome == 'success' }}
         run: |

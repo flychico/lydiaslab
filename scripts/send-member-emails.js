@@ -331,7 +331,7 @@ async function main() {
 
   console.log(`Loaded email data source: ${data.type} (${data.file})`);
 
-  const realMembers = await getMemberEmails();
+  const realMembers = await require("./lib/subscribers").getList("member-email");
   console.log(`Member emails found from signups branch: ${realMembers.length}`);
 
   const isPreview = realMembers.length === 0;
