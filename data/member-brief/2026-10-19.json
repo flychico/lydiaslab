@@ -1,6 +1,6 @@
 {
   "date": "2026-10-19",
-  "generated_at": "2026-10-19T20:15:05.087Z",
+  "generated_at": "2026-10-19T20:31:48.305Z",
   "snapshot_type": "posted",
   "source_of_truth": "Leo Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -11,7 +11,7 @@
     "minimum_lab_score": 72,
     "note": "Lab Rating grades Leo's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
   },
-  "summary": "No official picks cleared the stricter rules in any market — moneyline, game totals or pitcher strikeouts. 0 value-watch setups and 0 watchlist games remain research-only. 0 games reached a Lab Rating of 7.5+/10 but did not clear every official gate.",
+  "summary": "Brief generated without live market pricing. Treat the card as research-only until pricing is checked.",
   "official_card": [],
   "games": [
     {
@@ -30,12 +30,77 @@
       "side": "home",
       "model_probability": 0.6491,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
-      "bullpen_game": false,
+      "projected_runs": {
+        "away": 3.1,
+        "home": 2.9,
+        "total": 6.3
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "opener_bullpen",
+          "confidence": "low",
+          "reported": false,
+          "segments": [
+            {
+              "role": "opener",
+              "pitcher_id": 542888,
+              "pitcher": "Shawn Armstrong",
+              "expected_innings": 4.5,
+              "fip_lite": 4.25,
+              "pitcher_score": 53,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.5
+            }
+          ],
+          "expected_innings": 4.5,
+          "bullpen_innings": 4.5,
+          "effective_era": 3.65,
+          "pitcher_score": 53,
+          "bullpen_carries_game": false,
+          "description": "Shawn Armstrong 4.5 IP + remaining bullpen 4.5 IP",
+          "pitcher": "Shawn Armstrong",
+          "role": "unknown",
+          "label": "Role unknown",
+          "bullpen_game": true
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 642547,
+              "pitcher": "Freddy Peralta",
+              "expected_innings": 5.28125,
+              "fip_lite": 4.19,
+              "pitcher_score": 60,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.71875
+            }
+          ],
+          "expected_innings": 5.3,
+          "bullpen_innings": 3.7,
+          "effective_era": 3.93,
+          "pitcher_score": 60,
+          "bullpen_carries_game": false,
+          "description": "Freddy Peralta 5.3 IP + remaining bullpen 3.7 IP",
+          "pitcher": "Freddy Peralta",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
+      "bullpen_game": true,
       "legacy_strength_probability": 0.7981,
-      "model_effective_era_away": 4.51,
-      "model_effective_era_home": 4.41,
+      "model_effective_era_away": 3.65,
+      "model_effective_era_home": 3.93,
       "model_pitcher_score_away": 53,
       "model_pitcher_score_home": 60,
       "team_strength_blend_away": 0.5964,
@@ -51,7 +116,7 @@
         "applied_home": 0.0152,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.4682,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.7827,
       "edge": 0.0665,
@@ -68,15 +133,15 @@
         "offense_points": 0,
         "completeness_points": 0,
         "pitcher_edge_points": 13.33,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.33,
+        "model_agreement_credit": 0,
+        "assigned_bullpen_innings": 3.7,
         "offense_delta": -0.0695,
         "offense_delta_15d": null,
         "offense_delta_30d": -0.0695,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -88,8 +153,8 @@
         "model_probability_passed": true,
         "lab_score_passed": false
       },
-      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
-      "read": "The combined Lab Rating did not clear the official threshold.",
+      "pass_reason": "This is a bullpen game -- no confirmed traditional starter, so Leo does not publish an official pick here.",
+      "read": "This is a bullpen game -- no confirmed traditional starter, so Leo does not publish an official pick here.",
       "pitcher_edge": {
         "team": "Tampa Bay Rays",
         "gap": 7,
