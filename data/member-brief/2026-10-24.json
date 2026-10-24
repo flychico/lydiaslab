@@ -1,6 +1,6 @@
 {
   "date": "2026-10-24",
-  "generated_at": "2026-10-24T17:39:17.581Z",
+  "generated_at": "2026-10-24T18:03:06.671Z",
   "snapshot_type": "posted",
   "source_of_truth": "Leo Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -11,7 +11,7 @@
     "minimum_lab_score": 72,
     "note": "Lab Rating grades Leo's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
   },
-  "summary": "No official picks cleared the stricter rules in any market — moneyline, game totals or pitcher strikeouts. 1 value-watch setup and 0 watchlist games remain research-only. 1 game reached a Lab Rating of 7.5+/10 but did not clear every official gate.",
+  "summary": "Brief generated without live market pricing. Treat the card as research-only until pricing is checked.",
   "official_card": [],
   "games": [
     {
@@ -30,12 +30,77 @@
       "side": "home",
       "model_probability": 0.6075,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
+      "projected_runs": {
+        "away": 2.3,
+        "home": 3,
+        "total": 5.3
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 656876,
+              "pitcher": "Drew Rasmussen",
+              "expected_innings": 5.733333333333333,
+              "fip_lite": 2.75,
+              "pitcher_score": 82,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.2666666666666666
+            }
+          ],
+          "expected_innings": 5.7,
+          "bullpen_innings": 3.3,
+          "effective_era": 3.36,
+          "pitcher_score": 82,
+          "bullpen_carries_game": false,
+          "description": "Drew Rasmussen 5.7 IP + remaining bullpen 3.3 IP",
+          "pitcher": "Drew Rasmussen",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 701656,
+              "pitcher": "Logan Henderson",
+              "expected_innings": 5.462962962962963,
+              "fip_lite": 3.34,
+              "pitcher_score": 83,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.537037037037037
+            }
+          ],
+          "expected_innings": 5.5,
+          "bullpen_innings": 3.5,
+          "effective_era": 2.96,
+          "pitcher_score": 83,
+          "bullpen_carries_game": false,
+          "description": "Logan Henderson 5.5 IP + remaining bullpen 3.5 IP",
+          "pitcher": "Logan Henderson",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.7149,
-      "model_effective_era_away": 2.75,
-      "model_effective_era_home": 2.75,
+      "model_effective_era_away": 3.36,
+      "model_effective_era_home": 2.96,
       "model_pitcher_score_away": 82,
       "model_pitcher_score_home": 83,
       "team_strength_blend_away": 0.5272,
@@ -51,7 +116,7 @@
         "applied_home": 0.0049,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.6168,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.7112,
       "edge": 0.0825,
@@ -68,15 +133,15 @@
         "offense_points": 39.75,
         "completeness_points": 0,
         "pitcher_edge_points": 40,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.0981,
+        "model_agreement_credit": 0.4,
+        "assigned_bullpen_innings": 3.5,
         "offense_delta": 0.0354,
         "offense_delta_15d": null,
         "offense_delta_30d": 0.0354,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
@@ -89,7 +154,7 @@
         "lab_score_passed": true
       },
       "pass_reason": null,
-      "read": "Milwaukee Brewers is a value watch, not an official pick. Leo projects 60.7% against a 52.5% no-vig market number, a 8.2% model edge at -115. Lab Rating 8.3/10: conviction 2.87, pitching plan 40, offense 39.75. Milwaukee Brewers's pen efficiency: Effective (6.1/10). Bullpen fatigue moved this probability down 10.4 points from 71.1% (starting pitcher and team strength only) to 60.7%. It stayed a value watch because model win probability is 60.7%, below the 61.0% official-pick gate.",
+      "read": "Milwaukee Brewers is a value watch, not an official pick. Leo projects 60.7% against a 52.5% no-vig market number, a 8.2% model edge at -115. Lab Rating 8.3/10: conviction 2.87, pitching plan 40, offense 39.75. Milwaukee Brewers's pen efficiency: Effective (6.1/10). It stayed a value watch because model win probability is 60.7%, below the 61.0% official-pick gate.",
       "pitcher_edge": {
         "team": "No clear SP edge",
         "gap": 1,
