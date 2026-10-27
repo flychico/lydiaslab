@@ -1,6 +1,6 @@
 {
   "date": "2026-10-27",
-  "generated_at": "2026-10-27T19:41:13.103Z",
+  "generated_at": "2026-10-27T20:01:05.704Z",
   "snapshot_type": "posted",
   "source_of_truth": "Leo Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -11,7 +11,7 @@
     "minimum_lab_score": 72,
     "note": "Lab Rating grades Leo's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
   },
-  "summary": "No official picks cleared the stricter rules in any market — moneyline, game totals or pitcher strikeouts. 0 value-watch setups and 0 watchlist games remain research-only. 0 games reached a Lab Rating of 7.5+/10 but did not clear every official gate.",
+  "summary": "Brief generated without live market pricing. Treat the card as research-only until pricing is checked.",
   "official_card": [],
   "games": [
     {
@@ -30,12 +30,77 @@
       "side": "home",
       "model_probability": 0.7295,
       "model_source": "leo",
-      "projected_runs": null,
-      "pitching_plan": null,
-      "bullpen_game": false,
+      "projected_runs": {
+        "away": 4.7,
+        "home": 2.3,
+        "total": 7.1
+      },
+      "pitching_plan": {
+        "away": {
+          "type": "opener_bullpen",
+          "confidence": "low",
+          "reported": false,
+          "segments": [
+            {
+              "role": "opener",
+              "pitcher_id": null,
+              "pitcher": "TBD",
+              "expected_innings": 4.5,
+              "fip_lite": 4.2,
+              "pitcher_score": 50,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.5
+            }
+          ],
+          "expected_innings": 4.5,
+          "bullpen_innings": 4.5,
+          "effective_era": 3.26,
+          "pitcher_score": 50,
+          "bullpen_carries_game": false,
+          "description": "TBD 4.5 IP + remaining bullpen 4.5 IP",
+          "pitcher": "TBD",
+          "role": "unknown",
+          "label": "Role unknown",
+          "bullpen_game": true
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 643377,
+              "pitcher": "Griffin Jax",
+              "expected_innings": 4.492753623188406,
+              "fip_lite": 3.76,
+              "pitcher_score": 71,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 4.507246376811594
+            }
+          ],
+          "expected_innings": 4.5,
+          "bullpen_innings": 4.5,
+          "effective_era": 4.49,
+          "pitcher_score": 71,
+          "bullpen_carries_game": false,
+          "description": "Griffin Jax 4.5 IP + remaining bullpen 4.5 IP",
+          "pitcher": "Griffin Jax",
+          "role": "limited_starter",
+          "label": "Limited starter",
+          "bullpen_game": false
+        }
+      },
+      "bullpen_game": true,
       "legacy_strength_probability": 0.9591,
-      "model_effective_era_away": 4.2,
-      "model_effective_era_home": 3.65,
+      "model_effective_era_away": 3.26,
+      "model_effective_era_home": 4.49,
       "model_pitcher_score_away": 50,
       "model_pitcher_score_home": 71,
       "team_strength_blend_away": 0.6697,
@@ -51,10 +116,10 @@
         "applied_home": 0.0152,
         "weight": 0.5
       },
-      "run_model_probability": null,
+      "run_model_probability": 0.1832,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.962,
-      "edge": 0.2577,
+      "edge": 0.2576,
       "status": "pass",
       "value_tag": "PASS",
       "lab_score": 61,
@@ -68,13 +133,13 @@
         "offense_points": 24.33,
         "completeness_points": 0,
         "pitcher_edge_points": 28,
-        "model_agreement_gap": null,
-        "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "model_agreement_gap": 0.7759,
+        "model_agreement_credit": 0,
+        "assigned_bullpen_innings": 4.5,
         "offense_delta": -0.0016,
         "offense_delta_15d": null,
         "offense_delta_30d": -0.0016,
-        "completeness_checks_passed": 2,
+        "completeness_checks_passed": 4,
         "completeness_checks_total": 5,
         "data_complete": false,
         "market_points": 0,
@@ -88,8 +153,8 @@
         "model_probability_passed": true,
         "lab_score_passed": false
       },
-      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
-      "read": "The combined Lab Rating did not clear the official threshold.",
+      "pass_reason": "This is a bullpen game -- no confirmed traditional starter, so Leo does not publish an official pick here.",
+      "read": "This is a bullpen game -- no confirmed traditional starter, so Leo does not publish an official pick here.",
       "pitcher_edge": {
         "team": "Tampa Bay Rays",
         "gap": 21,
