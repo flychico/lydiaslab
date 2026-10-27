@@ -1,6 +1,6 @@
 {
   "date": "2026-10-27",
-  "generated_at": "2026-10-27T20:38:08.135Z",
+  "generated_at": "2026-10-27T20:42:49.549Z",
   "snapshot_type": "posted",
   "source_of_truth": "Leo Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -11,8 +11,37 @@
     "minimum_lab_score": 72,
     "note": "Lab Rating grades Leo's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
   },
-  "summary": "No official picks cleared the stricter rules in any market — moneyline, game totals or pitcher strikeouts. 0 value-watch setups and 0 watchlist games remain research-only. 0 games reached a Lab Rating of 7.5+/10 but did not clear every official gate.",
-  "official_card": [],
+  "summary": "Brief generated without live market pricing. Treat the card as research-only until pricing is checked.",
+  "official_card": [
+    {
+      "game_pk": 849803,
+      "game": "Milwaukee Brewers @ Tampa Bay Rays",
+      "away": "Milwaukee Brewers",
+      "home": "Tampa Bay Rays",
+      "time": "2026-10-28T00:00:00Z",
+      "lab_score": 59,
+      "moneyline": null,
+      "total": null,
+      "strikeouts": [
+        {
+          "pitcher": "Griffin Jax",
+          "pick": "Over",
+          "line": 3.5,
+          "best_price": -105,
+          "projection": 4.36,
+          "edge": 0.86
+        },
+        {
+          "pitcher": "Dustin May",
+          "pick": "Over",
+          "line": 2.5,
+          "best_price": 122,
+          "projection": 3.82,
+          "edge": 1.32
+        }
+      ]
+    }
+  ],
   "games": [
     {
       "game_pk": 849803,
@@ -31,40 +60,40 @@
       "model_probability": 0.6879,
       "model_source": "leo",
       "projected_runs": {
-        "away": 4.7,
-        "home": 2.3,
-        "total": 7.1
+        "away": 4,
+        "home": 5.8,
+        "total": 9.8
       },
       "pitching_plan": {
         "away": {
-          "type": "opener_bullpen",
-          "confidence": "low",
+          "type": "starter_bullpen",
+          "confidence": "high",
           "reported": false,
           "segments": [
             {
-              "role": "opener",
-              "pitcher_id": null,
-              "pitcher": "TBD",
-              "expected_innings": 4.5,
-              "fip_lite": 4.2,
-              "pitcher_score": 50,
+              "role": "starter",
+              "pitcher_id": 669160,
+              "pitcher": "Dustin May",
+              "expected_innings": 4.698924731182795,
+              "fip_lite": 3.45,
+              "pitcher_score": 59,
               "role_stats": null
             },
             {
               "role": "bullpen",
-              "expected_innings": 4.5
+              "expected_innings": 4.301075268817205
             }
           ],
-          "expected_innings": 4.5,
-          "bullpen_innings": 4.5,
-          "effective_era": 3.26,
-          "pitcher_score": 50,
+          "expected_innings": 4.7,
+          "bullpen_innings": 4.3,
+          "effective_era": 2.91,
+          "pitcher_score": 59,
           "bullpen_carries_game": false,
-          "description": "TBD 4.5 IP + remaining bullpen 4.5 IP",
-          "pitcher": "TBD",
-          "role": "unknown",
-          "label": "Role unknown",
-          "bullpen_game": true
+          "description": "Dustin May 4.7 IP + remaining bullpen 4.3 IP",
+          "pitcher": "Dustin May",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
         },
         "home": {
           "type": "starter_bullpen",
@@ -97,9 +126,9 @@
           "bullpen_game": false
         }
       },
-      "bullpen_game": true,
+      "bullpen_game": false,
       "legacy_strength_probability": 0.8758,
-      "model_effective_era_away": 4.63,
+      "model_effective_era_away": 2.91,
       "model_effective_era_home": 4.49,
       "model_pitcher_score_away": 59,
       "model_pitcher_score_home": 71,
@@ -116,7 +145,7 @@
         "applied_home": 0.0152,
         "weight": 0.5
       },
-      "run_model_probability": 0.1832,
+      "run_model_probability": 0.7156,
       "run_model_weight": 0,
       "model_probability_pre_bullpen": 0.8841,
       "edge": 0.2172,
@@ -133,7 +162,7 @@
         "offense_points": 24.33,
         "completeness_points": 0,
         "pitcher_edge_points": 28,
-        "model_agreement_gap": 0.6927,
+        "model_agreement_gap": 0.1602,
         "model_agreement_credit": 0,
         "assigned_bullpen_innings": 4.5,
         "offense_delta": -0.0016,
@@ -153,13 +182,13 @@
         "model_probability_passed": true,
         "lab_score_passed": false
       },
-      "pass_reason": "This is a bullpen game -- no confirmed traditional starter, so Leo does not publish an official pick here.",
-      "read": "This is a bullpen game -- no confirmed traditional starter, so Leo does not publish an official pick here.",
+      "pass_reason": "The combined Lab Rating did not clear the official threshold.",
+      "read": "The combined Lab Rating did not clear the official threshold.",
       "pitcher_edge": {
         "team": "Tampa Bay Rays",
-        "gap": 21,
+        "gap": 12,
         "conflict": false,
-        "away_score": 50,
+        "away_score": 59,
         "home_score": 71,
         "away_pitcher": "Dustin May",
         "home_pitcher": "Griffin Jax",
