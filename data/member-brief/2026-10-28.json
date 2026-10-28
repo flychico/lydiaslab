@@ -1,6 +1,6 @@
 {
   "date": "2026-10-28",
-  "generated_at": "2026-10-28T19:54:45.204Z",
+  "generated_at": "2026-10-28T20:12:26.311Z",
   "snapshot_type": "posted",
   "source_of_truth": "Leo Daily Engine",
   "current_official_model": "multi_market_v1",
@@ -11,7 +11,7 @@
     "minimum_lab_score": 72,
     "note": "Lab Rating grades Leo's analysis quality only and contains no price input. An official pick additionally requires a strong win probability and a good enough price."
   },
-  "summary": "No official picks cleared the stricter rules in any market — moneyline, game totals or pitcher strikeouts. 0 value-watch setups and 1 watchlist game remain research-only. 0 games reached a Lab Rating of 7.5+/10 but did not clear every official gate.",
+  "summary": "Brief generated without live market pricing. Treat the card as research-only until pricing is checked.",
   "official_card": [],
   "games": [
     {
@@ -31,11 +31,72 @@
       "model_probability": 0.5353,
       "model_source": "leo",
       "projected_runs": null,
-      "pitching_plan": null,
+      "pitching_plan": {
+        "away": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 694819,
+              "pitcher": "Jacob Misiorowski",
+              "expected_innings": 5.822222222222222,
+              "fip_lite": 2.75,
+              "pitcher_score": 85,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.177777777777778
+            }
+          ],
+          "expected_innings": 5.8,
+          "bullpen_innings": 3.2,
+          "effective_era": 2.62,
+          "pitcher_score": 85,
+          "bullpen_carries_game": false,
+          "description": "Jacob Misiorowski 5.8 IP + remaining bullpen 3.2 IP",
+          "pitcher": "Jacob Misiorowski",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        },
+        "home": {
+          "type": "starter_bullpen",
+          "confidence": "high",
+          "reported": false,
+          "segments": [
+            {
+              "role": "starter",
+              "pitcher_id": 656876,
+              "pitcher": "Drew Rasmussen",
+              "expected_innings": 5.733333333333333,
+              "fip_lite": 2.75,
+              "pitcher_score": 82,
+              "role_stats": null
+            },
+            {
+              "role": "bullpen",
+              "expected_innings": 3.2666666666666666
+            }
+          ],
+          "expected_innings": 5.7,
+          "bullpen_innings": 3.3,
+          "effective_era": 3.02,
+          "pitcher_score": 82,
+          "bullpen_carries_game": false,
+          "description": "Drew Rasmussen 5.7 IP + remaining bullpen 3.3 IP",
+          "pitcher": "Drew Rasmussen",
+          "role": "traditional_starter",
+          "label": "Traditional starter",
+          "bullpen_game": false
+        }
+      },
       "bullpen_game": false,
       "legacy_strength_probability": 0.5706,
-      "model_effective_era_away": 2.75,
-      "model_effective_era_home": 2.75,
+      "model_effective_era_away": 2.62,
+      "model_effective_era_home": 3.02,
       "model_pitcher_score_away": 85,
       "model_pitcher_score_home": 82,
       "team_strength_blend_away": 0.6697,
@@ -70,13 +131,13 @@
         "pitcher_edge_points": 40,
         "model_agreement_gap": null,
         "model_agreement_credit": null,
-        "assigned_bullpen_innings": null,
+        "assigned_bullpen_innings": 3.2,
         "offense_delta": null,
         "offense_delta_15d": null,
         "offense_delta_30d": null,
-        "completeness_checks_passed": 3,
+        "completeness_checks_passed": 5,
         "completeness_checks_total": 5,
-        "data_complete": false,
+        "data_complete": true,
         "market_points": 0,
         "model_edge_points": 0,
         "base_points": 0,
