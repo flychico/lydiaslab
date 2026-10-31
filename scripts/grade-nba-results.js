@@ -17,6 +17,12 @@
  *   miss        |predicted margin - final margin|, Leo and the spread
  *   lean        when Leo was 4+ points off the spread: Leo's side at the
  *               DraftKings spread, win / loss / push. A test, not a bet.
+ *   line move   (NBA-H15) the DraftKings spread at Leo's first read of the
+ *               day (open_home_spread), at the read of record, and at the
+ *               close (ESPN's closing line on the final scoreboard).
+ *               lean_clv_pts = points the line moved toward Leo's lean side
+ *               between the read of record and the close (+ = toward Leo).
+ *               A benchmark only: the line is never a model input.
  */
 const fs = require("fs");
 const path = require("path");
@@ -28,7 +34,8 @@ const HISTORY = path.join(DIR, "prediction-history.csv");
 const LEDGER = path.join(DIR, "results-ledger.csv");
 const COLS = ["date", "game_id", "away", "home", "away_score", "home_score", "margin", "leo_home_margin", "leo_p_home", "mkt_home_spread",
   "mkt_p_home", "leo_pick", "winner", "leo_winner_correct", "mkt_winner_correct", "brier_leo", "brier_mkt", "leo_miss", "line_miss",
-  "lean_side", "lean_line", "lean_result", "edge_pts", "home_lost", "away_lost", "captured_at", "kickoff_utc", "model_version"];
+  "lean_side", "lean_line", "lean_result", "edge_pts", "home_lost", "away_lost", "captured_at", "kickoff_utc", "model_version",
+  "open_home_spread", "close_home_spread", "lean_clv_pts"];
 const ESPN = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba";
 const nyDate = d => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(d);
 const arg = process.argv.find(a => a.startsWith("--date="));
@@ -51,7 +58,9 @@ async function finals(date) {
   function parse(j) {
     return (j.events || []).filter(e => e.status && e.status.type && e.status.type.completed).map(e => {
       const c = e.competitions[0], H = c.competitors.find(x => x.homeAway === "home"), A = c.competitors.find(x => x.homeAway === "away");
-      return { game_id: String(e.id), home: H.team.abbreviation, away: A.team.abbreviation, hs: +H.score, as: +A.score };
+      const o = (c.odds || []).find(x => /draftkings/i.test(x.provider && x.provider.name || "")) || (c.odds || [])[0];
+      const ps = o && o.pointSpread || {}, cl = parseFloat(String(ps.home && ps.home.close && ps.home.close.line != null ? ps.home.close.line : (o && o.spread != null ? o.spread : "")).replace(/^\+/, ""));
+      return { game_id: String(e.id), home: H.team.abbreviation, away: A.team.abbreviation, hs: +H.score, as: +A.score, close_home_spread: Number.isFinite(cl) ? cl : null };
     });
   }
 }
@@ -74,6 +83,11 @@ function summarize() {
       miss_leo: withMkt.length ? +avg(withMkt.map(r => num(r.leo_miss))).toFixed(2) : null,
       miss_line: withMkt.length ? +avg(withMkt.map(r => num(r.line_miss))).toFixed(2) : null,
       leans: { ...L, pct: L.won + L.lost ? +(L.won / (L.won + L.lost)).toFixed(3) : null, units_at_110: +((L.won * 100 / 110) - L.lost).toFixed(2) },
+      lean_line_moves: (() => {
+        const m = leans.filter(r => r.lean_clv_pts !== "" && r.lean_clv_pts != null).map(r => +r.lean_clv_pts);
+        return { n: m.length, toward_leo: m.filter(v => v > 0).length, against: m.filter(v => v < 0).length, unchanged: m.filter(v => v === 0).length,
+          avg_pts: m.length ? +avg(m).toFixed(2) : null };
+      })(),
       leans_by_edge: [[4, 6], [6, 8], [8, 99]].map(([a, b]) => ({ edge: b === 99 ? `${a}+` : `${a}-${b}`, ...rec(leans.filter(r => Math.abs(+r.edge_pts) >= a && Math.abs(+r.edge_pts) < b)) }))
     };
   };
@@ -99,9 +113,10 @@ function summarize() {
   if (process.argv.includes("--summary-only")) return summarize();
   const ledger = readCsv(LEDGER), graded = new Set(ledger.map(r => r.game_id));
   // Read of record: last capture before tip, per game.
-  const frozen = new Map();
+  const frozen = new Map(), opening = new Map();
   for (const r of readCsv(HISTORY)) {
     if (r.date !== DATE || !(r.captured_at < r.kickoff_utc)) continue;
+    if (r.mkt_home_spread !== "") { const o = opening.get(r.game_id); if (!o || r.captured_at < o.captured_at) opening.set(r.game_id, r); }
     const prev = frozen.get(r.game_id); if (!prev || r.captured_at > prev.captured_at) frozen.set(r.game_id, r);
   }
   if (!frozen.size) { console.log(`NBA grade ${DATE}: no frozen reads.`); }
@@ -126,7 +141,10 @@ function summarize() {
         brier_leo: ((ph - y) ** 2).toFixed(4), brier_mkt: mp == null ? "" : ((mp - y) ** 2).toFixed(4),
         leo_miss: Math.abs(m - margin).toFixed(2), line_miss: sp == null ? "" : Math.abs(-sp - margin).toFixed(2),
         lean_side: p.lean_side, lean_line: p.lean_line, lean_result: lean, edge_pts: p.edge_pts,
-        home_lost: p.home_lost, away_lost: p.away_lost, captured_at: p.captured_at, kickoff_utc: p.kickoff_utc, model_version: p.model_version
+        home_lost: p.home_lost, away_lost: p.away_lost, captured_at: p.captured_at, kickoff_utc: p.kickoff_utc, model_version: p.model_version,
+        open_home_spread: opening.has(g.game_id) ? opening.get(g.game_id).mkt_home_spread : "",
+        close_home_spread: g.close_home_spread ?? "",
+        lean_clv_pts: p.lean_side && sp != null && g.close_home_spread != null ? (p.lean_side === "home" ? sp - g.close_home_spread : g.close_home_spread - sp).toFixed(1) : ""
       });
     }
     if (out.length) {
