@@ -175,6 +175,7 @@ ul.inj,ul.last5{margin:6px 0 0;padding-left:18px;font-size:.86rem;line-height:1.
     <div class="box"><div class="l">Gap</div><div class="v">${L.edge_pts == null ? "&mdash;" : Math.abs(L.edge_pts).toFixed(1) + " pts"}</div><div class="s">${L.edge_pts == null ? "No line yet" : "Between Leo and DraftKings"}</div></div>
   </div>
   ${gapTxt ? `<p class="gapread">${gapTxt}</p>` : ""}
+  ${L.projected ? `<p class="gapread">Projected score: ${esc(A)} ${L.projected.away}, ${esc(H)} ${L.projected.home} (total ${L.projected.total}). Information only; Leo does not lean on totals.</p>` : ""}
   ${leanTxt}
   ${finalBlock(g, res)}
   ${partsTable(g)}

@@ -26,6 +26,7 @@
 const fs = require("fs");
 const path = require("path");
 const M = require("./lib/nba-model");
+const P = require("./lib/nba-points");
 
 const ROOT = path.join(__dirname, "..");
 const DIR = path.join(ROOT, "data", "nba");
@@ -123,6 +124,15 @@ function readHistory() {
   const lastDate = {};
   for (const g of prev) { lastDate[g.home] = g.date; lastDate[g.away] = g.date; }
   const regs = M.regulars(players, DATE);
+  // NBA-H08: projected score, display only. A failure here never blocks the card.
+  let PR = null;
+  try {
+    const pmFile = path.join(DIR, "points-model.json");
+    if (fs.existsSync(pmFile)) {
+      const pm = JSON.parse(fs.readFileSync(pmFile, "utf8")), tg = await P.loadTeamGames(season);
+      PR = P.rate(tg.filter(g => g.date < DATE), [...new Set([...Object.keys(pm.priors.off || {}), ...slate.flatMap(g => [g.home, g.away])])].sort(), pm.priors);
+    }
+  } catch (e) { console.log("Projected score skipped: " + e.message); }
   const inj = await injuries();
   const weight = s => model.status_weight[s] ?? (s.includes("out") ? 1 : 0.4);
   const statusOf = p => inj.byId.get(p.id) || inj.byName.get(p.name.toLowerCase() + "|" + p.team);
@@ -189,7 +199,8 @@ function readHistory() {
         rating: { home: r1(r[g.home]), away: r1(r[g.away]), home_court: r1(hca) },
         rest: { home: rest.home.rest, away: rest.away.rest }, back_to_back: { home: rest.home.b2b, away: rest.away.b2b },
         missing: { home: named("home"), away: named("away") }, lost: { home: r1(miss.home.lost), away: r1(miss.away.lost) },
-        edge_pts: r1(edge), lean, parts
+        edge_pts: r1(edge), lean, parts,
+        projected: PR ? (() => { const t = P.project(PR, g.home, g.away).total; return { total: Math.round(t), home: Math.round((t + margin) / 2), away: Math.round((t - margin) / 2) }; })() : null
       }
     };
     out.push(game);
