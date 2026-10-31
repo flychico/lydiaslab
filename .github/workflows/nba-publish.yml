@@ -1,0 +1,77 @@
+name: NBA publish card
+
+# Leo NBA card (DEC-20261031-01): win chance and spread for every game, with
+# the injury report as an input. No odds credits: lines and injuries come
+# from ESPN's public feeds, results from the sportsdataverse release files.
+#
+# Every run re-reads the injury report and refreezes each game that has not
+# tipped. Grading uses the LAST read before tip, so later runs only help.
+# GitHub can start scheduled runs hours late, hence several waves. Dispatch
+# by hand for an early tip (weekend afternoons).
+#
+# Eastern times below are EDT (UTC-4). In EST (from Nov 1) each runs an hour
+# earlier in local time, which is still before tip.
+#   10:00am  first card of the day
+#    2:00pm  midday injury updates
+#    5:30pm  after the 5pm official report
+#    6:40pm  last pass before the 7pm wave
+
+on:
+  schedule:
+    - cron: "0 14 * * *"
+    - cron: "0 18 * * *"
+    - cron: "30 21 * * *"
+    - cron: "40 22 * * *"
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "YYYY-MM-DD slate. Blank = today in America/New_York."
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nba-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Refuse merge-conflict markers
+        run: bash scripts/check-conflict-markers.sh
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Resolve date
+        id: d
+        run: |
+          D="${{ github.event.inputs.date }}"
+          [ -z "$D" ] && D=$(TZ="America/New_York" date +%F)
+          echo "date=$D" >> "$GITHUB_OUTPUT"
+
+      - name: Build the card
+        id: build
+        run: node scripts/generate-nba-slate.js "${{ steps.d.outputs.date }}"
+
+      - name: Health check
+        run: node scripts/nba-healthcheck.js "${{ steps.d.outputs.date }}"
+
+      - name: Commit and push if changed
+        run: |
+          set -euo pipefail
+          git config user.name "lydia-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/nba
+          if git diff --cached --quiet; then echo "No change."; exit 0; fi
+          git commit -m "NBA card ${{ steps.d.outputs.date }}"
+          git pull --rebase
+          git push

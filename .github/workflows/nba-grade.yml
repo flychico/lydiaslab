@@ -1,0 +1,52 @@
+name: NBA grade results
+
+# Grades yesterday's frozen NBA reads against ESPN finals, then re-grades any
+# frozen game from the last 14 days that is still missing (catch-up).
+# Writes data/nba/results-ledger.csv and data/nba/results.json.
+#   2:30am ET  after the late West Coast games
+#   8:30am ET  backstop, and before the morning audit
+on:
+  schedule:
+    - cron: "30 6 * * *"
+    - cron: "30 12 * * *"
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "YYYY-MM-DD to grade. Blank = yesterday in America/New_York."
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nba-grade
+  cancel-in-progress: false
+
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Grade
+        run: |
+          D="${{ github.event.inputs.date }}"
+          if [ -n "$D" ]; then node scripts/grade-nba-results.js --date="$D"; else node scripts/grade-nba-results.js; fi
+
+      - name: Commit and push if changed
+        run: |
+          set -euo pipefail
+          git config user.name "lydia-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/nba
+          if git diff --cached --quiet; then echo "No change."; exit 0; fi
+          git commit -m "NBA grade results $(TZ=America/New_York date +%F)"
+          git pull --rebase
+          git push
