@@ -40,12 +40,16 @@ jobs:
           D="${{ github.event.inputs.date }}"
           if [ -n "$D" ]; then node scripts/grade-nba-results.js --date="$D"; else node scripts/grade-nba-results.js; fi
 
+      # Add the final and the grade to the last three days' game pages.
+      - name: Matchup pages
+        run: node scripts/render-nba-matchup-pages.js $(for k in 1 2 3; do TZ=America/New_York date -d "-$k day" +%F; done)
+
       - name: Commit and push if changed
         run: |
           set -euo pipefail
           git config user.name "lydia-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/nba
+          git add data/nba nba
           if git diff --cached --quiet; then echo "No change."; exit 0; fi
           git commit -m "NBA grade results $(TZ=America/New_York date +%F)"
           git pull --rebase

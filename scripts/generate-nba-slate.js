@@ -127,6 +127,31 @@ function readHistory() {
   const weight = s => model.status_weight[s] ?? (s.includes("out") ? 1 : 0.4);
   const statusOf = p => inj.byId.get(p.id) || inj.byName.get(p.name.toLowerCase() + "|" + p.team);
 
+  // Matchup context for the game pages: form, key players, the full injury list.
+  const seasonPlayers = players.filter(p => p.date < DATE);
+  function form(team) {
+    const gs = prev.filter(g => g.home === team || g.away === team).map(g => {
+      const home = g.home === team, pts = home ? g.hs : g.as, opp = home ? g.as : g.hs;
+      return { date: g.date, opp: home ? g.away : g.home, home, pts, opp_pts: opp, won: pts > opp };
+    });
+    const w = gs.filter(x => x.won).length, avg = k => gs.length ? r1(gs.reduce((s, x) => s + x[k], 0) / gs.length) : null;
+    return { wins: w, losses: gs.length - w, ppg: avg("pts"), opp_ppg: avg("opp_pts"), last5: gs.slice(-5).reverse() };
+  }
+  function keyPlayers(team) {
+    const by = new Map();
+    for (const p of seasonPlayers) { if (!by.has(p.id)) by.set(p.id, []); by.get(p.id).push(p); }
+    const out = [];
+    for (const [id, rows] of by) {
+      if (rows[rows.length - 1].team !== team) continue;
+      const mine = rows.filter(r => r.team === team && r.played); if (!mine.length) continue;
+      const avg = k => r1(mine.reduce((s, r) => s + r[k], 0) / mine.length);
+      const st = statusOf({ id, name: rows[0].name, team });
+      out.push({ name: rows[0].name, gp: mine.length, mpg: avg("minutes"), ppg: avg("pts"), rpg: avg("reb"), apg: avg("ast"), status: st ? st.status : "" });
+    }
+    return out.sort((a, b) => b.mpg - a.mpg).slice(0, 8);
+  }
+  const teamInjuries = team => inj.list.filter(x => x.team === team).map(x => ({ name: x.name, status: x.status, detail: x.detail }));
+
   const prevFile = path.join(DIR, `picks-${DATE}.json`);
   const previous = fs.existsSync(prevFile) ? Object.fromEntries(JSON.parse(fs.readFileSync(prevFile, "utf8")).games.map(g => [g.game_id, g])) : {};
   const now = new Date().toISOString();
@@ -153,14 +178,18 @@ function readHistory() {
       lean = { side, team: g[side], line: side === "home" ? mk.home_spread : -mk.home_spread, edge_pts: r1(Math.abs(edge)) };
     }
     const named = side => miss[side].missing.map(p => ({ ...p, status: (statusOf(p) || {}).status || "", detail: (statusOf(p) || {}).detail || "" }));
+    const c = model.coef;
+    const parts = { home_court: r1(c.intercept), ratings: r1(c.rating_diff * f.rating_diff), back_to_back: r1(c.b2b_d * f.b2b_d), rest: r1(c.rest_d * f.rest_d), missing_players: r1(c.lost_d * f.lost_d) };
+    const context = {};
+    for (const side of ["home", "away"]) context[side] = { form: form(g[side]), players: keyPlayers(g[side]), injuries: teamInjuries(g[side]) };
     const game = {
-      ...g, model_version: model.model_version,
+      ...g, model_version: model.model_version, context,
       leo: {
         home_margin: r1(margin), home_spread: half(-margin), p_home: +p_home.toFixed(3), p_away: +(1 - p_home).toFixed(3),
         rating: { home: r1(r[g.home]), away: r1(r[g.away]), home_court: r1(hca) },
         rest: { home: rest.home.rest, away: rest.away.rest }, back_to_back: { home: rest.home.b2b, away: rest.away.b2b },
         missing: { home: named("home"), away: named("away") }, lost: { home: r1(miss.home.lost), away: r1(miss.away.lost) },
-        edge_pts: r1(edge), lean
+        edge_pts: r1(edge), lean, parts
       }
     };
     out.push(game);

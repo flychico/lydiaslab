@@ -85,14 +85,15 @@ async function loadSeason(season, opts) {
   const pb = parseCsv(await download("player", season, opts),
     ["game_id", "season_type", "game_date", "athlete_id", "athlete_display_name", "team_abbreviation", "minutes", "points",
       "field_goals_made", "field_goals_attempted", "free_throws_made", "free_throws_attempted", "offensive_rebounds",
-      "defensive_rebounds", "steals", "assists", "blocks", "fouls", "turnovers"]);
+      "defensive_rebounds", "rebounds", "steals", "assists", "blocks", "fouls", "turnovers"]);
   const players = pb.filter(r => r.season_type === "2").map(r => {
     const minutes = n(r.minutes);
     // Hollinger game score: one number for what a player put into a game.
     const gmsc = n(r.points) + 0.4 * n(r.field_goals_made) - 0.7 * n(r.field_goals_attempted)
       - 0.4 * (n(r.free_throws_attempted) - n(r.free_throws_made)) + 0.7 * n(r.offensive_rebounds)
       + 0.3 * n(r.defensive_rebounds) + n(r.steals) + 0.7 * n(r.assists) + 0.7 * n(r.blocks) - 0.4 * n(r.fouls) - n(r.turnovers);
-    return { game_id: r.game_id, date: r.game_date, id: r.athlete_id, name: r.athlete_display_name, team: r.team_abbreviation, minutes, gmsc, played: minutes > 0 ? 1 : 0 };
+    return { game_id: r.game_id, date: r.game_date, id: r.athlete_id, name: r.athlete_display_name, team: r.team_abbreviation, minutes, gmsc, played: minutes > 0 ? 1 : 0,
+      pts: n(r.points), reb: n(r.rebounds), ast: n(r.assists) };
   }).sort((a, b) => a.date.localeCompare(b.date));
   return { season, games, players };
 }

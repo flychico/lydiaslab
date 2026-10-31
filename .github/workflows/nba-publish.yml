@@ -62,6 +62,9 @@ jobs:
         id: build
         run: node scripts/generate-nba-slate.js "${{ steps.d.outputs.date }}"
 
+      - name: Matchup pages
+        run: node scripts/render-nba-matchup-pages.js "${{ steps.d.outputs.date }}"
+
       - name: Health check
         run: node scripts/nba-healthcheck.js "${{ steps.d.outputs.date }}"
 
@@ -70,7 +73,7 @@ jobs:
           set -euo pipefail
           git config user.name "lydia-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/nba
+          git add data/nba nba
           if git diff --cached --quiet; then echo "No change."; exit 0; fi
           git commit -m "NBA card ${{ steps.d.outputs.date }}"
           git pull --rebase

@@ -130,6 +130,7 @@ function card(g) {
       '<div class="market-box"><span class="market-label">DraftKings</span><span class="market-value">' + esc(mkLine) + '</span><span class="market-sub">' + (mk.p_home != null ? "Market " + esc(g.home) + " " + pct(mk.p_home) : "") + "</span></div>" +
       '<div class="market-box total"><span class="market-label">Gap</span><span class="market-value">' + (L.edge_pts == null ? "—" : Math.abs(L.edge_pts).toFixed(1) + " pts") + '</span><span class="market-sub">' + (L.edge_pts == null ? "" : "Leo likes " + esc(L.edge_pts > 0 ? g.home : g.away) + " more") + "</span></div>" +
     "</div>" + result +
+    '<a class="card-cta" href="/nba/' + g.away.toLowerCase() + "-vs-" + g.home.toLowerCase() + "-prediction-odds-" + g.date + '/">Full preview, injuries and form</a>' +
     ((L.missing && (L.missing.home.length || L.missing.away.length)) ? '<div class="out-list">Missing regulars Leo accounted for:' + outList(g, "away") + outList(g, "home") + "</div>" : "") +
     "</div></article>";
 }
