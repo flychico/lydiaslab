@@ -2933,6 +2933,7 @@ function weekStartOf(date){ const d = new Date(date + "T12:00"); d.setDate(d.get
 function sessionsBetween(a, b){ return new Set((S.logs || []).filter(l => l.date >= a && l.date <= b).map(l => l.date)).size; }
 /* Grade one day. Returns { items:[{k,label,ok,detail}], pass, total, won } */
 function gradeDay(date){
+  if (S.fresh && date < S.fresh) return { items: [], pass: 0, total: 0, won: false, pre: true };
   const items = [], add = (k, label, ok, detail) => items.push({ k, label, ok, detail });
   const tgt = (S.profile && S.profile.days) || 5, ws = weekStartOf(date);
   const elapsed = Math.round((new Date(date + "T12:00") - new Date(ws + "T12:00")) / 864e5) + 1; // days of the week through `date`
@@ -2968,7 +2969,7 @@ function weekScore(){
 /* Today's must-dos, ordered by what matters most for the goal. */
 function todaysMission(){
   const m = [], t = effTargets(), n = dayNutrition(today()), tgt = (S.profile && S.profile.days) || 5;
-  const ws = weekStartOf(today()), done = sessionsBetween(ws, today()), trainedToday = (S.logs || []).some(l => l.date === today());
+  const ws0 = weekStartOf(today()), ws = S.fresh && S.fresh > ws0 ? S.fresh : ws0, done = sessionsBetween(ws, today()), trainedToday = (S.logs || []).some(l => l.date === today());
   const daysLeft = 7 - Math.round((new Date(today() + "T12:00") - new Date(ws + "T12:00")) / 864e5); // including today
   const need = tgt - done;
   if (!trainedToday && need > 0) m.push(need > daysLeft ? `<b>Train today: not optional.</b> ${tgt} this week is already out of reach (${done} done, ${daysLeft} day${daysLeft === 1 ? "" : "s"} left). Train every remaining day to salvage it.` : need === daysLeft ? `<b>Train today: not optional.</b> ${need} sessions left and exactly ${daysLeft} day${daysLeft === 1 ? "" : "s"} to do them.` : `Train today: ${need} of ${tgt} sessions still to do this week.`);
@@ -2982,11 +2983,19 @@ function todaysMission(){
   m.push("In bed by a time that gives you <b>7+ hours</b>: muscle is built while you sleep.");
   return m;
 }
+function freshDay(d){ return d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }); }
 function coachCard(compact){
   if (!S.profile) return "";
+  if (S.fresh && today() < S.fresh) {
+    const start = new Date(S.fresh + "T12:00"), next = S.plan && S.plan.days.length ? S.plan.days[S.plan.nextDay % S.plan.days.length].name : "your first session";
+    return `<div class="card coachcard"><div class="exhead"><h3>🗿 Coach</h3><span class="small"><b>Clean slate</b></span></div>
+      <div class="small" style="line-height:1.6"><b>Your fresh start begins ${freshDay(start)}.</b> The missed weeks are wiped from your grade and streak. From day one, every standard counts.</div>
+      <div class="dim small" style="font-weight:700;margin:10px 0 4px">BEFORE THEN</div>
+      <ul class="mission"><li>Shop and prep protein for the week: eggs, chicken, cottage cheese, Greek yogurt.</li><li>Pick your 5 training days and put them in your calendar.</li><li>First session: <b>${esc(next)}</b>.</li><li>Weigh in and take your first progress photos on day one.</li></ul></div>`;
+  }
   const y = gradeDay(shiftDate(today(), -1)), streak = coachStreak(), wk = weekScore();
   const misses = y.items.filter(i => !i.ok);
-  const head = y.total ? (misses.length === 0 ? `<b class="green">Yesterday: ${y.pass}/${y.total}. Every standard met.</b> Do it again.`
+  const head = y.pre ? `<b>Day one of your fresh start.</b> Nothing to grade yet, so today sets the standard.` : y.total ? (misses.length === 0 ? `<b class="green">Yesterday: ${y.pass}/${y.total}. Every standard met.</b> Do it again.`
     : misses.length <= 1 && y.won ? `<b>Yesterday: ${y.pass}/${y.total}.</b> Close. Don't let ${misses[0].label.toLowerCase()} slide two days in a row.`
     : `<b class="red">Yesterday: ${y.pass}/${y.total}. Not good enough.</b> You missed ${misses.map(i => i.label.toLowerCase()).join(", ")}.`) : "No data for yesterday yet.";
   const rows = y.items.map(i => `<div class="exline"><span>${i.ok ? '<b class="green">✓</b>' : '<b class="red">✗</b>'} ${i.label}</span><span class="dim small">${esc(i.detail)}</span></div>`).join("");
@@ -3033,6 +3042,8 @@ async function coachSync(force){
   try {
     const snapshot = { ...S, active: null, exportedAt: new Date().toISOString(), catalog: EX.map(e => ({ id: e.id, n: e.n, m: e.m, p: e.p, inc: e.inc })) };
     await repoPut("data.json", b64(JSON.stringify(snapshot)), "App sync " + today());
+    const fs0 = await repoGet("coach/FRESH_START.md");
+    if (fs0 && fs0.content) { const m = unb64(fs0.content).match(/\d{4}-\d{2}-\d{2}/); if (m && S.fresh !== m[0]) { S.fresh = m[0]; save(); render(); } }
     const rv = await repoGet("coach/review.json");
     if (rv && rv.content) { let r = null; try { r = JSON.parse(unb64(rv.content)); } catch (e) {} if (r && r.id && (!S.review || S.review.id !== r.id)) { applyReview(r); toast("🗿 New weekly review from your coach"); render(); } }
     coachCfg.at = Date.now(); coachCfg.err = ""; saveCoachCfg();
@@ -3048,6 +3059,7 @@ function applyReview(r){
   }
   if (r.targets && (r.targets.cal || r.targets.protein)) { S.targets = { ...effTargets(), ...(S.targets || {}), ...r.targets }; applied.push("targets"); }
   if (r.standards) { S.standards = { ...(S.standards || {}), ...r.standards }; applied.push("standards"); }
+  if (r.freshStart && /^\d{4}-\d{2}-\d{2}$/.test(r.freshStart)) S.fresh = r.freshStart;
   S.review = { ...r, plan: undefined, prev, applied, receivedAt: Date.now(), undone: false, dismissed: false };
   save();
 }
