@@ -95,6 +95,19 @@ function page(g, res) {
   const title = `${nick(g.away_name)} vs ${nick(g.home_name)} Prediction and Odds, ${new Date(g.date + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })} | Leo`;
   const desc = `Leo gives the ${g.home_name} a ${pct(L.p_home)} chance against the ${g.away_name}. Leo's spread ${H} ${L.home_spread === 0 ? "PK" : sgn(L.home_spread)}, injury report, form and key players.`;
   const url = `https://ndhorizon.com/nba/${slug(g)}/`;
+  // Plain-English read of the gap, so a winner pick and a spread lean on the
+  // other team do not look like a contradiction.
+  const gapTxt = (() => {
+    if (mk.home_spread == null || L.home_margin == null) return "";
+    const m = +L.home_margin, mm = -mk.home_spread, r = v => Math.abs(Math.round(v * 2) / 2);
+    const who = v => v > 0 ? H : A, by = v => v === 0 ? "a pick'em" : `${who(v)} by ${r(v)}`;
+    if (r(m) === 0 || mm === 0) return `Leo has ${by(m)}; DraftKings has ${by(mm)}.`;
+    if (Math.sign(m) === Math.sign(mm)) {
+      if (r(m) === r(mm)) return `Leo and DraftKings agree: ${by(m)}.`;
+      return `Both expect ${esc(who(m))} to win. Leo expects ${r(m) < r(mm) ? "a closer game" : "a bigger win"} (${esc(by(m))}) than DraftKings (${esc(by(mm))}).`;
+    }
+    return `Leo expects ${esc(who(m))} to win (${esc(by(m))}); DraftKings has ${esc(by(mm))}.`;
+  })();
   const leanTxt = L.lean ? `<div class="lean">Lean: <b>${esc(L.lean.team)} ${sgn(L.lean.line)}</b>. Leo is ${L.lean.edge_pts} points off the DraftKings spread. A tracked test, not a bet.</div>` : "";
   return `<!DOCTYPE html>
 <html lang="en">
@@ -159,8 +172,9 @@ ul.inj,ul.last5{margin:6px 0 0;padding-left:18px;font-size:.86rem;line-height:1.
   <div class="boxes">
     <div class="box"><div class="l">Leo spread</div><div class="v">${esc(H)} ${L.home_spread === 0 ? "PK" : sgn(L.home_spread)}</div><div class="s">Expected margin</div></div>
     <div class="box"><div class="l">DraftKings</div><div class="v">${mk.home_spread == null ? "&mdash;" : esc(H) + " " + sgn(mk.home_spread)}</div><div class="s">Moneyline ${esc(A)} ${am(mk.away_ml)}, ${esc(H)} ${am(mk.home_ml)}</div></div>
-    <div class="box"><div class="l">Gap</div><div class="v">${L.edge_pts == null ? "&mdash;" : Math.abs(L.edge_pts).toFixed(1) + " pts"}</div><div class="s">${L.edge_pts == null ? "No line yet" : "Leo likes " + esc(L.edge_pts > 0 ? H : A) + " more than the market"}</div></div>
+    <div class="box"><div class="l">Gap</div><div class="v">${L.edge_pts == null ? "&mdash;" : Math.abs(L.edge_pts).toFixed(1) + " pts"}</div><div class="s">${L.edge_pts == null ? "No line yet" : "Between Leo and DraftKings"}</div></div>
   </div>
+  ${gapTxt ? `<p class="gapread">${gapTxt}</p>` : ""}
   ${leanTxt}
   ${finalBlock(g, res)}
   ${partsTable(g)}
