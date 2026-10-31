@@ -1,0 +1,61 @@
+name: NFL owner brief (send now)
+
+# Manual only. Emails the owner's PDF brief for any slate already in the repo,
+# built from the files that slate's gather committed. It gathers nothing and
+# spends no odds credits. Mode "test" marks the subject TEST and leaves no send
+# log, so the scheduled brief for that date still goes out (DEC-20261031-09).
+# The scheduled brief itself runs inside nfl-prepare-slate.yml.
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "YYYY-MM-DD slate that already has picks and props files, e.g. 2026-10-25"
+        required: true
+        type: string
+      mode:
+        description: "test = TEST subject, no send log; send = the real brief (once per date)"
+        required: true
+        default: test
+        type: choice
+        options: [test, send]
+
+permissions:
+  contents: write
+
+jobs:
+  brief:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Email the brief
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          AUDIT_EMAIL: ${{ secrets.AUDIT_EMAIL }}
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.mode }}" = "test" ]; then
+            node scripts/send-nfl-owner-brief.js "${{ inputs.date }}" --test
+          else
+            node scripts/send-nfl-owner-brief.js "${{ inputs.date }}" --force
+          fi
+
+      - name: Commit the send log
+        if: ${{ inputs.mode == 'send' }}
+        run: |
+          set -euo pipefail
+          git config user.name "lydia-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/email-log
+          if git diff --cached --quiet; then echo "Nothing to commit."; exit 0; fi
+          git commit -m "NFL owner brief ${{ inputs.date }}"
+          git pull --rebase
+          git push

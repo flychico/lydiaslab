@@ -6,6 +6,9 @@
  *   node scripts/send-nfl-owner-brief.js YYYY-MM-DD           send if inside the window
  *   node scripts/send-nfl-owner-brief.js YYYY-MM-DD --force   send now (still once per date)
  *   node scripts/send-nfl-owner-brief.js YYYY-MM-DD --pdf=out.pdf   build the PDF only, send nothing
+ *   node scripts/send-nfl-owner-brief.js YYYY-MM-DD --test    send now, subject marked TEST, any date
+ *                                                            (past slates too), and no send log, so the
+ *                                                            real brief for that date still goes out
  *
  * Runs in nfl-prepare-slate.yml after the prop lines are attached, so it
  * reads exactly what that capture wrote: data/nfl/picks-<date>.json,
@@ -42,7 +45,8 @@ const D = p => path.join(ROOT, "data/nfl", p);
 const args = process.argv.slice(2);
 const DATE = args.find(a => /^\d{4}-\d{2}-\d{2}$/.test(a))
   || new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
-const FORCE = args.includes("--force");
+const TEST = args.includes("--test");
+const FORCE = args.includes("--force") || TEST;
 const PDF_ONLY = (args.find(a => a.startsWith("--pdf=")) || "").slice(6);
 const TO = (process.env.AUDIT_EMAIL || process.env.OWNER_EMAIL || "").trim();
 const KEY = process.env.RESEND_API_KEY || "", FROM = process.env.EMAIL_FROM || "";
@@ -187,29 +191,30 @@ async function main() {
   const b = build();
   if (!b) { console.log(`NFL brief ${DATE}: no slate file, nothing to send.`); return; }
   if (PDF_ONLY) { toPdf(b.html, path.resolve(PDF_ONLY)); console.log(`NFL brief ${DATE}: wrote ${PDF_ONLY} (${b.games.length} games, ${b.lined} lined props).`); return; }
-  if (fs.existsSync(LOG)) { console.log(`NFL brief ${DATE} already sent.`); return; }
+  if (!TEST && fs.existsSync(LOG)) { console.log(`NFL brief ${DATE} already sent.`); return; }
 
   const first = b.games.map(g => Date.parse(kickoffUtc(DATE, g.kickoff))).filter(Number.isFinite).sort((x, y) => x - y)[0];
   const now = Date.now();
-  if (first && now >= first) { console.log(`NFL brief ${DATE}: first kickoff has passed, not sending.`); return; }
+  if (!TEST && first && now >= first) { console.log(`NFL brief ${DATE}: first kickoff has passed, not sending.`); return; }
   const nightOnly = String(b.games[0].kickoff) >= NIGHT_FIRST_KICK;
   const inWindow = first && (first - now) <= WINDOW_H * 3600e3;
   if (!FORCE && !inWindow && !nightOnly) {
     console.log(`NFL brief ${DATE}: ${first ? Math.round((first - now) / 6e4) : "?"} min to first kickoff; waiting for the capture within ${WINDOW_H}h.`); return;
   }
-  if (!KEY || !FROM || !TO) { console.log("NFL brief: RESEND_API_KEY, EMAIL_FROM or AUDIT_EMAIL not set, skipped."); return; }
+  if (!KEY || !FROM || !TO) { console.log("NFL brief: RESEND_API_KEY, EMAIL_FROM or AUDIT_EMAIL not set, skipped."); if (TEST) process.exitCode = 1; return; }
 
   const pdf = toPdf(b.html, path.join(os.tmpdir(), `leo-nfl-brief-${DATE}.pdf`));
   const content = fs.readFileSync(pdf).toString("base64");
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST", headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: FROM, to: [TO], subject: `Leo NFL brief: ${prettyDate(DATE)}, Week ${b.week}`,
+      from: FROM, to: [TO], subject: `${TEST ? "TEST " : ""}Leo NFL brief: ${prettyDate(DATE)}, Week ${b.week}`,
       text: b.text, html: `<p>${esc(b.text).replace(/\n/g, "<br>")}</p>`,
       attachments: [{ filename: `leo-nfl-brief-${DATE}.pdf`, content }]
     })
   });
-  if (!res.ok) { console.warn(`NFL brief send failed: HTTP ${res.status} ${await res.text().catch(() => "")}`); return; }
+  if (!res.ok) { console.warn(`NFL brief send failed: HTTP ${res.status} ${await res.text().catch(() => "")}`); if (TEST) process.exitCode = 1; return; }
+  if (TEST) { console.log(`NFL brief ${DATE}: TEST sent with PDF (no send log written).`); return; }
   fs.mkdirSync(path.dirname(LOG), { recursive: true });
   fs.writeFileSync(LOG, JSON.stringify({ date: DATE, sent_at: new Date().toISOString(), games: b.games.length, lined_props: b.lined }, null, 2) + "\n");
   console.log(`NFL brief ${DATE} sent with PDF.`);
