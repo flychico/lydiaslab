@@ -220,3 +220,5 @@ for (const date of DATES) {
   }
 }
 console.log(`NBA matchup pages: ${n} written for ${DATES.join(", ")}.`);
+// Every page writer rebuilds sitemap.xml from the pages that exist (scripts/lib/sitemap.js).
+console.log(`sitemap.xml: ${require("./lib/sitemap").writeSitemap(ROOT)} pages`);

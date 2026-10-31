@@ -79,14 +79,12 @@ function hasPicks(file) {
 function findBadEmptyDates() {
   const dates = unique([
     ...datedJsonFiles("data/member-brief"),
-    ...datedJsonFiles("data/published-picks"),
-    ...datedJsonFiles("data/picks")
+    ...datedJsonFiles("data/published-picks")
   ]);
   const bad = [];
   for (const date of dates) {
     const brief = readJsonSafe(`data/member-brief/${date}.json`);
     const published = readJsonSafe(`data/published-picks/${date}.json`);
-    const legacy = readJsonSafe(`data/picks/${date}.json`);
     const preview = exists(`previews/${date}.html`) ? fs.readFileSync(path.join(ROOT, "previews", `${date}.html`), "utf8") : "";
 
     const briefExistsButEmpty = brief && Array.isArray(brief.games) && brief.games.length === 0;
@@ -94,7 +92,7 @@ function findBadEmptyDates() {
 
     // Under the stricter official-pick gate, zero official picks can be valid.
     // Only delete dated generated artifacts when the research brief itself is empty or the preview is clearly empty.
-    const invalidEmptyLockWithoutBrief = !hasGames(brief) && ((published && Array.isArray(published.picks) && published.picks.length === 0) || (legacy && Array.isArray(legacy.picks) && legacy.picks.length === 0));
+    const invalidEmptyLockWithoutBrief = !hasGames(brief) && ((published && Array.isArray(published.picks) && published.picks.length === 0));
 
     if (briefExistsButEmpty || previewEmpty || invalidEmptyLockWithoutBrief) bad.push(date);
   }
@@ -104,7 +102,6 @@ function findBadEmptyDates() {
 function removeGeneratedDate(date) {
   unlink(`data/member-brief/${date}.json`);
   unlink(`data/published-picks/${date}.json`);
-  unlink(`data/picks/${date}.json`);
   unlink(`data/market/${date}.json`);
   unlink(`data/bullpen/${date}.json`);
   unlink(`previews/${date}.html`);
@@ -119,7 +116,6 @@ function removeStaleTodayMirrors() {
   const mirrorFiles = [
     "data/member-brief/today.json",
     "data/published-picks/today.json",
-    "data/picks/today.json",
     "data/market/today.json",
     "data/bullpen/today.json"
   ];
@@ -145,12 +141,6 @@ function removeInvalidTodayMirrors() {
   if (published && published.date === today && Array.isArray(published.picks) && published.picks.length === 0 && !hasValidBrief) {
     issues.push("Invalid today mirror detected: published picks empty without a valid member brief");
     unlink("data/published-picks/today.json");
-  }
-
-  const picks = readJsonSafe("data/picks/today.json");
-  if (picks && picks.date === today && Array.isArray(picks.picks) && picks.picks.length === 0 && !hasValidBrief) {
-    issues.push("Invalid today mirror detected: picks empty without a valid member brief");
-    unlink("data/picks/today.json");
   }
 
   const market = readJsonSafe("data/market/today.json");

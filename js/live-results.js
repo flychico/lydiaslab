@@ -228,8 +228,7 @@
 
     const picksFile = await fetchFirstJson([
       "/data/published-picks/today.json",
-      `/data/published-picks/${today}.json`,
-      "/data/picks/today.json"
+      `/data/published-picks/${today}.json`
     ]);
     const date = picksFile.date;
     const picks = Array.isArray(picksFile.picks) ? picksFile.picks : [];

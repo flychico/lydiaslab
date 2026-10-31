@@ -4,7 +4,7 @@
 
   Source:
   - Prefer data/member-brief/<date>.json from scripts/generate-member-lab.js
-  - Fallback to data/picks/<date>.json only if the member brief file is missing
+  - Fallback to data/published-picks/<date>.json only if the member brief file is missing
 
   Member list:
   - 2026-08-24: pulled from data/signups/member-email.csv on the dedicated
@@ -95,7 +95,7 @@ function loadDailyData(dateStr) {
     return { type: "brief", brief, file: todayBrief };
   }
 
-  const picksFile = path.join(ROOT, "data", "picks", `${dateStr}.json`);
+  const picksFile = path.join(ROOT, "data", "published-picks", `${dateStr}.json`);
   if (fs.existsSync(picksFile)) {
     const picks = JSON.parse(fs.readFileSync(picksFile, "utf8"));
     return { type: "legacy-picks", picks, file: picksFile };

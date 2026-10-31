@@ -4,7 +4,7 @@
    results/index.html from that log.
    Usage: node scripts/grade-results.js [YYYY-MM-DD]  (default: yesterday in US Eastern)
    Reads first: data/published-picks/<date>.json
-   Fallback:    data/picks/<date>.json for pre-lock historical days
+   Fallback:    data/archive/picks-legacy/<date>.json for pre-lock July days
    Writes:      data/results_log.csv, data/results.json, results/index.html,
                 data/clv/clv_log.csv
 

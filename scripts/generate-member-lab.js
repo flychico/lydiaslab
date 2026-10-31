@@ -451,8 +451,7 @@ async function main() {
     console.log(`Generated provisional Leo source data for ${DATE}. Waiting for unified run projections before locking picks.`);
   } else {
     const published = officialCard;
-    writeJson(`data/picks/${DATE}.json`, published);
-    if (DATE === etToday()) writeJson("data/picks/today.json", published);
+    // data/picks/ (a copy of data/published-picks/) retired 2026-10-31.
     mergeAndWriteMarket(buildMarketFile(rows, generatedAt));
     console.log(`Generated unified Leo source data for ${DATE}. Games: ${rows.length}. Official picks: ${published.picks.length}.`);
   }

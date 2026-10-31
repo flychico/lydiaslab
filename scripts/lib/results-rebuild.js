@@ -8,7 +8,7 @@
 
   Design: data/results_log.csv is authoritative for WHAT HAPPENED (result,
   actual stat, final score). data/published-picks/<date>.json (or the legacy
-  data/picks/<date>.json) is authoritative for WHAT WAS PICKED (price,
+  data/archive/picks-legacy/<date>.json) is authoritative for WHAT WAS PICKED (price,
   model probability, lab score, pitcher/bullpen context) — that half never
   needs hand-editing, so it's still read fresh from its original file rather
   than duplicated into the CSV. rebuildDay() below merges the two.
@@ -46,7 +46,8 @@ function readJsonSafe(rel) {
 
 function loadPicksForDate(date) {
   const publishedFile = path.join(ROOT, "data", "published-picks", `${date}.json`);
-  const legacyFile = path.join(ROOT, "data", "picks", `${date}.json`);
+  // Pre-lock July days kept when the data/picks mirror was retired (2026-10-31).
+  const legacyFile = path.join(ROOT, "data", "archive", "picks-legacy", `${date}.json`);
   if (fs.existsSync(publishedFile)) {
     const data = JSON.parse(fs.readFileSync(publishedFile, "utf8"));
     return { file: publishedFile, data, source: "published-picks" };
