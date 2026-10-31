@@ -66,7 +66,7 @@ const ApiKey = {
 // ---------- Sport Selector ----------
 const Sport = {
   KEY: "leo_selected_sport",
-  SPORTS: ["MLB", "NFL"],
+  SPORTS: ["MLB", "NFL", "NBA"],
   // The URL wins when it names a sport. Without this, landing straight on an
   // /nfl/ page (search result, shared link, bookmark) read the stored value --
   // which defaults to MLB -- and rendered MLB nav, MLB links and an MLB-active
@@ -78,6 +78,7 @@ const Sport = {
     try {
       const p = String(location.pathname || "").toLowerCase();
       if (p.startsWith("/nfl/")) return "NFL";
+      if (p.startsWith("/nba/")) return "NBA";
       if (p.startsWith("/mlb/")) return "MLB";
       // MLB's own sections live at the root. Treat them as MLB too, or a
       // visitor coming back from NFL got NFL nav on an MLB page and the
@@ -111,7 +112,11 @@ function renderNav(active) {
   const sport = Sport.get();
   const prefix = Sport.prefix();
   
-  const links = [
+  // NBA launched 2026-10-31 with two pages: the nightly card and the record.
+  const links = sport === "NBA" ? [
+    [prefix + "scoreboard/", "Today"],
+    [prefix + "results/", "Results"]
+  ] : [
     [prefix + "scoreboard/", "Scoreboard"],
     [prefix + "previews/", "Picks"],
     [sport === "MLB" ? "/tools/strikeout-projections/" : prefix + "tools/player-props/", sport === "MLB" ? "Pitchers" : "Props"],
@@ -196,7 +201,7 @@ function renderNav(active) {
       var newPrefix = newSport === "MLB" ? "/" : "/" + newSport.toLowerCase() + "/";
       var board = newPrefix + "scoreboard/";
       var path = window.location.pathname;
-      var slug = path.replace(/^\/(nfl|mlb)\//i, "").replace(/^\//, "");
+      var slug = path.replace(/^\/(nfl|mlb|nba)\//i, "").replace(/^\//, "");
       // Pages whose route genuinely differs between the two sports.
       var XWALK = {
         "MLB>NFL": { "tools/strikeout-projections/": "tools/player-props/" },

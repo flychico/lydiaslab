@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XVWTMDNBJK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XVWTMDNBJK');
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leo NBA Record, Graded Every Morning | Leo</title>
+<meta name="description" content="Every Leo NBA read, frozen before tip and graded against the final score and the DraftKings line.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Leo">
+<meta property="og:title" content="Leo NBA Record, Graded Every Morning | Leo">
+<meta property="og:url" content="https://ndhorizon.com/nba/results/">
+<meta property="og:image" content="https://ndhorizon.com/img/og-card.png">
+<link rel="canonical" href="https://ndhorizon.com/nba/results/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127936;</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/scoreboard.css">
+<style>
+.rec-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px;}
+.rec{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:13px 15px;display:flex;flex-direction:column;gap:3px;}
+.rec .lab{font-size:.64rem;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--text-dim);}
+.rec .big{font-size:1.5rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1;}
+.rec .beat{font-size:.76rem;color:var(--text-dim);}
+.honest{background:var(--bg-elev);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:12px;padding:13px 16px;font-size:.86rem;color:var(--text-dim);line-height:1.55;margin-bottom:16px;}
+.honest b{color:var(--text);}
+.tbl-card{padding:0;overflow-x:auto;}
+table.calls{width:100%;border-collapse:collapse;font-size:.88rem;}
+table.calls th,table.calls td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;}
+table.calls th{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);}
+.ok{color:var(--good);font-weight:800;} .no{color:var(--danger);font-weight:800;}
+@media(max-width:760px){
+  table.calls thead{display:none;}
+  table.calls,table.calls tbody,table.calls tr,table.calls td{display:block;width:100%;}
+  table.calls tr{border-bottom:1px solid var(--border);padding:10px 12px;}
+  table.calls td{border:0;padding:2px 0;white-space:normal;}
+  table.calls td[data-l]::before{content:attr(data-l) ": ";color:var(--text-dim);font-size:.78rem;}
+}
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main class="scoreboard-shell">
+  <section class="score-hero">
+    <p class="eyebrow">Every read, graded against what actually happened.</p>
+    <h1>Leo&rsquo;s NBA record</h1>
+    <p class="subtitle">Each game is graded on the last read Leo made before tip. Nothing is changed after the fact, and losses stay on the record.</p>
+  </section>
+  <section class="rec-row" id="records" aria-label="Season record"></section>
+  <div class="honest"><b>How Leo is graded.</b> <b>Win chance</b> is scored on whether the side Leo gave 50% or more won, and on its Brier score (lower is better), both beside the DraftKings no vig price. <b>Spread</b> is scored on how far Leo's expected margin landed from the final margin, beside how far the DraftKings spread landed. A <b>lean</b> is Leo's side at the DraftKings spread when the two were 4 or more points apart. It needs 52.4% to break even at standard odds. Leans are a public test, not bets, and under 50 graded games any record is an early read.</div>
+  <div id="status" class="loading">Loading the record&hellip;</div>
+  <section class="card tbl-card"><table class="calls"><thead><tr><th>Date</th><th>Game</th><th>Final</th><th>Leo spread</th><th>DraftKings</th><th>Winner call</th><th>Lean</th></tr></thead><tbody id="rows"></tbody></table></section>
+</main>
+<footer id="footer"></footer><script src="/js/app.js"></script>
+<script>
+renderNav("/nba/results/"); renderFooter();
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const sgn = v => v == null ? "—" : v === 0 ? "PK" : (v > 0 ? "+" : "") + v;
+const pc = v => v == null ? "—" : (v * 100).toFixed(1) + "%";
+(async () => {
+  const st = document.getElementById("status");
+  try {
+    const r = await fetch("/data/nba/results.json?v=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) { st.innerHTML = '<div class="score-empty">The first NBA games are graded the morning after Leo\'s first card.</div>'; return; }
+    const d = await r.json(), s = d.season, L = s.leans;
+    document.getElementById("records").innerHTML =
+      '<div class="rec"><span class="lab">Games graded</span><span class="big">' + s.games + '</span><span class="beat">' + (s.games < 50 ? "early read" : "season to date") + "</span></div>" +
+      '<div class="rec"><span class="lab">Winner calls</span><span class="big">' + pc(s.winner_leo) + '</span><span class="beat">DraftKings favourite ' + pc(s.winner_market) + "</span></div>" +
+      '<div class="rec"><span class="lab">Brier score</span><span class="big">' + (s.brier_leo ?? "—") + '</span><span class="beat">Market ' + (s.brier_market ?? "—") + ", lower is better</span></div>" +
+      '<div class="rec"><span class="lab">Average miss</span><span class="big">' + (s.miss_leo ?? "—") + '</span><span class="beat">DraftKings spread ' + (s.miss_line ?? "—") + " points</span></div>" +
+      '<div class="rec"><span class="lab">Leans</span><span class="big">' + L.won + "-" + L.lost + (L.push ? "-" + L.push : "") + '</span><span class="beat">' + (L.pct == null ? "none graded yet" : pc(L.pct) + ", " + (L.units_at_110 >= 0 ? "+" : "") + L.units_at_110 + " units at standard odds") + "</span></div>";
+    st.textContent = "";
+    document.getElementById("rows").innerHTML = d.games.map(g => {
+      const home = g.home, lm = g.leo_home_margin == null ? null : Math.round(-g.leo_home_margin * 2) / 2;
+      return "<tr><td data-l=\"Date\">" + esc(g.date) + "</td><td><b>" + esc(g.away) + " @ " + esc(home) + "</b></td>" +
+        '<td data-l="Final">' + g.away_score + "-" + g.home_score + "</td>" +
+        '<td data-l="Leo">' + esc(home) + " " + sgn(lm) + "</td>" +
+        '<td data-l="DraftKings">' + (g.mkt_home_spread == null ? "—" : esc(home) + " " + sgn(g.mkt_home_spread)) + "</td>" +
+        '<td data-l="Winner call">' + esc(g.leo_p_home >= .5 ? home : g.away) + ' <span class="' + (g.leo_winner_correct ? "ok" : "no") + '">' + (g.leo_winner_correct ? "right" : "wrong") + "</span></td>" +
+        '<td data-l="Lean">' + (g.lean_result ? esc(g.lean_side === "home" ? home : g.away) + " " + sgn(g.lean_line) + ' <span class="' + (g.lean_result === "win" ? "ok" : g.lean_result === "loss" ? "no" : "") + '">' + esc(g.lean_result) + "</span>" : "—") + "</td></tr>";
+    }).join("");
+  } catch (e) { st.innerHTML = '<div class="notice warn">The record could not load: ' + esc(e.message) + ".</div>"; }
+})();
+</script>
+</body>
+</html>

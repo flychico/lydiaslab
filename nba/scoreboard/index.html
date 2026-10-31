@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XVWTMDNBJK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XVWTMDNBJK');
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NBA Predictions, Spreads and Win Chances | Leo</title>
+<meta name="description" content="Leo's NBA card: a win chance and a spread for every game, built from team results, rest and the injury report, shown beside the DraftKings line.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Leo">
+<meta property="og:title" content="NBA Predictions, Spreads and Win Chances | Leo">
+<meta property="og:description" content="A win chance and a spread for every NBA game, with who is out and how much it moves the number.">
+<meta property="og:url" content="https://ndhorizon.com/nba/scoreboard/">
+<meta property="og:image" content="https://ndhorizon.com/img/og-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://ndhorizon.com/nba/scoreboard/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127936;</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/scoreboard.css">
+<style>
+/* Scoped here: style.css and scoreboard.css are shared with MLB and NFL. */
+.lean-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.68rem;font-weight:800;letter-spacing:.04em;
+  background:rgba(47,110,74,.12);border:1px solid rgba(47,110,74,.4);color:var(--good);white-space:nowrap;}
+.out-list{margin:10px 0 0;padding-top:8px;border-top:1px dashed var(--border);font-size:.8rem;color:var(--text-dim);line-height:1.5;}
+.out-list b{color:var(--text);}
+.out-list .st{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;}
+.score-card .market-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+.result-line{margin-top:8px;font-size:.82rem;font-weight:700;}
+.result-line .ok{color:var(--good);} .result-line .no{color:var(--danger);}
+.honest{background:var(--bg-elev);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:12px;
+  padding:13px 16px;font-size:.86rem;color:var(--text-dim);line-height:1.55;margin:4px 0 16px;}
+.honest b{color:var(--text);}
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main class="scoreboard-shell">
+  <section class="score-hero">
+    <p class="eyebrow">Every game. Leo's number beside the market's.</p>
+    <h1>NBA Predictions, Spreads and Win Chances</h1>
+    <p class="subtitle">For every game Leo gives a win chance and a spread, built from how teams have played, rest days and who is on the injury report. The DraftKings line sits beside it so you can see where they disagree.</p>
+    <div class="score-hero-chips">
+      <span class="hero-chip">&#127936; Full nightly slate</span>
+      <span class="hero-chip">&#129657; Injury report built in</span>
+      <span class="hero-chip">&#128274; Frozen before tip</span>
+      <span class="hero-chip">&#128202; Graded every morning</span>
+    </div>
+  </section>
+  <div class="honest"><b>How to read this.</b> Leo's spread is the margin Leo expects, written like a betting line. When Leo and DraftKings are 4 or more points apart, Leo records a <b>lean</b>. Leans are a public test, graded every morning on the <a href="/nba/results/">results page</a>. They are not bets, and the record is new, so treat it as an early read.</div>
+  <section class="score-controls" aria-label="Game day">
+    <div class="date-controls">
+      <button class="control-btn" type="button" onclick="shiftDay(-1)" aria-label="Previous game day">&larr;</button>
+      <div class="field"><label for="date-pick">Game day</label><select id="date-pick"><option>Loading&hellip;</option></select></div>
+      <button class="control-btn" type="button" onclick="shiftDay(1)" aria-label="Next game day">&rarr;</button>
+    </div>
+  </section>
+  <section class="kpis" id="kpis" aria-label="Slate summary"></section>
+  <div id="status" class="loading">Loading the NBA card&hellip;</div>
+  <section class="games-grid" id="games" aria-live="polite"></section>
+  <p class="data-note" id="data-note">Results and player minutes: ESPN via the open sportsdataverse files. Lines: DraftKings via ESPN. Injury report: ESPN.</p>
+</main>
+<footer id="footer"></footer><script src="/js/app.js"></script>
+<script>
+renderNav("/nba/scoreboard/"); renderFooter();
+const pick = document.getElementById("date-pick"), gamesEl = document.getElementById("games"), statusEl = document.getElementById("status"), kpisEl = document.getElementById("kpis");
+let DAYS = [], RESULTS = {};
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const sgn = v => v == null ? "—" : v === 0 ? "PK" : (v > 0 ? "+" : "") + v;
+const pct = p => p == null ? "—" : Math.round(p * 100) + "%";
+const am = v => v == null ? "—" : (v > 0 ? "+" : "") + v;
+const logo = t => "https://a.espncdn.com/i/teamlogos/nba/500/" + String(t).toLowerCase() + ".png";
+const tip = iso => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) + " ET";
+const nyToday = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
+async function j(url) { const r = await fetch(url + "?v=" + Date.now(), { cache: "no-store" }); if (!r.ok) throw new Error(url + " " + r.status); return r.json(); }
+
+(async function init() {
+  try {
+    DAYS = await j("/data/nba/slates.json");
+    try { (await j("/data/nba/results.json")).games.forEach(g => RESULTS[g.game_id] = g); } catch (e) {}
+    if (!DAYS.length) { statusEl.innerHTML = '<div class="score-empty">The first NBA card is on its way.</div>'; return; }
+    pick.innerHTML = DAYS.map(d => '<option value="' + d.date + '">' + esc(new Date(d.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })) + " · " + d.games + " games</option>").join("");
+    const t = nyToday();
+    pick.value = (DAYS.find(d => d.date >= t) || DAYS[DAYS.length - 1]).date;
+    pick.addEventListener("change", load);
+    load();
+  } catch (e) {
+    statusEl.innerHTML = / 404$/.test(e.message) ? '<div class="score-empty">The first NBA card is on its way.</div>'
+      : '<div class="notice warn">The NBA card could not load: ' + esc(e.message) + '.</div>';
+  }
+})();
+function shiftDay(n) { const i = DAYS.findIndex(d => d.date === pick.value), k = Math.max(0, Math.min(DAYS.length - 1, i + n)); if (DAYS[k]) { pick.value = DAYS[k].date; load(); } }
+
+function outList(g, side) {
+  const m = (g.leo.missing || {})[side] || [];
+  if (!m.length) return "";
+  return "<div><b>" + esc(g[side]) + ":</b> " + m.slice(0, 5).map(p => esc(p.name) + ' <span class="st">' + esc(p.status === "day-to-day" ? "day to day" : p.status) + "</span>").join(", ") + "</div>";
+}
+function teamRow(g, side) {
+  const p = side === "home" ? g.leo.p_home : g.leo.p_away, res = RESULTS[g.game_id];
+  const score = res ? (side === "home" ? res.home_score : res.away_score) : (g.completed ? (side === "home" ? g.hs : g.as) : null);
+  const ml = g.market ? (side === "home" ? g.market.home_ml : g.market.away_ml) : null;
+  return '<div class="team-row ' + side + '"><span class="team-logo-wrap"><img class="team-logo" src="' + logo(g[side]) + '" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\'"><span class="team-initials">' + esc(g[side]) + '</span></span>' +
+    '<span class="team-copy"><span class="team-name">' + esc(g[side + "_name"] || g[side]) + '</span><span class="team-record">' + (g.leo.back_to_back && g.leo.back_to_back[side] ? "Back to back" : "") + '</span></span>' +
+    '<span class="team-numbers">' + (score != null ? '<span class="team-score">' + score + "</span>" : '<span class="team-price">' + am(ml) + '</span><span class="team-prob">Leo ' + pct(p) + "</span>") + "</span></div>";
+}
+function card(g) {
+  const L = g.leo, mk = g.market || {}, res = RESULTS[g.game_id];
+  const leoLine = L.home_spread == null ? "—" : g.home + " " + sgn(L.home_spread);
+  const mkLine = mk.home_spread == null ? "—" : g.home + " " + sgn(mk.home_spread);
+  let result = "";
+  if (res) {
+    const parts = ['Leo had ' + esc(L.p_home >= .5 ? g.home : g.away) + ' to win: <span class="' + (res.leo_winner_correct ? "ok" : "no") + '">' + (res.leo_winner_correct ? "right" : "wrong") + "</span>"];
+    if (res.lean_result) parts.push('Lean ' + esc(L.lean.team) + " " + sgn(L.lean.line) + ': <span class="' + (res.lean_result === "win" ? "ok" : res.lean_result === "loss" ? "no" : "") + '">' + esc(res.lean_result) + "</span>");
+    result = '<div class="result-line">' + parts.join(" · ") + "</div>";
+  }
+  return '<article class="score-card"><div class="card-body">' +
+    '<div class="card-top"><div class="game-meta"><span class="game-time">' + tip(g.tip_utc) + '</span><span class="game-venue">' + esc(g.venue || "") + '</span></div>' +
+    '<div class="card-top-badges">' + (L.lean ? '<span class="lean-badge">Lean ' + esc(L.lean.team) + " " + sgn(L.lean.line) + "</span> " : "") + '<span class="game-status ' + (res || g.completed ? "final" : "") + '">' + (res || g.completed ? "Final" : g.state === "in" ? "Live" : "Pregame") + "</span></div></div>" +
+    '<div class="teams">' + teamRow(g, "away") + teamRow(g, "home") + "</div>" +
+    '<div class="prob-compare"><div class="prob-line"><span>Leo win chance</span><span>' + esc(g.away) + " " + pct(L.p_away) + " · " + esc(g.home) + " " + pct(L.p_home) + '</span></div><div class="prob-track"><div class="prob-away" style="width:' + (L.p_away * 100).toFixed(1) + '%"></div><div class="prob-home" style="width:' + (L.p_home * 100).toFixed(1) + '%"></div></div></div>' +
+    '<div class="market-grid">' +
+      '<div class="market-box rating"><span class="market-label">Leo spread</span><span class="market-value">' + esc(leoLine) + '</span><span class="market-sub">Expected margin</span></div>' +
+      '<div class="market-box"><span class="market-label">DraftKings</span><span class="market-value">' + esc(mkLine) + '</span><span class="market-sub">' + (mk.p_home != null ? "Market " + esc(g.home) + " " + pct(mk.p_home) : "") + "</span></div>" +
+      '<div class="market-box total"><span class="market-label">Gap</span><span class="market-value">' + (L.edge_pts == null ? "—" : Math.abs(L.edge_pts).toFixed(1) + " pts") + '</span><span class="market-sub">' + (L.edge_pts == null ? "" : "Leo likes " + esc(L.edge_pts > 0 ? g.home : g.away) + " more") + "</span></div>" +
+    "</div>" + result +
+    ((L.missing && (L.missing.home.length || L.missing.away.length)) ? '<div class="out-list">Missing regulars Leo accounted for:' + outList(g, "away") + outList(g, "home") + "</div>" : "") +
+    "</div></article>";
+}
+async function load() {
+  statusEl.textContent = "Loading…"; gamesEl.innerHTML = "";
+  try {
+    const d = await j("/data/nba/picks-" + pick.value + ".json");
+    const games = d.games.filter(g => g.leo);
+    const leans = games.filter(g => g.leo.lean).length;
+    kpisEl.innerHTML =
+      '<article class="kpi"><div class="label">Games</div><div class="value">' + games.length + '</div><div class="sub">' + esc(pick.value) + "</div></article>" +
+      '<article class="kpi"><div class="label">First tip</div><div class="value">' + (games[0] ? tip(games[0].tip_utc) : "—") + '</div><div class="sub">Eastern time</div></article>' +
+      '<article class="kpi"><div class="label">Leans</div><div class="value">' + leans + '</div><div class="sub">4+ points off the line</div></article>' +
+      '<article class="kpi"><div class="label">Injury report</div><div class="value">' + (d.injuries_as_of ? new Date(d.injuries_as_of).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) : "—") + '</div><div class="sub">as of, Eastern</div></article>';
+    statusEl.textContent = "";
+    gamesEl.innerHTML = games.map(card).join("") || '<div class="score-empty">No games on this day.</div>';
+  } catch (e) { statusEl.innerHTML = '<div class="notice warn">Could not load this day: ' + esc(e.message) + ".</div>"; }
+}
+</script>
+</body>
+</html>
