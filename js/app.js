@@ -93,11 +93,13 @@ const Sport = {
     try { return localStorage.getItem(this.KEY) || this.seasonDefault(); } catch (e) { return this.seasonDefault(); }
   },
   // A first-time visitor lands on the sport that is in season: NFL from
-  // September 1 through mid-February, MLB the rest of the year. A visitor who
-  // has picked a sport keeps it.
+  // September 1 through mid-February, NBA from then until MLB starts
+  // (late March), MLB through August. A visitor who has picked a sport keeps it.
   seasonDefault() {
     const d = new Date(), m = d.getMonth() + 1, day = d.getDate();
-    return (m >= 9 || m === 1 || (m === 2 && day <= 15)) ? "NFL" : "MLB";
+    if (m >= 9 || m === 1 || (m === 2 && day <= 15)) return "NFL";
+    if (m === 2 || (m === 3 && day < 24)) return "NBA";
+    return "MLB";
   },
   set(v) { try { localStorage.setItem(this.KEY, v); } catch (e) {} },
   prefix() { const sport = this.get(); return sport === "MLB" ? "/" : "/" + sport.toLowerCase() + "/"; }
