@@ -228,9 +228,30 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
     const pre = wk.filter(r => (n(r.week)||0) < week);
     return { pre, qb: ML.buildQbRatings(pre, WK_PRIOR), team: ML.buildTeamRatings(pre, WK_PRIOR) };
   })());
-  // Expected starter: games.csv names him for the coming week; otherwise the
-  // team's QB with the most attempts this season, then last season.
-  const starterQb = (named, team, pre) => {
+  // Named starter (DEC-20261031-08): the latest nflverse depth chart taken
+  // before kickoff, QB rank 1, skipping anyone Out or Doubtful. games.csv
+  // named Jalen Hurts for 2026-11-01 after he went on season-ending IR, so it
+  // is now only the fallback; then the team's QB with the most attempts.
+  const STARTERS = require("./lib/nfl-starters");
+  const { kickoffUtc } = require("./lib/prediction-history");
+  let depthQb = [], qbSidelined = new Set();
+  try {
+    depthQb = STARTERS.qbRowsOnly(get(`${REL}/depth_charts/depth_charts_${SEASON}.csv`));
+    const slateWk = Math.max(0, ...games.filter(g=>g.gameday===target).map(g=>n(g.week)||0));
+    qbSidelined = new Set(get(`${REL}/injuries/injuries_${SEASON}.csv`)
+      .filter(r => (n(r.week)||0)===slateWk && r.position==="QB" && /^(Out|Doubtful)$/i.test(r.report_status||""))
+      .map(r => r.gsis_id));
+    console.log(`  depth chart: ${depthQb.length} QB rows; ${qbSidelined.size} QBs Out or Doubtful`);
+  } catch(e) { console.log(`  depth chart unavailable (${e.message}); using games.csv starters`); }
+  // gsis id -> the display name the QB ratings are keyed on
+  const qbName = {};
+  [...WK_PRIOR, ...wk].forEach(r => { if (r.position==="QB" && r.player_id) qbName[r.player_id] = r.player_display_name || r.player_name; });
+  const qbSource = {};
+  const starterQb = (named, team, pre, g) => {
+    const cutoff = Math.min(Date.now(), Date.parse(kickoffUtc(g.gameday, g.gametime)) || Date.now());
+    const dc = depthQb.length ? STARTERS.depthChartQb(depthQb, team, cutoff, qbSidelined) : null;
+    if (dc) { qbSource[team] = "depth_chart"; return qbName[dc.gsis_id] || dc.name; }
+    qbSource[team] = named ? "games_csv" : "usage";
     if (named) return named;
     for (const rows of [pre, WK_PRIOR]) {
       const att = {};
@@ -245,8 +266,8 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
     const expMargin = (rating[g.home_team]??0) - (rating[g.away_team]??0) + HFA;
     const v1Home = normCdf(expMargin/SD);
     const inp = mlInputs(n(g.week)||1);
-    const homeQb = starterQb(g.home_qb_name, g.home_team, inp.pre);
-    const awayQb = starterQb(g.away_qb_name, g.away_team, inp.pre);
+    const homeQb = starterQb(g.home_qb_name, g.home_team, inp.pre, g);
+    const awayQb = starterQb(g.away_qb_name, g.away_team, inp.pre, g);
     const h2h3 = ML.h2hRecord(games, g.away_team, g.home_team, g.gameday, 3);
     const feats = ML.featureRow({ homeTeam:g.home_team, awayTeam:g.away_team, homeQb, awayQb,
       qbRatings:inp.qb, teamRatings:inp.team, h2h:h2h3 });
@@ -355,6 +376,7 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
       // in pick/model_prob; ml_call says whether it counts as a pick.
       ml_call: call.status, v1_model_prob: r3(v1Home >= 0.5 ? v1Home : 1-v1Home),
       home_qb: homeQb, away_qb: awayQb,
+      home_qb_source: qbSource[g.home_team] || "", away_qb_source: qbSource[g.away_team] || "",
       // The exact inputs behind model_prob, frozen in ml-inputs-history.csv
       // so the Model Tuner replays this game with the live model code.
       ml_inputs: { qb_diff:feats.qb_diff, off_diff:feats.off_diff, def_diff:feats.def_diff,

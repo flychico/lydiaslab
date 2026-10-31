@@ -197,8 +197,30 @@ function oppAdjustment(defRecent, defSeason, leagueAvg, nGames) {
   const leagueRush = mean([...def.values()].map(d => mean(d.rush)));
   console.log(`  league baseline: ${r1(leaguePass)} pass yds/g, ${r1(leagueRush)} rush yds/g allowed`);
 
+  // ---- named starting QB (DEC-20261031-08) --------------------------------
+  // The latest depth chart before kickoff names the QB; usage alone projected
+  // the backup whenever a starter came back (Huntley for Jackson, Kaliakmanis
+  // for Daniels, 2026-11-01). Falls back to usage when the chart has no row
+  // or the named QB has no game log to project from.
+  const STARTERS = require("./lib/nfl-starters");
+  const { kickoffUtc } = require("./lib/prediction-history");
+  let depthQb = [];
+  try { depthQb = STARTERS.qbRowsOnly(await get(`${REL}/depth_charts/depth_charts_${SEASON}.csv`)); }
+  catch (e) { console.log(`  depth chart unavailable (${e.message}); QB by usage`); }
+  const logById = new Map([...logs.entries()].map(([name, e]) => [e.id, [name, e]]));
+  const qbSourceLog = [];
+  function namedQb(team, g) {
+    if (!depthQb.length) return null;
+    const cutoff = Math.min(Date.now(), Date.parse(kickoffUtc(g.gameday, g.gametime)) || Date.now());
+    const dc = STARTERS.depthChartQb(depthQb, team, cutoff, sidelinedIds);
+    if (!dc) return null;
+    const hit = logById.get(dc.gsis_id);
+    if (!hit || !(hit[1].cur.length || hit[1].prior.length)) { qbSourceLog.push(`${team} ${dc.name} (no game log, usage used)`); return null; }
+    return { name: hit[0], e: hit[1] };
+  }
+
   // ---- pick real starters by actual usage ----------------------------------
-  function starters(team) {
+  function starters(team, g) {
     const onTeam = [...logs.entries()]
       .filter(([name, e]) => e.team === team && e.cur.length && active.has(name) && !sidelinedIds.has(e.id));
     const top = (pos, field, count) => onTeam
@@ -207,7 +229,9 @@ function oppAdjustment(defRecent, defSeason, leagueAvg, nGames) {
       .filter(x => x.use > 0)
       .sort((a, b) => b.use - a.use)
       .slice(0, count);
-    return { qb: top("QB", "att", 1), rb: top("RB", "car", 2), wr: top("WR", "tgt", 3) };
+    const named = g ? namedQb(team, g) : null;
+    return { qb: named ? [named] : top("QB", "att", 1), qb_source: named ? "depth_chart" : "usage",
+             rb: top("RB", "car", 2), wr: top("WR", "tgt", 3) };
   }
 
   // Team points scored / allowed before this week, shrunk toward last season.
@@ -225,7 +249,7 @@ function oppAdjustment(defRecent, defSeason, leagueAvg, nGames) {
 
   for (const g of slate) {
     for (const [team, opp] of [[g.away_team, g.home_team], [g.home_team, g.away_team]]) {
-      const s = starters(team);
+      const s = starters(team, g);
       const d = def.get(opp) || { pass: [], rush: [] };
       const adjPass = oppAdjustment(mean(d.pass.slice(-3)), mean(d.pass), leaguePass, d.pass.length);
       const adjRush = oppAdjustment(mean(d.rush.slice(-3)), mean(d.rush), leagueRush, d.rush.length);
