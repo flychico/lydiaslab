@@ -310,6 +310,36 @@ for (const f of ["css/style.css","css/scoreboard.css"]) {
   }
 }
 
+// ---- 17b. every game got a capture before it kicked off ------------------
+// PHI @ JAX (London, 9:30am ET, 2026-10-11) was first captured at 12:34pm ET,
+// three hours after kickoff. With no frozen read the grader rightly skipped
+// it, so the game and its props left the record without a sound. Warn when
+// any game in the last 14 days (the catch-up window) has no capture strictly
+// before kickoff, in either prediction history.
+{
+  const DAYS = 14, now = Number(process.env.NFL_HEALTH_NOW) || Date.now(), missed = new Map();
+  for (const f of ["data/nfl/prediction-history.csv", "data/nfl/prop-prediction-history.csv"]) {
+    if (!fs.existsSync(P(f))) continue;
+    const lines = fs.readFileSync(P(f), "utf8").split(/\r?\n/).filter(Boolean);
+    const h = lines.shift().split(",");
+    const iC = h.indexOf("captured_at"), iK = h.indexOf("kickoff_utc"), iG = h.indexOf("game_id"), iM = h.indexOf("matchup"), iD = h.indexOf("date");
+    if ([iC, iK, iG].some(i => i < 0)) { warn("KICKOFF-COVER", `${f} lacks captured_at/kickoff_utc/game_id columns`); continue; }
+    const games = new Map();
+    for (const l of lines) {
+      const c = l.split(","), k = Date.parse(c[iK]), t = Date.parse(c[iC]);
+      if (!Number.isFinite(k) || !Number.isFinite(t)) continue;
+      const g = games.get(c[iG]) || { k, first: t, label: `${c[iM]} ${c[iD]}` };
+      g.first = Math.min(g.first, t); games.set(c[iG], g);
+    }
+    for (const [id, g] of games)
+      if (g.first >= g.k && g.k <= now && now - g.k <= DAYS * 864e5)
+        missed.set(id, `${g.label} (first capture ${Math.round((g.first - g.k) / 6e4)} min after kickoff)`);
+  }
+  missed.size
+    ? warn("KICKOFF-COVER", `${missed.size} game(s) in the last ${DAYS} days had no capture before kickoff and cannot be graded: ${[...missed.values()].slice(0, 3).join("; ")}. Run early kickoffs by hand.`)
+    : ok("KICKOFF-COVER", `every game in the last ${DAYS} days was captured before kickoff`);
+}
+
 // ---- 18. no published pick contradicts the model -------------------------
 // The pick is the side Leo's own probability favours. A pick below 50% means
 // the market crept back into the selection, which is exactly what produced

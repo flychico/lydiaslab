@@ -184,6 +184,69 @@ function main() {
   }
   games.sort((a, b) => b.date.localeCompare(a.date) || a.matchup.localeCompare(b.matchup));
 
+  // ---- spread and total (DEC-20261031-05) ----------------------------------
+  // Shown as information, never as picks. Every frozen read is kept so the
+  // average miss covers every game; a side exists only where Leo took one
+  // (spread outside the 1.0 floor; totals only before sides were switched
+  // off). Line miss is |line - actual|, the same convention beat_market uses.
+  const lines = { spread: [], total: [] };
+  for (const r of gameRows) {
+    if (!lines[r.market] || r.status !== "frozen") continue;
+    const leo = n(r.leo_value), mkt = n(r.market_value), act = n(r.actual_value);
+    if (leo == null || act == null) continue;
+    lines[r.market].push({
+      date: r.date, week: r.week, matchup: r.matchup, away: r.away, home: r.home,
+      market: r.market, model_version: r.model_version || "",
+      side: r.leo_side || "", leo, line: mkt, actual: act,
+      result: r.leo_side ? (r.result || "") : "",
+      err: n(r.abs_error), lerr: mkt == null ? null : r2(Math.abs(mkt - act)),
+      beat: r.beat_market || "",
+      score: scores[`${r.week}|${r.matchup}`] || null
+    });
+  }
+  for (const m of Object.keys(lines)) {
+    const seen = new Map();
+    for (const g of lines[m]) {
+      const k = `${g.week}|${g.matchup}`, prev = seen.get(k);
+      if (prev && prev.date < g.date) g.date = prev.date;
+      seen.set(k, g);
+    }
+    lines[m] = [...seen.values()].sort((a, b) => b.date.localeCompare(a.date) || a.matchup.localeCompare(b.matchup));
+  }
+  const lineSummary = rows => { const s = blank(); rows.forEach(r => tally(s, r)); return finish(s); };
+
+  // ---- anytime touchdown (DEC-20261031-05) ---------------------------------
+  // No posted line, so no side and no W/L. Graded as a probability: Brier
+  // against a flat league rate, and calibration by bucket.
+  const tdSeen = new Map();
+  for (const r of propRows) {
+    if (r.market !== "ANYTIME_TD" || r.excluded === "Y") continue;
+    let p = n(r.projection), a = n(r.actual);
+    if (p == null || a == null) continue;
+    if (p > 1) p /= 100;
+    tdSeen.set(`${r.week}|${r.matchup}|${r.player}`, { p, y: a >= 1 ? 1 : 0 });
+  }
+  const td = [...tdSeen.values()];
+  const tdSummary = (() => {
+    if (!td.length) return null;
+    const mean = a => a.reduce((s, x) => s + x, 0) / a.length;
+    const rate = mean(td.map(t => t.y));
+    const BUCKETS = [[0, .15], [.15, .30], [.30, .45], [.45, 1.01]];
+    return {
+      n: td.length,
+      predicted_pct: r2(100 * mean(td.map(t => t.p))),
+      scored_pct: r2(100 * rate),
+      brier: Math.round(mean(td.map(t => (t.p - t.y) ** 2)) * 10000) / 10000,
+      flat_rate_brier: Math.round(rate * (1 - rate) * 10000) / 10000,
+      buckets: BUCKETS.map(([lo, hi]) => {
+        const s = td.filter(t => t.p >= lo && t.p < hi);
+        return { from_pct: lo * 100, to_pct: Math.min(hi, 1) * 100, n: s.length,
+                 predicted_pct: s.length ? r2(100 * mean(s.map(t => t.p))) : null,
+                 scored_pct: s.length ? r2(100 * mean(s.map(t => t.y))) : null };
+      })
+    };
+  })();
+
   // ---- running records ---------------------------------------------------
   const byGroup = {};
   for (const g of ["QB", "RB", "WR"]) byGroup[g] = blank();
@@ -213,13 +276,18 @@ function main() {
       props: { all: finish(all), QB: finish(byGroup.QB), RB: finish(byGroup.RB), WR: finish(byGroup.WR) },
       moneyline: finish(ml),
       moneyline_v2: finish(mlV2),   // Leo Picks, leo-nflml-v2, above 60%
-      moneyline_v1: finish(mlV1)    // Week 2, leo-nflml-v1, every game
+      moneyline_v1: finish(mlV1),   // Week 2, leo-nflml-v1, every game
+      spread: lineSummary(lines.spread),  // information only, v1 margin model
+      total: lineSummary(lines.total),    // sides off since 2026-10-17; W-L is history
+      anytime_td: tdSummary               // probability, no line: Brier and calibration
     },
-    counts: { prop_calls: props.length, games: games.length, excluded, no_line: noLine, no_call: noLean },
+    counts: { prop_calls: props.length, games: games.length, excluded, no_line: noLine, no_call: noLean,
+              spread_games: lines.spread.length, total_games: lines.total.length, td_players: td.length },
     // Final scores by "<week>|<matchup>", so a game whose only calls are props
     // still shows how it finished.
     scores,
-    props, games
+    props, games,
+    spreads: lines.spread, totals: lines.total
   };
 
   fs.writeFileSync(OUT, JSON.stringify(payload, null, 2));
@@ -236,6 +304,9 @@ function main() {
   line("WR", payload.summary.props.WR);
   line("ALL PROPS", payload.summary.props.all);
   line("MONEYLINE", payload.summary.moneyline);
+  line("SPREAD", payload.summary.spread);
+  line("TOTAL", payload.summary.total);
+  if (tdSummary) console.log(`  ANYTIME TD   n=${tdSummary.n}  Leo ${tdSummary.predicted_pct}%  scored ${tdSummary.scored_pct}%  Brier ${tdSummary.brier} (flat ${tdSummary.flat_rate_brier})`);
   console.log(`  ${"-".repeat(52)}`);
   console.log(`  ${props.length} prop calls, ${games.length} games`);
   console.log(`  not a call: ${noLean} (no lean or no line comparison) · ${excluded} excluded · ${noLine} missing a number`);

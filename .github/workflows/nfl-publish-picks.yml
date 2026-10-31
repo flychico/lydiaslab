@@ -9,20 +9,21 @@ name: NFL publish picks
 # missing slate must never overwrite a good published card.
 #
 # WEEKLY RHYTHM (15 min after each gather wave)
-#   Daily     9:15am ET
-#   Thursday  1:15pm ET
-#   Sunday    7:15am, 10:15am / 2:15pm / 6:15pm ET
-#   Monday    1:15pm ET
+#   (EDT / EST; from 2026-11-01 each fires one hour earlier in ET, DEC-20261031-03)
+#   Daily     9:15am / 8:15am
+#   Thursday  1:15pm / 12:15pm
+#   Sunday    7:15am / 6:15am, 10:15am / 9:15am, 2:15pm / 1:15pm, 6:15pm / 5:15pm
+#   Monday    1:15pm / 12:15pm
 
 on:
   schedule:
-    - cron: "15 13 * * *"   # 9:15am ET  daily
-    - cron: "15 17 * * 4"   # 1:15pm ET  Thursday
-    - cron: "15 11 * * 0"   # 7:15am ET  Sunday
-    - cron: "15 14 * * 0"   # 10:15am ET Sunday
-    - cron: "15 18 * * 0"   # 2:15pm ET  Sunday
-    - cron: "15 22 * * 0"   # 6:15pm ET  Sunday
-    - cron: "15 17 * * 1"   # 1:15pm ET  Monday
+    - cron: "15 13 * * *"   # 9:15am EDT / 8:15am EST  daily
+    - cron: "15 17 * * 4"   # 1:15pm EDT / 12:15pm EST  Thursday
+    - cron: "15 11 * * 0"   # 7:15am EDT / 6:15am EST  Sunday
+    - cron: "15 14 * * 0"   # 10:15am EDT / 9:15am EST  Sunday
+    - cron: "15 18 * * 0"   # 2:15pm EDT / 1:15pm EST  Sunday
+    - cron: "15 22 * * 0"   # 6:15pm EDT / 5:15pm EST  Sunday
+    - cron: "15 17 * * 1"   # 1:15pm EDT / 12:15pm EST  Monday
   workflow_dispatch:
     inputs:
       date:

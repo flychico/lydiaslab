@@ -125,7 +125,7 @@ table.calls tbody tr:hover{background:var(--bg-elev);}
   <section class="score-hero">
     <p class="eyebrow">Every call, graded against what actually happened.</p>
     <h1>Leo&rsquo;s record</h1>
-    <p class="subtitle">Each row is one game: the line, the side Leo took, what actually happened, and how far off his number was. Nothing here is a wager &mdash; the pick gate is closed until the record says otherwise.</p>
+    <p class="subtitle">Each row is one game: the line, the side Leo took, what actually happened, and how far off his number was. Nothing here is a wager. The pick gate is closed until the record says otherwise.</p>
     <div class="score-hero-chips"><span class="hero-chip">&#127944; Head to head</span><span class="hero-chip">&#128202; Running record</span><span class="hero-chip">&#128274; Frozen before kickoff</span></div>
   </section>
 
@@ -138,7 +138,9 @@ table.calls tbody tr:hover{background:var(--bg-elev);}
       <li><b>Winner picks were retired on October 17.</b> Leo now shows each team&rsquo;s win chance as information only. Picks graded before then (a team given more than a 60% chance) stay on the record as history.</li>
       <li><b>Prop calls:</b> Leo&rsquo;s side of the posted line for QB passing, RB rushing and WR receiving yards. Inside 5% of the line there is no call.</li>
       <li>Losses stay on the record. Players ruled out are marked excluded, never deleted.</li>
-      <li>Touchdown chances and projected totals are shown on each game page and graded there; they carry no over or under call.</li>
+      <li><b>Spread:</b> the side Leo&rsquo;s projected margin favours against the posted spread. Inside 1 point there is no call. Shown as information, never a pick.</li>
+      <li><b>Totals:</b> Leo&rsquo;s projected total and how far off it landed. Over and under calls were switched off on October 17; the ones graded before then stay on the record as history.</li>
+      <li><b>Touchdown chances</b> have no posted line, so there is no side. They are graded as chances: of the players Leo gave about a 25% chance, roughly 1 in 4 should score.</li>
     </ul>
   </details>
 
@@ -148,6 +150,8 @@ table.calls tbody tr:hover{background:var(--bg-elev);}
       <button class="control-btn" type="button" data-grp="QB">QB</button>
       <button class="control-btn" type="button" data-grp="RB">RB</button>
       <button class="control-btn" type="button" data-grp="WR">WR</button>
+      <button class="control-btn" type="button" data-grp="SP">Spread</button>
+      <button class="control-btn" type="button" data-grp="TOT">Totals</button>
       <button class="control-btn" type="button" data-grp="ML">Winners (history)</button>
     </div>
     <div class="view-controls filters" role="group" aria-label="Filter by week" id="weekFilter"></div>
@@ -170,7 +174,7 @@ table.calls tbody tr:hover{background:var(--bg-elev);}
     </form>
   </div>
 
-  <p class="data-note">Lines are the last posted number before kickoff. Every projection was frozen before kickoff and graded against the open nflverse dataset. Touchdown markets are tracked separately on each game page.</p>
+  <p class="data-note">Lines are the last posted number before kickoff. Every projection was frozen before kickoff and graded against the open nflverse dataset. Touchdown chances are graded as a season total in the record above.</p>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script>
@@ -248,12 +252,27 @@ function tallyFor(rows){
    number was in the markets where "right" is a matter of degree. */
 function recTile(label,s,note){
   if(!s||!s.decided) return '<article class="rec"><span class="lab">'+esc(label)+'</span>'+
-    '<span class="big">&mdash;</span><span class="beat">no graded calls yet</span></article>';
+    '<span class="big">None yet</span><span class="beat">no graded calls yet</span></article>';
   return '<article class="rec"><span class="lab">'+esc(label)+'</span>'+
-    '<span class="big">'+s.w+'&ndash;'+s.l+(s.p?'&ndash;'+s.p:'')+'</span>'+
+    '<span class="big">'+s.w+'-'+s.l+(s.p?'-'+s.p:'')+'</span>'+
     '<span class="beat">'+(s.win_pct!=null?s.win_pct.toFixed(0)+'% right':'')+
       (s.mae!=null?' &middot; off by <b>'+s.mae.toFixed(1)+'</b> per projection':'')+
       (note?' &middot; '+note:'')+'</span></article>';
+}
+
+const spreads=()=>(data.spreads||[]).filter(inWeek);
+const totals=()=>(data.totals||[]).filter(inWeek);
+
+/* Touchdown chances have no line, so no right or wrong: the tile compares the
+   average chance Leo gave with how often those players scored. Season only,
+   because the feed carries the summary, not the rows. */
+function tdTile(){
+  const t=data.summary&&data.summary.anytime_td;
+  if(!t||!t.n) return "";
+  return '<article class="rec"><span class="lab">Touchdown chances, season</span>'+
+    '<span class="big">'+Math.round(t.predicted_pct)+'%</span>'+
+    '<span class="beat">Leo&rsquo;s average chance &middot; <b>'+Math.round(t.scored_pct)+'%</b> scored &middot; '+
+    t.n.toLocaleString("en-US")+' players</span></article>';
 }
 
 function renderRecords(){
@@ -279,6 +298,9 @@ function renderRecords(){
     recTile("Quarterbacks",p.QB)+
     recTile("Running backs",p.RB)+
     recTile("Receivers",p.WR)+
+    (data.spreads?recTile("Spread",tallyFor(spreads().filter(x=>x.side)),"information, not a pick"):"")+
+    (data.totals?recTile("Totals, calls off Oct 17",tallyFor(totals().filter(x=>x.side)),"history"):"")+
+    tdTile()+
     recTile("Winner picks, retired Oct 17",tallyFor(v2),"history, above 60%")+
     (v1.length?recTile("Week 2 winners, retired model",tallyFor(v1),"history, every game"):"");
 }
@@ -310,6 +332,31 @@ function propCall(p){
     (p.result?' &middot; <span class="'+cls(p.result)+'">'+(p.result==="P"?"PUSH":p.result==="W"?"RIGHT":"WRONG")+'</span>':'') };
 }
 
+/* Spread and total values are stored from the home side (positive means the
+   home team wins by that much), the same convention as spread_line. */
+const fmt1=v=>String(Math.round(v*10)/10);
+const byMargin=(g,m)=>m>0?esc(g.home)+' by '+fmt1(m):m<0?esc(g.away)+' by '+fmt1(-m):'level';
+function spreadLine(g){
+  if(g.line==null) return 'no line';
+  if(g.side){ const h=g.side===g.home?-g.line:g.line; return esc(g.side)+' '+(h>0?'+'+fmt1(h):h<0?fmt1(h):'even'); }
+  return g.line>0?esc(g.home)+' -'+fmt1(g.line):g.line<0?esc(g.away)+' -'+fmt1(-g.line):'even';
+}
+function verdictTag(r){return r?' &middot; <span class="'+cls(r)+'">'+(r==="P"?"PUSH":r==="W"?"RIGHT":"WRONG")+'</span>':'';}
+function spreadCall(g){
+  const miss=typeof g.err==="number"?Math.round(Math.abs(g.err)):null;
+  return { result:g.result, group:"SP", html:
+    '<b>Spread</b> '+spreadLine(g)+' <span class="dim">&middot; Leo '+byMargin(g,g.leo)+'</span> &middot; actual <b>'+byMargin(g,g.actual)+'</b>'+
+    (miss!=null?' <span class="dim">(off by '+miss+')</span>':'')+
+    (g.result?verdictTag(g.result):' <span class="dim">&middot; no call</span>') };
+}
+function totalCall(g){
+  const miss=typeof g.err==="number"?Math.round(Math.abs(g.err)):null;
+  const side=g.side?'<span class="side-tag">'+esc(String(g.side).toUpperCase())+'</span> ':'';
+  return { result:g.result, group:"TOT", html:
+    '<b>Total</b> '+side+(g.line!=null?fmt1(g.line):'no line')+' <span class="dim">&middot; Leo '+fmt1(g.leo)+'</span> &middot; actual <b>'+fmt1(g.actual)+'</b>'+
+    (miss!=null?' <span class="dim">(off by '+miss+')</span>':'')+verdictTag(g.result) };
+}
+
 function mlCall(g){
   return { result:g.result, group:"ML", html:
     '<b>Winner</b> '+esc(g.pick)+' <span class="dim">('+Math.round(g.leo_prob*100)+'%)</span> &middot; '+
@@ -335,6 +382,8 @@ function groupGames(){
   data.games.filter(g=>inWeek(g)).forEach(g=>{ const e=slot(g); if(e.score==null&&g.score) e.score=g.score;
     if(inGrp("ML")&&keep(g)) e.calls.push(mlCall(g)); });
   data.props.filter(p=>inWeek(p)).forEach(p=>{ const e=slot(p); if(inGrp(p.group)&&keep(p)) e.calls.push(propCall(p)); });
+  spreads().forEach(g=>{ if(!inGrp("SP")||!keep(g)) return; const e=slot(g); if(e.score==null&&g.score) e.score=g.score; e.calls.push(spreadCall(g)); });
+  totals().forEach(g=>{ if(!inGrp("TOT")||!keep(g)) return; const e=slot(g); if(e.score==null&&g.score) e.score=g.score; e.calls.push(totalCall(g)); });
   return [...map.values()].filter(e=>e.calls.length)
     .sort((a,b)=>b.date.localeCompare(a.date)||a.matchup.localeCompare(b.matchup));
 }
@@ -343,8 +392,8 @@ function gameRow(e){
   // Only the winner call has a right/wrong of its own; a per-game "5-4" was
   // counting yardage projections against a line this page no longer shows.
   const w=e.calls.filter(c=>c.result==="W").length, l=e.calls.filter(c=>c.result==="L").length;
-  const verdict='<span class="small dim">calls '+w+'&ndash;'+l+'</span>';
-  const order={ML:0,QB:1,RB:2,WR:3};
+  const verdict='<span class="small dim">calls '+w+'-'+l+'</span>';
+  const order={ML:0,SP:1,TOT:2,QB:3,RB:4,WR:5};
   const calls=e.calls.slice().sort((a,b)=>(order[a.group]??9)-(order[b.group]??9));
   return '<tr>'+
     '<td class="gm-cell">'+logo(e.away)+logo(e.home)+
@@ -352,7 +401,7 @@ function gameRow(e){
       '<span class="small dim">Wk '+esc(e.week)+' &middot; '+esc(prettyDate(e.date))+'</span></span></td>'+
     '<td>'+calls.map(callLine).join("")+'</td>'+
     '<td class="res-cell"><b>Final</b>'+
-      (e.score?'<span class="small">'+e.score.away+'&ndash;'+e.score.home+'</span>':'')+
+      (e.score?'<span class="small">'+e.score.away+'-'+e.score.home+'</span>':'')+
       verdict+'</td>'+
   '</tr>';
 }
@@ -364,13 +413,13 @@ function render(){
   const wks=(data.weeks||[]).slice().sort((a,b)=>Number(a)-Number(b));
   const coverage=wks.length
     ? '<p class="data-note">Graded weeks: '+wks.map(w=>"Week "+esc(w)).join(", ")+
-      '. Earlier weeks are not shown because Leo made no pre-kickoff projections for them &mdash; '+
-      'grading them now would mean scoring the model on games it has already seen.</p>'
+      '. Earlier weeks are not shown because Leo made no pre-kickoff projections for them. '+
+      'Grading them now would mean scoring the model on games it has already seen.</p>'
     : "";
   const n=data.counts.prop_calls+data.counts.games;
   const warn=n<400
     ? '<div class="honest"><b>'+n+' graded calls so far, through '+esc(data.through||"")+'.</b> '+
-      'That is far too few to mean anything &mdash; a 60% stretch over this many decisions happens by chance often enough '+
+      'That is far too few to mean anything. A 60% stretch over this many decisions happens by chance often enough '+
       'to be unremarkable. Watch two things: how often the side was right, and <b>how far off</b> the projection landed. '+
       'No pick is published until those hold up across a real sample.</div>'
     : "";

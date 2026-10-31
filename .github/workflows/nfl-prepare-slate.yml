@@ -4,40 +4,43 @@ name: NFL prepare slate (gather data)
 # plays Thu / Sun / Mon rather than daily, so this gathers every morning
 # (lines move all week) and adds waves on the three game days.
 #
-# CRON IS UTC AND DOES NOT FOLLOW DST. The times below are correct for
-# Eastern DAYLIGHT time (UTC-4), which covers the regular season through
-# early November. After the November change to Eastern STANDARD time (UTC-5)
-# every one of these fires one hour EARLIER in ET. That is a deliberate,
-# documented tradeoff, not a mistake -- prepare-slate.yml was once rebuilt
-# precisely because its comments disagreed with its crons, so this file
-# states the drift instead of hiding it.
+# CRON IS UTC AND DOES NOT FOLLOW DST. Each line below gives both Eastern
+# times: EDT (UTC-4, through the first Sunday of November and again from the
+# second Sunday of March) and EST (UTC-5, in between). From 2026-11-01 every
+# wave fires one hour EARLIER in ET. Kept on purpose (DEC-20261031-03): the
+# Sunday last capture moves from 12:30pm to 11:30am EST, which leaves more
+# room before the 1pm kicks for runs that land late. The cost: the 4:05/4:25
+# games' last capture moves to 1:00pm EST, about 3 hours before kickoff.
+# prepare-slate.yml was once rebuilt because its comments disagreed with its
+# crons, so this file states the drift instead of hiding it.
 #
-# WEEKLY RHYTHM
+# WEEKLY RHYTHM (EDT / EST)
 #   NFL prepare slate  ->  NFL publish picks (fires 15 min after each wave)
 #
-#   Daily     9:00am ET   line movement through the week
-#   Thursday  1:00pm ET   before TNF
-#   Sunday    7:00am, 10:00am ET   before the 1:00pm ET block
-#   Sunday    2:00pm ET   before the 4:05/4:25 block
-#   Sunday    6:00pm ET   before SNF
-#   Monday    1:00pm ET   before MNF
+#   Daily     9:00am / 8:00am     line movement through the week
+#   Thursday  1:00pm / 12:00pm    before TNF
+#   Sunday    7:00am / 6:00am, 10:00am / 9:00am   before the 1:00pm block
+#   Sunday    12:30pm / 11:30am   last capture before the 1:00pm block
+#   Sunday    2:00pm / 1:00pm     before the 4:05/4:25 block
+#   Sunday    6:00pm / 5:00pm     before SNF
+#   Monday    1:00pm / 12:00pm    before MNF
 
 on:
   schedule:
-    - cron: "0 13 * * *"    # 9:00am ET  daily
-    - cron: "0 17 * * 4"    # 1:00pm ET  Thursday -- 7h before an 8:15pm kickoff
-    - cron: "0 11 * * 0"    # 7:00am ET  Sunday -- first wave, 6h before the 1pm games
-    - cron: "0 14 * * 0"    # 10:00am ET Sunday
+    - cron: "0 13 * * *"    # 9:00am EDT / 8:00am EST  daily
+    - cron: "0 17 * * 4"    # 1:00pm EDT / 12:00pm EST  Thursday -- 7h (EDT) before an 8:15pm kickoff
+    - cron: "0 11 * * 0"    # 7:00am EDT / 6:00am EST  Sunday -- first wave
+    - cron: "0 14 * * 0"    # 10:00am EDT / 9:00am EST  Sunday
     # PRE-KICKOFF CAPTURE. Added 2026-09-20 after the first live run showed
     # the 9:39am ET fetch was too early: books had not posted full prop menus
     # yet (Ladd McConkey, a front-line receiver, had no receiving line at all
     # -- the book listed only 9 players for that game). A line captured 3+
     # hours before kickoff is not a closing line, and CLV measured against it
     # is measuring the wrong number.
-    - cron: "30 16 * * 0"   # 12:30pm ET Sunday — last capture before 1pm kicks
-    - cron: "0 18 * * 0"    # 2:00pm ET  Sunday
-    - cron: "0 22 * * 0"    # 6:00pm ET  Sunday
-    - cron: "0 17 * * 1"    # 1:00pm ET  Monday -- 7h before an 8:15pm kickoff
+    - cron: "30 16 * * 0"   # 12:30pm EDT / 11:30am EST  Sunday -- last capture before 1pm kicks
+    - cron: "0 18 * * 0"    # 2:00pm EDT / 1:00pm EST  Sunday
+    - cron: "0 22 * * 0"    # 6:00pm EDT / 5:00pm EST  Sunday
+    - cron: "0 17 * * 1"    # 1:00pm EDT / 12:00pm EST  Monday -- 7h (EDT) before an 8:15pm kickoff
   workflow_dispatch:
     inputs:
       date:
