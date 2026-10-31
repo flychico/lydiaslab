@@ -12,6 +12,7 @@
 const fs=require("fs"), path=require("path");
 const ROOT=path.join(__dirname,"..");
 const TEAMS=require("./lib/nfl-teams");
+const SEO=require("./lib/game-page-seo");
 const niceDate=d=>new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"});
 
 /* Leo's two most likely scorers in the game, from the frozen TD props.
@@ -588,6 +589,7 @@ table.bx tr:last-child td{border-bottom:0}
 .final-score{display:flex;align-items:center;gap:8px;font-size:1.25rem;font-weight:700;flex-wrap:wrap;margin:4px 0 8px}
 .final-score img{width:34px;height:34px;object-fit:contain}
 </style>
+${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternToIso(m.date,m.kickoff),homeName:TEAMS.full(m.home),awayName:TEAMS.full(m.away),venue:m.stadium,completed:!!(m.final_report&&m.final_report.home_score!=null)})}
 </head>
 <body>
 <nav id="nav"></nav>
@@ -654,6 +656,7 @@ table.bx tr:last-child td{border-bottom:0}
   ${finalReport(m)}
 
   <p class="data-note">Player and team statistics from the open nflverse dataset. Roles assigned by actual usage &mdash; most attempts, carries and targets &mdash; not depth chart.</p>
+${SEO.relatedLinks({sport:"NFL",root:ROOT,slug:m.slug||String(m.url).split("/").filter(Boolean).pop(),away:m.away,home:m.home,awayName:TEAMS.full(m.away),homeName:TEAMS.full(m.home),hubs:[["/nfl/week/","This week\u2019s NFL card"],["/nfl/results/","Leo\u2019s NFL record"],["/nfl/tools/injury-tracker/","Injury tracker"],["/membership/#free","Free NFL card by email"]]})}
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script>renderNav("/nfl/scoreboard/"); renderFooter();</script>

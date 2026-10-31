@@ -156,6 +156,7 @@ ul.inj,ul.last5{margin:6px 0 0;padding-left:18px;font-size:.86rem;line-height:1.
 .nfl-signup form{display:flex;gap:8px}.nfl-signup input[type=email]{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--border);border-radius:10px}
 @media(max-width:700px){.two,.nfl-signup{grid-template-columns:1fr}.boxes{grid-template-columns:1fr 1fr}.box:last-child{grid-column:1/-1}}
 </style>
+${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,title,description:desc,startIso:g.tip_utc?new Date(g.tip_utc).toISOString().replace(".000Z","Z"):null,homeName:g.home_name,awayName:g.away_name,venue:g.venue,completed:!!(g.completed||res)})}
 </head>
 <body>
 <nav id="nav"></nav>
@@ -199,6 +200,7 @@ ul.inj,ul.last5{margin:6px 0 0;padding-left:18px;font-size:.86rem;line-height:1.
     </form>
   </div>
   <p class="dim" style="margin-top:18px">Leo&rsquo;s win chance and spread come from team results, rest and the injury report. The DraftKings line is shown for comparison and is never an input. Every read is graded on the <a href="/nba/results/">results page</a>. Analysis only, not betting advice. 21+.</p>
+${require("./lib/game-page-seo").relatedLinks({sport:"NBA",root:ROOT,slug:slug(g),away:g.away,home:g.home,awayName:g.away_name,homeName:g.home_name,hubs:[["/nba/scoreboard/","Tonight\u2019s NBA card"],["/nba/results/","Leo\u2019s NBA record"],["/nfl/week/","This week\u2019s NFL card"]]})}
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/nba/scoreboard/"); renderFooter();</script>
 </body>
