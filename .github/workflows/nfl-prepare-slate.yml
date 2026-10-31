@@ -149,6 +149,19 @@ jobs:
           node scripts/generate-nfl-matchups.js "${{ steps.slate_date.outputs.date }}"
           node scripts/render-nfl-matchup-pages.js "${{ steps.slate_date.outputs.date }}"
 
+      # The owner's PDF brief (DEC-20261031-09): Leo's read of the slate with
+      # the lines this capture just attached, emailed to the AUDIT_EMAIL secret.
+      # Once per date, only from the capture within 3 hours of the first
+      # kickoff (or any gather on a night-only day), never after kickoff.
+      # Headless Chrome ships on ubuntu-latest. Never fails the gather.
+      - name: Email the owner brief (PDF)
+        if: steps.slate.outputs.games != '0'
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          AUDIT_EMAIL: ${{ secrets.AUDIT_EMAIL }}
+        run: node scripts/send-nfl-owner-brief.js "${{ steps.slate_date.outputs.date }}" || true
+
       - name: Commit and push if changed
         if: steps.slate.outputs.games != '0'
         run: |
