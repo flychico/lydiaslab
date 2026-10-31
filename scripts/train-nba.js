@@ -96,7 +96,7 @@ function evaluate(rows, X, label) {
   for (const test of [2026, 2027]) {
     const fit = ols(rows.filter(r => r.season >= TRAIN_FROM && r.season < test), X);
     for (const r of rows.filter(r => r.season === test)) {
-      const m = fit.pred(r); tested.push({ ...r, pred: m, p_home: M.normCdf(m / fit.resid_sd) });
+      const m = fit.pred(r); tested.push({ ...r, pred: m, p_home: M.normCdf(m / fit.resid_sd), sd: fit.resid_sd });
     }
   }
   const g = tested.filter(r => r.mkt_margin != null && r.home_ml && r.away_ml);
@@ -121,6 +121,29 @@ function evaluate(rows, X, label) {
     }
     out.spread.push({ edge_pts: t, won: w, lost: l, push: p, pct: +(w / Math.max(1, w + l)).toFixed(3), roi_at_110: +((w * 100 / 110 - l) / Math.max(1, w + l + p)).toFixed(3) });
   }
+  // NBA-H07: lean thresholds as cumulative (gap >= t) and as bands, with
+  // Leo's stated cover chance (normal CDF of gap / resid_sd of that fold)
+  // against the actual cover rate, per test season, plus a 95% interval.
+  const bucket = (lo, hi) => {
+    const s = { won: 0, lost: 0, push: 0, stated: 0, by_season: {}, big_injury: 0 };
+    for (const r of g) {
+      const d = r.pred - r.mkt_margin, a = Math.abs(d);
+      if (d === 0 || a < lo || (hi != null && a >= hi)) continue;
+      const res = Math.sign(d) * (r.margin - r.mkt_margin);
+      const k = res > 0 ? "won" : res < 0 ? "lost" : "push"; s[k]++;
+      s.stated += M.normCdf(a / r.sd);
+      const bs = s.by_season[r.season] || (s.by_season[r.season] = { won: 0, lost: 0, push: 0 }); bs[k]++;
+      if (Math.abs(r.lost_d) >= 5 || Math.abs(r.lost_prev_d) >= 5) s.big_injury++;
+    }
+    const n = s.won + s.lost + s.push, wl = s.won + s.lost, p = s.won / Math.max(1, wl);
+    const se = Math.sqrt(p * (1 - p) / Math.max(1, wl));
+    return { gap: hi == null ? `${lo}+` : `${lo}-${hi}`, won: s.won, lost: s.lost, push: s.push,
+      stated_cover: n ? +(s.stated / n).toFixed(3) : null, actual_cover: wl ? +p.toFixed(3) : null,
+      ci95: wl ? [+(p - 1.96 * se).toFixed(3), +(p + 1.96 * se).toFixed(3)] : null,
+      roi_at_110: +((s.won * 100 / 110 - s.lost) / Math.max(1, n)).toFixed(3),
+      by_season: s.by_season, injury_heavy_share: n ? +(s.big_injury / n).toFixed(2) : null };
+  };
+  out.lean_buckets = [[4], [6], [7], [8], [10], [4, 6], [6, 8], [8, 10]].map(([lo, hi]) => bucket(lo, hi));
   for (const e of [0.05, 0.08, 0.10]) {
     const res = [];
     for (const r of g) {
@@ -146,6 +169,12 @@ function evaluate(rows, X, label) {
   for (const r of results) {
     const s4 = r.spread.find(s => s.edge_pts === 4), m10 = r.moneyline.find(m => m.edge === 0.10);
     console.log(`${r.label.padEnd(52)} miss ${r.miss_leo}/${r.miss_line}  brier ${r.brier_leo}/${r.brier_market}  4+pt ${s4.won}-${s4.lost} (${(s4.pct * 100).toFixed(1)}%)  ML10 ${m10.bets} roi ${m10.roi}`);
+  }
+  if (process.argv.includes("--leans")) {
+    for (const r of results) {
+      console.log(`\n${r.label} (${r.games} games)`);
+      for (const b of r.lean_buckets) console.log(`  gap ${b.gap.padEnd(5)} ${b.won}-${b.lost}-${b.push}  stated ${b.stated_cover}  actual ${b.actual_cover}  ci95 ${JSON.stringify(b.ci95)}  roi ${b.roi_at_110}  injury-heavy ${b.injury_heavy_share}  ${JSON.stringify(b.by_season)}`);
+    }
   }
   if (!process.argv.includes("--write")) return;
   // Production fit: every completed season from TRAIN_FROM.
