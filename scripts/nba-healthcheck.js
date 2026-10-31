@@ -11,7 +11,31 @@ const DIR = path.join(__dirname, "..", "data", "nba");
 const DATE = process.argv[2] || new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
 const fails = [], warns = [];
 const file = path.join(DIR, `picks-${DATE}.json`);
-if (!fs.existsSync(file)) { console.log(`No NBA card for ${DATE}. Nothing to check.`); process.exit(0); }
+// NBA-H02: no card is only fine when there were no games. Ask ESPN's
+// scoreboard; NBA_FIXTURES=<dir> serves scoreboard_<yyyymmdd>.json in tests.
+async function scheduledGames(date) {
+  const ymd = date.replace(/-/g, "");
+  let j;
+  if (process.env.NBA_FIXTURES) {
+    const f = path.join(process.env.NBA_FIXTURES, `scoreboard_${ymd}.json`);
+    if (!fs.existsSync(f)) throw new Error("no fixture " + f);
+    j = JSON.parse(fs.readFileSync(f, "utf8"));
+  } else {
+    const r = await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=${ymd}`, { headers: { "user-agent": "leo-nba/1.0" } });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    j = await r.json();
+  }
+  return (j.events || []).filter(e => !e.season || e.season.type === 2 || e.season.slug === "regular-season").length;
+}
+
+(async () => {
+if (!fs.existsSync(file)) {
+  let n;
+  try { n = await scheduledGames(DATE); }
+  catch (e) { console.log(`::warning::NBA no card for ${DATE}, and the scoreboard could not be read (${e.message}). Unknown whether games were scheduled.`); process.exit(0); }
+  if (n > 0) { console.log(`::error::NBA ${n} regular-season games on ${DATE} but no card (data/nba/picks-${DATE}.json missing).`); process.exit(1); }
+  console.log(`No NBA games on ${DATE}. Nothing to check.`); process.exit(0);
+}
 const d = JSON.parse(fs.readFileSync(file, "utf8"));
 const model = JSON.parse(fs.readFileSync(path.join(DIR, "model.json"), "utf8"));
 const teams = new Set(Object.keys(model.prior_ratings));
@@ -41,3 +65,4 @@ for (const w of warns) console.log(`::warning::NBA ${w}`);
 for (const f of fails) console.log(`::error::NBA ${f}`);
 console.log(`NBA health ${DATE}: ${n} games, ${leans} leans, ${fails.length} failures, ${warns.length} warnings.`);
 process.exit(fails.length ? 1 : 0);
+})().catch(e => { console.log(`::error::NBA healthcheck crashed: ${e.message}`); process.exit(1); });
