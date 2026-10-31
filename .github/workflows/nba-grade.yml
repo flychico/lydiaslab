@@ -3,8 +3,10 @@ name: NBA grade results
 # Grades yesterday's frozen NBA reads against ESPN finals, then re-grades any
 # frozen game from the last 14 days that is still missing (catch-up).
 # Writes data/nba/results-ledger.csv and data/nba/results.json.
-#   2:30am ET  after the late West Coast games
-#   8:30am ET  backstop, and before the morning audit
+# Crons are UTC with no daylight saving. Times below are Eastern Standard
+# Time (from Nov 1, 2026); add one hour while daylight saving is on.
+#   07:00 UTC = 2:00am ET  after the late West Coast games
+#   12:30 UTC = 7:30am ET  backstop
 on:
   schedule:
     - cron: "0 7 * * *"
