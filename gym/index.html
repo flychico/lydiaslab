@@ -1124,7 +1124,7 @@ document.getElementById("tabbar").addEventListener("click", e => {
 });
 function render(){
   applyTheme();
-  Object.assign(COACH, { steps: 7500, sleep: 420, fv: 5 }, S.standards || {});
+  Object.assign(COACH, { steps: 7500, sleep: 420, fv: 5, sessionMax: 75 }, S.standards || {});
   if (!S.profile) { document.body.classList.remove("dashmode", "workout"); return renderOnboarding(); }
   const active = !!S.active;
   const showingWorkout = active && tab === "today";
@@ -3041,7 +3041,7 @@ function gradeDay(date){
     const fv = dayFV(date);
     add("fv", "Fruit & veg", fv >= COACH.fv - 0.5, `${fv.toFixed(1)} / ${COACH.fv} servings`);
   }
-  if ((S.supps || []).length && (date >= (S.suppsSince || "") )) { const tk = suppsTaken(date), n = S.supps.filter(x => tk.has(x.id)).length; add("supps", "Supplements", n === S.supps.length, `${n} / ${S.supps.length} taken`); }
+  const ds = dailySupps(); if (ds.length && (date >= (S.suppsSince || ""))) { const tk = suppsTaken(date), n = ds.filter(x => tk.has(x.id)).length; add("supps", "Supplements", n === ds.length, `${n} / ${ds.length} taken`); }
   const h = (S.hk || {})[date] || {};
   // The Shortcut stores the night that FOLLOWS a day on that day's date (read when you wake up)
   if (h.sleep != null) add("sleep", "Sleep that night", h.sleep >= COACH.sleep, fmtSleep(h.sleep));
@@ -3070,7 +3070,7 @@ function todaysMission(){
   if (!trainedToday && need > 0) m.push(need > daysLeft ? `<b>Train today: not optional.</b> ${tgt} this week is already out of reach (${done} done, ${daysLeft} day${daysLeft === 1 ? "" : "s"} left). Train every remaining day to salvage it.` : need === daysLeft ? `<b>Train today: not optional.</b> ${need} session${need === 1 ? "" : "s"} left and exactly ${daysLeft} day${daysLeft === 1 ? "" : "s"} to do them.` : `Train today: ${need} of ${tgt} sessions still to do this week.`);
   if (n.p < t.protein) m.push(`Hit <b>${Math.round(t.protein - n.p)} g more protein</b>${n.n ? "" : ". Log breakfast now"}.`);
   const fv = dayFV(today()); if (fv < COACH.fv) m.push(`Eat <b>${Math.ceil(COACH.fv - fv)} more fruit/veg servings</b> (a banana, a cup of berries, a handful of greens).`);
-  const sl = (S.supps || []).filter(x => !suppsTaken(today()).has(x.id)); if (sl.length) m.push(`Take your supplements: <b>${sl.map(x => esc(x.n)).join(", ")}</b> (Food tab).`);
+  const sl = dailySupps().filter(x => !suppsTaken(today()).has(x.id)); if (sl.length) m.push(`Take your supplements: <b>${sl.map(x => esc(x.n)).join(", ")}</b> (Food tab).`);
   const lastPhoto = (S.photos || []).map(x => x.date).sort().pop();
   if (coachCfg && (!lastPhoto || lastPhoto < shiftDate(today(), -6))) m.push(`<b>Take this week's progress photos</b> (Progress tab). Your Sunday review compares them.`);
   const lastW = (S.weights || []).map(x => x.date).sort().pop();
@@ -3352,29 +3352,32 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 /* ---- Supplements ----
    A short list you tick off each day. Anything with real calories or
    protein (a protein shake) still belongs in the food log. */
-const SUPP_IDEAS = [["Creatine", "5 g"], ["Vitamin D3", "1,000–2,000 IU"], ["Fish oil", "1–2 g EPA+DHA"], ["Magnesium", "200–400 mg"], ["Multivitamin", "1 tablet"]];
+const SUPP_IDEAS = [["Creatine", "5 g"], ["Vitamin D3", "1,000–2,000 IU"], ["Fish oil", "1–2 g EPA+DHA"], ["Magnesium", "200–400 mg"], ["Multivitamin", "1 tablet"], ["HBOT session", "as scheduled", 1]];
+function dailySupps(){ return (S.supps || []).filter(x => !x.opt); }
 function suppsTaken(date){ return new Set(((S.suppLog || {})[date || fd()]) || []); }
 function toggleSupp(id){
   const d = fd(); S.suppLog = S.suppLog || {}; const set = new Set(S.suppLog[d] || []);
   if (set.has(id)) set.delete(id); else set.add(id);
   S.suppLog[d] = [...set]; save(); render();
 }
-function addSupp(name, dose){
+function addSupp(name, dose, opt){
   name = String(name || "").trim(); if (!name) { const i = document.getElementById("sp-name"); name = i ? i.value.trim() : ""; const j = document.getElementById("sp-dose"); dose = j ? j.value.trim() : ""; }
   if (!name) return toast("Type the supplement name");
   S.supps = S.supps || []; if (S.supps.some(x => x.n.toLowerCase() === name.toLowerCase())) return toast("Already on your list");
   if (!S.suppsSince) S.suppsSince = today();
-  S.supps.push({ id: "sp-" + Date.now(), n: name.slice(0, 30), dose: String(dose || "").slice(0, 30) }); save(); render(); toast("Added " + name);
+  if (opt == null) { const c = document.getElementById("sp-opt"); opt = c && c.checked; }
+  S.supps.push({ id: "sp-" + Date.now(), n: name.slice(0, 30), dose: String(dose || "").slice(0, 30), ...(opt ? { opt: true } : {}) }); save(); render(); toast("Added " + name);
 }
 function removeSupp(id){ if (!confirm("Remove this supplement from your list?")) return; S.supps = (S.supps || []).filter(x => x.id !== id); save(); render(); }
 function suppCard(){
-  const list = S.supps || [], taken = suppsTaken(), left = list.filter(x => !taken.has(x.id)).length;
+  const list = S.supps || [], taken = suppsTaken(), daily = list.filter(x => !x.opt), left = daily.filter(x => !taken.has(x.id)).length;
   const ideas = SUPP_IDEAS.filter(([n]) => !list.some(x => x.n.toLowerCase() === n.toLowerCase()));
-  return `<div class="card"><div class="exhead"><h3>💊 Supplements</h3>${list.length ? `<span class="small ${left ? "gold" : "green"}"><b>${list.length - left}/${list.length}</b> taken</span>` : ""}</div>
-    ${list.length ? `<div style="margin-top:6px">${list.map(x => `<div class="supprow ${taken.has(x.id) ? "on" : ""}"><span class="suppchk" onclick="toggleSupp('${x.id}')">${taken.has(x.id) ? "✓" : ""}</span><span style="flex:1;cursor:pointer" onclick="toggleSupp('${x.id}')"><b>${esc(x.n)}</b>${x.dose ? ` <span class="dim small">· ${esc(x.dose)}</span>` : ""}</span><span class="red" style="cursor:pointer;padding:0 4px" onclick="removeSupp('${x.id}')">×</span></div>`).join("")}</div>` : '<p class="dim small" style="margin-top:4px">Add what you take and tick it off each day. The coach reminds you.</p>'}
+  return `<div class="card"><div class="exhead"><h3>💊 Supplements</h3>${daily.length ? `<span class="small ${left ? "gold" : "green"}"><b>${daily.length - left}/${daily.length}</b> daily taken</span>` : ""}</div>
+    ${list.length ? `<div style="margin-top:6px">${list.map(x => `<div class="supprow ${taken.has(x.id) ? "on" : ""}"><span class="suppchk" onclick="toggleSupp('${x.id}')">${taken.has(x.id) ? "✓" : ""}</span><span style="flex:1;cursor:pointer" onclick="toggleSupp('${x.id}')"><b>${esc(x.n)}</b>${x.dose ? ` <span class="dim small">· ${esc(x.dose)}</span>` : ""}${x.opt ? ' <span class="dim small">· when scheduled</span>' : ""}</span><span class="red" style="cursor:pointer;padding:0 4px" onclick="removeSupp('${x.id}')">×</span></div>`).join("")}</div>` : '<p class="dim small" style="margin-top:4px">Add what you take and tick it off each day. The coach reminds you.</p>'}
     <details style="margin-top:8px"><summary class="small blue" style="cursor:pointer;font-weight:600">＋ Add a supplement</summary>
-      ${ideas.length ? `<div style="margin-top:8px">${ideas.map(([n, d]) => `<span class="pill fchip" onclick="addSupp('${n}','${d}')">＋ ${n}</span>`).join("")}</div>` : ""}
+      ${ideas.length ? `<div style="margin-top:8px">${ideas.map(([n, d, o]) => `<span class="pill fchip" onclick="addSupp('${n}','${d}',${o ? "true" : "false"})">＋ ${n}</span>`).join("")}</div>` : ""}
       <div class="row2" style="margin-top:6px"><input id="sp-name" placeholder="Name"><input id="sp-dose" placeholder="Dose (optional)"></div>
+      <label style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="sp-opt" style="width:auto"> Not every day (e.g. HBOT, sauna). Logged, never counted as missed.</label>
       <button class="btn small-btn" style="margin-top:8px" onclick="addSupp()">Add</button>
       <p class="dim small" style="margin-top:6px">Protein powder and shakes go in the food log, since they count toward protein.</p>
     </details></div>`;
@@ -3428,7 +3431,8 @@ function workoutFeedback(l){
   const ready = lifts.map(en => ({ en, sug: suggestFor(en.ex, (day && (day.exercises.find(s => s.ex === en.ex) || {}).lo) || 6, (day && (day.exercises.find(s => s.ex === en.ex) || {}).hi) || 12) })).filter(x => x.sug && !x.sug.deload && x.sug.w > (bestSet(x.en.sets).w || 0));
   if (ready.length) notes.push(["good", `Ready to add weight next time: <b>${ready.slice(0, 3).map(x => esc(EXBY[x.en.ex].n) + " → " + x.sug.w + " lb").join(", ")}</b>.`]);
   if (cardio) notes.push(["good", `${cardio} min of cardio${cardio >= 20 ? ". That counts toward your VO₂ max goal" : ""}.`]);
-  if (l.min > 75) notes.push(["warn", `${l.min} minutes is long. Keep rests to 2–3 min on big lifts and 60–90 s on the rest to finish in about an hour.`]);
+  const cap = COACH.sessionMax || 75;
+  if (l.min > cap + 15) notes.push(["warn", `${l.min} minutes is past your ${cap}-minute window. Quality drops late in long sessions: keep rests to 2–3 min on big lifts and 60–90 s on the rest.`]);
   const n = dayNutrition(l.date), t = effTargets();
   if (l.date === today() && n.p < t.protein * 0.6) notes.push(["warn", `Protein so far: ${Math.round(n.p)} g. Get 30–40 g in the next couple of hours; that's when it helps recovery most.`]);
   return { rows, notes, vol, sets, cardio, prs };
