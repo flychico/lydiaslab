@@ -191,6 +191,12 @@ details.more summary::-webkit-details-marker{display:none}
 .wstats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
 .wstats>div{background:var(--bg2);border-radius:10px;padding:8px 6px;text-align:center}
 .wstats b{display:block;font-size:1.25rem;font-weight:800}.wstats span{font-size:.72rem;color:var(--dim);font-weight:600}
+.hkc{margin-top:14px}
+.hkc-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:.9rem}
+.hkcv{width:100%;display:block;margin-top:4px;cursor:pointer;touch-action:pan-y}
+.hkc-tip{min-height:1.3em;margin-top:2px}
+.hkc-range{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+.hkc-range .pill{margin:0 0 0 6px}
 </style>
 </head>
 <body>
@@ -2954,46 +2960,99 @@ function healthCardHTML(compact){
   return `<div class="card"><h3>Apple Health <span class="dim small">· yesterday${stale ? ` · last data ${latestDate.slice(5)}` : ""}</span></h3>
     ${stale ? `<p class="small gold" style="margin-top:6px">No Health data for yesterday yet. If your phone was locked at 12:01, iPhone blocks the Shortcut from reading Health — the backup morning run fills it in.</p>` : ""}
     ${tiles}
-    <div class="dim small" style="font-weight:700;margin:10px 0 2px">STEPS · 30 DAYS <span style="font-weight:500">· avg ${hkAvg(base, "steps") ? Math.round(hkAvg(base, "steps")).toLocaleString() : "—"} · 7-day ${hkAvg(wk, "steps") ? Math.round(hkAvg(wk, "steps")).toLocaleString() : "—"}</span></div>
-    <canvas id="hk-steps" width="520" height="110"></canvas>
-    <div class="dim small" style="font-weight:700;margin:10px 0 2px">SLEEP · 30 DAYS <span style="font-weight:500">· avg ${fmtSleep(hkAvg(base, "sleep"))}</span></div>
-    <canvas id="hk-sleep" width="520" height="110"></canvas>
-    <div class="dim small" style="font-weight:700;margin:10px 0 2px">RESTING HEART RATE <span style="font-weight:500">· lower = fitter · avg ${hkAvg(base, "rhr") ? Math.round(hkAvg(base, "rhr")) + " bpm" : "—"}</span></div>
-    <canvas id="hk-rhr" width="520" height="100"></canvas>
-    <div class="dim small" style="font-weight:700;margin:10px 0 2px">HRV <span style="font-weight:500">· higher = better recovered · avg ${hkAvg(base, "hrv") ? Math.round(hkAvg(base, "hrv")) + " ms" : "—"}</span></div>
-    <canvas id="hk-hrv" width="520" height="100"></canvas>
+    ${hkCharts()}
     ${tDays.length >= 2 && rDays.length >= 2 ? `<p class="dim small" style="margin-top:10px;line-height:1.55">🏋️ Training days average <b>${Math.round(hkAvg(tDays, "steps")).toLocaleString()}</b> steps; 🌙 rest days <b>${Math.round(hkAvg(rDays, "steps")).toLocaleString()}</b>.${sleepBefore.length >= 2 ? ` Sleep before training days: <b>${fmtSleep(hkAvg(sleepBefore, "sleep"))}</b>.` : ""}</p>` : ""}
   </div>`;
 }
-/* Small gap-aware chart: bars or a line over the last 30 days; workout days get a dot under the bar. */
-function hkChart(id, key, opts){
-  const c = document.getElementById(id); if (!c) return;
-  const days = hkDays(30), vals = days.map(x => x.v[key] != null ? x.v[key] : null), have = vals.filter(v => v != null);
-  const x = c.getContext("2d"), W = c.width, H = c.height, col = chartColors(); x.clearRect(0, 0, W, H);
-  if (!have.length) { x.fillStyle = col.label; x.font = "12px sans-serif"; x.fillText("No data yet", 10, H / 2); return; }
+/* Health trend charts: crisp on retina, range starts at your first data day,
+   goal + your-average lines labelled, latest value labelled, tap any day to
+   read it. Workout days get a dot under their date. */
+let hkRange = (() => { try { return +localStorage.getItem("mangelo-hkrange") || 14; } catch (e) { return 14; } })();
+function setHkRange(n){ hkRange = n; try { localStorage.setItem("mangelo-hkrange", n); } catch (e) {} render(); }
+function hkSpan(){
+  const keys = Object.keys(S.hk || {}).sort(), first = keys[0];
+  if (!first) return hkRange;
+  const have = Math.round((new Date(today() + "T12:00") - new Date(first + "T12:00")) / 864e5);
+  return Math.max(7, Math.min(hkRange, have));
+}
+const HK_CHARTS = [
+  { id: "hk-steps", key: "steps", title: "Steps", goal: () => COACH.steps, goalLabel: v => "goal " + v.toLocaleString(), fmt: v => Math.round(v).toLocaleString(), short: v => v >= 1000 ? (v / 1000).toFixed(1) + "k" : String(Math.round(v)) },
+  { id: "hk-sleep", key: "sleep", title: "Sleep", goal: () => COACH.sleep, goalLabel: v => "goal " + fmtSleep(v), fmt: v => fmtSleep(v), short: v => (v / 60).toFixed(1) + "h", nightAfter: true },
+  { id: "hk-rhr", key: "rhr", title: "Resting heart rate", sub: "lower is fitter", line: true, pad: 6, fmt: v => Math.round(v) + " bpm", short: v => String(Math.round(v)) },
+  { id: "hk-hrv", key: "hrv", title: "HRV", sub: "higher is better recovered", line: true, pad: 12, fmt: v => Math.round(v) + " ms", short: v => String(Math.round(v)) }
+];
+function hkChartBlock(c){
+  const days = hkDays(hkSpan()), vals = days.map(x => x.v[c.key]).filter(v => v != null), avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  const last = [...days].reverse().find(x => x.v[c.key] != null);
+  return `<div class="hkc">
+    <div class="hkc-h"><span><b>${c.title}</b>${c.sub ? ` <span class="dim small">· ${c.sub}</span>` : ""}</span><span class="small dim">avg <b style="color:var(--text)">${avg != null ? c.fmt(avg) : "—"}</b></span></div>
+    <canvas id="${c.id}" class="hkcv" data-key="${c.key}" aria-label="${c.title}, last ${days.length} days${last ? ", latest " + c.fmt(last.v[c.key]) : ""}"></canvas>
+    <div class="hkc-tip small dim" id="${c.id}-tip">${last ? `Latest: <b style="color:var(--text)">${c.fmt(last.v[c.key])}</b> on ${new Date(last.d + "T12:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}${c.nightAfter ? " night" : ""} · tap a day for details` : "No data yet"}</div>
+  </div>`;
+}
+function hkCharts(){
+  return `<div class="hkc-range"><span class="dim small" style="font-weight:700">TRENDS</span><span>${[7, 14, 30].map(n => `<span class="pill ${hkRange === n ? "on" : ""}" onclick="setHkRange(${n})">${n}d</span>`).join("")}</span></div>
+    ${HK_CHARTS.map(hkChartBlock).join("")}
+    <div class="dim small" style="margin-top:4px">● under a date = workout day</div>`;
+}
+function hkChart(c){
+  const cv = document.getElementById(c.id); if (!cv) return;
+  const dpr = window.devicePixelRatio || 1, W = cv.clientWidth || 320, H = c.line ? 120 : 132;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.height = H + "px";
+  const x = cv.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, W, H);
+  const cs = getComputedStyle(document.documentElement), ink = cs.getPropertyValue("--text").trim(), dim = cs.getPropertyValue("--dim").trim(), grid = cs.getPropertyValue("--border").trim(), bar = cs.getPropertyValue("--fill").trim(), line = cs.getPropertyValue("--pink").trim(), surf = cs.getPropertyValue("--card").trim();
+  const font = s => `${s}px Onest, -apple-system, sans-serif`;
+  const days = hkDays(hkSpan()), n = days.length, vals = days.map(d => d.v[c.key] != null ? d.v[c.key] : null), have = vals.filter(v => v != null);
   const trained = new Set((S.logs || []).map(l => l.date));
-  const lo = opts.line ? Math.min(...have) - 2 : 0, hi = Math.max(...have, opts.goal || 0) || 1, rng = (hi - lo) || 1;
-  const step = (W - 20) / vals.length, py = v => 12 + (1 - (v - lo) / rng) * (H - 34);
-  if (opts.goal) { x.strokeStyle = col.label; x.setLineDash([4, 4]); x.lineWidth = 1; x.beginPath(); x.moveTo(10, py(opts.goal)); x.lineTo(W - 10, py(opts.goal)); x.stroke(); x.setLineDash([]); }
-  if (opts.line) {
-    x.strokeStyle = col.line; x.lineWidth = 2.2; x.beginPath(); let started = false;
-    vals.forEach((v, i) => { if (v == null) return; const px = 10 + step * (i + 0.5); started ? x.lineTo(px, py(v)) : x.moveTo(px, py(v)); started = true; });
-    x.stroke();
-    vals.forEach((v, i) => { if (v == null) return; x.fillStyle = col.line; x.beginPath(); x.arc(10 + step * (i + 0.5), py(v), 2.4, 0, 7); x.fill(); });
-  } else {
-    vals.forEach((v, i) => { if (v == null) return; const h = Math.max(2, (v / hi) * (H - 34)); x.fillStyle = col.bar; x.beginPath(); x.roundRect(10 + step * i + 1.5, H - 22 - h, Math.max(2, step - 3), h, 2); x.fill(); });
+  const L = 6, R = 6, T = 16, B = 30, pw = W - L - R, ph = H - T - B, step = pw / n;
+  const goal = c.goal ? c.goal() : null, avg = have.length ? have.reduce((a, b) => a + b, 0) / have.length : null;
+  let lo, hi;
+  if (c.line) { const m = avg || 0; lo = Math.min(...have, m - c.pad); hi = Math.max(...have, m + c.pad); }
+  else { lo = 0; hi = Math.max(...have, goal || 0) * 1.12 || 1; }
+  const py = v => T + (1 - (v - lo) / ((hi - lo) || 1)) * ph, cx = i => L + step * (i + 0.5);
+  // baseline
+  x.strokeStyle = grid; x.lineWidth = 1; x.beginPath(); x.moveTo(L, T + ph + 0.5); x.lineTo(W - R, T + ph + 0.5); x.stroke();
+  // reference line: goal for bars, your average for lines
+  const ref = c.line ? avg : goal;
+  if (ref != null) {
+    x.setLineDash([3, 3]); x.strokeStyle = dim; x.globalAlpha = 0.6; x.beginPath(); x.moveTo(L, py(ref)); x.lineTo(W - R, py(ref)); x.stroke(); x.setLineDash([]); x.globalAlpha = 1;
+    x.fillStyle = dim; x.font = font(10); x.textAlign = "left"; const lbl = c.line ? "your avg" : c.goalLabel(ref), tw = x.measureText(lbl).width + 6; x.fillStyle = surf; x.fillRect(L, py(ref) - 13, tw, 12); x.fillStyle = dim; x.fillText(lbl, L + 2, py(ref) - 4);
   }
-  days.forEach((dd, i) => { if (trained.has(dd.d)) { x.fillStyle = col.line; x.beginPath(); x.arc(10 + step * (i + 0.5), H - 12, 2.2, 0, 7); x.fill(); } });
-  x.fillStyle = col.label; x.font = "10px sans-serif"; x.textAlign = "left";
-  x.fillText(opts.fmt(Math.max(...have)), 10, 10); x.textAlign = "right"; x.fillText("● = workout day", W - 10, H - 1);
-  x.textAlign = "left"; x.fillText(days[0].d.slice(5), 10, H - 1);
+  if (!have.length) { x.fillStyle = dim; x.font = font(12); x.textAlign = "center"; x.fillText("No data yet", W / 2, T + ph / 2); }
+  else if (c.line) {
+    x.strokeStyle = line; x.lineWidth = 2; x.lineJoin = "round"; x.beginPath(); let on = false;
+    vals.forEach((v, i) => { if (v == null) { on = false; return; } on ? x.lineTo(cx(i), py(v)) : x.moveTo(cx(i), py(v)); on = true; });
+    x.stroke();
+    vals.forEach((v, i) => { if (v == null) return; x.fillStyle = surf; x.beginPath(); x.arc(cx(i), py(v), 5, 0, 7); x.fill(); x.fillStyle = line; x.beginPath(); x.arc(cx(i), py(v), 4, 0, 7); x.fill(); });
+  } else {
+    const bw = Math.max(3, Math.min(26, step - 2));
+    vals.forEach((v, i) => {
+      if (v == null) { x.fillStyle = grid; x.fillRect(cx(i) - bw / 2, T + ph - 2, bw, 2); return; }
+      const top = py(v), h = Math.max(2, T + ph - top), r = Math.min(4, bw / 2, h);
+      x.fillStyle = bar; x.beginPath(); x.moveTo(cx(i) - bw / 2, T + ph); x.lineTo(cx(i) - bw / 2, top + r); x.quadraticCurveTo(cx(i) - bw / 2, top, cx(i) - bw / 2 + r, top); x.lineTo(cx(i) + bw / 2 - r, top); x.quadraticCurveTo(cx(i) + bw / 2, top, cx(i) + bw / 2, top + r); x.lineTo(cx(i) + bw / 2, T + ph); x.closePath(); x.fill();
+    });
+  }
+  // label the latest value only
+  const li = vals.map((v, i) => v != null ? i : -1).filter(i => i >= 0).pop();
+  if (li != null && li >= 0) { x.fillStyle = ink; x.font = "600 " + font(11); x.textAlign = li > n - 3 ? "right" : "center"; x.fillText(c.short(vals[li]), li > n - 3 ? Math.min(W - R, cx(li) + 10) : cx(li), (c.line ? py(vals[li]) : py(vals[li])) - 8); }
+  // x labels: weekday initials (≤14 days) or dates every 7 days; workout dots
+  x.font = font(10); x.textAlign = "center"; x.fillStyle = dim;
+  days.forEach((d, i) => {
+    const dt = new Date(d.d + "T12:00");
+    if (n <= 14) x.fillText("SMTWTFS"[dt.getDay()], cx(i), H - 15);
+    else if ((n - 1 - i) % 7 === 0) x.fillText((dt.getMonth() + 1) + "/" + dt.getDate(), cx(i), H - 15);
+    if (trained.has(d.d)) { x.fillStyle = ink; x.beginPath(); x.arc(cx(i), H - 5, 2.5, 0, 7); x.fill(); x.fillStyle = dim; }
+  });
+  // tap / hover a day to read it
+  const tip = document.getElementById(c.id + "-tip");
+  const show = ev => {
+    const rect = cv.getBoundingClientRect(), px = (ev.touches ? ev.touches[0].clientX : ev.clientX) - rect.left, i = Math.max(0, Math.min(n - 1, Math.floor((px - L) / step)));
+    const d = days[i], v = vals[i], dt = new Date(d.d + "T12:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+    if (tip) tip.innerHTML = `<b style="color:var(--text)">${dt}${c.nightAfter ? " night" : ""}</b> · ${v != null ? `<b style="color:var(--text)">${c.fmt(v)}</b>` : "no data"}${trained.has(d.d) ? " · workout day" : ""}${v != null && ref != null ? ` · ${c.line ? (v > ref ? "above" : "below") + " your avg" : (v >= ref ? "goal met ✓" : "under goal")}` : ""}`;
+  };
+  cv.onclick = show; cv.onmousemove = show; cv.ontouchstart = show;
 }
-function drawHealthCharts(){
-  hkChart("hk-steps", "steps", { goal: 8000, fmt: v => (v / 1000).toFixed(1) + "k" });
-  hkChart("hk-sleep", "sleep", { goal: 420, fmt: v => fmtSleep(v) });
-  hkChart("hk-rhr", "rhr", { line: true, fmt: v => Math.round(v) + " bpm" });
-  hkChart("hk-hrv", "hrv", { line: true, fmt: v => Math.round(v) + " ms" });
-}
+function drawHealthCharts(){ HK_CHARTS.forEach(hkChart); }
 function copyText(t, msg){ if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(() => toast(msg)).catch(() => toast("Couldn't copy")); else toast("Copy not supported here"); }
 const HK_TEMPLATE = '{"files":{"health-[Date].txt":{"content":"date=[Date];steps=[Steps];exercise=[Exercise];active=[Active];rhr=[RHR];hrv=[HRV];vo2=[VO2];sleep=[Sleep];deep=[Deep];rem=[REM]"}}}';
 function healthSetupHTML(){
