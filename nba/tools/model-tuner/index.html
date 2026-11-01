@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XVWTMDNBJK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XVWTMDNBJK');
+</script>
+
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NBA Model Tuner | Leo</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Leo">
+<meta property="og:title" content="NBA Model Tuner | Leo">
+<meta property="og:description" content="Change Leo's NBA settings and see tonight's numbers and every graded game rebuilt from the inputs frozen before tip.">
+<meta property="og:url" content="https://ndhorizon.com/nba/tools/model-tuner/">
+<meta property="og:image" content="https://ndhorizon.com/img/og-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="NBA Model Tuner | Leo">
+<meta name="twitter:description" content="Change Leo's NBA settings and see tonight's numbers and every graded game rebuilt from the inputs frozen before tip.">
+<meta name="twitter:image" content="https://ndhorizon.com/img/og-card.png">
+
+<meta name="description" content="Change Leo's NBA settings and see tonight's numbers and every graded game rebuilt from the inputs frozen before tip.">
+<link rel="canonical" href="https://ndhorizon.com/nba/tools/model-tuner/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127936;</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/scoreboard.css">
+<style>
+.tune-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:var(--shadow-sm);}
+.tune label{display:flex;justify-content:space-between;font-weight:700;font-size:.86rem;margin-bottom:4px}
+.tune label b{color:var(--accent)} .tune input{width:100%} .tune small{color:var(--text-dim);font-size:.76rem;line-height:1.4;display:block;margin-top:3px}
+.reset{margin-top:12px} h2.sec{font-size:1.25rem;margin:28px 0 6px} p.sec-sub{color:var(--text-dim);font-size:.88rem;margin:0 0 12px}
+.tw{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-sm)}
+table.t{width:100%;border-collapse:collapse;font-size:.86rem} table.t th,table.t td{padding:8px 10px;text-align:right;white-space:nowrap}
+table.t th{background:var(--bg-elev);color:var(--text-dim);font-size:.64rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+table.t td:first-child,table.t th:first-child{text-align:left} table.t tbody tr{border-top:1px solid var(--border)}
+.chg{color:var(--accent2);font-weight:700} .ok{color:var(--good,#1e8e3e);font-weight:700} .no{color:var(--danger,#cf222e);font-weight:700} .scroller{overflow-x:auto}
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main class="scoreboard-shell">
+  <section class="score-hero">
+    <p class="eyebrow">Your settings. Leo's frozen inputs.</p>
+    <h1>NBA Model Tuner</h1>
+    <p class="subtitle">Move a setting and every game is rebuilt from exactly what Leo knew before tip: team ratings, rest, back to backs and the injury report. Graded games are re-scored against the final. Nothing here changes Leo&rsquo;s published numbers.</p>
+    <div class="score-hero-chips"><span class="hero-chip">&#127899; Seven settings</span><span class="hero-chip">&#128274; Frozen inputs</span><span class="hero-chip">&#128221; Re-graded live</span></div>
+  </section>
+
+  <section class="tune-grid" id="sliders"></section>
+  <button class="control-btn reset" type="button" id="reset">Back to Leo&rsquo;s settings</button>
+  <section class="kpis" id="kpis" aria-label="Replay summary" style="margin-top:18px"></section>
+  <div id="status" class="loading">Loading Leo&rsquo;s frozen reads&hellip;</div>
+  <h2 class="sec">Every graded game, re-scored</h2>
+  <p class="sec-sub">Leo&rsquo;s settings beside yours on every game with a final. Under 50 graded games is an early read: a better number here can be luck.</p>
+  <div class="tw"><div class="scroller"><table class="t" id="season"></table></div></div>
+  <h2 class="sec">Latest card with your settings</h2>
+  <p class="sec-sub">Highlighted numbers moved from Leo&rsquo;s published read.</p>
+  <div class="tw"><div class="scroller"><table class="t" id="today"></table></div></div>
+  <p class="data-note">Inputs are the read of record for each game, the last one saved before tip. Team ratings and player values are stored to one decimal, so a rebuilt number can differ from the published one by a tenth or two. The DraftKings line is used only for grading. Analysis only, not betting advice.</p>
+</main>
+<footer id="footer"></footer><script src="/js/app.js"></script>
+<script>
+renderNav(location.pathname); renderFooter();
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+async function tryJson(u){try{const r=await fetch(u+(u.includes("?")?"&":"?")+"v="+Date.now(),{cache:"no-store"});return r.ok?await r.json():null;}catch(e){return null;}}
+const nyToday=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"America/New_York"}).format(new Date());
+const tip=iso=>new Date(iso).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/New_York"})+" ET";
+const longDay=d=>new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
+const pct=p=>p==null?"—":Math.round(p*100)+"%";
+const sgn=v=>v==null?"—":v===0?"PK":(v>0?"+":"")+v;
+function logo(t){return '<img src="https://a.espncdn.com/i/teamlogos/nba/500/'+String(t).toLowerCase()+'.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">';}
+const pageUrl=g=>"/nba/"+g.away.toLowerCase()+"-vs-"+g.home.toLowerCase()+"-prediction-odds-"+g.date+"/";
+// The latest NBA card: today's if it exists, else the most recent day with one.
+async function latestCard(){
+  const days=await tryJson("/data/nba/slates.json")||[];
+  const t=nyToday(), d=(days.find(x=>x.date===t)||days.filter(x=>x.date<=t).pop()||days[days.length-1]);
+  return d?await tryJson("/data/nba/picks-"+d.date+".json"):null;
+}
+
+
+let M0=null,SET={},GAMES=[],RES={},LAST=null;
+const DEF=()=>({hc:M0.coef.intercept,rt:M0.coef.rating_diff,b2b:-M0.coef.b2b_d,rest:M0.coef.rest_d,lost:-M0.coef.lost_d,dtd:M0.status_weight["day-to-day"],lean:M0.lean_edge_pts});
+const SL=[["hc","Home court",0,5,0.1,"Points for playing at home."],["rt","Team ratings weight",0,1.5,0.01,"How much of the rating gap counts. Leo fits 0.94."],
+  ["b2b","Back to back",0,5,0.1,"Points a team loses on the second night of a back to back."],["rest","Rest per day",-1,1,0.01,"Points per extra day of rest, up to 4."],
+  ["lost","Missing players",0,0.5,0.01,"Points per unit of player value missing."],["dtd","Day to day weight",0,1,0.05,"How much a day to day regular counts as missing. Leo uses 0.4."],
+  ["lean","Lean threshold",2,10,0.5,"Points off the spread before a lean is recorded."]];
+function lostOf(g,side,dtd){return (((g.leo.missing||{})[side])||[]).reduce((s,p)=>s+p.value*(p.status==="day-to-day"?dtd:p.weight),0);}
+function rebuild(g,S){const L=g.leo;
+  const m=S.hc+S.rt*(L.rating.home-L.rating.away)-S.b2b*(L.back_to_back.home-L.back_to_back.away)+S.rest*(L.rest.home-L.rest.away)-S.lost*(lostOf(g,"home",S.dtd)-lostOf(g,"away",S.dtd));
+  const mk=g.market&&g.market.home_spread!=null?-g.market.home_spread:null, gap=mk==null?null:m-mk;
+  return {m,p:normCdf(m/M0.resid_sd),gap,lean:gap!=null&&Math.abs(gap)>=S.lean?(gap>0?"home":"away"):null};}
+function normCdf(z){const t=1/(1+0.2316419*Math.abs(z)),d=0.3989423*Math.exp(-z*z/2),p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return z>0?1-p:p;}
+function grade(S){let n=0,miss=0,lmiss=0,win=0,lw=0,ll=0,lp=0;
+  for(const g of GAMES){const r=RES[g.game_id];if(!r)continue;const a=r.home_score-r.away_score,x=rebuild(g,S);n++;miss+=Math.abs(x.m-a);win+=((x.m>0)===(a>0))?1:0;
+    if(r.mkt_home_spread!=null)lmiss+=Math.abs(-r.mkt_home_spread-a);
+    if(x.lean){const c=(a+g.market.home_spread)*(x.lean==="home"?1:-1);c>0?lw++:c<0?ll++:lp++;}}
+  return {n,miss:n?miss/n:null,lmiss:n?lmiss/n:null,win,lw,ll,lp};}
+function render(){
+  const D=DEF(),a=grade(D),b=grade(SET);
+  document.getElementById("kpis").innerHTML=
+    '<article class="kpi"><div class="label">Graded games</div><div class="value">'+b.n+'</div><div class="sub">'+(b.n<50?"early read":"season")+'</div></article>'+
+    '<article class="kpi"><div class="label">Average miss</div><div class="value">'+(b.miss==null?"—":b.miss.toFixed(2))+'</div><div class="sub">Leo '+(a.miss==null?"—":a.miss.toFixed(2))+' &middot; line '+(a.lmiss==null?"—":a.lmiss.toFixed(2))+'</div></article>'+
+    '<article class="kpi"><div class="label">Winners</div><div class="value">'+b.win+'-'+(b.n-b.win)+'</div><div class="sub">Leo '+a.win+'-'+(a.n-a.win)+'</div></article>'+
+    '<article class="kpi"><div class="label">Leans</div><div class="value">'+b.lw+'-'+b.ll+(b.lp?'-'+b.lp:'')+'</div><div class="sub">Leo '+a.lw+'-'+a.ll+(a.lp?'-'+a.lp:'')+'</div></article>';
+  const graded=GAMES.filter(g=>RES[g.game_id]).slice().reverse();
+  document.getElementById("season").innerHTML='<thead><tr><th>Game</th><th>Final</th><th>Leo</th><th>Yours</th><th>DK</th><th>Your lean</th><th>Result</th></tr></thead><tbody>'+
+    (graded.length?graded.map(g=>{const r=RES[g.game_id],a=r.home_score-r.away_score,x=rebuild(g,SET),y=rebuild(g,D);
+      const c=x.lean?(a+g.market.home_spread)*(x.lean==="home"?1:-1):null;
+      return '<tr><td>'+esc(g.date.slice(5))+' '+esc(g.away)+' at '+esc(g.home)+'</td><td>'+esc(g.home)+' '+(a>0?"+":"")+a+'</td><td>'+(y.m>0?"+":"")+y.m.toFixed(1)+'</td><td class="'+(Math.abs(x.m-y.m)>=0.05?"chg":"")+'">'+(x.m>0?"+":"")+x.m.toFixed(1)+'</td><td>'+(g.market&&g.market.home_spread!=null?((-g.market.home_spread>0?"+":"")+(-g.market.home_spread)):"—")+'</td><td>'+(x.lean?esc(g[x.lean])+' '+sgn(x.lean==="home"?g.market.home_spread:-g.market.home_spread):"—")+'</td><td>'+(c==null?"—":'<span class="'+(c>0?"ok":c<0?"no":"")+'">'+(c>0?"win":c<0?"loss":"push")+'</span>')+'</td></tr>';}).join(""):'<tr><td colspan="7">No graded games yet. The first night is graded after 2 AM ET.</td></tr>')+'</tbody>';
+  const today=LAST?GAMES.filter(g=>g.date===LAST):[];
+  document.getElementById("today").innerHTML='<thead><tr><th>Game</th><th>Leo margin</th><th>Yours</th><th>Win chance</th><th>DK</th><th>Gap</th><th>Lean</th></tr></thead><tbody>'+
+    today.map(g=>{const x=rebuild(g,SET),y=rebuild(g,D),ch=Math.abs(x.m-y.m)>=0.05;
+      return '<tr><td>'+esc(g.away)+' at '+esc(g.home)+'</td><td>'+(y.m>0?"+":"")+y.m.toFixed(1)+'</td><td class="'+(ch?"chg":"")+'">'+(x.m>0?"+":"")+x.m.toFixed(1)+'</td><td>'+esc(g.home)+' '+pct(x.p)+'</td><td>'+(g.market&&g.market.home_spread!=null?esc(g.home)+" "+sgn(g.market.home_spread):"—")+'</td><td>'+(x.gap==null?"—":Math.abs(x.gap).toFixed(1))+'</td><td class="'+(!!x.lean!==!!y.lean?"chg":"")+'">'+(x.lean?esc(g[x.lean])+' '+sgn(x.lean==="home"?g.market.home_spread:-g.market.home_spread):"No lean")+'</td></tr>';}).join("")+'</tbody>';
+}
+function sliders(){document.getElementById("sliders").innerHTML=SL.map(([k,l,mn,mx,st,h])=>'<div class="tune"><label for="s-'+k+'">'+l+' <b id="v-'+k+'">'+(+SET[k]).toFixed(2)+'</b></label><input type="range" id="s-'+k+'" min="'+mn+'" max="'+mx+'" step="'+st+'" value="'+SET[k]+'"><small>'+h+'</small></div>').join("");
+  SL.forEach(([k])=>document.getElementById("s-"+k).addEventListener("input",e=>{SET[k]=+e.target.value;document.getElementById("v-"+k).textContent=SET[k].toFixed(2);render();}));}
+(async function(){
+  const st=document.getElementById("status");
+  M0=await tryJson("/data/nba/model.json"); const days=await tryJson("/data/nba/slates.json")||[], res=await tryJson("/data/nba/results.json");
+  if(!M0||!days.length){st.innerHTML='<div class="score-empty">No NBA card has been published yet.</div>';return;}
+  ((res&&res.games)||[]).forEach(r=>RES[r.game_id]=r);
+  for(const d of days){const c=await tryJson("/data/nba/picks-"+d.date+".json");for(const g of (c&&c.games)||[])if(g.leo&&g.leo.rating&&g.leo.rest)GAMES.push({...g,date:d.date});}
+  LAST=days[days.length-1].date; st.style.display="none";
+  SET=DEF(); sliders(); render();
+  document.getElementById("reset").addEventListener("click",()=>{SET=DEF();sliders();render();});
+})();
+
+</script>
+</body>
+</html>

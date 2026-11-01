@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XVWTMDNBJK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XVWTMDNBJK');
+</script>
+
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The NBA Lab | Leo</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Leo">
+<meta property="og:title" content="The NBA Lab | Leo">
+<meta property="og:description" content="Leo's NBA research tools: the model tuner, the injury tracker, team ratings, tonight's reads and the graded record.">
+<meta property="og:url" content="https://ndhorizon.com/nba/tools/">
+<meta property="og:image" content="https://ndhorizon.com/img/og-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="The NBA Lab | Leo">
+<meta name="twitter:description" content="Leo's NBA research tools: the model tuner, the injury tracker, team ratings, tonight's reads and the graded record.">
+<meta name="twitter:image" content="https://ndhorizon.com/img/og-card.png">
+
+<meta name="description" content="Leo's NBA research tools: the model tuner, the injury tracker, team ratings, tonight's reads and the graded record.">
+<link rel="canonical" href="https://ndhorizon.com/nba/tools/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127936;</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/scoreboard.css">
+<style>
+.lab-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
+.lab-card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:var(--shadow-sm);text-decoration:none;color:inherit;transition:border-color .15s,transform .15s;}
+.lab-card:hover{border-color:var(--accent);transform:translateY(-2px);text-decoration:none;}
+.lab-icon{font-size:1.7rem;display:block;margin-bottom:9px;}
+.lab-card h3{margin:0 0 7px;font-size:1.05rem;}
+.lab-card p{margin:0;color:var(--text-dim);font-size:.88rem;line-height:1.55;}
+.lab-go{display:inline-block;margin-top:11px;color:var(--accent);font-weight:700;font-size:.85rem;}
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main class="scoreboard-shell">
+  <section class="score-hero">
+    <p class="eyebrow">Every tool. One place.</p>
+    <h1>The NBA Lab</h1>
+    <p class="subtitle">The research behind Leo&rsquo;s NBA reads: tune the model on its own frozen inputs, check the injury report Leo used, and see the ratings behind every number.</p>
+    <div class="score-hero-chips"><span class="hero-chip">&#129514; Five tools</span><span class="hero-chip">&#128200; Live data</span><span class="hero-chip">&#127936; Full slate</span></div>
+  </section>
+
+  <section class="lab-grid">
+    <a class="lab-card" href="/nba/tools/model-tuner/"><span class="lab-icon">&#127899;</span>
+      <h3>Model Tuner</h3><p>Change Leo&rsquo;s settings and watch tonight&rsquo;s numbers and every graded game rebuilt from the inputs frozen before tip.</p>
+      <span class="lab-go">Open the tuner &rarr;</span></a>
+    <a class="lab-card" href="/nba/tools/injury-tracker/"><span class="lab-icon">&#129517;</span>
+      <h3>Injury Tracker</h3><p>ESPN&rsquo;s injury report for every team, with the players Leo counted in tonight&rsquo;s numbers and how much.</p>
+      <span class="lab-go">Open the tracker &rarr;</span></a>
+    <a class="lab-card" href="/nba/stats/"><span class="lab-icon">&#128202;</span>
+      <h3>Team Ratings</h3><p>All 30 teams by division with Leo&rsquo;s rating, pace and points per 100 possessions on both ends.</p>
+      <span class="lab-go">Open team ratings &rarr;</span></a>
+    <a class="lab-card" href="/nba/previews/"><span class="lab-icon">&#127919;</span>
+      <h3>Picks and Leo&rsquo;s Reads</h3><p>Tonight&rsquo;s games ranked by the gap between Leo and DraftKings, with the leans Leo records as a public test.</p>
+      <span class="lab-go">Open picks &rarr;</span></a>
+    <a class="lab-card" href="/nba/results/"><span class="lab-icon">&#128221;</span>
+      <h3>Leo&rsquo;s record</h3><p>Every NBA read graded against the final score, with the lean record and how Leo compares with the line.</p>
+      <span class="lab-go">Open results &rarr;</span></a>
+  </section>
+</main>
+<footer id="footer"></footer><script src="/js/app.js"></script>
+<script>
+renderNav(location.pathname); renderFooter();
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+async function tryJson(u){try{const r=await fetch(u+(u.includes("?")?"&":"?")+"v="+Date.now(),{cache:"no-store"});return r.ok?await r.json():null;}catch(e){return null;}}
+const nyToday=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"America/New_York"}).format(new Date());
+const tip=iso=>new Date(iso).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/New_York"})+" ET";
+const longDay=d=>new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
+const pct=p=>p==null?"—":Math.round(p*100)+"%";
+const sgn=v=>v==null?"—":v===0?"PK":(v>0?"+":"")+v;
+function logo(t){return '<img src="https://a.espncdn.com/i/teamlogos/nba/500/'+String(t).toLowerCase()+'.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">';}
+const pageUrl=g=>"/nba/"+g.away.toLowerCase()+"-vs-"+g.home.toLowerCase()+"-prediction-odds-"+g.date+"/";
+// The latest NBA card: today's if it exists, else the most recent day with one.
+async function latestCard(){
+  const days=await tryJson("/data/nba/slates.json")||[];
+  const t=nyToday(), d=(days.find(x=>x.date===t)||days.filter(x=>x.date<=t).pop()||days[days.length-1]);
+  return d?await tryJson("/data/nba/picks-"+d.date+".json"):null;
+}
+
+
+</script>
+</body>
+</html>

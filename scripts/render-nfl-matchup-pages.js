@@ -213,13 +213,16 @@ const verdict=r=>r==="W"?'<span class="vd w">RIGHT</span>':r==="L"?'<span class=
   game. The point of the page is to be able to look back at what Leo expected
   and why, which only works if what Leo expected cannot be revised.
 */
+// Winner picks paused 2026-10-17 to 2026-10-31 (DEC-20261017-06), back from
+// 2026-11-01 (DEC-20261101-01). Pages for the paused week say so.
+const pickPaused=d=>d>="2026-10-17"&&d<="2026-10-31";
 function leoSection(m){
   const L=m.leo; if(!L) return "";
   const g=L.game;
   const when=L.captured_at?new Date(L.captured_at).toLocaleString("en-US",{timeZone:"America/New_York",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})+" ET":"";
   const game=g?`
   <div class="leo-grid">
-    <div class="box"><span class="lbl">Leo win chance</span><span class="val">${esc(g.pick)} ${pct(g.prob)}</span><span class="lbl2">chance to win; information, not a pick</span></div>
+    <div class="box"><span class="lbl">${pickPaused(m.date)?"Leo win chance":g.call==="leo_pick"?"Leo pick":"Too close to call"}</span><span class="val">${esc(g.pick)} ${pct(g.prob)}</span><span class="lbl2">${pickPaused(m.date)?"chance to win; picks were paused this week":g.call==="leo_pick"?"Leo gives this team more than 60%"+(g.price!=null&&g.price!==""?"; price "+esc((+g.price>0?"+":"")+g.price)+" at the read":""):"under 60%, so no pick; win chance only"}</span></div>
     <div class="box"><span class="lbl">Leo total</span><span class="val">${v(g.proj_total)}</span><span class="lbl2">points, both teams</span></div>
     <div class="box"><span class="lbl">Leo margin</span><span class="val">${esc(fav(m,g.proj_spread))}</span><span class="lbl2">expected winning margin</span></div>
   </div>`:"";

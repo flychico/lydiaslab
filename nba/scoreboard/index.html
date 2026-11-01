@@ -74,7 +74,7 @@
 <script>
 renderNav("/nba/scoreboard/"); renderFooter();
 const pick = document.getElementById("date-pick"), gamesEl = document.getElementById("games"), statusEl = document.getElementById("status"), kpisEl = document.getElementById("kpis");
-let DAYS = [], RESULTS = {}, MODEL = null, LIVE = {}, liveTimer = null;
+let DAYS = [], RESULTS = {}, MODEL = null, LIVE = {}, liveTimer = null, SCHED = {}, FIRST_CARD = null;
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const sgn = v => v == null ? "—" : v === 0 ? "PK" : (v > 0 ? "+" : "") + v;
 const pct = p => p == null ? "—" : Math.round(p * 100) + "%";
@@ -86,11 +86,18 @@ async function j(url) { const r = await fetch(url + "?v=" + Date.now(), { cache:
 
 (async function init() {
   try {
-    DAYS = await j("/data/nba/slates.json");
+    const cards = await j("/data/nba/slates.json").catch(() => []);
+    FIRST_CARD = cards.length ? cards[0].date : null;
+    // Full season from schedule.json; days with a Leo card come from slates.json.
+    try { (await j("/data/nba/schedule.json")).days.forEach(d => SCHED[d.date] = d.games); } catch (e) {}
+    const byDate = {};
+    for (const [date, games] of Object.entries(SCHED)) byDate[date] = { date, games: games.length, card: false };
+    for (const c of cards) byDate[c.date] = { ...c, card: true };
+    DAYS = Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date));
     try { MODEL = await j("/data/nba/model.json"); } catch (e) {}
     try { (await j("/data/nba/results.json")).games.forEach(g => RESULTS[g.game_id] = g); } catch (e) {}
     if (!DAYS.length) { statusEl.innerHTML = '<div class="score-empty">The first NBA card is on its way.</div>'; return; }
-    pick.innerHTML = DAYS.map(d => '<option value="' + d.date + '">' + esc(new Date(d.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })) + " · " + d.games + " games</option>").join("");
+    pick.innerHTML = DAYS.map(d => '<option value="' + d.date + '">' + esc(new Date(d.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })) + " · " + d.games + " games" + (d.card ? "" : d.date < nyToday() ? " · finals" : " · schedule") + "</option>").join("");
     const t = nyToday();
     pick.value = (DAYS.find(d => d.date >= t) || DAYS[DAYS.length - 1]).date;
     pick.addEventListener("change", load);
@@ -180,8 +187,38 @@ async function pollLive() {
   } catch (e) {}
   if (CURRENT.some(g => !RESULTS[g.game_id] && !(LIVE[g.game_id] && LIVE[g.game_id].state === "post"))) liveTimer = setTimeout(pollLive, 60000);
 }
+/* A day without a Leo card: the schedule, with finals for days already played.
+   Leo's read for a game exists only on game day, frozen before tip. */
+function schedRow(g, side) {
+  const score = g.final ? (side === "home" ? g.hs : g.as) : null;
+  return '<div class="team-row ' + side + '"><span class="team-logo-wrap"><img class="team-logo" src="' + logo(g[side]) + '" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\'"><span class="team-initials">' + esc(g[side]) + '</span></span>' +
+    '<span class="team-copy"><span class="team-name">' + esc(g[side + "_name"] || g[side]) + '</span><span class="team-record"></span></span>' +
+    '<span class="team-numbers">' + (score != null ? '<span class="team-score">' + score + "</span>" : "") + "</span></div>";
+}
+function schedCard(g) {
+  return '<article class="score-card"><div class="card-body">' +
+    '<div class="card-top"><div class="game-meta"><span class="game-time">' + tip(g.tip_utc) + '</span><span class="game-venue">' + esc(g.venue || "") + '</span></div>' +
+    '<div class="card-top-badges"><span class="game-status' + (g.final ? " final" : "") + '">' + (g.final ? "Final" : "Scheduled") + "</span></div></div>" +
+    '<div class="teams">' + schedRow(g, "away") + schedRow(g, "home") + "</div></div></article>";
+}
+function loadSchedule(date) {
+  const games = SCHED[date] || [];
+  const before = FIRST_CARD && date < FIRST_CARD, past = date < nyToday();
+  kpisEl.innerHTML =
+    '<article class="kpi"><div class="label">Games</div><div class="value">' + games.length + '</div><div class="sub">' + esc(date) + "</div></article>" +
+    '<article class="kpi"><div class="label">First tip</div><div class="value">' + (games[0] ? tip(games[0].tip_utc) : "—") + '</div><div class="sub">Eastern time</div></article>' +
+    '<article class="kpi"><div class="label">Leo&rsquo;s read</div><div class="value">' + (before ? "None" : past ? "Missing" : "Game day") + '</div><div class="sub">' + (before ? "Leo NBA started Oct 31" : past ? "No card was saved" : "Posts from about 12:40 PM ET") + "</div></article>";
+  statusEl.innerHTML = '<div class="notice">' + (before
+    ? "Leo&rsquo;s NBA reads started on " + esc(new Date(FIRST_CARD + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric" })) + ". Final scores only for this day."
+    : past ? "No Leo card was saved for this day. Final scores only."
+    : "Schedule only. Leo&rsquo;s win chance, spread and injury read for these games post on game day and are frozen before each tip.") + "</div>";
+  CURRENT = [];
+  gamesEl.innerHTML = games.map(schedCard).join("") || '<div class="score-empty">No games on this day.</div>';
+}
 async function load() {
   statusEl.textContent = "Loading…"; gamesEl.innerHTML = "";
+  const day = DAYS.find(d => d.date === pick.value);
+  if (day && !day.card) return loadSchedule(pick.value);
   try {
     const d = await j("/data/nba/picks-" + pick.value + ".json");
     const games = d.games.filter(g => g.leo);

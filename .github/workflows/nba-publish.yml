@@ -62,6 +62,14 @@ jobs:
         id: build
         run: node scripts/generate-nba-slate.js "${{ steps.d.outputs.date }}"
 
+      # Full season for the scoreboard's date picker (display only). Never blocks the run.
+      - name: Season schedule
+        run: node scripts/build-nba-schedule.js || echo "::warning::NBA schedule not refreshed"
+
+      # Standings, Leo ratings, pace and efficiency for /nba/stats/ (display only).
+      - name: Team stats
+        run: node scripts/build-nba-team-stats.js || echo "::warning::NBA team stats not refreshed"
+
       - name: Matchup pages
         run: node scripts/render-nba-matchup-pages.js "${{ steps.d.outputs.date }}"
 

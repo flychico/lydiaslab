@@ -82,6 +82,7 @@ function build() {
   const props = read(D(`props-${DATE}.json`)) || [];
   const injuries = read(D(`injuries-${DATE}.json`)) || [];
   const tracker = read(D("tracker.json"));
+  const clv = read(D("clv.json"));
   if (!games.length) return null;
 
   const yard = props.filter(p => MK[p.market]);
@@ -117,7 +118,7 @@ function build() {
     const side = spreadSide(g);
     return `<tr><td>${esc(clock(g.kickoff))}</td><td>${esc(g.matchup)}</td>
       <td>${esc(g.away_qb || "")} / ${esc(g.home_qb || "")}</td>
-      <td>${esc(g.pick)} ${pct(g.model_prob)}</td><td>${g.market_prob != null ? esc(g.pick) + " " + pct(g.market_prob) : "n/a"}</td>
+      <td>${num(g.model_prob) > 0.60 ? "<b>PICK</b> " : ""}${esc(g.pick)} ${pct(g.model_prob)}${num(g.model_prob) > 0.60 && g.price != null && g.price !== "" ? " (" + esc((+g.price > 0 ? "+" : "") + g.price) + ")" : ""}</td><td>${g.market_prob != null ? esc(g.pick) + " " + pct(g.market_prob) : "n/a"}</td>
       <td>${esc(byMargin(g, num(g.exp_margin)))}</td><td>${esc(spreadText(g, num(g.spread_line)))}</td>
       <td class="side">${side ? esc(side) : "no call"}</td>
       <td class="n">${r1(num(g.proj_total))}</td><td class="n">${r1(num(g.total_line))}</td></tr>`;
@@ -143,7 +144,7 @@ function build() {
       <h2>${esc(TEAMS.full(g.away))} at ${esc(TEAMS.full(g.home))}</h2>
       <div class="meta">${esc(clock(g.kickoff))}${g.stadium ? " &middot; " + esc(g.stadium) : ""} &middot; QBs ${esc(g.away_qb || "n/a")} and ${esc(g.home_qb || "n/a")}</div>
       <div class="cols">
-        <div><b>Win chance</b><br>Leo ${esc(g.pick)} ${pct(g.model_prob)}; market ${g.market_prob != null ? esc(g.pick) + " " + pct(g.market_prob) : "n/a"}</div>
+        <div><b>${num(g.model_prob) > 0.60 ? "Leo pick" : "Win chance (too close to call)"}</b><br>Leo ${esc(g.pick)} ${pct(g.model_prob)}${g.price != null && g.price !== "" ? " at " + esc((+g.price > 0 ? "+" : "") + g.price) : ""}; market ${g.market_prob != null ? esc(g.pick) + " " + pct(g.market_prob) : "n/a"}</div>
         <div><b>Spread</b><br>Leo ${esc(byMargin(g, num(g.exp_margin)))}; line ${esc(spreadText(g, num(g.spread_line)))}; <span class="side">${side ? "Leo's side " + esc(side) : "no call"}</span></div>
         <div><b>Total</b><br>Leo ${r1(num(g.proj_total))}; line ${r1(num(g.total_line))}; no side (off since Oct 17)</div>
       </div>
@@ -153,6 +154,10 @@ function build() {
     </div>`;
   }).join("");
 
+  // Tests running since Nov 1 (DEC-20261101-01, -03), with closing line value.
+  const t = clv && clv.tests ? clv.tests : null;
+  const tl = (lbl, x) => x && x.calls ? `${lbl} ${x.record}, ${x.units >= 0 ? "+" : ""}${x.units}u, line moved toward Leo ${x.moved_toward_pct}% / against ${x.moved_against_pct}%` : `${lbl} no graded calls yet`;
+  const testsNote = t ? `Tests since ${esc(clv.tests_from)}: ${esc(tl("Leo picks", t.leo_picks))}; ${esc(tl("WR unders", t.wr_unders))}; ${esc(tl("RB unders", t.rb_unders))}.` : "";
   const capNote = capturedMin.length
     ? `Prop lines captured ${Math.min(...capturedMin)} to ${Math.max(...capturedMin)} minutes before kickoff, ${withLine.length} of ${yard.length} projections have a line.`
     : `No prop lines were attached to this capture, so props show Leo's number only.`;
@@ -160,9 +165,9 @@ function build() {
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Leo NFL brief ${esc(DATE)}</title><style>${css}</style></head><body>
     <h1>Leo NFL brief</h1>
     <p class="sub">${esc(prettyDate(DATE))}, Week ${esc(week)} &middot; ${games.length} games &middot; built ${esc(new Date().toLocaleString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit", month: "short", day: "numeric" }))} ET</p>
-    <div class="box">Information only, for the owner. Leo's side is where his number sits relative to the posted line; it is not a bet recommendation. ${record} ${esc(capNote)} Calls: QB ${sideCount.QB[1]} of ${sideCount.QB[0]}, RB ${sideCount.RB[1]} of ${sideCount.RB[0]}, WR ${sideCount.WR[1]} of ${sideCount.WR[0]} lined props are outside the 5% floor.</div>
+    <div class="box">Information only, for the owner. Leo's side is where his number sits relative to the posted line; it is not a bet recommendation. ${record} ${esc(capNote)} Calls: QB ${sideCount.QB[1]} of ${sideCount.QB[0]}, RB ${sideCount.RB[1]} of ${sideCount.RB[0]}, WR ${sideCount.WR[1]} of ${sideCount.WR[0]} lined props are outside the 5% floor. ${testsNote}</div>
     <table><tr><th>Kick</th><th>Game</th><th>QBs</th><th>Leo win</th><th>Market</th><th>Leo margin</th><th>Spread</th><th>Leo's side</th><th class="n">Leo total</th><th class="n">Line</th></tr>${summaryRows}</table>
-    <p class="note">Spread side needs 1.0 point between Leo's margin and the line. Win chance is information only; winner picks were retired on October 17.</p>
+    <p class="note">Spread side needs 1.0 point between Leo's margin and the line. A Leo pick is a team Leo gives more than 60%; it is graded at the price shown when Leo made it. Under 60% is too close to call.</p>
     ${gameBlocks}
   </body></html>`;
 

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XVWTMDNBJK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XVWTMDNBJK');
+</script>
+
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NBA Injury Tracker | Leo</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Leo">
+<meta property="og:title" content="NBA Injury Tracker | Leo">
+<meta property="og:description" content="ESPN's NBA injury report for every team, with the players Leo counted in tonight's numbers and how much each one moved them.">
+<meta property="og:url" content="https://ndhorizon.com/nba/tools/injury-tracker/">
+<meta property="og:image" content="https://ndhorizon.com/img/og-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="NBA Injury Tracker | Leo">
+<meta name="twitter:description" content="ESPN's NBA injury report for every team, with the players Leo counted in tonight's numbers and how much each one moved them.">
+<meta name="twitter:image" content="https://ndhorizon.com/img/og-card.png">
+
+<meta name="description" content="ESPN's NBA injury report for every team, with the players Leo counted in tonight's numbers and how much each one moved them.">
+<link rel="canonical" href="https://ndhorizon.com/nba/tools/injury-tracker/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127936;</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/scoreboard.css">
+<style>
+.inj-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-sm);}
+table.inj{width:100%;border-collapse:collapse;font-size:.89rem;}
+table.inj th,table.inj td{padding:10px 12px;text-align:left;}
+table.inj th{background:var(--bg-elev);color:var(--text-dim);font-size:.67rem;font-weight:800;text-transform:uppercase;letter-spacing:.4px;}
+table.inj tbody tr{border-top:1px solid var(--border);}
+table.inj tbody tr:hover{background:var(--bg-elev);}
+.tm{display:flex;align-items:center;gap:8px;}
+.tm img{width:24px;height:24px;object-fit:contain;}
+.st{font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.4px;padding:3px 8px;border-radius:999px;white-space:nowrap;}
+.s-out{background:rgba(207,34,46,.13);color:var(--danger,#cf222e);}
+.s-doubt{background:rgba(217,70,143,.13);color:var(--accent2);}
+.s-quest{background:rgba(26,37,53,.13);color:var(--accent);}
+.s-other{background:rgba(31,35,40,.10);color:var(--text-dim);}
+.scroller{overflow-x:auto;}
+.filters{display:flex;flex-wrap:wrap;gap:8px;}
+.dim{color:var(--text-dim)}
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main class="scoreboard-shell">
+  <section class="score-hero">
+    <p class="eyebrow">Who is in. Who is out.</p>
+    <h1>NBA Injury Tracker</h1>
+    <p class="subtitle">ESPN&rsquo;s injury report for every team. Players marked Counted are regulars Leo took out of tonight&rsquo;s numbers: fully when out, 40% when day to day.</p>
+    <div class="score-hero-chips"><span class="hero-chip">&#127936; All 30 teams</span><span class="hero-chip">&#129517; ESPN designations</span><span class="hero-chip">&#9878;&#65039; What Leo counted</span></div>
+  </section>
+
+  <section class="score-controls" aria-label="Filters">
+    <div class="view-controls filters" role="group">
+      <button class="control-btn active" type="button" data-f="all">All</button>
+      <button class="control-btn" type="button" data-f="out">Out</button>
+      <button class="control-btn" type="button" data-f="day-to-day">Day to day</button>
+      <button class="control-btn" type="button" data-f="counted">Counted by Leo</button>
+    </div>
+  </section>
+  <section class="kpis" id="kpis" aria-label="Injury summary"></section>
+  <div id="status" class="loading">Loading the injury report&hellip;</div>
+  <div class="inj-wrap"><div class="scroller"><table class="inj" id="tbl"></table></div></div>
+  <p class="data-note">Injury report from ESPN&rsquo;s public feed, as of the time shown. Leo counts only regulars (10+ minutes a game over their last 10). Points moved are on that team&rsquo;s margin in tonight&rsquo;s read.</p>
+</main>
+<footer id="footer"></footer><script src="/js/app.js"></script>
+<script>
+renderNav(location.pathname); renderFooter();
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+async function tryJson(u){try{const r=await fetch(u+(u.includes("?")?"&":"?")+"v="+Date.now(),{cache:"no-store"});return r.ok?await r.json():null;}catch(e){return null;}}
+const nyToday=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"America/New_York"}).format(new Date());
+const tip=iso=>new Date(iso).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/New_York"})+" ET";
+const longDay=d=>new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
+const pct=p=>p==null?"—":Math.round(p*100)+"%";
+const sgn=v=>v==null?"—":v===0?"PK":(v>0?"+":"")+v;
+function logo(t){return '<img src="https://a.espncdn.com/i/teamlogos/nba/500/'+String(t).toLowerCase()+'.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">';}
+const pageUrl=g=>"/nba/"+g.away.toLowerCase()+"-vs-"+g.home.toLowerCase()+"-prediction-odds-"+g.date+"/";
+// The latest NBA card: today's if it exists, else the most recent day with one.
+async function latestCard(){
+  const days=await tryJson("/data/nba/slates.json")||[];
+  const t=nyToday(), d=(days.find(x=>x.date===t)||days.filter(x=>x.date<=t).pop()||days[days.length-1]);
+  return d?await tryJson("/data/nba/picks-"+d.date+".json"):null;
+}
+
+
+let ALL=[],F="all",COUNT={},COEF=-0.22;
+document.querySelectorAll("[data-f]").forEach(b=>b.addEventListener("click",()=>{F=b.dataset.f;document.querySelectorAll("[data-f]").forEach(x=>x.classList.toggle("active",x===b));render();}));
+const cls=s=>s==="out"||s==="suspension"?"s-out":s==="doubtful"?"s-doubt":s==="day-to-day"||s==="questionable"?"s-quest":"s-other";
+(async function(){
+  const st=document.getElementById("status");
+  const [inj,card,model]=await Promise.all([tryJson("/data/nba/injuries-today.json"),latestCard(),tryJson("/data/nba/model.json")]);
+  if(model&&model.coef) COEF=model.coef.lost_d;
+  ALL=(inj&&inj.players)||[];
+  if(!ALL.length){st.innerHTML='<div class="score-empty">No NBA injury report is published right now.</div>';return;}
+  st.style.display="none";
+  for(const g of (card&&card.games)||[]) for(const side of ["home","away"]) for(const p of ((g.leo||{}).missing||{})[side]||[]) COUNT[p.name+"|"+g[side]]=p;
+  const c=s=>ALL.filter(x=>x.status===s).length;
+  document.getElementById("kpis").innerHTML=
+    '<article class="kpi"><div class="label">Players listed</div><div class="value">'+ALL.length+'</div><div class="sub">as of '+esc(new Date(inj.as_of).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/New_York"}))+' ET</div></article>'+
+    '<article class="kpi"><div class="label">Out</div><div class="value">'+c("out")+'</div><div class="sub">ruled out</div></article>'+
+    '<article class="kpi"><div class="label">Day to day</div><div class="value">'+c("day-to-day")+'</div><div class="sub">game-time calls</div></article>'+
+    '<article class="kpi"><div class="label">Counted by Leo</div><div class="value">'+Object.keys(COUNT).length+'</div><div class="sub">in '+(card?esc(longDay(card.date)):"—")+'&rsquo;s read</div></article>';
+  render();
+})();
+function render(){
+  const rows=ALL.filter(x=>F==="all"||(F==="counted"?COUNT[x.name+"|"+x.team]:x.status===F)).sort((a,b)=>a.team.localeCompare(b.team)||a.name.localeCompare(b.name));
+  document.getElementById("tbl").innerHTML="<thead><tr><th>Team</th><th>Player</th><th>Injury</th><th>Status</th><th>Leo</th><th>Updated</th></tr></thead><tbody>"+
+    rows.map(x=>{const k=COUNT[x.name+"|"+x.team];
+      return '<tr><td><span class="tm">'+logo(x.team)+esc(x.team)+'</span></td><td>'+esc(x.name)+'</td><td>'+esc(x.detail||"—")+'</td>'+
+        '<td><span class="st '+cls(x.status)+'">'+esc(x.status==="day-to-day"?"day to day":x.status)+'</span></td>'+
+        '<td>'+(k?'Counted '+Math.round(k.weight*100)+'% &middot; '+(Math.abs(COEF*k.value*k.weight)).toFixed(1)+' pts':'<span class="dim">Not a regular</span>')+'</td>'+
+        '<td class="dim">'+(x.updated?esc(new Date(x.updated).toLocaleDateString("en-US",{month:"short",day:"numeric",timeZone:"America/New_York"})):"")+'</td></tr>';}).join("")+"</tbody>";
+}
+
+</script>
+</body>
+</html>

@@ -330,11 +330,13 @@ function renderCards(){
                 ? "Scored "+ft+" \u00b7 "+(tl!=null?(ft>tl?"Over":(ft<tl?"Under":"Push")):"\u2014")
                 : (leo&&leo.proj_total!=null ? "Leo "+leo.proj_total : ""))+'</span></div>'+
           // Two states only. Any nuance about WHY belongs on the matchup page.
-          '<div class="market-box rating"><span class="market-label">Leo</span>'+
-            // Win chance only; winner picks were retired 2026-10-17.
+          // Leo Pick above 60% (DEC-20261101-01, from 2026-11-01); paused Oct 17-31.
+          (()=>{const paused=g.gameday>="2026-10-17"&&g.gameday<="2026-10-31";
+            const isPick=leo&&leo.model_prob!=null&&leo.model_prob>0.60&&!paused;
+            return '<div class="market-box rating"><span class="market-label">'+(isPick?"Leo pick":"Leo")+'</span>'+
             '<span class="market-value">'+(leo&&leo.model_prob!=null
                 ? escapeHtml(leo.pick)+" "+Math.round(leo.model_prob*100)+"%" : "\u2014")+'</span>'+
-            '<span class="market-sub">'+(leo ? "Leo win chance" : "Model pending")+'</span></div>'+
+            '<span class="market-sub">'+(!leo?"Model pending":isPick?"More than 60%, graded":paused?"Leo win chance":"Too close to call")+'</span></div>';})()+
         '</div>'+
         // Starting QBs as Leo used them (depth chart, DEC-20261031-08); the
         // schedule feed's names can be stale (it still named Jalen Hurts).
