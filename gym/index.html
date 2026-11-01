@@ -2935,8 +2935,9 @@ function sessionsBetween(a, b){ return new Set((S.logs || []).filter(l => l.date
 function gradeDay(date){
   if (S.fresh && date < S.fresh) return { items: [], pass: 0, total: 0, won: false, pre: true };
   const items = [], add = (k, label, ok, detail) => items.push({ k, label, ok, detail });
-  const tgt = (S.profile && S.profile.days) || 5, ws = weekStartOf(date);
-  const elapsed = Math.round((new Date(date + "T12:00") - new Date(ws + "T12:00")) / 864e5) + 1; // days of the week through `date`
+  const ws0 = weekStartOf(date), ws = S.fresh && S.fresh > ws0 ? S.fresh : ws0; // a fresh start mid-week only counts the days since it
+  const tgt = (S.profile && S.profile.days) || 5;
+  const elapsed = Math.round((new Date(date + "T12:00") - new Date(ws + "T12:00")) / 864e5) + 1; // counted days of the week through `date`
   const done = sessionsBetween(ws, date), needBy = Math.floor(tgt * elapsed / 7);
   const trained = (S.logs || []).some(l => l.date === date);
   add("train", "Training", trained || done >= needBy, trained ? "Trained" : done >= needBy ? "Planned rest day" : `Skipped: ${done} of ${tgt} sessions this week, should be at ${needBy}`);
@@ -2968,11 +2969,13 @@ function weekScore(){
 }
 /* Today's must-dos, ordered by what matters most for the goal. */
 function todaysMission(){
-  const m = [], t = effTargets(), n = dayNutrition(today()), tgt = (S.profile && S.profile.days) || 5;
+  const m = [], t = effTargets(), n = dayNutrition(today()), tgt0 = (S.profile && S.profile.days) || 5;
   const ws0 = weekStartOf(today()), ws = S.fresh && S.fresh > ws0 ? S.fresh : ws0, done = sessionsBetween(ws, today()), trainedToday = (S.logs || []).some(l => l.date === today());
-  const daysLeft = 7 - Math.round((new Date(today() + "T12:00") - new Date(ws + "T12:00")) / 864e5); // including today
+  const daysLeft = 7 - Math.round((new Date(today() + "T12:00") - new Date(ws0 + "T12:00")) / 864e5); // including today, to Sunday
+  const weekDays = 7 - Math.round((new Date(ws + "T12:00") - new Date(ws0 + "T12:00")) / 864e5);
+  const tgt = Math.ceil(tgt0 * weekDays / 7); // partial first week after a fresh start
   const need = tgt - done;
-  if (!trainedToday && need > 0) m.push(need > daysLeft ? `<b>Train today: not optional.</b> ${tgt} this week is already out of reach (${done} done, ${daysLeft} day${daysLeft === 1 ? "" : "s"} left). Train every remaining day to salvage it.` : need === daysLeft ? `<b>Train today: not optional.</b> ${need} sessions left and exactly ${daysLeft} day${daysLeft === 1 ? "" : "s"} to do them.` : `Train today: ${need} of ${tgt} sessions still to do this week.`);
+  if (!trainedToday && need > 0) m.push(need > daysLeft ? `<b>Train today: not optional.</b> ${tgt} this week is already out of reach (${done} done, ${daysLeft} day${daysLeft === 1 ? "" : "s"} left). Train every remaining day to salvage it.` : need === daysLeft ? `<b>Train today: not optional.</b> ${need} session${need === 1 ? "" : "s"} left and exactly ${daysLeft} day${daysLeft === 1 ? "" : "s"} to do them.` : `Train today: ${need} of ${tgt} sessions still to do this week.`);
   if (n.p < t.protein) m.push(`Hit <b>${Math.round(t.protein - n.p)} g more protein</b>${n.n ? "" : ". Log breakfast now"}.`);
   const fv = dayFV(today()); if (fv < COACH.fv) m.push(`Eat <b>${Math.ceil(COACH.fv - fv)} more fruit/veg servings</b> (a banana, a cup of berries, a handful of greens).`);
   const lastPhoto = (S.photos || []).map(x => x.date).sort().pop();
