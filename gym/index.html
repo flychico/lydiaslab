@@ -151,6 +151,28 @@ details.card[open]>summary::after{content:"▴"}
 .coachcard.bad{border-color:var(--red)}
 .mission{margin:0 0 0 18px;font-size:.88rem;line-height:1.6}
 .mission li{margin-bottom:2px}
+/* ---- Desktop dashboard ---- */
+.dhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.dgrid{display:grid;grid-template-columns:1fr;gap:16px;align-items:stretch;margin-bottom:16px}
+.dgrid>.card,.dgrid>div>.card{margin:0;height:100%}
+.dbar{margin-bottom:10px}.dbar-h{display:flex;justify-content:space-between;font-size:.85rem}
+.dbar-t{height:7px;background:var(--bg2);border-radius:5px;overflow:hidden;margin-top:4px}.dbar-t>div{height:100%;border-radius:5px}
+.kpistrip-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:10px}
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.kpi{background:var(--bg2);border-radius:10px;padding:10px 12px;min-width:0}
+.kpi-l{font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--dim)}
+.kpi-v{font-size:1.45rem;font-weight:800;white-space:nowrap;line-height:1.25}.kpi-v small{font-size:.75rem;font-weight:600;color:var(--dim)}
+.kpi-s{font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mrow{display:grid;grid-template-columns:90px 1fr 34px;gap:10px;align-items:center;font-size:.84rem;margin-bottom:7px}.mrow .dbar-t{margin:0}.mrow b{text-align:right}
+@media(min-width:900px){
+  .dgrid{grid-template-columns:repeat(12,1fr);gap:20px;margin-bottom:20px}
+  .dspan12{grid-column:span 12}.dspan6{grid-column:span 6}.dspan5{grid-column:span 5}.dspan4{grid-column:span 4}.dspan3{grid-column:span 3}
+  .kpis{grid-template-columns:repeat(7,1fr)}
+}
+@media(min-width:900px) and (max-width:1180px){
+  .dspan5,.dspan4,.dspan3{grid-column:span 6}.dgrid .dspan3{grid-column:span 12}.dgrid .dwide-md{grid-column:span 12}
+  .kpis{grid-template-columns:repeat(4,1fr)}
+}
 </style>
 </head>
 <body>
@@ -1104,39 +1126,59 @@ function renderDash(){
   const prRows = Object.entries(prs).filter(([, p]) => p.w > 0).sort((a, b) => b[1].v - a[1].v).slice(0, 8);
   const weeks = weeklyVolume(logs), musc = weeklySetsByMuscle(), muscTotal = Object.values(musc).reduce((a, v) => a + v, 0);
   const doneToday = logs.find(l => l.date === today());
-  const adh = adherence(8), nt = effTargets(), nd = dayNutrition(today());
+  const adh = adherence(8), nt = effTargets(), nd = dayNutrition(today()), fv = dayFV(today());
+  const bar = (label, v, max, unit, color) => `<div class="dbar"><div class="dbar-h"><span>${label}</span><span><b>${Math.round(v)}</b> / ${max}${unit}</span></div><div class="dbar-t"><div style="width:${Math.min(100, Math.round(v / (max || 1) * 100))}%;background:${color}"></div></div></div>`;
+  // Watch strip: yesterday vs your 30-day normal
+  const yd = shiftDate(today(), -1), y = (S.hk || {})[yd] || {}, base = hkDays(30), vo2 = hkLatest("vo2");
+  const delta = (v, k, unit, goodUp) => { const a = hkAvg(base, k); if (v == null || a == null || Math.abs(v - a) / (a || 1) < 0.05) return '<span class="dim">normal</span>'; const up = v > a, good = goodUp ? up : !up; return `<span class="${good ? "green" : "gold"}">${up ? "▲" : "▼"} ${Math.abs(Math.round(v - a))}${unit}</span>`; };
+  const kpi = (label, val, sub) => `<div class="kpi"><div class="kpi-l">${label}</div><div class="kpi-v">${val}</div><div class="kpi-s">${sub || "&nbsp;"}</div></div>`;
+  const hasHk = Object.keys(S.hk || {}).length > 0;
+  const strip = hasHk ? `<div class="card dspan12 kpistrip">
+      <div class="kpistrip-h"><h3>Apple Watch <span class="dim small">· yesterday vs your 30-day normal</span></h3>${readinessCard() ? '<span class="small gold"><b>Recovery low today</b></span>' : ""}</div>
+      <div class="kpis">
+        ${kpi("Steps", y.steps != null ? y.steps.toLocaleString() : "—", y.steps != null ? delta(y.steps, "steps", "", true) : "")}
+        ${kpi("Move", y.kcal != null ? Math.round(y.kcal) + '<small> kcal</small>' : "—", y.kcal != null ? delta(y.kcal, "kcal", "", true) : "")}
+        ${kpi("Exercise", y.ex != null ? Math.round(y.ex) + '<small> min</small>' : "—", y.ex != null ? delta(y.ex, "ex", "", true) : "")}
+        ${kpi("Sleep", y.sleep != null ? fmtSleep(y.sleep) : "—", y.sleep != null ? (y.sleep >= COACH.sleep ? '<span class="green">7h+ ✓</span>' : '<span class="gold">under 7h</span>') : "")}
+        ${kpi("Resting HR", y.rhr != null ? Math.round(y.rhr) + '<small> bpm</small>' : "—", y.rhr != null ? delta(y.rhr, "rhr", "", false) : "")}
+        ${kpi("HRV", y.hrv != null ? Math.round(y.hrv) + '<small> ms</small>' : "—", y.hrv != null ? delta(y.hrv, "hrv", "", true) : "")}
+        ${kpi("VO₂ max", vo2 ? vo2.v.toFixed(1) : "—", vo2 ? `goal 38${vo2.d < yd ? ` · ${vo2.d.slice(5)}` : ""}` : "")}
+      </div></div>` : "";
   V.innerHTML = `
-  <div class="exhead"><h1><span class="mich">Michel</span><span class="angelo">Angelo</span> <span class="dim" style="font-size:1rem;font-weight:400">dashboard</span></h1><span class="dim small">${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · ${streakText()}</span></div>
-  <div class="dashgrid">
-    ${coachCard(true)}
-    ${healthCardHTML(true)}
-    ${insightsPanel("dashwide")}
-    <div class="card dashwide">
-      <div class="exhead"><h3>Today · ${esc(day.name)}</h3><span class="dim small">${day.exercises.length} exercises${doneToday ? ' · <span class="green">logged ✓</span>' : ""}</span></div>
-      ${(() => { const dm = dayMuscles(day); return dm.primary.length ? `<div class="dim small" style="margin-bottom:8px"><b>Targets:</b> ${dm.primary.join(", ")}${dm.secondary.length ? ` · also ${dm.secondary.join(", ")}` : ""}</div>` : ""; })()}
-      ${day.exercises.length ? day.exercises.map(s => { const ex = EXBY[s.ex] || { n: s.ex, u: null }; return `<div class="exline"><span>${esc(ex.n)}${ex.m ? ` <span class="dim small">· ${esc(ex.m)}</span>` : ""}</span><span class="dim">${ex.u === "time" ? s.lo + "–" + s.hi + "m" : s.sets + "×" + s.lo + "–" + s.hi}</span></div>`; }).join("") : '<p class="dim small">This day has no exercises yet — add some in Plan.</p>'}
-      <button class="btn full blue-btn" style="margin-top:12px" onclick="startWorkout(${dayIdx})">Start workout</button>
-      ${plan.days.length > 1 ? `<div class="small dim" style="margin-top:10px">Jump to: ${plan.days.map((d, i) => i === dayIdx ? "" : `<span class="blue" style="cursor:pointer;margin-right:12px" onclick="startWorkout(${i})">${esc(d.name)}</span>`).join("")}</div>` : ""}
+  <div class="dhead"><h1><span class="mich">Michel</span><span class="angelo">Angelo</span></h1><span class="dim">${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · ${streakText()}</span></div>
+  ${reviewCard() ? `<div class="dgrid"><div class="dspan12">${reviewCard()}</div></div>` : ""}
+  <div class="dgrid">
+    <div class="dspan5">${coachCard(true)}</div>
+    <div class="card dspan4">
+      <div class="exhead"><h3>Next · ${esc(day.name)}</h3><span class="dim small">${doneToday ? '<span class="green">trained today ✓</span>' : day.exercises.length + " exercises"}</span></div>
+      ${day.exercises.map(s => { const ex = EXBY[s.ex] || { n: s.ex, u: null }; return `<div class="exline"><span>${esc(ex.n)}</span><span class="dim">${ex.u === "time" ? s.lo + "–" + s.hi + "m" : s.sets + "×" + s.lo + "–" + s.hi}</span></div>`; }).join("") || '<p class="dim small">No exercises in this day yet.</p>'}
+      <button class="btn full blue-btn" style="margin-top:12px" onclick="tab='today';syncTabs();startWorkout(${dayIdx})">Start workout</button>
     </div>
-    <div class="card"><h3>Weekly sets per muscle <span class="dim small">· target 10–20</span></h3>
-      ${muscTotal > 0 ? MUSCLE_ORDER.map(mus => { const v = Math.round((musc[mus] || 0) * 10) / 10; const col = v >= 10 && v <= 20 ? "var(--green)" : "var(--gold)"; return `<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;font-size:.82rem"><span>${mus}</span><b style="color:${col}">${v}</b></div><div style="height:5px;background:var(--bg2);border-radius:4px;overflow:hidden;margin-top:2px"><div style="height:100%;width:${Math.min(100, v / 20 * 100)}%;background:${col}"></div></div></div>`; }).join("") : '<p class="dim small">No sets logged this week yet.</p>'}
-      <h3 style="margin:14px 0 4px;font-size:.9rem">Volume (lb lifted)</h3><canvas id="dashvol" width="520" height="120"></canvas>
+    <div class="card dspan3">
+      <h3>Food today</h3>
+      ${bar("Protein", nd.p, nt.protein, " g", "var(--pink)")}
+      ${bar("Calories", nd.cal, nt.cal, "", "var(--blue)")}
+      ${bar("Fruit &amp; veg", fv, COACH.fv, "", "var(--green)")}
+      <button class="btn ghost full small-btn" style="margin-top:10px" onclick="tab='food';foodDate=null;syncTabs();render()">Log food</button>
     </div>
-    <div class="card"><h3>Top lifts <span class="dim small">(best e1RM)</span></h3>
-      ${prRows.length ? `<table><thead><tr><th>Exercise</th><th class="num">Best set</th><th class="num">e1RM</th></tr></thead><tbody>${prRows.map(([id, p]) => { const mo = momentum(id); const tag = mo === "up" ? ' <span class="green">▲</span>' : mo === "down" ? ' <span class="red">▼</span>' : mo === "flat" ? ' <span class="dim">▬</span>' : ""; return `<tr style="cursor:pointer" onclick="exChart('${id}')"><td style="color:var(--blue);font-weight:600">${esc(EXBY[id] ? EXBY[id].n : id)}${tag}</td><td class="num">${p.w}×${p.r}</td><td class="num gold"><b>${Math.round(p.v)}</b></td></tr>`; }).join("")}</tbody></table>` : '<p class="dim small">Log a workout to see your PRs.</p>'}
+    ${strip}
+    <div class="card dspan6"><h3>Consistency <span class="dim small">· sessions per week vs ${S.profile.days}/wk target</span></h3>
+      <canvas id="dashadh" width="640" height="150"></canvas>
     </div>
-    <div class="card"><h3>Nutrition today</h3>
-      <div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:.85rem"><span>Protein</span><span><b>${Math.round(nd.p)}</b> / ${nt.protein} g</span></div><div style="height:7px;background:var(--bg2);border-radius:5px;overflow:hidden;margin-top:3px"><div style="height:100%;width:${Math.min(100, Math.round(nd.p / nt.protein * 100))}%;background:var(--pink)"></div></div></div>
-      <div><div style="display:flex;justify-content:space-between;font-size:.85rem"><span>Calories</span><span><b>${Math.round(nd.cal)}</b> / ${nt.cal}</span></div><div style="height:7px;background:var(--bg2);border-radius:5px;overflow:hidden;margin-top:3px"><div style="height:100%;width:${Math.min(100, Math.round(nd.cal / nt.cal * 100))}%;background:var(--blue)"></div></div></div>
-      <div class="small dim" style="margin-top:8px">${Math.round(nd.c)}g carbs · ${Math.round(nd.f)}g fat · <span class="blue" style="cursor:pointer" onclick="tab='food';foodDate=null;syncTabs();render()">log food →</span></div>
+    <div class="card dspan6"><h3>Training volume <span class="dim small">· lb lifted per week</span></h3>
+      <canvas id="dashvol" width="640" height="150"></canvas>
     </div>
-    <div class="card"><h3>Consistency <span class="dim small">· done vs ${S.profile.days}/wk target</span></h3>
-      <canvas id="dashadh" width="520" height="120"></canvas>
-      <div class="dim small" style="margin-top:6px">Last 8 weeks · target line at ${S.profile.days}/week</div>
+    <div class="card dspan4"><h3>${muscTotal > 0 ? "Sets this week" : "Planned sets / week"} <span class="dim small">· target 10–20 per muscle</span></h3>
+      ${(() => { const src = muscTotal > 0 ? musc : plannedSetsByMuscle(); return Object.values(src).some(v => v > 0) ? MUSCLE_ORDER.map(mus => { const v = Math.round((src[mus] || 0) * 10) / 10; const col = v >= 10 && v <= 20 ? "var(--green)" : "var(--gold)"; return `<div class="mrow"><span>${mus}</span><div class="dbar-t"><div style="width:${Math.min(100, v / 20 * 100)}%;background:${col}"></div></div><b style="color:${col}">${v}</b></div>`; }).join("") : '<p class="dim small">No sets planned yet.</p>'; })()}
+      ${muscTotal > 0 ? "" : '<div class="dim small" style="margin-top:6px">Switches to what you actually did once you log a session this week.</div>'}
     </div>
-    <div class="card"><h3>Recent workouts</h3>
-      ${logs.length ? [...logs].reverse().slice(0, 8).map(l => `<div class="exline"><span>${l.date.slice(5)} · <b>${esc(l.dayName || "Workout")}</b>${l.rpe ? ` <span class="dim small">RPE ${l.rpe}</span>` : ""}</span><span class="dim small">${l.entries.reduce((a, en) => a + en.sets.length, 0)} sets · ${l.min}m</span></div>`).join("") : '<p class="dim small">No workouts yet.</p>'}
+    <div class="card dspan4"><h3>Top lifts <span class="dim small">· best estimated 1RM</span></h3>
+      ${prRows.length ? `<table><tbody>${prRows.map(([id, p]) => { const mo = momentum(id); const tag = mo === "up" ? ' <span class="green">▲</span>' : mo === "down" ? ' <span class="red">▼</span>' : ""; return `<tr style="cursor:pointer" onclick="exChart('${id}')"><td style="font-weight:600">${esc(EXBY[id] ? EXBY[id].n : id)}${tag}</td><td class="num dim">${p.w}×${p.r}</td><td class="num gold"><b>${Math.round(p.v)}</b></td></tr>`; }).join("")}</tbody></table>` : '<p class="dim small">Log a workout to see your PRs.</p>'}
     </div>
+    <div class="card dspan4 dwide-md"><h3>Recent workouts</h3>
+      ${logs.length ? [...logs].reverse().slice(0, 8).map(l => `<div class="exline"><span>${new Date(l.date + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })} · <b>${esc(l.dayName || "Workout")}</b></span><span class="dim small">${(n => n + (n === 1 ? " set" : " sets"))(l.entries.reduce((a, en) => a + en.sets.length, 0))} · ${l.min}m</span></div>`).join("") : '<p class="dim small">No workouts yet.</p>'}
+    </div>
+    ${insightsPanel("dspan12")}
   </div>
   <div id="chartmodal"></div>`;
   drawBars("dashvol", weeks.map(w => w.vol), weeks.map(w => w.label));
@@ -1260,7 +1302,7 @@ function streakText(){
   if (!dates.has(today())) d.setDate(d.getDate() - 1);
   while (dates.has(d.toLocaleDateString("en-CA"))) { streak++; d.setDate(d.getDate() - 1); }
   const week = S.logs.filter(l => (Date.now() - new Date(l.date + "T12:00")) / 864e5 < 7).length;
-  return `${week}/${S.profile.days} this week` + (streak > 1 ? ` · ${streak}-day streak 🔥` : "");
+  return `${week}/${S.profile.days} this week` + (streak > 1 ? ` · trained ${streak} days in a row 🔥` : "");
 }
 function startWorkout(dayIdx){
   const day = S.plan.days[dayIdx];
