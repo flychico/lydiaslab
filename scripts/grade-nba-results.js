@@ -18,16 +18,25 @@
  *   lean        when Leo was 4+ points off the spread: Leo's side at the
  *               DraftKings spread, win / loss / push. A test, not a bet.
  *   line move   (NBA-H15) the DraftKings spread at Leo's first read of the
- *               day (open_home_spread), at the read of record, and at the
- *               close (ESPN's closing line on the final scoreboard).
+ *               day (open_home_spread) and at the close (close_home_spread,
+ *               from the pickcenter in ESPN's game summary; the scoreboard
+ *               drops the line once a game is final). close_source says
+ *               which: "espn" or, when ESPN has no line, "last_capture" (the
+ *               last DraftKings line Leo saved before tip).
  *               lean_clv_pts = points the line moved toward Leo's lean side
- *               between the read of record and the close (+ = toward Leo).
+ *               from the open to the close (+ = toward Leo).
  *               A benchmark only: the line is never a model input.
+ *   box scores  every player's line from ESPN's game summary, saved to
+ *               data/nba/boxscores/<date>.json (who played, minutes, stats,
+ *               did-not-play reasons) so the audit can check the injury
+ *               input the morning after, without waiting a day for the
+ *               sportsdataverse release.
  */
 const fs = require("fs");
 const path = require("path");
 const M = require("./lib/nba-model");
 const { catchUp } = require("./lib/nfl-catchup");
+const S = require("./lib/nba-espn-summary");
 
 const DIR = path.join(__dirname, "..", "data", "nba");
 const HISTORY = path.join(DIR, "prediction-history.csv");
@@ -35,7 +44,10 @@ const LEDGER = path.join(DIR, "results-ledger.csv");
 const COLS = ["date", "game_id", "away", "home", "away_score", "home_score", "margin", "leo_home_margin", "leo_p_home", "mkt_home_spread",
   "mkt_p_home", "leo_pick", "winner", "leo_winner_correct", "mkt_winner_correct", "brier_leo", "brier_mkt", "leo_miss", "line_miss",
   "lean_side", "lean_line", "lean_result", "edge_pts", "home_lost", "away_lost", "captured_at", "kickoff_utc", "model_version",
-  "open_home_spread", "close_home_spread", "lean_clv_pts"];
+  "open_home_spread", "close_home_spread", "lean_clv_pts", "close_source"];
+const BOX_DIR = path.join(DIR, "boxscores");
+const clvPts = (side, open, close) => side && open !== "" && open != null && close !== "" && close != null
+  ? (side === "home" ? +open - +close : +close - +open).toFixed(1) : "";
 const ESPN = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba";
 const nyDate = d => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(d);
 const arg = process.argv.find(a => a.startsWith("--date="));
@@ -109,24 +121,96 @@ function summarize() {
   console.log(`Season: ${s.games} graded. Winner Leo ${s.winner_leo} / market ${s.winner_market}. Brier ${s.brier_leo} / ${s.brier_market}. Leans ${s.leans.won}-${s.leans.lost}-${s.leans.push}.`);
 }
 
+function writeBox(date, games) {
+  fs.mkdirSync(BOX_DIR, { recursive: true });
+  const f = path.join(BOX_DIR, `${date}.json`);
+  const prev = fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, "utf8")).games : [];
+  const byId = new Map(prev.map(x => [x.game_id, x])); for (const x of games) byId.set(x.game_id, x);
+  fs.writeFileSync(f, JSON.stringify({ date, source: "ESPN game summary", saved_at: new Date().toISOString(), games: [...byId.values()] }) + "\n");
+  console.log(`  box scores: ${byId.size} games saved to data/nba/boxscores/${date}.json`);
+}
+
+/* Ledger rows graded before the summary source existed (or when ESPN had no
+   line yet) get their close, close_source, lean_clv_pts and box score filled
+   in later. Only blank fields are written; nothing graded is changed. */
+async function backfill() {
+  if (!fs.existsSync(LEDGER)) return;
+  const text = fs.readFileSync(LEDGER, "utf8").split(/\r?\n/).filter(Boolean);
+  const head = text[0].split(","), rows = readCsv(LEDGER);
+  if (!head.includes("close_source")) return;      // header rewritten below on first run
+  const lastLine = new Map();
+  for (const r of readCsv(HISTORY)) if (r.mkt_home_spread !== "" && r.captured_at < r.kickoff_utc) {
+    const l = lastLine.get(r.game_id); if (!l || r.captured_at > l.captured_at) lastLine.set(r.game_id, r); }
+  const cutoff = nyDate(new Date(Date.now() - 14 * 864e5)), byDate = {};
+  let changed = 0;
+  for (const r of rows) {
+    if (r.date < cutoff) continue;
+    const needClose = r.close_home_spread === "" || r.close_source === "last_capture";
+    const needBox = !fs.existsSync(path.join(BOX_DIR, `${r.date}.json`)) ||
+      !JSON.parse(fs.readFileSync(path.join(BOX_DIR, `${r.date}.json`), "utf8")).games.some(x => x.game_id === r.game_id);
+    if (!needClose && !needBox) continue;
+    let sm = null;
+    try { sm = await S.fetchSummary(r.game_id); } catch (e) { console.log(`  backfill ${r.game_id}: ${e.message}`); }
+    const c = sm ? S.closeSpread(sm) : null;
+    if (needClose) {
+      const before = [r.close_home_spread, r.close_source, r.lean_clv_pts].join("|");
+      if (c && c.home_spread != null) { r.close_home_spread = String(c.home_spread); r.close_source = "espn"; }
+      else if (r.close_home_spread === "" && lastLine.has(r.game_id)) { r.close_home_spread = lastLine.get(r.game_id).mkt_home_spread; r.close_source = "last_capture"; }
+      r.lean_clv_pts = clvPts(r.lean_side, r.open_home_spread, r.close_home_spread);
+      if ([r.close_home_spread, r.close_source, r.lean_clv_pts].join("|") !== before) changed++;
+    }
+    const players = sm ? S.boxScore(sm) : [];
+    if (needBox && players.length) (byDate[r.date] = byDate[r.date] || []).push({ game_id: r.game_id, away: r.away, home: r.home, away_score: +r.away_score, home_score: +r.home_score, players });
+  }
+  for (const [d, g] of Object.entries(byDate)) writeBox(d, g);
+  if (changed) {
+    fs.writeFileSync(LEDGER, COLS.join(",") + "\n" + rows.map(o => COLS.map(c => String(o[c] ?? "")).join(",")).join("\n") + "\n");
+    console.log(`  backfill: closing line filled on ${changed} graded games`);
+  }
+}
+
+/* The ledger gains the close_source column once; old rows keep every value. */
+function upgradeLedger() {
+  if (!fs.existsSync(LEDGER)) return;
+  const lines = fs.readFileSync(LEDGER, "utf8").split(/\r?\n/).filter(Boolean);
+  const head = lines[0].split(",");
+  if (head.includes("close_source")) return;
+  const rows = readCsv(LEDGER);
+  fs.writeFileSync(LEDGER, COLS.join(",") + "\n" + rows.map(o => COLS.map(c => String(o[c] ?? "")).join(",")).join("\n") + "\n");
+  console.log("  ledger: close_source column added");
+}
+
 (async () => {
+  upgradeLedger();
   if (process.argv.includes("--summary-only")) return summarize();
   const ledger = readCsv(LEDGER), graded = new Set(ledger.map(r => r.game_id));
   // Read of record: last capture before tip, per game.
-  const frozen = new Map(), opening = new Map();
+  const frozen = new Map(), opening = new Map(), lastLine = new Map();
   for (const r of readCsv(HISTORY)) {
     if (r.date !== DATE || !(r.captured_at < r.kickoff_utc)) continue;
-    if (r.mkt_home_spread !== "") { const o = opening.get(r.game_id); if (!o || r.captured_at < o.captured_at) opening.set(r.game_id, r); }
+    if (r.mkt_home_spread !== "") {
+      const o = opening.get(r.game_id); if (!o || r.captured_at < o.captured_at) opening.set(r.game_id, r);
+      const l = lastLine.get(r.game_id); if (!l || r.captured_at > l.captured_at) lastLine.set(r.game_id, r);
+    }
     const prev = frozen.get(r.game_id); if (!prev || r.captured_at > prev.captured_at) frozen.set(r.game_id, r);
   }
   if (!frozen.size) { console.log(`NBA grade ${DATE}: no frozen reads.`); }
   else {
-    const fin = await finals(DATE), out = [];
+    const fin = await finals(DATE), out = [], box = [];
     for (const g of fin) {
       const p = frozen.get(g.game_id); if (!p || graded.has(g.game_id)) continue;
       const margin = g.hs - g.as, m = +p.leo_home_margin, ph = +p.leo_p_home, y = margin > 0 ? 1 : 0;
       const sp = p.mkt_home_spread === "" ? null : +p.mkt_home_spread;
       const mp = p.home_ml !== "" && p.away_ml !== "" ? M.noVig(+p.home_ml, +p.away_ml) : null;
+      // Closing line and box score from ESPN's game summary (never an input).
+      let close = null, players = [];
+      try { const sm = await S.fetchSummary(g.game_id); close = S.closeSpread(sm); players = S.boxScore(sm); }
+      catch (e) { console.log(`  ${g.away}@${g.home}: no ESPN summary (${e.message})`); }
+      if (players.length) box.push({ game_id: g.game_id, away: g.away, home: g.home, away_score: g.as, home_score: g.hs, players });
+      const closeSp = close && close.home_spread != null ? close.home_spread
+        : lastLine.has(g.game_id) ? +lastLine.get(g.game_id).mkt_home_spread : null;
+      const closeSrc = close && close.home_spread != null ? "espn" : closeSp != null ? "last_capture" : "";
+      const openSp = opening.has(g.game_id) ? opening.get(g.game_id).mkt_home_spread : "";
       let lean = "";
       if (p.lean_side && sp != null) {
         const cover = margin + sp;   // >0 home covered
@@ -142,11 +226,11 @@ function summarize() {
         leo_miss: Math.abs(m - margin).toFixed(2), line_miss: sp == null ? "" : Math.abs(-sp - margin).toFixed(2),
         lean_side: p.lean_side, lean_line: p.lean_line, lean_result: lean, edge_pts: p.edge_pts,
         home_lost: p.home_lost, away_lost: p.away_lost, captured_at: p.captured_at, kickoff_utc: p.kickoff_utc, model_version: p.model_version,
-        open_home_spread: opening.has(g.game_id) ? opening.get(g.game_id).mkt_home_spread : "",
-        close_home_spread: g.close_home_spread ?? "",
-        lean_clv_pts: p.lean_side && sp != null && g.close_home_spread != null ? (p.lean_side === "home" ? sp - g.close_home_spread : g.close_home_spread - sp).toFixed(1) : ""
+        open_home_spread: openSp, close_home_spread: closeSp ?? "", close_source: closeSrc,
+        lean_clv_pts: clvPts(p.lean_side, openSp, closeSp)
       });
     }
+    if (box.length) writeBox(DATE, box);
     if (out.length) {
       const exists = fs.existsSync(LEDGER);
       fs.appendFileSync(LEDGER, (exists ? "" : COLS.join(",") + "\n") + out.map(o => COLS.map(c => String(o[c] ?? "")).join(",")).join("\n") + "\n");
@@ -155,6 +239,7 @@ function summarize() {
     console.log(`NBA grade ${DATE}: ${out.length} graded, ${waiting} not final yet.`);
     for (const o of out) console.log(`  ${o.away} ${o.away_score} @ ${o.home} ${o.home_score}  Leo ${o.leo_pick} ${o.leo_winner_correct ? "right" : "wrong"}${o.lean_result ? "  lean " + o.lean_result : ""}`);
   }
+  await backfill();
   summarize();
   catchUp({ script: __filename, historyFile: HISTORY, ledgerFile: LEDGER, today: nyDate(new Date()), label: "NBA" });
 })().catch(e => { console.error(e); process.exit(1); });
