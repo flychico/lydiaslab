@@ -135,7 +135,7 @@ table.calls tbody tr:hover{background:var(--bg-elev);}
     <summary style="cursor:pointer;font-weight:700">How Leo is graded</summary>
     <ul class="small" style="margin:10px 0 2px;padding-left:18px;line-height:1.55">
       <li>Every number is frozen before kickoff and never changed after. Only that frozen read is graded.</li>
-      <li><b>Winner picks were retired on October 17.</b> Leo now shows each team&rsquo;s win chance as information only. Picks graded before then (a team given more than a 60% chance) stay on the record as history.</li>
+      <li><b>Leo picks:</b> a team Leo gives more than a 60% chance to win. Picks were paused from October 17 to October 31 and came back on November 1; the earlier picks stay on the record as history. Under 60% is too close to call and is not graded.</li>
       <li><b>Prop calls:</b> Leo&rsquo;s side of the posted line for QB passing, RB rushing and WR receiving yards. Inside 5% of the line there is no call.</li>
       <li>Losses stay on the record. Players ruled out are marked excluded, never deleted.</li>
       <li><b>Spread:</b> the side Leo&rsquo;s projected margin favours against the posted spread. Inside 1 point there is no call. Shown as information, never a pick.</li>
@@ -152,7 +152,7 @@ table.calls tbody tr:hover{background:var(--bg-elev);}
       <button class="control-btn" type="button" data-grp="WR">WR</button>
       <button class="control-btn" type="button" data-grp="SP">Spread</button>
       <button class="control-btn" type="button" data-grp="TOT">Totals</button>
-      <button class="control-btn" type="button" data-grp="ML">Winners (history)</button>
+      <button class="control-btn" type="button" data-grp="ML">Leo picks</button>
     </div>
     <div class="view-controls filters" role="group" aria-label="Filter by week" id="weekFilter"></div>
     <div class="view-controls filters" role="group" aria-label="Filter by outcome">
@@ -289,7 +289,9 @@ function renderRecords(){
      every game at 50%+; it stays on the record, shown on its own. */
   const g = data.games.filter(inWeek);
   const v1 = g.filter(x=>x.model_version==="leo-nflml-v1");
-  const v2 = g.filter(x=>x.model_version!=="leo-nflml-v1");
+  const v2 = g.filter(x=>x.model_version!=="leo-nflml-v1" && x.date<"2026-10-17");
+  // Leo picks came back on 2026-11-01 (DEC-20261101-01).
+  const back = g.filter(x=>x.model_version!=="leo-nflml-v1" && x.date>="2026-11-01");
   /* Winner picks were retired on 2026-10-17 (DEC-20261017-06): Leo shows each
      team's win chance as information only. The graded picks stay on the
      record as history, never removed. */
@@ -301,7 +303,8 @@ function renderRecords(){
     (data.spreads?recTile("Spread",tallyFor(spreads().filter(x=>x.side)),"information, not a pick"):"")+
     (data.totals?recTile("Totals, calls off Oct 17",tallyFor(totals().filter(x=>x.side)),"history"):"")+
     tdTile()+
-    recTile("Winner picks, retired Oct 17",tallyFor(v2),"history, above 60%")+
+    recTile("Leo picks, from Nov 1",tallyFor(back),"a team Leo gives more than 60%")+
+    recTile("Winner picks, Sep 27 to Oct 11",tallyFor(v2),"history, above 60%")+
     (v1.length?recTile("Week 2 winners, retired model",tallyFor(v1),"history, every game"):"");
 }
 

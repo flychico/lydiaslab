@@ -45,8 +45,10 @@ const LEDGER = path.join(DIR, "nfl-results-log.csv");
 const argDate = (process.argv.find(a => a.startsWith("--date=")) || "").split("=")[1];
 const FORCE = process.argv.includes("--force");
 const DATE = argDate || new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
-// Winner picks are graded for slates before this date only (DEC-20261017-06).
-const ML_PICKS_RETIRED = "2026-10-17";
+// Winner picks were paused for slates from 2026-10-17 to 2026-10-31
+// (DEC-20261017-06) and brought back from 2026-11-01 (DEC-20261101-01).
+// Inside the pause each game keeps its win chance and Brier, ungraded.
+const ML_PICKS_PAUSED = ["2026-10-17", "2026-10-31"];
 
 const n = v => { const x = parseFloat(v); return Number.isFinite(x) ? x : null; };
 const r3 = x => x == null ? null : Math.round(x * 1000) / 1000;
@@ -194,10 +196,10 @@ function main() {
       // counts toward the record. Too Close to Call keeps its row and Brier,
       // with an empty result, the same way no-lean spreads and totals do.
       const tooClose = String(p.model_version||"").startsWith("leo-nflml-v2") && p.model_prob <= 0.60;
-      // DEC-20261017-06: winner picks retired from 2026-10-17. Leo still
-      // publishes each team's win chance and the row keeps its Brier for
-      // learning, but nothing from that date on is graded as a pick.
-      const retired = DATE >= ML_PICKS_RETIRED;
+      // DEC-20261017-06 paused winner picks for 2026-10-17 to 2026-10-31;
+      // those rows keep their Brier for learning but are not graded as
+      // picks. From 2026-11-01 (DEC-20261101-01) a Leo Pick is graded again.
+      const retired = DATE >= ML_PICKS_PAUSED[0] && DATE <= ML_PICKS_PAUSED[1];
       const res = (tooClose || retired) ? "" : winner === "TIE" ? "P" : (p.pick === winner ? "W" : "L");
       rows.push({ ...base, market: "moneyline",
         status: retired ? "win_probability" : tooClose ? "too_close_to_call" : p.status,

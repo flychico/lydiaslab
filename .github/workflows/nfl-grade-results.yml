@@ -110,6 +110,11 @@ jobs:
       - name: Build head-to-head tracker
         run: node scripts/generate-nfl-tracker.js
 
+      # Closing line value (DEC-20261101-02): did the market move toward Leo
+      # between his first read and kickoff? Private; feeds the owner brief.
+      - name: Closing line value
+        run: node scripts/generate-nfl-clv.js || true
+
       # Factor attribution per market, from frozen pre-kickoff projections.
       # Answers WHICH input made a projection wrong, not just that it was.
       - name: Learning — factor reports

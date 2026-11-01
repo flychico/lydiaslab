@@ -69,8 +69,11 @@ function gameCard(m) {
     .sort((a, b) => b.prob - a.prob).slice(0, 2);
   const scored = F && F.td_scored || null;
   const tdTag = x => !scored ? "" : ((scored[x.player] || 0) > 0 ? ' <span class="ok">scored</span>' : ' <span class="no">no TD</span>');
-  // Win chance only. Winner picks were retired on 2026-10-17 (DEC-20261017-06).
-  const winner = g ? `${esc(TEAMS.nick(g.pick))} ${pct(g.prob)}` : '<span class="dim">No pre-game read</span>';
+  // Leo pick above 60% from 2026-11-01 (DEC-20261101-01); paused Oct 17-31.
+  const paused = m.date >= "2026-10-17" && m.date <= "2026-10-31";
+  const winner = !g ? '<span class="dim">No pre-game read</span>'
+    : (!paused && g.call === "leo_pick") ? `Leo pick: ${esc(TEAMS.nick(g.pick))} ${pct(g.prob)}`
+    : `${esc(TEAMS.nick(g.pick))} ${pct(g.prob)}${paused ? "" : ' <span class="dim">too close to call</span>'}`;
   const final = F && F.away_score != null
     ? `<div class="wk-final">Final: ${esc(m.away)} ${F.away_score}, ${esc(m.home)} ${F.home_score}</div>` : "";
   return `<article class="wk-game">

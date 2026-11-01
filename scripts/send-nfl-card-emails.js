@@ -83,19 +83,20 @@ function build(games, props = null) {
     const g = m.leo && m.leo.game;
     const T = m.td_props || {};
     const top = [...(T[m.away] || []), ...(T[m.home] || [])].filter(x => x.prob != null).sort((a, b) => b.prob - a.prob).slice(0, 2);
-    // Win chance only; winner picks were retired 2026-10-17 (DEC-20261017-06).
-    const winner = !g ? "No read yet" : `${TEAMS.nick(g.pick)} ${pct(g.prob)}`;
+    // Leo pick above 60% (DEC-20261101-01, back from 2026-11-01); otherwise
+    // too close to call with the win chance shown.
+    const winner = !g ? "No read yet" : g.call === "leo_pick" ? `Leo pick: ${TEAMS.nick(g.pick)} ${pct(g.prob)}` : `Too close to call (${TEAMS.nick(g.pick)} ${pct(g.prob)})`;
     return { m, g, top, winner };
   });
   const subject = `${props ? "Members: " : ""}Leo NFL card, Week ${week}: ${games.length} game${games.length === 1 ? "" : "s"} ${games.length > 1 ? "on " : ""}${nice}`;
   const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:580px;margin:0 auto;color:#1A2535">
   <h2 style="margin:0 0 6px">Leo&rsquo;s NFL card, Week ${esc(week)}</h2>
-  <p style="margin:0 0 14px;color:#555">${esc(nice)}. Each team&rsquo;s chance to win, Leo&rsquo;s projected total, and the two players most likely to score in each game. Win chances are information, not picks.</p>
+  <p style="margin:0 0 14px;color:#555">${esc(nice)}. Leo&rsquo;s pick where he gives a team more than a 60% chance, his projected total, and the two players most likely to score in each game. Every pick is graded on the site, wins and losses alike.</p>
   ${rows.map(({ m, g, top, winner }) => `<div style="border:1px solid #e3ddd2;border-radius:10px;padding:12px 14px;margin:0 0 10px">
     <div style="font-size:12px;color:#777;text-transform:uppercase;letter-spacing:.04em">${esc(clock(m.kickoff))}${m.stadium ? " &middot; " + esc(m.stadium) : ""}</div>
     <div style="font-weight:bold;font-size:16px;margin:2px 0 6px"><a href="${SITE}${esc(m.url)}" style="color:#1A2535;text-decoration:none">${esc(TEAMS.full(m.away))} at ${esc(TEAMS.full(m.home))}</a></div>
     <div style="font-size:14px;line-height:1.5">
-      <b>Win chance:</b> ${esc(winner)}<br>
+      <b>Leo:</b> ${esc(winner)}<br>
       <b>Leo total:</b> ${g && g.proj_total != null ? `${esc(g.proj_total)} points` : "n/a"}<br>
       <b>Most likely TD:</b> ${top.length ? top.map(x => `${esc(x.player)} (${esc(x.team)} ${pct(x.prob)})`).join(", ") : "n/a"}
     </div>${props ? memberExtra(m, props).html : ""}</div>`).join("")}
@@ -105,7 +106,7 @@ function build(games, props = null) {
   <p style="font-size:12px;color:#999;margin-top:22px;border-top:1px solid #eee;padding-top:10px">Leo provides analysis and education only, not betting advice. 21+. If you or someone you know has a gambling problem, call 1-800-MY-RESET (1-800-697-3738).<br>To unsubscribe, reply with "unsubscribe".</p>
 </div>`;
   const text = [`Leo's NFL card, Week ${week}, ${nice}`, "",
-    ...rows.map(({ m, g, top, winner }) => `${TEAMS.full(m.away)} at ${TEAMS.full(m.home)} (${clock(m.kickoff)})\n  Win chance: ${winner}\n  Leo total: ${g && g.proj_total != null ? g.proj_total : "n/a"}\n  Most likely TD: ${top.map(x => `${x.player} ${pct(x.prob)}`).join(", ") || "n/a"}${props ? memberExtra(m, props).text : ""}\n  ${SITE}${m.url}`),
+    ...rows.map(({ m, g, top, winner }) => `${TEAMS.full(m.away)} at ${TEAMS.full(m.home)} (${clock(m.kickoff)})\n  Leo: ${winner}\n  Leo total: ${g && g.proj_total != null ? g.proj_total : "n/a"}\n  Most likely TD: ${top.map(x => `${x.player} ${pct(x.prob)}`).join(", ") || "n/a"}${props ? memberExtra(m, props).text : ""}\n  ${SITE}${m.url}`),
     "", `Full card: ${SITE}/nfl/week/`, "Analysis only, not betting advice. 21+. 1-800-MY-RESET.", 'Reply "unsubscribe" to stop these.'].join("\n");
   return { subject, html, text };
 }
