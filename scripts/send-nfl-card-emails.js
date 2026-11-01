@@ -24,6 +24,7 @@
 const fs = require("fs");
 const path = require("path");
 const TEAMS = require("./lib/nfl-teams");
+const E = require("./lib/email-cards");   // the website's look (DEC-20261101-04)
 
 const ROOT = path.join(__dirname, "..");
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
@@ -68,12 +69,77 @@ function memberExtra(m, props) {
   if (!yards.length && !tds.length) return { html: "", text: "" };
   const yl = yards.map(p => `${p.player} (${p.team}) ${UNIT[p.market]}: Leo ${p.projection} vs line ${p.line}${p.lean && p.lean !== "none" ? `, leans ${String(p.lean).toUpperCase()}` : ", no lean"}`);
   const tl = tds.map(p => `${p.player} (${p.team}) ${pct(p.projection)}`);
+  const cell = `style="font-family:${E.SANS};font-size:12px;padding:5px 0;border-top:1px solid ${E.X.line};color:${E.T.text}"`;
+  const yrows = yards.map(p => { const side = p.lean && p.lean !== "none" ? String(p.lean).toUpperCase() : "";
+    return `<tr><td ${cell}><b>${esc(p.player)}</b> <span style="color:${E.T.dim}">${esc(p.team)} ${esc(UNIT[p.market])}</span></td><td align="right" ${cell}>Leo <b>${esc(p.projection)}</b></td><td align="right" ${cell}>line ${esc(p.line)}</td><td align="right" ${cell}>${side ? E.pill(side, side === "UNDER" ? "gold" : "navy") : `<span style="color:${E.T.dim}">no lean</span>`}</td></tr>`; }).join("");
   return {
-    html: `<div style="font-size:13px;line-height:1.5;margin-top:8px;padding-top:8px;border-top:1px dashed #e3ddd2">
-      ${yl.length ? `<b>Prop reads</b><br>${yl.map(esc).join("<br>")}` : ""}
-      ${tl.length ? `<br><b>TD chances 25%+</b><br>${esc(tl.join(", "))}` : ""}</div>`,
+    html: `${yl.length ? `<div style="font-weight:800;color:${E.T.text};margin-bottom:4px">Prop reads (members)</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${yrows}</table>` : ""}
+      ${tl.length ? `<div style="margin-top:8px"><b style="color:${E.T.text}">Touchdown chances 25%+:</b> ${esc(tl.join(", "))}</div>` : ""}`,
     text: (yl.length ? `\n  Prop reads:\n    ${yl.join("\n    ")}` : "") + (tl.length ? `\n  TD chances 25%+: ${tl.join(", ")}` : "")
   };
+}
+
+// QBs as Leo used them (depth chart, DEC-20261031-08); the schedule feed's
+// names can be stale. picks-<date>.json carries them.
+const PICKS = (() => { try { return Object.fromEntries(JSON.parse(fs.readFileSync(path.join(ROOT, "data/nfl", `picks-${DATE}.json`), "utf8")).map(p => [p.matchup, p])); } catch (e) { return {}; } })();
+const fav = (m, x) => x == null ? "n/a" : x > 0 ? `${m.home} by ${Math.round(x * 10) / 10}` : x < 0 ? `${m.away} by ${Math.round(-x * 10) / 10}` : "level";
+const spreadTxt = (m, l) => l == null ? "n/a" : l > 0 ? `${m.home} -${l}` : l < 0 ? `${m.away} -${-l}` : "PK";
+const am = v => v == null || v === "" ? "" : (+v > 0 ? "+" : "") + v;
+
+function cardHtml(games, rows, props, nice, week, subject) {
+  const picks = rows.filter(r => r.g && r.g.call === "leo_pick");
+  const firstKick = games[0] ? clock(games[0].kickoff) : "";
+  const allTd = rows.flatMap(r => r.top).sort((a, b) => b.prob - a.prob);
+  const body = [
+    E.header("NFL"),
+    E.hero({ eyebrow: `Leo NFL &middot; Week ${esc(week)} &middot; ${esc(nice)}`,
+      title: `Week ${esc(week)} card: ${games.length} game${games.length === 1 ? "" : "s"}`,
+      subtitle: "Leo&rsquo;s pick where he gives a team more than a 60% chance, his spread and total beside the market, and the players most likely to score. Every number is frozen before kickoff and graded on the site.",
+      chips: ["&#127944; Full slate", "&#129657; Injury report built in", "&#128274; Frozen before kickoff", "&#128202; Graded every game"] }),
+    E.tiles([
+      { label: "Games", value: games.length, sub: esc(nice.split(",")[0]) },
+      { label: "First kickoff", value: esc(firstKick.replace(" ET", "")), sub: "Eastern time" },
+      { label: "Leo picks", value: picks.length, sub: "more than 60%" },
+      { label: "Top TD chance", value: allTd[0] ? `${Math.round(allTd[0].prob * 100)}%` : "n/a", sub: allTd[0] ? esc(allTd[0].player) : "" }
+    ]),
+    E.panel("Leo&rsquo;s picks", E.rows(picks.map(({ m, g }) => [
+      `<b>${esc(TEAMS.full(g.pick))}</b> ${Math.round(g.prob * 100)}%${g.price != null && g.price !== "" ? ` <span style="color:${E.T.dim}">${esc(am(g.price))}</span>` : ""}`,
+      `${esc(m.away)} at ${esc(m.home)} &middot; ${esc(clock(m.kickoff))}`]),
+      "No team clears 60% on this slate, so Leo makes no pick. Every game below still has his read.")),
+    ...rows.map(({ m, g, top }) => {
+      const [ac, hc] = E.pairColors(E.NFL_COLORS, m.away, m.home);
+      const P = PICKS[m.matchup] || {};
+      const leoHome = g && g.prob != null ? (g.pick === m.home ? g.prob : 1 - g.prob) : null;
+      const isPick = g && g.call === "leo_pick";
+      const href = `${E.SITE}${m.url}`;
+      const team = (abbr, side) => ({
+        abbr, logo: `${E.SITE}/img/nfl/${encodeURIComponent(abbr)}.png`, name: TEAMS.full(abbr),
+        sub: (P[side + "_qb"] || m[side + "_qb_name"]) ? `QB ${esc(P[side + "_qb"] || m[side + "_qb_name"])}` : "",
+        right: esc(am(m[side + "_moneyline"])) || "&nbsp;",
+        rightSub: leoHome == null ? "" : `Leo ${Math.round((side === "home" ? leoHome : 1 - leoHome) * 100)}%`
+      });
+      const td = top.length ? `<b style="color:${E.T.text}">Most likely to score:</b> ${top.map(x => `${esc(x.player)} <span style="color:${E.T.text}">${Math.round(x.prob * 100)}%</span>`).join(", ")}` : "";
+      return E.gameCard({
+        href, awayColor: ac, homeColor: hc,
+        time: esc(clock(m.kickoff)), venue: esc(m.stadium || ""),
+        badges: [isPick ? E.pill(`Leo pick ${esc(g.pick)}`, "good") : g ? E.pill("Too close to call", "muted") : E.pill("Read pending", "muted")],
+        away: team(m.away, "away"), home: team(m.home, "home"),
+        prob: leoHome == null ? null : { away: 1 - leoHome, label: "Leo win chance", text: `${esc(m.away)} ${Math.round((1 - leoHome) * 100)}% &middot; ${esc(m.home)} ${Math.round(leoHome * 100)}%` },
+        boxes: [
+          { label: "Spread", value: esc(spreadTxt(m, g ? g.spread_line : m.spread_line)), sub: g ? `Leo ${esc(fav(m, g.exp_margin))}` : "" , tone: "steel" },
+          { label: "Total", value: esc(g && g.total_line != null ? g.total_line : (m.total_line ?? "n/a")), sub: g && g.proj_total != null ? `Leo ${esc(g.proj_total)}` : "", tone: "steel" },
+          { label: isPick ? "Leo pick" : "Leo", value: g ? `${esc(g.pick)} ${Math.round(g.prob * 100)}%` : "n/a", sub: isPick ? "more than 60%, graded" : "under 60%, no pick", tone: isPick ? "good" : "gold" }
+        ],
+        notes: [td, props ? memberExtra(m, props).html : ""],
+        cta: "Full preview: injuries, props and why"
+      });
+    }),
+    E.footer({
+      links: [[`${E.SITE}/nfl/scoreboard/`, "Live scores"], [`${E.SITE}/nfl/results/`, "Leo&rsquo;s record"]],
+      note: (props ? "Prop reads are Leo&rsquo;s side of each posted line, not wagers. Inside 5% of the line there is no lean.<br>" : "") + "Leo&rsquo;s top touchdown pick in a game scored 47% of the time in 2023 to 2025. These are chances, not promises."
+    })
+  ].join("\n");
+  return E.shell({ title: subject, preheader: picks.length ? `Leo picks: ${picks.map(({ g }) => `${g.pick} ${Math.round(g.prob * 100)}%`).join(", ")}` : `${games.length} games, Leo's read on each`, body });
 }
 
 function build(games, props = null) {
@@ -89,22 +155,7 @@ function build(games, props = null) {
     return { m, g, top, winner };
   });
   const subject = `${props ? "Members: " : ""}Leo NFL card, Week ${week}: ${games.length} game${games.length === 1 ? "" : "s"} ${games.length > 1 ? "on " : ""}${nice}`;
-  const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:580px;margin:0 auto;color:#1A2535">
-  <h2 style="margin:0 0 6px">Leo&rsquo;s NFL card, Week ${esc(week)}</h2>
-  <p style="margin:0 0 14px;color:#555">${esc(nice)}. Leo&rsquo;s pick where he gives a team more than a 60% chance, his projected total, and the two players most likely to score in each game. Every pick is graded on the site, wins and losses alike.</p>
-  ${rows.map(({ m, g, top, winner }) => `<div style="border:1px solid #e3ddd2;border-radius:10px;padding:12px 14px;margin:0 0 10px">
-    <div style="font-size:12px;color:#777;text-transform:uppercase;letter-spacing:.04em">${esc(clock(m.kickoff))}${m.stadium ? " &middot; " + esc(m.stadium) : ""}</div>
-    <div style="font-weight:bold;font-size:16px;margin:2px 0 6px"><a href="${SITE}${esc(m.url)}" style="color:#1A2535;text-decoration:none">${esc(TEAMS.full(m.away))} at ${esc(TEAMS.full(m.home))}</a></div>
-    <div style="font-size:14px;line-height:1.5">
-      <b>Leo:</b> ${esc(winner)}<br>
-      <b>Leo total:</b> ${g && g.proj_total != null ? `${esc(g.proj_total)} points` : "n/a"}<br>
-      <b>Most likely TD:</b> ${top.length ? top.map(x => `${esc(x.player)} (${esc(x.team)} ${pct(x.prob)})`).join(", ") : "n/a"}
-    </div>${props ? memberExtra(m, props).html : ""}</div>`).join("")}
-  ${props ? `<p style="font-size:13px;color:#666">Prop reads are Leo&rsquo;s side of each posted line, not wagers. Inside 5% of the line there is no lean. Season record by market is on <a href="${SITE}/nfl/results/" style="color:#1A2535">Leo&rsquo;s record</a>.</p>` : ""}
-  <p><a href="${SITE}/nfl/week/" style="color:#1A2535;font-weight:bold">See the full Week ${esc(week)} card &rarr;</a> &nbsp; <a href="${SITE}/nfl/results/" style="color:#1A2535">Leo&rsquo;s record &rarr;</a></p>
-  <p style="font-size:13px;color:#666">Leo&rsquo;s top touchdown pick in a game scored 47% of the time in 2023 to 2025. These are chances, not promises. Every number was frozen before kickoff and is graded on the site after the game.</p>
-  <p style="font-size:12px;color:#999;margin-top:22px;border-top:1px solid #eee;padding-top:10px">Leo provides analysis and education only, not betting advice. 21+. If you or someone you know has a gambling problem, call 1-800-MY-RESET (1-800-697-3738).<br>To unsubscribe, reply with "unsubscribe".</p>
-</div>`;
+  const html = cardHtml(games, rows, props, nice, week, subject);
   const text = [`Leo's NFL card, Week ${week}, ${nice}`, "",
     ...rows.map(({ m, g, top, winner }) => `${TEAMS.full(m.away)} at ${TEAMS.full(m.home)} (${clock(m.kickoff)})\n  Leo: ${winner}\n  Leo total: ${g && g.proj_total != null ? g.proj_total : "n/a"}\n  Most likely TD: ${top.map(x => `${x.player} ${pct(x.prob)}`).join(", ") || "n/a"}${props ? memberExtra(m, props).text : ""}\n  ${SITE}${m.url}`),
     "", `Full card: ${SITE}/nfl/week/`, "Analysis only, not betting advice. 21+. 1-800-MY-RESET.", 'Reply "unsubscribe" to stop these.'].join("\n");
@@ -120,6 +171,8 @@ async function main() {
   const pf = path.join(ROOT, "data/nfl", `props-${DATE}.json`);
   const props = fs.existsSync(pf) ? JSON.parse(fs.readFileSync(pf, "utf8")) : [];
   const freeEmail = build(games), memberEmail = build(games, props);
+  const HTMLOUT = (process.argv.find(a => a.startsWith("--html=")) || "").slice(7);
+  if (HTMLOUT) { fs.writeFileSync(HTMLOUT, (process.argv.includes("--member") ? memberEmail : freeEmail).html); console.log(`NFL card preview written to ${HTMLOUT}`); return; }
   if (DRY) {
     const which = process.argv.includes("--member") ? memberEmail : freeEmail;
     console.log(`SUBJECT: ${which.subject}\n\n${which.text}`); return;

@@ -102,17 +102,23 @@ function build() {
 
   const css = `
   @page { size: letter; margin: 0.55in 0.5in; }
-  body { font-family: Helvetica, Arial, sans-serif; color: #1A2535; font-size: 10.5px; line-height: 1.35; }
-  h1 { font-size: 20px; margin: 0 0 2px; } h2 { font-size: 14px; margin: 0 0 4px; }
-  .sub { color: #555; margin: 0 0 10px; } .note { color: #555; font-size: 9.5px; }
+  /* The website's palette and type (DEC-20261101-04). */
+  body { font-family: "Onest", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: #2A2620; font-size: 10.5px; line-height: 1.38; background: #F5F0E8; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .brand { font-weight: 900; font-size: 22px; color: #C9A84C; letter-spacing: -.02em; }
+  .eyebrow { font-size: 9px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #7A5D14; }
+  h1 { font-family: "EB Garamond", Georgia, serif; font-weight: 600; font-size: 26px; margin: 2px 0 2px; letter-spacing: -.01em; }
+  h2 { font-size: 14px; margin: 0 0 4px; font-weight: 800; }
+  .sub { color: #675D4F; margin: 0 0 10px; } .note { color: #675D4F; font-size: 9.5px; }
   table { border-collapse: collapse; width: 100%; margin: 4px 0 8px; }
-  th, td { text-align: left; padding: 3px 5px; border-bottom: 1px solid #ddd; vertical-align: top; }
-  th { font-size: 9px; text-transform: uppercase; letter-spacing: .04em; color: #555; border-bottom: 1.5px solid #1A2535; }
+  th, td { text-align: left; padding: 3px 5px; border-bottom: 1px solid #E6DCCB; vertical-align: top; }
+  th { font-size: 8.5px; text-transform: uppercase; letter-spacing: .06em; color: #675D4F; border-bottom: 1.5px solid #1A2535; }
   td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
-  .game { break-inside: avoid; border: 1px solid #ccc; border-radius: 6px; padding: 8px 10px; margin: 0 0 10px; }
+  .game { break-inside: avoid; background: #FDFBF7; border: 1px solid #D3D3D3; border-top: 5px solid #1A2535; border-radius: 12px; padding: 9px 11px; margin: 0 0 10px; }
+  .game.pick { border-top-color: #2F6E4A; }
   .meta { color: #555; margin-bottom: 4px; } .side { font-weight: 700; }
   .cols { display: flex; gap: 14px; } .cols > div { flex: 1; }
-  .box { background: #F5F0E8; border-radius: 6px; padding: 8px 10px; margin: 0 0 12px; }`;
+  .box { background: #FDFBF7; border: 1px solid #DED4C2; border-left: 4px solid #C9A84C; border-radius: 10px; padding: 8px 10px; margin: 0 0 12px; }
+  .summary { background: #FDFBF7; border-radius: 10px; }`;
 
   const summaryRows = games.map(g => {
     const side = spreadSide(g);
@@ -140,7 +146,7 @@ function build() {
     const hurt = injuries.filter(i => (i.team === g.away || i.team === g.home) && /^(Out|Doubtful)$/i.test(i.status || ""))
       .map(i => `${esc(i.team)} ${esc(i.player)} ${esc(i.position)}, ${esc(i.status)}${i.injury ? " (" + esc(i.injury) + ")" : ""}`).join("; ");
     const side = spreadSide(g);
-    return `<div class="game">
+    return `<div class="game${num(g.model_prob) > 0.60 ? " pick" : ""}">
       <h2>${esc(TEAMS.full(g.away))} at ${esc(TEAMS.full(g.home))}</h2>
       <div class="meta">${esc(clock(g.kickoff))}${g.stadium ? " &middot; " + esc(g.stadium) : ""} &middot; QBs ${esc(g.away_qb || "n/a")} and ${esc(g.home_qb || "n/a")}</div>
       <div class="cols">
@@ -162,7 +168,8 @@ function build() {
     ? `Prop lines captured ${Math.min(...capturedMin)} to ${Math.max(...capturedMin)} minutes before kickoff, ${withLine.length} of ${yard.length} projections have a line.`
     : `No prop lines were attached to this capture, so props show Leo's number only.`;
 
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Leo NFL brief ${esc(DATE)}</title><style>${css}</style></head><body>
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Leo NFL brief ${esc(DATE)}</title><link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;700;800;900&family=EB+Garamond:wght@600&display=swap" rel="stylesheet"><style>${css}</style></head><body>
+    <div class="brand">Leo</div><div class="eyebrow">Owner brief &middot; NFL</div>
     <h1>Leo NFL brief</h1>
     <p class="sub">${esc(prettyDate(DATE))}, Week ${esc(week)} &middot; ${games.length} games &middot; built ${esc(new Date().toLocaleString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit", month: "short", day: "numeric" }))} ET</p>
     <div class="box">Information only, for the owner. Leo's side is where his number sits relative to the posted line; it is not a bet recommendation. ${record} ${esc(capNote)} Calls: QB ${sideCount.QB[1]} of ${sideCount.QB[0]}, RB ${sideCount.RB[1]} of ${sideCount.RB[0]}, WR ${sideCount.WR[1]} of ${sideCount.WR[0]} lined props are outside the 5% floor. ${testsNote}</div>
@@ -173,7 +180,16 @@ function build() {
 
   const text = `Leo NFL brief, ${prettyDate(DATE)}, Week ${week}. ${games.length} games. The full brief is attached as a PDF. Information only, not a bet recommendation.\n\n` +
     games.map(g => `${clock(g.kickoff)}  ${g.matchup}: Leo ${g.pick} ${pct(g.model_prob)}, margin ${byMargin(g, num(g.exp_margin))}, line ${spreadText(g, num(g.spread_line))}, total ${r1(num(g.proj_total))} vs ${r1(num(g.total_line))}`).join("\n");
-  return { html, text, games, week, lined: withLine.length };
+  const E = require("./lib/email-cards");
+  const picks = games.filter(g => num(g.model_prob) > 0.60);
+  const emailHtml = E.shell({ title: `Leo NFL brief ${DATE}`, preheader: `${games.length} games, ${picks.length} Leo picks. Full brief attached.`, body: [
+    E.header("NFL"),
+    E.hero({ eyebrow: `Owner brief &middot; Week ${esc(week)} &middot; ${esc(prettyDate(DATE))}`, title: "Leo NFL brief", subtitle: `The full brief is attached as a PDF: every game, every prop with its line, the touchdown chances and the injury report. Information only, not a bet recommendation. ${testsNote}` }),
+    E.panel("Leo&rsquo;s picks", E.rows(picks.map(g => [`<b>${esc(TEAMS.full(g.pick))}</b> ${pct(num(g.model_prob))}${g.price != null && g.price !== "" ? ` <span style="color:${E.T.dim}">${esc((+g.price > 0 ? "+" : "") + g.price)}</span>` : ""}`, `${esc(g.matchup)} &middot; ${esc(clock(g.kickoff))}`]), "No team clears 60% on this slate.")),
+    E.panel("Every game", E.rows(games.map(g => [`${esc(g.matchup)} <span style="color:${E.T.dim}">${esc(clock(g.kickoff))}</span>`, `Leo ${esc(byMargin(g, num(g.exp_margin)))} &middot; line ${esc(spreadText(g, num(g.spread_line)))} &middot; total ${r1(num(g.proj_total))} vs ${r1(num(g.total_line))}`]), "")),
+    E.footer({ links: [[`${E.SITE}/nfl/scoreboard/`, "Scoreboard"]], note: "Private to the owner. Leo&rsquo;s side is where his number sits against the line, never a recommendation to bet." })
+  ].join("\n") });
+  return { html, text, games, week, lined: withLine.length, emailHtml };
 }
 
 function toPdf(html, out) {
@@ -214,7 +230,7 @@ async function main() {
     method: "POST", headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       from: FROM, to: [TO], subject: `${TEST ? "TEST " : ""}Leo NFL brief: ${prettyDate(DATE)}, Week ${b.week}`,
-      text: b.text, html: `<p>${esc(b.text).replace(/\n/g, "<br>")}</p>`,
+      text: b.text, html: b.emailHtml,
       attachments: [{ filename: `leo-nfl-brief-${DATE}.pdf`, content }]
     })
   });
