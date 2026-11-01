@@ -95,7 +95,7 @@ function relatedLinks(o) {
     const mine = games.filter(g => g.away === a || g.home === a).slice(0, per);
     if (!mine.length) return "";
     return `<div><h3 style="margin:0 0 6px;font-size:1rem">More ${escHtml(name)} games</h3><ul style="margin:0;padding-left:18px;line-height:1.7">`
-      + mine.map(g => `<li><a href="/${o.sport.toLowerCase()}/${g.slug}/">${escHtml(g.away.toUpperCase())} at ${escHtml(g.home.toUpperCase())}, ${escHtml(niceShort(g.date))}</a></li>`).join("")
+      + mine.map(g => `<li><a href="/${o.sport.toLowerCase()}/${g.slug}/">${escHtml(linkText(dir, g))}, ${escHtml(niceShort(g.date))}</a></li>`).join("")
       + `</ul></div>`;
   };
   const hubs = (o.hubs || []).map(([href, label]) => `<a href="${href}">${escHtml(label)}</a>`).join(" &middot; ");
@@ -105,6 +105,16 @@ function relatedLinks(o) {
   <p style="margin:0 0 10px">${hubs}</p>
   ${teams ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">${teams}</div>` : ""}
 </section>`;
+}
+
+// "Panthers vs Packers Prediction" read from the linked page's title, so the
+// link carries the words people search; falls back to "CAR at GB".
+function linkText(dir, g) {
+  try {
+    const t = (fs.readFileSync(path.join(dir, g.slug, "index.html"), "utf8").slice(0, 6000).match(/<title>([^<]*?) Prediction/i) || [])[1];
+    if (t) return `${t.replace(/&amp;/g, "&").replace(/&#39;/g, "\u2019")} Prediction`;
+  } catch (e) { /* fall through */ }
+  return `${g.away.toUpperCase()} at ${g.home.toUpperCase()}`;
 }
 
 function niceShort(date) {

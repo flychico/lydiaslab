@@ -177,7 +177,9 @@ function build(targetDate) {
   const dir = path.join(ROOT, "nfl/week", slug);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "index.html"), page(wk, rec, `/nfl/week/${slug}/`));
-  if (wk.isLatest) fs.writeFileSync(path.join(ROOT, "nfl/week/index.html"), page(wk, rec, "/nfl/week/"));
+  // /nfl/week/ is the same page as this week's permalink, so it points search
+  // engines at the permalink (one URL per week ranks; no duplicate).
+  if (wk.isLatest) fs.writeFileSync(path.join(ROOT, "nfl/week/index.html"), page(wk, rec, `/nfl/week/${slug}/`));
   console.log(`  week card: Week ${wk.week} (${wk.games.length} games) -> /nfl/week/${slug}/${wk.isLatest ? " and /nfl/week/" : ""}`);
   return slug;
 }

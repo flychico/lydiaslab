@@ -215,7 +215,7 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
     </form>
   </div>
   <p class="dim" style="margin-top:18px">Leo&rsquo;s win chance and spread come from team results, rest and the injury report. The DraftKings line is shown for comparison and is never an input. Every read is graded on the <a href="/nba/results/">results page</a>. Analysis only, not betting advice. 21+.</p>
-${require("./lib/game-page-seo").relatedLinks({sport:"NBA",root:ROOT,slug:slug(g),away:g.away,home:g.home,awayName:g.away_name,homeName:g.home_name,hubs:[["/nba/scoreboard/","Tonight\u2019s NBA card"],["/nba/results/","Leo\u2019s NBA record"],["/nfl/week/","This week\u2019s NFL card"]]})}
+${require("./lib/game-page-seo").relatedLinks({sport:"NBA",root:ROOT,slug:slug(g),away:g.away,home:g.home,awayName:g.away_name,homeName:g.home_name,hubs:[["/nba/scoreboard/","Tonight\u2019s NBA predictions"],["/nba/games/","Every NBA game"],["/nba/results/","Leo\u2019s NBA record"],["/nba/tools/injury-tracker/","NBA injury tracker"],["/nba/stats/","NBA team stats"],["/membership/#free","Free card by email"]]})}
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/nba/scoreboard/"); renderFooter();</script>
 </body>

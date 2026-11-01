@@ -148,6 +148,8 @@ jobs:
         run: |
           node scripts/generate-nfl-matchups.js "${{ steps.slate_date.outputs.date }}"
           node scripts/render-nfl-matchup-pages.js "${{ steps.slate_date.outputs.date }}"
+          node scripts/build-game-archives.js nfl
+          node scripts/generate-sitemap.js
 
       # The owner's PDF brief (DEC-20261031-09): Leo's read of the slate with
       # the lines this capture just attached, emailed to the AUDIT_EMAIL secret.

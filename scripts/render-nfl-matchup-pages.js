@@ -63,6 +63,13 @@ function wrRow(p,label){
     <td>${v(p.rec_ypg)}</td><td>${v(p.rec_td)}</td></tr>`;
 }
 
+// The game's own week page, not /nfl/week/ (which moves to the newest week).
+// Season = the year the season started (January games belong to last year's).
+function weekUrl(m){
+  if(!m||!m.week||!m.date) return "/nfl/week/";
+  const y=+m.date.slice(0,4), mo=+m.date.slice(5,7);
+  return `/nfl/week/${mo>=3?y:y-1}-week-${m.week}/`;
+}
 function sideBlock(side, seasonKey, seasonLabel, rating){
   const p=side[seasonKey];
   // Leo's QB rating sits beside the passer's line so the two sides can be
@@ -614,7 +621,7 @@ ${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternT
     <div class="box"><span class="lbl">Total</span><span class="val">${v(m.total_line)}</span></div>
   </section>
   <h1 class="mh-title">${esc(TEAMS.full(m.away))} at ${esc(TEAMS.full(m.home))}</h1>
-  <p style="text-align:center;margin:0"><a class="wk-link" href="/nfl/week/">Every game this week on Leo&rsquo;s Week ${v(m.week,"")} card &rarr;</a></p>
+  <p style="text-align:center;margin:0"><a class="wk-link" href="${weekUrl(m)}">Every game this week on Leo&rsquo;s Week ${v(m.week,"")} card &rarr;</a></p>
   <div class="notice note">This is a pre-game analysis page. Every stat above the Final result comes from games played <b>before</b> this one${m.pregame_through_week?" (through Week "+m.pregame_through_week+")":""}, and Leo&rsquo;s numbers were frozen before kickoff. Market numbers are the closing line. Nothing here is a wager &mdash; the pick gate stays closed until Leo shows it can beat that line.</div>
 
   ${leoSection(m)}
@@ -659,7 +666,7 @@ ${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternT
   ${finalReport(m)}
 
   <p class="data-note">Player and team statistics from the open nflverse dataset. Roles assigned by actual usage &mdash; most attempts, carries and targets &mdash; not depth chart.</p>
-${SEO.relatedLinks({sport:"NFL",root:ROOT,slug:m.slug||String(m.url).split("/").filter(Boolean).pop(),away:m.away,home:m.home,awayName:TEAMS.full(m.away),homeName:TEAMS.full(m.home),hubs:[["/nfl/week/","This week\u2019s NFL card"],["/nfl/results/","Leo\u2019s NFL record"],["/nfl/tools/injury-tracker/","Injury tracker"],["/membership/#free","Free NFL card by email"]]})}
+${SEO.relatedLinks({sport:"NFL",root:ROOT,slug:m.slug||String(m.url).split("/").filter(Boolean).pop(),away:m.away,home:m.home,awayName:TEAMS.full(m.away),homeName:TEAMS.full(m.home),hubs:[[weekUrl(m),"Week "+v(m.week,"")+" NFL predictions"],["/nfl/games/","Every NFL game"],["/nfl/results/","Leo\u2019s NFL record"],["/nfl/tools/injury-tracker/","Injury tracker"],["/membership/#free","Free NFL card by email"]]})}
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script>renderNav("/nfl/scoreboard/"); renderFooter();</script>
