@@ -94,6 +94,7 @@ jobs:
           BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_REPLY_TO: ${{ secrets.EMAIL_REPLY_TO }}
+          EMAIL_POSTAL_ADDRESS: ${{ secrets.EMAIL_POSTAL_ADDRESS }}
         run: node scripts/send-nba-card-emails.js "${{ steps.d.outputs.date }}"
 
       - name: Commit and push if changed

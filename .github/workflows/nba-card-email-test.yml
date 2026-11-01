@@ -1,0 +1,35 @@
+name: NBA card email (test send)
+
+# One copy of the NBA card email for a date, sent through Resend exactly as
+# subscribers get it, to the owner only (AUDIT_EMAIL secret). Subject marked
+# TEST. No subscribers, no timing gates, no email log, no commit.
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "YYYY-MM-DD card to send. Blank = today in America/New_York."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  test-send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Send the test
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_REPLY_TO: ${{ secrets.EMAIL_REPLY_TO }}
+          AUDIT_EMAIL: ${{ secrets.AUDIT_EMAIL }}
+          EMAIL_POSTAL_ADDRESS: ${{ secrets.EMAIL_POSTAL_ADDRESS }}
+        run: |
+          D="${{ github.event.inputs.date }}"
+          [ -z "$D" ] && D=$(TZ="America/New_York" date +%F)
+          node scripts/send-nba-card-emails.js "$D" --test

@@ -1,68 +1,69 @@
 /**
- * Leo NBA card email: the scoreboard cards, built for inboxes.
+ * Leo NBA card email: the scoreboard, built for inboxes.
  *
- * Same content as /nba/previews/ (Leo win chance for both teams, Leo spread
- * beside DraftKings, the gap, lean or no lean, the why line), laid out with
- * tables and inline styles so it reads the same in Gmail, Apple Mail and
- * Outlook, on a phone or a desktop. Leans are listed first and summarised at
- * the top. Leans are a tracked test, never bets.
+ * Same content and look as /nba/scoreboard/ and /nba/previews/: the Leo
+ * wordmark, the headline panel, summary tiles, then one card per game with
+ * the two team-colour stripe, logos, Leo's win chance with the bar, the three
+ * boxes (Leo spread, DraftKings, gap), the lean line and the why line. Uses
+ * the shared theme (scripts/lib/email-theme.js). Leans first; a lean line
+ * states Leo's margin beside DraftKings ("Leo has BOS by 3.5; DraftKings has
+ * BOS by 7.5") so a win chance and a lean on the other team never read as a
+ * contradiction. Leans are a tracked test, never bets.
  *
- *   build(card, { model, why }) -> { subject, html, text, leans }
+ *   build(card, { why }) -> { subject, html, text, leans }
  * card is data/nba/picks-<date>.json; why is scripts/lib/nba-why.js.
  */
-const SITE = "https://ndhorizon.com";
-const C = { ink: "#1A2535", dim: "#6b6457", line: "#e6dfd2", card: "#fffdf8", head: "#f1ebdf", page: "#f6f1e7",
-  gold: "#c9a54a", navy: "#1A2535", leanBg: "#dcefe0", leanInk: "#2e7d4f", noBg: "#e9e3d7", noInk: "#6b6457" };
-const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const E = require("./email-theme");
+const { T, SANS, SITE, esc, tbl } = E;
+
+// ESPN team colours (team_color in the season's team box file).
+const COLOR = { ATL: "c8102e", BOS: "008348", BKN: "000000", CHA: "008ca8", CHI: "ce1141", CLE: "860038", DAL: "0064b1", DEN: "0e2240",
+  DET: "1d428a", GS: "fdb927", HOU: "ce0e2d", IND: "0c2340", LAC: "12173f", LAL: "552583", MEM: "5d76a9", MIA: "98002e", MIL: "00471b",
+  MIN: "266092", NO: "0a2240", NY: "1d428a", OKC: "007ac1", ORL: "0150b5", PHI: "1d428a", PHX: "29127a", POR: "e03a3e", SAC: "5a2d81",
+  SA: "000000", TOR: "d91244", UTAH: "4e008e", WSH: "e31837" };
+const col = t => "#" + (COLOR[t] || "1A2535");
 const pct = p => p == null ? "&mdash;" : Math.round(p * 100) + "%";
 const sgn = v => v == null ? "&mdash;" : v === 0 ? "PK" : (v > 0 ? "+" : "") + v;
 const tip = iso => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) + " ET";
 const logo = t => `https://a.espncdn.com/i/teamlogos/nba/500/${String(t).toLowerCase()}.png`;
 const pageUrl = (g, date) => `${SITE}/nba/${g.away.toLowerCase()}-vs-${g.home.toLowerCase()}-prediction-odds-${date}/`;
-const FONT = "font-family:Arial,Helvetica,sans-serif";
+const byTxt = (m, home, away) => m == null ? null : Math.abs(m) < 0.25 ? "a pick'em" : `${m > 0 ? home : away} by ${Math.abs(Math.round(m * 2) / 2)}`;
 
 function teamRow(g, side) {
-  const p = side === "home" ? g.leo.p_home : g.leo.p_away;
+  const p = side === "home" ? g.leo.p_home : g.leo.p_away, lean = g.leo.lean && g.leo.lean.side === side;
   return `<tr>
-    <td width="40" style="padding:8px 0;vertical-align:middle"><img src="${logo(g[side])}" width="32" height="32" alt="${esc(g[side])}" style="display:block;border:0"></td>
-    <td style="padding:8px 8px;vertical-align:middle;${FONT};font-size:16px;color:${C.ink};font-weight:${g.leo.lean && g.leo.lean.side === side ? "bold" : "normal"}">${esc(g[side + "_name"] || g[side])}</td>
-    <td align="right" style="padding:8px 0;vertical-align:middle;${FONT}"><div style="font-size:16px;font-weight:bold;color:${C.ink}">${pct(p)}</div><div style="font-size:12px;color:${C.dim}">Leo win chance</div></td>
+    <td width="44" style="padding:7px 0;vertical-align:middle"><img src="${logo(g[side])}" width="36" height="36" alt="${esc(g[side])}" style="display:block;border:0;width:36px;height:36px"></td>
+    <td style="padding:7px 8px;vertical-align:middle;font-family:${SANS};font-size:16px;font-weight:${lean ? 800 : 600};color:${T.text}">${esc(g[side + "_name"] || g[side])}</td>
+    <td align="right" style="padding:7px 0;vertical-align:middle;font-family:${SANS};white-space:nowrap"><div style="font-size:17px;font-weight:800;color:${T.text}">${pct(p)}</div><div style="font-size:12px;color:${T.dim}">Leo win chance</div></td>
   </tr>`;
 }
-function box(label, value, sub) {
-  return `<td width="33%" valign="top" style="padding:0 3px">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${C.line};border-radius:10px;background:#ffffff">
-      <tr><td align="center" style="padding:9px 4px;${FONT}">
-        <div style="font-size:10px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;color:${C.dim}">${label}</div>
-        <div style="font-size:16px;font-weight:bold;color:${C.ink};margin:3px 0">${value}</div>
-        <div style="font-size:11px;color:${C.dim}">${sub}</div>
-      </td></tr></table></td>`;
+function box(label, value, sub, gold) {
+  return `<td width="33%" valign="top" style="padding:0 3px">${tbl(`<tr><td align="center" style="padding:10px 4px;font-family:${SANS}">
+    <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:${T.dim}">${label}</div>
+    <div style="font-size:16px;font-weight:800;color:${T.text};margin:4px 0 3px;white-space:nowrap">${value}</div>
+    <div style="font-size:11px;color:${T.dim}">${sub}</div></td></tr>`, `background:${gold ? "#FBF5E4" : "#ffffff"};border:1px solid ${gold ? "#E7D8AC" : T.border};border-radius:12px`)}</td>`;
 }
 function card(g, date, why) {
-  const L = g.leo, mk = g.market || {};
+  const L = g.leo, mk = g.market || {}, W = why ? why.why(g) : null;
+  const leoM = L.home_margin, mkM = mk.home_spread == null ? null : -mk.home_spread;
   const badge = L.lean ? `Lean ${esc(L.lean.team)} ${sgn(L.lean.line)}` : "No lean";
-  const W = why ? why.why(g) : null;
-  const pa = Math.round((L.p_away || 0) * 100), ph = 100 - pa;
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.card};border:1px solid ${C.line};border-radius:14px;margin:0 0 14px;border-collapse:separate">
-  <tr><td style="background:${C.head};border-radius:14px 14px 0 0;padding:12px 16px;border-bottom:1px solid ${C.line}">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td style="${FONT};font-size:15px;font-weight:bold;color:${C.ink}">${esc(tip(g.tip_utc))} &middot; ${esc(g.away)} at ${esc(g.home)}</td>
-      <td align="right"><span style="${FONT};display:inline-block;font-size:11px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:${L.lean ? C.leanBg : C.noBg};color:${L.lean ? C.leanInk : C.noInk}">${badge}</span></td>
-    </tr></table></td></tr>
-  <tr><td style="padding:8px 16px 4px">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${teamRow(g, "away")}${teamRow(g, "home")}</table>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 12px"><tr>
-      <td width="${pa}%" style="height:7px;line-height:7px;font-size:0;background:${C.gold};border-radius:999px 0 0 999px">&nbsp;</td>
-      <td width="${ph}%" style="height:7px;line-height:7px;font-size:0;background:${C.navy};border-radius:0 999px 999px 0">&nbsp;</td>
-    </tr></table>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      ${box("Leo spread", `${esc(g.home)} ${sgn(L.home_spread)}`, "expected margin")}
-      ${box("DraftKings", mk.home_spread == null ? "&mdash;" : `${esc(g.home)} ${sgn(mk.home_spread)}`, mk.p_home != null ? `market ${esc(g.home)} ${pct(mk.p_home)}` : "&nbsp;")}
-      ${box("Gap", L.edge_pts == null ? "&mdash;" : `${Math.abs(L.edge_pts).toFixed(1)} pts`, L.lean ? "lean" : "under 4, no lean")}
-    </tr></table>
-    ${W && W.summary ? `<div style="${FONT};font-size:14px;line-height:1.5;color:${C.dim};border-top:1px solid ${C.line};margin-top:12px;padding-top:10px">${esc(W.summary)}</div>` : ""}
-    <div style="${FONT};font-size:14px;font-weight:bold;margin:10px 0 12px"><a href="${pageUrl(g, date)}" style="color:${C.ink};text-decoration:none">Full preview: why Leo has this number &rarr;</a></div>
-  </td></tr></table>`;
+  const pa = Math.max(1, Math.min(99, Math.round((L.p_away || 0) * 100)));
+  const leanLine = L.lean
+    ? `<div style="font-family:${SANS};font-size:14px;line-height:1.5;color:${T.text};background:${T.leanBg};border-radius:10px;padding:9px 12px;margin-top:12px"><b>Lean ${esc(L.lean.team)} ${sgn(L.lean.line)}.</b> Leo has ${esc(byTxt(leoM, g.home, g.away))}; DraftKings has ${esc(byTxt(mkM, g.home, g.away))}. A tracked test, not a bet.</div>`
+    : "";
+  return tbl(`<tr><td style="padding:0;font-size:0;line-height:0">${tbl(`<tr><td width="50%" style="height:6px;line-height:6px;font-size:0;background:${col(g.away)};border-radius:20px 0 0 0">&nbsp;</td><td width="50%" style="height:6px;line-height:6px;font-size:0;background:${col(g.home)};border-radius:0 20px 0 0">&nbsp;</td></tr>`)}</td></tr>
+  <tr><td style="padding:14px 16px 16px">
+    ${tbl(`<tr>
+      <td style="font-family:${SANS}"><div style="font-size:15px;font-weight:800;color:${T.text}">${esc(tip(g.tip_utc))}</div><div style="font-size:12px;color:${T.dim}">${esc(g.venue || `${g.away} at ${g.home}`)}</div></td>
+      <td align="right" valign="top"><span style="display:inline-block;font-family:${SANS};font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:5px 10px;border-radius:999px;background:${L.lean ? T.leanBg : T.noBg};color:${L.lean ? T.good : T.dim}">${badge}</span></td>
+    </tr>`)}
+    ${tbl(`${teamRow(g, "away")}${teamRow(g, "home")}`, "margin-top:6px")}
+    ${tbl(`<tr><td width="${pa}%" style="height:8px;line-height:8px;font-size:0;background:${T.gold};border-radius:999px 0 0 999px">&nbsp;</td><td width="${100 - pa}%" style="height:8px;line-height:8px;font-size:0;background:${T.navy};border-radius:0 999px 999px 0">&nbsp;</td></tr>`, "margin:10px 0 12px")}
+    ${tbl(`<tr>${box("Leo spread", `${esc(g.home)} ${sgn(L.home_spread)}`, "expected margin", true)}${box("DraftKings", mk.home_spread == null ? "&mdash;" : `${esc(g.home)} ${sgn(mk.home_spread)}`, mk.p_home != null ? `market ${esc(g.home)} ${pct(mk.p_home)}` : "&nbsp;")}${box("Gap", L.edge_pts == null ? "&mdash;" : `${Math.abs(L.edge_pts).toFixed(1)} pts`, L.lean ? "lean" : "under 4, no lean")}</tr>`)}
+    ${leanLine}
+    ${W && W.summary ? `<div style="font-family:${SANS};font-size:14px;line-height:1.55;color:${T.dim};border-top:1px solid ${T.border};margin-top:12px;padding-top:11px">${esc(W.summary)}</div>` : ""}
+    <div style="font-family:${SANS};font-size:14px;font-weight:800;margin-top:11px"><a href="${pageUrl(g, date)}" style="color:${T.navy};text-decoration:none">Full preview: why Leo has this number &rarr;</a></div>
+  </td></tr>`, `background:${T.card};border:1px solid rgba(26,37,53,.16);border-radius:20px;margin:0 0 14px`);
 }
 
 function build(doc, { why } = {}) {
@@ -73,34 +74,41 @@ function build(doc, { why } = {}) {
   games.sort((a, b) => (!!b.leo.lean - !!a.leo.lean) || a.tip_utc.localeCompare(b.tip_utc) || gap(b) - gap(a));
   const leans = games.filter(g => g.leo.lean);
   const leanList = leans.map(g => `${g.leo.lean.team} ${sgn(g.leo.lean.line)}`);
+  const first = games.map(g => g.tip_utc).sort()[0];
+  const big = games.length ? Math.max(...games.map(gap)) : null;
   const subject = `Leo NBA card, ${nice}: ${games.length} game${games.length === 1 ? "" : "s"}, ${leans.length ? `${leans.length} lean${leans.length === 1 ? "" : "s"} (${leanList.join(", ")})` : "no leans"}`;
-  const summary = leans.length
-    ? leans.map(g => `<tr><td style="${FONT};font-size:15px;padding:4px 0;color:${C.ink}"><b>${esc(g.leo.lean.team)} ${sgn(g.leo.lean.line)}</b></td><td align="right" style="${FONT};font-size:13px;color:${C.dim}">${esc(g.away)} at ${esc(g.home)} &middot; ${esc(tip(g.tip_utc))} &middot; ${Math.abs(g.leo.edge_pts).toFixed(1)} pts off</td></tr>`).join("")
-    : `<tr><td style="${FONT};font-size:14px;color:${C.dim}">No game tonight is 4 or more points off the DraftKings spread, so Leo records no lean.</td></tr>`;
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(subject)}</title></head>
-<body style="margin:0;padding:0;background:${C.page}">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.page}"><tr><td align="center" style="padding:20px 10px">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px">
-  <tr><td style="${FONT};padding:0 4px 14px">
-    <div style="font-size:12px;font-weight:bold;letter-spacing:.1em;text-transform:uppercase;color:#a8862f">Leo NBA &middot; ${esc(nice)}</div>
-    <div style="font-size:24px;font-weight:bold;color:${C.ink};margin:4px 0 6px">Tonight&rsquo;s card: ${games.length} game${games.length === 1 ? "" : "s"}</div>
-    <div style="font-size:14px;line-height:1.5;color:${C.dim}">Leo&rsquo;s win chance and spread for every game, beside DraftKings. A gap of 4 points or more is a lean: a public test, graded every morning, not a bet.</div>
-  </td></tr>
-  <tr><td style="padding:0 0 16px">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid ${C.line};border-radius:14px"><tr><td style="padding:12px 16px">
-      <div style="${FONT};font-size:11px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;color:${C.dim};margin-bottom:4px">Tonight&rsquo;s leans</div>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${summary}</table>
-    </td></tr></table>
-  </td></tr>
-  <tr><td>${games.map(g => card(g, date, why)).join("")}</td></tr>
-  <tr><td style="${FONT};font-size:14px;padding:4px 4px 0"><a href="${SITE}/nba/scoreboard/" style="color:${C.ink};font-weight:bold">Live scores and every card &rarr;</a> &nbsp; <a href="${SITE}/nba/results/" style="color:${C.ink}">Leo&rsquo;s record &rarr;</a></td></tr>
-  <tr><td style="${FONT};font-size:12px;line-height:1.5;color:#999;padding:18px 4px 0;border-top:1px solid ${C.line}">Every number is frozen before tip and graded on the site, wins and losses alike. Under 50 graded leans is an early read.<br>Leo provides analysis and education only, not betting advice. 21+. If you or someone you know has a gambling problem, call 1-800-MY-RESET (1-800-697-3738).<br>To unsubscribe, reply with &ldquo;unsubscribe&rdquo;.</td></tr>
-</table></td></tr></table></body></html>`;
+  const leanRows = leans.length
+    ? tbl(leans.map(g => `<tr><td style="padding:6px 0;font-family:${SANS};font-size:16px;font-weight:800;color:${T.text};white-space:nowrap">${esc(g.leo.lean.team)} ${sgn(g.leo.lean.line)}</td>
+        <td align="right" style="padding:6px 0;font-family:${SANS};font-size:13px;color:${T.dim}">${esc(g.away)} at ${esc(g.home)} &middot; ${esc(tip(g.tip_utc))}<br>Leo ${esc(byTxt(g.leo.home_margin, g.home, g.away))}, DraftKings ${esc(byTxt(-g.market.home_spread, g.home, g.away))}</td></tr>`).join(`<tr><td colspan="2" style="border-top:1px solid ${T.border};font-size:0;line-height:0;height:1px">&nbsp;</td></tr>`))
+    : `<div style="font-family:${SANS};font-size:14px;color:${T.dim}">No game tonight is 4 or more points off the DraftKings spread, so Leo records no lean.</div>`;
+  const body = [
+    E.header("NBA"),
+    E.hero({
+      eyebrow: `Leo NBA &middot; ${esc(nice)}`,
+      title: `Tonight&rsquo;s card: ${games.length} game${games.length === 1 ? "" : "s"}`,
+      subtitle: "Leo&rsquo;s win chance and spread for every game, with the DraftKings line beside it. When they are 4 or more points apart, Leo records a lean: a public test, graded every morning, not a bet.",
+      chips: ["&#127936; Full slate", "&#129657; Injury report built in", "&#128274; Frozen before tip"]
+    }),
+    E.tiles([
+      { label: "Games", value: games.length, sub: esc(nice.split(",")[0]) },
+      { label: "First tip", value: first ? esc(tip(first)) : "&mdash;", sub: "Eastern time" },
+      { label: "Leans", value: leans.length, sub: "4+ points off the line" },
+      { label: "Biggest gap", value: big == null || big < 0 ? "&mdash;" : `${big.toFixed(1)} pts`, sub: "Leo vs DraftKings" }
+    ]),
+    E.panel("Tonight&rsquo;s leans", leanRows),
+    games.map(g => card(g, date, why)).join(""),
+    E.footer({
+      links: [[`${SITE}/nba/scoreboard/`, "Live scores and every card"], [`${SITE}/nba/results/`, "Leo&rsquo;s record"]],
+      note: "Every number is frozen before tip and graded on the site, wins and losses alike. Under 50 graded leans is an early read."
+    })
+  ].join("\n");
+  const html = E.shell({ title: subject, preheader: leans.length ? `Tonight's leans: ${leanList.join(", ")}.` : "No leans tonight. Leo's read on every game.", body });
   const text = [`Leo NBA card, ${nice}`, "",
     leans.length ? `Tonight's leans: ${leanList.join(", ")}` : "No leans tonight.", "",
     ...games.map(g => { const L = g.leo, mk = g.market || {}, W = why ? why.why(g) : null;
-      return `${tip(g.tip_utc)}  ${g.away} at ${g.home}  ${L.lean ? `LEAN ${L.lean.team} ${sgn(L.lean.line)}` : "No lean"}\n  Leo win chance: ${g.away} ${Math.round(L.p_away * 100)}%, ${g.home} ${Math.round(L.p_home * 100)}%\n  Leo spread ${g.home} ${sgn(L.home_spread)} | DraftKings ${mk.home_spread == null ? "n/a" : g.home + " " + sgn(mk.home_spread)} | gap ${L.edge_pts == null ? "n/a" : Math.abs(L.edge_pts).toFixed(1)}\n${W && W.summary ? "  " + W.summary + "\n" : ""}  ${pageUrl(g, date)}`; }),
-    "", `Every card: ${SITE}/nba/scoreboard/`, "Leans are a public test, not bets. Analysis only, not betting advice. 21+. 1-800-MY-RESET.", 'Reply "unsubscribe" to stop these.'].join("\n").replace(/&mdash;/g, "-");
+      return `${tip(g.tip_utc)}  ${g.away} at ${g.home}  ${L.lean ? `LEAN ${L.lean.team} ${sgn(L.lean.line)}` : "No lean"}\n  Leo win chance: ${g.away} ${Math.round(L.p_away * 100)}%, ${g.home} ${Math.round(L.p_home * 100)}%\n  Leo has ${byTxt(L.home_margin, g.home, g.away)}; DraftKings ${mk.home_spread == null ? "n/a" : "has " + byTxt(-mk.home_spread, g.home, g.away)}; gap ${L.edge_pts == null ? "n/a" : Math.abs(L.edge_pts).toFixed(1)}\n${W && W.summary ? "  " + W.summary + "\n" : ""}  ${pageUrl(g, date)}\n`; }),
+    "", `Every card: ${SITE}/nba/scoreboard/`, "Leans are a public test, not bets. Analysis only, not betting advice. 21+. 1-800-MY-RESET.",
+    ...((process.env.EMAIL_POSTAL_ADDRESS || "").trim() ? [(process.env.EMAIL_POSTAL_ADDRESS || "").trim()] : []), 'Reply "unsubscribe" to stop these.'].join("\n").replace(/&mdash;/g, "-").replace(/&rsquo;/g, "'");
   return { subject, html, text, leans: leanList };
 }
 
