@@ -70,6 +70,11 @@ jobs:
       - name: Team stats
         run: node scripts/build-nba-team-stats.js || echo "::warning::NBA team stats not refreshed"
 
+      # Every player's points per game and game log for /nba/players/ and the
+      # matchup pages' box scores (display only). Never blocks the run.
+      - name: Player scoring log
+        run: node scripts/build-nba-player-log.js || echo "::warning::NBA player log not refreshed"
+
       - name: Matchup pages
         run: |
           node scripts/render-nba-matchup-pages.js "${{ steps.d.outputs.date }}"
@@ -79,12 +84,24 @@ jobs:
       - name: Health check
         run: node scripts/nba-healthcheck.js "${{ steps.d.outputs.date }}"
 
+      # The NBA card to the free list and members, laid out like the scoreboard
+      # cards (scripts/lib/nba-card-email.js). Sent once per date by the first
+      # run within 3 hours of the first tip (data/email-log/nba-card-<date>.json),
+      # never after tip, and a no-op when the email secrets are missing.
+      - name: Email the NBA card (members and free list)
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_REPLY_TO: ${{ secrets.EMAIL_REPLY_TO }}
+        run: node scripts/send-nba-card-emails.js "${{ steps.d.outputs.date }}"
+
       - name: Commit and push if changed
         run: |
           set -euo pipefail
           git config user.name "lydia-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/nba nba sitemap.xml
+          git add data/nba nba sitemap.xml data/email-log
           if git diff --cached --quiet; then echo "No change."; exit 0; fi
           git commit -m "NBA card ${{ steps.d.outputs.date }}"
           git pull --rebase

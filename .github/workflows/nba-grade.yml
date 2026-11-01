@@ -42,11 +42,16 @@ jobs:
           D="${{ github.event.inputs.date }}"
           if [ -n "$D" ]; then node scripts/grade-nba-results.js --date="$D"; else node scripts/grade-nba-results.js; fi
 
-      # Full season for the scoreboard's date picker (display only). Never blocks the run.
+      # Every player's points per game and game log for /nba/players/ and the
+      # matchup pages' box scores (display only). Never blocks the run.
+      - name: Player scoring log
+        run: node scripts/build-nba-player-log.js || echo "::warning::NBA player log not refreshed"
+
       # Standings, Leo ratings, pace and efficiency for /nba/stats/ (display only).
       - name: Team stats
         run: node scripts/build-nba-team-stats.js || echo "::warning::NBA team stats not refreshed"
 
+      # Full season for the scoreboard's date picker (display only). Never blocks the run.
       - name: Season schedule
         run: node scripts/build-nba-schedule.js || echo "::warning::NBA schedule not refreshed"
 
