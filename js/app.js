@@ -116,7 +116,7 @@ function renderNav(active) {
   
   // NBA launched 2026-10-31 with two pages: the nightly card and the record.
   const links = sport === "NBA" ? [
-    [prefix + "scoreboard/", "Today"],
+    [prefix + "scoreboard/", "Scoreboard"],   // same label as MLB and NFL
     [prefix + "results/", "Results"]
   ] : [
     [prefix + "scoreboard/", "Scoreboard"],

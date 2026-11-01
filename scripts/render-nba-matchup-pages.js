@@ -36,6 +36,19 @@ function results() {
   return out;
 }
 
+// Leo's read in plain words (DEC-20261031-10). Same text as the nightly card.
+const WHY = require("./lib/nba-why");
+const MODEL = (() => { try { return JSON.parse(fs.readFileSync(path.join(DIR, "model.json"), "utf8")); } catch (e) { return {}; } })();
+function whyBlock(g) {
+  const w = WHY.why(g, { lostCoef: MODEL.coef && MODEL.coef.lost_d, leanPts: MODEL.lean_edge_pts });
+  if (!w.leo) return "";
+  return `<h2>Why Leo has ${esc(w.leo)}</h2>
+  <div class="card why"><p><b>Leo: ${esc(w.leo)}.</b> ${w.market ? `DraftKings: ${esc(w.market)}.` : ""} ${esc(w.lean.text)}</p>
+  ${w.drivers.length ? `<ol>${w.drivers.map(d => `<li>${esc(d.text)}.</li>`).join("")}</ol>` : ""}
+  ${w.swing.length ? `<p class="dim"><b>What could still move it.</b> ${w.swing.map(esc).join(" ")}</p>` : ""}
+  <p class="dim">Leo only knows team results, rest and the injury report. It does not know matchups, lineups announced after the read, or motivation, so a small gap from DraftKings is usually noise, which is why nothing under ${MODEL.lean_edge_pts || 4} points is a call.</p></div>`;
+}
+
 function partsTable(g) {
   const p = g.leo.parts; if (!p) return "";
   const H = esc(g.home), row = (label, v, note) => `<tr><td>${label}</td><td class="num"><b>${v == null ? "&mdash;" : (v > 0 ? "+" : "") + v.toFixed(1)}</b></td><td class="dim">${note}</td></tr>`;
@@ -149,6 +162,7 @@ function page(g, res) {
 .tag{display:inline-block;padding:0 6px;border-radius:999px;font-size:.66rem;font-weight:800;background:var(--bg-elev);border:1px solid var(--border);color:var(--danger)}
 ul.inj,ul.last5{margin:6px 0 0;padding-left:18px;font-size:.86rem;line-height:1.6}
 .ok{color:var(--good);font-weight:800}.no{color:var(--danger);font-weight:800}
+.why{padding:12px 16px}.why ol{margin:6px 0 8px;padding-left:20px;line-height:1.6;font-size:.9rem}.why p{margin:6px 0}
 .final{padding:14px 16px}.final .score{font-size:1.25rem;font-weight:800;margin:0 0 6px}
 .final ul{margin:0;padding-left:18px;line-height:1.6;font-size:.9rem}
 .nfl-signup{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;align-items:center;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin:26px 0 6px;box-shadow:var(--shadow-sm)}
@@ -179,6 +193,7 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
   ${L.projected ? `<p class="gapread">Projected score: ${esc(A)} ${L.projected.away}, ${esc(H)} ${L.projected.home} (total ${L.projected.total}). Information only; Leo does not lean on totals.</p>` : ""}
   ${leanTxt}
   ${finalBlock(g, res)}
+  ${whyBlock(g)}
   ${partsTable(g)}
 
   <h2>Injury report</h2>

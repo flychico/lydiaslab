@@ -34,6 +34,9 @@
 .score-card .market-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
 .result-line{margin-top:8px;font-size:.82rem;font-weight:700;}
 .result-line .ok{color:var(--good);} .result-line .no{color:var(--danger);}
+.why-line{margin-top:10px;font-size:.84rem;line-height:1.45;color:var(--text);}
+.why-line .nolean{color:var(--text-dim);}
+.score-card[role=link]{cursor:pointer;}
 .honest{background:var(--bg-elev);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:12px;
   padding:13px 16px;font-size:.86rem;color:var(--text-dim);line-height:1.55;margin:4px 0 16px;}
 .honest b{color:var(--text);}
@@ -64,13 +67,14 @@
   <section class="kpis" id="kpis" aria-label="Slate summary"></section>
   <div id="status" class="loading">Loading the NBA card&hellip;</div>
   <section class="games-grid" id="games" aria-live="polite"></section>
-  <p class="data-note" id="data-note">Results and player minutes: ESPN via the open sportsdataverse files. Lines: DraftKings via ESPN. Injury report: ESPN.</p>
+  <p class="data-note" id="data-note">Results and player minutes: ESPN via the open sportsdataverse files. Lines: DraftKings via ESPN. Injury report and live scores: ESPN.</p>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
+<script src="/scripts/lib/nba-why.js"></script>
 <script>
 renderNav("/nba/scoreboard/"); renderFooter();
 const pick = document.getElementById("date-pick"), gamesEl = document.getElementById("games"), statusEl = document.getElementById("status"), kpisEl = document.getElementById("kpis");
-let DAYS = [], RESULTS = {};
+let DAYS = [], RESULTS = {}, MODEL = null, LIVE = {}, liveTimer = null;
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const sgn = v => v == null ? "—" : v === 0 ? "PK" : (v > 0 ? "+" : "") + v;
 const pct = p => p == null ? "—" : Math.round(p * 100) + "%";
@@ -83,6 +87,7 @@ async function j(url) { const r = await fetch(url + "?v=" + Date.now(), { cache:
 (async function init() {
   try {
     DAYS = await j("/data/nba/slates.json");
+    try { MODEL = await j("/data/nba/model.json"); } catch (e) {}
     try { (await j("/data/nba/results.json")).games.forEach(g => RESULTS[g.game_id] = g); } catch (e) {}
     if (!DAYS.length) { statusEl.innerHTML = '<div class="score-empty">The first NBA card is on its way.</div>'; return; }
     pick.innerHTML = DAYS.map(d => '<option value="' + d.date + '">' + esc(new Date(d.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })) + " · " + d.games + " games</option>").join("");
@@ -103,15 +108,32 @@ function outList(g, side) {
   return "<div><b>" + esc(g[side]) + ":</b> " + m.slice(0, 5).map(p => esc(p.name) + ' <span class="st">' + esc(p.status === "day-to-day" ? "day to day" : p.status) + "</span>").join(", ") + "</div>";
 }
 function teamRow(g, side) {
-  const p = side === "home" ? g.leo.p_home : g.leo.p_away, res = RESULTS[g.game_id];
-  const score = res ? (side === "home" ? res.home_score : res.away_score) : (g.completed ? (side === "home" ? g.hs : g.as) : null);
+  const p = side === "home" ? g.leo.p_home : g.leo.p_away, res = RESULTS[g.game_id], lv = LIVE[g.game_id];
+  const score = res ? (side === "home" ? res.home_score : res.away_score)
+    : (lv && lv.state !== "pre") ? (side === "home" ? lv.hs : lv.as)
+    : (g.completed ? (side === "home" ? g.hs : g.as) : null);
   const ml = g.market ? (side === "home" ? g.market.home_ml : g.market.away_ml) : null;
   return '<div class="team-row ' + side + '"><span class="team-logo-wrap"><img class="team-logo" src="' + logo(g[side]) + '" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\'"><span class="team-initials">' + esc(g[side]) + '</span></span>' +
     '<span class="team-copy"><span class="team-name">' + esc(g[side + "_name"] || g[side]) + '</span><span class="team-record">' + (g.leo.back_to_back && g.leo.back_to_back[side] ? "Back to back" : "") + '</span></span>' +
     '<span class="team-numbers">' + (score != null ? '<span class="team-score">' + score + "</span>" : '<span class="team-price">' + am(ml) + '</span><span class="team-prob">Leo ' + pct(p) + "</span>") + "</span></div>";
 }
+const pageUrl = g => "/nba/" + g.away.toLowerCase() + "-vs-" + g.home.toLowerCase() + "-prediction-odds-" + g.date + "/";
+// Whole card opens the matchup page, like MLB and NFL. Real links inside still win.
+function openMatchup(event, el) {
+  if (event.target.closest("a")) return;
+  if (event.type === "keydown" && event.key !== "Enter" && event.key !== " ") return;
+  if (event.type === "keydown") event.preventDefault();
+  if (el.dataset.matchupUrl) window.location.href = el.dataset.matchupUrl;
+}
+function statusBadge(g, res) {
+  const lv = LIVE[g.game_id];
+  if (res || g.completed || (lv && lv.state === "post")) return '<span class="game-status final">Final</span>';
+  if (lv && lv.state === "in") return '<span class="game-status live">Live</span> <span class="live-clock">' + esc(lv.detail) + "</span>";
+  return '<span class="game-status">Pregame</span>';
+}
 function card(g) {
   const L = g.leo, mk = g.market || {}, res = RESULTS[g.game_id];
+  const W = window.NBA_WHY ? NBA_WHY.why(g, { lostCoef: MODEL && MODEL.coef && MODEL.coef.lost_d, leanPts: MODEL && MODEL.lean_edge_pts }) : null;
   const leoLine = L.home_spread == null ? "—" : g.home + " " + sgn(L.home_spread);
   const mkLine = mk.home_spread == null ? "—" : g.home + " " + sgn(mk.home_spread);
   let result = "";
@@ -120,19 +142,43 @@ function card(g) {
     if (res.lean_result) parts.push('Lean ' + esc(L.lean.team) + " " + sgn(L.lean.line) + ': <span class="' + (res.lean_result === "win" ? "ok" : res.lean_result === "loss" ? "no" : "") + '">' + esc(res.lean_result) + "</span>");
     result = '<div class="result-line">' + parts.join(" · ") + "</div>";
   }
-  return '<article class="score-card"><div class="card-body">' +
+  return '<article class="score-card' + (LIVE[g.game_id] && LIVE[g.game_id].state === "in" ? " is-live" : "") + '" role="link" tabindex="0" data-matchup-url="' + pageUrl(g) + '" aria-label="' + esc(g.away_name || g.away) + " at " + esc(g.home_name || g.home) + ' preview" onclick="openMatchup(event,this)" onkeydown="openMatchup(event,this)"><div class="card-body">' +
     '<div class="card-top"><div class="game-meta"><span class="game-time">' + tip(g.tip_utc) + '</span><span class="game-venue">' + esc(g.venue || "") + '</span></div>' +
-    '<div class="card-top-badges">' + (L.lean ? '<span class="lean-badge">Lean ' + esc(L.lean.team) + " " + sgn(L.lean.line) + "</span> " : "") + '<span class="game-status ' + (res || g.completed ? "final" : "") + '">' + (res || g.completed ? "Final" : g.state === "in" ? "Live" : "Pregame") + "</span></div></div>" +
+    '<div class="card-top-badges">' + (L.lean ? '<span class="lean-badge">Lean ' + esc(L.lean.team) + " " + sgn(L.lean.line) + "</span> " : "") + statusBadge(g, res) + "</div></div>" +
     '<div class="teams">' + teamRow(g, "away") + teamRow(g, "home") + "</div>" +
     '<div class="prob-compare"><div class="prob-line"><span>Leo win chance</span><span>' + esc(g.away) + " " + pct(L.p_away) + " · " + esc(g.home) + " " + pct(L.p_home) + '</span></div><div class="prob-track"><div class="prob-away" style="width:' + (L.p_away * 100).toFixed(1) + '%"></div><div class="prob-home" style="width:' + (L.p_home * 100).toFixed(1) + '%"></div></div></div>' +
     '<div class="market-grid">' +
       '<div class="market-box rating"><span class="market-label">Leo spread</span><span class="market-value">' + esc(leoLine) + '</span><span class="market-sub">Expected margin</span></div>' +
       '<div class="market-box"><span class="market-label">DraftKings</span><span class="market-value">' + esc(mkLine) + '</span><span class="market-sub">' + (mk.p_home != null ? "Market " + esc(g.home) + " " + pct(mk.p_home) : "") + "</span></div>" +
-      '<div class="market-box total"><span class="market-label">Gap</span><span class="market-value">' + (L.edge_pts == null ? "—" : Math.abs(L.edge_pts).toFixed(1) + " pts") + '</span><span class="market-sub">' + (L.edge_pts == null ? "" : "Leo likes " + esc(L.edge_pts > 0 ? g.home : g.away) + " more") + "</span></div>" +
+      '<div class="market-box total"><span class="market-label">Gap</span><span class="market-value">' + (L.edge_pts == null ? "—" : Math.abs(L.edge_pts).toFixed(1) + " pts") + '</span><span class="market-sub">' + (L.edge_pts == null ? "" : L.lean ? "Lean " + esc(L.lean.team) + " " + sgn(L.lean.line) : "No lean, under " + ((MODEL && MODEL.lean_edge_pts) || 4)) + "</span></div>" +
     "</div>" + result +
-    '<a class="card-cta" href="/nba/' + g.away.toLowerCase() + "-vs-" + g.home.toLowerCase() + "-prediction-odds-" + g.date + '/">Full preview, injuries and form</a>' +
+    (W && W.summary ? '<div class="why-line">' + esc(W.summary) + (W.lean && W.lean.status === "none" ? ' <span class="nolean">Not a call.</span>' : "") + "</div>" : "") +
+    '<a class="card-cta" href="' + pageUrl(g) + '">Full preview: why Leo has this number</a>' +
     ((L.missing && (L.missing.home.length || L.missing.away.length)) ? '<div class="out-list">Missing regulars Leo accounted for:' + outList(g, "away") + outList(g, "home") + "</div>" : "") +
     "</div></article>";
+}
+/* Live scores, like the MLB scoreboard: ESPN's public scoreboard (the same
+   source as the lines and injury report), polled every minute while the
+   selected day is today and a game is not final. A failed fetch leaves the
+   card as published. Display only; nothing here feeds Leo's numbers. */
+let CURRENT = [];
+async function pollLive() {
+  clearTimeout(liveTimer);
+  if (pick.value !== nyToday() || !CURRENT.length) return;
+  try {
+    const r = await fetch("https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=" + pick.value.replace(/-/g, ""), { cache: "no-store" });
+    if (r.ok) {
+      const d = await r.json();
+      LIVE = {};
+      for (const ev of d.events || []) {
+        const c = (ev.competitions || [])[0] || {}, t = (c.status || ev.status || {}).type || {};
+        const home = (c.competitors || []).find(x => x.homeAway === "home"), away = (c.competitors || []).find(x => x.homeAway === "away");
+        LIVE[ev.id] = { state: t.state, detail: t.shortDetail || "", hs: home ? +home.score : null, as: away ? +away.score : null };
+      }
+      gamesEl.innerHTML = CURRENT.map(card).join("");
+    }
+  } catch (e) {}
+  if (CURRENT.some(g => !RESULTS[g.game_id] && !(LIVE[g.game_id] && LIVE[g.game_id].state === "post"))) liveTimer = setTimeout(pollLive, 60000);
 }
 async function load() {
   statusEl.textContent = "Loading…"; gamesEl.innerHTML = "";
@@ -146,7 +192,9 @@ async function load() {
       '<article class="kpi"><div class="label">Leans</div><div class="value">' + leans + '</div><div class="sub">4+ points off the line</div></article>' +
       '<article class="kpi"><div class="label">Injury report</div><div class="value">' + (d.injuries_as_of ? new Date(d.injuries_as_of).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) : "—") + '</div><div class="sub">as of, Eastern</div></article>';
     statusEl.textContent = "";
+    CURRENT = games;
     gamesEl.innerHTML = games.map(card).join("") || '<div class="score-empty">No games on this day.</div>';
+    pollLive();
   } catch (e) { statusEl.innerHTML = '<div class="notice warn">Could not load this day: ' + esc(e.message) + ".</div>"; }
 }
 </script>

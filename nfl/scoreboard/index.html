@@ -57,6 +57,7 @@
     <div class="view-controls" role="group" aria-label="Filter games">
       <button class="control-btn active" type="button" data-filter="all">All</button>
       <button class="control-btn" type="button" data-filter="preview">Pregame</button>
+      <button class="control-btn" type="button" data-filter="live">Live</button>
       <button class="control-btn" type="button" data-filter="final">Final</button>
     </div>
   </section>
@@ -163,7 +164,45 @@ function openMatchup(event, card){
   if (url) window.location.href = url;
 }
 
-function stateKey(g){return (g.away_score!==""&&g.home_score!=="")?"final":"preview";}
+/* Live scores, like the MLB scoreboard: ESPN's public NFL scoreboard, polled
+   every minute while the selected day is today and a game is not final.
+   nflverse posts the final hours later, so ESPN fills the gap. A failed fetch
+   leaves the card as published. Display only; nothing here feeds Leo. */
+let LIVE={}, liveTimer=null;
+const ESPN_ABBR={LA:"LAR",WAS:"WSH"};
+const fromEspn=a=>({LAR:"LA",WSH:"WAS"})[a]||a;
+async function pollLive(){
+  clearTimeout(liveTimer);
+  const date=datePick.value;
+  if(date!==localISODate(new Date())||!renderedGames.length) return;
+  try{
+    const r=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates="+date.replace(/-/g,""),{cache:"no-store"});
+    if(r.ok){
+      const d=await r.json(); LIVE={};
+      for(const ev of d.events||[]){
+        const c=(ev.competitions||[])[0]||{}, t=(c.status||ev.status||{}).type||{};
+        const h=(c.competitors||[]).find(x=>x.homeAway==="home"), a=(c.competitors||[]).find(x=>x.homeAway==="away");
+        if(!h||!a) continue;
+        LIVE[fromEspn(a.team.abbreviation)+" @ "+fromEspn(h.team.abbreviation)]={state:t.state,detail:t.shortDetail||"",as:a.score,hs:h.score};
+      }
+      renderKPIs(); renderCards();
+    }
+  }catch(e){}
+  if(renderedGames.some(g=>stateKey(g)!=="final")) liveTimer=setTimeout(pollLive,60000);
+}
+function liveOf(g){return LIVE[g.away_team+" @ "+g.home_team]||null;}
+function stateKey(g){
+  if(g.away_score!==""&&g.home_score!=="") return "final";
+  const lv=liveOf(g);
+  if(lv&&lv.state==="post") return "final";
+  if(lv&&lv.state==="in") return "live";
+  return "preview";
+}
+function scoreOf(g,side){
+  const v=side==="away"?g.away_score:g.home_score;
+  if(v!=="") return v;
+  const lv=liveOf(g); return lv&&lv.state!=="pre"?(side==="away"?lv.as:lv.hs):"";
+}
 
 async function loadScoreboard(opts={}){
   statusEl.style.display="block"; statusEl.innerHTML="Loading the NFL slate\u2026";
@@ -193,7 +232,7 @@ async function loadScoreboard(opts={}){
     statusEl.innerHTML = renderedGames.length ? "" :
       '<div class="score-empty">No NFL games are scheduled for '+escapeHtml(date)+'.</div>';
     statusEl.style.display = renderedGames.length ? "none" : "block";
-    renderKPIs(); renderCards();
+    renderKPIs(); renderCards(); pollLive();
   }catch(e){
     statusEl.style.display="block";
     statusEl.innerHTML='<div class="notice warn">The scoreboard could not load: '+escapeHtml(e.message)+'.</div>';
@@ -203,10 +242,11 @@ async function loadScoreboard(opts={}){
 function renderKPIs(){
   const total=renderedGames.length;
   const finals=renderedGames.filter(g=>stateKey(g)==="final").length;
+  const lives=renderedGames.filter(g=>stateKey(g)==="live").length;
   const first=renderedGames[0];
   const withTotals=renderedGames.filter(g=>num(g.total_line)!=null).length;
   kpisEl.innerHTML=
-    '<article class="kpi"><div class="label">Games</div><div class="value">'+total+'</div><div class="sub">'+(total-finals)+' pregame \u00b7 '+finals+' final</div></article>'+
+    '<article class="kpi"><div class="label">Games</div><div class="value">'+total+'</div><div class="sub">'+(total-finals-lives)+' pregame \u00b7 '+(lives?lives+' live \u00b7 ':'')+finals+' final</div></article>'+
     '<article class="kpi"><div class="label">First kickoff</div><div class="value">'+(first?fmtTime(first.gametime):"\u2014")+'</div><div class="sub">'+(first?escapeHtml(first.gameday):"\u2014")+'</div></article>'+
     '<article class="kpi"><div class="label">Slate</div><div class="value">'+(first?"Week "+escapeHtml(first.week):"\u2014")+'</div><div class="sub">'+(first?escapeHtml(first.weekday):"\u2014")+'</div></article>'+
     '<article class="kpi"><div class="label">Totals posted</div><div class="value">'+withTotals+'/'+total+'</div><div class="sub">market and model context</div></article>';
@@ -232,8 +272,9 @@ function renderCards(){
   const list=renderedGames.filter(g=>activeFilter==="all"||stateKey(g)===activeFilter);
   if(!list.length&&renderedGames.length){gamesEl.innerHTML='<div class="score-empty">No games match this filter.</div>';return;}
   gamesEl.innerHTML=list.map(g=>{
-    const isFinal=stateKey(g)==="final";
-    const as=num(g.away_score), hs=num(g.home_score);
+    const st=stateKey(g), isFinal=st==="final", isLive=st==="live", lv=liveOf(g);
+    const showScore=isFinal||isLive;
+    const as=num(scoreOf(g,"away")), hs=num(scoreOf(g,"home"));
     const [pa,ph]=devig(g.away_moneyline,g.home_moneyline);
     const awayColor=TEAM_COLORS[g.away_team]||"var(--accent2)", homeColor=TEAM_COLORS[g.home_team]||"var(--accent)";
     const spread=num(g.spread_line);
@@ -258,7 +299,7 @@ function renderCards(){
       : "";
 
     const cardUrl = matchupUrl(g);
-    return '<div class="score-card" style="--away-color:'+awayColor+';--home-color:'+homeColor+'"'+
+    return '<div class="score-card'+(isLive?" is-live":"")+'" style="--away-color:'+awayColor+';--home-color:'+homeColor+'"'+
       ' role="link" tabindex="0"'+
       ' aria-label="'+escapeHtml(TEAM_NAMES[g.away_team]||g.away_team)+' at '+escapeHtml(TEAM_NAMES[g.home_team]||g.home_team)+' stats and matchup"'+
       ' data-matchup-url="'+cardUrl+'"'+
@@ -270,12 +311,13 @@ function renderCards(){
             '<span class="game-venue">'+escapeHtml(g.stadium||"Venue TBD")+'</span>'+
           '</div>'+
           '<div class="card-top-badges">'+
-            '<span class="game-status '+(isFinal?"final":"")+'">'+(isFinal?"Final":"Pregame")+'</span>'+
+            '<span class="game-status '+(isFinal?"final":isLive?"live":"")+'">'+(isFinal?"Final":isLive?"Live":"Pregame")+'</span>'+
+            (isLive&&lv&&lv.detail?' <span class="live-clock">'+escapeHtml(lv.detail)+'</span>':'')+
           '</div>'+
         '</div>'+
         '<div class="teams">'+
-          teamRow(g.away_team,g.away_score,g.away_moneyline,pa,isFinal,isFinal&&as>hs,"away",leoAway)+
-          teamRow(g.home_team,g.home_score,g.home_moneyline,ph,isFinal,isFinal&&hs>as,"home",leoHome)+
+          teamRow(g.away_team,scoreOf(g,"away"),g.away_moneyline,pa,showScore,isFinal&&as>hs,"away",leoAway)+
+          teamRow(g.home_team,scoreOf(g,"home"),g.home_moneyline,ph,showScore,isFinal&&hs>as,"home",leoHome)+
         '</div>'+
         probCompare+
         '<div class="market-grid">'+
@@ -294,8 +336,10 @@ function renderCards(){
                 ? escapeHtml(leo.pick)+" "+Math.round(leo.model_prob*100)+"%" : "\u2014")+'</span>'+
             '<span class="market-sub">'+(leo ? "Leo win chance" : "Model pending")+'</span></div>'+
         '</div>'+
-        ((g.away_qb_name&&g.home_qb_name)
-          ? '<div class="pitcher-line">\ud83c\udfc8 <span>'+escapeHtml(g.away_qb_name)+' vs '+escapeHtml(g.home_qb_name)+'</span></div>' : "")+
+        // Starting QBs as Leo used them (depth chart, DEC-20261031-08); the
+        // schedule feed's names can be stale (it still named Jalen Hurts).
+        (()=>{const aq=(leo&&leo.away_qb)||g.away_qb_name, hq=(leo&&leo.home_qb)||g.home_qb_name;
+          return (aq&&hq)?'<div class="pitcher-line">\ud83c\udfc8 <span>'+escapeHtml(aq)+' vs '+escapeHtml(hq)+'</span></div>':"";})()+
         '<a class="card-cta" href="'+matchupUrl(g)+'" aria-label="'+escapeHtml(g.away_team)+' at '+escapeHtml(g.home_team)+' stats and matchup">'+
           '<span>'+(isFinal?"View matchup and final result":"View stats, odds and matchup")+'</span><span>\u2192</span></a>'+
       '</div></div>';
