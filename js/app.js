@@ -168,6 +168,7 @@ function renderNav(active) {
             ? [
                 [prefix + "tools/model-tuner/", "Model Tuner"],
                 [prefix + "tools/injury-tracker/", "Injury Tracker"],
+                [prefix + "players/", "Player Scoring"],
                 [prefix + "stats/", "Team Ratings"]
               ]
             : sport === "MLB" 

@@ -70,6 +70,11 @@ jobs:
       - name: Team stats
         run: node scripts/build-nba-team-stats.js || echo "::warning::NBA team stats not refreshed"
 
+      # Every player's points per game and game log for /nba/players/ and the
+      # matchup pages' box scores (display only). Never blocks the run.
+      - name: Player scoring log
+        run: node scripts/build-nba-player-log.js || echo "::warning::NBA player log not refreshed"
+
       - name: Matchup pages
         run: |
           node scripts/render-nba-matchup-pages.js "${{ steps.d.outputs.date }}"

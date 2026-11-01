@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XVWTMDNBJK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XVWTMDNBJK');
+</script>
+
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NBA Player Scoring | Leo</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Leo">
+<meta property="og:title" content="NBA Player Scoring | Leo">
+<meta property="og:description" content="Points per game for every NBA player this season, the last five games and a full game-by-game scoring log, updated every morning.">
+<meta property="og:url" content="https://ndhorizon.com/nba/players/">
+<meta property="og:image" content="https://ndhorizon.com/img/og-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="NBA Player Scoring | Leo">
+<meta name="twitter:description" content="Points per game for every NBA player this season, the last five games and a full game-by-game scoring log, updated every morning.">
+<meta name="twitter:image" content="https://ndhorizon.com/img/og-card.png">
+
+<meta name="description" content="Points per game for every NBA player this season, the last five games and a full game-by-game scoring log, updated every morning.">
+<link rel="canonical" href="https://ndhorizon.com/nba/players/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127936;</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/scoreboard.css">
+<style>
+h2.sec{font-size:1.3rem;margin:30px 0 6px;}
+p.sec-sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px;}
+.div-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:15px;}
+.div-card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-sm);}
+.div-head{padding:10px 15px;background:var(--bg-elev);border-bottom:1px solid var(--border);font-weight:800;font-size:.76rem;text-transform:uppercase;letter-spacing:.09em;color:var(--text-dim);}
+table.t{width:100%;border-collapse:collapse;font-size:.88rem;}
+table.t th,table.t td{padding:8px 11px;text-align:right;white-space:nowrap;}
+table.t th{background:var(--bg-elev);color:var(--text-dim);font-size:.64rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;}
+table.t td:first-child,table.t th:first-child{text-align:left;}
+table.t tbody tr{border-top:1px solid var(--border);}
+table.t tbody tr:hover{background:var(--bg-elev);}
+.tm{display:flex;align-items:center;gap:8px;}
+.tm img{width:24px;height:24px;object-fit:contain;flex:none;}
+.pos{color:var(--good);font-weight:700;}.neg{color:var(--danger);font-weight:700;}
+.scroller{overflow-x:auto;}
+.map-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:var(--shadow-sm);}
+.map{position:relative;width:100%;aspect-ratio:16/10;min-height:340px;}
+.map svg{width:100%;height:100%;overflow:visible;}
+.qd{font-size:.63rem;fill:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:.07em;}
+.axl{font-size:.72rem;fill:var(--text-dim);font-weight:700;}
+.legend{margin-top:12px;}
+.fpill{display:inline-block;padding:5px 12px;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);font-size:.8rem;font-weight:700;cursor:pointer;margin:0 6px 6px 0;color:var(--text-dim);}
+.fpill.on{background:var(--accent2);border-color:var(--accent2);color:#fff;}
+@media(max-width:760px){.div-grid{grid-template-columns:1fr;}}
+.ctrl{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 14px}.ctrl input,.ctrl select{padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg-card);font:inherit;font-size:.9rem;color:inherit}
+.ctrl input{flex:1;min-width:180px}.l5{display:inline-flex;gap:3px;align-items:flex-end;height:22px;vertical-align:middle}.l5 i{display:block;width:6px;background:var(--accent2);border-radius:2px;opacity:.85}
+tr.pl{cursor:pointer} tr.gl td{background:var(--bg-elev);text-align:left!important;white-space:normal} .glog{display:flex;flex-wrap:wrap;gap:6px}.glog span{font-size:.78rem;border:1px solid var(--border);border-radius:8px;padding:3px 7px;background:var(--bg-card)}.glog b{font-size:.86rem}
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main class="scoreboard-shell">
+  <section class="score-hero">
+    <p class="eyebrow">Every player. Every game.</p>
+    <h1>NBA Player Scoring</h1>
+    <p class="subtitle">Points per game for every player this season, how they have scored over their last five games, and the full game log. Updated every morning from the night&rsquo;s box scores.</p>
+    <div class="score-hero-chips"><span class="hero-chip">&#127936; Every player</span><span class="hero-chip">&#128200; Last 5 games</span><span class="hero-chip">&#128203; Game logs</span></div>
+  </section>
+
+  <section class="kpis" id="kpis" aria-label="Scoring summary"></section>
+  <div id="status" class="loading">Loading player scoring&hellip;</div>
+  <div class="ctrl"><input id="q" type="search" placeholder="Find a player" aria-label="Find a player"><select id="tm" aria-label="Team"><option value="">All teams</option></select>
+    <select id="minG" aria-label="Minimum games"><option value="1">Any games</option><option value="3" selected>3+ games</option><option value="10">10+ games</option></select></div>
+  <div class="div-card"><div class="scroller"><table class="t" id="board"></table></div></div>
+  <p class="data-note">Box scores from ESPN, via the game summary saved each night and the open sportsdataverse files. Tap a player for every game. Information only: Leo does not post player props.</p>
+</main>
+<footer id="footer"></footer><script src="/js/app.js"></script>
+<script>
+renderNav(location.pathname); renderFooter();
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+async function tryJson(u){try{const r=await fetch(u+(u.includes("?")?"&":"?")+"v="+Date.now(),{cache:"no-store"});return r.ok?await r.json():null;}catch(e){return null;}}
+const nyToday=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"America/New_York"}).format(new Date());
+const tip=iso=>new Date(iso).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/New_York"})+" ET";
+const longDay=d=>new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
+const pct=p=>p==null?"—":Math.round(p*100)+"%";
+const sgn=v=>v==null?"—":v===0?"PK":(v>0?"+":"")+v;
+function logo(t){return '<img src="https://a.espncdn.com/i/teamlogos/nba/500/'+String(t).toLowerCase()+'.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">';}
+const pageUrl=g=>"/nba/"+g.away.toLowerCase()+"-vs-"+g.home.toLowerCase()+"-prediction-odds-"+g.date+"/";
+// The latest NBA card: today's if it exists, else the most recent day with one.
+async function latestCard(){
+  const days=await tryJson("/data/nba/slates.json")||[];
+  const t=nyToday(), d=(days.find(x=>x.date===t)||days.filter(x=>x.date<=t).pop()||days[days.length-1]);
+  return d?await tryJson("/data/nba/picks-"+d.date+".json"):null;
+}
+
+
+let P=[],SORT={k:"ppg",d:-1},OPEN=null;
+const COLS=[["name","Player"],["team","Team"],["gp","GP"],["ppg","PPG"],["last5","Last 5"],["high","High"],["mpg","MIN"],["rpg","REB"],["apg","AST"]];
+(async function(){
+  const st=document.getElementById("status"), d=await tryJson("/data/nba/player-log.json");
+  if(!d||!d.players||!d.players.length){st.innerHTML='<div class="score-empty">Player scoring is not published yet.</div>';return;}
+  st.style.display="none"; P=d.players;
+  const q=P.filter(p=>p.gp>=3), top=q[0]||P[0], hi=P.slice().sort((a,b)=>b.high-a.high)[0];
+  document.getElementById("kpis").innerHTML=
+    '<article class="kpi"><div class="label">Players</div><div class="value">'+P.length+'</div><div class="sub">through '+esc(new Date(d.data_through+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"}))+'</div></article>'+
+    '<article class="kpi"><div class="label">Top scorer</div><div class="value">'+esc(top.ppg)+'</div><div class="sub">'+esc(top.name)+', '+esc(top.team)+'</div></article>'+
+    '<article class="kpi"><div class="label">Best game</div><div class="value">'+esc(hi.high)+'</div><div class="sub">'+esc(hi.name)+'</div></article>'+
+    '<article class="kpi"><div class="label">20+ a game</div><div class="value">'+q.filter(p=>p.ppg>=20).length+'</div><div class="sub">players, 3+ games</div></article>';
+  const tm=document.getElementById("tm"); [...new Set(P.map(p=>p.team))].sort().forEach(t=>tm.insertAdjacentHTML("beforeend",'<option>'+esc(t)+'</option>'));
+  const hash=decodeURIComponent(location.hash.slice(1)); if(hash&&[...tm.options].some(o=>o.value===hash)) tm.value=hash;
+  ["q","tm","minG"].forEach(i=>document.getElementById(i).addEventListener("input",render));
+  render();
+})();
+function spark(p){const g=p.log.filter(l=>l[3]!=null).slice(-5),mx=Math.max(1,...g.map(l=>l[3]));return '<span class="l5" title="'+g.map(l=>l[3]).join(", ")+'">'+g.map(l=>'<i style="height:'+Math.max(2,Math.round(l[3]/mx*22))+'px"></i>').join("")+'</span> '+p.last5;}
+function render(){
+  const q=document.getElementById("q").value.trim().toLowerCase(), t=document.getElementById("tm").value, m=+document.getElementById("minG").value;
+  const rows=P.filter(p=>(!q||p.name.toLowerCase().includes(q))&&(!t||p.team===t)&&p.gp>=m).sort((a,b)=>{const va=a[SORT.k],vb=b[SORT.k];return (typeof va==="string"?va.localeCompare(vb):va-vb)*SORT.d;}).slice(0,300);
+  document.getElementById("board").innerHTML='<thead><tr>'+COLS.map(c=>'<th data-k="'+c[0]+'" style="cursor:pointer">'+c[1]+'</th>').join("")+'</tr></thead><tbody>'+
+    (rows.length?rows.map(p=>'<tr class="pl" data-id="'+esc(p.id)+'"><td>'+esc(p.name)+'</td><td><span class="tm">'+logo(p.team)+esc(p.team)+'</span></td><td>'+p.gp+'</td><td><b>'+p.ppg+'</b></td><td>'+spark(p)+'</td><td>'+p.high+'</td><td>'+p.mpg+'</td><td>'+p.rpg+'</td><td>'+p.apg+'</td></tr>'+
+      (OPEN===p.id?'<tr class="gl"><td colspan="9"><div class="glog">'+p.log.slice().reverse().map(l=>'<span>'+esc(new Date(l[0]+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"}))+' vs '+esc(l[1])+': '+(l[3]==null?"did not play":'<b>'+l[3]+'</b> pts, '+l[2]+' min')+'</span>').join("")+'</div></td></tr>':"")).join(""):'<tr><td colspan="9">No players match.</td></tr>')+'</tbody>';
+  document.querySelectorAll("#board th").forEach(th=>th.addEventListener("click",()=>{const k=th.dataset.k;SORT={k,d:SORT.k===k?-SORT.d:(k==="name"||k==="team"?1:-1)};render();}));
+  document.querySelectorAll("#board tr.pl").forEach(tr=>tr.addEventListener("click",()=>{OPEN=OPEN===tr.dataset.id?null:tr.dataset.id;render();}));
+}
+
+</script>
+</body>
+</html>

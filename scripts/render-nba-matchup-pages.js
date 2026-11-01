@@ -38,6 +38,47 @@ function results() {
 
 // Leo's read in plain words (DEC-20261031-10). Same text as the nightly card.
 const WHY = require("./lib/nba-why");
+// Player lines for finished games: ESPN's game summary saved at grading
+// (data/nba/boxscores/<date>.json, full line), else the season player log
+// (data/nba/player-log.json: minutes, points, rebounds, assists).
+const PLOG = (() => { try { return JSON.parse(fs.readFileSync(path.join(DIR, "player-log.json"), "utf8")).players; } catch (e) { return []; } })();
+const BOXES = {};
+function espnBox(date, id) {
+  if (!(date in BOXES)) { const f = path.join(DIR, "boxscores", `${date}.json`); BOXES[date] = fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, "utf8")).games : []; }
+  return BOXES[date].find(x => x.game_id === String(id)) || null;
+}
+function lastN(team, name, date, k = 5) {
+  const p = PLOG.find(x => x.team === team && x.name === name); if (!p) return null;
+  const g = p.log.filter(l => l[0] < date && l[3] != null).slice(-k);
+  return g.length ? Math.round(g.reduce((s, l) => s + l[3], 0) / g.length * 10) / 10 : null;
+}
+function boxBlock(g, res) {
+  if (!res) return "";
+  const eb = espnBox(g.date, g.game_id), counted = {};
+  for (const side of ["home", "away"]) for (const p of ((g.leo.missing || {})[side]) || []) counted[g[side] + "|" + p.name] = p;
+  const n = v => { const x = parseFloat(String(v ?? "").replace(/^\+/, "")); return Number.isFinite(x) ? x : null; };
+  const side = sd => {
+    const team = g[sd];
+    let rows = eb ? eb.players.filter(p => p.team === team).map(p => ({ name: p.name, starter: p.starter, min: p.dnp ? 0 : Math.round(p.minutes || 0), dnp: p.dnp || !(p.minutes > 0), reason: p.reason,
+        pts: n(p.stats.points), reb: n(p.stats.rebounds), ast: n(p.stats.assists), fg: p.stats["fieldGoalsMade-fieldGoalsAttempted"], tp: p.stats["threePointFieldGoalsMade-threePointFieldGoalsAttempted"],
+        ft: p.stats["freeThrowsMade-freeThrowsAttempted"], pm: p.stats.plusMinus }))
+      : PLOG.filter(p => p.team === team).map(p => { const l = p.log.find(x => x[0] === g.date); return l ? { name: p.name, min: l[2], dnp: !l[2], pts: l[3], reb: l[4], ast: l[5] } : null; }).filter(Boolean);
+    if (!rows.length) return `<p class="dim">${esc(team)} box score not in yet.</p>`;
+    rows.sort((a, b) => (a.dnp - b.dnp) || (b.min - a.min));
+    const full = !!eb, tot = rows.reduce((s, r) => s + (r.pts || 0), 0);
+    const leoTag = r => { const c = counted[team + "|" + r.name]; if (!c) return "";
+      const was = c.status === "out" ? "out" : c.status === "day-to-day" ? "day to day" : c.status;
+      return ` <span class="tag">Leo counted ${esc(was)}: ${r.dnp ? "sat" : "played"}</span>`; };
+    return `<div class="card tbl"><table><thead><tr><th>${esc(g[sd + "_name"] || team)}</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th>${full ? "<th>FG</th><th>3PT</th><th>FT</th><th>+/-</th>" : ""}</tr></thead><tbody>
+    ${rows.map(r => r.dnp
+      ? `<tr class="dnp"><td>${esc(r.name)}${leoTag(r)}</td><td colspan="${full ? 8 : 4}" class="dim">Did not play${r.reason && !/coach/i.test(r.reason) ? ": " + esc(r.reason.toLowerCase()) : ""}</td></tr>`
+      : `<tr><td>${esc(r.name)}${r.starter ? ' <span class="st5">S</span>' : ""}${leoTag(r)}</td><td>${r.min}</td><td><b>${r.pts ?? "&mdash;"}</b></td><td>${r.reb ?? "&mdash;"}</td><td>${r.ast ?? "&mdash;"}</td>${full ? `<td>${esc(r.fg || "")}</td><td>${esc(r.tp || "")}</td><td>${esc(r.ft || "")}</td><td>${esc(r.pm || "")}</td>` : ""}</tr>`).join("")}
+    <tr class="tot"><td>Team</td><td></td><td><b>${tot}</b></td><td colspan="${full ? 6 : 2}"></td></tr>
+    </tbody></table></div>`;
+  };
+  return `<h2>Box score</h2><p class="dim">${eb ? "ESPN box score, saved the night of the game." : "Minutes, points, rebounds and assists from the open ESPN box score files."} Players Leo counted as out or day to day are tagged with whether they played.</p>${side("away")}${side("home")}`;
+}
+
 const MODEL = (() => { try { return JSON.parse(fs.readFileSync(path.join(DIR, "model.json"), "utf8")); } catch (e) { return {}; } })();
 function whyBlock(g) {
   const w = WHY.why(g, { lostCoef: MODEL.coef && MODEL.coef.lost_d, leanPts: MODEL.lean_edge_pts });
@@ -85,8 +126,8 @@ function formBlock(g, side) {
 
 function playersBlock(g, side) {
   const c = g.context && g.context[side]; if (!c || !c.players.length) return "";
-  return `<div class="card tbl"><table><thead><tr><th>Player</th><th>GP</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th></tr></thead><tbody>
-  ${c.players.map(p => `<tr><td>${esc(p.name)}${p.status ? ` <span class="tag">${esc(statusTxt(p.status))}</span>` : ""}</td><td>${p.gp}</td><td>${p.mpg}</td><td><b>${p.ppg}</b></td><td>${p.rpg}</td><td>${p.apg}</td></tr>`).join("")}
+  return `<div class="card tbl"><table><thead><tr><th>Player</th><th>GP</th><th>MIN</th><th>PTS</th><th>Last 5</th><th>REB</th><th>AST</th></tr></thead><tbody>
+  ${c.players.map(p => { const l5 = lastN(g[side], p.name, g.date); return `<tr><td>${esc(p.name)}${p.status ? ` <span class="tag">${esc(statusTxt(p.status))}</span>` : ""}</td><td>${p.gp}</td><td>${p.mpg}</td><td><b>${p.ppg}</b></td><td>${l5 ?? "&mdash;"}</td><td>${p.rpg}</td><td>${p.apg}</td></tr>`; }).join("")}
   </tbody></table></div>`;
 }
 
@@ -153,6 +194,7 @@ function page(g, res) {
 .box .v{font-size:1.15rem;font-weight:800;margin-top:3px}.box .s{font-size:.76rem;color:var(--text-dim)}
 .lean{margin-top:10px;background:rgba(47,110,74,.1);border:1px solid rgba(47,110,74,.35);border-radius:10px;padding:9px 12px;font-size:.88rem}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.tbl{overflow-x:auto}.tbl tr.dnp td{color:var(--text-dim)}.tbl tr.tot td{border-top:2px solid var(--border);font-weight:700}.st5{font-size:.62rem;font-weight:800;color:var(--text-dim)}
 .card.tbl{padding:0;overflow-x:auto}
 .card table{width:100%;border-collapse:collapse;font-size:.86rem}
 .card th,.card td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left}
@@ -193,6 +235,7 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
   ${L.projected ? `<p class="gapread">Projected score: ${esc(A)} ${L.projected.away}, ${esc(H)} ${L.projected.home} (total ${L.projected.total}). Information only; Leo does not lean on totals.</p>` : ""}
   ${leanTxt}
   ${finalBlock(g, res)}
+  ${boxBlock(g, res)}
   ${whyBlock(g)}
   ${partsTable(g)}
 
@@ -204,6 +247,7 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
   <div class="two"><div><b>${esc(g.away_name)}</b>${formBlock(g, "away")}</div><div><b>${esc(g.home_name)}</b>${formBlock(g, "home")}</div></div>
 
   <h2>Key players this season</h2>
+  <p class="dim">Points per game this season and over each player&rsquo;s last 5 games before this one. Every player&rsquo;s game log is on <a href="/nba/players/">Player Scoring</a>.</p>
   <div class="two"><div><b>${esc(g.away_name)}</b>${playersBlock(g, "away")}</div><div><b>${esc(g.home_name)}</b>${playersBlock(g, "home")}</div></div>
 
   <div class="nfl-signup">
