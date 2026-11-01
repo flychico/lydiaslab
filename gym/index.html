@@ -1110,7 +1110,7 @@ function render(){
   const active = !!S.active;
   const showingWorkout = active && tab === "today";
   document.body.classList.toggle("workout", showingWorkout);
-  document.body.classList.toggle("dashmode", !active && tab === "dash");
+  document.body.classList.toggle("dashmode", tab === "dash");
   if (showingWorkout) return renderWorkout();
   if (tab === "dash") renderDash();
   else if (tab === "today") renderToday();
@@ -1145,6 +1145,7 @@ function renderDash(){
         ${kpi("VO₂ max", vo2 ? vo2.v.toFixed(1) : "—", vo2 ? `goal 38${vo2.d < yd ? ` · ${vo2.d.slice(5)}` : ""}` : "")}
       </div></div>` : "";
   V.innerHTML = `
+  ${S.active ? `<div class="card" style="border-color:var(--gold);display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px"><span><b>You have a workout in progress</b> <span class="dim small">· ${esc((S.plan.days[S.active.dayIdx] || {}).name || "Workout")}, started ${new Date(S.active.start).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span></span><span style="display:flex;gap:8px"><button class="btn small-btn blue-btn" onclick="tab='today';syncTabs();render()">Resume</button><button class="btn ghost small-btn" onclick="cancelWorkout()">Discard</button></span></div>` : ""}
   <div class="dhead"><h1><span class="mich">Michel</span><span class="angelo">Angelo</span></h1><span class="dim">${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · ${streakText()}</span></div>
   ${reviewCard() ? `<div class="dgrid"><div class="dspan12">${reviewCard()}</div></div>` : ""}
   <div class="dgrid">
