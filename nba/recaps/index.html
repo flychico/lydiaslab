@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XVWTMDNBJK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XVWTMDNBJK');
+</script>
+
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NBA Recaps | Leo</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Leo">
+<meta property="og:title" content="NBA Recaps | Leo">
+<meta property="og:description" content="Every graded NBA game night by night: the final, what Leo expected, how far each side missed, and how the lean landed.">
+<meta property="og:url" content="https://ndhorizon.com/nba/recaps/">
+<meta property="og:image" content="https://ndhorizon.com/img/og-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="NBA Recaps | Leo">
+<meta name="twitter:description" content="Every graded NBA game night by night: the final, what Leo expected, how far each side missed, and how the lean landed.">
+<meta name="twitter:image" content="https://ndhorizon.com/img/og-card.png">
+
+<meta name="description" content="Every graded NBA game night by night: the final, what Leo expected, how far each side missed, and how the lean landed.">
+<link rel="canonical" href="https://ndhorizon.com/nba/recaps/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127936;</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/scoreboard.css">
+<style>
+.recap{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-sm);margin-bottom:16px;overflow:hidden;}
+.recap-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 17px;border-bottom:1px solid var(--border);background:var(--bg-elev);}
+.recap-teams{display:flex;align-items:center;gap:9px;font-weight:800;font-size:1.02rem;}
+.recap-teams img{width:28px;height:28px;object-fit:contain;}
+.recap-sc{font-size:1.25rem;font-weight:800;white-space:nowrap;}
+.recap-body{padding:15px 17px;}
+.recap-body p{margin:0 0 10px;line-height:1.6;}
+.wk-head{font-size:1.15rem;margin:26px 0 12px;}
+.ok{color:var(--good,#1e8e3e);font-weight:700}.no{color:var(--danger,#cf222e);font-weight:700}
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main class="scoreboard-shell">
+  <section class="score-hero">
+    <p class="eyebrow">What actually happened.</p>
+    <h1>NBA Recaps</h1>
+    <p class="subtitle">Every graded game, night by night: the final score, what Leo expected before tip, how far Leo and the DraftKings spread each missed, and how any lean landed.</p>
+    <div class="score-hero-chips"><span class="hero-chip">&#127936; Night by night</span><span class="hero-chip">&#128200; Leo vs the line</span><span class="hero-chip">&#129514; Leans graded</span></div>
+  </section>
+
+  <section class="kpis" id="kpis" aria-label="Recap summary"></section>
+  <div id="status" class="loading">Loading NBA recaps&hellip;</div>
+  <div id="recaps"></div>
+  <p class="data-note">Built from Leo&rsquo;s read frozen before tip and the final score. Recaps describe what happened, not what to bet next. Under 50 graded items is an early read.</p>
+</main>
+<footer id="footer"></footer><script src="/js/app.js"></script>
+<script>
+renderNav(location.pathname); renderFooter();
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+async function tryJson(u){try{const r=await fetch(u+(u.includes("?")?"&":"?")+"v="+Date.now(),{cache:"no-store"});return r.ok?await r.json():null;}catch(e){return null;}}
+const nyToday=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"America/New_York"}).format(new Date());
+const tip=iso=>new Date(iso).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/New_York"})+" ET";
+const longDay=d=>new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
+const pct=p=>p==null?"—":Math.round(p*100)+"%";
+const sgn=v=>v==null?"—":v===0?"PK":(v>0?"+":"")+v;
+function logo(t){return '<img src="https://a.espncdn.com/i/teamlogos/nba/500/'+String(t).toLowerCase()+'.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">';}
+const pageUrl=g=>"/nba/"+g.away.toLowerCase()+"-vs-"+g.home.toLowerCase()+"-prediction-odds-"+g.date+"/";
+// The latest NBA card: today's if it exists, else the most recent day with one.
+async function latestCard(){
+  const days=await tryJson("/data/nba/slates.json")||[];
+  const t=nyToday(), d=(days.find(x=>x.date===t)||days.filter(x=>x.date<=t).pop()||days[days.length-1]);
+  return d?await tryJson("/data/nba/picks-"+d.date+".json"):null;
+}
+
+
+(async function(){
+  const el=document.getElementById("recaps"), st=document.getElementById("status");
+  const [res,sch]=await Promise.all([tryJson("/data/nba/results.json"),tryJson("/data/nba/schedule.json")]);
+  const G=(res&&res.games)||[];
+  if(!G.length){st.innerHTML='<div class="score-empty">The first NBA night is graded after 2 AM ET. Recaps appear here once it is.</div>';return;}
+  st.style.display="none";
+  const NAME={}; for(const d of (sch&&sch.days)||[]) for(const g of d.games) NAME[g.game_id]=g;
+  const leans=G.filter(g=>g.lean_result), lw=leans.filter(g=>g.lean_result==="win").length, ll=leans.filter(g=>g.lean_result==="loss").length;
+  const right=G.filter(g=>g.leo_winner_correct===1).length, blow=G.filter(g=>Math.abs(g.home_score-g.away_score)>=20).length;
+  document.getElementById("kpis").innerHTML=
+    '<article class="kpi"><div class="label">Games recapped</div><div class="value">'+G.length+'</div><div class="sub">this season</div></article>'+
+    '<article class="kpi"><div class="label">Leo&rsquo;s winners</div><div class="value">'+right+'-'+(G.length-right)+'</div><div class="sub">'+(G.length<50?"early read":"season")+'</div></article>'+
+    '<article class="kpi"><div class="label">Leans</div><div class="value">'+lw+'-'+ll+'</div><div class="sub">4+ points off the line</div></article>'+
+    '<article class="kpi"><div class="label">Blowouts</div><div class="value">'+blow+'</div><div class="sub">decided by 20+</div></article>';
+  const by={}; G.forEach(g=>(by[g.date]=by[g.date]||[]).push(g));
+  const nm=(g,s)=>{const n=NAME[g.game_id];return n?n[s+"_name"]:g[s];};
+  el.innerHTML=Object.keys(by).sort().reverse().map(d=>'<h2 class="wk-head">'+esc(longDay(d))+'</h2>'+by[d].map(g=>{
+    const m=g.home_score-g.away_score, w=m>0?"home":"away", l=w==="home"?"away":"home", ws=Math.max(g.home_score,g.away_score), ls=Math.min(g.home_score,g.away_score);
+    const how=Math.abs(m)>=20?"ran away from":Math.abs(m)<=5?"edged":"beat";
+    const lm=g.leo_home_margin, leoTxt=(lm>0?g.home+" by ":g.away+" by ")+Math.abs(Math.round(lm*2)/2);
+    const mk=g.mkt_home_spread==null?null:-g.mkt_home_spread, mkTxt=mk==null?null:(mk>0?g.home+" by ":g.away+" by ")+Math.abs(mk);
+    const lmiss=Math.abs(lm-m).toFixed(1), kmiss=mk==null?null:Math.abs(mk-m).toFixed(1);
+    const lean=g.lean_result?' Lean '+esc(g.lean_side==="home"?g.home:g.away)+' '+sgn(g.lean_line)+': <span class="'+(g.lean_result==="win"?"ok":g.lean_result==="loss"?"no":"")+'">'+esc(g.lean_result)+'</span>.':" No lean on this game.";
+    return '<article class="recap"><div class="recap-head"><span class="recap-teams">'+logo(g.away)+esc(g.away)+' <span style="color:var(--text-dim);font-weight:500">at</span> '+logo(g.home)+esc(g.home)+'</span>'+
+      '<span class="recap-sc">'+g.away_score+' &ndash; '+g.home_score+'</span></div><div class="recap-body">'+
+      '<p><b>'+esc(nm(g,w))+'</b> '+how+' the <b>'+esc(nm(g,l))+'</b> '+ws+'&ndash;'+ls+'.</p>'+
+      '<p>Leo had '+esc(leoTxt)+' and <span class="'+(g.leo_winner_correct?"ok":"no")+'">'+(g.leo_winner_correct?"picked the winner":"missed the winner")+'</span>'+(mkTxt?'; DraftKings had '+esc(mkTxt)+'. Leo missed the margin by '+lmiss+', the line by '+kmiss+'.':'. Leo missed the margin by '+lmiss+'.')+lean+'</p>'+
+      '<p><a href="'+pageUrl(g)+'">Leo&rsquo;s full preview and final report &rarr;</a></p></div></article>';
+  }).join("")).join("");
+})();
+
+</script>
+</body>
+</html>

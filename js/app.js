@@ -114,10 +114,15 @@ function renderNav(active) {
   const sport = Sport.get();
   const prefix = Sport.prefix();
   
-  // NBA launched 2026-10-31 with two pages: the nightly card and the record.
+  // NBA has the same tabs as NFL except Props: no free source for NBA prop
+  // lines yet, so no props until there is one (Lynold, 2026-10-31).
   const links = sport === "NBA" ? [
-    [prefix + "scoreboard/", "Scoreboard"],   // same label as MLB and NFL
-    [prefix + "results/", "Results"]
+    [prefix + "scoreboard/", "Scoreboard"],
+    [prefix + "previews/", "Picks"],
+    [prefix + "tools/", "Lab"],
+    [prefix + "stats/", "Stats"],
+    [prefix + "results/", "Results"],
+    [prefix + "recaps/", "Recaps"]
   ] : [
     [prefix + "scoreboard/", "Scoreboard"],
     [prefix + "previews/", "Picks"],
@@ -159,7 +164,13 @@ function renderNav(active) {
 
   navHtml += links.map(function (l) {
         if (l[0] === prefix + "tools/") {
-          var tools = sport === "MLB" 
+          var tools = sport === "NBA"
+            ? [
+                [prefix + "tools/model-tuner/", "Model Tuner"],
+                [prefix + "tools/injury-tracker/", "Injury Tracker"],
+                [prefix + "stats/", "Team Ratings"]
+              ]
+            : sport === "MLB" 
             ? [
                 [prefix + "member-brief/", "Daily Member Brief"],
                 [prefix + "tools/offense-matchups/", "Offense Matchup"],

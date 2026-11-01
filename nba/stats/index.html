@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XVWTMDNBJK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XVWTMDNBJK');
+</script>
+
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NBA Standings, Ratings and Team Stats | Leo</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Leo">
+<meta property="og:title" content="NBA Standings, Ratings and Team Stats | Leo">
+<meta property="og:description" content="NBA standings by division, Leo power ratings, pace and points per 100 possessions on offence and defence for all 30 teams.">
+<meta property="og:url" content="https://ndhorizon.com/nba/stats/">
+<meta property="og:image" content="https://ndhorizon.com/img/og-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="NBA Standings, Ratings and Team Stats | Leo">
+<meta name="twitter:description" content="NBA standings by division, Leo power ratings, pace and points per 100 possessions on offence and defence for all 30 teams.">
+<meta name="twitter:image" content="https://ndhorizon.com/img/og-card.png">
+
+<meta name="description" content="NBA standings by division, Leo power ratings, pace and points per 100 possessions on offence and defence for all 30 teams.">
+<link rel="canonical" href="https://ndhorizon.com/nba/stats/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127936;</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/scoreboard.css">
+<style>
+h2.sec{font-size:1.3rem;margin:30px 0 6px;}
+p.sec-sub{color:var(--text-dim);font-size:.88rem;margin:0 0 14px;}
+.div-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:15px;}
+.div-card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-sm);}
+.div-head{padding:10px 15px;background:var(--bg-elev);border-bottom:1px solid var(--border);font-weight:800;font-size:.76rem;text-transform:uppercase;letter-spacing:.09em;color:var(--text-dim);}
+table.t{width:100%;border-collapse:collapse;font-size:.88rem;}
+table.t th,table.t td{padding:8px 11px;text-align:right;white-space:nowrap;}
+table.t th{background:var(--bg-elev);color:var(--text-dim);font-size:.64rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;}
+table.t td:first-child,table.t th:first-child{text-align:left;}
+table.t tbody tr{border-top:1px solid var(--border);}
+table.t tbody tr:hover{background:var(--bg-elev);}
+.tm{display:flex;align-items:center;gap:8px;}
+.tm img{width:24px;height:24px;object-fit:contain;flex:none;}
+.pos{color:var(--good);font-weight:700;}.neg{color:var(--danger);font-weight:700;}
+.scroller{overflow-x:auto;}
+.map-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:var(--shadow-sm);}
+.map{position:relative;width:100%;aspect-ratio:16/10;min-height:340px;}
+.map svg{width:100%;height:100%;overflow:visible;}
+.qd{font-size:.63rem;fill:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:.07em;}
+.axl{font-size:.72rem;fill:var(--text-dim);font-weight:700;}
+.legend{margin-top:12px;}
+.fpill{display:inline-block;padding:5px 12px;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);font-size:.8rem;font-weight:700;cursor:pointer;margin:0 6px 6px 0;color:var(--text-dim);}
+.fpill.on{background:var(--accent2);border-color:var(--accent2);color:#fff;}
+@media(max-width:760px){.div-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main class="scoreboard-shell">
+  <section class="score-hero">
+    <p class="eyebrow">All 30 teams. Every angle.</p>
+    <h1>NBA Standings, Ratings and Team Stats</h1>
+    <p class="subtitle">Standings by division, the Leo rating behind every nightly number, pace, and points per 100 possessions on both ends, with a map of every team&rsquo;s offence against its defence.</p>
+    <div class="score-hero-chips"><span class="hero-chip">&#127936; Six divisions</span><span class="hero-chip">&#128202; Power ratings</span><span class="hero-chip">&#128506; Team map</span><span class="hero-chip">&#9201;&#65039; Pace</span></div>
+  </section>
+
+  <section class="kpis" id="kpis" aria-label="League summary"></section>
+  <div id="status" class="loading">Loading NBA team data&hellip;</div>
+
+  <h2 class="sec">Standings by division</h2>
+  <p class="sec-sub">Record, point differential and Leo rating. The rating is points per game better than an average team on a neutral floor, pulled toward last season early on so one blowout does not move a team much.</p>
+  <div class="div-grid" id="divs"></div>
+
+  <h2 class="sec">The Map: offence against defence</h2>
+  <p class="sec-sub">Points scored and allowed per 100 possessions, so fast and slow teams compare fairly. Up and to the right scores well and defends well.</p>
+  <div class="map-wrap"><div class="map" id="map"></div></div>
+
+  <h2 class="sec">Power ratings: full board</h2>
+  <p class="sec-sub">Every team ranked by Leo rating. Click a column header to sort.</p>
+  <div class="div-card"><div class="scroller"><table class="t" id="board"></table></div></div>
+
+  <p class="data-note">Scores and box scores from ESPN via the open sportsdataverse files. Ratings are Leo model output, the same ones the nightly card uses. Possessions = FGA &minus; OREB + TOV + 0.44 &times; FTA.</p>
+</main>
+<footer id="footer"></footer><script src="/js/app.js"></script>
+<script>
+renderNav(location.pathname); renderFooter();
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+async function tryJson(u){try{const r=await fetch(u+(u.includes("?")?"&":"?")+"v="+Date.now(),{cache:"no-store"});return r.ok?await r.json():null;}catch(e){return null;}}
+const nyToday=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"America/New_York"}).format(new Date());
+const tip=iso=>new Date(iso).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/New_York"})+" ET";
+const longDay=d=>new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
+const pct=p=>p==null?"—":Math.round(p*100)+"%";
+const sgn=v=>v==null?"—":v===0?"PK":(v>0?"+":"")+v;
+function logo(t){return '<img src="https://a.espncdn.com/i/teamlogos/nba/500/'+String(t).toLowerCase()+'.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">';}
+const pageUrl=g=>"/nba/"+g.away.toLowerCase()+"-vs-"+g.home.toLowerCase()+"-prediction-odds-"+g.date+"/";
+// The latest NBA card: today's if it exists, else the most recent day with one.
+async function latestCard(){
+  const days=await tryJson("/data/nba/slates.json")||[];
+  const t=nyToday(), d=(days.find(x=>x.date===t)||days.filter(x=>x.date<=t).pop()||days[days.length-1]);
+  return d?await tryJson("/data/nba/picks-"+d.date+".json"):null;
+}
+
+
+let T=[],SORT={k:"leo_rank",d:1};
+const rec=r=>r.w+"-"+r.l, sg=v=>v==null?"—":(v>0?"+":"")+v.toFixed(1);
+const cl=v=>v>0?"pos":v<0?"neg":"";
+(async function(){
+  const st=document.getElementById("status"), d=await tryJson("/data/nba/team-stats.json");
+  if(!d||!d.teams){st.innerHTML='<div class="score-empty">Team stats are not published yet.</div>';return;}
+  st.style.display="none"; T=d.teams;
+  const top=T.slice().sort((a,b)=>a.leo_rank-b.leo_rank)[0], fast=T.slice().sort((a,b)=>b.pace-a.pace)[0];
+  document.getElementById("kpis").innerHTML=
+    '<article class="kpi"><div class="label">Games played</div><div class="value">'+d.games+'</div><div class="sub">through '+esc(new Date(d.data_through+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"}))+'</div></article>'+
+    '<article class="kpi"><div class="label">Top Leo rating</div><div class="value">'+esc(top.team)+'</div><div class="sub">'+sg(top.leo_rating)+' per game</div></article>'+
+    '<article class="kpi"><div class="label">Fastest pace</div><div class="value">'+esc(fast.team)+'</div><div class="sub">'+fast.pace+' possessions</div></article>'+
+    '<article class="kpi"><div class="label">Home court</div><div class="value">'+sg(d.home_court)+'</div><div class="sub">points, this season</div></article>';
+  document.getElementById("divs").innerHTML=d.divisions.map(dv=>'<div class="div-card"><div class="div-head">'+esc(dv)+'</div><div class="scroller"><table class="t"><thead><tr><th>Team</th><th>W-L</th><th>Home</th><th>Away</th><th>L10</th><th>Strk</th><th>Diff</th><th>Leo</th></tr></thead><tbody>'+
+    T.filter(t=>t.div===dv).sort((a,b)=>(b.w-b.l)-(a.w-a.l)||b.margin-a.margin).map(t=>'<tr><td><span class="tm">'+logo(t.team)+esc(t.team)+'</span></td><td>'+rec(t)+'</td><td>'+rec(t.home)+'</td><td>'+rec(t.away)+'</td><td>'+rec(t.last10)+'</td><td>'+esc(t.streak)+'</td><td class="'+cl(t.margin)+'">'+sg(t.margin)+'</td><td class="'+cl(t.leo_rating)+'">'+sg(t.leo_rating)+'</td></tr>').join("")+'</tbody></table></div></div>').join("");
+  map(); board();
+})();
+function map(){
+  const xs=T.map(t=>t.off_rtg), ys=T.map(t=>t.def_rtg), x0=Math.min(...xs)-2,x1=Math.max(...xs)+2,y0=Math.min(...ys)-2,y1=Math.max(...ys)+2;
+  const W=1000,H=620,px=v=>60+(v-x0)/(x1-x0)*(W-90),py=v=>30+(v-y0)/(y1-y0)*(H-80); // lower def rating = better, so it plots higher
+  const mx=xs.reduce((s,v)=>s+v,0)/xs.length,my=ys.reduce((s,v)=>s+v,0)/ys.length;
+  document.getElementById("map").innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Offence against defence for every team">'+
+    '<line x1="'+px(mx)+'" y1="20" x2="'+px(mx)+'" y2="'+(H-45)+'" stroke="var(--border)" stroke-dasharray="4 4"/>'+
+    '<line x1="50" y1="'+py(my)+'" x2="'+(W-20)+'" y2="'+py(my)+'" stroke="var(--border)" stroke-dasharray="4 4"/>'+
+    '<text class="qd" x="'+(W-25)+'" y="40" text-anchor="end">Good offence, good defence</text><text class="qd" x="65" y="'+(H-55)+'">Poor offence, poor defence</text>'+
+    '<text class="axl" x="'+(W/2)+'" y="'+(H-12)+'" text-anchor="middle">Points scored per 100 possessions &rarr;</text>'+
+    '<text class="axl" x="16" y="'+(H/2)+'" transform="rotate(-90 16 '+(H/2)+')" text-anchor="middle">Points allowed per 100 (fewer is higher) &rarr;</text>'+
+    T.map(t=>'<g><image href="https://a.espncdn.com/i/teamlogos/nba/500/'+t.team.toLowerCase()+'.png" x="'+(px(t.off_rtg)-15)+'" y="'+(py(t.def_rtg)-15)+'" width="30" height="30"><title>'+esc(t.team)+': offence '+t.off_rtg+', defence '+t.def_rtg+'</title></image></g>').join("")+'</svg>';
+}
+const COLS=[["leo_rank","#"],["team","Team"],["w","W-L"],["ppg","PPG"],["opp_ppg","Opp"],["margin","Diff"],["pace","Pace"],["off_rtg","Off"],["def_rtg","Def"],["leo_rating","Leo"]];
+function board(){
+  const rows=T.slice().sort((a,b)=>{const k=SORT.k,va=k==="w"?a.w-a.l:a[k],vb=k==="w"?b.w-b.l:b[k];return (typeof va==="string"?va.localeCompare(vb):va-vb)*SORT.d;});
+  document.getElementById("board").innerHTML='<thead><tr>'+COLS.map(c=>'<th data-k="'+c[0]+'" style="cursor:pointer">'+c[1]+'</th>').join("")+'</tr></thead><tbody>'+
+    rows.map(t=>'<tr><td>'+t.leo_rank+'</td><td><span class="tm">'+logo(t.team)+esc(t.team)+'</span></td><td>'+rec(t)+'</td><td>'+t.ppg+'</td><td>'+t.opp_ppg+'</td><td class="'+cl(t.margin)+'">'+sg(t.margin)+'</td><td>'+t.pace+'</td><td>'+t.off_rtg+'</td><td>'+t.def_rtg+'</td><td class="'+cl(t.leo_rating)+'">'+sg(t.leo_rating)+'</td></tr>').join("")+'</tbody>';
+  document.querySelectorAll("#board th").forEach(th=>th.addEventListener("click",()=>{const k=th.dataset.k;SORT={k,d:SORT.k===k?-SORT.d:(k==="leo_rank"||k==="team"||k==="opp_ppg"||k==="def_rtg"?1:-1)};board();}));
+}
+
+</script>
+</body>
+</html>
