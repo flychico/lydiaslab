@@ -1033,7 +1033,7 @@ function adherence(nWeeks){
   for (let w = nWeeks - 1; w >= 0; w--) {
     const mon = new Date(); mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7) - 7 * w); mon.setHours(0, 0, 0, 0);
     const next = new Date(mon); next.setDate(mon.getDate() + 7);
-    const done = S.logs.filter(l => { const d = new Date(l.date + "T12:00"); return d >= mon && d < next; }).length;
+    const done = new Set(trainLogs().filter(l => { const d = new Date(l.date + "T12:00"); return d >= mon && d < next; }).map(l => l.date)).size;
     out.push({ label: (mon.getMonth() + 1) + "/" + mon.getDate(), done, target });
   }
   return out;
@@ -1309,7 +1309,7 @@ function renderToday(){
   const plan = S.plan;
   const dayIdx = plan.nextDay % plan.days.length;
   const day = plan.days[dayIdx];
-  const doneToday = S.logs.find(l => l.date === today());
+  const doneToday = trainLogs().find(l => l.date === today()), anyToday = S.logs.filter(l => l.date === today());
   const offerStrong = S.profile && S.profile.goal !== "strong" && !S.strongDismissed;
   V.innerHTML = `
   <h1>Today</h1>
@@ -1318,7 +1318,7 @@ function renderToday(){
   ${reviewCard()}
   ${coachCard()}
   ${doneToday ? "" : readinessCard()}
-  ${doneToday ? workoutSummaryCard(S.logs.filter(l => l.date === today())) : ""}
+  ${anyToday.length ? workoutSummaryCard(anyToday) : ""}
   ${S.tune && S.tune.msgs && S.tune.msgs.length ? `<div class="card" style="border-color:var(--blue)"><b class="blue">🗿 Plan auto-tuned after your last session</b><div class="dim small" style="margin-top:5px;line-height:1.6">${S.tune.msgs.map(esc).join("<br>")}</div><button class="btn ghost small-btn" style="margin-top:10px" onclick="S.tune=null;save();render()">Got it</button></div>` : ""}
   ${(() => { const stalledNow = [...new Set(S.plan.days.flatMap(d => d.exercises.map(e => e.ex)))].filter(id => EXBY[id] && EXBY[id].inc > 0 && stalled(id)); return stalledNow.length >= 3 ? `<div class="card" style="border-color:var(--gold)"><b class="gold">Time to back off a week</b><div class="dim small">${stalledNow.length} lifts have stalled for 3 straight sessions (${stalledNow.slice(0, 3).map(id => EXBY[id].n).join(", ")}${stalledNow.length > 3 ? "…" : ""}). Run them 10% lighter this week so your body recovers — then build back up. Each shows its lighter target already.</div></div>` : ""; })()}
   <div class="card">
@@ -1328,6 +1328,7 @@ function renderToday(){
     ${doneToday ? `<div class="dim small" style="margin-top:10px;line-height:1.5">Already trained today. A second session (say, cardio tonight) still counts as <b>one training day</b>, and its cardio counts toward your weekly cardio.</div>` : ""}
     <button class="btn full blue-btn" style="margin-top:12px" onclick="startWorkout(${dayIdx})">${doneToday ? "Start a second session" : "Start workout"}</button>
   </div>
+  <div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="quickWalkOpen()"><span style="font-size:1.5rem">🚶</span><div style="flex:1"><b>Log a quick walk</b><div class="dim small">Walked outside or on the treadmill? Log it in 2 taps. Counts toward your weekly cardio, not your training days.</div></div><span class="blue" style="font-weight:700">＋</span></div>
   <h2>Or jump to another day</h2>
   ${plan.days.map((d, i) => i === dayIdx ? "" : `<div class="card daycard" onclick="startWorkout(${i})"><b>${esc(d.name)}</b> <span class="dim small">· ${d.exercises.length} exercises · tap to start</span></div>`).join("")}`;
 }
@@ -1338,11 +1339,11 @@ function switchToStrong(){
   save(); toast("Strong & Lean plan ready"); render();
 }
 function streakText(){
-  const dates = new Set(S.logs.map(l => l.date));
+  const dates = new Set(trainLogs().map(l => l.date));
   let streak = 0, d = new Date();
   if (!dates.has(today())) d.setDate(d.getDate() - 1);
   while (dates.has(d.toLocaleDateString("en-CA"))) { streak++; d.setDate(d.getDate() - 1); }
-  const week = new Set(S.logs.filter(l => (Date.now() - new Date(l.date + "T12:00")) / 864e5 < 7).map(l => l.date)).size;
+  const week = new Set(trainLogs().filter(l => (Date.now() - new Date(l.date + "T12:00")) / 864e5 < 7).map(l => l.date)).size;
   return `${week}/${S.profile.days} this week` + (streak > 1 ? ` · trained ${streak} days in a row 🔥` : "");
 }
 function startWorkout(dayIdx){
@@ -1746,7 +1747,7 @@ function renderProgress(){
     ${exList.length ? `<details class="more" style="margin-top:10px"><summary class="small blue">Every exercise (${exList.length})</summary><div style="margin-top:6px">${exList.map(id => { const ex = EXBY[id]; return `<div class="exline" style="cursor:pointer" onclick="exChart('${id}')"><span style="color:var(--blue);font-weight:600">${esc(ex ? ex.n : id)}${tick(momentum(id))}</span><span class="dim small">${loggedEx[id]} session${loggedEx[id] === 1 ? "" : "s"} ›</span></div>`; }).join("")}</div></details>` : ""}
   </div>`;
   const hist = [...logs].reverse(), hrow = l => `<div class="exline"><span>${new Date(l.date + "T12:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} · <b>${esc(l.dayName || "Workout")}</b></span><span class="dim small">${l.entries.reduce((a, en) => a + en.sets.length, 0)} sets · ${l.min}m</span></div>`;
-  const cHist = `<div class="card" id="pg-history"><h3>History <span class="dim small">· ${logs.length} workouts</span></h3>
+  const cHist = `<div class="card" id="pg-history"><h3>History <span class="dim small">· ${trainLogs().length} workouts</span></h3>
     ${logs.length ? hist.slice(0, 8).map(hrow).join("") + (hist.length > 8 ? `<details class="more"><summary class="small blue">${hist.length - 8} older</summary>${hist.slice(8, 60).map(hrow).join("")}</details>` : "") : '<p class="dim small">No workouts yet.</p>'}</div>`;
   V.innerHTML = `
   <h1>Progress</h1>
@@ -3256,7 +3257,8 @@ function fvServings(food, grams){ const t = FRUITVEG[food.n]; if (!t) return 0; 
 function dayFV(date){ return (S.nutrition || []).filter(x => x.date === date).reduce((a, x) => a + (x.fv || 0), 0); }
 const COACH = { steps: 7500, sleep: 420, fv: 5 };
 function weekStartOf(date){ const d = new Date(date + "T12:00"); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.toLocaleDateString("en-CA"); }
-function sessionsBetween(a, b){ return new Set((S.logs || []).filter(l => l.date >= a && l.date <= b).map(l => l.date)).size; }
+function trainLogs(){ return (S.logs || []).filter(l => !l.quick); }
+function sessionsBetween(a, b){ return new Set(trainLogs().filter(l => l.date >= a && l.date <= b).map(l => l.date)).size; }
 /* Weekly cardio for the VO₂ goal: intervals + outdoor walks, counted from every
    workout that week, so a second session the same day still counts. */
 const WALK_IDS = new Set(["outdoor-walk", "outdoor-run"]);
@@ -3293,7 +3295,7 @@ function gradeDay(date){
   const tgt = (S.profile && S.profile.days) || 5;
   const elapsed = Math.round((new Date(date + "T12:00") - new Date(ws + "T12:00")) / 864e5) + 1; // counted days of the week through `date`
   const done = sessionsBetween(ws, date), needBy = Math.floor(tgt * elapsed / 7);
-  const trained = (S.logs || []).some(l => l.date === date);
+  const trained = trainLogs().some(l => l.date === date);
   add("train", "Training", trained || done >= needBy, trained ? "Trained" : done >= needBy ? "Planned rest day" : `Skipped: ${done} of ${tgt} sessions this week, should be at ${needBy}`);
   const n = dayNutrition(date), t = effTargets();
   if (!n.n) add("log", "Food logged", false, "Nothing logged");
@@ -3326,7 +3328,7 @@ function weekScore(){
 /* Today's must-dos, ordered by what matters most for the goal. */
 function todaysMission(){
   const m = [], t = effTargets(), n = dayNutrition(today()), tgt0 = (S.profile && S.profile.days) || 5;
-  const ws0 = weekStartOf(today()), ws = S.fresh && S.fresh > ws0 ? S.fresh : ws0, done = sessionsBetween(ws, today()), trainedToday = (S.logs || []).some(l => l.date === today());
+  const ws0 = weekStartOf(today()), ws = S.fresh && S.fresh > ws0 ? S.fresh : ws0, done = sessionsBetween(ws, today()), trainedToday = trainLogs().some(l => l.date === today());
   const daysLeft = 7 - Math.round((new Date(today() + "T12:00") - new Date(ws0 + "T12:00")) / 864e5); // including today, to Sunday
   const weekDays = 7 - Math.round((new Date(ws + "T12:00") - new Date(ws0 + "T12:00")) / 864e5);
   const tgt = Math.ceil(tgt0 * weekDays / 7); // partial first week after a fresh start
@@ -3650,6 +3652,34 @@ function suppCard(){
     </details></div>`;
 }
 
+/* ---- Quick walk: log a walk without starting a workout ---- */
+let qw = { min: 30, ex: "outdoor-walk", day: 0 };
+function quickWalkOpen(){
+  let m = document.getElementById("qwmodal"); if (!m) { m = document.createElement("div"); m.id = "qwmodal"; document.body.appendChild(m); }
+  const pill = (on, txt, js) => `<span class="pill ${on ? "on" : ""}" onclick="${js};quickWalkOpen()">${txt}</span>`;
+  m.innerHTML = `<div class="modal" onclick="if(event.target===this)this.parentNode.innerHTML=''"><div class="inner">
+    <h3>🚶 Log a walk</h3>
+    <label>How long?</label>
+    <div class="qopt">${[15, 20, 30, 45, 60].map(n => pill(qw.min === n, n + " min", `qw.min=${n}`)).join("")}</div>
+    <input type="number" inputmode="numeric" id="qw-min" placeholder="or type minutes" value="${[15, 20, 30, 45, 60].includes(qw.min) ? "" : qw.min}" style="margin-top:6px" oninput="qw.min=+this.value||qw.min">
+    <label>Where?</label>
+    <div class="qopt">${[["outdoor-walk", "Outside"], ["incline-walk", "Treadmill"], ["outdoor-run", "Run outside"]].map(([id, l]) => pill(qw.ex === id, l, `qw.ex='${id}'`)).join("")}</div>
+    <label>When?</label>
+    <div class="qopt">${pill(qw.day === 0, "Today", "qw.day=0")}${pill(qw.day === -1, "Yesterday", "qw.day=-1")}</div>
+    <p class="dim small" style="margin-top:10px;line-height:1.5">${qw.ex === "incline-walk" ? "Treadmill walks count as cardio minutes. Only outdoor walks count toward your 2 weekly outdoor walks (they update VO₂ max on the Watch)." : qw.min >= 20 ? "✓ Counts as one of this week's outdoor walks. Start it as Outdoor Walk on the Watch next time so it updates your VO₂ max." : "Under 20 min: logged as cardio, but it won't count as one of your weekly outdoor walks."}</p>
+    <button class="btn blue-btn full" style="margin-top:10px" onclick="quickWalkSave()">Log ${qw.min} min</button>
+    <button class="btn ghost full" style="margin-top:8px" onclick="document.getElementById('qwmodal').innerHTML=''">Cancel</button>
+  </div></div>`;
+}
+function quickWalkSave(){
+  const inp = document.getElementById("qw-min"), typed = inp && +inp.value; const min = Math.round(typed || qw.min);
+  if (!min || min < 1 || min > 300) return toast("Enter the minutes");
+  const date = shiftDate(today(), qw.day), name = qw.ex === "outdoor-run" ? "Quick run" : "Quick walk";
+  S.logs.push({ date, quick: true, dayIdx: -1, dayName: name, min, entries: [{ ex: qw.ex, rpe: null, sets: [{ w: 0, r: min, done: true }] }] });
+  S.logs.sort((a, b) => a.date.localeCompare(b.date));
+  save(); document.getElementById("qwmodal").innerHTML = ""; render(); toast(`Logged ${min} min ${qw.ex === "incline-walk" ? "treadmill walk" : name.toLowerCase().replace("quick ", "")}`);
+}
+function deleteQuick(date, min){ const i = S.logs.findIndex(l => l.quick && l.date === date && l.min === min); if (i < 0 || !confirm("Delete this walk?")) return; S.logs.splice(i, 1); save(); render(); }
 /* ---- Workout summary + feedback (Today tab) ----
    Compares each lift with the last time you did it, spots PRs, checks what
    the plan called for, and turns that into a few plain-English notes. */
@@ -3711,8 +3741,9 @@ function workoutFeedback(l){
 }
 function workoutSummaryCard(logsToday){
   return logsToday.map((l, k) => {
+    if (l.quick) return `<div class="card" style="display:flex;align-items:center;gap:12px"><span style="font-size:1.4rem">🚶</span><div style="flex:1"><b>${esc(l.dayName)} · ${l.min} min</b><div class="dim small">${l.entries[0].ex === "incline-walk" ? "Treadmill · cardio minutes" : l.min >= 20 ? "✓ Counts as an outdoor walk this week" : "Cardio minutes (under 20 min doesn't count as a weekly walk)"}</div></div><span class="red small" style="cursor:pointer" onclick="deleteQuick('${l.date}',${l.min})">delete</span></div>`;
     const f = workoutFeedback(l), icon = t => t === "good" ? "✅" : "⚠️";
-    return `<div class="card wsum"><div class="exhead"><h3>✓ ${logsToday.length > 1 ? `Session ${k + 1}: ` : ""}${esc(l.dayName || "Workout")} done</h3><span class="dim small">${l.min} min</span></div>
+    return `<div class="card wsum"><div class="exhead"><h3>✓ ${(() => { const tl = logsToday.filter(x => !x.quick); return tl.length > 1 ? `Session ${tl.indexOf(l) + 1}: ` : ""; })()}${esc(l.dayName || "Workout")} done</h3><span class="dim small">${l.min} min</span></div>
       <div class="wstats">
         <div><b>${f.sets}</b><span>sets</span></div>
         <div><b>${f.vol >= 1000 ? (f.vol / 1000).toFixed(1) + "k" : Math.round(f.vol)}</b><span>lb lifted</span></div>
