@@ -18,7 +18,7 @@
  * proj_total, total_line. Nothing here reads the line into a projection;
  * the line only decides whether Leo's own number is far enough from it.
  *
- * In force from the 2026-11-05 slate. Earlier slates keep the rules they
+ * In force from the 2026-11-02 slate (Monday night; first set for Nov 5). Earlier slates keep the rules they
  * were graded under.
  *
  * Pure. Works in Node and the browser (window.NFL_CALLS).
@@ -27,7 +27,7 @@
 'use strict';
 
 const RULES = {
-  FROM: "2026-11-05",
+  FROM: "2026-11-02",      // moved up from Nov 5 so Monday night uses the calls (Lynold, Nov 2)
   ML_MIN_PROB: 0.60,       // strictly above
   ML_PRICE_LIMIT: -230,    // -230 and more expensive: PASS
   SPREAD_FLOOR: 1.0,

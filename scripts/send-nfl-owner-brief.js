@@ -26,8 +26,8 @@
  *
  * When: once per date (data/email-log/nfl-brief-<date>.json), never after the
  * first kickoff, and only from the gather closest to it: within 3 hours of
- * the first kickoff (Sunday: the 11:30am EST last capture), or any gather on
- * a day whose first game is at night (Thursday, Monday).
+ * the first kickoff (Sunday: the 11:30am EST last capture), or within 9 hours
+ * of a night-only slate (Thursday, Monday: the 12pm EST gather).
  *
  * PDF: headless Chrome (google-chrome on GitHub's ubuntu runners; CHROME_BIN
  * overrides). Email: Resend, recipient from the AUDIT_EMAIL secret (falls back
@@ -51,7 +51,7 @@ const PDF_ONLY = (args.find(a => a.startsWith("--pdf=")) || "").slice(6);
 const TO = (process.env.AUDIT_EMAIL || process.env.OWNER_EMAIL || "").trim();
 const KEY = process.env.RESEND_API_KEY || "", FROM = process.env.EMAIL_FROM || "";
 const LOG = path.join(ROOT, "data/email-log", `nfl-brief-${DATE}.json`);
-const WINDOW_H = 3, NIGHT_FIRST_KICK = "18:00", SPREAD_FLOOR = 1.0, PROP_FLOOR = 0.05;
+const WINDOW_H = 3, NIGHT_WINDOW_H = 9, NIGHT_FIRST_KICK = "18:00", SPREAD_FLOOR = 1.0, PROP_FLOOR = 0.05;
 
 const read = f => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch (e) { return null; } };
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -230,7 +230,10 @@ async function main() {
   if (!TEST && first && now >= first) { console.log(`NFL brief ${DATE}: first kickoff has passed, not sending.`); return; }
   const nightOnly = String(b.games[0].kickoff) >= NIGHT_FIRST_KICK;
   const inWindow = first && (first - now) <= WINDOW_H * 3600e3;
-  if (!FORCE && !inWindow && !nightOnly) {
+  // A night-only slate (Thursday, Monday) sends from the midday gather, not
+  // the 8am one, which comes before most prop lines are posted.
+  const inNightWindow = nightOnly && first && (first - now) <= NIGHT_WINDOW_H * 3600e3;
+  if (!FORCE && !inWindow && !inNightWindow) {
     console.log(`NFL brief ${DATE}: ${first ? Math.round((first - now) / 6e4) : "?"} min to first kickoff; waiting for the capture within ${WINDOW_H}h.`); return;
   }
   if (!KEY || !FROM || !TO) { console.log("NFL brief: RESEND_API_KEY, EMAIL_FROM or AUDIT_EMAIL not set, skipped."); if (TEST) process.exitCode = 1; return; }

@@ -154,7 +154,7 @@ jobs:
       # The owner's PDF brief (DEC-20261031-09): Leo's read of the slate with
       # the lines this capture just attached, emailed to the AUDIT_EMAIL secret.
       # Once per date, only from the capture within 3 hours of the first
-      # kickoff (or any gather on a night-only day), never after kickoff.
+      # kickoff (or within 9 hours on a night-only day: the midday gather), never after kickoff.
       # Headless Chrome ships on ubuntu-latest. Never fails the gather.
       - name: Email the owner brief (PDF)
         if: steps.slate.outputs.games != '0'
