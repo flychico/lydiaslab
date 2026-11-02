@@ -1,0 +1,64 @@
+name: Prerender hub pages
+
+# SEO-13 (2026-11-02). The scoreboards, picks, results, recaps, stats and
+# injury trackers build their content in the browser, so search engines read
+# only a heading and "Loading". After every NFL and NBA publish or grade run,
+# this opens each hub in headless Chromium and saves the finished content into
+# the page's HTML (scripts/prerender-hubs.js). Visitors see no difference: the
+# page script still replaces it with fresh data on load. Display only.
+
+on:
+  workflow_run:
+    workflows:
+      - "NBA publish card"
+      - "NBA grade results"
+      - "NFL publish picks"
+      - "NFL grade results"
+    types: [completed]
+  schedule:
+    - cron: "17 16 * * *"   # backstop, 11:17am EST / 12:17pm EDT
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prerender-hubs
+  cancel-in-progress: true
+
+jobs:
+  prerender:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install headless Chromium
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.63.0
+          npx playwright install --with-deps chromium
+
+      - name: Prerender hubs
+        run: node scripts/prerender-hubs.js
+
+      - name: Commit and push if changed
+        run: |
+          set -euo pipefail
+          git config user.name "lydia-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html nfl/scoreboard nfl/previews nfl/results nfl/recaps nfl/stats nfl/tools/injury-tracker \
+                  nba/scoreboard nba/previews nba/results nba/recaps nba/stats nba/tools/injury-tracker
+          if git diff --cached --quiet; then echo "No change."; exit 0; fi
+          git commit -m "Prerender hub pages"
+          for i in 1 2 3; do
+            git pull --rebase && git push && exit 0
+            sleep 5
+          done
+          exit 1
