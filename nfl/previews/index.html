@@ -16,15 +16,15 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Leo">
 <meta property="og:title" content="NFL Picks and Leo's Reads | Leo">
-<meta property="og:description" content="Leo's read on every NFL game: win chance for both teams, Leo's spread and total beside the posted lines, and Leo's pick when one team is above 60%.">
+<meta property="og:description" content="Leo's three calls for every NFL game: moneyline, spread and total, each a call or a PASS, with Leo's win chance, spread and total beside the posted lines.">
 <meta property="og:url" content="https://ndhorizon.com/nfl/previews/">
 <meta property="og:image" content="https://ndhorizon.com/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="NFL Picks and Leo's Reads | Leo">
-<meta name="twitter:description" content="Leo's read on every NFL game: win chance for both teams, Leo's spread and total beside the posted lines, and Leo's pick when one team is above 60%.">
+<meta name="twitter:description" content="Leo's three calls for every NFL game: moneyline, spread and total, each a call or a PASS, with Leo's win chance, spread and total beside the posted lines.">
 <meta name="twitter:image" content="https://ndhorizon.com/img/og-card.png">
 
-<meta name="description" content="Leo's read on every NFL game: win chance for both teams, Leo's spread and total beside the posted lines, and Leo's pick when one team is above 60%.">
+<meta name="description" content="Leo's three calls for every NFL game: moneyline, spread and total, each a call or a PASS, with Leo's win chance, spread and total beside the posted lines.">
 <link rel="canonical" href="https://ndhorizon.com/nfl/previews/">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127944;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
@@ -59,8 +59,8 @@
 <section class="score-hero">
     <p class="eyebrow">Every game. Leo’s read, ranked.</p>
     <h1>NFL Picks and Leo’s Reads</h1>
-    <p class="subtitle">Leo’s win chance for every game, with Leo’s spread and total beside the posted lines. Leo names a pick only when one team is above 60%; anything closer is too close to call.</p>
-    <div class="score-hero-chips"><span class="hero-chip">🏈 Full slate</span><span class="hero-chip">📈 Leo vs the line</span><span class="hero-chip">🎯 Picks above 60%</span><span class="hero-chip">🔒 Frozen before kickoff</span></div>
+    <p class="subtitle">Three calls for every game: moneyline, spread and total. Each is a call or a PASS, and every call is graded after the game. A moneyline call needs more than 60% and a price better than -230; a spread call needs Leo 1 point off the line with both of his models on the same winner; a total call needs Leo 1.5 to 7 points off the line.</p>
+    <div class="score-hero-chips"><span class="hero-chip">🏈 Full slate</span><span class="hero-chip">📈 Leo vs the line</span><span class="hero-chip">🎯 Three calls a game</span><span class="hero-chip">🔒 Frozen before kickoff</span></div>
   </section>
 
   <section class="kpis" id="kpis" aria-label="Slate summary"><article class="kpi"><div class="label">Games</div><div class="value">12</div><div class="sub">Week 8 · Sun, Nov 1</div></article><article class="kpi"><div class="label">Leo picks</div><div class="value">9</div><div class="sub">one team above 60%</div></article><article class="kpi"><div class="label">Too close</div><div class="value">3</div><div class="sub">60% or less</div></article><article class="kpi"><div class="label">Spread sides</div><div class="value">10</div><div class="sub">1+ point off the line</div></article></section>
@@ -71,6 +71,7 @@
 </main>
 
 <footer id="footer"></footer><script src="/js/app.js"></script>
+<script src="/scripts/lib/nfl-calls.js"></script>
 <script>
 renderNav("/articles/"); renderFooter();
 
@@ -96,18 +97,28 @@ const by=(m,h,a)=>m==null?"—":Math.abs(m)<0.05?"pick'em":(m>0?h:a)+" by "+Math
   if(!p){ st.innerHTML='<div class="score-empty">No NFL reads are published right now.</div>'; return; }
   st.style.display="none";
   const homeP=x=>x.model_prob==null?null:(x.pick===x.home?x.model_prob:1-x.model_prob);
+  // DEC-20261102-01: from the 2026-11-02 slate, three calls per game from
+  // scripts/lib/nfl-calls.js. Earlier slates keep the old layout.
+  const CALLS=window.NFL_CALLS&&p[0]&&p[0].date>=NFL_CALLS.RULES.FROM?NFL_CALLS:null;
+  const C=x=>CALLS?CALLS.calls(x):null;
   const picks=p.filter(x=>x.ml_call==="leo_pick").length;
   const gapS=x=>x.proj_spread==null||x.spread_line==null?null:x.proj_spread-x.spread_line;
   const sides=p.filter(x=>gapS(x)!=null&&Math.abs(gapS(x))>=1).length;
   const when=new Date(p[0].date+"T12:00:00").toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-  kp.innerHTML=
+  const nCall=k=>p.filter(x=>C(x)[k].call).length;
+  kp.innerHTML= CALLS ?
+    '<article class="kpi"><div class="label">Games</div><div class="value">'+p.length+'</div><div class="sub">Week '+esc(p[0].week)+' &middot; '+when+'</div></article>'+
+    '<article class="kpi"><div class="label">Moneyline calls</div><div class="value">'+nCall("ml")+'</div><div class="sub">above 60%, better than -230</div></article>'+
+    '<article class="kpi"><div class="label">Spread calls</div><div class="value">'+nCall("spread")+'</div><div class="sub">1+ point off the line</div></article>'+
+    '<article class="kpi"><div class="label">Total calls</div><div class="value">'+nCall("total")+'</div><div class="sub">1.5 to 7 points off</div></article>' :
     '<article class="kpi"><div class="label">Games</div><div class="value">'+p.length+'</div><div class="sub">Week '+esc(p[0].week)+' &middot; '+when+'</div></article>'+
     '<article class="kpi"><div class="label">Leo picks</div><div class="value">'+picks+'</div><div class="sub">one team above 60%</div></article>'+
     '<article class="kpi"><div class="label">Too close</div><div class="value">'+(p.length-picks)+'</div><div class="sub">60% or less</div></article>'+
     '<article class="kpi"><div class="label">Spread sides</div><div class="value">'+sides+'</div><div class="sub">1+ point off the line</div></article>';
-  const order=x=>(x.ml_call==="leo_pick"?1:0)*10+Math.abs((homeP(x)||.5)-.5);
+  const order=x=>CALLS?C(x).count*10+Math.abs((homeP(x)||.5)-.5):(x.ml_call==="leo_pick"?1:0)*10+Math.abs((homeP(x)||.5)-.5);
+  const callBox=(cls,label,c,sub)=>'<div class="market-box '+cls+'"'+(c.call?'':' style="opacity:.72"')+'><span class="market-label">'+label+'</span><span class="market-value">'+(c.call?esc(c.label):"PASS")+'</span><span class="market-sub">'+esc(c.call?sub:(c.short||c.pass||""))+'</span></div>';
   el.innerHTML=p.slice().sort((a,b)=>order(b)-order(a)).map(x=>{
-    const hp=homeP(x), ap=hp==null?null:1-hp, isPick=x.ml_call==="leo_pick";
+    const hp=homeP(x), ap=hp==null?null:1-hp, K=C(x), isPick=K?!!K.ml.call:x.ml_call==="leo_pick";
     const row=(t,prob,lean)=>'<div class="side'+(lean?" lean":"")+'">'+
       '<img src="/img/nfl/'+encodeURIComponent(t)+'.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'+
       '<span class="nm">'+esc(t)+'</span><span><span class="pr">'+pct(prob)+'</span><span class="pb">Leo win chance</span></span></div>';
@@ -116,14 +127,19 @@ const by=(m,h,a)=>m==null?"—":Math.abs(m)<0.05?"pick'em":(m>0?h:a)+" by "+Math
     const totTxt=gt==null?"no line yet":Math.abs(gt)>=1.5?"Leo side "+(gt>0?"over":"under"):"under 1.5, no side";
     const qb=(x.away_qb&&x.home_qb)?'<div class="why">Starting QBs Leo used: '+esc(x.away_qb)+' ('+esc(x.away)+'), '+esc(x.home_qb)+' ('+esc(x.home)+').</div>':"";
     return '<article class="pick-card"><div class="pick-top"><span class="pick-when">'+esc(x.matchup)+'</span>'+
-      '<span class="badge '+(isPick?"b-pick":"b-pass")+'">'+(isPick?"Leo pick "+esc(x.pick):"Too close to call")+'</span></div>'+
+      (K ? '<span class="badge '+(K.count?"b-pick":"b-pass")+'">'+(K.count?K.count+" call"+(K.count===1?"":"s"):"All pass")+'</span></div>'
+         : '<span class="badge '+(isPick?"b-pick":"b-pass")+'">'+(isPick?"Leo pick "+esc(x.pick):"Too close to call")+'</span></div>')+
       '<div class="pick-body">'+row(x.away,ap,isPick&&x.pick===x.away)+row(x.home,hp,isPick&&x.pick===x.home)+
       '<div class="wbar"><i style="width:'+((ap||0)*100).toFixed(1)+'%;background:var(--accent)"></i><i style="width:'+((hp||0)*100).toFixed(1)+'%;background:var(--accent2)"></i></div>'+
-      '<div class="market-grid" style="grid-template-columns:repeat(3,1fr);margin-top:10px">'+
+      (K ? '<div class="market-grid" style="grid-template-columns:repeat(3,1fr);margin-top:10px">'+
+        callBox("rating","Moneyline",K.ml,pct(x.model_prob)+" to win")+
+        callBox("","Spread",K.spread,"Leo "+by(x.proj_spread,x.home,x.away))+
+        callBox("total","Total",K.total,"Leo "+x.proj_total)+
+      '</div>' : '<div class="market-grid" style="grid-template-columns:repeat(3,1fr);margin-top:10px">'+
         '<div class="market-box rating"><span class="market-label">Leo spread</span><span class="market-value">'+esc(by(x.proj_spread,x.home,x.away))+'</span><span class="market-sub">line: '+esc(by(x.spread_line,x.home,x.away))+'</span></div>'+
         '<div class="market-box"><span class="market-label">Spread</span><span class="market-value">'+(gs==null?"—":Math.abs(gs).toFixed(1)+" pts")+'</span><span class="market-sub">'+sideTxt+'</span></div>'+
         '<div class="market-box total"><span class="market-label">Total</span><span class="market-value">'+(x.proj_total==null?"—":x.proj_total)+'</span><span class="market-sub">line '+(x.total_line==null?"—":x.total_line)+', '+totTxt+'</span></div>'+
-      '</div>'+qb+
+      '</div>')+qb+
       '<a class="more" href="/nfl/'+x.away.toLowerCase()+'-vs-'+x.home.toLowerCase()+'-prediction-odds-'+x.date+'/">Full preview: why Leo has this number &rarr;</a></div></article>';
   }).join("");
 })();
