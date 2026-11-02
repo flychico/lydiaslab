@@ -38,6 +38,7 @@ function results() {
 
 // Leo's read in plain words (DEC-20261031-10). Same text as the nightly card.
 const WHY = require("./lib/nba-why");
+const PKS = require("./lib/nba-picks");   // Leo Pick rule (DEC-20261102-30)
 // Player lines for finished games: ESPN's game summary saved at grading
 // (data/nba/boxscores/<date>.json, full line), else the season player log
 // (data/nba/player-log.json: minutes, points, rebounds, assists).
@@ -152,7 +153,8 @@ function page(g, res) {
   // Same winner or not, by how much, and Leo's side (shared with the card and email).
   const LS = WHY.leoLine(g), GS = WHY.gapShown(g);
   const gapTxt = esc(WHY.compare(g, MODEL.lean_edge_pts || 4));
-  const leanTxt = L.lean && gapTxt ? `<div class="lean">${gapTxt}</div>` : "";
+  const PT = PKS.pickText(g);
+  const leanTxt = (PT ? (PT.ok ? `<div class="lean">${esc(PT.line)}</div>` : `<p class="gapread">${esc(PT.line)}</p>`) : "") + (L.lean && gapTxt ? `<div class="lean">${gapTxt}</div>` : "");
   return `<!DOCTYPE html>
 <html lang="en">
 <head>

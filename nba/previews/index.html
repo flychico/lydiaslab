@@ -72,6 +72,7 @@
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script src="/scripts/lib/nba-why.js?v=20261102"></script>
+<script src="/scripts/lib/nba-picks.js?v=20261102"></script>
 <script>
 renderNav(location.pathname); renderFooter();
 
@@ -105,25 +106,27 @@ let MODEL=null;
   const leans=games.filter(g=>g.leo.lean).length, big=games.length?Math.max(...games.map(gap)):null;
   kp.innerHTML=
     '<article class="kpi"><div class="label">Games</div><div class="value">'+games.length+'</div><div class="sub">'+esc(longDay(d.date))+'</div></article>'+
+    '<article class="kpi"><div class="label">Leo Picks</div><div class="value">'+games.filter(g=>{const t=window.NBA_PICKS?NBA_PICKS.pickText(g):null;return t&&t.ok}).length+'</div><div class="sub">60%+, better than -230</div></article>'+
     '<article class="kpi"><div class="label">Leans</div><div class="value">'+leans+'</div><div class="sub">4+ points off the line</div></article>'+
     '<article class="kpi"><div class="label">Biggest gap</div><div class="value">'+(big==null||big<0?"—":big+" pts")+'</div><div class="sub">Leo vs DraftKings</div></article>'+
     '<article class="kpi"><div class="label">Injury report</div><div class="value">'+(d.injuries_as_of?new Date(d.injuries_as_of).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/New_York"}):"—")+'</div><div class="sub">as of, Eastern</div></article>';
   if(d.date!==nyToday()) document.getElementById("note").innerHTML='<div class="notice">Today&rsquo;s card is not out yet. Showing '+esc(longDay(d.date))+'.</div>';
   el.innerHTML=games.map(g=>{
     const L=g.leo, mk=g.market||{};
+    const PT=window.NBA_PICKS?NBA_PICKS.pickText(g):null;
     const gs=(window.NBA_WHY&&NBA_WHY.gapShown)?NBA_WHY.gapShown(g):(L.edge_pts==null?null:Math.abs(L.edge_pts));
     const W=window.NBA_WHY?NBA_WHY.why(g,{lostCoef:MODEL&&MODEL.coef&&MODEL.coef.lost_d,leanPts:MODEL&&MODEL.lean_edge_pts}):null;
     const row=(side,p)=>'<div class="side'+(L.lean&&L.lean.side===side?" lean":"")+'">'+logo(g[side])+
       '<span class="nm">'+esc(g[side+"_name"]||g[side])+'</span><span><span class="pr">'+pct(p)+'</span><span class="pb">Leo win chance</span></span></div>';
     return '<article class="pick-card"><div class="pick-top"><span class="pick-when">'+esc(tip(g.tip_utc))+' &middot; '+esc(g.away)+' at '+esc(g.home)+'</span>'+
-      '<span class="badge '+(L.lean?"b-pick":"b-pass")+'">'+(L.lean?"Lean "+esc(L.lean.team)+" "+sgn(L.lean.line):"No lean")+'</span></div>'+
+      (PT&&PT.ok?'<span class="badge b-pick">'+esc(PT.badge)+'</span> ':'')+'<span class="badge '+(L.lean?"b-pick":"b-pass")+'">'+(L.lean?"Lean "+esc(L.lean.team)+" "+sgn(L.lean.line):"No lean")+'</span></div>'+
       '<div class="pick-body">'+row("away",L.p_away)+row("home",L.p_home)+
       '<div class="wbar"><i style="width:'+(L.p_away*100).toFixed(1)+'%;background:var(--accent)"></i><i style="width:'+(L.p_home*100).toFixed(1)+'%;background:var(--accent2)"></i></div>'+
       '<div class="market-grid" style="grid-template-columns:repeat(3,1fr);margin-top:10px">'+
         '<div class="market-box rating"><span class="market-label">Leo spread</span><span class="market-value">'+esc(g.home)+' '+sgn((window.NBA_WHY&&NBA_WHY.leoLine)?NBA_WHY.leoLine(g):L.home_spread)+'</span><span class="market-sub">expected margin</span></div>'+
         '<div class="market-box"><span class="market-label">DraftKings</span><span class="market-value">'+(mk.home_spread==null?"—":esc(g.home)+" "+sgn(mk.home_spread))+'</span><span class="market-sub">'+(mk.p_home!=null?"market "+esc(g.home)+" "+pct(mk.p_home):"")+'</span></div>'+
         '<div class="market-box total"><span class="market-label">Gap</span><span class="market-value">'+(gs==null?"—":gs+" pts")+'</span><span class="market-sub">'+(L.lean?"lean":"under 4, no lean")+'</span></div>'+
-      '</div>'+(W&&W.compare?'<div class="why">'+esc(W.compare)+'</div>':"")+(W&&W.summary?'<div class="why">'+esc(W.summary)+'</div>':"")+
+      '</div>'+(PT?'<div class="why">'+esc(PT.line)+'</div>':"")+(W&&W.compare?'<div class="why">'+esc(W.compare)+'</div>':"")+(W&&W.summary?'<div class="why">'+esc(W.summary)+'</div>':"")+
       '<a class="more" href="'+pageUrl(g)+'">Full preview: why Leo has this number &rarr;</a></div></article>';
   }).join("");
 })();

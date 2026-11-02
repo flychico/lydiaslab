@@ -44,7 +44,30 @@ const LEDGER = path.join(DIR, "results-ledger.csv");
 const COLS = ["date", "game_id", "away", "home", "away_score", "home_score", "margin", "leo_home_margin", "leo_p_home", "mkt_home_spread",
   "mkt_p_home", "leo_pick", "winner", "leo_winner_correct", "mkt_winner_correct", "brier_leo", "brier_mkt", "leo_miss", "line_miss",
   "lean_side", "lean_line", "lean_result", "edge_pts", "home_lost", "away_lost", "captured_at", "kickoff_utc", "model_version",
-  "open_home_spread", "close_home_spread", "lean_clv_pts", "close_source"];
+  "open_home_spread", "close_home_spread", "lean_clv_pts", "close_source",
+  "home_ml", "away_ml", "pick_side", "pick_team", "pick_p", "pick_price", "pick_result", "pick_units",
+  "lean_price", "lean_units", "price_source"];
+const PK = require("./lib/nba-picks");
+/* Leo Pick and lean units from the read of record (DEC-20261102-30). p is that
+   prediction-history row (or null when it cannot be found). Prices are the
+   DraftKings numbers stored before tip; nothing is looked up after the game. */
+function moneyFields(p, margin, leanSide, leanResult) {
+  const o = { home_ml: p ? p.home_ml ?? "" : "", away_ml: p ? p.away_ml ?? "" : "", pick_side: "", pick_team: "", pick_p: "", pick_price: "", pick_result: "", pick_units: "",
+    lean_price: "", lean_units: "", price_source: "" };
+  if (p) {
+    const pk = PK.pick({ p_home: p.leo_p_home, home_ml: p.home_ml, away_ml: p.away_ml, home: p.home, away: p.away });
+    if (pk && pk.ok) {
+      const res = pk.side === "home" ? (margin > 0 ? "win" : "loss") : (margin < 0 ? "win" : "loss");
+      Object.assign(o, { pick_side: pk.side, pick_team: pk.team, pick_p: pk.p.toFixed(3), pick_price: pk.price, pick_result: res, pick_units: PK.units(res, pk.price).toFixed(3) });
+    }
+  }
+  if (leanSide && leanResult) {
+    const raw = p ? (leanSide === "home" ? p.home_spread_odds : p.away_spread_odds) : "";
+    const known = raw !== "" && raw != null && Number.isFinite(+raw) && +raw !== 0, price = known ? +raw : -110;
+    Object.assign(o, { lean_price: price, lean_units: PK.units(leanResult, price).toFixed(3), price_source: known ? "dk_at_read" : "assumed" });
+  }
+  return o;
+}
 const BOX_DIR = path.join(DIR, "boxscores");
 const clvPts = (side, open, close) => side && open !== "" && open != null && close !== "" && close != null
   ? (side === "home" ? +open - +close : +close - +open).toFixed(1) : "";
@@ -86,6 +109,9 @@ function summarize() {
     const leans = list.filter(r => r.lean_result);
     const rec = rs => ({ won: rs.filter(r => r.lean_result === "win").length, lost: rs.filter(r => r.lean_result === "loss").length, push: rs.filter(r => r.lean_result === "push").length });
     const L = rec(leans);
+    const u = rs => +rs.reduce((t, r) => t + (r.lean_units !== "" && r.lean_units != null ? +r.lean_units : (PK.units(r.lean_result, -110) ?? 0)), 0).toFixed(2);
+    const pk = list.filter(r => r.pick_result && r.date >= PK.TRACK_FROM), pw = pk.filter(r => r.pick_result === "win").length;
+    const pu = +pk.reduce((t, r) => t + +r.pick_units, 0).toFixed(2);
     return {
       games: list.length,
       winner_leo: list.length ? +avg(list.map(r => +r.leo_winner_correct)).toFixed(3) : null,
@@ -94,7 +120,13 @@ function summarize() {
       brier_market: withMkt.length ? +avg(withMkt.map(r => num(r.brier_mkt))).toFixed(4) : null,
       miss_leo: withMkt.length ? +avg(withMkt.map(r => num(r.leo_miss))).toFixed(2) : null,
       miss_line: withMkt.length ? +avg(withMkt.map(r => num(r.line_miss))).toFixed(2) : null,
-      leans: { ...L, pct: L.won + L.lost ? +(L.won / (L.won + L.lost)).toFixed(3) : null, units_at_110: +((L.won * 100 / 110) - L.lost).toFixed(2) },
+      leans: { ...L, pct: L.won + L.lost ? +(L.won / (L.won + L.lost)).toFixed(3) : null, units_at_110: +((L.won * 100 / 110) - L.lost).toFixed(2),
+        units: u(leans), priced: leans.filter(r => r.price_source === "dk_at_read").length },
+      // Leo Picks: 60%+ and priced better than -230, 1 unit at the moneyline stored before tip. Counted from TRACK_FROM.
+      picks: { from: PK.TRACK_FROM, n: pk.length, won: pw, lost: pk.length - pw, pct: pk.length ? +(pw / pk.length).toFixed(3) : null, units: pu,
+        roi: pk.length ? +(pu / pk.length).toFixed(3) : null,
+        avg_price: pk.length ? Math.round(pk.reduce((t, r) => t + +r.pick_price, 0) / pk.length) : null,
+        stated: pk.length ? +(pk.reduce((t, r) => t + +r.pick_p, 0) / pk.length).toFixed(3) : null },
       lean_line_moves: (() => {
         const m = leans.filter(r => r.lean_clv_pts !== "" && r.lean_clv_pts != null).map(r => +r.lean_clv_pts);
         return { n: m.length, toward_leo: m.filter(v => v > 0).length, against: m.filter(v => v < 0).length, unchanged: m.filter(v => v === 0).length,
@@ -107,18 +139,20 @@ function summarize() {
   const last7 = dates.slice(-7);
   const doc = {
     updated_at: new Date().toISOString(), model_version: M.MODEL_VERSION,
-    note: "Leans are a tracked test, not bets. Spread units assume -110. Under 50 graded items is an early read.",
+    note: "Leo Picks (60%+ and priced better than -230) and leans (4+ pts off the spread) are a tracked test, not bets. Units: 1 unit each at the DraftKings price stored before tip (leans at -110 where no spread price was stored). Picks are counted from " + PK.TRACK_FROM + "; earlier games are shown as a replay. Under 50 graded items is an early read.",
     season: block(rows), last_7_days: block(rows.filter(r => last7.includes(r.date))),
     by_date: dates.map(d => ({ date: d, ...block(rows.filter(r => r.date === d)) })).reverse(),
     games: rows.slice().reverse().map(r => ({
       date: r.date, game_id: r.game_id, away: r.away, home: r.home, away_score: +r.away_score, home_score: +r.home_score,
       leo_home_margin: num(r.leo_home_margin), leo_p_home: num(r.leo_p_home), mkt_home_spread: num(r.mkt_home_spread),
-      leo_winner_correct: +r.leo_winner_correct, lean_side: r.lean_side, lean_line: num(r.lean_line), lean_result: r.lean_result, edge_pts: num(r.edge_pts)
+      leo_winner_correct: +r.leo_winner_correct, lean_side: r.lean_side, lean_line: num(r.lean_line), lean_result: r.lean_result, edge_pts: num(r.edge_pts),
+      pick_team: r.pick_team || "", pick_p: num(r.pick_p), pick_price: num(r.pick_price), pick_result: r.pick_result || "", pick_units: num(r.pick_units),
+      pick_replay: !!r.pick_result && r.date < PK.TRACK_FROM, lean_price: num(r.lean_price), lean_units: num(r.lean_units), price_source: r.price_source || ""
     }))
   };
   fs.writeFileSync(path.join(DIR, "results.json"), JSON.stringify(doc, null, 1) + "\n");
   const s = doc.season;
-  console.log(`Season: ${s.games} graded. Winner Leo ${s.winner_leo} / market ${s.winner_market}. Brier ${s.brier_leo} / ${s.brier_market}. Leans ${s.leans.won}-${s.leans.lost}-${s.leans.push}.`);
+  console.log(`Season: ${s.games} graded. Winner Leo ${s.winner_leo} / market ${s.winner_market}. Brier ${s.brier_leo} / ${s.brier_market}. Leans ${s.leans.won}-${s.leans.lost}-${s.leans.push} (${s.leans.units}u). Picks ${s.picks.won}-${s.picks.lost} (${s.picks.units}u) since ${s.picks.from}.`);
 }
 
 function writeBox(date, games) {
@@ -169,15 +203,18 @@ async function backfill() {
   }
 }
 
-/* The ledger gains the close_source column once; old rows keep every value. */
+/* New ledger columns are added once; old rows keep every value and get the new fields filled. */
 function upgradeLedger() {
   if (!fs.existsSync(LEDGER)) return;
   const lines = fs.readFileSync(LEDGER, "utf8").split(/\r?\n/).filter(Boolean);
   const head = lines[0].split(",");
-  if (head.includes("close_source")) return;
-  const rows = readCsv(LEDGER);
+  if (COLS.every(c => head.includes(c))) return;
+  // Rows graded before a column existed: fill picks and units from the same read of record (captured_at).
+  const hist = new Map(readCsv(HISTORY).map(h => [h.game_id + "|" + h.captured_at, h]));
+  const rows = readCsv(LEDGER).map(o => o.pick_result !== undefined && o.pick_result !== "" ? o
+    : { ...o, ...moneyFields(hist.get(o.game_id + "|" + o.captured_at) || null, +o.margin, o.lean_side, o.lean_result) });
   fs.writeFileSync(LEDGER, COLS.join(",") + "\n" + rows.map(o => COLS.map(c => String(o[c] ?? "")).join(",")).join("\n") + "\n");
-  console.log("  ledger: close_source column added");
+  console.log("  ledger: new columns added (" + COLS.filter(c => !head.includes(c)).join(", ") + ")");
 }
 
 (async () => {
@@ -227,7 +264,8 @@ function upgradeLedger() {
         lean_side: p.lean_side, lean_line: p.lean_line, lean_result: lean, edge_pts: p.edge_pts,
         home_lost: p.home_lost, away_lost: p.away_lost, captured_at: p.captured_at, kickoff_utc: p.kickoff_utc, model_version: p.model_version,
         open_home_spread: openSp, close_home_spread: closeSp ?? "", close_source: closeSrc,
-        lean_clv_pts: clvPts(p.lean_side, openSp, closeSp)
+        lean_clv_pts: clvPts(p.lean_side, openSp, closeSp),
+        ...moneyFields(p, margin, p.lean_side, lean)
       });
     }
     if (box.length) writeBox(DATE, box);

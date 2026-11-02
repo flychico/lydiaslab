@@ -32,7 +32,8 @@ const ROOT = path.join(__dirname, "..");
 const DIR = path.join(ROOT, "data", "nba");
 const HISTORY = path.join(DIR, "prediction-history.csv");
 const HIST_COLS = ["captured_at", "date", "game_id", "kickoff_utc", "away", "home", "leo_home_margin", "leo_p_home",
-  "mkt_home_spread", "home_ml", "away_ml", "lean_side", "lean_line", "edge_pts", "home_lost", "away_lost", "home_out", "away_out", "model_version"];
+  "mkt_home_spread", "home_ml", "away_ml", "lean_side", "lean_line", "edge_pts", "home_lost", "away_lost", "home_out", "away_out", "model_version",
+  "home_spread_odds", "away_spread_odds"];   // spread prices added 2026-11-02 for units (DEC-20261102-30)
 const ESPN = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba";
 
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
@@ -42,6 +43,17 @@ const num = v => { const x = parseFloat(String(v).replace(/^\+/, "")); return Nu
 const r1 = v => v == null ? null : Math.round(v * 10) / 10;
 const WHYL = require("./lib/nba-why");   // shown spread: .5 grid, rounded toward DraftKings (DEC-20261102-03)
 const half = v => Math.round(v * 2) / 2;
+const PK = require("./lib/nba-picks");   // Leo Pick rule: 60%+ and priced better than -230 (DEC-20261102-30)
+
+/* New history columns are added once at the end of the header; old rows keep every value and get blanks. */
+function upgradeHistory() {
+  const lines = fs.readFileSync(HISTORY, "utf8").split(/\r?\n/).filter(Boolean);
+  const head = lines[0].split(",");
+  if (HIST_COLS.every(c => head.includes(c))) return;
+  const rows = lines.slice(1).map(l => { const c = l.split(","); return Object.fromEntries(head.map((k, i) => [k, c[i] ?? ""])); });
+  fs.writeFileSync(HISTORY, HIST_COLS.join(",") + "\n" + rows.map(o => HIST_COLS.map(c => String(o[c] ?? "")).join(",")).join("\n") + "\n");
+  console.log("  history: spread price columns added");
+}
 
 async function getJson(url, tries = 3) {
   // Tests only: NBA_FIXTURES=<dir> serves scoreboard_<yyyymmdd>.json and injuries.json from disk.
@@ -71,7 +83,10 @@ async function scoreboard(date) {
         home_spread: homeSpread,
         home_ml: num(ml.home && ml.home.close && ml.home.close.odds) ?? num(o.homeTeamOdds && o.homeTeamOdds.moneyLine),
         away_ml: num(ml.away && ml.away.close && ml.away.close.odds) ?? num(o.awayTeamOdds && o.awayTeamOdds.moneyLine),
-        total: num(o.overUnder)
+        total: num(o.overUnder),
+        // DraftKings price on each side of the spread (American odds), for lean units.
+        home_spread_odds: num(ps.home && ps.home.close && ps.home.close.odds) ?? num(o.homeTeamOdds && o.homeTeamOdds.spreadOdds),
+        away_spread_odds: num(ps.away && ps.away.close && ps.away.close.odds) ?? num(o.awayTeamOdds && o.awayTeamOdds.spreadOdds)
       };
       market.p_home = M.noVig(market.home_ml, market.away_ml);
     }
@@ -204,6 +219,7 @@ function readHistory() {
         projected: PR ? (() => { const t = P.project(PR, g.home, g.away).total; return { total: Math.round(t), home: Math.round((t + margin) / 2), away: Math.round((t - margin) / 2) }; })() : null
       }
     };
+    { const pk = PK.pickForGame(game); game.leo.pick = pk ? { side: pk.side, team: pk.team, p: +pk.p.toFixed(3), price: pk.price, ok: pk.ok, why: pk.why } : null; }
     out.push(game);
     if (!started) hist.push({
       captured_at: now, date: DATE, game_id: g.game_id, kickoff_utc: g.tip_utc, away: g.away, home: g.home,
@@ -212,7 +228,8 @@ function readHistory() {
       lean_side: lean ? lean.side : "", lean_line: lean ? lean.line : "", edge_pts: edge == null ? "" : edge.toFixed(2),
       home_lost: miss.home.lost.toFixed(2), away_lost: miss.away.lost.toFixed(2),
       home_out: miss.home.missing.filter(p => p.weight >= 1).length, away_out: miss.away.missing.filter(p => p.weight >= 1).length,
-      model_version: model.model_version
+      model_version: model.model_version,
+      home_spread_odds: mk ? mk.home_spread_odds ?? "" : "", away_spread_odds: mk ? mk.away_spread_odds ?? "" : ""
     });
   }
 
@@ -226,18 +243,19 @@ function readHistory() {
   fs.writeFileSync(path.join(DIR, "injuries-today.json"), JSON.stringify({ as_of: inj.timestamp, players: inj.list }, null, 1) + "\n");
   if (hist.length) {
     const exists = fs.existsSync(HISTORY);
+    if (exists) upgradeHistory();
     fs.appendFileSync(HISTORY, (exists ? "" : HIST_COLS.join(",") + "\n") + hist.map(h => HIST_COLS.map(c => String(h[c] ?? "").replace(/,/g, " ")).join(",")).join("\n") + "\n");
   }
   // Slate index for the page's date picker.
   const idxFile = path.join(DIR, "slates.json");
   const idx = fs.existsSync(idxFile) ? JSON.parse(fs.readFileSync(idxFile, "utf8")) : [];
   const rest_ = idx.filter(d => d.date !== DATE);
-  rest_.push({ date: DATE, games: out.length, leans: out.filter(g => g.leo && g.leo.lean).length });
+  rest_.push({ date: DATE, games: out.length, leans: out.filter(g => g.leo && g.leo.lean).length, picks: out.filter(g => g.leo && g.leo.pick && g.leo.pick.ok).length });
   fs.writeFileSync(idxFile, JSON.stringify(rest_.sort((a, b) => a.date.localeCompare(b.date)), null, 1) + "\n");
 
   for (const g of doc.games) {
     const L = g.leo, mk = g.market;
-    console.log(`  ${g.away}@${g.home}  Leo ${g.home} ${L.home_spread > 0 ? "+" : ""}${L.home_spread} (${(L.p_home * 100).toFixed(0)}%)  DK ${mk && mk.home_spread != null ? mk.home_spread : "-"}  missing ${L.lost.away}/${L.lost.home}${L.lean ? "  LEAN " + L.lean.team + " " + L.lean.line : ""}`);
+    console.log(`  ${g.away}@${g.home}  Leo ${g.home} ${L.home_spread > 0 ? "+" : ""}${L.home_spread} (${(L.p_home * 100).toFixed(0)}%)  DK ${mk && mk.home_spread != null ? mk.home_spread : "-"}  missing ${L.lost.away}/${L.lost.home}${L.lean ? "  LEAN " + L.lean.team + " " + L.lean.line : ""}${L.pick && L.pick.ok ? "  PICK " + L.pick.team + " " + PK.fmtPrice(L.pick.price) : ""}`);
   }
   console.log(`Data through ${doc.data_through} (${prev.length} games). ${hist.length} pre-tip reads frozen.`);
 })().catch(e => { console.error(e); process.exit(1); });

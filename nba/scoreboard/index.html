@@ -72,6 +72,7 @@
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script src="/scripts/lib/nba-why.js?v=20261102"></script>
+<script src="/scripts/lib/nba-picks.js?v=20261102"></script>
 <script>
 renderNav("/nba/scoreboard/"); renderFooter();
 const pick = document.getElementById("date-pick"), gamesEl = document.getElementById("games"), statusEl = document.getElementById("status"), kpisEl = document.getElementById("kpis");
@@ -145,6 +146,7 @@ function card(g) {
   const LS = (window.NBA_WHY && NBA_WHY.leoLine) ? NBA_WHY.leoLine(g) : L.home_spread, GS = (window.NBA_WHY && NBA_WHY.gapShown) ? NBA_WHY.gapShown(g) : (L.edge_pts == null ? null : Math.abs(L.edge_pts));
   const leoLine = LS == null ? "—" : g.home + " " + sgn(LS);
   const mkLine = mk.home_spread == null ? "—" : g.home + " " + sgn(mk.home_spread);
+  const PT = window.NBA_PICKS ? NBA_PICKS.pickText(g) : null;
   let result = "";
   if (res) {
     const parts = ['Leo had ' + esc(L.p_home >= .5 ? g.home : g.away) + ' to win: <span class="' + (res.leo_winner_correct ? "ok" : "no") + '">' + (res.leo_winner_correct ? "right" : "wrong") + "</span>"];
@@ -153,7 +155,7 @@ function card(g) {
   }
   return '<article class="score-card' + (LIVE[g.game_id] && LIVE[g.game_id].state === "in" ? " is-live" : "") + '" role="link" tabindex="0" data-matchup-url="' + pageUrl(g) + '" aria-label="' + esc(g.away_name || g.away) + " at " + esc(g.home_name || g.home) + ' preview" onclick="openMatchup(event,this)" onkeydown="openMatchup(event,this)"><div class="card-body">' +
     '<div class="card-top"><div class="game-meta"><span class="game-time">' + tip(g.tip_utc) + '</span><span class="game-venue">' + esc(g.venue || "") + '</span></div>' +
-    '<div class="card-top-badges">' + (L.lean ? '<span class="lean-badge">Lean ' + esc(L.lean.team) + " " + sgn(L.lean.line) + "</span> " : "") + statusBadge(g, res) + "</div></div>" +
+    '<div class="card-top-badges">' + (PT && PT.ok ? '<span class="lean-badge">' + esc(PT.badge) + "</span> " : "") + (L.lean ? '<span class="lean-badge">Lean ' + esc(L.lean.team) + " " + sgn(L.lean.line) + "</span> " : "") + statusBadge(g, res) + "</div></div>" +
     '<div class="teams">' + teamRow(g, "away") + teamRow(g, "home") + "</div>" +
     '<div class="prob-compare"><div class="prob-line"><span>Leo win chance</span><span>' + esc(g.away) + " " + pct(L.p_away) + " · " + esc(g.home) + " " + pct(L.p_home) + '</span></div><div class="prob-track"><div class="prob-away" style="width:' + (L.p_away * 100).toFixed(1) + '%"></div><div class="prob-home" style="width:' + (L.p_home * 100).toFixed(1) + '%"></div></div></div>' +
     '<div class="market-grid">' +
@@ -161,6 +163,7 @@ function card(g) {
       '<div class="market-box"><span class="market-label">DraftKings</span><span class="market-value">' + esc(mkLine) + '</span><span class="market-sub">' + (mk.p_home != null ? "Market " + esc(g.home) + " " + pct(mk.p_home) : "") + "</span></div>" +
       '<div class="market-box total"><span class="market-label">Gap</span><span class="market-value">' + (GS == null ? "—" : GS + " pts") + '</span><span class="market-sub">' + (L.edge_pts == null ? "" : L.lean ? "Lean " + esc(L.lean.team) + " " + sgn(L.lean.line) : "No lean, under " + ((MODEL && MODEL.lean_edge_pts) || 4)) + "</span></div>" +
     "</div>" + result +
+    (PT ? '<div class="why-line pick">' + esc(PT.line) + "</div>" : "") +
     (W && W.compare ? '<div class="why-line compare">' + esc(W.compare) + "</div>" : "") +
     (W && W.summary ? '<div class="why-line">' + esc(W.summary) + (W.lean && W.lean.status === "none" ? ' <span class="nolean">Not a call.</span>' : "") + "</div>" : "") +
     '<a class="card-cta" href="' + pageUrl(g) + '">Full preview: why Leo has this number</a>' +
