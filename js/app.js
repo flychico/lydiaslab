@@ -80,6 +80,8 @@ const Sport = {
       if (p.startsWith("/nfl/")) return "NFL";
       if (p.startsWith("/nba/")) return "NBA";
       if (p.startsWith("/mlb/")) return "MLB";
+      // MLB guides and articles live at the root as /mlb-<topic>/.
+      if (p.startsWith("/mlb-")) return "MLB";
       // MLB's own sections live at the root. Treat them as MLB too, or a
       // visitor coming back from NFL got NFL nav on an MLB page and the
       // toggle did nothing. Home, membership and articles stay neutral.
