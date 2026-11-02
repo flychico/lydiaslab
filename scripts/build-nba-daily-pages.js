@@ -17,6 +17,7 @@
 const fs = require("fs");
 const path = require("path");
 const WHY = require("./lib/nba-why");
+const PKS = require("./lib/nba-picks");   // Leo Picks (DEC-20261102-30); shown from PKS.TRACK_FROM
 
 const ROOT = path.join(__dirname, "..");
 const DATA = path.join(ROOT, "data/nba");
@@ -46,6 +47,10 @@ function intro(date, games, res) {
     out.push(`Leo's strongest read is the ${nick(top.team)} over the ${nick(top.opp)} at ${pct(top.p)}.`);
     const close = read.map(g => ({ g, ...fav(g) })).sort((a, b) => a.p - b.p)[0];
     if (close.g !== top.g) out.push(`The closest game is the ${nick(close.g.away_name)} at the ${nick(close.g.home_name)}, ${pct(close.p)} for the ${nick(close.team)}.`);
+    const picks = read.filter(g => g.date >= PKS.TRACK_FROM && (PKS.pickText(g) || {}).ok);
+    if (read.length && read[0].date >= PKS.TRACK_FROM) out.push(picks.length
+      ? `Leo Picks, teams Leo gives 60% or more at a price better than -230: ${picks.map(g => PKS.pickText(g).badge.replace(/^Pick /, "")).join(", ")}. Tracked in units, not bets.`
+      : "No team tonight is 60% or more with Leo at a price better than -230, so there is no Leo Pick.");
     const leans = read.filter(g => g.leo.lean);
     out.push(leans.length
       ? `Leo is 4 or more points off the DraftKings spread in ${leans.length} game${leans.length === 1 ? "" : "s"}, so ${leans.length === 1 ? "that is a lean" : "those are leans"}: ${leans.map(g => `${g.leo.lean.team} ${g.leo.lean.line > 0 ? "+" : ""}${g.leo.lean.line}`).join(", ")}. Leans are a tracked test, not bets.`
@@ -54,7 +59,9 @@ function intro(date, games, res) {
   if (res.length) {
     const w = res.filter(r => r.leo_winner_correct === 1).length, l = res.filter(r => r.leo_winner_correct === 0).length;
     const lw = res.filter(r => r.lean_result === "win").length, ll = res.filter(r => r.lean_result === "loss").length, lp = res.filter(r => r.lean_result === "push").length;
-    out.push(`Graded: Leo had the winner in ${w} of ${w + l}${lw + ll + lp ? `, and the leans went ${lw}-${ll}${lp ? "-" + lp : ""}` : ""}.`);
+    const pk = res.filter(r => r.pick_result && !r.pick_replay), pw = pk.filter(r => r.pick_result === "win").length;
+    const pu = pk.reduce((t, r) => t + (r.pick_units || 0), 0);
+    out.push(`Graded: Leo had the winner in ${w} of ${w + l}${pk.length ? `, the Leo Picks went ${pw}-${pk.length - pw} (${pu >= 0 ? "+" : ""}${pu.toFixed(2)} units)` : ""}${lw + ll + lp ? `, and the leans went ${lw}-${ll}${lp ? "-" + lp : ""}` : ""}.`);
   }
   return out.join(" ");
 }
@@ -65,12 +72,12 @@ function card(g, r) {
   const leoLine = WHY.leoLine(g);
   const leoTxt = leoLine == null ? "n/a" : leoLine === 0 ? "pick'em" : `${leoLine < 0 ? g.home : g.away} by ${Math.abs(leoLine)}`;
   const mkTxt = mk.home_spread == null ? "no line" : mk.home_spread === 0 ? "pick'em" : `${mk.home_spread < 0 ? g.home : g.away} by ${Math.abs(mk.home_spread)}`;
-  const final = r ? `<p class="dn-final"><b>Final: ${esc(g.away)} ${r.away_score}, ${esc(g.home)} ${r.home_score}.</b> ${r.leo_winner_correct === 1 ? "Leo had the winner." : r.leo_winner_correct === 0 ? "Leo had the other team." : ""}${r.lean_result ? ` Lean ${esc(r.lean_result)}.` : ""}</p>`
+  const final = r ? `<p class="dn-final"><b>Final: ${esc(g.away)} ${r.away_score}, ${esc(g.home)} ${r.home_score}.</b> ${r.leo_winner_correct === 1 ? "Leo had the winner." : r.leo_winner_correct === 0 ? "Leo had the other team." : ""}${r.pick_result && !r.pick_replay ? ` Leo Pick ${esc(r.pick_team)} ${esc(r.pick_result)} (${r.pick_units >= 0 ? "+" : ""}${(+r.pick_units).toFixed(2)}u).` : ""}${r.lean_result ? ` Lean ${esc(r.lean_result)}.` : ""}</p>`
     : (g.completed && g.hs != null ? `<p class="dn-final"><b>Final: ${esc(g.away)} ${g.as}, ${esc(g.home)} ${g.hs}.</b> Grading pending.</p>` : "");
   return `<article class="dn-game">
     <div class="dn-when">${esc(tip(g.tip_utc))}${g.venue ? " &middot; " + esc(g.venue) : ""}</div>
     <h3><a href="${gameUrl(g)}">${esc(g.away_name)} at ${esc(g.home_name)} prediction</a></h3>
-    ${ph != null ? `<p class="dn-line">Leo win chance: <b>${esc(g.away)} ${100 - Math.round(ph * 100)}%</b>, <b>${esc(g.home)} ${Math.round(ph * 100)}%</b>. Leo spread ${esc(leoTxt)}; DraftKings ${esc(mkTxt)}.${L.lean ? ` <span class="dn-lean">Lean ${esc(L.lean.team)} ${L.lean.line > 0 ? "+" : ""}${esc(L.lean.line)}</span>` : ""}</p>
+    ${ph != null ? `<p class="dn-line">Leo win chance: <b>${esc(g.away)} ${100 - Math.round(ph * 100)}%</b>, <b>${esc(g.home)} ${Math.round(ph * 100)}%</b>. Leo spread ${esc(leoTxt)}; DraftKings ${esc(mkTxt)}.${g.date >= PKS.TRACK_FROM && (PKS.pickText(g) || {}).ok ? ` <span class="dn-lean">${esc(PKS.pickText(g).badge)}</span>` : ""}${L.lean ? ` <span class="dn-lean">Lean ${esc(L.lean.team)} ${L.lean.line > 0 ? "+" : ""}${esc(L.lean.line)}</span>` : ""}</p>
     <p class="dn-why">${esc(WHY.compare(g))}</p>` : `<p class="dn-line">No Leo read for this game.</p>`}
     ${final}
     <a class="dn-more" href="${gameUrl(g)}">Full preview: why Leo has this number, injuries and box score &rarr;</a>
