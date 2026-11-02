@@ -6,7 +6,7 @@
  * (leo-nflml-v2) instead of the old v1 point-margin rating? Today the two
  * models can pick different winners, and the calls rule then passes.
  *
- * Pre-registered before running (DEC-20261102-04):
+ * Pre-registered before running (DEC-20261102-51):
  *   v2 margin  = 13.2 * probit(v2 home win chance), the same points-to-chance
  *                mapping v1 already uses (SD 13.2). Nothing is fitted to it.
  *   Spread call rule unchanged: |margin - line| >= 1.0 on the side the margin
@@ -154,7 +154,7 @@ function main() {
   const live = live2026(games);
   const per = TEST_SEASONS.map(s => { const r = oos.filter(x => x.season === s); return { season: s, games: r.length, v1: summarize(r, 'v1'), v2: summarize(r, 'v2') }; });
   const out = {
-    generated_at: new Date().toISOString(), decision: 'DEC-20261102-04',
+    generated_at: new Date().toISOString(), decision: 'DEC-20261102-51',
     rule: 'margin = 13.2 * probit(v2 home win chance); spread call |margin - line| >= 1; v1 also passes when its winner differs from v2',
     oos: { games: oos.length, v1: summarize(oos, 'v1'), v2: summarize(oos, 'v2'), v1_disagree_games: oos.filter(r => r.v1_disagree).length, by_season: per },
     live_2026: { games: live.length, v1: summarize(live, 'v1'), v2: summarize(live, 'v2'), rows: live },

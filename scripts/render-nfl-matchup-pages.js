@@ -723,7 +723,7 @@ ${SEO.relatedLinks({sport:"NFL",root:ROOT,slug:m.slug||String(m.url).split("/").
   console.log(`rendered ${wrote} matchup pages for ${target}`);
   // The weekly card reads the same matchup data, so it refreshes whenever
   // any page of its week is rendered (prepare, publish and grade runs).
-  // Early reads (DEC-20261102-05) leave the week card to the game-day runs,
+  // Early reads (DEC-20261102-52) leave the week card to the game-day runs,
   // so /nfl/week/ keeps the week still being played.
   if (!process.argv.includes("--early"))
   try { require("./generate-nfl-week-card").build(target); }

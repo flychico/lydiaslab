@@ -83,7 +83,7 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
 
 (async function main(){
   const target = process.argv[2] || new Date(Date.now()+864e5).toISOString().slice(0,10);
-  // EARLY READ (DEC-20261102-05, SEO-04): a slate later in the week, so its
+  // EARLY READ (DEC-20261102-52, SEO-04): a slate later in the week, so its
   // game pages exist from Tuesday. Writes picks-<date>.json only: never the
   // -today files, never prediction-history.csv or ml-inputs-history.csv.
   // Grading, closing line value and the emails still use the game-day reads.

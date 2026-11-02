@@ -129,7 +129,7 @@ if (props) {
   // defence shares it. On a slate under 4 games (a Monday or Thursday night)
   // two defences decide the whole share, so the rail share is a warning
   // there, not a failure (Nov 2: CHI @ SEA alone read 27% and blocked the
-  // publish). DEC-20261102-06.
+  // publish). DEC-20261102-53.
   const games=new Set(props.map(p=>p.matchup||p.game_id).filter(Boolean)).size;
   adj.length && pegged/adj.length > 0.25 && games < 4
     ? warn("OPP-ADJ",`${Math.round(100*pegged/adj.length)}% of opponent adjustments at the rails on a ${games} game slate (too few defences to judge)`)

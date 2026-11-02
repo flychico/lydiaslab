@@ -152,7 +152,7 @@ function teamProfile(rows, team, active){
   // Leo's numbers as they stood BEFORE kickoff -- never the revised file.
   const DATA=path.join(ROOT,"data/nfl");
   const FROZEN_GAMES=frozenPredictions(path.join(DATA,"prediction-history.csv"), target);
-  // EARLY READ (DEC-20261102-05, SEO-04): before game day there is no frozen
+  // EARLY READ (DEC-20261102-52, SEO-04): before game day there is no frozen
   // read yet, so the page shows the latest early read from picks-<date>.json,
   // marked early. The game-day gathers replace it with the frozen read.
   const EARLY=process.argv.includes("--early");

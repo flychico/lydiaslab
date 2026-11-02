@@ -17,7 +17,7 @@ name: NFL prepare slate (gather data)
 # WEEKLY RHYTHM (EDT / EST)
 #   NFL prepare slate  ->  NFL publish picks (fires 15 min after each wave)
 #
-# OFF THE HOUR (DEC-20261102-03): GitHub dropped both Monday Nov 2 gathers
+# OFF THE HOUR (DEC-20261102-50): GitHub dropped both Monday Nov 2 gathers
 # (8am and 12pm EST, both on the hour), so every wave now runs at :53 and
 # Monday and Thursday nights get a backup gather at :07 an hour later.
 #   Daily     8:53am / 7:53am     line movement through the week
@@ -190,7 +190,7 @@ jobs:
           git pull --rebase
           git push
 
-      # EARLY READS (DEC-20261102-05, SEO-04): game pages for the rest of the
+      # EARLY READS (DEC-20261102-52, SEO-04): game pages for the rest of the
       # week from the daily morning wave, so "X vs Y prediction" pages exist
       # from Tuesday. Writes picks-<date>.json and the pages only: no -today
       # files, no prediction history, no prop lines, no emails. Game-day
