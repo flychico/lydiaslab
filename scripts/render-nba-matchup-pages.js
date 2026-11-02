@@ -114,7 +114,7 @@ function injuries(g, side) {
   if (!list.length) return `<p class="dim">Nobody listed.</p>`;
   return `<ul class="inj">${list.map(p => {
     const k = counted.get(p.name);
-    return `<li><b>${esc(p.name)}</b> <span class="tag">${esc(statusTxt(p.status))}</span>${p.detail ? ` <span class="dim">${esc(p.detail)}</span>` : ""}${k ? ` <span class="dim">&middot; counted, ${k.mpg} min a game</span>` : ""}</li>`;
+    return `<li><b>${esc(p.name)}</b> <span class="tag">${esc(statusTxt(p.status))}</span>${p.detail ? ` <span class="dim">${esc(p.detail)}</span>` : ""}${k ? ` <span class="dim">&middot; in Leo&rsquo;s number${(k.weight ?? 1) < 1 ? ` at ${Math.round(k.weight * 100)}%` : ""}, plays ${k.mpg} min a game</span>` : ""}</li>`;
   }).join("")}</ul>`;
 }
 
@@ -232,7 +232,7 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
   ${partsTable(g)}
 
   <h2>Injury report</h2>
-  <p class="dim">As of Leo&rsquo;s read. &ldquo;Counted&rdquo; means Leo lowered the team&rsquo;s number for that player: fully when out, 40% when day to day.</p>
+  <p class="dim">The injury report when Leo made its read. A player marked <b>in Leo&rsquo;s number</b> is a regular whose value Leo has taken off his team: all of it when he is out, 40% of it when he is day to day, because Leo assumes about 4 in 10 day-to-day players end up sitting. Players without the mark play too little to move the number.</p>
   <div class="two"><div><b>${esc(g.away_name)}</b>${injuries(g, "away")}</div><div><b>${esc(g.home_name)}</b>${injuries(g, "home")}</div></div>
 
   <h2>Form</h2>

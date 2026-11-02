@@ -81,7 +81,7 @@ function callBox(g) {
   if (pk && pk.ok && ln) return { on: true, value: `${pk.team} ${fmtPrice(pk.price)}`, sub: `Pick, plus lean ${leanTxt}` };
   if (pk && pk.ok) return { on: true, value: `${pk.team} ${fmtPrice(pk.price)}`, sub: "Leo Pick, to win" };
   if (ln) return { on: true, value: leanTxt, sub: "Lean, on the spread" };
-  let why = "Under 60%, gap under 4";
+  let why = "Under 60%, close to DraftKings";
   if (pk && (pk.under || pk.p < PICK_P)) why = `${pk.team} ${(pk.p * 100).toFixed(1)}%, under 60%`;
   else if (pk && pk.price == null) why = "No moneyline yet";
   else if (pk) why = `${fmtPrice(pk.price)} is past -230`;

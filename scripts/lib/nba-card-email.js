@@ -52,7 +52,7 @@ function card(g, date, why) {
   const LS = NW.leoLine(g), GS = NW.gapShown(g), CMP = NW.compare(g);
   const leoM = LS == null ? null : -LS, mkM = mk.home_spread == null ? null : -mk.home_spread;
   const PT = PKS.pickText(g);
-  const badge = [PT && PT.ok ? esc(PT.badge) : "", L.lean ? `Lean ${esc(L.lean.team)} ${sgn(L.lean.line)}` : ""].filter(Boolean).join(" &middot; ") || "No pick, no lean";
+  const badge = [PT && PT.ok ? esc(PT.badge) : "", L.lean ? `Lean ${esc(L.lean.team)} ${sgn(L.lean.line)}` : ""].filter(Boolean).join(" &middot; ") || "No call";
   const pa = Math.max(1, Math.min(99, Math.round((L.p_away || 0) * 100)));
   const leanLine = L.lean
     ? `<div style="font-family:${SANS};font-size:14px;line-height:1.5;color:${T.text};background:${T.leanBg};border-radius:10px;padding:9px 12px;margin-top:12px">${esc(CMP)}</div>`
@@ -106,7 +106,7 @@ function build(doc, { why } = {}) {
       { label: "Games", value: games.length, sub: esc(nice.split(",")[0]) },
       { label: "First tip", value: first ? esc(tip(first)) : "&mdash;", sub: "Eastern time" },
       { label: "Leo Picks", value: picks.length, sub: "60%+, better than -230" },
-      { label: "Leans", value: leans.length, sub: "4+ points off the line" }
+      { label: "Leans", value: leans.length, sub: "on the spread" }
     ]),
     E.panel("Tonight&rsquo;s Leo Picks (moneyline)", pickRows),
     E.panel("Tonight&rsquo;s leans (spread)", leanRows),
@@ -121,7 +121,7 @@ function build(doc, { why } = {}) {
     picks.length ? `Leo Picks (moneyline): ${pickList.join(", ")}` : "No Leo Picks tonight.",
     leans.length ? `Leans (spread): ${leanList.join(", ")}` : "No leans tonight.", "",
     ...games.map(g => { const L = g.leo, mk = g.market || {}, W = why ? why.why(g) : null;
-      return `${tip(g.tip_utc)}  ${g.away} at ${g.home}  ${[PKS.pickText(g) && PKS.pickText(g).ok ? PKS.pickText(g).badge.toUpperCase() : "", L.lean ? `LEAN ${L.lean.team} ${sgn(L.lean.line)}` : ""].filter(Boolean).join("  ") || "No pick, no lean"}\n  Leo win chance: ${g.away} ${Math.round(L.p_away * 100)}%, ${g.home} ${Math.round(L.p_home * 100)}%\n  ${NW.compare(g)}\n${W && W.summary ? "  " + W.summary + "\n" : ""}  ${pageUrl(g, date)}\n`; }),
+      return `${tip(g.tip_utc)}  ${g.away} at ${g.home}  ${[PKS.pickText(g) && PKS.pickText(g).ok ? PKS.pickText(g).badge.toUpperCase() : "", L.lean ? `LEAN ${L.lean.team} ${sgn(L.lean.line)}` : ""].filter(Boolean).join("  ") || "No call"}\n  Leo win chance: ${g.away} ${Math.round(L.p_away * 100)}%, ${g.home} ${Math.round(L.p_home * 100)}%\n  ${NW.compare(g)}\n${W && W.summary ? "  " + W.summary + "\n" : ""}  ${pageUrl(g, date)}\n`; }),
     "", `Every card: ${SITE}/nba/scoreboard/`, "Picks and leans are a public test, not bets. Analysis only, not betting advice. 21+. 1-800-MY-RESET.",
     ...((process.env.EMAIL_POSTAL_ADDRESS || "").trim() ? [(process.env.EMAIL_POSTAL_ADDRESS || "").trim()] : []), 'Reply "unsubscribe" to stop these.'].join("\n").replace(/&mdash;/g, "-").replace(/&rsquo;/g, "'");
   return { subject, html, text, leans: leanList };
