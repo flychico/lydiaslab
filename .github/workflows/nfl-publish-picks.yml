@@ -104,6 +104,7 @@ jobs:
           node scripts/generate-nfl-matchups.js "${{ steps.slate_date.outputs.date }}"
           node scripts/render-nfl-matchup-pages.js "${{ steps.slate_date.outputs.date }}"
           node scripts/build-game-archives.js nfl
+          node scripts/build-nfl-team-pages.js || true
           node scripts/generate-sitemap.js
 
       # The one safety net, matching the spirit of publish-picks.yml: refuse

@@ -93,8 +93,11 @@ function relatedLinks(o) {
   const teamBlock = (abbr, name) => {
     const a = String(abbr).toLowerCase();
     const mine = games.filter(g => g.away === a || g.home === a).slice(0, per);
-    if (!mine.length) return "";
+    // o.teamUrl(abbr) -> the team's page (NFL team pages, 2026-11-02), linked first.
+    const teamHref = typeof o.teamUrl === "function" ? o.teamUrl(abbr) : null;
+    if (!mine.length && !teamHref) return "";
     return `<div><h3 style="margin:0 0 6px;font-size:1rem">More ${escHtml(name)} games</h3><ul style="margin:0;padding-left:18px;line-height:1.7">`
+      + (teamHref ? `<li><a href="${teamHref}">All ${escHtml(name)} predictions this season</a></li>` : "")
       + mine.map(g => `<li><a href="/${o.sport.toLowerCase()}/${g.slug}/">${escHtml(linkText(dir, g))}, ${escHtml(niceShort(g.date))}</a></li>`).join("")
       + `</ul></div>`;
   };

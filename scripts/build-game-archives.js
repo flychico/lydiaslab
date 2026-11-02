@@ -120,7 +120,7 @@ function nfl() {
     description: `Every NFL game Leo has called in 2026, week by week: win chances, projected totals and the most likely touchdown scorers, each graded after the game. ${games.length} games so far.`,
     h1: "Every NFL game Leo has called",
     intro: "Each game page shows Leo&rsquo;s win chance for both teams, the projected total and the players most likely to score, frozen before kickoff and graded after the final.",
-    links: [["/nfl/week/", "This week\u2019s card"], ["/nfl/results/", "Leo\u2019s NFL record"], ["/nfl/scoreboard/", "NFL scoreboard"], ["/nba/games/", "Every NBA game"]],
+    links: [["/nfl/week/", "This week\u2019s card"], ["/nfl/teams/", "NFL team predictions"], ["/nfl/results/", "Leo\u2019s NFL record"], ["/nfl/scoreboard/", "NFL scoreboard"], ["/nba/games/", "Every NBA game"]],
     body,
   });
   fs.mkdirSync(path.join(dir, "games"), { recursive: true });

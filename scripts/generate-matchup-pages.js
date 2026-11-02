@@ -2162,6 +2162,7 @@ function buildArchive() {
 <title>${esc(h1)} | Leo</title>
 <meta name="description" content="Leo MLB matchup analysis: model probability, moneyline odds, starting pitchers, offense form, bullpen risk and public grading for every game.">
 <link rel="canonical" href="${SITE}${canonical}">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Leo"><meta property="og:title" content="${esc(h1)}"><meta property="og:description" content="Leo MLB matchup analysis for every game: win chance, starting pitchers, offense form and bullpen risk."><meta property="og:url" content="${SITE}${canonical}"><meta property="og:image" content="${SITE}/img/og-card.png"><meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="/css/style.css"><style>.matchup-row{margin:8px 0}</style></head>
 <body><nav id="nav"></nav><main><p class="eyebrow">${esc(eyebrow)}</p><h1>${esc(h1)}</h1><p class="subtitle">${esc(sub)}</p>${canonical === "/mlb/matchups/" ? '<p><a href="/mlb/teams/">Browse by team: all 30 MLB teams &rarr;</a></p>' : ""}${body}
 <div class="lead-box" style="border-color:var(--accent2);margin-top:22px"><h3 style="margin:0 0 4px">Get tomorrow's MLB model card free</h3><p class="dim small" style="margin:0">One email each morning with the featured game and the previous day's graded result.</p><p style="margin-top:10px"><a class="btn blue" href="/membership/#free">Get the free card &rarr;</a></p></div>

@@ -107,6 +107,7 @@ jobs:
             node scripts/render-nfl-matchup-pages.js "$d" || true
           done
           node scripts/build-game-archives.js nfl
+          node scripts/build-nfl-team-pages.js || true
           node scripts/generate-sitemap.js
 
       - name: Build head-to-head tracker
