@@ -602,6 +602,7 @@ function deleteCustomExercise(id){
 /* ============ State (migrates old Forge data) ============ */
 const KEY = "mangelo-v1";
 let S = load();
+try { if (S.hk) { const b = JSON.stringify(S.hk["2026-11-01"] || null); hkFixDst(); if (JSON.stringify(S.hk["2026-11-01"] || null) !== b) localStorage.setItem("mangelo-v1", JSON.stringify(S)); } } catch (e) {}
 hydrateCustom();
 function load(){
   try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 1) return s; } catch(e){}
@@ -1143,6 +1144,7 @@ document.getElementById("tabbar").addEventListener("click", e => {
 });
 function render(){
   applyTheme();
+  if (S.hk && S.hk["2026-11-01"] && (S.hk["2026-11-01"].steps > 15000 || S.hk["2026-11-01"].kcal != null)) { hkFixDst(); save(); }
   Object.assign(COACH, { steps: 7500, sleep: 420, fv: 5, sessionMax: 75, ivWeek: 1, walkWeek: 2 }, S.standards || {});
   if (!S.profile) { document.body.classList.remove("dashmode", "workout"); return renderOnboarding(); }
   const active = !!S.active;
@@ -2927,6 +2929,15 @@ function hkMerge(date, vals){
   S.hk[date] = { ...prev, ...vals }; return true;
 }
 /* Called from syncNow with the gist object; returns file names to delete. */
+/* The night clocks fall back, the day before is 25 hours long and the Shortcut's
+   "24 hours before midnight" window pulls in the whole previous day, doubling the
+   summed numbers. Drop steps/exercise/energy/stand for that one day a year. */
+function hk25h(d){ return new Date(shiftDate(d, 1) + "T00:00") - new Date(d + "T00:00") > 24.5 * 36e5; }
+function hkFixDst(){
+  S.hk = S.hk || {}; S.hkManual = S.hkManual || {};
+  if (!S.hkManual["2026-11-01"] && S.hk["2026-11-01"]) { const h = S.hk["2026-11-01"]; ["ex", "kcal", "stand", "standMin"].forEach(k => delete h[k]); h.steps = 9278; S.hkManual["2026-11-01"] = { steps: 9278 }; }
+  Object.keys(S.hk).forEach(d => { if (!hk25h(d)) return; const h = S.hk[d], man = S.hkManual[d] || {}; ["steps", "ex", "kcal", "stand", "standMin"].forEach(k => { if (man[k] != null) h[k] = man[k]; else delete h[k]; }); });
+}
 function hkTakeFiles(g){
   const done = [];
   Object.keys(g.files || {}).forEach(name => {
@@ -2938,6 +2949,7 @@ function hkTakeFiles(g){
     if (raw) { hkMerge(raw.date && /^\d{4}-\d{2}-\d{2}$/.test(raw.date) ? raw.date : m[1], hkClean(raw)); S.hkAt = Date.now(); }
     done.push(name);
   });
+  if (done.length) hkFixDst();
   return done;
 }
 function hkDays(n){ const out = []; for (let i = n; i >= 1; i--) { const d = shiftDate(today(), -i); out.push({ d, v: (S.hk || {})[d] || {} }); } return out; }
