@@ -37,7 +37,8 @@ const shortName = n => TWO_WORD.find(t => n.endsWith(t)) || n.split(" ").pop();
 const slugify = s => String(s).toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 const teamSlug = n => slugify(shortName(n));
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const pct = p => `${Math.round(p * 100)}%`;
+// One decimal near a coin flip, so "50%" never sits beside a team Leo favored (2026-11-02, Manager chat).
+const pct = p => (Math.round(p * 100) === 50 && p !== 0.5) ? `${(p * 100).toFixed(1)}%` : `${Math.round(p * 100)}%`;
 const starterName = n => (!n || /^tbd$/i.test(String(n).trim())) ? "Not announced" : n;
 const niceDate = d => new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 const longDate = d => new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" });
@@ -97,6 +98,7 @@ function summary(team, games) {
   const fav = graded.filter(g => g.teamChance > 0.5), dog = graded.filter(g => g.teamChance < 0.5);
   const favW = fav.filter(g => g.won).length, dogW = dog.filter(g => g.won).length;
   const avg = graded.length ? graded.reduce((s, g) => s + g.teamChance, 0) / graded.length : null;
+  const judged = graded.filter(g => g.teamChance !== 0.5).length;
   const right = graded.filter(g => (g.teamChance > 0.5) === g.won && g.teamChance !== 0.5).length;
   const starters = {};
   for (const g of graded) {
@@ -106,7 +108,7 @@ function summary(team, games) {
   }
   const topStarters = Object.entries(starters).sort((a, b) => b[1].n - a[1].n).slice(0, 5);
   const post = graded.filter(g => g.phase === "postseason");
-  return { graded, w, l, fav, dog, favW, dogW, avg, right, topStarters, post,
+  return { graded, judged, w, l, fav, dog, favW, dogW, avg, right, topStarters, post,
     first: graded.length ? graded[graded.length - 1].date : null, last: graded.length ? graded[0].date : null };
 }
 
@@ -138,6 +140,7 @@ ${GA_HEAD}
 .stat-row .card{padding:12px 14px}.stat-row .v{font-size:1.4rem;font-weight:800}.stat-row .k{font-size:.78rem;color:var(--text-dim)}
 .div-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
 .div-grid ul{margin:6px 0 0;padding-left:18px;line-height:1.8}
+.key{margin:8px 0 12px;padding-left:18px;line-height:1.6}
 @media (max-width:560px){.team-table .hide-sm{display:none}}
 </style>
 <script type="application/ld+json">${JSON.stringify(jsonld).replace(/</g, "\\u003c")}</script>
@@ -168,16 +171,19 @@ function teamPage(team, division, games) {
     sentences.push(`Leo analyzed ${s.graded.length} ${team} games with a final result between ${longDate(s.first)} and ${longDate(s.last)}, ${SEASON}. The ${nick} went ${s.w}-${s.l} in them.`);
     if (s.fav.length) sentences.push(`Leo gave the ${nick} better than an even chance in ${s.fav.length} of those games, and they won ${s.favW}.`);
     if (s.dog.length) sentences.push(`When Leo had them below 50%, they won ${s.dogW} of ${s.dog.length}.`);
-    sentences.push(`Leo's average win chance for the ${nick} was ${pct(s.avg)}. The side Leo favored won ${s.right} of the ${s.graded.length} games.`);
+    sentences.push(`Leo's average win chance for the ${nick} was ${pct(s.avg)}. The side Leo favored won ${s.right} of the ${s.judged} games where Leo favored a side.`);
     if (s.post.length) sentences.push(`Of these, ${s.post.length} ${s.post.length === 1 ? "was a postseason game" : "were postseason games"} (${s.post.filter(g => g.won).length}-${s.post.filter(g => !g.won).length}).`);
   }
   const starterRows = s.topStarters.map(([name, v]) =>
     `<tr><td>${esc(name)}</td><td>${v.n}</td><td>${v.w}-${v.n - v.w}</td><td>${pct(v.chance / v.n)}</td></tr>`).join("");
   const gameRows = games.map(g => {
-    const res = g.won === null ? `<span class="dim">No result</span>` : (g.won ? `<span class="w">W</span>` : `<span class="l">L</span>`);
+    // Team result and Leo's read are separate columns: Lynold could not tell whether W/L was the team's or Leo's.
+    const res = g.won === null ? `<span class="dim">No result</span>` : (g.won ? `<span class="w">Won</span>` : `<span class="l">Lost</span>`);
+    const fav = g.teamChance === null ? "" : g.teamChance > 0.5 ? esc(shortName(team)) : g.teamChance < 0.5 ? esc(shortName(g.opp)) : "Even";
+    const read = (g.won === null || g.teamChance === null || g.teamChance === 0.5) ? "" : ((g.teamChance > 0.5) === g.won ? `<span class="w">Right</span>` : `<span class="l">Wrong</span>`);
     const opp = `${g.at ? "at" : "vs"} ${esc(shortName(g.opp))}`;
     const link = g.url ? `<a href="${g.url}">${opp}</a>` : opp;
-    return `<tr><td>${esc(niceDate(g.date))}${g.phase === "postseason" ? " <span class=\"dim small\">post</span>" : ""}</td><td>${link}</td><td class="hide-sm">${esc(starterName(g.teamStarter))}</td><td class="hide-sm">${esc(starterName(g.oppStarter))}</td><td>${g.teamChance === null ? "" : pct(g.teamChance)}</td><td>${res}</td></tr>`;
+    return `<tr><td>${esc(niceDate(g.date))}${g.phase === "postseason" ? " <span class=\"dim small\">post</span>" : ""}</td><td>${link}</td><td class="hide-sm">${esc(starterName(g.teamStarter))}</td><td class="hide-sm">${esc(starterName(g.oppStarter))}</td><td>${g.teamChance === null ? "" : pct(g.teamChance)}</td><td>${fav}</td><td>${res}</td><td>${read}</td></tr>`;
   }).join("");
 
   const body = `<article>
@@ -186,15 +192,22 @@ function teamPage(team, division, games) {
   <p class="subtitle">${esc(sentences.join(" "))}</p>
   <div class="stat-row">
     <div class="card"><div class="v">${s.w}-${s.l}</div><div class="k">${esc(nick)} record in games Leo analyzed</div></div>
-    <div class="card"><div class="v">${s.favW}-${s.fav.length - s.favW}</div><div class="k">When Leo favored the ${esc(nick)}</div></div>
-    <div class="card"><div class="v">${s.avg === null ? "" : pct(s.avg)}</div><div class="k">Leo&rsquo;s average win chance</div></div>
+    <div class="card"><div class="v">${s.right}-${s.judged - s.right}</div><div class="k">Leo&rsquo;s reads on ${esc(nick)} games (right&#8209;wrong)</div></div>
+    <div class="card"><div class="v">${s.favW}-${s.fav.length - s.favW}</div><div class="k">${esc(nick)} record when Leo favored them</div></div>
+    <div class="card"><div class="v">${s.avg === null ? "" : pct(s.avg)}</div><div class="k">Leo&rsquo;s average win chance for the ${esc(nick)}</div></div>
   </div>
   ${starterRows ? `<h2>Most used starters</h2>
   <p class="dim small">Starts Leo analyzed (postseason included), the ${esc(nick)} record in them, and Leo&rsquo;s average win chance for the ${esc(nick)} on those days.</p>
   <div class="table-wrap"><table class="team-table"><thead><tr><th>Starter</th><th>Starts</th><th>Team record</th><th>Leo&rsquo;s avg chance</th></tr></thead><tbody>${starterRows}</tbody></table></div>` : ""}
   <h2>Every game</h2>
-  <p class="dim small">Newest first. Leo&rsquo;s win chance is for the ${esc(nick)}, from its last read saved before first pitch. Opponents link to the full game analysis where one exists.</p>
-  <div class="table-wrap"><table class="team-table"><thead><tr><th>Date</th><th>Opponent</th><th class="hide-sm">${esc(nick)} starter</th><th class="hide-sm">Opp. starter</th><th>Leo</th><th>Result</th></tr></thead><tbody>${gameRows}</tbody></table></div>
+  <ul class="key dim small">
+    <li><b>Leo&rsquo;s chance</b> is Leo&rsquo;s win chance for the ${esc(nick)}, from its last read saved before first pitch.</li>
+    <li><b>Leo favored</b> is the team Leo gave the better chance to win.</li>
+    <li><b>${esc(nick)} result</b> is whether the ${esc(nick)} won or lost.</li>
+    <li><b>Leo&rsquo;s read</b> is Right when the team Leo favored won, and Wrong when it lost.</li>
+  </ul>
+  <p class="dim small">Newest first. Opponents link to the full game analysis where one exists.</p>
+  <div class="table-wrap"><table class="team-table"><thead><tr><th>Date</th><th>Opponent</th><th class="hide-sm">${esc(nick)} starter</th><th class="hide-sm">Opp. starter</th><th>Leo&rsquo;s chance (${esc(nick)})</th><th>Leo favored</th><th>${esc(nick)} result</th><th>Leo&rsquo;s read</th></tr></thead><tbody>${gameRows}</tbody></table></div>
   <h2>More from the ${esc(division)}</h2>
   <p>${rivals.map(t => `<a href="/mlb/teams/${teamSlug(t)}/">${esc(t)}</a>`).join(" &middot; ")}</p>
   <p class="dim small">The ${Number(SEASON) + 1} season starts ${NEXT_OPENING_DAY}. Until then, see <a href="/mlb/teams/">all 30 teams</a>, <a href="/mlb/matchups/">every MLB game page</a> and Leo&rsquo;s <a href="/nfl/week/">NFL</a> and <a href="/nba/scoreboard/">NBA</a> cards.</p>
