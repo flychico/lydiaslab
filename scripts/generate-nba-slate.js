@@ -40,6 +40,7 @@ const DATE = (process.argv.slice(2).find(a => /^\d{4}-\d{2}-\d{2}$/.test(a))) ||
 const shift = (d, n) => new Date(Date.parse(d + "T12:00:00Z") + n * 864e5).toISOString().slice(0, 10);
 const num = v => { const x = parseFloat(String(v).replace(/^\+/, "")); return Number.isFinite(x) ? x : null; };
 const r1 = v => v == null ? null : Math.round(v * 10) / 10;
+const WHYL = require("./lib/nba-why");   // shown spread: .5 grid, rounded toward DraftKings (DEC-20261102-03)
 const half = v => Math.round(v * 2) / 2;
 
 async function getJson(url, tries = 3) {
@@ -195,7 +196,7 @@ function readHistory() {
     const game = {
       ...g, model_version: model.model_version, context,
       leo: {
-        home_margin: r1(margin), home_spread: half(-margin), p_home: +p_home.toFixed(3), p_away: +(1 - p_home).toFixed(3),
+        home_margin: r1(margin), home_spread: WHYL.leoLine({ leo: { home_margin: margin }, market: mk }), p_home: +p_home.toFixed(3), p_away: +(1 - p_home).toFixed(3),
         rating: { home: r1(r[g.home]), away: r1(r[g.away]), home_court: r1(hca) },
         rest: { home: rest.home.rest, away: rest.away.rest }, back_to_back: { home: rest.home.b2b, away: rest.away.b2b },
         missing: { home: named("home"), away: named("away") }, lost: { home: r1(miss.home.lost), away: r1(miss.away.lost) },

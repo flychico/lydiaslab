@@ -141,7 +141,8 @@ function statusBadge(g, res) {
 function card(g) {
   const L = g.leo, mk = g.market || {}, res = RESULTS[g.game_id];
   const W = window.NBA_WHY ? NBA_WHY.why(g, { lostCoef: MODEL && MODEL.coef && MODEL.coef.lost_d, leanPts: MODEL && MODEL.lean_edge_pts }) : null;
-  const leoLine = L.home_spread == null ? "—" : g.home + " " + sgn(L.home_spread);
+  const LS = window.NBA_WHY ? NBA_WHY.leoLine(g) : L.home_spread, GS = window.NBA_WHY ? NBA_WHY.gapShown(g) : (L.edge_pts == null ? null : Math.abs(L.edge_pts));
+  const leoLine = LS == null ? "—" : g.home + " " + sgn(LS);
   const mkLine = mk.home_spread == null ? "—" : g.home + " " + sgn(mk.home_spread);
   let result = "";
   if (res) {
@@ -157,8 +158,9 @@ function card(g) {
     '<div class="market-grid">' +
       '<div class="market-box rating"><span class="market-label">Leo spread</span><span class="market-value">' + esc(leoLine) + '</span><span class="market-sub">Expected margin</span></div>' +
       '<div class="market-box"><span class="market-label">DraftKings</span><span class="market-value">' + esc(mkLine) + '</span><span class="market-sub">' + (mk.p_home != null ? "Market " + esc(g.home) + " " + pct(mk.p_home) : "") + "</span></div>" +
-      '<div class="market-box total"><span class="market-label">Gap</span><span class="market-value">' + (L.edge_pts == null ? "—" : Math.abs(L.edge_pts).toFixed(1) + " pts") + '</span><span class="market-sub">' + (L.edge_pts == null ? "" : L.lean ? "Lean " + esc(L.lean.team) + " " + sgn(L.lean.line) : "No lean, under " + ((MODEL && MODEL.lean_edge_pts) || 4)) + "</span></div>" +
+      '<div class="market-box total"><span class="market-label">Gap</span><span class="market-value">' + (GS == null ? "—" : GS + " pts") + '</span><span class="market-sub">' + (L.edge_pts == null ? "" : L.lean ? "Lean " + esc(L.lean.team) + " " + sgn(L.lean.line) : "No lean, under " + ((MODEL && MODEL.lean_edge_pts) || 4)) + "</span></div>" +
     "</div>" + result +
+    (W && W.compare ? '<div class="why-line compare">' + esc(W.compare) + "</div>" : "") +
     (W && W.summary ? '<div class="why-line">' + esc(W.summary) + (W.lean && W.lean.status === "none" ? ' <span class="nolean">Not a call.</span>' : "") + "</div>" : "") +
     '<a class="card-cta" href="' + pageUrl(g) + '">Full preview: why Leo has this number</a>' +
     ((L.missing && (L.missing.home.length || L.missing.away.length)) ? '<div class="out-list">Missing regulars Leo accounted for:' + outList(g, "away") + outList(g, "home") + "</div>" : "") +

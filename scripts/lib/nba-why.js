@@ -9,6 +9,7 @@
  *
  *   why(g, { lostCoef, leanPts }) -> {
  *     leo, market,        "POR by 4.5", "POR by 7.5"
+ *     compare             plain words: same winner or not, and Leo's side of the spread"
  *     drivers: [{ key, pts, team, text }],   biggest first, |pts| >= 0.5
  *     lean: { status: "lean" | "none" | "no_line", text },
  *     swing: [text],      what a day-to-day player would change
@@ -35,12 +36,58 @@ function by(g, homeMargin) {
   return `${m > 0 ? g.home : g.away} by ${half(m)}`;
 }
 
+/**
+ * Leo's number as shown to readers (DEC-20261102-03): on the .5 grid the
+ * books use, rounded TOWARD the DraftKings spread (Leo ATL by 9.8 against
+ * ATL -5.5 shows ATL by 9.5). Because the line is always on that grid, the
+ * gap readers see is never bigger than the real one, and it is 4 or more
+ * exactly when the game is a lean. Display only: grading and the lean rule
+ * use Leo's unrounded margin. Returns the HOME spread (negative = home
+ * favoured), or null.
+ */
+function leoLine(g) {
+  const L = g.leo || {}, mk = g.market || {};
+  if (L.home_margin == null || !Number.isFinite(+L.home_margin)) return L.home_spread ?? null;
+  const s = -L.home_margin, m = mk.home_spread;
+  const v = m == null ? Math.round(s * 2) / 2 : s > m ? Math.floor(s * 2) / 2 : Math.ceil(s * 2) / 2;
+  return v === 0 ? 0 : v;   // no -0
+}
+/** Points between Leo's shown number and DraftKings, or null. */
+function gapShown(g) {
+  const v = leoLine(g), m = (g.market || {}).home_spread;
+  return v == null || m == null ? null : Math.abs(v - m);
+}
+
+/** One sentence: do Leo and DraftKings have the same winner, by how much, and Leo's side. */
+function compare(g, leanPts = 4) {
+  const L = g.leo || {}, mk = g.market || {};
+  const v = leoLine(g);
+  if (v == null) return "";
+  const leoTxt = v === 0 ? "a pick'em" : `${v < 0 ? g.home : g.away} by ${Math.abs(v)}`;
+  if (mk.home_spread == null) return `Leo has ${leoTxt}. No DraftKings line yet.`;
+  const m = mk.home_spread, gap = Math.abs(v - m);
+  const leoWin = v < 0 ? g.home : v > 0 ? g.away : null, mkWin = m < 0 ? g.home : m > 0 ? g.away : null;
+  const sgn = x => (x > 0 ? "+" : "") + x;
+  const pts = x => `${x} ${x === 1 ? "pt" : "pts"}`;
+  const side = L.lean ? `${L.lean.team} ${sgn(L.lean.line)}` : null;
+  let head;
+  if (leoWin && leoWin === mkWin) head = `Both have ${leoWin} winning: Leo by ${Math.abs(v)}, DraftKings by ${Math.abs(m)}.`;
+  else if (!leoWin && !mkWin) head = `Leo and DraftKings both call it a pick'em.`;
+  else if (!leoWin) head = `Leo calls it even; DraftKings has ${mkWin} by ${Math.abs(m)}.`;
+  else if (!mkWin) head = `Leo has ${leoWin} by ${Math.abs(v)}; DraftKings calls it a pick'em.`;
+  else head = `Different winners: Leo has ${leoWin} by ${Math.abs(v)}; DraftKings has ${mkWin} by ${Math.abs(m)}.`;
+  return side
+    ? `${head} They are ${pts(gap)} apart, so Leo's side of the spread is ${side}. A tracked test, not a bet.`
+    : gap === 0 ? `${head} Same number, so no lean.`
+    : `${head} They are ${pts(gap)} apart, under the ${leanPts} pt bar, so no lean.`;
+}
+
 function why(g, opts = {}) {
   const L = g.leo || {}, P = L.parts || {}, mk = g.market || {};
   const lostCoef = Math.abs(opts.lostCoef ?? 0.2209), leanPts = opts.leanPts ?? 4;
   const H = g.home, A = g.away;
   const toward = v => (v > 0 ? H : A);
-  const out = { leo: by(g, L.home_margin), market: mk.home_spread == null ? null : by(g, -mk.home_spread), drivers: [], swing: [] };
+  const out = { leo: leoLine(g) == null ? null : by(g, -leoLine(g)), compare: compare(g, opts.leanPts ?? 4), market: mk.home_spread == null ? null : by(g, -mk.home_spread), drivers: [], swing: [] };
 
   const add = (key, pts, text, short) => { if (pts != null && Math.abs(pts) >= 0.5) out.drivers.push({ key, pts: r1(pts), team: toward(pts), text, short }); };
   if (P.ratings != null) {
@@ -76,9 +123,9 @@ function why(g, opts = {}) {
   if (mk.home_spread == null || edge == null) {
     out.lean = { status: "no_line", text: "No DraftKings line yet, so no comparison." };
   } else if (L.lean) {
-    out.lean = { status: "lean", text: `Lean ${L.lean.team} ${L.lean.line > 0 ? "+" : ""}${L.lean.line}: Leo is ${f1(edge)} pts off DraftKings, past the ${leanPts} pt bar. A tracked test, not a bet.` };
+    out.lean = { status: "lean", text: out.compare };
   } else {
-    out.lean = { status: "none", text: `No lean. Leo is ${f1(edge)} pts off DraftKings, under the ${leanPts} pt bar, so this game is not a call.` };
+    out.lean = { status: "none", text: out.compare };
   }
 
   const top = out.drivers.slice(0, 3).map(d => d.short).join(", ");
@@ -86,7 +133,7 @@ function why(g, opts = {}) {
   return out;
 }
 
-const api = { why, by };
+const api = { why, by, leoLine, gapShown, compare };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else if (typeof window !== "undefined") window.NBA_WHY = api;
 })();

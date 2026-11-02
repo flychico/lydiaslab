@@ -197,12 +197,15 @@ async function loadJson(u){ try{ const r=await fetch(`${u}?v=${Date.now()}`,{cac
   const cards=games.slice().sort((a,b)=>String(a.tip_utc).localeCompare(String(b.tip_utc))).slice(0,8).map(g=>{
     const homeFav=g.leo.p_home>=0.5;
     const fav=homeFav?g.home:g.away, p=homeFav?g.leo.p_home:g.leo.p_away;
-    const m=Math.abs(Number(g.leo.home_margin)||0);
-    const spreadFav=(Number(g.leo.home_margin)||0)>=0?g.home:g.away;
+    // Leo's number on the .5 grid, rounded toward the DraftKings spread (same as scripts/lib/nba-why.js leoLine).
+    const sp=-(Number(g.leo.home_margin)||0), mkSp=g.market&&g.market.home_spread!=null?g.market.home_spread:null;
+    const ls=mkSp==null?Math.round(sp*2)/2:sp>mkSp?Math.floor(sp*2)/2:Math.ceil(sp*2)/2;
+    const m=Math.abs(ls);
+    const spreadFav=ls<=0?g.home:g.away;
     const final=g.completed?` &middot; final ${esc(g.away)} ${esc(g.as)}, ${esc(g.home)} ${esc(g.hs)}`:"";
     return `<a class="feat-card" href="${slug(g)}"><div class="teams">${esc(g.away_name)} @ ${esc(g.home_name)}</div>
       <div class="meta">Win chance: <b>${esc(fav)} ${Math.round(p*100)}%</b></div>
-      <div class="meta">Leo&rsquo;s spread: ${esc(spreadFav)} by ${m.toFixed(1)}${final}</div></a>`;
+      <div class="meta">Leo&rsquo;s spread: ${m===0?"pick&rsquo;em":esc(spreadFav)+" by "+m}${final}</div></a>`;
   }).join("");
   const date=card.date?new Date(card.date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"}):"";
   el.innerHTML=(date?`<p class="small dim" style="margin:0 0 10px">${esc(date)} &middot; <a href="/nba/results/">NBA record</a></p>`:"")+`<div class="feat-grid">${cards}</div>`+

@@ -6,7 +6,9 @@
  * the two team-colour stripe, logos, Leo's win chance with the bar, the three
  * boxes (Leo spread, DraftKings, gap), the lean line and the why line. Uses
  * the shared theme (scripts/lib/email-theme.js). Leans first; a lean line
- * states Leo's margin beside DraftKings ("Leo has BOS by 3.5; DraftKings has
+ * says in plain words whether Leo and DraftKings have the same winner, by how
+ * much each, and Leo's side of the spread (scripts/lib/nba-why.js compare(); was
+ * "Leo has BOS by 3.5; DraftKings has
  * BOS by 7.5") so a win chance and a lean on the other team never read as a
  * contradiction. Leans are a tracked test, never bets.
  *
@@ -27,6 +29,7 @@ const sgn = v => v == null ? "&mdash;" : v === 0 ? "PK" : (v > 0 ? "+" : "") + v
 const tip = iso => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) + " ET";
 const logo = t => `https://a.espncdn.com/i/teamlogos/nba/500/${String(t).toLowerCase()}.png`;
 const pageUrl = (g, date) => `${SITE}/nba/${g.away.toLowerCase()}-vs-${g.home.toLowerCase()}-prediction-odds-${date}/`;
+const NW = require("./nba-why");   // leoLine / gapShown / compare: the same rounding and wording as the site
 const byTxt = (m, home, away) => m == null ? null : Math.abs(m) < 0.25 ? "a pick'em" : `${m > 0 ? home : away} by ${Math.abs(Math.round(m * 2) / 2)}`;
 
 function teamRow(g, side) {
@@ -45,12 +48,13 @@ function box(label, value, sub, gold) {
 }
 function card(g, date, why) {
   const L = g.leo, mk = g.market || {}, W = why ? why.why(g) : null;
-  const leoM = L.home_margin, mkM = mk.home_spread == null ? null : -mk.home_spread;
+  const LS = NW.leoLine(g), GS = NW.gapShown(g), CMP = NW.compare(g);
+  const leoM = LS == null ? null : -LS, mkM = mk.home_spread == null ? null : -mk.home_spread;
   const badge = L.lean ? `Lean ${esc(L.lean.team)} ${sgn(L.lean.line)}` : "No lean";
   const pa = Math.max(1, Math.min(99, Math.round((L.p_away || 0) * 100)));
   const leanLine = L.lean
-    ? `<div style="font-family:${SANS};font-size:14px;line-height:1.5;color:${T.text};background:${T.leanBg};border-radius:10px;padding:9px 12px;margin-top:12px"><b>Lean ${esc(L.lean.team)} ${sgn(L.lean.line)}.</b> Leo has ${esc(byTxt(leoM, g.home, g.away))}; DraftKings has ${esc(byTxt(mkM, g.home, g.away))}. A tracked test, not a bet.</div>`
-    : "";
+    ? `<div style="font-family:${SANS};font-size:14px;line-height:1.5;color:${T.text};background:${T.leanBg};border-radius:10px;padding:9px 12px;margin-top:12px">${esc(CMP)}</div>`
+    : CMP ? `<div style="font-family:${SANS};font-size:14px;line-height:1.5;color:${T.text};margin-top:12px">${esc(CMP)}</div>` : "";
   return tbl(`<tr><td style="padding:0;font-size:0;line-height:0">${tbl(`<tr><td width="50%" style="height:6px;line-height:6px;font-size:0;background:${col(g.away)};border-radius:20px 0 0 0">&nbsp;</td><td width="50%" style="height:6px;line-height:6px;font-size:0;background:${col(g.home)};border-radius:0 20px 0 0">&nbsp;</td></tr>`)}</td></tr>
   <tr><td style="padding:14px 16px 16px">
     ${tbl(`<tr>
@@ -59,7 +63,7 @@ function card(g, date, why) {
     </tr>`)}
     ${tbl(`${teamRow(g, "away")}${teamRow(g, "home")}`, "margin-top:6px")}
     ${tbl(`<tr><td width="${pa}%" style="height:8px;line-height:8px;font-size:0;background:${T.gold};border-radius:999px 0 0 999px">&nbsp;</td><td width="${100 - pa}%" style="height:8px;line-height:8px;font-size:0;background:${T.navy};border-radius:0 999px 999px 0">&nbsp;</td></tr>`, "margin:10px 0 12px")}
-    ${tbl(`<tr>${box("Leo spread", `${esc(g.home)} ${sgn(L.home_spread)}`, "expected margin", true)}${box("DraftKings", mk.home_spread == null ? "&mdash;" : `${esc(g.home)} ${sgn(mk.home_spread)}`, mk.p_home != null ? `market ${esc(g.home)} ${pct(mk.p_home)}` : "&nbsp;")}${box("Gap", L.edge_pts == null ? "&mdash;" : `${Math.abs(L.edge_pts).toFixed(1)} pts`, L.lean ? "lean" : "under 4, no lean")}</tr>`)}
+    ${tbl(`<tr>${box("Leo spread", LS == null ? "&mdash;" : `${esc(g.home)} ${sgn(LS)}`, "expected margin", true)}${box("DraftKings", mk.home_spread == null ? "&mdash;" : `${esc(g.home)} ${sgn(mk.home_spread)}`, mk.p_home != null ? `market ${esc(g.home)} ${pct(mk.p_home)}` : "&nbsp;")}${box("Gap", GS == null ? "&mdash;" : `${GS} pts`, L.lean ? "lean" : "under 4, no lean")}</tr>`)}
     ${leanLine}
     ${W && W.summary ? `<div style="font-family:${SANS};font-size:14px;line-height:1.55;color:${T.dim};border-top:1px solid ${T.border};margin-top:12px;padding-top:11px">${esc(W.summary)}</div>` : ""}
     <div style="font-family:${SANS};font-size:14px;font-weight:800;margin-top:11px"><a href="${pageUrl(g, date)}" style="color:${T.navy};text-decoration:none">Full preview: why Leo has this number &rarr;</a></div>
@@ -70,7 +74,7 @@ function build(doc, { why } = {}) {
   const date = doc.date;
   const nice = new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" });
   const games = doc.games.filter(g => g.leo && g.state !== "post");
-  const gap = g => g.leo.edge_pts == null ? -1 : Math.abs(g.leo.edge_pts);
+  const gap = g => { const v = NW.gapShown(g); return v == null ? -1 : v; };
   games.sort((a, b) => (!!b.leo.lean - !!a.leo.lean) || a.tip_utc.localeCompare(b.tip_utc) || gap(b) - gap(a));
   const leans = games.filter(g => g.leo.lean);
   const leanList = leans.map(g => `${g.leo.lean.team} ${sgn(g.leo.lean.line)}`);
@@ -79,7 +83,7 @@ function build(doc, { why } = {}) {
   const subject = `Leo NBA card, ${nice}: ${games.length} game${games.length === 1 ? "" : "s"}, ${leans.length ? `${leans.length} lean${leans.length === 1 ? "" : "s"} (${leanList.join(", ")})` : "no leans"}`;
   const leanRows = leans.length
     ? tbl(leans.map(g => `<tr><td style="padding:6px 0;font-family:${SANS};font-size:16px;font-weight:800;color:${T.text};white-space:nowrap">${esc(g.leo.lean.team)} ${sgn(g.leo.lean.line)}</td>
-        <td align="right" style="padding:6px 0;font-family:${SANS};font-size:13px;color:${T.dim}">${esc(g.away)} at ${esc(g.home)} &middot; ${esc(tip(g.tip_utc))}<br>Leo ${esc(byTxt(g.leo.home_margin, g.home, g.away))}, DraftKings ${esc(byTxt(-g.market.home_spread, g.home, g.away))}</td></tr>`).join(`<tr><td colspan="2" style="border-top:1px solid ${T.border};font-size:0;line-height:0;height:1px">&nbsp;</td></tr>`))
+        <td align="right" style="padding:6px 0;font-family:${SANS};font-size:13px;color:${T.dim}">${esc(g.away)} at ${esc(g.home)} &middot; ${esc(tip(g.tip_utc))}<br>Leo ${esc(byTxt(-NW.leoLine(g), g.home, g.away))}, DraftKings ${esc(byTxt(-g.market.home_spread, g.home, g.away))}</td></tr>`).join(`<tr><td colspan="2" style="border-top:1px solid ${T.border};font-size:0;line-height:0;height:1px">&nbsp;</td></tr>`))
     : `<div style="font-family:${SANS};font-size:14px;color:${T.dim}">No game tonight is 4 or more points off the DraftKings spread, so Leo records no lean.</div>`;
   const body = [
     E.header("NBA"),
@@ -93,7 +97,7 @@ function build(doc, { why } = {}) {
       { label: "Games", value: games.length, sub: esc(nice.split(",")[0]) },
       { label: "First tip", value: first ? esc(tip(first)) : "&mdash;", sub: "Eastern time" },
       { label: "Leans", value: leans.length, sub: "4+ points off the line" },
-      { label: "Biggest gap", value: big == null || big < 0 ? "&mdash;" : `${big.toFixed(1)} pts`, sub: "Leo vs DraftKings" }
+      { label: "Biggest gap", value: big == null || big < 0 ? "&mdash;" : `${big} pts`, sub: "Leo vs DraftKings" }
     ]),
     E.panel("Tonight&rsquo;s leans", leanRows),
     games.map(g => card(g, date, why)).join(""),
@@ -106,7 +110,7 @@ function build(doc, { why } = {}) {
   const text = [`Leo NBA card, ${nice}`, "",
     leans.length ? `Tonight's leans: ${leanList.join(", ")}` : "No leans tonight.", "",
     ...games.map(g => { const L = g.leo, mk = g.market || {}, W = why ? why.why(g) : null;
-      return `${tip(g.tip_utc)}  ${g.away} at ${g.home}  ${L.lean ? `LEAN ${L.lean.team} ${sgn(L.lean.line)}` : "No lean"}\n  Leo win chance: ${g.away} ${Math.round(L.p_away * 100)}%, ${g.home} ${Math.round(L.p_home * 100)}%\n  Leo has ${byTxt(L.home_margin, g.home, g.away)}; DraftKings ${mk.home_spread == null ? "n/a" : "has " + byTxt(-mk.home_spread, g.home, g.away)}; gap ${L.edge_pts == null ? "n/a" : Math.abs(L.edge_pts).toFixed(1)}\n${W && W.summary ? "  " + W.summary + "\n" : ""}  ${pageUrl(g, date)}\n`; }),
+      return `${tip(g.tip_utc)}  ${g.away} at ${g.home}  ${L.lean ? `LEAN ${L.lean.team} ${sgn(L.lean.line)}` : "No lean"}\n  Leo win chance: ${g.away} ${Math.round(L.p_away * 100)}%, ${g.home} ${Math.round(L.p_home * 100)}%\n  ${NW.compare(g)}\n${W && W.summary ? "  " + W.summary + "\n" : ""}  ${pageUrl(g, date)}\n`; }),
     "", `Every card: ${SITE}/nba/scoreboard/`, "Leans are a public test, not bets. Analysis only, not betting advice. 21+. 1-800-MY-RESET.",
     ...((process.env.EMAIL_POSTAL_ADDRESS || "").trim() ? [(process.env.EMAIL_POSTAL_ADDRESS || "").trim()] : []), 'Reply "unsubscribe" to stop these.'].join("\n").replace(/&mdash;/g, "-").replace(/&rsquo;/g, "'");
   return { subject, html, text, leans: leanList };

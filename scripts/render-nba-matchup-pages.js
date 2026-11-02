@@ -84,7 +84,7 @@ function whyBlock(g) {
   const w = WHY.why(g, { lostCoef: MODEL.coef && MODEL.coef.lost_d, leanPts: MODEL.lean_edge_pts });
   if (!w.leo) return "";
   return `<h2>Why Leo has ${esc(w.leo)}</h2>
-  <div class="card why"><p><b>Leo: ${esc(w.leo)}.</b> ${w.market ? `DraftKings: ${esc(w.market)}.` : ""} ${esc(w.lean.text)}</p>
+  <div class="card why">
   ${w.drivers.length ? `<ol>${w.drivers.map(d => `<li>${esc(d.text)}.</li>`).join("")}</ol>` : ""}
   ${w.swing.length ? `<p class="dim"><b>What could still move it.</b> ${w.swing.map(esc).join(" ")}</p>` : ""}
   <p class="dim">Leo only knows team results, rest and the injury report. It does not know matchups, lineups announced after the read, or motivation, so a small gap from DraftKings is usually noise, which is why nothing under ${MODEL.lean_edge_pts || 4} points is a call.</p></div>`;
@@ -147,22 +147,12 @@ function finalBlock(g, res) {
 function page(g, res) {
   const L = g.leo, mk = g.market || {}, H = g.home, A = g.away;
   const title = `${nick(g.away_name)} vs ${nick(g.home_name)} Prediction and Odds, ${new Date(g.date + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })} | Leo`;
-  const desc = `Leo gives the ${g.home_name} a ${pct(L.p_home)} chance against the ${g.away_name}. Leo's spread ${H} ${L.home_spread === 0 ? "PK" : sgn(L.home_spread)}, injury report, form and key players.`;
+  const desc = `Leo gives the ${g.home_name} a ${pct(L.p_home)} chance against the ${g.away_name}. Leo's spread ${H} ${WHY.leoLine(g) === 0 ? "PK" : sgn(WHY.leoLine(g))}, injury report, form and key players.`;
   const url = `https://ndhorizon.com/nba/${slug(g)}/`;
-  // Plain-English read of the gap, so a winner pick and a spread lean on the
-  // other team do not look like a contradiction.
-  const gapTxt = (() => {
-    if (mk.home_spread == null || L.home_margin == null) return "";
-    const m = +L.home_margin, mm = -mk.home_spread, r = v => Math.abs(Math.round(v * 2) / 2);
-    const who = v => v > 0 ? H : A, by = v => v === 0 ? "a pick'em" : `${who(v)} by ${r(v)}`;
-    if (r(m) === 0 || mm === 0) return `Leo has ${by(m)}; DraftKings has ${by(mm)}.`;
-    if (Math.sign(m) === Math.sign(mm)) {
-      if (r(m) === r(mm)) return `Leo and DraftKings agree: ${by(m)}.`;
-      return `Both expect ${esc(who(m))} to win. Leo expects ${r(m) < r(mm) ? "a closer game" : "a bigger win"} (${esc(by(m))}) than DraftKings (${esc(by(mm))}).`;
-    }
-    return `Leo expects ${esc(who(m))} to win (${esc(by(m))}); DraftKings has ${esc(by(mm))}.`;
-  })();
-  const leanTxt = L.lean ? `<div class="lean">Lean: <b>${esc(L.lean.team)} ${sgn(L.lean.line)}</b>. Leo is ${L.lean.edge_pts} points off the DraftKings spread. A tracked test, not a bet.</div>` : "";
+  // Same winner or not, by how much, and Leo's side (shared with the card and email).
+  const LS = WHY.leoLine(g), GS = WHY.gapShown(g);
+  const gapTxt = esc(WHY.compare(g, MODEL.lean_edge_pts || 4));
+  const leanTxt = L.lean && gapTxt ? `<div class="lean">${gapTxt}</div>` : "";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -227,11 +217,11 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
     <div class="tm"><img src="${logo(H)}" alt="" onerror="this.style.visibility='hidden'"><b>${esc(g.home_name)}</b><span class="p">${pct(L.p_home)}</span><span class="dim">Leo win chance</span></div>
   </div>
   <div class="boxes">
-    <div class="box"><div class="l">Leo spread</div><div class="v">${esc(H)} ${L.home_spread === 0 ? "PK" : sgn(L.home_spread)}</div><div class="s">Expected margin</div></div>
+    <div class="box"><div class="l">Leo spread</div><div class="v">${esc(H)} ${LS === 0 ? "PK" : sgn(LS)}</div><div class="s">Expected margin</div></div>
     <div class="box"><div class="l">DraftKings</div><div class="v">${mk.home_spread == null ? "&mdash;" : esc(H) + " " + sgn(mk.home_spread)}</div><div class="s">Moneyline ${esc(A)} ${am(mk.away_ml)}, ${esc(H)} ${am(mk.home_ml)}</div></div>
-    <div class="box"><div class="l">Gap</div><div class="v">${L.edge_pts == null ? "&mdash;" : Math.abs(L.edge_pts).toFixed(1) + " pts"}</div><div class="s">${L.edge_pts == null ? "No line yet" : "Between Leo and DraftKings"}</div></div>
+    <div class="box"><div class="l">Gap</div><div class="v">${GS == null ? "&mdash;" : GS + " pts"}</div><div class="s">${GS == null ? "No line yet" : "Between Leo and DraftKings"}</div></div>
   </div>
-  ${gapTxt ? `<p class="gapread">${gapTxt}</p>` : ""}
+  ${gapTxt && !L.lean ? `<p class="gapread">${gapTxt}</p>` : ""}
   ${L.projected ? `<p class="gapread">Projected score: ${esc(A)} ${L.projected.away}, ${esc(H)} ${L.projected.home} (total ${L.projected.total}). Information only; Leo does not lean on totals.</p>` : ""}
   ${leanTxt}
   ${finalBlock(g, res)}
