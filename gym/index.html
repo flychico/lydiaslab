@@ -2091,6 +2091,7 @@ function mergeBackup(inc){
   S.nutrition = uniq([...(S.nutrition || []), ...(inc.nutrition || [])], x => JSON.stringify([x.date, x.n, x.cal, x.p, x.c, x.f])).sort((a, b) => a.date.localeCompare(b.date));
   if (inc.hk) { S.hk = S.hk || {}; Object.keys(inc.hk).forEach(d => { S.hk[d] = { ...inc.hk[d], ...(S.hk[d] || {}) }; }); }
   S.supps = uniq([...(S.supps || []), ...(inc.supps || [])], x => x.id);
+  S.inboxDone = [...new Set([...(S.inboxDone || []), ...(inc.inboxDone || [])])].slice(-200);
   if (inc.suppLog) { S.suppLog = S.suppLog || {}; Object.keys(inc.suppLog).forEach(d => { S.suppLog[d] = [...new Set([...(S.suppLog[d] || []), ...inc.suppLog[d]])]; }); }
   if (!S.targets && inc.targets) S.targets = inc.targets;
   if (!S.profile && inc.profile) S.profile = inc.profile;
@@ -3419,6 +3420,7 @@ async function coachSync(force){
   if (!force && coachCfg.at && Date.now() - coachCfg.at < 5 * 60000) return;
   coachBusy = true;
   try {
+    await coachInbox();
     const snapshot = { ...S, active: null, exportedAt: new Date().toISOString(), catalog: EX.map(e => ({ id: e.id, n: e.n, m: e.m, p: e.p, inc: e.inc })) };
     await repoPut("data.json", b64(JSON.stringify(snapshot)), "App sync " + today());
     const fs0 = await repoGet("coach/FRESH_START.md");
@@ -3428,6 +3430,27 @@ async function coachSync(force){
     coachCfg.at = Date.now(); coachCfg.err = ""; saveCoachCfg();
   } catch (e) { coachCfg.err = e.status === 401 || e.status === 403 ? "token" : e.status === 404 ? "repo" : "net"; saveCoachCfg(); }
   finally { coachBusy = false; }
+}
+/* Inbox: things Claude logs for you from chat (coach/inbox.json in the private repo).
+   Each item is applied once, then removed from the file. */
+async function coachInbox(){
+  const f = await repoGet("coach/inbox.json"); if (!f || !f.content) return;
+  let ib = null; try { ib = JSON.parse(unb64(f.content)); } catch (e) { return; }
+  const items = (ib && ib.items) || []; if (!items.length) return;
+  S.inboxDone = S.inboxDone || []; const got = [];
+  items.forEach(it => {
+    if (!it || !it.id || S.inboxDone.includes(it.id)) return;
+    if (it.type === "food" && it.n) {
+      const d = /^\d{4}-\d{2}-\d{2}$/.test(it.date || "") ? it.date : today();
+      S.nutrition = S.nutrition || []; S.nutrition.push({ date: d, n: String(it.n).slice(0, 60), cal: Math.round(+it.cal || 0), p: r1(+it.p || 0), c: r1(+it.c || 0), f: r1(+it.f || 0), ...(it.fv > 0 ? { fv: r1(+it.fv) } : {}), ...xtra(it) });
+      if (it.saveMeal && !(S.foods || []).some(m => m.n === it.n)) saveMealObj(it);
+      got.push(it.n);
+    }
+    S.inboxDone.push(it.id);
+  });
+  S.inboxDone = S.inboxDone.slice(-200);
+  if (got.length) { save(); render(); toast("🗿 Logged for you: " + got.join(", ")); }
+  try { await repoPut("coach/inbox.json", b64(JSON.stringify({ items: items.filter(it => it && it.id && !S.inboxDone.includes(it.id)) }, null, 1)), "App: inbox applied"); } catch (e) {}
 }
 function applyReview(r){
   const prev = { plan: S.plan, targets: S.targets || null, standards: S.standards || null };
