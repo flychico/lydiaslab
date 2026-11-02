@@ -17,13 +17,15 @@ name: NFL publish picks
 
 on:
   schedule:
-    - cron: "15 13 * * *"   # 9:15am EDT / 8:15am EST  daily
-    - cron: "15 17 * * 4"   # 1:15pm EDT / 12:15pm EST  Thursday
-    - cron: "15 11 * * 0"   # 7:15am EDT / 6:15am EST  Sunday
-    - cron: "15 14 * * 0"   # 10:15am EDT / 9:15am EST  Sunday
-    - cron: "15 18 * * 0"   # 2:15pm EDT / 1:15pm EST  Sunday
-    - cron: "15 22 * * 0"   # 6:15pm EDT / 5:15pm EST  Sunday
-    - cron: "15 17 * * 1"   # 1:15pm EDT / 12:15pm EST  Monday
+    - cron: "8 13 * * *"    # 9:08am EDT / 8:08am EST  daily
+    - cron: "8 17 * * 4"    # 1:08pm EDT / 12:08pm EST  Thursday
+    - cron: "22 18 * * 4"   # 2:22pm EDT / 1:22pm EST  Thursday -- after the backup gather
+    - cron: "8 11 * * 0"    # 7:08am EDT / 6:08am EST  Sunday
+    - cron: "8 14 * * 0"    # 10:08am EDT / 9:08am EST  Sunday
+    - cron: "8 18 * * 0"    # 2:08pm EDT / 1:08pm EST  Sunday
+    - cron: "8 22 * * 0"    # 6:08pm EDT / 5:08pm EST  Sunday
+    - cron: "8 17 * * 1"    # 1:08pm EDT / 12:08pm EST  Monday
+    - cron: "22 18 * * 1"   # 2:22pm EDT / 1:22pm EST  Monday -- after the backup gather
   workflow_dispatch:
     inputs:
       date:

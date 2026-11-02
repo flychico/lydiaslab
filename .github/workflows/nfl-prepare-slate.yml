@@ -17,20 +17,24 @@ name: NFL prepare slate (gather data)
 # WEEKLY RHYTHM (EDT / EST)
 #   NFL prepare slate  ->  NFL publish picks (fires 15 min after each wave)
 #
-#   Daily     9:00am / 8:00am     line movement through the week
-#   Thursday  1:00pm / 12:00pm    before TNF
+# OFF THE HOUR (DEC-20261102-03): GitHub dropped both Monday Nov 2 gathers
+# (8am and 12pm EST, both on the hour), so every wave now runs at :53 and
+# Monday and Thursday nights get a backup gather at :07 an hour later.
+#   Daily     8:53am / 7:53am     line movement through the week
+#   Thursday  12:53pm / 11:53am, backup 2:07pm / 1:07pm   before TNF
 #   Sunday    7:00am / 6:00am, 10:00am / 9:00am   before the 1:00pm block
 #   Sunday    12:30pm / 11:30am   last capture before the 1:00pm block
 #   Sunday    2:00pm / 1:00pm     before the 4:05/4:25 block
 #   Sunday    6:00pm / 5:00pm     before SNF
-#   Monday    1:00pm / 12:00pm    before MNF
+#   Monday    12:53pm / 11:53am, backup 2:07pm / 1:07pm   before MNF
 
 on:
   schedule:
-    - cron: "0 13 * * *"    # 9:00am EDT / 8:00am EST  daily
-    - cron: "0 17 * * 4"    # 1:00pm EDT / 12:00pm EST  Thursday -- 7h (EDT) before an 8:15pm kickoff
-    - cron: "0 11 * * 0"    # 7:00am EDT / 6:00am EST  Sunday -- first wave
-    - cron: "0 14 * * 0"    # 10:00am EDT / 9:00am EST  Sunday
+    - cron: "53 12 * * *"   # 8:53am EDT / 7:53am EST  daily
+    - cron: "53 16 * * 4"   # 12:53pm EDT / 11:53am EST  Thursday -- before TNF
+    - cron: "7 18 * * 4"    # 2:07pm EDT / 1:07pm EST  Thursday -- backup gather
+    - cron: "53 10 * * 0"   # 6:53am EDT / 5:53am EST  Sunday -- first wave
+    - cron: "53 13 * * 0"   # 9:53am EDT / 8:53am EST  Sunday
     # PRE-KICKOFF CAPTURE. Added 2026-09-20 after the first live run showed
     # the 9:39am ET fetch was too early: books had not posted full prop menus
     # yet (Ladd McConkey, a front-line receiver, had no receiving line at all
@@ -38,9 +42,10 @@ on:
     # hours before kickoff is not a closing line, and CLV measured against it
     # is measuring the wrong number.
     - cron: "30 16 * * 0"   # 12:30pm EDT / 11:30am EST  Sunday -- last capture before 1pm kicks
-    - cron: "0 18 * * 0"    # 2:00pm EDT / 1:00pm EST  Sunday
-    - cron: "0 22 * * 0"    # 6:00pm EDT / 5:00pm EST  Sunday
-    - cron: "0 17 * * 1"    # 1:00pm EDT / 12:00pm EST  Monday -- 7h (EDT) before an 8:15pm kickoff
+    - cron: "53 17 * * 0"   # 1:53pm EDT / 12:53pm EST  Sunday
+    - cron: "53 21 * * 0"   # 5:53pm EDT / 4:53pm EST  Sunday
+    - cron: "53 16 * * 1"   # 12:53pm EDT / 11:53am EST  Monday -- before MNF
+    - cron: "7 18 * * 1"    # 2:07pm EDT / 1:07pm EST  Monday -- backup gather
   workflow_dispatch:
     inputs:
       date:
