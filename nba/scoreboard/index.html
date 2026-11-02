@@ -71,7 +71,7 @@
   <p class="data-note" id="data-note">Results and player minutes: ESPN via the open sportsdataverse files. Lines: DraftKings via ESPN. Injury report and live scores: ESPN.</p>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
-<script src="/scripts/lib/nba-why.js"></script>
+<script src="/scripts/lib/nba-why.js?v=20261102"></script>
 <script>
 renderNav("/nba/scoreboard/"); renderFooter();
 const pick = document.getElementById("date-pick"), gamesEl = document.getElementById("games"), statusEl = document.getElementById("status"), kpisEl = document.getElementById("kpis");
@@ -142,7 +142,7 @@ function statusBadge(g, res) {
 function card(g) {
   const L = g.leo, mk = g.market || {}, res = RESULTS[g.game_id];
   const W = window.NBA_WHY ? NBA_WHY.why(g, { lostCoef: MODEL && MODEL.coef && MODEL.coef.lost_d, leanPts: MODEL && MODEL.lean_edge_pts }) : null;
-  const LS = window.NBA_WHY ? NBA_WHY.leoLine(g) : L.home_spread, GS = window.NBA_WHY ? NBA_WHY.gapShown(g) : (L.edge_pts == null ? null : Math.abs(L.edge_pts));
+  const LS = (window.NBA_WHY && NBA_WHY.leoLine) ? NBA_WHY.leoLine(g) : L.home_spread, GS = (window.NBA_WHY && NBA_WHY.gapShown) ? NBA_WHY.gapShown(g) : (L.edge_pts == null ? null : Math.abs(L.edge_pts));
   const leoLine = LS == null ? "—" : g.home + " " + sgn(LS);
   const mkLine = mk.home_spread == null ? "—" : g.home + " " + sgn(mk.home_spread);
   let result = "";
