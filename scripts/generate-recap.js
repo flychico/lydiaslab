@@ -215,7 +215,7 @@ function pageShell(title, desc, body, canonical = `${SITE}/recaps/${DATE}.html`)
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${esc(title)}</title>
-<meta name="description" content="${esc(desc)}">
+${/\/recaps\/\d{4}-\d{2}-\d{2}\.html$/.test(canonical) ? '<meta name="robots" content="noindex,follow">\n' : ""}<meta name="description" content="${esc(desc)}">
 <link rel="canonical" href="${canonical}">
 <link rel="stylesheet" href="/css/style.css">
 <style>

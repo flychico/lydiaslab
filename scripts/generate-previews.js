@@ -203,8 +203,13 @@ async function main() {
 
   fs.mkdirSync(path.join(ROOT, "previews"), { recursive: true });
   const page = renderPreviewPage(brief, published);
-  fs.writeFileSync(path.join(ROOT, "previews", `${DATE}.html`), page, "utf8");
-  fs.writeFileSync(path.join(ROOT, "previews", "index.html"), page, "utf8");
+  // Dated cards stay for visitors but are kept out of search (thin, same games
+  // as the matchup pages; SEO-10, 2026-11-02). The /previews/ hub stays indexed
+  // under its own address.
+  const dated = page.replace('<meta name="description"', '<meta name="robots" content="noindex,follow">\n<meta name="description"');
+  const hub = page.replace(`<link rel="canonical" href="${SITE}/previews/${esc(DATE)}.html">`, `<link rel="canonical" href="${SITE}/previews/">`);
+  fs.writeFileSync(path.join(ROOT, "previews", `${DATE}.html`), dated, "utf8");
+  fs.writeFileSync(path.join(ROOT, "previews", "index.html"), hub, "utf8");
   updatePreviewArchive(DATE);
   updateSitemap();
   console.log(`Rendered previews/${DATE}.html from source data. Official picks: ${published.picks.length}.`);
