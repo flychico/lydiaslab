@@ -46,7 +46,7 @@ const COLS = ["date", "game_id", "away", "home", "away_score", "home_score", "ma
   "lean_side", "lean_line", "lean_result", "edge_pts", "home_lost", "away_lost", "captured_at", "kickoff_utc", "model_version",
   "open_home_spread", "close_home_spread", "lean_clv_pts", "close_source",
   "home_ml", "away_ml", "pick_side", "pick_team", "pick_p", "pick_price", "pick_result", "pick_units",
-  "lean_price", "lean_units", "price_source"];
+  "lean_price", "lean_units", "price_source", "pick_close_price", "pick_close_source"];
 const PK = require("./lib/nba-picks");
 /* Leo Pick and lean units from the read of record (DEC-20261102-30). p is that
    prediction-history row (or null when it cannot be found). Prices are the
@@ -111,6 +111,7 @@ function summarize() {
     const L = rec(leans);
     const u = rs => +rs.reduce((t, r) => t + (r.lean_units !== "" && r.lean_units != null ? +r.lean_units : (PK.units(r.lean_result, -110) ?? 0)), 0).toFixed(2);
     const pk = list.filter(r => r.pick_result && r.date >= PK.TRACK_FROM), pw = pk.filter(r => r.pick_result === "win").length;
+    const mv = pk.filter(r => r.pick_close_price !== "" && r.pick_close_price != null).map(r => PK.imp(+r.pick_close_price) - PK.imp(+r.pick_price));
     const pu = +pk.reduce((t, r) => t + +r.pick_units, 0).toFixed(2);
     return {
       games: list.length,
@@ -126,7 +127,8 @@ function summarize() {
       picks: { from: PK.TRACK_FROM, n: pk.length, won: pw, lost: pk.length - pw, pct: pk.length ? +(pw / pk.length).toFixed(3) : null, units: pu,
         roi: pk.length ? +(pu / pk.length).toFixed(3) : null,
         avg_price: pk.length ? Math.round(pk.reduce((t, r) => t + +r.pick_price, 0) / pk.length) : null,
-        stated: pk.length ? +(pk.reduce((t, r) => t + +r.pick_p, 0) / pk.length).toFixed(3) : null },
+        stated: pk.length ? +(pk.reduce((t, r) => t + +r.pick_p, 0) / pk.length).toFixed(3) : null,
+        price_moves: { n: mv.length, toward_leo: mv.filter(v => v > 0.004).length, against: mv.filter(v => v < -0.004).length } },
       lean_line_moves: (() => {
         const m = leans.filter(r => r.lean_clv_pts !== "" && r.lean_clv_pts != null).map(r => +r.lean_clv_pts);
         return { n: m.length, toward_leo: m.filter(v => v > 0).length, against: m.filter(v => v < 0).length, unchanged: m.filter(v => v === 0).length,
@@ -147,7 +149,7 @@ function summarize() {
       leo_home_margin: num(r.leo_home_margin), leo_p_home: num(r.leo_p_home), mkt_home_spread: num(r.mkt_home_spread),
       leo_winner_correct: +r.leo_winner_correct, lean_side: r.lean_side, lean_line: num(r.lean_line), lean_result: r.lean_result, edge_pts: num(r.edge_pts),
       pick_team: r.pick_team || "", pick_p: num(r.pick_p), pick_price: num(r.pick_price), pick_result: r.pick_result || "", pick_units: num(r.pick_units),
-      pick_replay: !!r.pick_result && r.date < PK.TRACK_FROM, lean_price: num(r.lean_price), lean_units: num(r.lean_units), price_source: r.price_source || ""
+      pick_replay: !!r.pick_result && r.date < PK.TRACK_FROM, pick_close_price: num(r.pick_close_price), lean_price: num(r.lean_price), lean_units: num(r.lean_units), price_source: r.price_source || ""
     }))
   };
   fs.writeFileSync(path.join(DIR, "results.json"), JSON.stringify(doc, null, 1) + "\n");
@@ -267,6 +269,14 @@ function upgradeLedger() {
         lean_clv_pts: clvPts(p.lean_side, openSp, closeSp),
         ...moneyFields(p, margin, p.lean_side, lean)
       });
+      // Price on the pick at the close (ESPN summary; else Leo's last capture): a benchmark, never an input.
+      { const o = out[out.length - 1];
+        if (o.pick_side) {
+          const espnMl = close ? (o.pick_side === "home" ? close.home_ml : close.away_ml) : null;
+          const lc = lastLine.get(g.game_id), capMl = lc ? (o.pick_side === "home" ? lc.home_ml : lc.away_ml) : "";
+          o.pick_close_price = espnMl != null ? espnMl : capMl !== "" && capMl != null ? +capMl : "";
+          o.pick_close_source = espnMl != null ? "espn" : o.pick_close_price !== "" ? "last_capture" : "";
+        } }
     }
     if (box.length) writeBox(DATE, box);
     if (out.length) {

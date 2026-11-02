@@ -46,7 +46,11 @@ function closeSpread(summary) {
   const withSpread = rows.filter(r => num(r.spread) != null);
   const dk = withSpread.find(r => /draftkings/i.test((r.provider && r.provider.name) || ""));
   const r = dk || withSpread[0];
-  return r ? { home_spread: num(r.spread), provider: (r.provider && r.provider.name) || "", total: num(r.overUnder) } : null;
+  if (!r) return null;
+  // Moneylines at the close (DEC-20261102-33): pickcenter carries them as home/awayTeamOdds.moneyLine.
+  const ml = (side, alt) => num(r[side] && r[side].moneyLine) ?? num(r.moneyline && r.moneyline[alt] && r.moneyline[alt].close && r.moneyline[alt].close.odds);
+  return { home_spread: num(r.spread), provider: (r.provider && r.provider.name) || "", total: num(r.overUnder),
+    home_ml: ml("homeTeamOdds", "home"), away_ml: ml("awayTeamOdds", "away") };
 }
 
 /** Every player line for both teams, including did-not-play rows. */

@@ -141,6 +141,7 @@ function finalBlock(g, res) {
     <ul>
       <li>Leo had ${esc(res.leo_p_home >= .5 ? H : A)} to win: <b class="${res.leo_winner_correct ? "ok" : "no"}">${res.leo_winner_correct ? "right" : "wrong"}</b></li>
       <li>Leo expected ${esc(H)} ${(res.leo_home_margin > 0 ? "+" : "") + res.leo_home_margin.toFixed(1)}; it finished ${(margin > 0 ? "+" : "") + margin}. Leo missed by ${Math.abs(res.leo_home_margin - margin).toFixed(1)}${res.mkt_home_spread != null ? `, the DraftKings spread by ${Math.abs(-res.mkt_home_spread - margin).toFixed(1)}` : ""}.</li>
+      ${res.pick_result && !res.pick_replay ? `<li>Leo Pick ${esc(res.pick_team)} ${PKS.fmtPrice(res.pick_price)}: <b class="${res.pick_result === "win" ? "ok" : "no"}">${res.pick_result === "win" ? "won" : "lost"}</b>, ${res.pick_units > 0 ? "+" : ""}${(+res.pick_units).toFixed(2)} units${res.pick_close_price != null ? `. Price at tip ${PKS.fmtPrice(res.pick_close_price)}` : ""}.</li>` : ""}
       ${lean}
     </ul></div>`;
 }

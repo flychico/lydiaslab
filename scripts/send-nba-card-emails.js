@@ -44,7 +44,8 @@ async function main() {
   const doc = JSON.parse(fs.readFileSync(src, "utf8"));
   const games = (doc.games || []).filter(g => g.leo);
   if (!games.length) { console.log(`NBA card email: no games on ${DATE}.`); return; }
-  const email = E.build(doc, { why: WHY });
+  const record = (() => { try { return JSON.parse(fs.readFileSync(path.join(ROOT, "data/nba/results.json"), "utf8")).season.picks || null; } catch (e) { return null; } })();
+  const email = E.build(doc, { why: WHY, record });
   if (HTML) { fs.writeFileSync(HTML, email.html); console.log(`NBA card email preview written to ${HTML}. ${email.subject}`); return; }
   if (DRY) { console.log(`SUBJECT: ${email.subject}\n\n${email.text}`); return; }
   if (process.argv.includes("--test")) {

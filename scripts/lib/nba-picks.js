@@ -88,7 +88,53 @@ function callBox(g) {
   return { on: false, value: "No call", sub: why };
 }
 
-const api = { PICK_P, PRICE_LIMIT, TRACK_FROM, payout, units, pick, pickForGame, fmtPrice, pickText, callBox };
+const imp = p => p < 0 ? -p / (-p + 100) : 100 / (p + 100);
+
+/**
+ * Result of the Leo Pick for one game (DEC-20261102-33).
+ *  res  = the graded row from results.json (pick_result, pick_units), or null
+ *  live = { state, hs, as } from ESPN's scoreboard, or null
+ * -> null (no pick), or { team, price, result: "win"|"loss"|null, units, graded }
+ * A final that is not graded yet is worked out from the score and the price
+ * frozen on the card (graded: false); the morning grade is the record.
+ */
+function settle(g, res, live) {
+  const pk = (g.leo && g.leo.pick !== undefined) ? g.leo.pick : pickForGame(g);
+  if (res && res.pick_result) return { team: res.pick_team, price: res.pick_price, result: res.pick_result, units: res.pick_units, graded: true };
+  if (!pk || !pk.ok) return null;
+  const fin = live && live.state === "post" && live.hs != null && live.as != null ? live
+    : (g.completed && g.hs != null && g.as != null ? { hs: g.hs, as: g.as } : null);
+  if (!fin) return { team: pk.team, price: pk.price, result: null, units: null, graded: false };
+  const won = pk.side === "home" ? fin.hs > fin.as : fin.as > fin.hs;
+  return { team: pk.team, price: pk.price, result: won ? "win" : "loss", units: +units(won ? "win" : "loss", pk.price).toFixed(2), graded: false };
+}
+
+/** DraftKings moneylines from one ESPN scoreboard competition (browser live fetch). */
+function espnMoneyline(c) {
+  const o = ((c && c.odds) || []).find(x => /draftkings/i.test((x.provider && x.provider.name) || "")) || ((c && c.odds) || [])[0];
+  if (!o) return null;
+  const ml = o.moneyline || {}, n = v => { const x = parseFloat(String(v == null ? "" : v).replace(/^\+/, "")); return Number.isFinite(x) ? x : null; };
+  const pickOdds = s => s ? (n(s.current && s.current.odds) ?? n(s.close && s.close.odds)) : null;
+  const home = pickOdds(ml.home) ?? n(o.homeTeamOdds && o.homeTeamOdds.moneyLine), away = pickOdds(ml.away) ?? n(o.awayTeamOdds && o.awayTeamOdds.moneyLine);
+  return home == null && away == null ? null : { home_ml: home, away_ml: away };
+}
+
+/**
+ * How the price on Leo's pick moved since Leo's read: { from, to, toward, text } or null.
+ * toward = the market moved to Leo's side (the pick got more expensive). A benchmark, never an input.
+ */
+function priceMove(g, nowMl) {
+  const pk = (g.leo && g.leo.pick !== undefined) ? g.leo.pick : pickForGame(g);
+  if (!pk || !pk.ok || !nowMl) return null;
+  const to = pk.side === "home" ? nowMl.home_ml : nowMl.away_ml;
+  if (to == null || pk.price == null) return null;
+  const d = imp(to) - imp(pk.price);
+  const toward = d > 0.004 ? true : d < -0.004 ? false : null;
+  return { from: pk.price, to, toward,
+    text: `Price: ${fmtPrice(pk.price)} at Leo's read, ${fmtPrice(to)} now${toward === true ? " (moved toward Leo)" : toward === false ? " (moved against Leo)" : " (no real move)"}` };
+}
+
+const api = { PICK_P, PRICE_LIMIT, TRACK_FROM, payout, units, pick, pickForGame, fmtPrice, pickText, callBox, settle, espnMoneyline, priceMove, imp };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else if (typeof window !== "undefined") window.NBA_PICKS = api;
 })();

@@ -73,7 +73,7 @@ function card(g, date, why) {
   </td></tr>`, `background:${T.card};border:1px solid rgba(26,37,53,.16);border-radius:20px;margin:0 0 14px`);
 }
 
-function build(doc, { why } = {}) {
+function build(doc, { why, record } = {}) {
   const date = doc.date;
   const nice = new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" });
   const games = doc.games.filter(g => g.leo && g.state !== "post");
@@ -103,10 +103,12 @@ function build(doc, { why } = {}) {
       chips: ["&#127936; Full slate", "&#129657; Injury report built in", "&#128274; Frozen before tip"]
     }),
     E.tiles([
-      { label: "Games", value: games.length, sub: esc(nice.split(",")[0]) },
-      { label: "First tip", value: first ? esc(tip(first)) : "&mdash;", sub: "Eastern time" },
-      { label: "Leo Picks", value: picks.length, sub: "60%+, better than -230" },
-      { label: "Leans", value: leans.length, sub: "on the spread" }
+      { label: "Games", value: games.length, sub: first ? `first tip ${esc(tip(first))}` : esc(nice.split(",")[0]) },
+      { label: "Leo Picks tonight", value: picks.length, sub: "60%+, better than -230" },
+      { label: "Leans tonight", value: leans.length, sub: "on the spread" },
+      // Running record from results.json season.picks (DEC-20261102-33)
+      { label: "Leo Picks so far", value: record && record.n ? `${record.won}-${record.lost}` : "0-0",
+        sub: record && record.n ? `${record.units > 0 ? "+" : ""}${(+record.units).toFixed(2)} units since ${new Date(record.from + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}` : "first picks graded tomorrow" }
     ]),
     E.panel("Tonight&rsquo;s Leo Picks (moneyline)", pickRows),
     E.panel("Tonight&rsquo;s leans (spread)", leanRows),
@@ -119,6 +121,7 @@ function build(doc, { why } = {}) {
   const html = E.shell({ title: subject, preheader: [picks.length ? `Leo Picks: ${pickList.join(", ")}.` : "", leans.length ? `Leans: ${leanList.join(", ")}.` : ""].filter(Boolean).join(" ") || "No picks or leans tonight. Leo's read on every game.", body });
   const text = [`Leo NBA card, ${nice}`, "",
     picks.length ? `Leo Picks (moneyline): ${pickList.join(", ")}` : "No Leo Picks tonight.",
+    ...(record && record.n ? [`Leo Picks so far: ${record.won}-${record.lost}, ${record.units > 0 ? "+" : ""}${(+record.units).toFixed(2)} units since ${record.from}`] : []),
     leans.length ? `Leans (spread): ${leanList.join(", ")}` : "No leans tonight.", "",
     ...games.map(g => { const L = g.leo, mk = g.market || {}, W = why ? why.why(g) : null;
       return `${tip(g.tip_utc)}  ${g.away} at ${g.home}  ${[PKS.pickText(g) && PKS.pickText(g).ok ? PKS.pickText(g).badge.toUpperCase() : "", L.lean ? `LEAN ${L.lean.team} ${sgn(L.lean.line)}` : ""].filter(Boolean).join("  ") || "No call"}\n  Leo win chance: ${g.away} ${Math.round(L.p_away * 100)}%, ${g.home} ${Math.round(L.p_home * 100)}%\n  ${NW.compare(g)}\n${W && W.summary ? "  " + W.summary + "\n" : ""}  ${pageUrl(g, date)}\n`; }),

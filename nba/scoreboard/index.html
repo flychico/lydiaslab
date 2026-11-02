@@ -71,12 +71,12 @@
   <p class="data-note" id="data-note">Results and player minutes: ESPN via the open sportsdataverse files. Lines: DraftKings via ESPN. Injury report and live scores: ESPN.</p>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
-<script src="/scripts/lib/nba-why.js?v=20261102c"></script>
-<script src="/scripts/lib/nba-picks.js?v=20261102c"></script>
+<script src="/scripts/lib/nba-why.js?v=20261102d"></script>
+<script src="/scripts/lib/nba-picks.js?v=20261102d"></script>
 <script>
 renderNav("/nba/scoreboard/"); renderFooter();
 const pick = document.getElementById("date-pick"), gamesEl = document.getElementById("games"), statusEl = document.getElementById("status"), kpisEl = document.getElementById("kpis");
-let DAYS = [], RESULTS = {}, MODEL = null, LIVE = {}, liveTimer = null, SCHED = {}, FIRST_CARD = null;
+let RES_DOC = null, LAST_DOC = null, DAYS = [], RESULTS = {}, MODEL = null, LIVE = {}, liveTimer = null, SCHED = {}, FIRST_CARD = null;
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const sgn = v => v == null ? "—" : v === 0 ? "PK" : (v > 0 ? "+" : "") + v;
 const pct = p => p == null ? "—" : Math.round(p * 100) + "%";
@@ -97,7 +97,7 @@ async function j(url) { const r = await fetch(url + "?v=" + Date.now(), { cache:
     for (const c of cards) byDate[c.date] = { ...c, card: true };
     DAYS = Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date));
     try { MODEL = await j("/data/nba/model.json"); } catch (e) {}
-    try { (await j("/data/nba/results.json")).games.forEach(g => RESULTS[g.game_id] = g); } catch (e) {}
+    try { RES_DOC = await j("/data/nba/results.json"); RES_DOC.games.forEach(g => RESULTS[g.game_id] = g); } catch (e) {}
     if (!DAYS.length) { statusEl.innerHTML = '<div class="score-empty">The first NBA card is on its way.</div>'; return; }
     pick.innerHTML = DAYS.map(d => '<option value="' + d.date + '">' + esc(new Date(d.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })) + " · " + d.games + " games" + (d.card ? "" : d.date < nyToday() ? " · finals" : " · schedule") + "</option>").join("");
     const t = nyToday();
@@ -148,6 +148,12 @@ function card(g) {
   const mkLine = mk.home_spread == null ? "—" : g.home + " " + sgn(mk.home_spread);
   const PT = window.NBA_PICKS ? NBA_PICKS.pickText(g) : null, CB = window.NBA_PICKS && NBA_PICKS.callBox ? NBA_PICKS.callBox(g) : null;
   let result = "";
+  // Leo Pick after the final (graded, or worked out from the final score until the morning grade) and the price move before tip (DEC-20261102-33).
+  const ST = window.NBA_PICKS && NBA_PICKS.settle ? NBA_PICKS.settle(g, res, LIVE[g.game_id]) : null;
+  const MV = window.NBA_PICKS && NBA_PICKS.priceMove && LIVE[g.game_id] && LIVE[g.game_id].state === "pre" ? NBA_PICKS.priceMove(g, LIVE[g.game_id].ml) : null;
+  const uTxt = v => (v > 0 ? "+" : "") + (+v).toFixed(2) + "u";
+  const pickLine = ST && ST.result ? '<div class="result-line">Leo Pick ' + esc(ST.team) + " " + esc(NBA_PICKS.fmtPrice(ST.price)) + ': <span class="' + (ST.result === "win" ? "ok" : "no") + '">' + (ST.result === "win" ? "won" : "lost") + "</span>, " + uTxt(ST.units) + (ST.graded ? "" : ' <span class="nolean">(graded in the morning)</span>') + "</div>" : "";
+  const moveLine = MV ? '<div class="why-line">' + esc(MV.text) + "</div>" : "";
   if (res) {
     const parts = ['Leo had ' + esc(L.p_home >= .5 ? g.home : g.away) + ' to win: <span class="' + (res.leo_winner_correct ? "ok" : "no") + '">' + (res.leo_winner_correct ? "right" : "wrong") + "</span>"];
     if (res.lean_result) parts.push('Lean ' + esc(L.lean.team) + " " + sgn(L.lean.line) + ': <span class="' + (res.lean_result === "win" ? "ok" : res.lean_result === "loss" ? "no" : "") + '">' + esc(res.lean_result) + "</span>");
@@ -163,9 +169,10 @@ function card(g) {
       '<div class="market-box"><span class="market-label">DraftKings</span><span class="market-value">' + esc(mkLine) + '</span><span class="market-sub">' + (mk.p_home != null ? "Market " + esc(g.home) + " " + pct(mk.p_home) : "") + "</span></div>" +
       (CB ? '<div class="market-box total"><span class="market-label">Call</span><span class="market-value">' + esc(CB.value) + '</span><span class="market-sub" style="white-space:normal">' + esc(CB.sub) + "</span></div>" : "") +
     "</div>" + result +
-    (PT ? '<div class="why-line pick">' + esc(PT.line) + "</div>" : "") +
+    pickLine + moveLine +
+    (PT && !(ST && ST.result) ? '<div class="why-line pick">' + esc(PT.line) + "</div>" : "") +
     (W && W.compare ? '<div class="why-line compare">' + esc(W.compare) + "</div>" : "") +
-    (W && W.summary ? '<div class="why-line">' + esc(W.summary) + (W.lean && W.lean.status === "none" ? ' <span class="nolean">Not a call.</span>' : "") + "</div>" : "") +
+    (W && W.summary ? '<div class="why-line">' + esc(W.summary) + (W.lean && W.lean.status === "none" && !(PT && PT.ok) ? ' <span class="nolean">Not a call.</span>' : "") + "</div>" : "") +
     '<a class="card-cta" href="' + pageUrl(g) + '">Full preview: why Leo has this number</a>' +
     ((L.missing && (L.missing.home.length || L.missing.away.length)) ? '<div class="out-list">Missing regulars Leo accounted for:' + outList(g, "away") + outList(g, "home") + "</div>" : "") +
     "</div></article>";
@@ -186,9 +193,11 @@ async function pollLive() {
       for (const ev of d.events || []) {
         const c = (ev.competitions || [])[0] || {}, t = (c.status || ev.status || {}).type || {};
         const home = (c.competitors || []).find(x => x.homeAway === "home"), away = (c.competitors || []).find(x => x.homeAway === "away");
-        LIVE[ev.id] = { state: t.state, detail: t.shortDetail || "", hs: home ? +home.score : null, as: away ? +away.score : null };
+        LIVE[ev.id] = { state: t.state, detail: t.shortDetail || "", hs: home ? +home.score : null, as: away ? +away.score : null,
+          ml: window.NBA_PICKS && NBA_PICKS.espnMoneyline ? NBA_PICKS.espnMoneyline(c) : null };
       }
       gamesEl.innerHTML = CURRENT.map(card).join("");
+      if (LAST_DOC) renderKpis(LAST_DOC);
     }
   } catch (e) {}
   if (CURRENT.some(g => !RESULTS[g.game_id] && !(LIVE[g.game_id] && LIVE[g.game_id].state === "post"))) liveTimer = setTimeout(pollLive, 60000);
@@ -221,6 +230,20 @@ function loadSchedule(date) {
   CURRENT = [];
   gamesEl.innerHTML = games.map(schedCard).join("") || '<div class="score-empty">No games on this day.</div>';
 }
+/* Header tiles: tonight's picks (count, then the record as finals come in), tonight's leans,
+   and the Leo Picks record so far from results.json (DEC-20261102-33). */
+function renderKpis(d) {
+  const games = CURRENT, u = v => (v > 0 ? "+" : "") + (+v).toFixed(2);
+  const P = window.NBA_PICKS && NBA_PICKS.settle ? games.map(g => NBA_PICKS.settle(g, RESULTS[g.game_id], LIVE[g.game_id])).filter(Boolean) : [];
+  const done = P.filter(x => x.result), w = done.filter(x => x.result === "win").length, un = done.reduce((t, x) => t + (x.units || 0), 0);
+  const S = RES_DOC && RES_DOC.season && RES_DOC.season.picks;
+  const inj = d.injuries_as_of ? new Date(d.injuries_as_of).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) : null;
+  kpisEl.innerHTML =
+    '<article class="kpi"><div class="label">Games</div><div class="value">' + games.length + '</div><div class="sub">' + (games[0] ? "first tip " + tip(games[0].tip_utc) : "") + (inj ? " · injuries " + inj : "") + "</div></article>" +
+    '<article class="kpi"><div class="label">Leo Picks tonight</div><div class="value">' + (done.length ? w + "-" + (done.length - w) : P.length) + '</div><div class="sub">' + (done.length ? u(un) + " units" + (done.length < P.length ? ", " + (P.length - done.length) + " to go" : "") : "60%+, better than -230") + "</div></article>" +
+    '<article class="kpi"><div class="label">Leans tonight</div><div class="value">' + games.filter(g => g.leo.lean).length + '</div><div class="sub">on the spread</div></article>' +
+    '<article class="kpi"><div class="label">Leo Picks so far</div><div class="value">' + (S && S.n ? S.won + "-" + S.lost : "0-0") + '</div><div class="sub">' + (S && S.n ? u(S.units) + " units since " + new Date(S.from + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }) : "first picks graded tomorrow") + "</div></article>";
+}
 async function load() {
   statusEl.textContent = "Loading…"; gamesEl.innerHTML = "";
   const day = DAYS.find(d => d.date === pick.value);
@@ -229,11 +252,7 @@ async function load() {
     const d = await j("/data/nba/picks-" + pick.value + ".json");
     const games = d.games.filter(g => g.leo);
     const leans = games.filter(g => g.leo.lean).length;
-    kpisEl.innerHTML =
-      '<article class="kpi"><div class="label">Games</div><div class="value">' + games.length + '</div><div class="sub">' + esc(pick.value) + "</div></article>" +
-      '<article class="kpi"><div class="label">First tip</div><div class="value">' + (games[0] ? tip(games[0].tip_utc) : "—") + '</div><div class="sub">Eastern time</div></article>' +
-      '<article class="kpi"><div class="label">Leans</div><div class="value">' + leans + '</div><div class="sub">on the spread</div></article>' +
-      '<article class="kpi"><div class="label">Injury report</div><div class="value">' + (d.injuries_as_of ? new Date(d.injuries_as_of).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) : "—") + '</div><div class="sub">as of, Eastern</div></article>';
+    CURRENT = games; LAST_DOC = d; renderKpis(d);
     statusEl.textContent = "";
     CURRENT = games;
     gamesEl.innerHTML = games.map(card).join("") || '<div class="score-empty">No games on this day.</div>';
