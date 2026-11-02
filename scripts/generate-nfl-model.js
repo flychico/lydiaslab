@@ -83,7 +83,12 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
 
 (async function main(){
   const target = process.argv[2] || new Date(Date.now()+864e5).toISOString().slice(0,10);
-  console.log(`NFL model for ${target}`);
+  // EARLY READ (DEC-20261102-05, SEO-04): a slate later in the week, so its
+  // game pages exist from Tuesday. Writes picks-<date>.json only: never the
+  // -today files, never prediction-history.csv or ml-inputs-history.csv.
+  // Grading, closing line value and the emails still use the game-day reads.
+  const EARLY = process.argv.includes("--early");
+  console.log(`NFL model for ${target}${EARLY ? " (early read)" : ""}`);
 
   const games = get(FEED);
   const played = s => games.filter(g => g.season===String(s) && g.away_score!=="" && g.home_score!=="");
@@ -500,6 +505,7 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
     // Only promote to the rolling -today file when there is something to show.
     // Most calendar days have no NFL games; without this guard the daily
     // gather blanks the live pages every Tuesday by publishing an empty array.
+    if(EARLY){ continue; }
     if(Array.isArray(data) && data.length){
       fs.writeFileSync(path.join(dir,`${name}-today.json`), JSON.stringify(data,null,2));
     } else {
@@ -515,6 +521,7 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
     The append-only history below is what grading reads instead. Nothing here
     is ever rewritten.
   */
+  if (EARLY) { console.log(`  early read: picks-${target}.json written; history and -today files untouched`); return; }
   try {
     const { record } = require("./lib/prediction-history");
     const h = record(dir, picks);

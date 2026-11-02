@@ -82,7 +82,9 @@ function summary(m) {
     const opp = g.pick === m.home ? m.away : m.home;
     const venue = m.stadium ? ` at ${m.stadium}` : "";
     parts.push(`Leo gives ${the(g.pick)} ${aPct(g.prob)} chance to beat ${the(opp)} on ${partOfDay(m)}, ${longDate(m.date)},${venue}${m.week ? `, in Week ${m.week}` : ""}.`);
-    if (!pickPaused(m.date)) parts.push(g.call === "leo_pick" ? "That is above 60%, so it counts as a Leo pick." : "Neither team is above 60%, so Leo calls it too close to call.");
+    // Three calls (DEC-20261102-01): the moneyline call also needs a price better than -230.
+    if (g.calls) parts.push(g.calls.ml.call ? "That is above 60% at a price better than -230, so the moneyline is a call." : g.prob > 0.60 ? "That is above 60%, but the price is past the -230 limit, so the moneyline is a PASS." : "Neither team is above 60%, so the moneyline is a PASS.");
+    else if (!pickPaused(m.date)) parts.push(g.call === "leo_pick" ? "That is above 60%, so it counts as a Leo pick." : "Neither team is above 60%, so Leo calls it too close to call.");
     const tot = g.proj_total != null ? `Leo projects ${g.proj_total} total points${m.total_line != null ? ` (posted total ${m.total_line})` : ""}` : "";
     const mar = g.proj_spread != null ? `expects ${byTeam(m, g.proj_spread) === "even" ? "an even game" : "the " + byTeam(m, g.proj_spread)}${m.spread_line != null ? ` (posted spread ${lineTeam(m, m.spread_line)})` : ""}` : "";
     if (tot || mar) parts.push(`${tot}${tot && mar ? " and " : ""}${tot ? mar : mar.charAt(0).toUpperCase() + mar.slice(1)}.`);
@@ -183,7 +185,7 @@ function why(m) {
   const when = m.leo.captured_at ? new Date(m.leo.captured_at).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + " ET" : "";
   return `
   <h2 class="sec">Why Leo has the ${esc(TEAMS.nick(g.pick))} at ${pct(g.prob)}</h2>
-  <p class="sub">What moved Leo's win chance away from a coin flip for this game, from the inputs frozen before kickoff.</p>
+  <p class="sub">What moved Leo's win chance away from a coin flip for this game, ${m.leo.early ? "from Leo's early read, which updates until kickoff" : "from the inputs frozen before kickoff"}.</p>
   <ul style="margin:0 0 6px;padding-left:20px;line-height:1.7">${items.join("")}</ul>${note}
   <p class="dim" style="margin:8px 0 0">Leo knows team results, quarterback play and the injury report as of its last read${when ? ` (${esc(when)})` : ""}. It does not know game plans, weather changes or news after that read.</p>`;
 }

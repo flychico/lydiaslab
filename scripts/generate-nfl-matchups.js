@@ -152,6 +152,16 @@ function teamProfile(rows, team, active){
   // Leo's numbers as they stood BEFORE kickoff -- never the revised file.
   const DATA=path.join(ROOT,"data/nfl");
   const FROZEN_GAMES=frozenPredictions(path.join(DATA,"prediction-history.csv"), target);
+  // EARLY READ (DEC-20261102-05, SEO-04): before game day there is no frozen
+  // read yet, so the page shows the latest early read from picks-<date>.json,
+  // marked early. The game-day gathers replace it with the frozen read.
+  const EARLY=process.argv.includes("--early");
+  let EARLY_GAMES=[];
+  if(EARLY){
+    try{ EARLY_GAMES=JSON.parse(fs.readFileSync(path.join(DATA,`picks-${target}.json`),"utf8")); }catch(e){ EARLY_GAMES=[]; }
+    const at=new Date().toISOString();
+    EARLY_GAMES=(Array.isArray(EARLY_GAMES)?EARLY_GAMES:[]).map(x=>({...x, captured_at:x.generated_at||at, minutes_before_kickoff:null, early:true}));
+  }
   const FROZEN_PROPS=frozenProps(path.join(DATA,"prop-prediction-history.csv"), target);
   const readLedger=f=>{
     const fp=path.join(DATA,f); if(!fs.existsSync(fp)) return [];
@@ -165,10 +175,11 @@ function teamProfile(rows, team, active){
   const num=v=>{const x=parseFloat(v);return Number.isFinite(x)?x:null;};
 
   const leoRead=(g,matchup)=>{
-    const fg=FROZEN_GAMES.find(x=>x.game_id===g.game_id);
+    const fg=FROZEN_GAMES.find(x=>x.game_id===g.game_id) || EARLY_GAMES.find(x=>x.game_id===g.game_id);
     const fp=FROZEN_PROPS.filter(x=>x.matchup===matchup && x.market!=="ANYTIME_TD");
     if(!fg && !fp.length) return null;
     return {
+      early: !!(fg && fg.early),
       captured_at: fg?fg.captured_at:(fp[0]&&fp[0].captured_at)||null,
       minutes_before_kickoff: fg?fg.minutes_before_kickoff:null,
       game: fg ? { pick:fg.pick, prob:fg.model_prob, market_prob:fg.market_prob, price:fg.price,
@@ -339,7 +350,7 @@ function teamProfile(rows, team, active){
   const dir=path.join(ROOT,"data/nfl/matchups");
   fs.mkdirSync(dir,{recursive:true});
   fs.writeFileSync(path.join(dir,`${target}.json`), JSON.stringify(out,null,2));
-  fs.writeFileSync(path.join(dir,"today.json"), JSON.stringify(out,null,2));
+  if(!EARLY) fs.writeFileSync(path.join(dir,"today.json"), JSON.stringify(out,null,2));
 
   const withQb=out.filter(m=>m.sides.away.this_season.qb&&m.sides.home.this_season.qb).length;
   const withScorers=out.filter(m=>m.sides.away.this_season.top_scorers.length).length;

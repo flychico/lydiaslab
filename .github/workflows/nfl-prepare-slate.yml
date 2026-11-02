@@ -52,6 +52,11 @@ on:
         description: "YYYY-MM-DD slate to gather. Blank = next slate date in America/New_York."
         required: false
         type: string
+      early:
+        description: "Also build early reads and game pages for the next 6 days"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -184,3 +189,34 @@ jobs:
           git commit -m "NFL prepare slate ${{ steps.slate_date.outputs.date }}"
           git pull --rebase
           git push
+
+      # EARLY READS (DEC-20261102-05, SEO-04): game pages for the rest of the
+      # week from the daily morning wave, so "X vs Y prediction" pages exist
+      # from Tuesday. Writes picks-<date>.json and the pages only: no -today
+      # files, no prediction history, no prop lines, no emails. Game-day
+      # gathers replace them with the frozen read. Never fails the gather.
+      - name: Early reads and game pages for the next 6 days
+        if: github.event.schedule == '53 12 * * *' || github.event.inputs.early == 'true'
+        run: |
+          set -uo pipefail
+          git pull --rebase -q || true
+          built=0
+          for d in 1 2 3 4 5 6; do
+            D=$(TZ="America/New_York" date -d "+$d day" +%F)
+            N=$(node scripts/nfl-slate-size.js "$D" || echo unknown)
+            if [ "$N" = "0" ] || [ "$N" = "unknown" ]; then continue; fi
+            echo "Early read for $D ($N games)"
+            node scripts/generate-nfl-model.js "$D" --early &&
+            node scripts/generate-nfl-matchups.js "$D" --early &&
+            node scripts/render-nfl-matchup-pages.js "$D" --early && built=$((built+1)) || echo "::warning::early read for $D failed"
+          done
+          if [ "$built" = "0" ]; then echo "No early reads built."; exit 0; fi
+          node scripts/build-game-archives.js nfl || true
+          node scripts/generate-sitemap.js || true
+          git config user.name "lydia-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "No change to commit."; exit 0; fi
+          git commit -m "NFL early reads"
+          git pull --rebase
+          git push || echo "::warning::early reads not pushed"

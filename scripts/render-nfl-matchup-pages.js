@@ -252,7 +252,7 @@ function leoSection(m){
   <p class="dim" style="margin:0 0 10px">A call is graded after the game. PASS means no call: a moneyline needs more than 60% and a price better than -230; a spread needs Leo 1 point off the line and his two models agreeing on the winner; a total needs Leo 1.5 to 7 points off the line.</p>`:"";
   const game=g?`${callsHtml}
   <div class="leo-grid">
-    <div class="box"><span class="lbl">${pickPaused(m.date)?"Leo win chance":g.call==="leo_pick"?"Leo pick":"Too close to call"}</span><span class="val">${esc(g.pick)} ${pct(g.prob)}</span><span class="lbl2">${pickPaused(m.date)?"chance to win; picks were paused this week":g.call==="leo_pick"?"Leo gives this team more than 60%"+(g.price!=null&&g.price!==""?"; price "+esc((+g.price>0?"+":"")+g.price)+" at the read":""):"under 60%, so no pick; win chance only"}</span></div>
+    <div class="box"><span class="lbl">${pickPaused(m.date)||g.calls?"Leo win chance":g.call==="leo_pick"?"Leo pick":"Too close to call"}</span><span class="val">${esc(g.pick)} ${pct(g.prob)}</span><span class="lbl2">${pickPaused(m.date)?"chance to win; picks were paused this week":g.calls?"chance to win; the moneyline call is in the box above":g.call==="leo_pick"?"Leo gives this team more than 60%"+(g.price!=null&&g.price!==""?"; price "+esc((+g.price>0?"+":"")+g.price)+" at the read":""):"under 60%, so no pick; win chance only"}</span></div>
     <div class="box"><span class="lbl">Leo total</span><span class="val">${v(g.proj_total)}</span><span class="lbl2">points, both teams</span></div>
     <div class="box"><span class="lbl">Leo margin</span><span class="val">${esc(fav(m,g.proj_spread))}</span><span class="lbl2">expected winning margin</span></div>
   </div>`:"";
@@ -269,7 +269,7 @@ function leoSection(m){
   }).join("");
   return `
   <h2 class="sec">Leo&rsquo;s read</h2>
-  <p class="sub">What the model expected, frozen before kickoff${when?" ("+esc(when)+")":""}. Each player projection is rate &times; volume &times; opponent adjustment, and the columns show every input. None of this is a wager.</p>
+  <p class="sub">${L.early?`Early read${when?" ("+esc(when)+")":""}. Leo updates it every morning and again on game day; the last read before kickoff is frozen and graded. Player props are added on game day.`:`What the model expected, frozen before kickoff${when?" ("+esc(when)+")":""}.`} Each player projection is rate &times; volume &times; opponent adjustment, and the columns show every input. None of this is a wager.</p>
   ${game}${props}`;
 }
 
@@ -654,7 +654,7 @@ ${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternT
   <p style="text-align:center;margin:0"><a class="wk-link" href="${weekUrl(m)}">Every game this week on Leo&rsquo;s Week ${v(m.week,"")} card &rarr;</a></p>
   ${COPY.summary(m)}
 
-  <div class="notice note">This is a pre-game analysis page. Every stat above the Final result comes from games played <b>before</b> this one${m.pregame_through_week?" (through Week "+m.pregame_through_week+")":""}, and Leo&rsquo;s numbers were frozen before kickoff. Market numbers are the closing line. Nothing here is a wager. Calls are a public test, graded after every game.</div>
+  <div class="notice note">This is a pre-game analysis page. Every stat above the Final result comes from games played <b>before</b> this one${m.pregame_through_week?" (through Week "+m.pregame_through_week+")":""}, and ${m.leo&&m.leo.early?"Leo&rsquo;s numbers are an early read that updates until kickoff, when the last read is frozen":"Leo&rsquo;s numbers were frozen before kickoff"}. Market numbers are ${m.leo&&m.leo.early?"the latest posted line":"the closing line"}. Nothing here is a wager. Calls are a public test, graded after every game.</div>
 
   ${leoSection(m)}
 
@@ -723,6 +723,9 @@ ${SEO.relatedLinks({sport:"NFL",root:ROOT,slug:m.slug||String(m.url).split("/").
   console.log(`rendered ${wrote} matchup pages for ${target}`);
   // The weekly card reads the same matchup data, so it refreshes whenever
   // any page of its week is rendered (prepare, publish and grade runs).
+  // Early reads (DEC-20261102-05) leave the week card to the game-day runs,
+  // so /nfl/week/ keeps the week still being played.
+  if (!process.argv.includes("--early"))
   try { require("./generate-nfl-week-card").build(target); }
   catch (e) { console.warn(`  week card NOT written: ${e.message}`); }
   console.log(`sitemap.xml: ${require("./lib/sitemap").writeSitemap(ROOT)} pages`);
