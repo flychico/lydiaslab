@@ -138,8 +138,10 @@ table.calls tbody tr:hover{background:var(--bg-elev);}
       <li><b>Leo picks:</b> a team Leo gives more than a 60% chance to win. Picks were paused from October 17 to October 31 and came back on November 1; the earlier picks stay on the record as history. Under 60% is too close to call and is not graded.</li>
       <li><b>Prop calls:</b> Leo&rsquo;s side of the posted line for QB passing, RB rushing and WR receiving yards. Inside 5% of the line there is no call.</li>
       <li>Losses stay on the record. Players ruled out are marked excluded, never deleted.</li>
-      <li><b>Spread:</b> the side Leo&rsquo;s projected margin favours against the posted spread. Inside 1 point there is no call. Shown as information, never a pick.</li>
-      <li><b>Totals:</b> Leo&rsquo;s projected total and how far off it landed. Over and under calls were switched off on October 17; the ones graded before then stay on the record as history.</li>
+      <li><b>Three calls per game from November 5:</b> moneyline, spread and total. Each is a call or a PASS, and only calls are graded.</li>
+      <li><b>Moneyline:</b> a team Leo gives more than 60%, priced better than -230. A dearer favourite is a PASS.</li>
+      <li><b>Spread:</b> the side Leo&rsquo;s projected margin favours when he is 1 point or more off the line, and only when his margin and his win chance agree on the winner.</li>
+      <li><b>Total:</b> over or under when Leo&rsquo;s total is 1.5 to 7 points off the line. Total calls were paused from October 17 to November 4.</li>
       <li><b>Touchdown chances</b> have no posted line, so there is no side. They are graded as chances: of the players Leo gave about a 25% chance, roughly 1 in 4 should score.</li>
     </ul>
   </details>
@@ -300,10 +302,10 @@ function renderRecords(){
     recTile("Quarterbacks",p.QB)+
     recTile("Running backs",p.RB)+
     recTile("Receivers",p.WR)+
-    (data.spreads?recTile("Spread",tallyFor(spreads().filter(x=>x.side)),"information, not a pick"):"")+
-    (data.totals?recTile("Totals, calls off Oct 17",tallyFor(totals().filter(x=>x.side)),"history"):"")+
+    (data.spreads?recTile("Spread calls",tallyFor(spreads().filter(x=>x.side)),"Leo 1 point off the line"):"")+
+    (data.totals?recTile("Total calls",tallyFor(totals().filter(x=>x.side)),"over or under, paused Oct 17 to Nov 4"):"")+
     tdTile()+
-    recTile("Leo picks, from Nov 1",tallyFor(back),"a team Leo gives more than 60%")+
+    recTile("Moneyline calls, from Nov 1",tallyFor(back),"more than 60%; from Nov 5 priced better than -230")+
     recTile("Winner picks, Sep 27 to Oct 11",tallyFor(v2),"history, above 60%")+
     (v1.length?recTile("Week 2 winners, retired model",tallyFor(v1),"history, every game"):"");
 }

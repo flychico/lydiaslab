@@ -134,7 +134,11 @@ function gameCalls() {
     const isHome = r.pick === r.home;
     const closeProb = isHome ? cHome : cAway;
     const paused = r.date >= "2026-10-17" && r.date <= "2026-10-31";
-    const isPick = prob != null && prob > 0.60 && String(r.model_version || "").startsWith("leo-nflml-v2");
+    // DEC-20261102-01: from Nov 5 the moneyline call also needs a price
+    // better than -230 (scripts/lib/nfl-calls.js).
+    const CALLS = require("./lib/nfl-calls");
+    const isPick = prob != null && prob > 0.60 && String(r.model_version || "").startsWith("leo-nflml-v2")
+      && (r.date < CALLS.RULES.FROM || !!CALLS.calls(r).ml.call);
     if (isPick) {
       const res = winner === "TIE" ? "P" : winner === r.pick ? "W" : "L";
       out.push({ date: r.date, kind: "moneyline", market: "MONEYLINE", group: "ML", player: "", team: r.pick, matchup: r.matchup,
@@ -146,7 +150,8 @@ function gameCalls() {
     }
     // Spread side at the first read: Leo's home margin against the home line.
     const m = num(r.exp_margin), l0 = num(r.spread_line), lc = num(g.spread_line);
-    if (m != null && l0 != null && Math.abs(m - l0) >= SPREAD_FLOOR) {
+    const spreadOk = r.date < require("./lib/nfl-calls").RULES.FROM || !!require("./lib/nfl-calls").calls(r).spread.call;
+    if (m != null && l0 != null && Math.abs(m - l0) >= SPREAD_FLOOR && spreadOk) {
       const homeSide = m > l0, marg = hs - as;
       // home_line is stated as home favoured by +x; home covers if margin > line.
       const res = marg === l0 ? "P" : ((marg > l0) === homeSide ? "W" : "L");

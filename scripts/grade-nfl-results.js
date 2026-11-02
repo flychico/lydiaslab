@@ -49,6 +49,8 @@ const DATE = argDate || new Date().toLocaleDateString("en-CA", { timeZone: "Amer
 // (DEC-20261017-06) and brought back from 2026-11-01 (DEC-20261101-01).
 // Inside the pause each game keeps its win chance and Brier, ungraded.
 const ML_PICKS_PAUSED = ["2026-10-17", "2026-10-31"];
+// One rule book for every call from the 2026-11-05 slate (DEC-20261102-01).
+const CALLS = require("./lib/nfl-calls");
 
 const n = v => { const x = parseFloat(v); return Number.isFinite(x) ? x : null; };
 const r3 = x => x == null ? null : Math.round(x * 1000) / 1000;
@@ -200,9 +202,13 @@ function main() {
       // those rows keep their Brier for learning but are not graded as
       // picks. From 2026-11-01 (DEC-20261101-01) a Leo Pick is graded again.
       const retired = DATE >= ML_PICKS_PAUSED[0] && DATE <= ML_PICKS_PAUSED[1];
-      const res = (tooClose || retired) ? "" : winner === "TIE" ? "P" : (p.pick === winner ? "W" : "L");
+      let res = (tooClose || retired) ? "" : winner === "TIE" ? "P" : (p.pick === winner ? "W" : "L");
+      // DEC-20261102-01: from 2026-11-05 a moneyline call also needs a price
+      // better than -230; a dearer favourite is a PASS, kept ungraded.
+      const mlCall = DATE >= CALLS.RULES.FROM ? CALLS.calls(p).ml : null;
+      if (mlCall) res = mlCall.call ? (winner === "TIE" ? "P" : (p.pick === winner ? "W" : "L")) : "";
       rows.push({ ...base, market: "moneyline",
-        status: retired ? "win_probability" : tooClose ? "too_close_to_call" : p.status,
+        status: retired ? "win_probability" : tooClose ? "too_close_to_call" : (mlCall && !mlCall.call) ? "pass_price" : p.status,
         leo_side: p.pick, leo_value: r3(p.model_prob), market_value: r3(p.market_prob),
         market_price: p.price ?? "",
         edge: r3(p.edge), actual_value: winner, result: res,
@@ -232,7 +238,8 @@ function main() {
       // No side when the frozen prediction named none (DEC-20261017-03: totals
       // sides are off while no backtest supports them). Older captures always
       // carried the sign of the gap here, so their grading is unchanged.
-      const side = gap == null || Math.abs(gap) < TOTAL_FLOOR || !p.total_side ? "" : (gap > 0 ? "Over" : "Under");
+      let side = gap == null || Math.abs(gap) < TOTAL_FLOOR || !p.total_side ? "" : (gap > 0 ? "Over" : "Under");
+      if (DATE >= CALLS.RULES.FROM) side = CALLS.calls(p).total.call || "";   // DEC-20261102-01
       const res = !side ? "" : total === line ? "P"
                 : ((total > line) === (side === "Over") ? "W" : "L");
       const leoErr = Math.abs(p.proj_total - total);
@@ -253,7 +260,8 @@ function main() {
       // both numbers are stated from the home side: Leo takes the home team
       // when he expects them to beat the line, the away team when he doesn't
       const gap = line == null ? null : p.proj_spread - line;
-      const side = gap == null || Math.abs(gap) < SPREAD_FLOOR ? "" : (gap > 0 ? p.home : p.away);
+      let side = gap == null || Math.abs(gap) < SPREAD_FLOOR ? "" : (gap > 0 ? p.home : p.away);
+      if (DATE >= CALLS.RULES.FROM) side = CALLS.calls(p).spread.call || "";  // DEC-20261102-01
       let res = "";
       if (side) {
         res = "P";

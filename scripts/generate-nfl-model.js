@@ -426,6 +426,18 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
       away_ml:n(g.away_moneyline), home_ml:n(g.home_moneyline)
     };
   });
+  // Leo's three calls per game (DEC-20261102-01): moneyline, spread, total,
+  // each a call or PASS, from one rule book (scripts/lib/nfl-calls.js). From
+  // the 2026-11-05 slate the frozen spread_side and total_side ARE the calls,
+  // so the grader grades exactly what the card showed.
+  const CALLS = require("./lib/nfl-calls");
+  for (const p of picks) {
+    if (p.date < CALLS.RULES.FROM) continue;
+    const c = CALLS.calls(p);
+    p.calls = { ml: c.ml, spread: c.spread, total: c.total, count: c.count };
+    p.spread_side = c.spread.call || null;
+    p.total_side = c.total.call || null;
+  }
 
   // ---- injury report -------------------------------------------------------
   let injuries=[];
@@ -466,6 +478,23 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
 
   const dir=path.join(ROOT,"data/nfl");
   fs.mkdirSync(dir,{recursive:true});
+  // A game that has kicked off keeps the read it had before kickoff
+  // (DEC-20261102-01). Later gathers on the same date re-ran every game, so
+  // the scoreboard showed numbers (and now calls) revised after kickoff that
+  // differed from what was graded (watch list #25). Its prior entry was
+  // written by the last run before kickoff and is kept as is.
+  {
+    const prevFile = path.join(dir, `picks-${target}.json`);
+    let prev = []; try { prev = JSON.parse(fs.readFileSync(prevFile, "utf8")); } catch (e) {}
+    const byId = new Map((Array.isArray(prev) ? prev : []).map(p => [p.game_id, p]));
+    const { kickoffUtc } = require("./lib/prediction-history");
+    let kept = 0;
+    for (let i = 0; i < picks.length; i++) {
+      const k = Date.parse(kickoffUtc(picks[i].date, picks[i].kickoff));
+      if (Number.isFinite(k) && Date.now() >= k && byId.has(picks[i].game_id)) { picks[i] = byId.get(picks[i].game_id); kept++; }
+    }
+    if (kept) console.log(`  started games: ${kept} kept as read before kickoff`);
+  }
   for(const [name,data] of [["team-stats",teamStats],["picks",picks],["injuries",injuries],["results",results]]){
     fs.writeFileSync(path.join(dir,`${name}-${target}.json`), JSON.stringify(data,null,2));
     // Only promote to the rolling -today file when there is something to show.

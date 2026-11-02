@@ -86,27 +86,44 @@ const fav = (m, x) => x == null ? "n/a" : x > 0 ? `${m.home} by ${Math.round(x *
 const spreadTxt = (m, l) => l == null ? "n/a" : l > 0 ? `${m.home} -${l}` : l < 0 ? `${m.away} -${-l}` : "PK";
 const am = v => v == null || v === "" ? "" : (+v > 0 ? "+" : "") + v;
 
+// DEC-20261102-01: from the Nov 5 slate every game carries three calls
+// (moneyline, spread, total), each a call or PASS, from scripts/lib/nfl-calls.js.
+const CALLS = require("./lib/nfl-calls");
+const callsOf = (m, g) => g && m.date >= CALLS.RULES.FROM ? (g.calls || CALLS.calls({ ...g, away: m.away, home: m.home, model_prob: g.prob })) : null;
+
+// The whole slate at a glance: one row per game, one column per market.
+function callsTable(list) {
+  const th = t => `<td style="font-family:${E.SANS};font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:${E.T.dim};padding:4px 4px 6px">${t}</td>`;
+  const td = (c, first) => `<td style="font-family:${E.SANS};font-size:${first ? 13 : 14}px;padding:7px 4px;border-top:1px solid ${E.X.line};${c && c.call ? `font-weight:800;color:${E.T.good}` : `color:${E.T.dim}`}">${c === true ? "" : c && c.call ? esc(c.label) : "PASS"}</td>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${th("Game")}${th("Moneyline")}${th("Spread")}${th("Total")}</tr>` +
+    list.filter(r => r.C).map(({ m, C }) => `<tr><td style="font-family:${E.SANS};font-size:13px;padding:7px 4px;border-top:1px solid ${E.X.line};color:${E.T.text}"><b>${esc(m.away)} @ ${esc(m.home)}</b><br><span style="color:${E.T.dim};font-size:11px">${esc(clock(m.kickoff))}</span></td>${td(C.ml)}${td(C.spread)}${td(C.total)}</tr>`).join("") +
+    `</table><div style="font-family:${E.SANS};font-size:11px;color:${E.T.dim};margin-top:8px">PASS means no call. Moneyline needs more than 60% and a price better than -230. Spread needs Leo 1 point off the line. Total needs Leo 1.5 to 7 points off the line.</div>`;
+}
+
 function cardHtml(games, rows, props, nice, week, subject) {
-  const picks = rows.filter(r => r.g && r.g.call === "leo_pick");
+  const withCalls = rows.map(r => ({ ...r, C: callsOf(r.m, r.g) }));
+  const newRules = withCalls.some(r => r.C);
+  const picks = newRules ? withCalls.filter(r => r.C && r.C.ml.call) : rows.filter(r => r.g && r.g.call === "leo_pick");
+  const nCalls = withCalls.reduce((a, r) => a + (r.C ? r.C.count : 0), 0);
   const firstKick = games[0] ? clock(games[0].kickoff) : "";
   const allTd = rows.flatMap(r => r.top).sort((a, b) => b.prob - a.prob);
   const body = [
     E.header("NFL"),
     E.hero({ eyebrow: `Leo NFL &middot; Week ${esc(week)} &middot; ${esc(nice)}`,
       title: `Week ${esc(week)} card: ${games.length} game${games.length === 1 ? "" : "s"}`,
-      subtitle: "Leo&rsquo;s pick where he gives a team more than a 60% chance, his spread and total beside the market, and the players most likely to score. Every number is frozen before kickoff and graded on the site.",
+      subtitle: newRules ? "Three calls per game: moneyline, spread and total. Each is a call or a PASS, and every call is graded after the game." : "Leo&rsquo;s pick where he gives a team more than a 60% chance, his spread and total beside the market, and the players most likely to score. Every number is frozen before kickoff and graded on the site.",
       chips: ["&#127944; Full slate", "&#129657; Injury report built in", "&#128274; Frozen before kickoff", "&#128202; Graded every game"] }),
     E.tiles([
       { label: "Games", value: games.length, sub: esc(nice.split(",")[0]) },
       { label: "First kickoff", value: esc(firstKick.replace(" ET", "")), sub: "Eastern time" },
-      { label: "Leo picks", value: picks.length, sub: "more than 60%" },
+      newRules ? { label: "Leo&rsquo;s calls", value: nCalls, sub: `of ${games.length * 3} possible` } : { label: "Leo picks", value: picks.length, sub: "more than 60%" },
       { label: "Top TD chance", value: allTd[0] ? `${Math.round(allTd[0].prob * 100)}%` : "n/a", sub: allTd[0] ? esc(allTd[0].player) : "" }
     ]),
-    E.panel("Leo&rsquo;s picks", E.rows(picks.map(({ m, g }) => [
+    newRules ? E.panel("Leo&rsquo;s calls", callsTable(withCalls)) : E.panel("Leo&rsquo;s picks", E.rows(picks.map(({ m, g }) => [
       `<b>${esc(TEAMS.full(g.pick))}</b> ${Math.round(g.prob * 100)}%${g.price != null && g.price !== "" ? ` <span style="color:${E.T.dim}">${esc(am(g.price))}</span>` : ""}`,
       `${esc(m.away)} at ${esc(m.home)} &middot; ${esc(clock(m.kickoff))}`]),
       "No team clears 60% on this slate, so Leo makes no pick. Every game below still has his read.")),
-    ...rows.map(({ m, g, top }) => {
+    ...withCalls.map(({ m, g, top, C }) => {
       const [ac, hc] = E.pairColors(E.NFL_COLORS, m.away, m.home);
       const P = PICKS[m.matchup] || {};
       const leoHome = g && g.prob != null ? (g.pick === m.home ? g.prob : 1 - g.prob) : null;
@@ -122,10 +139,14 @@ function cardHtml(games, rows, props, nice, week, subject) {
       return E.gameCard({
         href, awayColor: ac, homeColor: hc,
         time: esc(clock(m.kickoff)), venue: esc(m.stadium || ""),
-        badges: [isPick ? E.pill(`Leo pick ${esc(g.pick)}`, "good") : g ? E.pill("Too close to call", "muted") : E.pill("Read pending", "muted")],
+        badges: [C ? E.pill(C.count ? `${C.count} call${C.count === 1 ? "" : "s"}` : "All pass", C.count ? "good" : "muted") : isPick ? E.pill(`Leo pick ${esc(g.pick)}`, "good") : g ? E.pill("Too close to call", "muted") : E.pill("Read pending", "muted")],
         away: team(m.away, "away"), home: team(m.home, "home"),
         prob: leoHome == null ? null : { away: 1 - leoHome, label: "Leo win chance", text: `${esc(m.away)} ${Math.round((1 - leoHome) * 100)}% &middot; ${esc(m.home)} ${Math.round(leoHome * 100)}%` },
-        boxes: [
+        boxes: C ? [
+          { label: "Moneyline", value: C.ml.call ? esc(C.ml.label) : "PASS", sub: esc(C.ml.call ? `${Math.round(g.prob * 100)}% to win` : C.ml.pass), tone: C.ml.call ? "good" : "muted" },
+          { label: "Spread", value: C.spread.call ? esc(C.spread.label) : "PASS", sub: esc(C.spread.call ? `Leo ${fav(m, g.exp_margin)}` : C.spread.pass), tone: C.spread.call ? "good" : "muted" },
+          { label: "Total", value: C.total.call ? esc(C.total.label) : "PASS", sub: esc(C.total.call ? `Leo ${g.proj_total}` : C.total.pass), tone: C.total.call ? "good" : "muted" }
+        ] : [
           { label: "Spread", value: esc(spreadTxt(m, g ? g.spread_line : m.spread_line)), sub: g ? `Leo ${esc(fav(m, g.exp_margin))}` : "" , tone: "steel" },
           { label: "Total", value: esc(g && g.total_line != null ? g.total_line : (m.total_line ?? "n/a")), sub: g && g.proj_total != null ? `Leo ${esc(g.proj_total)}` : "", tone: "steel" },
           { label: isPick ? "Leo pick" : "Leo", value: g ? `${esc(g.pick)} ${Math.round(g.prob * 100)}%` : "n/a", sub: isPick ? "more than 60%, graded" : "under 60%, no pick", tone: isPick ? "good" : "gold" }

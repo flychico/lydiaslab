@@ -13,6 +13,7 @@
  *   QB  most pass attempts        RB  most carries        WR  most targets
  */
 const { execFileSync } = require("child_process");
+const CALLS = require("./lib/nfl-calls");   // DEC-20261102-01
 const { buildRatings, headToHead } = require("./lib/nfl-ratings.js");
 const { frozenPredictions, frozenProps } = require("./lib/prediction-history.js");
 const { splitCsv } = require("./lib/odds-history.js");
@@ -173,6 +174,8 @@ function teamProfile(rows, team, active){
       game: fg ? { pick:fg.pick, prob:fg.model_prob, market_prob:fg.market_prob, price:fg.price,
                    // leo-nflml-v2: a Leo Pick only above 60%, else Too Close to Call
                    call: String(fg.model_version||"").startsWith("leo-nflml-v2") ? (fg.model_prob>0.60?"leo_pick":"too_close_to_call") : null,
+                   // DEC-20261102-01: the three calls, from the frozen read.
+                   calls: fg.date >= CALLS.RULES.FROM ? (({ml,spread,total,count})=>({ml,spread,total,count}))(CALLS.calls(fg)) : null,
                    proj_total:fg.proj_total, total_line:fg.total_line, total_side:fg.total_side,
                    proj_spread:fg.proj_spread, spread_line:fg.spread_line, spread_side:fg.spread_side,
                    exp_margin:fg.exp_margin } : null,

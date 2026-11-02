@@ -70,6 +70,7 @@
 </main>
 
 <footer id="footer"></footer><script src="/js/app.js"></script>
+<script src="/scripts/lib/nfl-calls.js"></script>
 <script>
 renderNav("/articles/"); renderFooter();
 
@@ -191,6 +192,24 @@ async function pollLive(){
   if(renderedGames.some(g=>stateKey(g)!=="final")) liveTimer=setTimeout(pollLive,60000);
 }
 function liveOf(g){return LIVE[g.away_team+" @ "+g.home_team]||null;}
+/* Leo's three calls as three boxes. Each shows the call (or PASS and why);
+   after the final, whether it was right. */
+function callsGrid(g, leo, isFinal, as, hs){
+  const C=NFL_CALLS.calls(leo);
+  const fin=isFinal&&as!=null&&hs!=null?{home_score:hs,away_score:as}:null;
+  const box=(cls,label,c,key,sub)=>{
+    const r=fin&&c.call?NFL_CALLS.grade(key,leo,fin):"";
+    const tag=r==="W"?'<b style="color:var(--good)">RIGHT</b>':r==="L"?'<b style="color:var(--danger)">WRONG</b>':r==="P"?"<b>PUSH</b>":"";
+    return '<div class="market-box '+cls+'"'+(c.call?'':' style="opacity:.72"')+' title="'+escapeHtml(c.call?sub:(c.pass||""))+'"><span class="market-label">'+label+'</span>'+
+      '<span class="market-value">'+(c.call?escapeHtml(c.label):"PASS")+'</span>'+
+      '<span class="market-sub">'+(tag||escapeHtml(c.call?sub:(c.short||c.pass||"")))+'</span></div>';
+  };
+  return '<div class="market-grid">'+
+    box("rating","Moneyline",C.ml,"ml",Math.round(leo.model_prob*100)+"% to win")+
+    box("","Spread",C.spread,"spread","Leo "+(leo.exp_margin>0?leo.home+" by "+leo.exp_margin:leo.exp_margin<0?leo.away+" by "+(-leo.exp_margin):"level"))+
+    box("total","Total",C.total,"total","Leo "+leo.proj_total)+
+  '</div>';
+}
 function stateKey(g){
   if(g.away_score!==""&&g.home_score!=="") return "final";
   const lv=liveOf(g);
@@ -320,6 +339,10 @@ function renderCards(){
           teamRow(g.home_team,scoreOf(g,"home"),g.home_moneyline,ph,showScore,isFinal&&hs>as,"home",leoHome)+
         '</div>'+
         probCompare+
+        // From the 2026-11-05 slate: Leo's three calls, each a call or PASS,
+        // from one rule book (scripts/lib/nfl-calls.js, DEC-20261102-01).
+        // Graded after the game: right or wrong beside each call.
+        ((leo && window.NFL_CALLS && g.gameday>=NFL_CALLS.RULES.FROM) ? callsGrid(g, leo, isFinal, as, hs) : (
         '<div class="market-grid">'+
           '<div class="market-box"><span class="market-label">Spread</span>'+
             '<span class="market-value">'+escapeHtml(spreadTxt)+'</span>'+
@@ -337,7 +360,8 @@ function renderCards(){
             '<span class="market-value">'+(leo&&leo.model_prob!=null
                 ? escapeHtml(leo.pick)+" "+Math.round(leo.model_prob*100)+"%" : "\u2014")+'</span>'+
             '<span class="market-sub">'+(!leo?"Model pending":isPick?"More than 60%, graded":paused?"Leo win chance":"Too close to call")+'</span></div>';})()+
-        '</div>'+
+        '</div>'
+        ))+
         // Starting QBs as Leo used them (depth chart, DEC-20261031-08); the
         // schedule feed's names can be stale (it still named Jalen Hurts).
         (()=>{const aq=(leo&&leo.away_qb)||g.away_qb_name, hq=(leo&&leo.home_qb)||g.home_qb_name;

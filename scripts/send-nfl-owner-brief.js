@@ -120,6 +120,15 @@ function build() {
   .box { background: #FDFBF7; border: 1px solid #DED4C2; border-left: 4px solid #C9A84C; border-radius: 10px; padding: 8px 10px; margin: 0 0 12px; }
   .summary { background: #FDFBF7; border-radius: 10px; }`;
 
+  // DEC-20261102-01: from Nov 5 the summary is Leo's three calls per game.
+  const CALLS = require("./lib/nfl-calls");
+  const newRules = DATE >= CALLS.RULES.FROM;
+  const cv = c => c.call ? `<b style="color:#2F6E4A">${esc(c.label)}</b>` : `<span style="color:#8A8174">PASS</span>`;
+  const callRows = games.map(g => { const C = CALLS.calls(g);
+    return `<tr><td>${esc(clock(g.kickoff))}</td><td>${esc(g.matchup)}</td><td>${esc(g.away_qb || "")} / ${esc(g.home_qb || "")}</td>
+      <td>${cv(C.ml)}<br><span class="note">${C.ml.call ? esc(g.pick) + " " + pct(g.model_prob) : esc(C.ml.pass)}</span></td>
+      <td>${cv(C.spread)}<br><span class="note">Leo ${esc(byMargin(g, num(g.exp_margin)))}; line ${esc(spreadText(g, num(g.spread_line)))}</span></td>
+      <td>${cv(C.total)}<br><span class="note">Leo ${r1(num(g.proj_total))}; line ${r1(num(g.total_line))}</span></td></tr>`; }).join("");
   const summaryRows = games.map(g => {
     const side = spreadSide(g);
     return `<tr><td>${esc(clock(g.kickoff))}</td><td>${esc(g.matchup)}</td>
@@ -145,14 +154,14 @@ function build() {
       .map(p => `${esc(p.player)} (${esc(p.team)}) ${pct(num(p.projection))}`).join(", ");
     const hurt = injuries.filter(i => (i.team === g.away || i.team === g.home) && /^(Out|Doubtful)$/i.test(i.status || ""))
       .map(i => `${esc(i.team)} ${esc(i.player)} ${esc(i.position)}, ${esc(i.status)}${i.injury ? " (" + esc(i.injury) + ")" : ""}`).join("; ");
-    const side = spreadSide(g);
+    const side = newRules ? (CALLS.calls(g).spread.label || null) : spreadSide(g);
     return `<div class="game${num(g.model_prob) > 0.60 ? " pick" : ""}">
       <h2>${esc(TEAMS.full(g.away))} at ${esc(TEAMS.full(g.home))}</h2>
       <div class="meta">${esc(clock(g.kickoff))}${g.stadium ? " &middot; " + esc(g.stadium) : ""} &middot; QBs ${esc(g.away_qb || "n/a")} and ${esc(g.home_qb || "n/a")}</div>
       <div class="cols">
-        <div><b>${num(g.model_prob) > 0.60 ? "Leo pick" : "Win chance (too close to call)"}</b><br>Leo ${esc(g.pick)} ${pct(g.model_prob)}${g.price != null && g.price !== "" ? " at " + esc((+g.price > 0 ? "+" : "") + g.price) : ""}; market ${g.market_prob != null ? esc(g.pick) + " " + pct(g.market_prob) : "n/a"}</div>
-        <div><b>Spread</b><br>Leo ${esc(byMargin(g, num(g.exp_margin)))}; line ${esc(spreadText(g, num(g.spread_line)))}; <span class="side">${side ? "Leo's side " + esc(side) : "no call"}</span></div>
-        <div><b>Total</b><br>Leo ${r1(num(g.proj_total))}; line ${r1(num(g.total_line))}; no side (off since Oct 17)</div>
+        <div><b>${newRules ? (CALLS.calls(g).ml.call ? "Moneyline call " + esc(CALLS.calls(g).ml.label) : "Moneyline PASS") : num(g.model_prob) > 0.60 ? "Leo pick" : "Win chance (too close to call)"}</b><br>Leo ${esc(g.pick)} ${pct(g.model_prob)}${g.price != null && g.price !== "" ? " at " + esc((+g.price > 0 ? "+" : "") + g.price) : ""}; market ${g.market_prob != null ? esc(g.pick) + " " + pct(g.market_prob) : "n/a"}</div>
+        <div><b>Spread</b><br>Leo ${esc(byMargin(g, num(g.exp_margin)))}; line ${esc(spreadText(g, num(g.spread_line)))}; <span class="side">${side ? (newRules ? "call " : "Leo's side ") + esc(side) : (newRules ? "PASS" : "no call")}</span></div>
+        <div><b>Total</b><br>Leo ${r1(num(g.proj_total))}; line ${r1(num(g.total_line))}; ${newRules ? (CALLS.calls(g).total.call ? "<span class=\"side\">call " + esc(CALLS.calls(g).total.label) + "</span>" : "PASS") : "no side (off since Oct 17)"}</div>
       </div>
       ${rows ? `<table><tr><th>Pos</th><th>Team</th><th>Player</th><th class="n">Leo</th><th class="n">Line</th><th>Leo's side</th><th class="n">Books</th></tr>${rows}</table>` : `<p class="note">No yardage projections for this game.</p>`}
       <div><b>Most likely touchdown scorers:</b> ${td || "n/a"}</div>
@@ -173,7 +182,9 @@ function build() {
     <h1>Leo NFL brief</h1>
     <p class="sub">${esc(prettyDate(DATE))}, Week ${esc(week)} &middot; ${games.length} games &middot; built ${esc(new Date().toLocaleString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit", month: "short", day: "numeric" }))} ET</p>
     <div class="box">Information only, for the owner. Leo's side is where his number sits relative to the posted line; it is not a bet recommendation. ${record} ${esc(capNote)} Calls: QB ${sideCount.QB[1]} of ${sideCount.QB[0]}, RB ${sideCount.RB[1]} of ${sideCount.RB[0]}, WR ${sideCount.WR[1]} of ${sideCount.WR[0]} lined props are outside the 5% floor. ${testsNote}</div>
-    <table><tr><th>Kick</th><th>Game</th><th>QBs</th><th>Leo win</th><th>Market</th><th>Leo margin</th><th>Spread</th><th>Leo's side</th><th class="n">Leo total</th><th class="n">Line</th></tr>${summaryRows}</table>
+    ${newRules
+      ? `<table><tr><th>Kick</th><th>Game</th><th>QBs</th><th>Moneyline</th><th>Spread</th><th>Total</th></tr>${callRows}</table><p class="note">PASS means no call. Moneyline: more than 60% and a price better than -230. Spread: Leo 1 point off the line, and his margin and win chance agree on the winner. Total: Leo 1.5 to 7 points off the line.</p>`
+      : `<table><tr><th>Kick</th><th>Game</th><th>QBs</th><th>Leo win</th><th>Market</th><th>Leo margin</th><th>Spread</th><th>Leo's side</th><th class="n">Leo total</th><th class="n">Line</th></tr>${summaryRows}</table>`}
     <p class="note">Spread side needs 1.0 point between Leo's margin and the line. A Leo pick is a team Leo gives more than 60%; it is graded at the price shown when Leo made it. Under 60% is too close to call.</p>
     ${gameBlocks}
   </body></html>`;
@@ -181,7 +192,7 @@ function build() {
   const text = `Leo NFL brief, ${prettyDate(DATE)}, Week ${week}. ${games.length} games. The full brief is attached as a PDF. Information only, not a bet recommendation.\n\n` +
     games.map(g => `${clock(g.kickoff)}  ${g.matchup}: Leo ${g.pick} ${pct(g.model_prob)}, margin ${byMargin(g, num(g.exp_margin))}, line ${spreadText(g, num(g.spread_line))}, total ${r1(num(g.proj_total))} vs ${r1(num(g.total_line))}`).join("\n");
   const E = require("./lib/email-cards");
-  const picks = games.filter(g => num(g.model_prob) > 0.60);
+  const picks = newRules ? games.filter(g => CALLS.calls(g).ml.call) : games.filter(g => num(g.model_prob) > 0.60);
   const emailHtml = E.shell({ title: `Leo NFL brief ${DATE}`, preheader: `${games.length} games, ${picks.length} Leo picks. Full brief attached.`, body: [
     E.header("NFL"),
     E.hero({ eyebrow: `Owner brief &middot; Week ${esc(week)} &middot; ${esc(prettyDate(DATE))}`, title: "Leo NFL brief", subtitle: `The full brief is attached as a PDF: every game, every prop with its line, the touchdown chances and the injury report. Information only, not a bet recommendation. ${testsNote}` }),

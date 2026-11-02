@@ -227,7 +227,29 @@ function leoSection(m){
   const L=m.leo; if(!L) return "";
   const g=L.game;
   const when=L.captured_at?new Date(L.captured_at).toLocaleString("en-US",{timeZone:"America/New_York",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})+" ET":"";
-  const game=g?`
+  // DEC-20261102-01: from Nov 5, Leo's three calls lead the section, each a
+  // call or PASS with the reason, and RIGHT or WRONG once the game is final.
+  const C=g&&g.calls, F=m.final_report;
+  const callBox=(label,c,key,ctx)=>{
+    if(!c) return "";
+    let r="";
+    if(c.call&&F&&F.away_score!=null){
+      const hs=F.home_score, as=F.away_score;
+      if(key==="ml") r=hs===as?"P":((hs>as?m.home:m.away)===c.call?"W":"L");
+      if(key==="spread"){const l=+g.spread_line,mg=hs-as;r=mg===l?"P":((c.call===m.home)===(mg>l)?"W":"L");}
+      if(key==="total"){const l=+g.total_line,t=hs+as;r=t===l?"P":((t>l)===(c.call==="Over")?"W":"L");}
+    }
+    const tag=r==="W"?' <span class="ok">RIGHT</span>':r==="L"?' <span class="no">WRONG</span>':r==="P"?" PUSH":"";
+    return `<div class="box${c.call?" call":" pass"}"><span class="lbl">${label}</span><span class="val">${c.call?esc(c.label):"PASS"}${tag}</span><span class="lbl2">${esc(c.call?ctx:c.pass)}</span></div>`;
+  };
+  const callsHtml=C?`
+  <div class="leo-grid calls">
+    ${callBox("Moneyline",C.ml,"ml",`Leo gives ${g.pick} ${pct(g.prob)}`)}
+    ${callBox("Spread",C.spread,"spread",`Leo ${fav(m,g.proj_spread)}`)}
+    ${callBox("Total",C.total,"total",`Leo ${v(g.proj_total)}`)}
+  </div>
+  <p class="dim" style="margin:0 0 10px">A call is graded after the game. PASS means no call: a moneyline needs more than 60% and a price better than -230; a spread needs Leo 1 point off the line and his two models agreeing on the winner; a total needs Leo 1.5 to 7 points off the line.</p>`:"";
+  const game=g?`${callsHtml}
   <div class="leo-grid">
     <div class="box"><span class="lbl">${pickPaused(m.date)?"Leo win chance":g.call==="leo_pick"?"Leo pick":"Too close to call"}</span><span class="val">${esc(g.pick)} ${pct(g.prob)}</span><span class="lbl2">${pickPaused(m.date)?"chance to win; picks were paused this week":g.call==="leo_pick"?"Leo gives this team more than 60%"+(g.price!=null&&g.price!==""?"; price "+esc((+g.price>0?"+":"")+g.price)+" at the read":""):"under 60%, so no pick; win chance only"}</span></div>
     <div class="box"><span class="lbl">Leo total</span><span class="val">${v(g.proj_total)}</span><span class="lbl2">points, both teams</span></div>
@@ -576,6 +598,8 @@ table.bx tr:last-child td{border-bottom:0}
 .leo-grid .lbl{font-size:.64rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--text-dim)}
 .leo-grid .val{font-size:1.15rem;font-weight:800;font-variant-numeric:tabular-nums}
 .leo-grid .lbl2{font-size:.74rem;color:var(--text-dim)}
+.leo-grid.calls .box.call{border-color:rgba(47,110,74,.45);background:rgba(47,110,74,.06)}
+.leo-grid.calls .box.pass .val{color:var(--text-dim)}
 .sec3{font-size:.9rem;margin:16px 0 6px}
 .fxw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:4px}
 .fx{width:100%;border-collapse:collapse;font-size:.84rem;font-variant-numeric:tabular-nums;background:transparent}
