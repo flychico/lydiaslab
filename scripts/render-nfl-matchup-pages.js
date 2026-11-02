@@ -700,7 +700,7 @@ ${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternT
   ${finalReport(m)}
 
   <p class="data-note">Player and team statistics from the open nflverse dataset. Roles assigned by actual usage (most attempts, carries and targets), not depth chart.</p>
-${SEO.relatedLinks({sport:"NFL",root:ROOT,slug:m.slug||String(m.url).split("/").filter(Boolean).pop(),away:m.away,home:m.home,awayName:TEAMS.full(m.away),homeName:TEAMS.full(m.home),teamUrl:abbr=>"/nfl/teams/"+require("./build-nfl-team-pages").teamSlug(abbr)+"/",hubs:[[weekUrl(m),"Week "+v(m.week,"")+" NFL predictions"],["/nfl/games/","Every NFL game"],["/nfl/teams/","NFL team predictions"],["/nfl/results/","Leo\u2019s NFL record"],["/nfl/tools/injury-tracker/","Injury tracker"],["/membership/#free","Free NFL card by email"]]})}
+${SEO.relatedLinks({sport:"NFL",root:ROOT,slug:m.slug||String(m.url).split("/").filter(Boolean).pop(),away:m.away,home:m.home,awayName:TEAMS.full(m.away),homeName:TEAMS.full(m.home),teamUrl:abbr=>"/nfl/teams/"+require("./build-nfl-team-pages").teamSlug(abbr)+"/",featured:[weekUrl(m),"All Week "+v(m.week,"")+" NFL predictions","Every game that week: Leo\u2019s win chance, spread, total and touchdown scorer chances"],hubs:[["/nfl/games/","Every NFL game"],["/nfl/teams/","NFL team predictions"],["/nfl/results/","Leo\u2019s NFL record"],["/nfl/tools/injury-tracker/","Injury tracker"],["/membership/#free","Free NFL card by email"]]})}
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script>renderNav("/nfl/scoreboard/"); renderFooter();</script>
