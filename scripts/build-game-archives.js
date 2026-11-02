@@ -135,7 +135,8 @@ function nba() {
   for (const g of games) { if (!groups.has(g.date)) groups.set(g.date, []); groups.get(g.date).push(g); }
   let body = "";
   for (const [date, list] of groups) {
-    body += `  <section class="arch-group"><h2>NBA predictions for ${esc(longDay(date))}</h2><ul class="arch-list">`
+    const dayPage = fs.existsSync(path.join(dir, "predictions", date, "index.html"));
+    body += `  <section class="arch-group"><h2>${dayPage ? `<a href="/nba/predictions/${date}/">NBA predictions for ${esc(longDay(date))}</a>` : `NBA predictions for ${esc(longDay(date))}`}</h2><ul class="arch-list">`
       + list.map(g => `<li><a href="/nba/${g.slug}/">${esc(g.matchup)} Prediction</a></li>`).join("")
       + `</ul></section>\n`;
   }
@@ -145,7 +146,7 @@ function nba() {
     description: `Every NBA game Leo has called this season, night by night: win chance and Leo's own spread beside the DraftKings line, each graded after the final. ${games.length} games so far.`,
     h1: "Every NBA game Leo has called",
     intro: "Each game page shows Leo&rsquo;s win chance and spread, the injury report Leo used, and how the read held up once the game was final.",
-    links: [["/nba/scoreboard/", "Tonight\u2019s NBA card"], ["/nba/results/", "Leo\u2019s NBA record"], ["/nba/stats/", "NBA team stats"], ["/nfl/games/", "Every NFL game"]],
+    links: [["/nba/scoreboard/", "Tonight\u2019s NBA card"], ["/nba/predictions/", "NBA predictions by night"], ["/nba/results/", "Leo\u2019s NBA record"], ["/nba/stats/", "NBA team stats"], ["/nfl/games/", "Every NFL game"]],
     body,
   });
   fs.mkdirSync(path.join(dir, "games"), { recursive: true });

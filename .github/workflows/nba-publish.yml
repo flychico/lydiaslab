@@ -78,6 +78,7 @@ jobs:
       - name: Matchup pages
         run: |
           node scripts/render-nba-matchup-pages.js "${{ steps.d.outputs.date }}"
+          node scripts/build-nba-daily-pages.js "$(TZ=America/New_York date +%F)" "$(TZ=America/New_York date -d '-1 day' +%F)" || node scripts/build-nba-daily-pages.js
           node scripts/build-game-archives.js nba
           node scripts/generate-sitemap.js
 

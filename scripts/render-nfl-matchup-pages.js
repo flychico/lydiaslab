@@ -13,6 +13,7 @@ const fs=require("fs"), path=require("path");
 const ROOT=path.join(__dirname,"..");
 const TEAMS=require("./lib/nfl-teams");
 const SEO=require("./lib/game-page-seo");
+const COPY=require("./lib/nfl-page-copy");
 const niceDate=d=>new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"});
 
 /* Leo's two most likely scorers in the game, from the frozen TD props.
@@ -150,8 +151,8 @@ function ratingsSection(m){
   const pc=x=>x==null?"—":(x*100).toFixed(1)+"%";
   const sg=x=>x==null?"—":(x>0?"+":"")+x;
   return `
-  <h2 class="sec">Leo ratings &mdash; head to head</h2>
-  <p class="sub">Each rating is 0&ndash;100 against the league this season, built from efficiency rather than record: 50 is average, every 15 points is one standard deviation. These describe the teams &mdash; they are not used to price the game.</p>
+  <h2 class="sec">Leo ratings, head to head</h2>
+  <p class="sub">Each rating is 0 to 100 against the league this season, built from efficiency rather than record: 50 is average, every 15 points is one standard deviation. They describe the teams; the &ldquo;Why Leo has&rdquo; section above says which of them push Leo&rsquo;s number.</p>
 
   <div class="rcard">
     <div class="rhead">
@@ -268,7 +269,7 @@ function leoSection(m){
   }).join("");
   return `
   <h2 class="sec">Leo&rsquo;s read</h2>
-  <p class="sub">What the model expected, frozen before kickoff${when?" ("+esc(when)+")":""}. Each player projection is rate &times; volume &times; opponent adjustment &mdash; the columns show every input. None of this is a wager.</p>
+  <p class="sub">What the model expected, frozen before kickoff${when?" ("+esc(when)+")":""}. Each player projection is rate &times; volume &times; opponent adjustment, and the columns show every input. None of this is a wager.</p>
   ${game}${props}`;
 }
 
@@ -350,7 +351,7 @@ function injCard(side){
   }
   if(!side.practice.length) return `<div class="tdcard injcard">${head}<p class="none injsum">No players listed.</p></div>`;
   return `<div class="tdcard injcard">${head}
-    <p class="injsum">No game statuses on file &mdash; latest practice report shown</p>
+    <p class="injsum">No game statuses on file, so the latest practice report is shown</p>
     <ul class="injlist">${side.practice.map(x=>`<li><span class="ijs p">${esc(prac(x.practice)||"Listed")}</span>
       <span class="ijn">${esc(x.player)}</span><span class="tdp">${esc(x.pos)}</span>
       <span class="iji">${esc(x.injury)}</span></li>`).join("")}</ul></div>`;
@@ -447,7 +448,7 @@ function finalReport(m){
     <h3 class="sec3">How Leo&rsquo;s read held up</h3>
     <p class="sub">What Leo expected before kickoff, the posted number he was calling against, and what happened. A winner call is only made when one side is above 60%; a yardage or points call needs a real gap from the line before Leo takes a side.</p>
     ${F.graded?games:'<p class="sub">Grading runs the morning after the game; the comparison appears once it has.</p>'}
-    ${props?`<p class="sub" style="margin-top:14px">&ldquo;Main reason&rdquo; names which of Leo&rsquo;s two inputs was further off &mdash; how much the player was used, or how efficient he was when he was.</p>`+props:""}
+    ${props?`<p class="sub" style="margin-top:14px">&ldquo;Main reason&rdquo; names which of Leo&rsquo;s two inputs was further off, how much the player was used, or how efficient he was when he was.</p>`+props:""}
   </section>`;
 }
 
@@ -456,8 +457,13 @@ function page(m){
   const cur=(m.ratings&&m.ratings.this_season)||null;
   const pri=(m.ratings&&m.ratings.last_season)||null;
   // Nicknames in the title: people search "Bears vs Packers prediction".
-  const title=`${TEAMS.nick(m.away)} vs ${TEAMS.nick(m.home)} Prediction and Odds, Week ${v(m.week,"")} ${m.date.slice(0,4)} | Leo`;
-  const desc=`Leo's prediction for the ${TEAMS.full(m.away)} at the ${TEAMS.full(m.home)}, ${niceDate(m.date)}: win probability, projected total, most likely touchdown scorers, injury report and player props, graded after the game.`;
+  // SEO-14: "Touchdown Scorers" is its own search; the description leads
+  // with Leo's actual numbers so the search snippet says something.
+  const title=`${TEAMS.nick(m.away)} vs ${TEAMS.nick(m.home)} Prediction, Odds and Touchdown Scorers, Week ${v(m.week,"")} ${m.date.slice(0,4)} | Leo`;
+  const G0=m.leo&&m.leo.game;
+  const desc=G0&&G0.pick&&G0.prob!=null
+    ?`Leo gives the ${TEAMS.nick(G0.pick)} a ${Math.round(G0.prob*100)}% chance against the ${TEAMS.nick(G0.pick===m.home?m.away:m.home)} (${niceDate(m.date)}). Projected total${G0.proj_total!=null?" "+G0.proj_total:""}, ${G0.calls?"moneyline, spread and total calls":"expected margin"}, most likely touchdown scorers and the injury report, graded after the game.`
+    :`Leo's prediction for the ${TEAMS.full(m.away)} at the ${TEAMS.full(m.home)}, ${niceDate(m.date)}: win probability, projected total, most likely touchdown scorers, injury report and player props, graded after the game.`;
   const spread = m.spread_line==null?"—":(m.spread_line>0?`${m.home} -${m.spread_line}`:(m.spread_line<0?`${m.away} -${Math.abs(m.spread_line)}`:"PK"));
   const cmp=(label,a,h,fmt=x=>v(x))=>{
     const lead = (a==null||h==null||a===h) ? "" : (Number(a)>Number(h) ? "a" : "h");
@@ -646,9 +652,13 @@ ${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternT
   </section>
   <h1 class="mh-title">${esc(TEAMS.full(m.away))} at ${esc(TEAMS.full(m.home))}</h1>
   <p style="text-align:center;margin:0"><a class="wk-link" href="${weekUrl(m)}">Every game this week on Leo&rsquo;s Week ${v(m.week,"")} card &rarr;</a></p>
-  <div class="notice note">This is a pre-game analysis page. Every stat above the Final result comes from games played <b>before</b> this one${m.pregame_through_week?" (through Week "+m.pregame_through_week+")":""}, and Leo&rsquo;s numbers were frozen before kickoff. Market numbers are the closing line. Nothing here is a wager &mdash; the pick gate stays closed until Leo shows it can beat that line.</div>
+  ${COPY.summary(m)}
+
+  <div class="notice note">This is a pre-game analysis page. Every stat above the Final result comes from games played <b>before</b> this one${m.pregame_through_week?" (through Week "+m.pregame_through_week+")":""}, and Leo&rsquo;s numbers were frozen before kickoff. Market numbers are the closing line. Nothing here is a wager. Calls are a public test, graded after every game.</div>
 
   ${leoSection(m)}
+
+  ${COPY.why(m)}
 
   ${signupBox()}
 
@@ -678,7 +688,7 @@ ${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternT
   </table>
 
   <h2 class="sec">This season</h2>
-  <p class="sub">Starting quarterback, lead backs and top receivers, by actual usage this season &mdash; games before this one only.</p>
+  <p class="sub">Starting quarterback, lead backs and top receivers, by actual usage this season, from games before this one only.</p>
   <div class="grid2">${sideBlock(A,"this_season",m.date.slice(0,4),cur&&cur.away)}${sideBlock(H,"this_season",m.date.slice(0,4),cur&&cur.home)}</div>
 
   <h2 class="sec">Last season</h2>
@@ -689,7 +699,7 @@ ${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternT
 
   ${finalReport(m)}
 
-  <p class="data-note">Player and team statistics from the open nflverse dataset. Roles assigned by actual usage &mdash; most attempts, carries and targets &mdash; not depth chart.</p>
+  <p class="data-note">Player and team statistics from the open nflverse dataset. Roles assigned by actual usage (most attempts, carries and targets), not depth chart.</p>
 ${SEO.relatedLinks({sport:"NFL",root:ROOT,slug:m.slug||String(m.url).split("/").filter(Boolean).pop(),away:m.away,home:m.home,awayName:TEAMS.full(m.away),homeName:TEAMS.full(m.home),hubs:[[weekUrl(m),"Week "+v(m.week,"")+" NFL predictions"],["/nfl/games/","Every NFL game"],["/nfl/results/","Leo\u2019s NFL record"],["/nfl/tools/injury-tracker/","Injury tracker"],["/membership/#free","Free NFL card by email"]]})}
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
