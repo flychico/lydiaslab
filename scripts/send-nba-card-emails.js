@@ -5,6 +5,9 @@
  *   node scripts/send-nba-card-emails.js YYYY-MM-DD          send (needs RESEND_API_KEY, EMAIL_FROM)
  *   node scripts/send-nba-card-emails.js YYYY-MM-DD --dry    print the email, send nothing
  *   node scripts/send-nba-card-emails.js YYYY-MM-DD --html=<file>   write the HTML preview, send nothing
+ *   node scripts/send-nba-card-emails.js YYYY-MM-DD --test   one copy to the owner (AUDIT_EMAIL secret)
+ *        through Resend, as subscribers get it, subject marked TEST. No timing
+ *        gates, no subscribers, no email log. Workflow: "NBA card email (test send)".
  *
  * Content is data/nba/picks-<date>.json, the card the site shows, laid out
  * like the scoreboard cards (scripts/lib/nba-card-email.js). Free list and
@@ -44,6 +47,17 @@ async function main() {
   const email = E.build(doc, { why: WHY });
   if (HTML) { fs.writeFileSync(HTML, email.html); console.log(`NBA card email preview written to ${HTML}. ${email.subject}`); return; }
   if (DRY) { console.log(`SUBJECT: ${email.subject}\n\n${email.text}`); return; }
+  if (process.argv.includes("--test")) {
+    const to = (process.env.AUDIT_EMAIL || "").trim();
+    if (!RESEND_API_KEY || !EMAIL_FROM || !to) { console.log("NBA card test: RESEND_API_KEY, EMAIL_FROM or AUDIT_EMAIL not set."); process.exitCode = 1; return; }
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST", headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: EMAIL_FROM, to: [to], reply_to: EMAIL_REPLY_TO || undefined, subject: "TEST: " + email.subject, html: email.html, text: email.text })
+    });
+    console.log(res.ok ? `NBA card test for ${DATE} sent to the owner address.` : `NBA card test failed: HTTP ${res.status} ${await res.text()}`);
+    if (!res.ok) process.exitCode = 1;
+    return;
+  }
   if (fs.existsSync(LOG)) { console.log(`NBA card for ${DATE} already sent (${path.relative(ROOT, LOG)}).`); return; }
   const first = new Date(games.map(g => g.tip_utc).sort()[0]);
   const now = Date.now();
