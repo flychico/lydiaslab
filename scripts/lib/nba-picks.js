@@ -42,7 +42,9 @@ function pick(x) {
   const ph = num(x.p_home);
   if (ph == null) return null;
   const side = ph >= 0.5 ? "home" : "away", p = side === "home" ? ph : 1 - ph;
-  if (p < PICK_P) return null;
+  // Just under the bar (rounds to 60% on the card): say so, with the exact chance (DEC-20261102-31).
+  if (p < PICK_P) return Math.round(p * 100) >= PICK_P * 100
+    ? { side, team: x[side], p, price: num(side === "home" ? x.home_ml : x.away_ml), ok: false, why: "just under 60%", under: true } : null;
   const price = num(side === "home" ? x.home_ml : x.away_ml), team = x[side];
   if (price == null) return { side, team, p, price: null, ok: false, why: "no moneyline yet" };
   if (price <= PRICE_LIMIT) return { side, team, p, price, ok: false, why: `priced ${price}, -230 or dearer` };
@@ -62,12 +64,31 @@ function pickText(g) {
   const pk = (g.leo && g.leo.pick !== undefined) ? g.leo.pick : pickForGame(g);
   if (!pk) return null;
   const pct = Math.round(pk.p * 100) + "%";
+  if (pk.under || pk.p < PICK_P) return { ok: false, badge: "", line: `No pick: Leo has ${pk.team} ${(pk.p * 100).toFixed(1)}%, just under the 60% bar.` };
   if (pk.ok) return { ok: true, badge: `Pick ${pk.team} ${fmtPrice(pk.price)}`,
     line: `Leo Pick: ${pk.team} to win at ${fmtPrice(pk.price)} (Leo ${pct}). Tracked in units, not a bet.` };
   return { ok: false, badge: "", line: `No pick: Leo has ${pk.team} ${pct}, but ${pk.price == null ? "there is no moneyline yet" : `the price is ${fmtPrice(pk.price)}, -230 or dearer`}.` };
 }
 
-const api = { PICK_P, PRICE_LIMIT, TRACK_FROM, payout, units, pick, pickForGame, fmtPrice, pickText };
+/**
+ * The Call box on cards and pages (replaces the Gap box, DEC-20261102-31):
+ * { value, sub, on } - what Leo is tracking on this game, or why nothing.
+ */
+function callBox(g) {
+  const L = g.leo || {}, pk = (L.pick !== undefined) ? L.pick : pickForGame(g), ln = L.lean;
+  const sg = v => (v > 0 ? "+" : "") + v;
+  const leanTxt = ln ? `${ln.team} ${sg(ln.line)}` : "";
+  if (pk && pk.ok && ln) return { on: true, value: `${pk.team} ${fmtPrice(pk.price)}`, sub: `Pick, plus lean ${leanTxt}` };
+  if (pk && pk.ok) return { on: true, value: `${pk.team} ${fmtPrice(pk.price)}`, sub: "Leo Pick, to win" };
+  if (ln) return { on: true, value: leanTxt, sub: "Lean, on the spread" };
+  let why = "Under 60%, gap under 4";
+  if (pk && (pk.under || pk.p < PICK_P)) why = `${pk.team} ${(pk.p * 100).toFixed(1)}%, under 60%`;
+  else if (pk && pk.price == null) why = "No moneyline yet";
+  else if (pk) why = `${fmtPrice(pk.price)} is past -230`;
+  return { on: false, value: "No call", sub: why };
+}
+
+const api = { PICK_P, PRICE_LIMIT, TRACK_FROM, payout, units, pick, pickForGame, fmtPrice, pickText, callBox };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else if (typeof window !== "undefined") window.NBA_PICKS = api;
 })();

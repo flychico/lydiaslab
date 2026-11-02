@@ -71,8 +71,8 @@
   <p class="data-note">Leo’s spread comes from team ratings, rest and the injury report. The DraftKings line is shown for comparison and is never an input. Leans are graded on the <a href="/nba/results/">results page</a>. Analysis only, not betting advice. 21+.</p>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
-<script src="/scripts/lib/nba-why.js?v=20261102"></script>
-<script src="/scripts/lib/nba-picks.js?v=20261102"></script>
+<script src="/scripts/lib/nba-why.js?v=20261102b"></script>
+<script src="/scripts/lib/nba-picks.js?v=20261102b"></script>
 <script>
 renderNav(location.pathname); renderFooter();
 
@@ -113,7 +113,7 @@ let MODEL=null;
   if(d.date!==nyToday()) document.getElementById("note").innerHTML='<div class="notice">Today&rsquo;s card is not out yet. Showing '+esc(longDay(d.date))+'.</div>';
   el.innerHTML=games.map(g=>{
     const L=g.leo, mk=g.market||{};
-    const PT=window.NBA_PICKS?NBA_PICKS.pickText(g):null;
+    const PT=window.NBA_PICKS?NBA_PICKS.pickText(g):null, CB=window.NBA_PICKS&&NBA_PICKS.callBox?NBA_PICKS.callBox(g):null;
     const gs=(window.NBA_WHY&&NBA_WHY.gapShown)?NBA_WHY.gapShown(g):(L.edge_pts==null?null:Math.abs(L.edge_pts));
     const W=window.NBA_WHY?NBA_WHY.why(g,{lostCoef:MODEL&&MODEL.coef&&MODEL.coef.lost_d,leanPts:MODEL&&MODEL.lean_edge_pts}):null;
     const row=(side,p)=>'<div class="side'+(L.lean&&L.lean.side===side?" lean":"")+'">'+logo(g[side])+
@@ -125,7 +125,7 @@ let MODEL=null;
       '<div class="market-grid" style="grid-template-columns:repeat(3,1fr);margin-top:10px">'+
         '<div class="market-box rating"><span class="market-label">Leo spread</span><span class="market-value">'+esc(g.home)+' '+sgn((window.NBA_WHY&&NBA_WHY.leoLine)?NBA_WHY.leoLine(g):L.home_spread)+'</span><span class="market-sub">expected margin</span></div>'+
         '<div class="market-box"><span class="market-label">DraftKings</span><span class="market-value">'+(mk.home_spread==null?"—":esc(g.home)+" "+sgn(mk.home_spread))+'</span><span class="market-sub">'+(mk.p_home!=null?"market "+esc(g.home)+" "+pct(mk.p_home):"")+'</span></div>'+
-        '<div class="market-box total"><span class="market-label">Gap</span><span class="market-value">'+(gs==null?"—":gs+" pts")+'</span><span class="market-sub">'+(L.lean?"lean":"under 4, no lean")+'</span></div>'+
+        (CB?'<div class="market-box total"><span class="market-label">Call</span><span class="market-value">'+esc(CB.value)+'</span><span class="market-sub" style="white-space:normal">'+esc(CB.sub)+'</span></div>':"")+
       '</div>'+(PT?'<div class="why">'+esc(PT.line)+'</div>':"")+(W&&W.compare?'<div class="why">'+esc(W.compare)+'</div>':"")+(W&&W.summary?'<div class="why">'+esc(W.summary)+'</div>':"")+
       '<a class="more" href="'+pageUrl(g)+'">Full preview: why Leo has this number &rarr;</a></div></article>';
   }).join("");

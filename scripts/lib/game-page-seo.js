@@ -84,7 +84,9 @@ function listGames(sportDir) {
 
 /*
   o: { sport: "NFL"|"NBA", root, slug, away, home, awayName, homeName,
-       hubs: [[href, label], ...], per: games per team (default 4) }
+       hubs: [[href, label], ...], per: games per team (default 4),
+       featured: [href, label, sub] optional - shown as a button-like link above the hubs
+       (NBA, 2026-11-02, HO-0004: the night's page was easy to miss in the dotted row) }
 */
 function relatedLinks(o) {
   const dir = path.join(o.root, o.sport.toLowerCase());
@@ -105,6 +107,7 @@ function relatedLinks(o) {
   const teams = [teamBlock(o.away, o.awayName), teamBlock(o.home, o.homeName)].filter(Boolean).join("");
   return `<section class="card" style="margin-top:22px">
   <h2 style="margin:0 0 8px;font-size:1.15rem">Keep reading</h2>
+  ${o.featured ? `<a href="${o.featured[0]}" style="display:block;margin:0 0 12px;padding:12px 14px;border:1px solid var(--accent,#C9A84C);border-radius:12px;background:var(--bg-elev,#EDE6D9);text-decoration:none;color:inherit"><b style="font-size:1.05rem">${escHtml(o.featured[1])} &rarr;</b>${o.featured[2] ? `<span style="display:block;font-size:.9rem;opacity:.8;margin-top:2px">${escHtml(o.featured[2])}</span>` : ""}</a>` : ""}
   <p style="margin:0 0 10px">${hubs}</p>
   ${teams ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">${teams}</div>` : ""}
 </section>`;

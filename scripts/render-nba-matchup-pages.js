@@ -221,10 +221,10 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
   <div class="boxes">
     <div class="box"><div class="l">Leo spread</div><div class="v">${esc(H)} ${LS === 0 ? "PK" : sgn(LS)}</div><div class="s">Expected margin</div></div>
     <div class="box"><div class="l">DraftKings</div><div class="v">${mk.home_spread == null ? "&mdash;" : esc(H) + " " + sgn(mk.home_spread)}</div><div class="s">Moneyline ${esc(A)} ${am(mk.away_ml)}, ${esc(H)} ${am(mk.home_ml)}</div></div>
-    <div class="box"><div class="l">Gap</div><div class="v">${GS == null ? "&mdash;" : GS + " pts"}</div><div class="s">${GS == null ? "No line yet" : "Between Leo and DraftKings"}</div></div>
+    <div class="box"><div class="l">Call</div><div class="v">${esc(PKS.callBox(g).value)}</div><div class="s">${esc(PKS.callBox(g).sub)}</div></div>
   </div>
   ${gapTxt && !L.lean ? `<p class="gapread">${gapTxt}</p>` : ""}
-  ${L.projected ? `<p class="gapread">Projected score: ${esc(A)} ${L.projected.away}, ${esc(H)} ${L.projected.home} (total ${L.projected.total}). Information only; Leo does not lean on totals.</p>` : ""}
+  ${WHY.projScore(g) ? `<p class="gapread">Projected score: ${esc(A)} ${WHY.projScore(g).away}, ${esc(H)} ${WHY.projScore(g).home} (total ${WHY.projScore(g).total}). Information only; Leo does not lean on totals.</p>` : ""}
   ${leanTxt}
   ${finalBlock(g, res)}
   ${boxBlock(g, res)}
@@ -251,7 +251,7 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
     </form>
   </div>
   <p class="dim" style="margin-top:18px">Leo&rsquo;s win chance and spread come from team results, rest and the injury report. The DraftKings line is shown for comparison and is never an input. Every read is graded on the <a href="/nba/results/">results page</a>. Analysis only, not betting advice. 21+.</p>
-${require("./lib/game-page-seo").relatedLinks({sport:"NBA",root:ROOT,slug:slug(g),away:g.away,home:g.home,awayName:g.away_name,homeName:g.home_name,hubs:[[`/nba/predictions/${g.date}/`,`All NBA predictions for ${new Date(g.date+"T12:00:00Z").toLocaleDateString("en-US",{month:"long",day:"numeric",timeZone:"UTC"})}`],["/nba/scoreboard/","Tonight\u2019s NBA predictions"],["/nba/games/","Every NBA game"],["/nba/results/","Leo\u2019s NBA record"],["/nba/tools/injury-tracker/","NBA injury tracker"],["/nba/stats/","NBA team stats"],["/membership/#free","Free card by email"]]})}
+${require("./lib/game-page-seo").relatedLinks({sport:"NBA",root:ROOT,slug:slug(g),away:g.away,home:g.home,awayName:g.away_name,homeName:g.home_name,featured:[`/nba/predictions/${g.date}/`,`All NBA predictions for ${new Date(g.date+"T12:00:00Z").toLocaleDateString("en-US",{month:"long",day:"numeric",timeZone:"UTC"})}`,"Every game that night: Leo's win chance, spread, picks and leans"],hubs:[["/nba/scoreboard/","Tonight\u2019s NBA predictions"],["/nba/games/","Every NBA game"],["/nba/results/","Leo\u2019s NBA record"],["/nba/tools/injury-tracker/","NBA injury tracker"],["/nba/stats/","NBA team stats"],["/membership/#free","Free card by email"]]})}
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/nba/scoreboard/"); renderFooter();</script>
 </body>

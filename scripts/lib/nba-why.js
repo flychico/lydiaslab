@@ -52,6 +52,23 @@ function leoLine(g) {
   const v = m == null ? Math.round(s * 2) / 2 : s > m ? Math.floor(s * 2) / 2 : Math.ceil(s * 2) / 2;
   return v === 0 ? 0 : v;   // no -0
 }
+/**
+ * Projected score that matches the shown spread (DEC-20261102-31): the
+ * winning margin is Leo's shown number rounded to a whole point (scores are
+ * whole numbers), split around the projected total. Display only.
+ * -> { home, away, total } or null
+ */
+function projScore(g) {
+  const P = (g.leo || {}).projected, v = leoLine(g);
+  if (!P || P.total == null || v == null) return P || null;
+  // Whole-point margin: a .5 spread uses whichever neighbour keeps the projected total.
+  const a = Math.abs(v), lo = Math.floor(a), hi = Math.ceil(a);
+  const w = lo === hi ? a : ((P.total + lo) % 2 === 0 ? lo : hi);
+  const d = Math.sign(-v) * w;                             // home margin, whole points
+  const home = Math.round((P.total + d) / 2), away = home - d;
+  return { home, away, total: home + away };
+}
+
 /** Points between Leo's shown number and DraftKings, or null. */
 function gapShown(g) {
   const v = leoLine(g), m = (g.market || {}).home_spread;
@@ -133,7 +150,7 @@ function why(g, opts = {}) {
   return out;
 }
 
-const api = { why, by, leoLine, gapShown, compare };
+const api = { why, by, leoLine, gapShown, compare, projScore };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else if (typeof window !== "undefined") window.NBA_WHY = api;
 })();

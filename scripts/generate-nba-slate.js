@@ -219,7 +219,7 @@ function readHistory() {
         projected: PR ? (() => { const t = P.project(PR, g.home, g.away).total; return { total: Math.round(t), home: Math.round((t + margin) / 2), away: Math.round((t - margin) / 2) }; })() : null
       }
     };
-    { const pk = PK.pickForGame(game); game.leo.pick = pk ? { side: pk.side, team: pk.team, p: +pk.p.toFixed(3), price: pk.price, ok: pk.ok, why: pk.why } : null; }
+    { const pk = PK.pickForGame(game); game.leo.pick = pk ? { side: pk.side, team: pk.team, p: +pk.p.toFixed(4), price: pk.price, ok: pk.ok, why: pk.why, ...(pk.under ? { under: true } : {}) } : null; }
     out.push(game);
     if (!started) hist.push({
       captured_at: now, date: DATE, game_id: g.game_id, kickoff_utc: g.tip_utc, away: g.away, home: g.home,
