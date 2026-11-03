@@ -42,57 +42,147 @@ table.calls th{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;col
   table.calls td{border:0;padding:2px 0;white-space:normal;}
   table.calls td[data-l]::before{content:attr(data-l) ": ";color:var(--text-dim);font-size:.78rem;}
 }
+.updated{font-size:.84rem;color:var(--text-dim);margin:10px 0 0;}
+.sec-h{font-family:var(--font-display,inherit);font-size:1.35rem;margin:26px 0 4px;}
+.sec-p{font-size:.88rem;color:var(--text-dim);margin:0 0 12px;max-width:760px;line-height:1.5;}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin:6px 0 4px;}
+.filters .field{margin:0;min-width:150px;flex:1 1 150px;}
+.filters .field label{display:block;font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;}
+.filters select{width:100%;box-sizing:border-box;}
+.filters .control-btn{flex:0 0 auto;}
+.chip-reset{border:1px solid var(--border);background:var(--bg-card);color:var(--text);border-radius:999px;padding:8px 14px;font-weight:700;cursor:pointer;font:inherit;font-size:.85rem;}
+.day-row td{background:var(--bg-elev);font-weight:800;font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;color:var(--text-dim);}
+.call-tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.7rem;font-weight:800;background:rgba(47,110,74,.12);border:1px solid rgba(47,110,74,.4);color:var(--good);white-space:nowrap;}
+.call-tag.lean{background:rgba(26,37,53,.07);border-color:rgba(26,37,53,.25);color:var(--text);}
+.empty-row td{color:var(--text-dim);text-align:center;}
+@media(max-width:760px){ .day-row td::before{content:none;} }
 </style>
 </head>
 <body>
 <nav id="nav"><div class="nav-inner"><a class="brand" href="/" aria-label="Leo home"><span class="brand-leo">Leo</span></a><div class="nav-sport-selector"><button class="nav-sport" data-sport="MLB">MLB</button><button class="nav-sport" data-sport="NFL">NFL</button><button class="nav-sport active" data-sport="NBA">NBA</button></div><button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">☰</button><div class="nav-links"><a class="navlink" href="/nba/scoreboard/">Scoreboard</a><a class="navlink" href="/nba/previews/">Picks</a><span class="nav-drop"><a class="navlink nav-drop-toggle" href="/nba/tools/">Lab ▾</a><span class="nav-drop-menu"><a href="/nba/tools/model-tuner/">Model Tuner</a><a href="/nba/tools/injury-tracker/">Injury Tracker</a><a href="/nba/players/">Player Scoring</a><a href="/nba/stats/">Team Ratings</a></span></span><a class="navlink" href="/nba/stats/">Stats</a><a class="navlink active" href="/nba/results/">Results</a><a class="navlink" href="/nba/recaps/">Recaps</a><a class="navlink navlink-cta" href="/membership/">Join $30/mo</a></div></div></nav>
-<main class="scoreboard-shell">
-<!-- prerendered 2026-11-03T07:13:43.465Z by scripts/prerender-hubs.js; replaced by the page script on load -->
-<section class="score-hero">
+<main class="scoreboard-shell" id="main">
+  <section class="score-hero">
     <p class="eyebrow">Every read, graded against what actually happened.</p>
-    <h1>Leo’s NBA record</h1>
+    <h1>Leo&rsquo;s NBA record</h1>
     <p class="subtitle">Each game is graded on the last read Leo made before tip. Nothing is changed after the fact, and losses stay on the record.</p>
+    <p class="updated" id="updated"></p>
   </section>
-  <section class="rec-row" id="records" aria-label="Season record"><div class="rec"><span class="lab">Games graded</span><span class="big">26</span><span class="beat">early read</span></div><div class="rec"><span class="lab">Winner calls</span><span class="big">69.2%</span><span class="beat">DraftKings favourite 73.1%</span></div><div class="rec"><span class="lab">Brier score</span><span class="big">0.204</span><span class="beat">Market 0.1873, lower is better</span></div><div class="rec"><span class="lab">Average miss</span><span class="big">11.41</span><span class="beat">DraftKings spread 10.62 points</span></div><div class="rec"><span class="lab">Leo Picks</span><span class="big">3-2</span><span class="beat">-0.56 units, 60.0% at an average price of -205</span></div><div class="rec"><span class="lab">Leans</span><span class="big">2-2</span><span class="beat">-0.18 units, 50.0% (priced at -110)</span></div></section>
-  <div class="honest"><b>How Leo is graded.</b> <b>Win chance</b> is scored on whether the side Leo gave 50% or more won, and on its Brier score (lower is better), both beside the DraftKings no vig price. <b>Spread</b> is scored on how far Leo's expected margin landed from the final margin, beside how far the DraftKings spread landed. A <b>Leo Pick</b> is a team Leo gives 60% or more to win when the DraftKings moneyline on it is better than -230; it is graded on the moneyline at the price stored before tip, 1 unit each, from Nov 2 (earlier games are shown as a replay). A <b>lean</b> is Leo's side at the DraftKings spread when the two were 4 or more points apart, 1 unit at the spread price stored before tip (-110 where none was stored, about 52.4% to break even). Picks and leans are a public test, not bets, and under 50 graded items any record is an early read.</div>
-  <div id="status" class="loading"></div>
-  <section class="card tbl-card"><table class="calls"><thead><tr><th>Date</th><th>Game</th><th>Final</th><th>Leo spread</th><th>DraftKings</th><th>Winner call</th><th>Leo Pick</th><th>Lean</th></tr></thead><tbody id="rows"><tr><td data-l="Date">2026-11-02</td><td><b>MIA @ LAL</b></td><td data-l="Final">117-138</td><td data-l="Leo">LAL -2.5</td><td data-l="DraftKings">LAL -2.5</td><td data-l="Winner call">LAL <span class="ok">right</span></td><td data-l="Leo Pick">—</td><td data-l="Lean">—</td></tr><tr><td data-l="Date">2026-11-02</td><td><b>TOR @ LAC</b></td><td data-l="Final">125-118</td><td data-l="Leo">LAC +4.5</td><td data-l="DraftKings">LAC +6.5</td><td data-l="Winner call">TOR <span class="ok">right</span></td><td data-l="Leo Pick">TOR -216 <span class="ok">win</span> <span class="dim">+0.46u</span></td><td data-l="Lean">—</td></tr><tr><td data-l="Date">2026-11-02</td><td><b>PHX @ GS</b></td><td data-l="Final">113-116</td><td data-l="Leo">GS -2.5</td><td data-l="DraftKings">GS -2.5</td><td data-l="Winner call">GS <span class="ok">right</span></td><td data-l="Leo Pick">—</td><td data-l="Lean">—</td></tr><tr><td data-l="Date">2026-11-02</td><td><b>POR @ DEN</b></td><td data-l="Final">118-110</td><td data-l="Leo">DEN -2</td><td data-l="DraftKings">DEN -4.5</td><td data-l="Winner call">DEN <span class="no">wrong</span></td><td data-l="Leo Pick">—</td><td data-l="Lean">—</td></tr><tr><td data-l="Date">2026-11-02</td><td><b>UTAH @ SA</b></td><td data-l="Final">97-119</td><td data-l="Leo">SA -14.5</td><td data-l="DraftKings">SA -16.5</td><td data-l="Winner call">SA <span class="ok">right</span></td><td data-l="Leo Pick">—</td><td data-l="Lean">—</td></tr><tr><td data-l="Date">2026-11-02</td><td><b>BOS @ HOU</b></td><td data-l="Final">93-109</td><td data-l="Leo">HOU -8</td><td data-l="DraftKings">HOU -4.5</td><td data-l="Winner call">HOU <span class="ok">right</span></td><td data-l="Leo Pick">HOU -191 <span class="ok">win</span> <span class="dim">+0.52u</span></td><td data-l="Lean">—</td></tr><tr><td data-l="Date">2026-11-02</td><td><b>MIL @ MIN</b></td><td data-l="Final">100-112</td><td data-l="Leo">MIN -11.5</td><td data-l="DraftKings">MIN -10.5</td><td data-l="Winner call">MIN <span class="ok">right</span></td><td data-l="Leo Pick">—</td><td data-l="Lean">—</td></tr><tr><td data-l="Date">2026-11-02</td><td><b>NO @ MEM</b></td><td data-l="Final">135-134</td><td data-l="Leo">MEM -8.5</td><td data-l="DraftKings">MEM -5.5</td><td data-l="Winner call">MEM <span class="no">wrong</span></td><td data-l="Leo Pick">MEM -214 <span class="no">loss</span> <span class="dim">-1.00u</span></td><td data-l="Lean">—</td></tr><tr><td data-l="Date">2026-11-02</td><td><b>SAC @ DAL</b></td><td data-l="Final">115-100</td><td data-l="Leo">DAL -10</td><td data-l="DraftKings">DAL -7.5</td><td data-l="Winner call">DAL <span class="no">wrong</span></td><td data-l="Leo Pick">—</td><td data-l="Lean">—</td></tr><tr><td data-l="Date">2026-11-02</td><td><b>CHI @ PHI</b></td><td data-l="Final">107-126</td><td data-l="Leo">PHI -10.5</td><td data-l="DraftKings">PHI -10.5</td><td data-l="Winner call">PHI <span class="ok">right</span></td><td data-l="Leo Pick">—</td><td data-l="Lean">—</td></tr><tr><td data-l="Date">2026-11-02</td><td><b>WSH @ ORL</b></td><td data-l="Final">103-94</td><td data-l="Leo">ORL -2.5</td><td data-l="DraftKings">ORL -2.5</td><td data-l="Winner call">ORL <span class="no">wrong</span></td><td data-l="Leo Pick">—</td><td data-l="Lean">—</td></tr><tr><td data-l="Date">2026-11-02</td><td><b>BKN @ NY</b></td><td data-l="Final">90-103</td><td data-l="Leo">NY -12.5</td><td data-l="DraftKings">NY -14.5</td><td data-l="Winner call">NY <span class="ok">right</span></td><td data-l="Leo Pick">—</td><td data-l="Lean">—</td></tr><tr><td data-l="Date">2026-11-02</td><td><b>ATL @ IND</b></td><td data-l="Final">108-104</td><td data-l="Leo">IND +12.5</td><td data-l="DraftKings">IND +9.5</td><td data-l="Winner call">ATL <span class="ok">right</span></td><td data-l="Leo Pick">—</td><td data-l="Lean">—</td></tr><tr><td data-l="Date">2026-11-02</td><td><b>DET @ CHA</b></td><td data-l="Final">124-91</td><td data-l="Leo">CHA +6.5</td><td data-l="DraftKings">CHA +5.5</td><td data-l="Winner call">DET <span class="ok">right</span></td><td data-l="Leo Pick">DET -223 <span class="ok">win</span> <span class="dim">+0.45u</span></td><td data-l="Lean">—</td></tr><tr><td data-l="Date">2026-11-02</td><td><b>OKC @ CLE</b></td><td data-l="Final">117-112</td><td data-l="Leo">CLE -4</td><td data-l="DraftKings">CLE -4.5</td><td data-l="Winner call">CLE <span class="no">wrong</span></td><td data-l="Leo Pick">CLE -180 <span class="no">loss</span> <span class="dim">-1.00u</span></td><td data-l="Lean">—</td></tr><tr><td data-l="Date">2026-11-01</td><td><b>TOR @ LAL</b></td><td data-l="Final">125-131</td><td data-l="Leo">LAL +0.5</td><td data-l="DraftKings">LAL -3.5</td><td data-l="Winner call">TOR <span class="no">wrong</span></td><td data-l="Leo Pick">—</td><td data-l="Lean">TOR +3.5 <span class="no">loss</span> <span class="dim">-1.00u</span></td></tr><tr><td data-l="Date">2026-11-01</td><td><b>LAC @ GS</b></td><td data-l="Final">112-124</td><td data-l="Leo">GS -1</td><td data-l="DraftKings">GS -1.5</td><td data-l="Winner call">GS <span class="ok">right</span></td><td data-l="Leo Pick">—</td><td data-l="Lean">—</td></tr><tr><td data-l="Date">2026-11-01</td><td><b>BKN @ IND</b></td><td data-l="Final">98-90</td><td data-l="Leo">IND +0.5</td><td data-l="DraftKings">IND -3.5</td><td data-l="Winner call">BKN <span class="ok">right</span></td><td data-l="Leo Pick">—</td><td data-l="Lean">BKN +3.5 <span class="ok">win</span> <span class="dim">+0.91u</span></td></tr><tr><td data-l="Date">2026-11-01</td><td><b>BOS @ ORL</b></td><td data-l="Final">108-97</td><td data-l="Leo">ORL +3.5</td><td data-l="DraftKings">ORL +7.5</td><td data-l="Winner call">BOS <span class="ok">right</span></td><td data-l="Leo Pick">—</td><td data-l="Lean">ORL +7.5 <span class="no">loss</span> <span class="dim">-1.00u</span></td></tr><tr><td data-l="Date">2026-10-31</td><td><b>OKC @ HOU</b></td><td data-l="Final">98-119</td><td data-l="Leo">HOU -3</td><td data-l="DraftKings">HOU -2.5</td><td data-l="Winner call">HOU <span class="ok">right</span></td><td data-l="Leo Pick">—</td><td data-l="Lean">—</td></tr><tr><td data-l="Date">2026-10-31</td><td><b>MIN @ SA</b></td><td data-l="Final">111-121</td><td data-l="Leo">SA -5</td><td data-l="DraftKings">SA -12.5</td><td data-l="Winner call">SA <span class="ok">right</span></td><td data-l="Leo Pick">—</td><td data-l="Lean">MIN +12.5 <span class="ok">win</span> <span class="dim">+0.91u</span></td></tr><tr><td data-l="Date">2026-10-31</td><td><b>CLE @ MIL</b></td><td data-l="Final">136-111</td><td data-l="Leo">MIL +6.5</td><td data-l="DraftKings">MIL +9.5</td><td data-l="Winner call">CLE <span class="ok">right</span></td><td data-l="Leo Pick">—</td><td data-l="Lean">—</td></tr><tr><td data-l="Date">2026-10-31</td><td><b>SAC @ MEM</b></td><td data-l="Final">105-136</td><td data-l="Leo">MEM -10.5</td><td data-l="DraftKings">MEM -8.5</td><td data-l="Winner call">MEM <span class="ok">right</span></td><td data-l="Leo Pick">—</td><td data-l="Lean">—</td></tr><tr><td data-l="Date">2026-10-31</td><td><b>ATL @ NO</b></td><td data-l="Final">99-121</td><td data-l="Leo">NO +7.5</td><td data-l="DraftKings">NO +5.5</td><td data-l="Winner call">ATL <span class="no">wrong</span></td><td data-l="Leo Pick">ATL -198 <span class="no">loss</span> <span class="dim">-1.00u</span> <span class="dim">replay</span></td><td data-l="Lean">—</td></tr><tr><td data-l="Date">2026-10-31</td><td><b>PHI @ CHA</b></td><td data-l="Final">109-104</td><td data-l="Leo">CHA -1.5</td><td data-l="DraftKings">CHA +1.5</td><td data-l="Winner call">CHA <span class="no">wrong</span></td><td data-l="Leo Pick">—</td><td data-l="Lean">—</td></tr><tr><td data-l="Date">2026-10-31</td><td><b>POR @ UTAH</b></td><td data-l="Final">112-90</td><td data-l="Leo">UTAH +5</td><td data-l="DraftKings">UTAH +7.5</td><td data-l="Winner call">POR <span class="ok">right</span></td><td data-l="Leo Pick">—</td><td data-l="Lean">—</td></tr></tbody></table></section>
+  <div id="status" class="loading">Loading&hellip;</div>
+  <div id="app"></div>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
+<script src="/scripts/lib/nba-picks.js?v=20261103"></script>
 <script>
 renderNav("/nba/results/"); renderFooter();
+/* NBA results (DEC-20261103-30): official calls (Leo Picks and leans) kept apart
+   from Leo's projected winner on every game; filters by date and team; the time
+   the record was last graded. Every section is written with innerHTML = (prerender rule). */
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const sgn = v => v == null ? "—" : v === 0 ? "PK" : (v > 0 ? "+" : "") + v;
-const pc = v => v == null ? "—" : (v * 100).toFixed(1) + "%";
-const u = v => v == null ? "—" : (v > 0 ? "+" : "") + (+v).toFixed(2);
-const niceDate = d => new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+const sgn = v => v == null ? "&mdash;" : v === 0 ? "PK" : (v > 0 ? "+" : "") + v;
+const pc = v => v == null ? "&mdash;" : (v * 100).toFixed(1) + "%";
+const u = v => v == null ? "&mdash;" : (v > 0 ? "+" : "") + (+v).toFixed(2);
+const day = d => new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+const avg = a => a.length ? a.reduce((t, v) => t + v, 0) / a.length : null;
+let DOC = null, F = { date: "", team: "" };
+try { const q = new URLSearchParams(location.search); F.date = q.get("date") || ""; F.team = (q.get("team") || "").toUpperCase(); } catch (e) {}
+
+function setFilter(k, v) {
+  F[k] = v;
+  try { const q = new URLSearchParams(); if (F.date) q.set("date", F.date); if (F.team) q.set("team", F.team); history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q : "")); } catch (e) {}
+  render();
+}
+function shiftDate(n) {
+  const ds = [...new Set(DOC.games.map(g => g.date))].sort().reverse();   // newest first, as in the list
+  const i = F.date ? ds.indexOf(F.date) : -1, k = i < 0 ? (n > 0 ? 0 : -1) : i + n;
+  setFilter("date", ds[k] || "");
+}
+const isPick = g => !!g.pick_result && !g.pick_replay;
+const leanTeam = g => g.lean_side === "home" ? g.home : g.away;
+
+function tiles(items) { return '<section class="rec-row">' + items.map(([l, b, s]) => '<div class="rec"><span class="lab">' + l + '</span><span class="big">' + b + '</span><span class="beat">' + s + "</span></div>").join("") + "</section>"; }
+
+function render() {
+  const all = DOC.games;
+  const dates = [...new Set(all.map(g => g.date))].sort().reverse();
+  const teams = [...new Set(all.flatMap(g => [g.away, g.home]))].sort();
+  const list = all.filter(g => (!F.date || g.date === F.date) && (!F.team || g.away === F.team || g.home === F.team));
+  const scope = (F.date ? day(F.date) : "Season") + (F.team ? ", " + F.team + " games" : "");
+
+  // Official calls
+  const picks = list.filter(isPick), pw = picks.filter(g => g.pick_result === "win").length, pu = picks.reduce((t, g) => t + (g.pick_units || 0), 0);
+  const leans = list.filter(g => g.lean_result), lw = leans.filter(g => g.lean_result === "win").length, ll = leans.filter(g => g.lean_result === "loss").length, lp = leans.length - lw - ll;
+  const lu = leans.reduce((t, g) => t + (g.lean_units != null ? g.lean_units : g.lean_result === "win" ? 100 / 110 : g.lean_result === "loss" ? -1 : 0), 0);
+  const mv = picks.filter(g => g.pick_close_price != null && g.pick_price != null && window.NBA_PICKS).map(g => NBA_PICKS.imp(g.pick_close_price) - NBA_PICKS.imp(g.pick_price));
+  const avgPrice = picks.length ? Math.round(avg(picks.map(g => g.pick_price))) : null;
+  const calls = list.filter(g => isPick(g) || g.lean_result);
+
+  // Every game
+  const y = g => (g.home_score > g.away_score ? 1 : 0), mk = list.filter(g => g.mkt_p_home != null);
+  const winLeo = avg(list.map(g => g.leo_winner_correct)), winMk = avg(mk.map(g => +((g.mkt_p_home >= .5) === !!y(g))));
+  const brLeo = avg(mk.map(g => (g.leo_p_home - y(g)) ** 2)), brMk = avg(mk.map(g => (g.mkt_p_home - y(g)) ** 2));
+  const mLeo = avg(list.filter(g => g.mkt_home_spread != null).map(g => Math.abs(g.leo_home_margin - (g.home_score - g.away_score))));
+  const mLine = avg(list.filter(g => g.mkt_home_spread != null).map(g => Math.abs(-g.mkt_home_spread - (g.home_score - g.away_score))));
+
+  const opt = (v, t, sel) => '<option value="' + esc(v) + '"' + (sel ? " selected" : "") + ">" + t + "</option>";
+  const filters = '<section class="filters" aria-label="Filter the record">' +
+    '<button class="control-btn" type="button" onclick="shiftDate(1)" aria-label="Older day">&larr;</button>' +
+    '<div class="field"><label for="f-date">Game day</label><select id="f-date" onchange="setFilter(\'date\',this.value)">' + opt("", "All days", !F.date) +
+      dates.map(d => { const n = all.filter(g => g.date === d), p = n.filter(isPick), w = p.filter(g => g.pick_result === "win").length;
+        return opt(d, day(d) + " &middot; " + n.length + " games" + (p.length ? " &middot; " + w + "-" + (p.length - w) : ""), F.date === d); }).join("") + "</select></div>" +
+    '<button class="control-btn" type="button" onclick="shiftDate(-1)" aria-label="Newer day">&rarr;</button>' +
+    '<div class="field"><label for="f-team">Team</label><select id="f-team" onchange="setFilter(\'team\',this.value)">' + opt("", "All teams", !F.team) + teams.map(t => opt(t, t, F.team === t)).join("") + "</select></div>" +
+    (F.date || F.team ? '<button class="chip-reset" type="button" onclick="F.date=\'\';setFilter(\'team\',\'\')">Show everything</button>' : "") + "</section>";
+
+  const callRows = calls.length ? calls.map((g, i) => {
+    const head = (i === 0 || calls[i - 1].date !== g.date) && !F.date ? '<tr class="day-row"><td colspan="6">' + day(g.date) + "</td></tr>" : "";
+    const res = (r, units) => '<span class="' + (r === "win" ? "ok" : r === "loss" ? "no" : "") + '">' + (r === "win" ? "won" : r === "loss" ? "lost" : esc(r)) + "</span>" + (units == null ? "" : " " + u(units) + "u");
+    const out = [];
+    if (isPick(g)) out.push('<tr><td data-l="Game"><b>' + esc(g.away) + " @ " + esc(g.home) + '</b></td><td data-l="Call"><span class="call-tag">Pick ' + esc(g.pick_team) + '</span> to win</td><td data-l="Price">' + sgn(g.pick_price) + (g.pick_close_price != null ? ' <span class="dim">(tip ' + sgn(g.pick_close_price) + ")</span>" : "") + '</td><td data-l="Leo">' + Math.round(g.pick_p * 100) + '%</td><td data-l="Final">' + g.away_score + "-" + g.home_score + '</td><td data-l="Result">' + res(g.pick_result, g.pick_units) + "</td></tr>");
+    if (g.lean_result) out.push('<tr><td data-l="Game"><b>' + esc(g.away) + " @ " + esc(g.home) + '</b></td><td data-l="Call"><span class="call-tag lean">Lean ' + esc(leanTeam(g)) + " " + sgn(g.lean_line) + '</span> spread</td><td data-l="Price">' + (g.price_source === "dk_at_read" ? sgn(g.lean_price) : "-110") + '</td><td data-l="Gap">' + (g.edge_pts == null ? "" : Math.abs(g.edge_pts).toFixed(1) + " pts") + '</td><td data-l="Final">' + g.away_score + "-" + g.home_score + '</td><td data-l="Result">' + res(g.lean_result, g.lean_units != null ? g.lean_units : null) + "</td></tr>");
+    return head + out.join("");
+  }).join("") : '<tr class="empty-row"><td colspan="6">No official calls ' + (F.date || F.team ? "for this filter" : "graded yet") + ".</td></tr>";
+
+  const gameRows = list.length ? list.map((g, i) => {
+    const head = (i === 0 || list[i - 1].date !== g.date) && !F.date ? '<tr class="day-row"><td colspan="6">' + day(g.date) + "</td></tr>" : "";
+    const sp = g.leo_home_margin == null ? null : -g.leo_home_margin, m = g.mkt_home_spread;
+    const lm = sp == null ? null : m == null ? Math.round(sp * 2) / 2 : sp > m ? Math.floor(sp * 2) / 2 : Math.ceil(sp * 2) / 2;
+    const fav = g.leo_p_home >= .5 ? g.home : g.away, p = Math.max(g.leo_p_home, 1 - g.leo_p_home);
+    return head + '<tr><td data-l="Game"><b>' + esc(g.away) + " @ " + esc(g.home) + '</b></td><td data-l="Final">' + g.away_score + "-" + g.home_score +
+      '</td><td data-l="Leo had">' + esc(fav) + " " + Math.round(p * 100) + '% <span class="' + (g.leo_winner_correct ? "ok" : "no") + '">' + (g.leo_winner_correct ? "right" : "wrong") + "</span>" +
+      '</td><td data-l="Leo spread">' + esc(g.home) + " " + sgn(lm) + '</td><td data-l="DraftKings">' + (m == null ? "&mdash;" : esc(g.home) + " " + sgn(m)) +
+      '</td><td data-l="Leo missed by">' + (g.leo_home_margin == null ? "&mdash;" : Math.abs(g.leo_home_margin - (g.home_score - g.away_score)).toFixed(1)) + "</td></tr>";
+  }).join("") : '<tr class="empty-row"><td colspan="6">No graded games for this filter.</td></tr>';
+
+  document.getElementById("app").innerHTML = filters +
+    '<h2 class="sec-h">Leo&rsquo;s official calls</h2>' +
+    '<p class="sec-p">The only games Leo puts on the record as calls. A <b>Leo Pick</b> is a team Leo gives 60% or more to win when the DraftKings moneyline on it is better than -230, graded on the moneyline at the price saved before tip. A <b>lean</b> is Leo 4 or more points off the DraftKings spread, graded on the spread. 1 unit each. Picks count from Nov 2. A public test, not bets; under 50 graded calls is an early read.</p>' +
+    tiles([
+      ["Leo Picks &middot; " + esc(scope), picks.length ? pw + "-" + (picks.length - pw) : "0-0", picks.length ? u(pu) + " units, " + pc(pw / picks.length) + " at an average price of " + sgn(avgPrice) : "none graded for this filter"],
+      ["Leans &middot; " + esc(scope), leans.length ? lw + "-" + ll + (lp ? "-" + lp : "") : "0-0", leans.length ? u(lu) + " units, " + pc(lw / Math.max(1, lw + ll)) : "none graded for this filter"],
+      ["Price after Leo&rsquo;s read", mv.length ? mv.filter(v => v > .004).length + " of " + mv.length : "&mdash;", mv.length ? "picks where the price moved toward Leo by tip (" + mv.filter(v => v < -.004).length + " against). A benchmark, not a result." : "shows once picks are graded"]
+    ]) +
+    '<section class="card tbl-card"><table class="calls"><thead><tr><th>Game</th><th>Call</th><th>Price</th><th>Leo / gap</th><th>Final</th><th>Result</th></tr></thead><tbody>' + callRows + "</tbody></table></section>" +
+    '<h2 class="sec-h">Every game: Leo&rsquo;s projected winner</h2>' +
+    '<p class="sec-p">Leo&rsquo;s read on every game, call or not: the team Leo gave 50% or more and Leo&rsquo;s spread, beside DraftKings. This is how the model is judged, not a list of calls.</p>' +
+    tiles([
+      ["Games graded", list.length, list.length < 50 ? "early read" : esc(scope)],
+      ["Winner right", pc(winLeo), "DraftKings favourite " + pc(winMk)],
+      ["Brier score", brLeo == null ? "&mdash;" : brLeo.toFixed(4), "Market " + (brMk == null ? "&mdash;" : brMk.toFixed(4)) + ", lower is better"],
+      ["Average miss", mLeo == null ? "&mdash;" : mLeo.toFixed(2), "DraftKings spread " + (mLine == null ? "&mdash;" : mLine.toFixed(2)) + " points"]
+    ]) +
+    '<section class="card tbl-card"><table class="calls"><thead><tr><th>Game</th><th>Final</th><th>Leo had</th><th>Leo spread</th><th>DraftKings</th><th>Leo missed by</th></tr></thead><tbody>' + gameRows + "</tbody></table></section>";
+}
+
 (async () => {
   const st = document.getElementById("status");
   try {
     const r = await fetch("/data/nba/results.json?v=" + Date.now(), { cache: "no-store" });
     if (!r.ok) { st.innerHTML = '<div class="score-empty">The first NBA games are graded the morning after Leo\'s first card.</div>'; return; }
-    const d = await r.json(), s = d.season, L = s.leans, P = s.picks;
-    document.getElementById("records").innerHTML =
-      '<div class="rec"><span class="lab">Games graded</span><span class="big">' + s.games + '</span><span class="beat">' + (s.games < 50 ? "early read" : "season to date") + "</span></div>" +
-      '<div class="rec"><span class="lab">Winner calls</span><span class="big">' + pc(s.winner_leo) + '</span><span class="beat">DraftKings favourite ' + pc(s.winner_market) + "</span></div>" +
-      '<div class="rec"><span class="lab">Brier score</span><span class="big">' + (s.brier_leo ?? "—") + '</span><span class="beat">Market ' + (s.brier_market ?? "—") + ", lower is better</span></div>" +
-      '<div class="rec"><span class="lab">Average miss</span><span class="big">' + (s.miss_leo ?? "—") + '</span><span class="beat">DraftKings spread ' + (s.miss_line ?? "—") + " points</span></div>" +
-      '<div class="rec"><span class="lab">Leo Picks</span><span class="big">' + (P ? P.won + "-" + P.lost : "0-0") + '</span><span class="beat">' + (!P || !P.n ? "60%+ and better than -230; tracked from " + esc(niceDate(P ? P.from : "2026-11-02")) : u(P.units) + " units, " + pc(P.pct) + " at an average price of " + sgn(P.avg_price)) + "</span></div>" +
-      '<div class="rec"><span class="lab">Leans</span><span class="big">' + L.won + "-" + L.lost + (L.push ? "-" + L.push : "") + '</span><span class="beat">' + (L.pct == null ? "none graded yet" : u(L.units ?? L.units_at_110) + " units, " + pc(L.pct) + (L.priced ? "" : " (priced at -110)")) + "</span></div>";
-    st.textContent = "";
-    document.getElementById("rows").innerHTML = d.games.map(g => {
-      // Leo's number on the .5 grid, rounded toward the DraftKings spread (scripts/lib/nba-why.js leoLine).
-      const home = g.home, sp = g.leo_home_margin == null ? null : -g.leo_home_margin, mk = g.mkt_home_spread;
-      const lm = sp == null ? null : mk == null ? Math.round(sp * 2) / 2 : sp > mk ? Math.floor(sp * 2) / 2 : Math.ceil(sp * 2) / 2;
-      const res = (r, units) => ' <span class="' + (r === "win" ? "ok" : r === "loss" ? "no" : "") + '">' + esc(r) + "</span>" + (units == null ? "" : ' <span class="dim">' + u(units) + "u</span>");
-      return "<tr><td data-l=\"Date\">" + esc(g.date) + "</td><td><b>" + esc(g.away) + " @ " + esc(home) + "</b></td>" +
-        '<td data-l="Final">' + g.away_score + "-" + g.home_score + "</td>" +
-        '<td data-l="Leo">' + esc(home) + " " + sgn(lm) + "</td>" +
-        '<td data-l="DraftKings">' + (g.mkt_home_spread == null ? "—" : esc(home) + " " + sgn(g.mkt_home_spread)) + "</td>" +
-        '<td data-l="Winner call">' + esc(g.leo_p_home >= .5 ? home : g.away) + ' <span class="' + (g.leo_winner_correct ? "ok" : "no") + '">' + (g.leo_winner_correct ? "right" : "wrong") + "</span></td>" +
-        '<td data-l="Leo Pick">' + (g.pick_result ? esc(g.pick_team) + " " + sgn(g.pick_price) + res(g.pick_result, g.pick_units) + (g.pick_replay ? ' <span class="dim">replay</span>' : "") : "—") + "</td>" +
-        '<td data-l="Lean">' + (g.lean_result ? esc(g.lean_side === "home" ? home : g.away) + " " + sgn(g.lean_line) + (g.lean_price != null && g.price_source === "dk_at_read" ? " (" + sgn(g.lean_price) + ")" : "") + res(g.lean_result, g.lean_units) : "—") + "</td></tr>";
-    }).join("");
+    DOC = await r.json();
+    const last = DOC.games.length ? DOC.games.map(g => g.date).sort().slice(-1)[0] : null;
+    document.getElementById("updated").innerHTML = "Last updated " + new Date(DOC.updated_at).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) + " ET" + (last ? " &middot; games through " + day(last) : "");
+    st.innerHTML = "";
+    render();
   } catch (e) { st.innerHTML = '<div class="notice warn">The record could not load: ' + esc(e.message) + ".</div>"; }
 })();
 </script>

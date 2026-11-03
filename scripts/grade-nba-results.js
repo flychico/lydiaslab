@@ -146,7 +146,7 @@ function summarize() {
     by_date: dates.map(d => ({ date: d, ...block(rows.filter(r => r.date === d)) })).reverse(),
     games: rows.slice().reverse().map(r => ({
       date: r.date, game_id: r.game_id, away: r.away, home: r.home, away_score: +r.away_score, home_score: +r.home_score,
-      leo_home_margin: num(r.leo_home_margin), leo_p_home: num(r.leo_p_home), mkt_home_spread: num(r.mkt_home_spread),
+      leo_home_margin: num(r.leo_home_margin), leo_p_home: num(r.leo_p_home), mkt_home_spread: num(r.mkt_home_spread), mkt_p_home: num(r.mkt_p_home),
       leo_winner_correct: +r.leo_winner_correct, lean_side: r.lean_side, lean_line: num(r.lean_line), lean_result: r.lean_result, edge_pts: num(r.edge_pts),
       pick_team: r.pick_team || "", pick_p: num(r.pick_p), pick_price: num(r.pick_price), pick_result: r.pick_result || "", pick_units: num(r.pick_units),
       pick_replay: !!r.pick_result && r.date < PK.TRACK_FROM, pick_close_price: num(r.pick_close_price), lean_price: num(r.lean_price), lean_units: num(r.lean_units), price_source: r.price_source || ""
