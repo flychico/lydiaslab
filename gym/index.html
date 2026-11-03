@@ -2092,6 +2092,8 @@ function mergeBackup(inc){
   if (inc.hk) { S.hk = S.hk || {}; Object.keys(inc.hk).forEach(d => { S.hk[d] = { ...inc.hk[d], ...(S.hk[d] || {}) }; }); }
   S.supps = uniq([...(S.supps || []), ...(inc.supps || [])], x => x.id);
   S.inboxDone = [...new Set([...(S.inboxDone || []), ...(inc.inboxDone || [])])].slice(-200);
+  if (inc.hkManual) { S.hkManual = S.hkManual || {}; Object.entries(inc.hkManual).forEach(([d, v]) => { S.hkManual[d] = { ...v, ...(S.hkManual[d] || {}) }; }); }
+  hkApplyManual();
   if (inc.suppLog) { S.suppLog = S.suppLog || {}; Object.keys(inc.suppLog).forEach(d => { S.suppLog[d] = [...new Set([...(S.suppLog[d] || []), ...inc.suppLog[d]])]; }); }
   if (!S.targets && inc.targets) S.targets = inc.targets;
   if (!S.profile && inc.profile) S.profile = inc.profile;
@@ -2803,6 +2805,10 @@ async function syncNow(manual){
     else if (remoteChanged && !localChanged) { adoptRemote(remote); pulled = true; }
     else if (remoteChanged && localChanged) { mergeBackup(remote); if (remoteAt > localAt && remote.plan) S.plan = remote.plan; S.updatedAt = Date.now(); localStorage.setItem(KEY, JSON.stringify(S)); hydrateCustom(); pulled = true; }
     if (pulled) { syncCfg.last = remoteAt; }
+    // Share the AI coach connection between your devices through the private gist
+    const link = g.files && g.files["coach-link.json"];
+    if (!coachCfg && link && link.content) { try { const c = JSON.parse(link.content); if (c.repo && c.token) { coachCfg = { repo: c.repo, token: c.token, at: 0 }; saveCoachCfg(); toast("AI coach connected from your other device"); } } catch (e) {} }
+    else if (coachCfg && (!link || !String(link.content || "").includes(coachCfg.token))) { try { await gh("/gists/" + syncCfg.gist, { method: "PATCH", body: { files: { "coach-link.json": { content: JSON.stringify({ repo: coachCfg.repo, token: coachCfg.token }) } } } }); } catch (e) {} }
     const hkFiles = hkTakeFiles(g);
     if (hkFiles.length) { S.updatedAt = Date.now(); localStorage.setItem(KEY, JSON.stringify(S)); pulled = "health"; }
     if ((S.updatedAt || 0) > (syncCfg.last || 0) || !remote) {
@@ -2934,9 +2940,11 @@ function hkMerge(date, vals){
    "24 hours before midnight" window pulls in the whole previous day, doubling the
    summed numbers. Drop steps/exercise/energy/stand for that one day a year. */
 function hk25h(d){ return new Date(shiftDate(d, 1) + "T00:00") - new Date(d + "T00:00") > 24.5 * 36e5; }
+function hkApplyManual(){ S.hk = S.hk || {}; Object.entries(S.hkManual || {}).forEach(([d, v]) => { S.hk[d] = { ...(S.hk[d] || {}), ...v }; }); }
 function hkFixDst(){
   S.hk = S.hk || {}; S.hkManual = S.hkManual || {};
   if (!S.hkManual["2026-11-01"] && S.hk["2026-11-01"]) { const h = S.hk["2026-11-01"]; ["ex", "kcal", "stand", "standMin"].forEach(k => delete h[k]); h.steps = 9278; S.hkManual["2026-11-01"] = { steps: 9278 }; }
+  hkApplyManual();
   Object.keys(S.hk).forEach(d => { if (!hk25h(d)) return; const h = S.hk[d], man = S.hkManual[d] || {}; ["steps", "ex", "kcal", "stand", "standMin"].forEach(k => { if (man[k] != null) h[k] = man[k]; else delete h[k]; }); });
 }
 function hkTakeFiles(g){
@@ -3445,6 +3453,12 @@ async function coachInbox(){
       S.nutrition = S.nutrition || []; S.nutrition.push({ date: d, n: String(it.n).slice(0, 60), cal: Math.round(+it.cal || 0), p: r1(+it.p || 0), c: r1(+it.c || 0), f: r1(+it.f || 0), ...(it.fv > 0 ? { fv: r1(+it.fv) } : {}), ...xtra(it) });
       if (it.saveMeal && !(S.foods || []).some(m => m.n === it.n)) saveMealObj(it);
       got.push(it.n);
+    }
+    if (it.type === "hk" && /^\d{4}-\d{2}-\d{2}$/.test(it.date || "")) {
+      const v = {}; ["steps", "ex", "kcal", "standMin", "sleep", "rhr", "hrv", "vo2"].forEach(k => { if (it[k] != null && isFinite(+it[k])) v[k] = +it[k]; });
+      (it.clear || []).forEach(k => { if (S.hk && S.hk[it.date]) delete S.hk[it.date][k]; });
+      S.hkManual = S.hkManual || {}; S.hkManual[it.date] = { ...(S.hkManual[it.date] || {}), ...v }; hkApplyManual();
+      got.push("Health fix " + it.date.slice(5));
     }
     S.inboxDone.push(it.id);
   });
