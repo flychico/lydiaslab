@@ -2805,10 +2805,8 @@ async function syncNow(manual){
     else if (remoteChanged && !localChanged) { adoptRemote(remote); pulled = true; }
     else if (remoteChanged && localChanged) { mergeBackup(remote); if (remoteAt > localAt && remote.plan) S.plan = remote.plan; S.updatedAt = Date.now(); localStorage.setItem(KEY, JSON.stringify(S)); hydrateCustom(); pulled = true; }
     if (pulled) { syncCfg.last = remoteAt; }
-    // Share the AI coach connection between your devices through the private gist
-    const link = g.files && g.files["coach-link.json"];
-    if (!coachCfg && link && link.content) { try { const c = JSON.parse(link.content); if (c.repo && c.token) { coachCfg = { repo: c.repo, token: c.token, at: 0 }; saveCoachCfg(); toast("AI coach connected from your other device"); } } catch (e) {} }
-    else if (coachCfg && (!link || !String(link.content || "").includes(coachCfg.token))) { try { await gh("/gists/" + syncCfg.gist, { method: "PATCH", body: { files: { "coach-link.json": { content: JSON.stringify({ repo: coachCfg.repo, token: coachCfg.token }) } } } }); } catch (e) {} }
+    // Never keep tokens in the gist: remove the old coach-link file if an earlier version wrote it
+    if (g.files && g.files["coach-link.json"]) { try { await gh("/gists/" + syncCfg.gist, { method: "PATCH", body: { files: { "coach-link.json": null } } }); } catch (e) {} }
     const hkFiles = hkTakeFiles(g);
     if (hkFiles.length) { S.updatedAt = Date.now(); localStorage.setItem(KEY, JSON.stringify(S)); pulled = "health"; }
     if ((S.updatedAt || 0) > (syncCfg.last || 0) || !remote) {
@@ -2940,7 +2938,7 @@ function hkMerge(date, vals){
    "24 hours before midnight" window pulls in the whole previous day, doubling the
    summed numbers. Drop steps/exercise/energy/stand for that one day a year. */
 function hk25h(d){ return new Date(shiftDate(d, 1) + "T00:00") - new Date(d + "T00:00") > 24.5 * 36e5; }
-function hkApplyManual(){ S.hk = S.hk || {}; Object.entries(S.hkManual || {}).forEach(([d, v]) => { S.hk[d] = { ...(S.hk[d] || {}), ...v }; }); }
+function hkApplyManual(){ S.hk = S.hk || {}; Object.entries(S.hkManual || {}).forEach(([d, v]) => { const h = { ...(S.hk[d] || {}) }; Object.entries(v).forEach(([k, x]) => { if (x === null) delete h[k]; else h[k] = x; }); S.hk[d] = h; }); } // null = cleared for good
 function hkFixDst(){
   S.hk = S.hk || {}; S.hkManual = S.hkManual || {};
   if (!S.hkManual["2026-11-01"] && S.hk["2026-11-01"]) { const h = S.hk["2026-11-01"]; ["ex", "kcal", "stand", "standMin"].forEach(k => delete h[k]); h.steps = 9278; S.hkManual["2026-11-01"] = { steps: 9278 }; }
@@ -3456,7 +3454,7 @@ async function coachInbox(){
     }
     if (it.type === "hk" && /^\d{4}-\d{2}-\d{2}$/.test(it.date || "")) {
       const v = {}; ["steps", "ex", "kcal", "standMin", "sleep", "rhr", "hrv", "vo2"].forEach(k => { if (it[k] != null && isFinite(+it[k])) v[k] = +it[k]; });
-      (it.clear || []).forEach(k => { if (S.hk && S.hk[it.date]) delete S.hk[it.date][k]; });
+      (it.clear || []).forEach(k => { v[k] = null; });
       S.hkManual = S.hkManual || {}; S.hkManual[it.date] = { ...(S.hkManual[it.date] || {}), ...v }; hkApplyManual();
       got.push("Health fix " + it.date.slice(5));
     }
