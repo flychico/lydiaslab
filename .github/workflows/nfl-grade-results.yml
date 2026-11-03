@@ -25,9 +25,14 @@ name: NFL grade results
 
 on:
   schedule:
-    - cron: "0 10 * * *"    # 6:00am EDT / 5:00am EST  daily -- catches overnight stat posts
-    - cron: "0 15 * * 1,2"  # 11:00am EDT / 10:00am EST  Mon/Tue -- Sunday + Monday night games
-    - cron: "0 4 * * 1"     # 12:00am EDT / 11:00pm EST Sun  -- late Sunday windows
+    # DEC-20261103-50: first grade at 3am EST (Lynold: 10am is too late), and
+    # every run off the hour (GitHub dropped the 5am run on Nov 3). The later
+    # runs stay as backstops for stats nflverse posts late; a graded date is
+    # never rewritten.
+    - cron: "7 8 * * *"     # 4:07am EDT / 3:07am EST  daily -- first grade
+    - cron: "7 10 * * *"    # 6:07am EDT / 5:07am EST  daily -- backstop for overnight stat posts
+    - cron: "7 15 * * 1,2"  # 11:07am EDT / 10:07am EST  Mon/Tue -- backstop, Sunday + Monday night games
+    - cron: "7 4 * * 1"     # 12:07am EDT / 11:07pm EST Sun  -- late Sunday windows
   workflow_dispatch:
     inputs:
       date:
