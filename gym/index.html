@@ -255,7 +255,7 @@ const EX = [
   {id:"db-bench",n:"Dumbbell Bench Press",p:"pushH",e:"db",m:"Chest/Triceps",inc:5},
   {id:"incline-db",n:"Incline Dumbbell Press",p:"pushH",e:"db",m:"Upper chest",inc:5},
   {id:"pushup",n:"Push-Up",p:"pushH",e:"bw",m:"Chest/Triceps",inc:0},
-  {id:"dips",n:"Dips",p:"pushH",e:"bw",m:"Chest/Triceps",inc:0},
+  {id:"dips",n:"Dips (Bodyweight)",p:"pushH",e:"bw",m:"Chest/Triceps",inc:0},
   {id:"cable-fly",n:"Cable Fly",p:"pushH",e:"gym",m:"Chest",inc:5},
   {id:"machine-chest",n:"Chest Press Machine",p:"pushH",e:"gym",m:"Chest/Triceps",inc:10},
   {id:"ohp",n:"Overhead Press (Barbell)",p:"pushV",e:"gym",m:"Shoulders/Triceps",inc:5},
@@ -315,6 +315,7 @@ const EX = [
   {id:"incline-machine",n:"Incline Chest Press Machine",p:"pushH",e:"gym",m:"Upper chest",inc:10},
   {id:"smith-bench",n:"Smith Machine Bench Press",p:"pushH",e:"gym",m:"Chest/Triceps",inc:5},
   {id:"smith-incline",n:"Incline Smith Machine Press",p:"pushH",e:"gym",m:"Upper chest",inc:5},
+  {id:"seated-dip",n:"Seated Dip Machine",p:"pushH",e:"gym",m:"Triceps/Chest",inc:10},
   {id:"arnold-press",n:"Arnold Press",p:"pushV",e:"db",m:"Shoulders",inc:5},
   {id:"machine-shoulder-press",n:"Machine Shoulder Press",p:"pushV",e:"gym",m:"Shoulders/Triceps",inc:10},
   {id:"landmine-press",n:"Landmine Press",p:"pushV",e:"db",m:"Shoulders/Upper chest",inc:5},
@@ -467,6 +468,7 @@ const CUES = {
 "incline-db":"30° bench. Press up and slightly back.",
 "pushup":"Body one straight line, chest to floor, full lockout.",
 "dips":"Lean forward for chest, stay upright for triceps. Shoulders down.",
+"seated-dip":"Sit tall, elbows tucked back, press down until your arms are straight. Control it up; don't let the stack crash.",
 "cable-fly":"Slight elbow bend held constant — hug a barrel.",
 "machine-chest":"Drive evenly, squeeze chest, don't bounce the stack.",
 "ohp":"Squeeze glutes, ribs down, press to lockout over ears.",
@@ -3492,7 +3494,7 @@ function reviewCard(full){
     <div class="exhead"><h3>🗿 Weekly review</h3><span class="dim small">${esc(r.date || "")}${r.grade ? ` · <b>${esc(r.grade)}</b>` : ""}</span></div>
     ${r.title ? `<div style="font-weight:700;margin-bottom:4px">${esc(r.title)}</div>` : ""}
     <div class="small" style="line-height:1.6">${esc(r.summary || "").replace(/\n/g, "<br>")}</div>
-    ${list("WHAT WORKED", r.wins)}${list("WHERE YOU SLACKED", r.misses)}${list("CHANGES I MADE", r.changes)}${list("THIS WEEK'S FOCUS", r.focus)}
+    ${list("WHAT WORKED", r.wins)}${list("WHERE YOU SLACKED", r.misses)}${list("CHANGES I MADE", r.changes)}${list("THIS WEEK'S FOCUS", r.focus)}${list("WHAT TO EAT THIS WEEK", r.eat)}
     ${r.photos ? `<div class="dim small" style="font-weight:700;margin:10px 0 4px">PHOTOS</div><div class="small" style="line-height:1.55">${esc(r.photos)}</div>` : ""}
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
       ${r.applied && r.applied.length && !r.undone ? `<button class="btn ghost small-btn" onclick="undoReview()">Undo changes</button>` : r.undone ? '<span class="dim small">Changes undone</span>' : ""}
