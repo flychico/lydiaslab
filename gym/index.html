@@ -1755,7 +1755,7 @@ function renderProgress(){
     ${logs.length ? hist.slice(0, 8).map(hrow).join("") + (hist.length > 8 ? `<details class="more"><summary class="small blue">${hist.length - 8} older</summary>${hist.slice(8, 60).map(hrow).join("")}</details>` : "") : '<p class="dim small">No workouts yet.</p>'}</div>`;
   V.innerHTML = `
   <h1>Progress</h1>
-  <div class="jumps">${[["pg-road", "🗺 Roadmap"], ["pg-weight", "⚖️ Weight"], ["pg-photos", "📸 Photos"], ["pg-health", "⌚ Watch"], ["pg-lifts", "🏋️ Strength"], ["pg-history", "🗓 History"]].map(([id, l]) => `<span class="pill" onclick="const e=document.getElementById('${id}');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})">${l}</span>`).join("")}</div>
+  <div class="jumps">${[["pg-road", "🗺 Roadmap"], ["pg-weight", "⚖️ Weight"], ["pg-photos", "📸 Photos"], ["pg-health", "⌚ Watch"], ["pg-labs", "🩸 Labs"], ["pg-lifts", "🏋️ Strength"], ["pg-history", "🗓 History"]].map(([id, l]) => `<span class="pill" onclick="const e=document.getElementById('${id}');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})">${l}</span>`).join("")}</div>
   <div class="pcols">
     <div class="pcol">
       <div style="order:1">${roadmapCard()}</div>
@@ -1766,6 +1766,7 @@ function renderProgress(){
     </div>
     <div class="pcol">
       <div style="order:4" id="pg-health">${healthCardHTML()}</div>
+      <div style="order:5">${labsCard()}</div>
       <div style="order:5">${insightsPanel()}</div>
       <div style="order:6">${cPR}</div>
       <div style="order:8">${cVol}</div>
@@ -3327,7 +3328,7 @@ function gradeDay(date){
     const fv = dayFV(date);
     add("fv", "Fruit & veg", fv >= COACH.fv - 0.5, `${fv.toFixed(1)} / ${COACH.fv} servings`);
   }
-  const ds = dailySupps(); if (ds.length && (date >= (S.suppsSince || ""))) { const tk = suppsTaken(date), n = ds.filter(x => tk.has(x.id)).length; add("supps", "Supplements", n === ds.length, `${n} / ${ds.length} taken`); }
+  const ds = dailySupps().filter(x => !(creatineOffOn(date) && /creatine/i.test(x.n))); if (ds.length && (date >= (S.suppsSince || ""))) { const tk = suppsTaken(date), n = ds.filter(x => tk.has(x.id)).length; add("supps", "Supplements", n === ds.length, `${n} / ${ds.length} taken`); }
   if (new Date(date + "T12:00").getDay() === 0 && ws === ws0) { const c = cardioWeek(ws, date), ok = c.iv.length >= COACH.ivWeek && c.walk.length >= COACH.walkWeek; add("cardio", "Weekly cardio", ok, `${c.iv.length}/${COACH.ivWeek} 4×4 · ${c.walk.length}/${COACH.walkWeek} outdoor walks`); }
   const h = (S.hk || {})[date] || {};
   // The Shortcut stores the night that FOLLOWS a day on that day's date (read when you wake up)
@@ -3358,9 +3359,13 @@ function todaysMission(){
   if (ws === ws0) { const c = cardioWeek(ws, today()), ivLeft = COACH.ivWeek - c.iv.length, wLeft = COACH.walkWeek - c.walk.length;
     if (ivLeft > 0 && daysLeft <= 3) m.push(`<b>Your 4×4 isn't done this week.</b> ${daysLeft === 1 ? "Today is the last chance" : `${daysLeft} days left`}. It can be a second session tonight, just not on leg day.`);
     if (wLeft > 0 && wLeft >= daysLeft - 1) m.push(`<b>${wLeft} outdoor walk${wLeft === 1 ? "" : "s"} still to do</b> this week (25–35 min, started as Outdoor Walk on your Watch so it updates VO₂ max).`); }
+  { const rt = S.labs && S.labs.retest, td = today(); if (rt && td <= rt.to && !(S.labs.draws || []).some(x => x.date >= rt.from)) {
+      if (td >= rt.from) m.push(`<b>Blood work retest this week</b> (${esc(rt.tests)}): morning, fasted, well hydrated, no heavy lifting the 2–3 days before.`);
+      else if (td >= shiftDate(rt.from, -7)) m.push(`<b>Skip creatine</b> until your blood retest (${new Date(rt.from + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}) so creatinine reads clean.`); } }
   if (n.p < t.protein) m.push(`Hit <b>${Math.round(t.protein - n.p)} g more protein</b>${n.n ? "" : ". Log breakfast now"}.`);
   const fv = dayFV(today()); if (fv < COACH.fv) m.push(`Eat <b>${Math.ceil(COACH.fv - fv)} more fruit/veg servings</b> (a banana, a cup of berries, a handful of greens).`);
-  const sl = dailySupps().filter(x => !suppsTaken(today()).has(x.id)); if (sl.length) m.push(`Take your supplements: <b>${sl.map(x => esc(x.n)).join(", ")}</b> (Food tab).`);
+  const creatineOff = creatineOffOn(today());
+  const sl = dailySupps().filter(x => !suppsTaken(today()).has(x.id) && !(creatineOff && /creatine/i.test(x.n))); if (sl.length) m.push(`Take your supplements: <b>${sl.map(x => esc(x.n)).join(", ")}</b> (Food tab).`);
   const lastPhoto = (S.photos || []).map(x => x.date).sort().pop();
   if (coachCfg && (!lastPhoto || lastPhoto < shiftDate(today(), -6))) m.push(`<b>Take this week's progress photos</b> (Progress tab). Your Sunday review compares them.`);
   const lastW = (S.weights || []).map(x => x.date).sort().pop();
@@ -3433,11 +3438,29 @@ async function coachSync(force){
     await repoPut("data.json", b64(JSON.stringify(snapshot)), "App sync " + today());
     const fs0 = await repoGet("coach/FRESH_START.md");
     if (fs0 && fs0.content) { const m = unb64(fs0.content).match(/\d{4}-\d{2}-\d{2}/); if (m && S.fresh !== m[0]) { S.fresh = m[0]; save(); render(); } }
+    const lb = await repoGet("coach/labs.json");
+    if (lb && lb.content) { try { const L = JSON.parse(unb64(lb.content)); if (L && L.updated && (!S.labs || S.labs.updated !== L.updated)) { S.labs = L; save(); render(); toast("🩸 Blood work updated"); } } catch (e) {} }
     const rv = await repoGet("coach/review.json");
     if (rv && rv.content) { let r = null; try { r = JSON.parse(unb64(rv.content)); } catch (e) {} if (r && r.id && (!S.review || S.review.id !== r.id)) { applyReview(r); toast("🗿 New weekly review from your coach"); render(); } }
     coachCfg.at = Date.now(); coachCfg.err = ""; saveCoachCfg();
   } catch (e) { coachCfg.err = e.status === 401 || e.status === 403 ? "token" : e.status === 404 ? "repo" : "net"; saveCoachCfg(); }
   finally { coachBusy = false; }
+}
+/* Blood work: the latest draw from coach/labs.json, with goals and the retest plan.
+   The Sunday coach uses the same file as the foundation for food advice. */
+function labsCard(){
+  const L = S.labs; if (!L || !L.draws || !L.draws.length) return "";
+  const d = L.draws[0], all = d.panels.flatMap(p => p.items), flagged = all.filter(i => i.f);
+  const fmtD = x => new Date(x + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const row = i => `<div class="exline" style="align-items:flex-start"><span>${i.f ? `<b class="${i.f === "H" ? "red" : "gold"}">${i.f === "H" ? "▲" : "▼"}</b> ` : '<b class="green">✓</b> '}${esc(i.n)}${i.why ? `<div class="dim small" style="line-height:1.4;margin-top:2px">${esc(i.why)}</div>` : ""}</span><span class="small" style="white-space:nowrap;text-align:right"><b>${i.v}</b> ${esc(i.u || "")}<div class="dim small">${esc(i.r)}</div></span></div>`;
+  const rt = L.retest, td = today(), retestDue = rt && td >= shiftDate(rt.from, -10) && td <= rt.to && !L.draws.some(x => x.date >= rt.from);
+  return `<div class="card" id="pg-labs"><div class="exhead"><h3>🩸 Blood work</h3><span class="dim small">${fmtD(d.date)} · ${all.length - flagged.length}/${all.length} in range</span></div>
+    ${retestDue ? `<div class="small" style="background:var(--bg2);border-radius:10px;padding:10px 12px;margin:8px 0;line-height:1.5"><b>Retest ${fmtD(rt.from).replace(/, \d{4}/, "")}–${fmtD(rt.to).replace(/, \d{4}/, "")}</b> (${esc(rt.tests)})<ul class="mission" style="margin-top:4px">${rt.steps.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+    ${L.goals && L.goals.length ? `<div class="dim small" style="font-weight:700;margin:10px 0 4px">YOUR LAB GOALS</div>${L.goals.map(g => `<div class="rmrow"><div><b>${esc(g.marker)}</b> <span class="dim small">${esc(g.now)} → ${esc(g.target)}</span><div class="dim small" style="line-height:1.45">${esc(g.how)}</div></div></div>`).join("")}` : ""}
+    ${flagged.length ? `<div class="dim small" style="font-weight:700;margin:12px 0 4px">FLAGGED · RECHECK WITH YOUR DOCTOR</div>${flagged.map(row).join("")}` : ""}
+    <details class="more" style="margin-top:8px"><summary class="small blue">All ${all.length} results</summary>${d.panels.map(p => `<div class="dim small" style="font-weight:700;margin:10px 0 2px">${esc(p.name).toUpperCase()}</div>${p.items.map(row).join("")}`).join("")}
+      <p class="dim small" style="margin-top:8px;line-height:1.5">${esc(d.context || "")} ${esc(d.by || "")}. Ranges are this lab's; ask your doctor about anything flagged.</p></details>
+  </div>`;
 }
 /* Inbox: things Claude logs for you from chat (coach/inbox.json in the private repo).
    Each item is applied once, then removed from the file. */
@@ -3672,6 +3695,8 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
    protein (a protein shake) still belongs in the food log. */
 const SUPP_IDEAS = [["Creatine", "5 g"], ["Vitamin D3", "1,000–2,000 IU"], ["Fish oil", "1–2 g EPA+DHA"], ["Magnesium", "200–400 mg"], ["Multivitamin", "1 tablet"], ["HBOT session", "as scheduled", 1]];
 function dailySupps(){ return (S.supps || []).filter(x => !x.opt); }
+// The week before a blood retest, creatine is paused so creatinine reads clean.
+function creatineOffOn(date){ const rt = S.labs && S.labs.retest; return !!(rt && date >= shiftDate(rt.from, -7) && date <= rt.to && !(S.labs.draws || []).some(x => x.date >= rt.from && x.date <= date)); }
 function suppsTaken(date){ return new Set(((S.suppLog || {})[date || fd()]) || []); }
 function toggleSupp(id){
   const d = fd(); S.suppLog = S.suppLog || {}; const set = new Set(S.suppLog[d] || []);
