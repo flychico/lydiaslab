@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>Market Desk</title>
+<link rel="stylesheet" href="/css/style.css">
+<style>
+/* Market Desk: private research reader. Everything under /research/data is
+   AES-GCM ciphertext; this page derives the key from the password in the
+   browser and decrypts locally. Built by scripts/research/research.mjs. */
+:root { --serif: "EB Garamond", Georgia, "Times New Roman", serif; --gutter: max(18px, env(safe-area-inset-left, 0px)); }
+body { background: var(--bg); }
+[hidden] { display: none !important; }
+.md-top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: rgba(253,251,247,.94); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
+.md-top-in { max-width: 1180px; margin: 0 auto; height: 58px; display: flex; align-items: center; gap: 14px; padding-left: var(--gutter); padding-right: max(18px, env(safe-area-inset-right, 0px)); }
+.md-brand { font-weight: 850; color: var(--text); letter-spacing: -.02em; font-size: 1.1rem; white-space: nowrap; }
+.md-brand b { color: var(--accent); font-weight: 850; }
+.md-brand:hover { text-decoration: none; }
+.md-search { flex: 1; max-width: 420px; margin-left: auto; position: relative; }
+.md-search input { width: 100%; height: 38px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-card); padding: 0 12px 0 34px; font: inherit; font-size: .93rem; color: var(--text); }
+.md-search input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.md-search svg { position: absolute; left: 11px; top: 11px; width: 16px; height: 16px; color: var(--text-dim); }
+.md-lock { border: 1px solid var(--border); background: var(--bg-card); color: var(--accent2); font: inherit; font-weight: 700; font-size: .86rem; padding: 7px 12px; border-radius: 10px; cursor: pointer; white-space: nowrap; }
+.md-lock:hover { background: var(--bg-elev); }
+.md-lock:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* gate */
+.gate { min-height: 100vh; display: grid; place-items: center; padding: 40px var(--gutter); }
+.gate-card { width: 100%; max-width: 420px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-md); padding: 34px 30px 28px; display: flex; flex-direction: column; gap: 14px; }
+.gate-card h1 { font-family: var(--serif); font-weight: 600; font-size: 2.3rem; letter-spacing: -.01em; margin: 0; }
+.gate-card p { color: var(--text-dim); font-size: .95rem; }
+.gate-card label { font-size: .78rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); }
+.gate-card input[type=password] { height: 46px; border-radius: 10px; border: 1px solid var(--border); padding: 0 14px; font: inherit; font-size: 1.05rem; background: #fff; color: var(--text); }
+.gate-card input[type=password]:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.remember { display: flex; gap: 8px; align-items: center; font-size: .9rem; color: var(--text-dim); text-transform: none !important; letter-spacing: 0 !important; font-weight: 500 !important; }
+.btn { height: 46px; border: 0; border-radius: 10px; background: var(--accent2); color: #fff; font: inherit; font-weight: 800; font-size: 1rem; cursor: pointer; }
+.btn:hover { filter: brightness(1.08); }
+.btn[disabled] { opacity: .6; cursor: progress; }
+.gate-err { color: var(--danger); font-weight: 600; font-size: .92rem; min-height: 1.3em; }
+.gate-foot { font-size: .78rem; color: var(--text-dim); border-top: 1px solid var(--border); padding-top: 12px; }
+
+/* layout */
+.md-wrap { max-width: 1180px; margin: 0 auto; padding: 28px max(18px, env(safe-area-inset-right, 0px)) 80px var(--gutter); display: grid; grid-template-columns: 230px minmax(0,1fr); gap: 36px; }
+.side { position: sticky; top: 82px; align-self: start; max-height: calc(100vh - 100px); overflow-y: auto; display: flex; flex-direction: column; gap: 18px; font-size: .92rem; }
+.side h4 { font-size: .7rem; font-weight: 850; text-transform: uppercase; letter-spacing: .1em; color: var(--gold-deep); margin-bottom: 6px; }
+.side a { display: flex; justify-content: space-between; gap: 8px; padding: 5px 9px; border-radius: 8px; color: var(--text-dim); font-weight: 600; }
+.side a span { font-weight: 500; font-size: .8rem; color: var(--text-dim); opacity: .8; }
+.side a:hover { background: var(--bg-elev); text-decoration: none; color: var(--text); }
+.side a.on { background: rgba(26,37,53,.08); color: var(--accent2); }
+.mobile-nav { display: none; margin-bottom: 18px; }
+@media (max-width: 860px) { .md-wrap { grid-template-columns: minmax(0,1fr); gap: 0; padding-top: 18px; } .side { display: none; } .mobile-nav { display: block; } .md-brand { font-size: 1rem; } }
+.mobile-nav select { width: 100%; height: 42px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-card); font: inherit; padding: 0 10px; color: var(--text); }
+
+.content { min-width: 0; margin: 0; padding: 0; max-width: none; }
+.eyebrow { color: var(--gold-deep); }
+.page-h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(2rem, 5vw, 2.8rem); letter-spacing: -.01em; line-height: 1.08; margin: 0 0 8px; text-wrap: balance; }
+.lead { color: var(--text-dim); font-size: 1.03rem; max-width: 64ch; }
+
+/* home */
+.hero-card { display: block; background: var(--bg-card); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 8px; padding: 22px 24px; margin: 22px 0 8px; box-shadow: var(--shadow-sm); color: var(--text); }
+.hero-card:hover { text-decoration: none; border-color: rgba(26,37,53,.3); border-left-color: var(--accent); }
+.hero-card .t { font-family: var(--serif); font-size: clamp(1.4rem, 3.6vw, 1.85rem); line-height: 1.2; margin: 4px 0 8px; text-wrap: balance; font-weight: 600; }
+.hero-card p { color: var(--text-dim); max-width: 70ch; }
+.hero-card .go { display: inline-block; margin-top: 12px; font-weight: 800; color: var(--accent2); }
+.kicker { font-size: .7rem; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-deep); }
+h2.sec { font-family: var(--serif); font-weight: 600; font-size: 1.55rem; margin: 34px 0 10px; letter-spacing: -.005em; }
+.list { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.row { display: grid; grid-template-columns: 96px minmax(0,1fr); gap: 4px 16px; padding: 13px 18px; border-bottom: 1px solid var(--border); color: var(--text); }
+.row:last-child { border-bottom: 0; }
+.row:hover { background: #fff; text-decoration: none; }
+.row .d { font-size: .8rem; color: var(--text-dim); font-variant-numeric: tabular-nums; padding-top: 3px; }
+.row .tt { font-weight: 700; }
+.row .sm { grid-column: 2; color: var(--text-dim); font-size: .88rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.row .tag { font-size: .68rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--gold-deep); margin-right: 8px; }
+@media (max-width: 520px) { .row { grid-template-columns: minmax(0,1fr); } .row .sm { grid-column: 1; } }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.tile { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; color: var(--text); display: flex; flex-direction: column; gap: 3px; }
+.tile:hover { text-decoration: none; border-color: rgba(26,37,53,.3); }
+.tile .n { font-weight: 800; }
+.tile .c { font-size: .82rem; color: var(--text-dim); }
+.grp-label { font-size: .7rem; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; color: var(--text-dim); margin: 18px 0 8px; }
+
+/* doc */
+.crumb { font-size: .86rem; color: var(--text-dim); margin-bottom: 10px; }
+.crumb a { font-weight: 600; }
+.doc-meta { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; color: var(--text-dim); font-size: .9rem; margin-bottom: 22px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.doc-meta a { font-weight: 700; }
+.doc { max-width: 760px; font-size: 1.02rem; line-height: 1.68; }
+.doc > * + * { margin-top: 14px; }
+.doc h2, .doc h3, .doc h4 { font-family: var(--serif); font-weight: 600; color: var(--accent2); letter-spacing: -.005em; line-height: 1.25; }
+.doc h2 { font-size: 1.65rem; margin-top: 34px; }
+.doc h3 { font-size: 1.4rem; margin-top: 30px; padding-top: 14px; border-top: 1px solid var(--border); }
+.doc h4, .doc h5, .doc h6 { font-size: 1.15rem; margin-top: 22px; }
+.doc ul, .doc ol { padding-left: 22px; }
+.doc li + li { margin-top: 5px; }
+.doc li > ul, .doc li > ol { margin-top: 5px; }
+.doc li.task { list-style: none; margin-left: -20px; display: flex; gap: 9px; align-items: baseline; }
+.doc .box { flex: none; width: 13px; height: 13px; border: 1.5px solid var(--text-dim); border-radius: 3px; display: inline-block; transform: translateY(1px); }
+.doc .box.on { background: var(--good); border-color: var(--good); }
+.doc strong { color: var(--text); font-weight: 750; }
+.doc blockquote { border-left: 4px solid var(--accent); background: var(--bg-card); padding: 12px 16px; border-radius: 0 8px 8px 0; color: var(--text); }
+.doc hr { border: 0; border-top: 1px solid var(--border); margin: 26px 0; }
+.doc code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .86em; background: var(--bg-elev); padding: 1px 5px; border-radius: 4px; }
+.doc pre.code { background: var(--navy-deep); color: #EDE6D9; border-radius: 10px; padding: 16px; overflow-x: auto; font-size: .82rem; line-height: 1.5; }
+.doc pre.code code { background: none; padding: 0; color: inherit; }
+.doc a.wl { border-bottom: 1px dashed rgba(26,37,53,.35); }
+.doc a.wl:hover { text-decoration: none; border-bottom-style: solid; }
+.doc .wl-miss { font-weight: 600; }
+.tw { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-card); }
+.doc table { border-collapse: collapse; width: 100%; font-size: .86rem; line-height: 1.45; }
+.doc th { text-align: left; font-size: .7rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); background: var(--bg-elev); padding: 9px 11px; white-space: nowrap; }
+.doc td { padding: 8px 11px; border-top: 1px solid var(--border); vertical-align: top; }
+.doc td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pager { display: flex; justify-content: space-between; gap: 12px; margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.pager a { display: flex; flex-direction: column; max-width: 48%; font-weight: 700; }
+.pager a span { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); font-weight: 800; }
+.pager a.next { text-align: right; margin-left: auto; }
+.empty { color: var(--text-dim); padding: 24px 0; }
+.busy { color: var(--text-dim); padding: 30px 0; }
+mark { background: rgba(201,168,76,.32); color: inherit; padding: 0 1px; border-radius: 2px; }
+.foot { margin-top: 50px; font-size: .78rem; color: var(--text-dim); }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+
+<section class="gate" id="gate">
+  <form class="gate-card" id="gateForm" autocomplete="off">
+    <span class="kicker">Private · Leo</span>
+    <h1>Market Desk</h1>
+    <p>Market reports, levels, the Fed archive and the research library. Enter the password to unlock.</p>
+    <label for="pw">Password</label>
+    <input type="password" id="pw" name="pw" autocomplete="current-password" required>
+    <label class="remember" for="remember"><input type="checkbox" id="remember"> Keep me unlocked on this device</label>
+    <button class="btn" id="unlockBtn" type="submit">Unlock</button>
+    <div class="gate-err" id="gateErr" role="alert"></div>
+    <div class="gate-foot">Everything here is encrypted. It's decrypted only in your browser, after you enter the password.</div>
+  </form>
+</section>
+
+<div id="app" hidden>
+  <header class="md-top">
+    <div class="md-top-in">
+      <a class="md-brand" href="#/">Market <b>Desk</b></a>
+      <div class="md-search">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="8.5" cy="8.5" r="6"/><path d="M13 13l5 5"/></svg>
+        <input type="search" id="q" placeholder="Search reports and notes" aria-label="Search">
+      </div>
+      <button class="md-lock" id="lockBtn" type="button">Lock</button>
+    </div>
+  </header>
+  <div class="md-wrap">
+    <aside class="side" id="side"></aside>
+    <main class="content">
+      <div class="mobile-nav"><select id="mnav" aria-label="Go to section"></select></div>
+      <div id="view"></div>
+      <p class="foot">Educational research, not personal investment advice. Claude never places trades.</p>
+    </main>
+  </div>
+</div>
+
+<script>
+(() => {
+  const DATA = '/research/data/';
+  const $ = (s) => document.querySelector(s);
+  let KEY = null, META = null, IDX = null;
+  const cache = new Map();
+  const te = new TextEncoder(), td = new TextDecoder();
+  const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  const toB64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
+  const escH = (s) => String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const store = {
+    get() { try { return sessionStorage.getItem('mdk') || localStorage.getItem('mdk'); } catch { return null; } },
+    set(v, remember) { try { sessionStorage.setItem('mdk', v); if (remember) localStorage.setItem('mdk', v); } catch {} },
+    clear() { try { sessionStorage.removeItem('mdk'); localStorage.removeItem('mdk'); } catch {} },
+  };
+  const getJSON = async (url) => { const r = await fetch(url, { cache: 'no-cache' }); if (!r.ok) throw new Error(url + ' ' + r.status); return r.json(); };
+  async function dec(box, key = KEY) {
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(box.iv) }, key, b64(box.ct));
+    return JSON.parse(td.decode(pt));
+  }
+  async function derive(pw) {
+    const base = await crypto.subtle.importKey('raw', te.encode(pw), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: b64(META.salt), iterations: META.iterations, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
+  }
+  const importRaw = (raw) => crypto.subtle.importKey('raw', b64(raw), 'AES-GCM', true, ['decrypt']);
+  async function tryKey(key) { try { await dec(META.check, key); return true; } catch { return false; } }
+
+  async function boot() {
+    try { META = await getJSON(DATA + 'meta.json'); } catch { $('#gateErr').textContent = 'The research data could not be loaded. Try again in a minute.'; return; }
+    const saved = store.get();
+    if (saved) {
+      try { const k = await importRaw(saved); if (await tryKey(k)) { KEY = k; return open(); } } catch {}
+      store.clear();
+    }
+    $('#pw').focus();
+  }
+  $('#gateForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = $('#unlockBtn'); btn.disabled = true; btn.textContent = 'Unlocking…'; $('#gateErr').textContent = '';
+    try {
+      if (!META) META = await getJSON(DATA + 'meta.json');
+      const k = await derive($('#pw').value);
+      if (!(await tryKey(k))) { $('#gateErr').textContent = 'That password is not right. Try again.'; return; }
+      KEY = k; store.set(toB64(await crypto.subtle.exportKey('raw', k)), $('#remember').checked);
+      $('#pw').value = ''; open();
+    } catch (err) { $('#gateErr').textContent = 'Could not unlock: ' + err.message; }
+    finally { btn.disabled = false; btn.textContent = 'Unlock'; }
+  });
+  $('#lockBtn').addEventListener('click', () => { store.clear(); location.hash = ''; location.reload(); });
+
+  async function open() {
+    IDX = await dec(await getJSON(DATA + 'index.enc.json'));
+    $('#gate').hidden = true; $('#app').hidden = false;
+    buildNav(); route();
+  }
+  const sectionSlug = (s) => s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-');
+  const bySection = (s) => IDX.items.filter((x) => x.section === s);
+  const fmt = (d) => { if (!d) return ''; const [y, m, day] = d.split('-').map(Number); return new Date(y, m - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); };
+  function buildNav() {
+    const side = $('#side'); const mnav = $('#mnav');
+    let h = '<div><a href="#/" data-r="home">Home</a></div>';
+    let o = '<option value="#/">Home</option>';
+    for (const [g, secs] of IDX.groups) {
+      const present = secs.filter((s) => bySection(s).length);
+      if (!present.length) continue;
+      h += `<div><h4>${escH(g)}</h4>` + present.map((s) => `<a href="#/s/${sectionSlug(s)}" data-r="s/${sectionSlug(s)}">${escH(s)}<span>${bySection(s).length}</span></a>`).join('') + '</div>';
+      o += `<optgroup label="${escH(g)}">` + present.map((s) => `<option value="#/s/${sectionSlug(s)}">${escH(s)}</option>`).join('') + '</optgroup>';
+    }
+    side.innerHTML = h; mnav.innerHTML = o;
+    mnav.onchange = () => { location.hash = mnav.value; };
+  }
+  function mark(r) {
+    document.querySelectorAll('.side a').forEach((a) => a.classList.toggle('on', a.dataset.r === r));
+    const m = $('#mnav'); const v = '#/' + (r === 'home' ? '' : r); if ([...m.options].some((o) => o.value === v)) m.value = v;
+  }
+  const rowHTML = (x, showSec) => `<a class="row" href="#/doc/${x.id}"><span class="d">${fmt(x.date)}</span><span class="tt">${showSec ? `<span class="tag">${escH(x.section)}</span>` : ''}${escH(x.title)}</span>${x.summary ? `<span class="sm">${escH(x.summary)}</span>` : ''}</a>`;
+
+  function home() {
+    mark('home');
+    const reportSecs = ['Pre-Market', 'Daily Reports', 'Week Ahead', 'Weekly Reports'];
+    const reports = IDX.items.filter((x) => reportSecs.includes(x.section) && x.date);
+    const latest = reports[0];
+    let h = `<p class="eyebrow">Updated ${escH(new Date(IDX.updated).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</p>
+      <h1 class="page-h1">Market Desk</h1><p class="lead">Your reports, levels, the Fed archive and the research library, all in one place. ${IDX.items.length} notes.</p>`;
+    if (latest) h += `<a class="hero-card" href="#/doc/${latest.id}"><span class="kicker">Latest · ${escH(latest.section)} · ${fmt(latest.date)}</span><div class="t">${escH(latest.title)}</div><p>${escH(latest.summary)}</p><span class="go">Read it →</span></a>`;
+    h += `<h2 class="sec">Recent reports</h2><div class="list">${reports.slice(1, 9).map((x) => rowHTML(x, true)).join('')}</div>`;
+    h += `<h2 class="sec">Everything</h2>`;
+    for (const [g, secs] of IDX.groups) {
+      const present = secs.filter((s) => bySection(s).length); if (!present.length) continue;
+      h += `<p class="grp-label">${escH(g)}</p><div class="tiles">` + present.map((s) => { const it = bySection(s); const d = it.find((x) => x.date); return `<a class="tile" href="#/s/${sectionSlug(s)}"><span class="n">${escH(s)}</span><span class="c">${it.length} note${it.length > 1 ? 's' : ''}${d ? ' · latest ' + fmt(d.date) : ''}</span></a>`; }).join('') + '</div>';
+    }
+    $('#view').innerHTML = h; document.title = 'Market Desk';
+  }
+  function section(slugv) {
+    const s = IDX.groups.flatMap((g) => g[1]).find((x) => sectionSlug(x) === slugv);
+    if (!s) return notFound();
+    mark('s/' + slugv);
+    const items = bySection(s);
+    $('#view').innerHTML = `<p class="crumb"><a href="#/">Market Desk</a></p><h1 class="page-h1">${escH(s)}</h1><p class="lead">${items.length} note${items.length > 1 ? 's' : ''}.</p><div class="list" style="margin-top:20px">${items.map((x) => rowHTML(x, false)).join('')}</div>`;
+    document.title = s + ' · Market Desk';
+  }
+  async function getDoc(id) {
+    if (!cache.has(id)) cache.set(id, getJSON(DATA + 'docs/' + id + '.json').then((b) => dec(b)));
+    return cache.get(id);
+  }
+  async function doc(id) {
+    const meta = IDX.items.find((x) => x.id === id);
+    if (!meta) return notFound();
+    mark('s/' + sectionSlug(meta.section));
+    $('#view').innerHTML = '<p class="busy">Opening…</p>';
+    const d = await getDoc(id);
+    const sib = bySection(meta.section); const i = sib.findIndex((x) => x.id === id);
+    const newer = sib[i - 1], older = sib[i + 1];
+    $('#view').innerHTML = `<p class="crumb"><a href="#/">Market Desk</a> / <a href="#/s/${sectionSlug(meta.section)}">${escH(meta.section)}</a></p>
+      <h1 class="page-h1">${escH(d.title)}</h1>
+      <div class="doc-meta">${meta.date ? `<span>${fmt(meta.date)}</span>` : ''}<span>${Math.max(1, Math.round(meta.words / 230))} min read</span>${d.page ? `<a href="${escH(d.page)}" target="_blank" rel="noopener">Open the styled report →</a>` : ''}</div>
+      <article class="doc">${d.html}</article>
+      <nav class="pager" aria-label="More in ${escH(meta.section)}">${older ? `<a href="#/doc/${older.id}"><span>${meta.date ? 'Earlier' : 'Next'}</span>${escH(older.title)}</a>` : ''}${newer ? `<a class="next" href="#/doc/${newer.id}"><span>${meta.date ? 'Later' : 'Previous'}</span>${escH(newer.title)}</a>` : ''}</nav>`;
+    document.title = d.title + ' · Market Desk';
+    window.scrollTo(0, 0);
+  }
+  let allLoaded = null;
+  async function search(q) {
+    mark('');
+    q = q.trim(); if (!q) return home();
+    $('#view').innerHTML = `<h1 class="page-h1">Search</h1><p class="busy">Searching ${IDX.items.length} notes…</p>`;
+    if (!allLoaded) allLoaded = Promise.all(IDX.items.map((x) => getDoc(x.id).then((d) => [x, new DOMParser().parseFromString(d.html, 'text/html').body.textContent.replace(/\s+/g, ' ')])));
+    const all = await allLoaded;
+    const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
+    const hits = [];
+    for (const [x, text] of all) {
+      const hay = (x.title + ' ' + text).toLowerCase();
+      if (!terms.every((t) => hay.includes(t))) continue;
+      const score = terms.reduce((s, t) => s + (x.title.toLowerCase().includes(t) ? 20 : 0) + hay.split(t).length - 1, 0);
+      const pos = text.toLowerCase().indexOf(terms[0]);
+      let snip = pos > -1 ? text.slice(Math.max(0, pos - 80), pos + 160) : x.summary;
+      snip = escH(snip); for (const t of terms) snip = snip.replace(new RegExp('(' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig'), '<mark>$1</mark>');
+      hits.push({ x, score, snip });
+    }
+    hits.sort((a, b) => b.score - a.score || (b.x.date || '').localeCompare(a.x.date || ''));
+    if ($('#q').value.trim() !== q && location.hash.indexOf('#/search/') !== 0) return;
+    $('#view').innerHTML = `<h1 class="page-h1">Search</h1><p class="lead">${hits.length} result${hits.length === 1 ? '' : 's'} for “${escH(q)}”.</p>` +
+      (hits.length ? `<div class="list" style="margin-top:20px">${hits.slice(0, 60).map(({ x, snip }) => `<a class="row" href="#/doc/${x.id}"><span class="d">${fmt(x.date)}</span><span class="tt"><span class="tag">${escH(x.section)}</span>${escH(x.title)}</span><span class="sm">…${snip}…</span></a>`).join('')}</div>` : '<p class="empty">Nothing matches. Try a ticker or a single word.</p>');
+    document.title = 'Search · Market Desk';
+  }
+  function notFound() { $('#view').innerHTML = '<h1 class="page-h1">Not found</h1><p class="lead"><a href="#/">Back to Market Desk</a></p>'; }
+  function route() {
+    if (!IDX) return;
+    const h = decodeURIComponent(location.hash.replace(/^#\/?/, ''));
+    if (h.startsWith('doc/')) doc(h.slice(4)).catch((e) => { $('#view').innerHTML = `<p class="empty">This note could not be opened (${escH(e.message)}).</p>`; });
+    else if (h.startsWith('s/')) section(h.slice(2));
+    else if (h.startsWith('search/')) { const q = h.slice(7); if ($('#q').value !== q) $('#q').value = q; search(q); }
+    else home();
+  }
+  window.addEventListener('hashchange', route);
+  let t; $('#q').addEventListener('input', (e) => { clearTimeout(t); t = setTimeout(() => { const v = e.target.value.trim(); location.hash = v ? '#/search/' + encodeURIComponent(v) : '#/'; }, 300); });
+  boot();
+})();
+</script>
+</body>
+</html>
