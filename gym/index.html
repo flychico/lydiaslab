@@ -2180,6 +2180,38 @@ const XK = ["fib", "sug", "na", "sat"];
 function xtra(o){ const r = {}; XK.forEach(k => { if (o && o[k] != null && isFinite(+o[k]) && +o[k] > 0) r[k] = k === "na" ? Math.round(+o[k]) : r1(+o[k]); }); return r; }
 const FIBER100 = { "Banana": 2.6, "Apple": 2.4, "Orange": 2.4, "Blueberries": 2.4, "Strawberries": 2, "Grapes": 0.9, "Avocado": 6.7, "Broccoli": 3.3, "Spinach": 2.2, "Salad greens": 2, "Green beans": 3.2, "Carrots": 2.8, "Corn": 2.4, "Edamame": 5.2, "Black beans": 8.7, "Lentils (cooked)": 7.9, "Oats (dry)": 10.1, "Oatmeal (cooked)": 1.7, "Whole wheat bread": 6, "White bread": 2.7, "Brown rice (cooked)": 1.6, "White rice (cooked)": 0.4, "Pasta (cooked)": 1.8, "Quinoa (cooked)": 2.8, "Potato": 2.2, "Sweet potato": 3.3, "Almonds": 12.5, "Peanuts": 8.5, "Peanut butter": 6, "Bagel": 2.3, "Popcorn": 14.5, "Hummus": 6, "Cereal": 10, "Granola": 6.4, "Flour tortilla": 2.4, "Corn tortilla": 6.3, "Dark chocolate": 10.9, "Trail mix": 5, "English muffin": 2.6, "Mac and cheese": 1, "French fries": 3.8 };
 function logFood(it){ S.nutrition = S.nutrition || []; S.nutrition.push({ date: fd(), n: String(it.n).slice(0, 60), cal: Math.round(+it.cal || 0), p: r1(+it.p || 0), c: r1(+it.c || 0), f: r1(+it.f || 0), ...(it.fv > 0 ? { fv: r1(+it.fv) } : {}), ...xtra(it) }); save(); }
+/* Today's menu: a default day that hits the targets, built from foods Lynold eats.
+   The coach can replace it by writing coach/menu.json; each meal logs with one tap. */
+const MENU_DEFAULT = { updated: "2026-11-06", meals: [
+  { slot: "Breakfast", opts: [{ n: "Core Power 42 + banana", cal: 335, p: 43, c: 36, f: 4, fib: 5, sug: 21, na: 261, fv: 1 }] },
+  { slot: "Lunch", opts: [{ n: "Publix grilled chicken wrap (double meat, Swiss)", cal: 665, p: 65, c: 50, f: 20, fib: 4, na: 1600, fv: 0.5 },
+                          { n: "Chipotle bowl (double chicken, half rice, beans, salsa, no cheese)", cal: 650, p: 75, c: 50, f: 15, fib: 10, na: 1500, fv: 1.5 }] },
+  { slot: "Snack", opts: [{ n: "Apple", cal: 95, p: 0.5, c: 25, f: 0.3, fib: 4.4, fv: 1 }, { n: "Orange", cal: 62, p: 1.2, c: 15, f: 0.2, fib: 3, fv: 1 }] },
+  { slot: "Dinner", opts: [{ n: "6 oz chicken + 1 cup rice + salad with olive oil", cal: 635, p: 54, c: 50, f: 21, fib: 4, na: 500, fv: 2 },
+                           { n: "6 oz salmon + 1 cup rice + veggies", cal: 645, p: 43, c: 50, f: 25, fib: 4, na: 450, fv: 2 },
+                           { n: "6 oz steak + 1 cup rice + salad", cal: 635, p: 52, c: 50, f: 22, fib: 4, na: 450, fv: 2 }] },
+  { slot: "Night", opts: [{ n: "FAGE 0% (3/4 cup) + berries", cal: 135, p: 18, c: 16, f: 0, fib: 2.5, sug: 12, na: 65, fv: 1 },
+                          { n: "FAGE 0% + 1 scoop casein", cal: 210, p: 42, c: 9, f: 1, na: 230 }] }
+], note: "Fish (salmon) twice a week for your HDL." };
+let menuPick = {};
+function theMenu(){ return (S.menu && S.menu.meals && S.menu.meals.length) ? S.menu : MENU_DEFAULT; }
+function menuLogged(date, n){ return (S.nutrition || []).some(x => x.date === date && x.n === String(n).slice(0, 60)); }
+function menuLog(i){
+  const m = theMenu().meals[i], it = m.opts[(menuPick[m.slot] || 0) % m.opts.length];
+  logFood(it); render(); toast("Logged " + m.slot.toLowerCase() + ": " + it.n);
+}
+function menuSwap(i){ const m = theMenu().meals[i]; menuPick[m.slot] = ((menuPick[m.slot] || 0) + 1) % m.opts.length; render(); }
+function menuCard(date){
+  const M = theMenu(), picks = M.meals.map(m => { const done = m.opts.find(o => menuLogged(date, o.n)); return done || m.opts[(menuPick[m.slot] || 0) % m.opts.length]; });
+  const tot = picks.reduce((a, o) => ({ cal: a.cal + o.cal, p: a.p + o.p }), { cal: 0, p: 0 });
+  const doneN = M.meals.filter(m => m.opts.some(o => menuLogged(date, o.n))).length;
+  return `<div class="card" id="fd-menu"><div class="exhead"><h3>🍽 Today's menu</h3><span class="dim small">${Math.round(tot.cal).toLocaleString()} cal · ${Math.round(tot.p)} g protein${doneN ? ` · <b class="green">${doneN}/${M.meals.length} eaten</b>` : ""}</span></div>
+    ${M.meals.map((m, i) => { const o = picks[i], done = m.opts.some(x => menuLogged(date, x.n));
+      return `<div class="exline" style="align-items:center;gap:10px"><span style="flex:1;min-width:0"><span class="dim small" style="font-weight:700;letter-spacing:.03em">${esc(m.slot).toUpperCase()}</span><br>${esc(o.n)}<span class="dim small"> · ${o.cal} cal · ${Math.round(o.p)} g</span>${!done && m.opts.length > 1 ? ` <span class="blue small" style="cursor:pointer;font-weight:700;white-space:nowrap" onclick="menuSwap(${i})">⇄ swap</span>` : ""}</span>
+        ${done ? '<b class="green small" style="white-space:nowrap">✓ eaten</b>' : `<button class="btn small-btn" style="white-space:nowrap" onclick="menuLog(${i})">Log</button>`}</div>`; }).join("")}
+    ${M.note ? `<p class="dim small" style="margin-top:8px">${esc(M.note)}</p>` : ""}
+  </div>`;
+}
 function logSaved(id){ const m = (S.foods || []).find(x => x.id === id); if (!m) return; logFood(m); render(); toast("Logged " + m.n); }
 function proteinPace(){ const h = new Date().getHours() + new Date().getMinutes() / 60; return Math.round(Math.max(0, Math.min(1, (h - 7) / 13)) * 100); } // 7 AM → 8 PM
 function saveDayMeal(){
@@ -2635,6 +2667,7 @@ function renderNutrition(){
     ${d.xn ? `<div class="small" style="margin-top:4px"><span class="${d.sug > 50 ? "gold" : "dim"}">Sugars <b>${Math.round(d.sug)}</b> g</span> · <span class="${d.na > 2300 ? "gold" : "dim"}">Sodium <b>${Math.round(d.na).toLocaleString()}</b> / 2,300 mg</span> <span class="dim">· from ${d.xn} scanned/looked-up item${d.xn === 1 ? "" : "s"}</span></div>` : ""}
   </div>
 
+  ${menuCard(date)}
   <div class="card"><h3>What did you eat?</h3>
     <p class="dim small" style="margin:2px 0 8px">Type it like you'd say it: <i>3 eggs, 2 slices toast, black coffee</i> · <i>6oz chicken and a cup of rice</i></p>
     <textarea id="qtext" rows="2" placeholder="e.g. protein shake, banana" oninput="quickInput(this.value)">${qs ? esc(qs.text || "") : ""}</textarea>
@@ -3438,6 +3471,8 @@ async function coachSync(force){
     await repoPut("data.json", b64(JSON.stringify(snapshot)), "App sync " + today());
     const fs0 = await repoGet("coach/FRESH_START.md");
     if (fs0 && fs0.content) { const m = unb64(fs0.content).match(/\d{4}-\d{2}-\d{2}/); if (m && S.fresh !== m[0]) { S.fresh = m[0]; save(); render(); } }
+    const mn = await repoGet("coach/menu.json");
+    if (mn && mn.content) { try { const Mn = JSON.parse(unb64(mn.content)); if (Mn && Mn.updated && Mn.meals && (!S.menu || S.menu.updated !== Mn.updated)) { S.menu = Mn; save(); render(); } } catch (e) {} }
     const lb = await repoGet("coach/labs.json");
     if (lb && lb.content) { try { const L = JSON.parse(unb64(lb.content)); if (L && L.updated && (!S.labs || S.labs.updated !== L.updated)) { S.labs = L; save(); render(); toast("🩸 Blood work updated"); } } catch (e) {} }
     const rv = await repoGet("coach/review.json");
