@@ -72,6 +72,7 @@
 
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script src="/scripts/lib/nfl-calls.js"></script>
+<script src="/scripts/lib/nfl-urls.js"></script>
 <script>
 renderNav("/articles/"); renderFooter();
 
@@ -140,7 +141,7 @@ const by=(m,h,a)=>m==null?"—":Math.abs(m)<0.05?"pick'em":(m>0?h:a)+" by "+Math
         '<div class="market-box"><span class="market-label">Spread</span><span class="market-value">'+(gs==null?"—":Math.abs(gs).toFixed(1)+" pts")+'</span><span class="market-sub">'+sideTxt+'</span></div>'+
         '<div class="market-box total"><span class="market-label">Total</span><span class="market-value">'+(x.proj_total==null?"—":x.proj_total)+'</span><span class="market-sub">line '+(x.total_line==null?"—":x.total_line)+', '+totTxt+'</span></div>'+
       '</div>')+qb+
-      '<a class="more" href="/nfl/'+x.away.toLowerCase()+'-vs-'+x.home.toLowerCase()+'-prediction-odds-'+x.date+'/">Full preview: why Leo has this number &rarr;</a></div></article>';
+      '<a class="more" href="'+(window.NFL_URLS?NFL_URLS.gameUrl(x.away,x.home,x.date):'/nfl/'+x.away.toLowerCase()+'-vs-'+x.home.toLowerCase()+'-prediction-odds-'+x.date+'/')+'">Full preview: why Leo has this number &rarr;</a></div></article>';
   }).join("");
 })();
 </script>

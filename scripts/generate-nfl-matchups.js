@@ -14,6 +14,7 @@
  */
 const { execFileSync } = require("child_process");
 const CALLS = require("./lib/nfl-calls");   // DEC-20261102-01
+const URLS = require("./lib/nfl-urls");     // SEO-09: nickname addresses from Week 10
 const { buildRatings, headToHead } = require("./lib/nfl-ratings.js");
 const { frozenPredictions, frozenProps } = require("./lib/prediction-history.js");
 const { splitCsv } = require("./lib/odds-history.js");
@@ -313,7 +314,7 @@ function teamProfile(rows, team, active){
   };
 
   const out=games.map(g=>{
-    const pageSlug=`${slug(g.away_team)}-vs-${slug(g.home_team)}-prediction-odds-${target}`;
+    const pageSlug=URLS.gameSlug(g.away_team, g.home_team, target);
     const build=(team)=>({
       team,
       this_season: teamProfile(wkCur, team, active),

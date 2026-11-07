@@ -45,14 +45,17 @@ function loadWeek(targetDate) {
   let latestWeek = 0;
   for (const f of files.filter(sameSeason)) {
     for (const m of read(f)) {
-      latestWeek = Math.max(latestWeek, Number(m.week) || 0);
+      // SEO-18 (DEC-20261107-51): early reads for next week do not make it
+      // "the latest week", so /nfl/week/ keeps the week still being played.
+      if (!(m.leo && m.leo.early)) latestWeek = Math.max(latestWeek, Number(m.week) || 0);
       if (String(m.week) === week) games.push(m);
       if (Number(m.week) === Number(week) - 1) prev.push(m);
     }
   }
   games.sort((a, b) => a.date.localeCompare(b.date) || String(a.kickoff).localeCompare(String(b.kickoff)));
   const seasonYear = +targetDate.slice(5, 7) >= 3 ? season : String(+season - 1);
-  return { week, season: seasonYear, games, prev, latestWeek, isLatest: Number(week) >= latestWeek };
+  const early = games.some(m => m.leo && m.leo.early);
+  return { week, season: seasonYear, games, prev, latestWeek, early, isLatest: Number(week) >= latestWeek };
 }
 
 function record() {
@@ -72,9 +75,10 @@ function gameCard(m) {
   const tdTag = x => !scored ? "" : ((scored[x.player] || 0) > 0 ? ' <span class="ok">scored</span>' : ' <span class="no">no TD</span>');
   // Leo pick above 60% from 2026-11-01 (DEC-20261101-01); paused Oct 17-31.
   const paused = m.date >= "2026-10-17" && m.date <= "2026-10-31";
+  const isCall = g && (g.calls ? !!(g.calls.ml && g.calls.ml.call) : g.call === "leo_pick");
   const winner = !g ? '<span class="dim">No pre-game read</span>'
-    : (!paused && g.call === "leo_pick") ? `Leo pick: ${esc(TEAMS.nick(g.pick))} ${pct(g.prob)}`
-    : `${esc(TEAMS.nick(g.pick))} ${pct(g.prob)}${paused ? "" : ' <span class="dim">too close to call</span>'}`;
+    : (!paused && isCall) ? `Leo pick: ${esc(TEAMS.nick(g.pick))} ${pct(g.prob)}`
+    : `${esc(TEAMS.nick(g.pick))} ${pct(g.prob)}${paused ? "" : (g.calls && g.prob > 0.6) ? ' <span class="dim">price past -230, PASS</span>' : ' <span class="dim">too close to call</span>'}`;
   const final = F && F.away_score != null
     ? `<div class="wk-final">Final: ${esc(m.away)} ${F.away_score}, ${esc(m.home)} ${F.home_score}</div>` : "";
   return `<article class="wk-game">
@@ -158,7 +162,7 @@ ${rows.map(r => `    <tr><td><b>${esc(r.player)}</b> <span class="dim">${esc(r.t
   </tbody></table></div>`;
 }
 
-function page({ week, season, games, prev }, rec, canonical) {
+function page({ week, season, games, prev, early }, rec, canonical) {
   const title = `NFL Week ${week} Predictions ${season}: Picks, Win Chances and Touchdown Scorers | Leo`;
   const desc = `Leo's NFL Week ${week} ${season} card: a win chance and projected total for all ${games.length} games, plus the two most likely touchdown scorers in each, frozen before kickoff and graded after.`;
   const recLine = rec && rec.props && rec.props.decided
@@ -210,6 +214,7 @@ ${GA_HEAD}
     <h1>Leo&rsquo;s Week ${esc(week)} card</h1>
     <p class="subtitle">Every game this week: each team&rsquo;s chance to win, Leo&rsquo;s projected total, and the two players most likely to score a touchdown. Every number is frozen before kickoff and graded after the game.</p>
     ${recLine ? `<p class="wk-rec small">${recLine}</p>` : ""}
+    ${early ? `<p class="wk-rec small">Some games show an early read: Leo updates it every morning until game day, adds touchdown chances on game day, and grades only the last read before kickoff.</p>` : ""}
   </section>
 
   <section class="card"><p style="margin:0">${esc(intro({ week, season, games, prev }))}</p></section>
@@ -238,7 +243,9 @@ ${tdTable({ week, games })}
 </html>`;
 }
 
-function build(targetDate) {
+// opts.permalinkOnly (early reads, SEO-18): write /nfl/week/<season>-week-N/
+// only, never /nfl/week/index.html.
+function build(targetDate, opts = {}) {
   const wk = loadWeek(targetDate);
   if (!wk || !wk.games.length) { console.log(`  week card: no matchup data for ${targetDate}`); return null; }
   const rec = record();
@@ -258,8 +265,9 @@ function build(targetDate) {
   fs.writeFileSync(path.join(dir, "index.html"), page(wk, rec, `/nfl/week/${slug}/`));
   // /nfl/week/ is the same page as this week's permalink, so it points search
   // engines at the permalink (one URL per week ranks; no duplicate).
-  if (wk.isLatest) fs.writeFileSync(path.join(ROOT, "nfl/week/index.html"), page(wk, rec, `/nfl/week/${slug}/`));
-  console.log(`  week card: Week ${wk.week} (${wk.games.length} games) -> /nfl/week/${slug}/${wk.isLatest ? " and /nfl/week/" : ""}`);
+  const main = wk.isLatest && !opts.permalinkOnly;
+  if (main) fs.writeFileSync(path.join(ROOT, "nfl/week/index.html"), page(wk, rec, `/nfl/week/${slug}/`));
+  console.log(`  week card: Week ${wk.week} (${wk.games.length} games) -> /nfl/week/${slug}/${main ? " and /nfl/week/" : ""}`);
   return slug;
 }
 

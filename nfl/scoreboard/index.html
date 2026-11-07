@@ -72,6 +72,7 @@
 
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script src="/scripts/lib/nfl-calls.js"></script>
+<script src="/scripts/lib/nfl-urls.js"></script>
 <script>
 renderNav("/articles/"); renderFooter();
 
@@ -153,6 +154,8 @@ function fmtTime(t){const m=String(t||"").match(/^(\d{1,2}):(\d{2})/);if(!m)retu
 // Permanent per-game stat page, same slug the renderer writes.
 function matchupUrl(g){
   const sl=t=>String(t).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+  // SEO-09: nickname addresses from Week 10 (scripts/lib/nfl-urls.js).
+  if(window.NFL_URLS) return NFL_URLS.gameUrl(g.away_team,g.home_team,g.gameday);
   return "/nfl/"+sl(g.away_team)+"-vs-"+sl(g.home_team)+"-prediction-odds-"+g.gameday+"/";
 }
 

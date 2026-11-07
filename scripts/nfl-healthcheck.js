@@ -95,7 +95,9 @@ if (fs.existsSync(logoDir)) {
 // ---- 6. matchup pages exist for every game on the card --------------------
 if (picks && mu) {
   const slug=t=>String(t).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
-  const miss=mu.filter(m=>!fs.existsSync(P(`nfl/${slug(m.away)}-vs-${slug(m.home)}-prediction-odds-${m.date}/index.html`)));
+  // SEO-09: read the folder from the matchup data (nickname addresses from Week 10).
+  const URLS=require("./lib/nfl-urls");
+  const miss=mu.filter(m=>!fs.existsSync(P(`nfl/${m.slug||URLS.gameSlug(m.away,m.home,m.date)}/index.html`)));
   miss.length ? fail("MATCHUP-PAGE",`${miss.length} games have no matchup page`)
               : ok("MATCHUP-PAGE",`all ${mu.length} matchup pages rendered`);
 }

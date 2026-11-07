@@ -12,6 +12,17 @@
 const fs=require("fs"), path=require("path");
 const ROOT=path.join(__dirname,"..");
 const TEAMS=require("./lib/nfl-teams");
+const URLS=require("./lib/nfl-urls");   // SEO-09
+// A page that moved: tells browsers and search engines where it lives now.
+// scripts/lib/sitemap.js leaves meta refresh pages out of the sitemap.
+const redirectStub=m=>`<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>${TEAMS.full(m.away)} vs ${TEAMS.full(m.home)} prediction (moved)</title>
+<meta name="robots" content="noindex,follow">
+<link rel="canonical" href="https://ndhorizon.com${m.url}">
+<meta http-equiv="refresh" content="0; url=${m.url}">
+</head><body><p>This page moved to <a href="${m.url}">${TEAMS.full(m.away)} vs ${TEAMS.full(m.home)} prediction</a>.</p></body></html>
+`;
 const SEO=require("./lib/game-page-seo");
 const COPY=require("./lib/nfl-page-copy");
 const niceDate=d=>new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"});
@@ -719,14 +730,23 @@ ${SEO.relatedLinks({sport:"NFL",root:ROOT,slug:m.slug||String(m.url).split("/").
     fs.mkdirSync(dir,{recursive:true});
     fs.writeFileSync(path.join(dir,"index.html"), page(m));
     wrote++;
+    // SEO-09 (DEC-20261107-50): a game first published at its abbreviation
+    // address (WAS @ NYG, Nov 12) keeps that address as a redirect to the
+    // nickname page. Only folders that already exist; never a new old one.
+    const old=URLS.oldSlug(m.away,m.home,m.date);
+    if(old!==m.slug && fs.existsSync(path.join(ROOT,"nfl",old,"index.html"))){
+      fs.writeFileSync(path.join(ROOT,"nfl",old,"index.html"), redirectStub(m));
+      console.log(`  redirect: /nfl/${old}/ -> ${m.url}`);
+    }
   }
   console.log(`rendered ${wrote} matchup pages for ${target}`);
   // The weekly card reads the same matchup data, so it refreshes whenever
   // any page of its week is rendered (prepare, publish and grade runs).
   // Early reads (DEC-20261102-52) leave the week card to the game-day runs,
   // so /nfl/week/ keeps the week still being played.
-  if (!process.argv.includes("--early"))
-  try { require("./generate-nfl-week-card").build(target); }
+  // SEO-18 (DEC-20261107-51): early reads also build the new week's own page,
+  // /nfl/week/<season>-week-N/, but never /nfl/week/ itself.
+  try { require("./generate-nfl-week-card").build(target, { permalinkOnly: process.argv.includes("--early") }); }
   catch (e) { console.warn(`  week card NOT written: ${e.message}`); }
   console.log(`sitemap.xml: ${require("./lib/sitemap").writeSitemap(ROOT)} pages`);
   data.slice(0,3).forEach(m=>console.log(`  ${m.url}`));
