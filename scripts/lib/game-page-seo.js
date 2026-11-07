@@ -96,11 +96,22 @@ function nickSlug(fullName) {
   const nick = two || n.split(/\s+/).pop();
   return nick.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
+// A folder whose page is a meta refresh stub (an old address that moved, e.g.
+// was-vs-nyg -> commanders-vs-giants, HO-0024) is not a game page: archives
+// and Keep reading skip it, as scripts/lib/sitemap.js does.
+function isRedirectStub(file) {
+  try {
+    const head = fs.readFileSync(file, "utf8").slice(0, 4000);
+    return /<meta[^>]+http-equiv=["']refresh["']/i.test(head);
+  } catch (e) { return false; }
+}
 function listGames(sportDir) {
   if (!fs.existsSync(sportDir)) return [];
   return fs.readdirSync(sportDir).map(n => {
     const m = n.match(GAME_DIR);
-    return m && fs.existsSync(path.join(sportDir, n, "index.html")) ? { slug: n, away: m[1], home: m[2], date: m[3] } : null;
+    if (!m) return null;
+    const file = path.join(sportDir, n, "index.html");
+    return fs.existsSync(file) && !isRedirectStub(file) ? { slug: n, away: m[1], home: m[2], date: m[3] } : null;
   }).filter(Boolean).sort((a, b) => b.date.localeCompare(a.date));
 }
 
