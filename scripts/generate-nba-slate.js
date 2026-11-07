@@ -44,6 +44,7 @@ const r1 = v => v == null ? null : Math.round(v * 10) / 10;
 const WHYL = require("./lib/nba-why");   // shown spread: .5 grid, rounded toward DraftKings (DEC-20261102-03)
 const half = v => Math.round(v * 2) / 2;
 const PK = require("./lib/nba-picks");   // Leo Pick rule: 60%+ and priced better than -230 (DEC-20261102-30)
+const URLS = require("./lib/nba-urls");   // game page addresses (SEO-09, DEC-20261107-30)
 
 /* New history columns are added once at the end of the header; old rows keep every value and get blanks. */
 function upgradeHistory() {
@@ -186,7 +187,8 @@ function readHistory() {
     const started = g.state !== "pre" || g.tip_utc <= now;
     // Once a game tips, the card keeps the last read made before tip.
     if (started && previous[g.game_id] && previous[g.game_id].leo) {
-      out.push({ ...previous[g.game_id], state: g.state, completed: g.completed, status: g.status, hs: g.hs, as: g.as });
+      { const kept = { ...previous[g.game_id], state: g.state, completed: g.completed, status: g.status, hs: g.hs, as: g.as };
+        kept.url = URLS.gamePath(kept); out.push(kept); }
       continue;
     }
     const f = { rating_diff: r[g.home] - r[g.away] };
@@ -220,6 +222,7 @@ function readHistory() {
       }
     };
     { const pk = PK.pickForGame(game); game.leo.pick = pk ? { side: pk.side, team: pk.team, p: +pk.p.toFixed(4), price: pk.price, ok: pk.ok, why: pk.why, ...(pk.under ? { under: true } : {}) } : null; }
+    game.url = URLS.gamePath(game);   // the game page address, for the home page card and every link (SEO-09)
     out.push(game);
     if (!started) hist.push({
       captured_at: now, date: DATE, game_id: g.game_id, kickoff_utc: g.tip_utc, away: g.away, home: g.home,

@@ -65,6 +65,7 @@ table.t td:first-child,table.t th:first-child{text-align:left} table.t tbody tr{
   <p class="data-note">Inputs are the read of record for each game, the last one saved before tip. Team ratings and player values are stored to one decimal, so a rebuilt number can differ from the published one by a tenth or two. The DraftKings line is used only for grading. Analysis only, not betting advice.</p>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
+<script src="/scripts/lib/nba-urls.js?v=20261107"></script>
 <script>
 renderNav(location.pathname); renderFooter();
 
@@ -76,7 +77,7 @@ const longDay=d=>new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"lo
 const pct=p=>p==null?"—":Math.round(p*100)+"%";
 const sgn=v=>v==null?"—":v===0?"PK":(v>0?"+":"")+v;
 function logo(t){return '<img src="https://a.espncdn.com/i/teamlogos/nba/500/'+String(t).toLowerCase()+'.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">';}
-const pageUrl=g=>"/nba/"+g.away.toLowerCase()+"-vs-"+g.home.toLowerCase()+"-prediction-odds-"+g.date+"/";
+const pageUrl=g=>g.url||(window.NBA_URLS?NBA_URLS.gamePath(g):"/nba/"+g.away.toLowerCase()+"-vs-"+g.home.toLowerCase()+"-prediction-odds-"+g.date+"/");
 // The latest NBA card: today's if it exists, else the most recent day with one.
 async function latestCard(){
   const days=await tryJson("/data/nba/slates.json")||[];

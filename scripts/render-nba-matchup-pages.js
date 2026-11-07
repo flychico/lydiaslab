@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * One permanent page per NBA game: /nba/<away>-vs-<home>-prediction-odds-<date>/
+ * One permanent page per NBA game: /nba/<away>-vs-<home>-prediction-odds-<date>/ (team nicknames from
+ * 2026-11-07, abbreviations before; scripts/lib/nba-urls.js)
  *
  *   node scripts/render-nba-matchup-pages.js [YYYY-MM-DD ...]   default: today, New York
  *
@@ -24,7 +25,8 @@ const pct = p => p == null ? "&mdash;" : Math.round(p * 100) + "%";
 const am = v => v == null ? "&mdash;" : (v > 0 ? "+" : "") + v;
 const nick = name => String(name || "").split(" ").slice(-1)[0].replace("Blazers", "Trail Blazers");
 const logo = t => "https://a.espncdn.com/i/teamlogos/nba/500/" + String(t).toLowerCase() + ".png";
-const slug = g => `${g.away.toLowerCase()}-vs-${g.home.toLowerCase()}-prediction-odds-${g.date}`;
+const URLS = require("./lib/nba-urls");   // one address helper for page, nightly page, email, picks data (SEO-09, DEC-20261107-30)
+const slug = g => URLS.gameSlug(g);
 const longDate = d => new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
 const tip = iso => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) + " ET";
 const statusTxt = s => s === "day-to-day" ? "Day to day" : s ? s[0].toUpperCase() + s.slice(1) : "";
@@ -252,7 +254,7 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
     </form>
   </div>
   <p class="dim" style="margin-top:18px">Leo&rsquo;s win chance and spread come from team results, rest and the injury report. The DraftKings line is shown for comparison and is never an input. Every read is graded on the <a href="/nba/results/">results page</a>. Analysis only, not betting advice. 21+.</p>
-${require("./lib/game-page-seo").relatedLinks({sport:"NBA",root:ROOT,slug:slug(g),away:g.away,home:g.home,awayName:g.away_name,homeName:g.home_name,featured:[`/nba/predictions/${g.date}/`,`All NBA predictions for ${new Date(g.date+"T12:00:00Z").toLocaleDateString("en-US",{month:"long",day:"numeric",timeZone:"UTC"})}`,"Every game that night: Leo's win chance, spread, picks and leans"],hubs:[["/nba/scoreboard/","Tonight\u2019s NBA predictions"],["/nba/games/","Every NBA game"],["/nba/results/","Leo\u2019s NBA record"],["/nba/tools/injury-tracker/","NBA injury tracker"],["/nba/stats/","NBA team stats"],["/membership/#free","Free card by email"]]})}
+${require("./lib/game-page-seo").relatedLinks({sport:"NBA",root:ROOT,slug:slug(g),away:g.away,home:g.home,teamSlug:a=>URLS.slugify(URLS.nick(a)),awayName:g.away_name,homeName:g.home_name,featured:[`/nba/predictions/${g.date}/`,`All NBA predictions for ${new Date(g.date+"T12:00:00Z").toLocaleDateString("en-US",{month:"long",day:"numeric",timeZone:"UTC"})}`,"Every game that night: Leo's win chance, spread, picks and leans"],hubs:[["/nba/scoreboard/","Tonight\u2019s NBA predictions"],["/nba/games/","Every NBA game"],["/nba/results/","Leo\u2019s NBA record"],["/nba/tools/injury-tracker/","NBA injury tracker"],["/nba/stats/","NBA team stats"],["/membership/#free","Free card by email"]]})}
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/nba/scoreboard/"); renderFooter();</script>
 </body>

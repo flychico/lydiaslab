@@ -74,6 +74,7 @@
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script src="/scripts/lib/nba-why.js?v=20261102d"></script>
 <script src="/scripts/lib/nba-picks.js?v=20261102d"></script>
+<script src="/scripts/lib/nba-urls.js?v=20261107"></script>
 <script>
 renderNav(location.pathname); renderFooter();
 
@@ -85,7 +86,7 @@ const longDay=d=>new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"lo
 const pct=p=>p==null?"—":Math.round(p*100)+"%";
 const sgn=v=>v==null?"—":v===0?"PK":(v>0?"+":"")+v;
 function logo(t){return '<img src="https://a.espncdn.com/i/teamlogos/nba/500/'+String(t).toLowerCase()+'.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">';}
-const pageUrl=g=>"/nba/"+g.away.toLowerCase()+"-vs-"+g.home.toLowerCase()+"-prediction-odds-"+g.date+"/";
+const pageUrl=g=>g.url||(window.NBA_URLS?NBA_URLS.gamePath(g):"/nba/"+g.away.toLowerCase()+"-vs-"+g.home.toLowerCase()+"-prediction-odds-"+g.date+"/");
 // The latest NBA card: today's if it exists, else the most recent day with one.
 async function latestCard(){
   const days=await tryJson("/data/nba/slates.json")||[];

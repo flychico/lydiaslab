@@ -73,6 +73,7 @@
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script src="/scripts/lib/nba-why.js?v=20261102d"></script>
 <script src="/scripts/lib/nba-picks.js?v=20261102d"></script>
+<script src="/scripts/lib/nba-urls.js?v=20261107"></script>
 <script>
 renderNav("/nba/scoreboard/"); renderFooter();
 const pick = document.getElementById("date-pick"), gamesEl = document.getElementById("games"), statusEl = document.getElementById("status"), kpisEl = document.getElementById("kpis");
@@ -126,7 +127,7 @@ function teamRow(g, side) {
     '<span class="team-copy"><span class="team-name">' + esc(g[side + "_name"] || g[side]) + '</span><span class="team-record">' + (g.leo.back_to_back && g.leo.back_to_back[side] ? "Back to back" : "") + '</span></span>' +
     '<span class="team-numbers">' + (score != null ? '<span class="team-score">' + score + "</span>" : '<span class="team-price">' + am(ml) + '</span><span class="team-prob">Leo ' + pct(p) + "</span>") + "</span></div>";
 }
-const pageUrl = g => "/nba/" + g.away.toLowerCase() + "-vs-" + g.home.toLowerCase() + "-prediction-odds-" + g.date + "/";
+const pageUrl = g => g.url || (window.NBA_URLS ? NBA_URLS.gamePath(g) : "/nba/" + g.away.toLowerCase() + "-vs-" + g.home.toLowerCase() + "-prediction-odds-" + g.date + "/");
 // Whole card opens the matchup page, like MLB and NFL. Real links inside still win.
 function openMatchup(event, el) {
   if (event.target.closest("a")) return;

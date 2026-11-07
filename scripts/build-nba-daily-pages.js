@@ -31,7 +31,8 @@ const longDay = d => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { we
 const monthDay = d => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
 const tip = iso => iso ? new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) + " ET" : "";
 const pct = p => `${Math.round(p * 100)}%`;
-const gameUrl = g => `/nba/${g.away.toLowerCase()}-vs-${g.home.toLowerCase()}-prediction-odds-${g.date}/`;
+const URLS = require("./lib/nba-urls");   // same address as the game page (SEO-09)
+const gameUrl = g => g.url || URLS.gamePath(g);
 const readJson = f => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch (e) { return null; } };
 
 function dates() {

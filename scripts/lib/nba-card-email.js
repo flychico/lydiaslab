@@ -28,7 +28,8 @@ const pct = p => p == null ? "&mdash;" : Math.round(p * 100) + "%";
 const sgn = v => v == null ? "&mdash;" : v === 0 ? "PK" : (v > 0 ? "+" : "") + v;
 const tip = iso => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) + " ET";
 const logo = t => `https://a.espncdn.com/i/teamlogos/nba/500/${String(t).toLowerCase()}.png`;
-const pageUrl = (g, date) => `${SITE}/nba/${g.away.toLowerCase()}-vs-${g.home.toLowerCase()}-prediction-odds-${date}/`;
+const URLS = require("./nba-urls");   // same address as the game page (SEO-09)
+const pageUrl = (g, date) => SITE + (g.url || URLS.gamePath({ ...g, date: g.date || date }));
 const NW = require("./nba-why");
 const PKS = require("./nba-picks");   // Leo Pick rule and words (DEC-20261102-30)   // leoLine / gapShown / compare: the same rounding and wording as the site
 const byTxt = (m, home, away) => m == null ? null : Math.abs(m) < 0.25 ? "a pick'em" : `${m > 0 ? home : away} by ${Math.abs(Math.round(m * 2) / 2)}`;
