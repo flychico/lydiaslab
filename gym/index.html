@@ -1347,7 +1347,7 @@ function streakText(){
   let streak = 0, d = new Date();
   if (!dates.has(today())) d.setDate(d.getDate() - 1);
   while (dates.has(d.toLocaleDateString("en-CA"))) { streak++; d.setDate(d.getDate() - 1); }
-  const week = new Set(trainLogs().filter(l => (Date.now() - new Date(l.date + "T12:00")) / 864e5 < 7).map(l => l.date)).size;
+  const week = sessionsBetween(weekStartOf(today()), today()); // same Mon–Sun week the coach grades
   return `${week}/${S.profile.days} this week` + (streak > 1 ? ` · trained ${streak} days in a row 🔥` : "");
 }
 function startWorkout(dayIdx){
@@ -3324,7 +3324,7 @@ function gradeDay(date){
   else {
     add("protein", "Protein", n.p >= t.protein * 0.9, `${Math.round(n.p)} / ${t.protein} g` + (n.p < t.protein * 0.9 ? ` (${Math.round(t.protein - n.p)} g short)` : ""));
     const off = (n.cal - t.cal) / t.cal;
-    add("cal", "Calories", Math.abs(off) <= 0.15, `${Math.round(n.cal)} / ${t.cal}` + (off > 0.15 ? " (over)" : off < -0.15 ? " (under; can't build muscle on empty)" : ""));
+    add("cal", "Calories", off <= 0.10 && off >= -0.25, `${Math.round(n.cal)} / ${t.cal}` + (off > 0.10 ? " (over)" : off < -0.25 ? " (too low: you'll lose muscle, not just fat)" : off < -0.1 ? " (a little under: fine)" : ""));
     const fv = dayFV(date);
     add("fv", "Fruit & veg", fv >= COACH.fv - 0.5, `${fv.toFixed(1)} / ${COACH.fv} servings`);
   }
@@ -3361,7 +3361,7 @@ function todaysMission(){
     if (wLeft > 0 && wLeft >= daysLeft - 1) m.push(`<b>${wLeft} outdoor walk${wLeft === 1 ? "" : "s"} still to do</b> this week (25–35 min, started as Outdoor Walk on your Watch so it updates VO₂ max).`); }
   { const rt = S.labs && S.labs.retest, td = today(); if (rt && td <= rt.to && !(S.labs.draws || []).some(x => x.date >= rt.from)) {
       if (td >= rt.from) m.push(`<b>Blood work retest this week</b> (${esc(rt.tests)}): morning, fasted, well hydrated, no heavy lifting the 2–3 days before.`);
-      else if (td >= shiftDate(rt.from, -7)) m.push(`<b>Skip creatine</b> until your blood retest (${new Date(rt.from + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}) so creatinine reads clean.`); } }
+      else if (creatineOffOn(td)) m.push(`<b>Creatine paused</b> until your blood retest (${new Date(rt.from + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}) so creatinine reads clean.`); } }
   if (n.p < t.protein) m.push(`Hit <b>${Math.round(t.protein - n.p)} g more protein</b>${n.n ? "" : ". Log breakfast now"}.`);
   const fv = dayFV(today()); if (fv < COACH.fv) m.push(`Eat <b>${Math.ceil(COACH.fv - fv)} more fruit/veg servings</b> (a banana, a cup of berries, a handful of greens).`);
   const creatineOff = creatineOffOn(today());
@@ -3696,7 +3696,7 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 const SUPP_IDEAS = [["Creatine", "5 g"], ["Vitamin D3", "1,000–2,000 IU"], ["Fish oil", "1–2 g EPA+DHA"], ["Magnesium", "200–400 mg"], ["Multivitamin", "1 tablet"], ["HBOT session", "as scheduled", 1]];
 function dailySupps(){ return (S.supps || []).filter(x => !x.opt); }
 // The week before a blood retest, creatine is paused so creatinine reads clean.
-function creatineOffOn(date){ const rt = S.labs && S.labs.retest; return !!(rt && date >= shiftDate(rt.from, -7) && date <= rt.to && !(S.labs.draws || []).some(x => x.date >= rt.from && x.date <= date)); }
+function creatineOffOn(date){ const rt = S.labs && S.labs.retest; return !!(rt && date >= (rt.creatineOff || shiftDate(rt.from, -7)) && date <= rt.to && !(S.labs.draws || []).some(x => x.date >= rt.from && x.date <= date)); }
 function suppsTaken(date){ return new Set(((S.suppLog || {})[date || fd()]) || []); }
 function toggleSupp(id){
   const d = fd(); S.suppLog = S.suppLog || {}; const set = new Set(S.suppLog[d] || []);
