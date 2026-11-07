@@ -27,7 +27,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+// RESEARCH_ROOT lets a copy of this script outside the repo (e.g. saved from the Claude Project) work on a checkout.
+const ROOT = process.env.RESEARCH_ROOT
+  ? path.resolve(process.env.RESEARCH_ROOT)
+  : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const OUT = path.join(ROOT, 'research', 'data');
 const DOCS = path.join(OUT, 'docs');
 const ITER = 600000;
