@@ -72,8 +72,30 @@ function jsonLd(o) {
   return `<script type="application/ld+json">${JSON.stringify(graph).replace(/</g, "\\u003c")}</script>`;
 }
 
-// Game folders look like <away>-vs-<home>-prediction-odds-<date>.
-const GAME_DIR = /^([a-z0-9]+)-vs-([a-z0-9]+)-prediction-odds-(\d{4}-\d{2}-\d{2})$/;
+// Game folders look like <away>-vs-<home>-prediction-odds-<date>. A team is an
+// abbreviation (buf, older pages) or a nickname slug that may hold hyphens
+// (bills, trail-blazers, 76ers; SEO-09, HO-0023 part A, 2026-11-07).
+const TEAM_PART = "[a-z0-9]+(?:-[a-z0-9]+)*?";
+const GAME_DIR = new RegExp(`^(${TEAM_PART})-vs-(${TEAM_PART})-prediction-odds-(\\d{4}-\\d{2}-\\d{2})$`);
+
+// "trail-blazers" -> "Trail Blazers", "buf" -> "BUF" (fallback label only;
+// real labels come from the page title).
+function teamLabel(part) {
+  const p = String(part || "");
+  if (p.length <= 3 && !/^\d/.test(p)) return p.toUpperCase();
+  return p.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
+
+// The nickname slug for a full team name: last word, except two-word
+// nicknames ("Trail Blazers", "Red Sox", "White Sox", "Blue Jays").
+const TWO_WORD = ["trail blazers", "red sox", "white sox", "blue jays"];
+function nickSlug(fullName) {
+  const n = String(fullName || "").trim().toLowerCase();
+  if (!n) return "";
+  const two = TWO_WORD.find(t => n.endsWith(t));
+  const nick = two || n.split(/\s+/).pop();
+  return nick.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
 function listGames(sportDir) {
   if (!fs.existsSync(sportDir)) return [];
   return fs.readdirSync(sportDir).map(n => {
@@ -93,8 +115,13 @@ function relatedLinks(o) {
   const games = listGames(dir).filter(g => g.slug !== o.slug);
   const per = o.per || 4;
   const teamBlock = (abbr, name) => {
-    const a = String(abbr).toLowerCase();
-    const mine = games.filter(g => g.away === a || g.home === a).slice(0, per);
+    // A past game belongs to this team under its abbreviation (older pages)
+    // or its nickname slug (pages from SEO-09). o.teamSlug(abbr) wins when a
+    // renderer passes it; otherwise the nickname comes from the full name.
+    const keys = new Set([String(abbr).toLowerCase()]);
+    const nick = typeof o.teamSlug === "function" ? o.teamSlug(abbr) : nickSlug(name);
+    if (nick) keys.add(String(nick).toLowerCase());
+    const mine = games.filter(g => keys.has(g.away) || keys.has(g.home)).slice(0, per);
     // o.teamUrl(abbr) -> the team's page (NFL team pages, 2026-11-02), linked first.
     const teamHref = typeof o.teamUrl === "function" ? o.teamUrl(abbr) : null;
     if (!mine.length && !teamHref) return "";
@@ -120,7 +147,7 @@ function linkText(dir, g) {
     const t = (fs.readFileSync(path.join(dir, g.slug, "index.html"), "utf8").slice(0, 6000).match(/<title>([^<]*?) Prediction/i) || [])[1];
     if (t) return `${t.replace(/&amp;/g, "&").replace(/&#39;/g, "\u2019")} Prediction`;
   } catch (e) { /* fall through */ }
-  return `${g.away.toUpperCase()} at ${g.home.toUpperCase()}`;
+  return `${teamLabel(g.away)} at ${teamLabel(g.home)}`;
 }
 
 function niceShort(date) {
@@ -128,4 +155,4 @@ function niceShort(date) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
-module.exports = { jsonLd, relatedLinks, easternToIso, listGames };
+module.exports = { jsonLd, relatedLinks, easternToIso, listGames, teamLabel, nickSlug, GAME_DIR };

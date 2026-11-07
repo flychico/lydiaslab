@@ -189,7 +189,14 @@ async function loadJson(u){ try{ const r=await fetch(`${u}?v=${Date.now()}`,{cac
   if(!Array.isArray(picks)||!picks.length){ el.innerHTML=recHtml+`<div class="dim small">The next NFL slate posts on game week. <a href="/nfl/week/">See the latest week card &rarr;</a></div>`; return; }
   const td={};
   (Array.isArray(props)?props:[]).filter(p=>p.market==="ANYTIME_TD").forEach(p=>{(td[p.matchup]=td[p.matchup]||[]).push(p);});
-  const slug=g=>`/nfl/${g.away.toLowerCase()}-vs-${g.home.toLowerCase()}-prediction-odds-${g.date}/`;
+  // Game page address: the url the matchups data carries (team nickname
+  // addresses from SEO-09, HO-0023), else the old abbreviation pattern.
+  const urls={};
+  await Promise.all([...new Set(picks.map(g=>g.date))].map(async d=>{
+    const m=await loadJson(`/data/nfl/matchups/${d}.json`);
+    (Array.isArray(m)?m:(m&&m.games)||[]).forEach(x=>{ if(x&&x.game_id&&x.url) urls[x.game_id]=x.url; });
+  }));
+  const slug=g=>g.url||urls[g.game_id]||`/nfl/${g.away.toLowerCase()}-vs-${g.home.toLowerCase()}-prediction-odds-${g.date}/`;
   const cards=picks.slice().sort((a,b)=>String(a.date+a.kickoff).localeCompare(String(b.date+b.kickoff))).slice(0,8).map(g=>{
     const top=(td[g.matchup]||[]).sort((a,b)=>b.projection-a.projection).slice(0,2);
     // Win chance only; winner picks retired 2026-10-17.
@@ -211,7 +218,8 @@ async function loadJson(u){ try{ const r=await fetch(`${u}?v=${Date.now()}`,{cac
   const games = card && Array.isArray(card.games) ? card.games.filter(g=>g.leo) : [];
   const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   if(!games.length){ el.innerHTML=`<div class="dim small">The next NBA card posts on the next game day. <a href="/nba/scoreboard/">See the NBA card &rarr;</a></div>`; return; }
-  const slug=g=>`/nba/${g.away.toLowerCase()}-vs-${g.home.toLowerCase()}-prediction-odds-${g.date}/`;
+  // The url the NBA card data carries (team nickname addresses, SEO-09, HO-0023 part C), else the old pattern.
+  const slug=g=>g.url||g.page_url||`/nba/${g.away.toLowerCase()}-vs-${g.home.toLowerCase()}-prediction-odds-${g.date}/`;
   const cards=games.slice().sort((a,b)=>String(a.tip_utc).localeCompare(String(b.tip_utc))).slice(0,8).map(g=>{
     const homeFav=g.leo.p_home>=0.5;
     const fav=homeFav?g.home:g.away, p=homeFav?g.leo.p_home:g.leo.p_away;

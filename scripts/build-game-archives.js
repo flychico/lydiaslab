@@ -15,7 +15,7 @@
 "use strict";
 const fs = require("fs");
 const path = require("path");
-const { listGames } = require("./lib/game-page-seo");
+const { listGames, teamLabel } = require("./lib/game-page-seo");
 
 const ROOT = path.join(__dirname, "..");
 const ORIGIN = "https://ndhorizon.com";
@@ -27,7 +27,7 @@ function readGame(sportDir, g) {
   const raw = ((html.match(/<title>([^<]*)<\/title>/i) || [])[1] || "")
     .replace(/&#39;|&rsquo;/g, "\u2019").replace(/&amp;/g, "&").replace(/\s*\|\s*Leo\s*$/, "").trim();
   const week = (raw.match(/Week (\d+)/) || [])[1];
-  const matchup = (raw.match(/^(.*?) Prediction/) || [])[1] || `${g.away.toUpperCase()} vs ${g.home.toUpperCase()}`;
+  const matchup = (raw.match(/^(.*?) Prediction/) || [])[1] || `${teamLabel(g.away)} vs ${teamLabel(g.home)}`;
   return { ...g, title: raw || matchup, matchup, week: week ? Number(week) : null };
 }
 
