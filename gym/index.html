@@ -3512,6 +3512,12 @@ async function coachInbox(){
       if (it.saveMeal && !(S.foods || []).some(m => m.n === it.n)) saveMealObj(it);
       got.push(it.n);
     }
+    if (it.type === "setup") {
+      if (it.days >= 2 && it.days <= 7 && S.profile) S.profile.days = Math.round(it.days);
+      if (it.plan && Array.isArray(it.plan.days) && it.plan.days.length) { const days = it.plan.days.map(d => ({ name: String(d.name || "Day"), exercises: (d.exercises || []).filter(x => EXBY[x.ex]).map(x => ({ ex: x.ex, sets: Math.max(1, Math.min(8, +x.sets || 3)), lo: +x.lo || 8, hi: +x.hi || 12 })) })).filter(d => d.exercises.length); if (days.length) S.plan = { ...S.plan, days, nextDay: 0 }; }
+      if (it.standards && typeof it.standards === "object") S.standards = { ...(S.standards || {}), ...it.standards };
+      got.push(it.label || "New schedule");
+    }
     if (it.type === "hk" && /^\d{4}-\d{2}-\d{2}$/.test(it.date || "")) {
       const v = {}; ["steps", "ex", "kcal", "standMin", "sleep", "rhr", "hrv", "vo2"].forEach(k => { if (it[k] != null && isFinite(+it[k])) v[k] = +it[k]; });
       (it.clear || []).forEach(k => { v[k] = null; });
@@ -3533,6 +3539,7 @@ function applyReview(r){
   }
   if (r.targets && (r.targets.cal || r.targets.protein)) { S.targets = { ...effTargets(), ...(S.targets || {}), ...r.targets }; applied.push("targets"); }
   if (r.standards) { S.standards = { ...(S.standards || {}), ...r.standards }; applied.push("standards"); }
+  if (r.days >= 2 && r.days <= 7 && S.profile) { prev.days = S.profile.days; S.profile.days = Math.round(r.days); applied.push("days"); }
   if (r.freshStart && /^\d{4}-\d{2}-\d{2}$/.test(r.freshStart)) S.fresh = r.freshStart;
   if (r.roadmap && typeof r.roadmap === "object") { S.roadmap = { ...(S.roadmap || {}), ...r.roadmap }; applied.push("roadmap"); }
   S.review = { ...r, plan: undefined, prev, applied, receivedAt: Date.now(), undone: false, dismissed: false };
@@ -3541,7 +3548,7 @@ function applyReview(r){
 function undoReview(){
   if (!S.review || !S.review.prev) return;
   if (!confirm("Put back last week's plan, targets and standards?")) return;
-  S.plan = S.review.prev.plan || S.plan; S.targets = S.review.prev.targets; S.standards = S.review.prev.standards; S.review.undone = true;
+  S.plan = S.review.prev.plan || S.plan; S.targets = S.review.prev.targets; S.standards = S.review.prev.standards; if (S.review.prev.days && S.profile) S.profile.days = S.review.prev.days; S.review.undone = true;
   save(); render(); toast("Changes undone");
 }
 function reviewCard(full){
