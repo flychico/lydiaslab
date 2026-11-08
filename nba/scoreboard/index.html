@@ -180,12 +180,15 @@ function card(g) {
 }
 /* Live scores, like the MLB scoreboard: ESPN's public scoreboard (the same
    source as the lines and injury report), polled every minute while the
-   selected day is today and a game is not final. A failed fetch leaves the
+   selected day is today or yesterday and a game is not final or graded. A failed fetch leaves the
    card as published. Display only; nothing here feeds Leo's numbers. */
 let CURRENT = [];
 async function pollLive() {
   clearTimeout(liveTimer);
-  if (pick.value !== nyToday() || !CURRENT.length) return;
+  // Today and yesterday: late West Coast games end after midnight ET, and until the
+  // 2am grade the card only has the scores saved at the last publish.
+  const yd = new Date(nyToday() + "T12:00:00Z"); yd.setUTCDate(yd.getUTCDate() - 1);
+  if ((pick.value !== nyToday() && pick.value !== yd.toISOString().slice(0, 10)) || !CURRENT.length) return;
   try {
     const r = await fetch("https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=" + pick.value.replace(/-/g, ""), { cache: "no-store" });
     if (r.ok) {
