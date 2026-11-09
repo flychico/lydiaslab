@@ -322,6 +322,7 @@ const EX = [
   {id:"pendlay-row",n:"Pendlay Row",p:"pullH",e:"gym",m:"Back/Biceps",inc:5},
   {id:"tbar-row",n:"T-Bar Row",p:"pullH",e:"gym",m:"Back",inc:10},
   {id:"chest-supported-row",n:"Chest-Supported Row",p:"pullH",e:"db",m:"Back/Biceps",inc:5},
+  {id:"dy-row",n:"Hammer Strength D.Y. Row",p:"pullH",e:"gym",m:"Back/Biceps",inc:10},
   {id:"meadows-row",n:"Meadows Row",p:"pullH",e:"db",m:"Back/Lats",inc:5},
   {id:"chinup",n:"Chin-Up",p:"pullV",e:"bw",m:"Lats/Biceps",inc:0},
   {id:"neutral-pulldown",n:"Neutral-Grip Lat Pulldown",p:"pullV",e:"gym",m:"Lats/Biceps",inc:5},
@@ -3268,6 +3269,7 @@ function drawWeightChart(){
 
 /* Photos: pick any two dates per pose and drag the slider to compare. */
 let phCmp = { a: null, b: null, mode: "side" };
+let showPhotos = false; // photos stay hidden until tapped, every time the app opens
 function photoCompare(mine){
   if (mine.length < 2) return "";
   const a = mine.find(p => p.path === phCmp.a) || mine[0], b = mine.find(p => p.path === phCmp.b) || mine[mine.length - 1];
@@ -3518,12 +3520,17 @@ async function coachInbox(){
       if (it.standards && typeof it.standards === "object") S.standards = { ...(S.standards || {}), ...it.standards };
       got.push(it.label || "New schedule");
     }
+    if (it.type === "relabel" && EXBY[it.to] && /^\d{4}-\d{2}-\d{2}$/.test(it.date || "")) {
+      let n = 0; S.logs.filter(l => l.date === it.date).forEach(l => l.entries.forEach(en => { if (en.ex === it.from) { en.ex = it.to; n++; } }));
+      if (n) got.push((EXBY[it.to].n) + " " + it.date.slice(5));
+    }
     if (it.type === "hk" && /^\d{4}-\d{2}-\d{2}$/.test(it.date || "")) {
       const v = {}; ["steps", "ex", "kcal", "standMin", "sleep", "rhr", "hrv", "vo2"].forEach(k => { if (it[k] != null && isFinite(+it[k])) v[k] = +it[k]; });
       (it.clear || []).forEach(k => { v[k] = null; });
       S.hkManual = S.hkManual || {}; S.hkManual[it.date] = { ...(S.hkManual[it.date] || {}), ...v }; hkApplyManual();
       got.push("Health fix " + it.date.slice(5));
     }
+    if (!["food", "setup", "hk", "relabel"].includes(it.type)) return; // unknown to this version: leave it for a newer copy
     S.inboxDone.push(it.id);
   });
   S.inboxDone = S.inboxDone.slice(-200);
@@ -3599,14 +3606,15 @@ function photosCard(){
   if (!coachCfg) return `<div class="card"><h3>Progress photos</h3><p class="dim small" style="margin-top:6px;line-height:1.55">Weekly photos show changes the scale can't. Connect the <b>AI coach</b> in Settings first: photos are stored in your private repo, where your Sunday review can compare them.</p></div>`;
   const ph = S.photos || [], mine = ph.filter(p => p.pose === photoPose), first = mine[0];
   const lastAny = ph.length ? ph[ph.length - 1].date : null, due = !lastAny || lastAny < shiftDate(today(), -6);
-  if (mine.length === 1) setTimeout(() => loadPhoto(first.path, "ph-first"), 0);
+  if (showPhotos && mine.length === 1) setTimeout(() => loadPhoto(first.path, "ph-first"), 0);
   return `<div class="card"><div class="exhead"><h3>Progress photos</h3><span class="small ${due ? "red" : "green"}">${due ? "Due this week" : "✓ This week done"}</span></div>
     <p class="dim small" style="margin:4px 0 8px;line-height:1.5">Same spot, same light, same time of day (morning, before eating). Relaxed, arms at your sides.</p>
     <div>${["front", "side", "back"].map(p => `<span class="pill ${photoPose === p ? "on" : ""}" onclick="photoPose='${p}';render()">${p[0].toUpperCase() + p.slice(1)}</span>`).join("")}</div>
     <button class="btn blue-btn small-btn" style="margin-top:6px" onclick="pickPhoto()">📸 Add ${photoPose} photo for today</button>
     <input type="file" id="photopick" accept="image/*" class="hidden" onchange="uploadPhoto(this)">
     ${!ph.length ? `<div class="small" style="margin-top:10px;line-height:1.5"><b>Take your day-one photos this week:</b> front, side and back. In 6 months these are the ones you'll compare against.</div>` : ""}
-    ${mine.length === 1 ? `<div class="row2" style="margin-top:12px"><div><div class="dim small">Day one · ${first.date}</div><div class="phbox"><img id="ph-first" alt="First ${photoPose} photo" style="width:100%;height:100%;object-fit:cover"></div></div><div><div class="dim small">Next week's goes here</div><div class="phbox" style="border:1px dashed var(--border)"></div></div></div>` : photoCompare(mine)}
+    ${mine.length && !showPhotos ? `<div style="margin-top:10px"><span class="pill" onclick="showPhotos=true;render()">👁 Show photos (${mine.length})</span></div>` : mine.length && showPhotos ? `<div style="margin-top:10px"><span class="pill" onclick="showPhotos=false;render()">🙈 Hide photos</span></div>` : ""}
+    ${!showPhotos ? "" : mine.length === 1 ? `<div class="row2" style="margin-top:12px"><div><div class="dim small">Day one · ${first.date}</div><div class="phbox"><img id="ph-first" alt="First ${photoPose} photo" style="width:100%;height:100%;object-fit:cover"></div></div><div><div class="dim small">Next week's goes here</div><div class="phbox" style="border:1px dashed var(--border)"></div></div></div>` : photoCompare(mine)}
   </div>`;
 }
 /* ---- Settings: connect the coach ---- */
@@ -3843,7 +3851,7 @@ function workoutFeedback(l){
   if (skipped.length) notes.push(["warn", `Skipped: <b>${skipped.map(s => esc((EXBY[s.ex] || { n: s.ex }).n)).join(", ")}</b>.${skipped.some(s => EXBY[s.ex] && EXBY[s.ex].u === "time") ? " The cardio is part of your VO₂ goal." : " Do them first next time this day comes up."}`]);
   const ready = lifts.map(en => ({ en, sug: suggestFor(en.ex, (day && (day.exercises.find(s => s.ex === en.ex) || {}).lo) || 6, (day && (day.exercises.find(s => s.ex === en.ex) || {}).hi) || 12) })).filter(x => x.sug && !x.sug.deload && x.sug.w > (bestSet(x.en.sets).w || 0));
   if (ready.length) notes.push(["good", `Ready to add weight next time: <b>${ready.slice(0, 3).map(x => esc(EXBY[x.en.ex].n) + " → " + x.sug.w + " lb").join(", ")}</b>.`]);
-  l.entries.filter(en => EXBY[en.ex] && EXBY[en.ex].u === "time").forEach(en => {
+  l.entries.filter(en => EXBY[en.ex] && EXBY[en.ex].u === "time" && !WALK_IDS.has(en.ex)).forEach(en => {
     const lv = Math.max(...en.sets.map(s => s.lv == null ? -Infinity : s.lv)); if (!isFinite(lv)) { notes.push(["warn", `Add the level/speed you used on ${esc(EXBY[en.ex].n)} next time, so you can see your cardio getting stronger.`]); return; }
     let prevLv = null; for (const o of S.logs) { if (o === l || o.date > l.date) continue; const pe = o.entries.find(x => x.ex === en.ex); const v = pe && Math.max(...pe.sets.map(s => s.lv == null ? -Infinity : s.lv)); if (isFinite(v)) prevLv = v; }
     if (prevLv != null) notes.push([lv >= prevLv ? "good" : "warn", `${esc(EXBY[en.ex].n)}: level ${lv} vs ${prevLv} last time${lv > prevLv ? ". Fitter already" : lv === prevLv ? ". Try a notch higher next time if the hard parts felt manageable" : ""}.`]);
