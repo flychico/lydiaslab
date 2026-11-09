@@ -927,10 +927,12 @@ const CUSTOM_MUSCLE_MAP = {
   Core: { p: "core", m: "Core (custom)" }
 };
 function weekStart(){ const d = new Date(); const mon = new Date(d); mon.setDate(d.getDate() - ((d.getDay() + 6) % 7)); mon.setHours(0,0,0,0); return mon; }
-function weeklySetsByMuscle(){
+function weeklySetsByMuscle(back){
   const start = weekStart(), acc = {};
+  if (back) start.setDate(start.getDate() - 7 * back);
+  const end = new Date(start); end.setDate(end.getDate() + 7);
   for (const l of S.logs) {
-    if (new Date(l.date + "T12:00") < start) continue;
+    const d = new Date(l.date + "T12:00"); if (d < start || d >= end) continue;
     for (const en of l.entries) {
       const ex = EXBY[en.ex]; if (!ex || ex.u === "time") continue;
       const n = en.sets.length;
@@ -1723,10 +1725,11 @@ function renderProgress(){
     if (!prs[en.ex] || v > prs[en.ex].v) prs[en.ex] = { v, w: s.w, r: s.r, date: l.date };
   }
   const prRows = Object.entries(prs).filter(([, p]) => p.w > 0).sort((a, b) => b[1].v - a[1].v).slice(0, 12);
-  const weeks = weeklyVolume(logs);
+  const weeks = weeklyWorkouts();
   const b = bmi();
-  const musc = weeklySetsByMuscle();
-  const muscTotal = Object.values(musc).reduce((a, v) => a + v, 0);
+  const muscNow = weeklySetsByMuscle(), muscLast = weeklySetsByMuscle(1), sumOf = o => Object.values(o).reduce((a, v) => a + v, 0);
+  const mView = muscView || (sumOf(muscNow) > 0 ? "this" : "last");
+  const musc = mView === "this" ? muscNow : muscLast, muscTotal = sumOf(musc);
   const tr = bwTrend();
   const act = S.activity || [];
   const todayAct = act.find(a => a.date === today());
@@ -1738,22 +1741,39 @@ function renderProgress(){
   const exList = Object.keys(loggedEx).sort((a, b) => (EXBY[a] ? EXBY[a].n : a).localeCompare(EXBY[b] ? EXBY[b].n : b));
   const tick = mo => mo === "up" ? ' <span class="green">▲</span>' : mo === "down" ? ' <span class="red">▼</span>' : mo === "flat" ? ' <span class="dim">▬</span>' : "";
   const cMuscle = `<div class="card"><h3>Weekly sets per muscle <span class="dim small">· target 10–20</span></h3>
-    <p class="dim small" style="margin-bottom:10px">Hard sets since Monday. 10–20 a week per muscle is the growth sweet spot.</p>
+    <div style="margin:6px 0 4px">${[["this", "This week"], ["last", "Last week"]].map(([k, t]) => `<span class="pill ${mView === k ? "on" : ""}" onclick="muscView='${k}';render()">${t}</span>`).join("")}</div>
+    <p class="dim small" style="margin-bottom:10px">${mView === "this" ? "Hard sets since Monday." : "Hard sets last Mon–Sun."} 10–20 a week per muscle is the growth sweet spot.</p>
     ${muscTotal > 0 ? MUSCLE_ORDER.map(mus => {
       const v = Math.round((musc[mus] || 0) * 10) / 10, inRange = v >= 10 && v <= 20, col = inRange ? "var(--green)" : v > 20 ? "var(--red)" : "var(--fill)";
       const note = v === 0 ? "not yet" : v < 10 ? "add volume" : v > 20 ? "very high" : "on target";
       return `<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:.85rem"><span>${mus}</span><span><b>${v}</b> <span class="dim small">· ${note}</span></span></div>
         <div style="height:6px;background:var(--bg2);border-radius:4px;overflow:hidden;margin-top:3px;position:relative"><div style="height:100%;width:${Math.min(100, v / 20 * 100)}%;background:${col}"></div><div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--dim);opacity:.5"></div></div></div>`;
-    }).join("") : '<p class="dim small">No sets logged yet this week.</p>'}</div>`;
-  const cVol = `<div class="card"><h3>Weekly volume <span class="dim small">· lb lifted</span></h3>${weeks.length ? '<canvas id="volchart" class="hkcv" height="150"></canvas>' : '<p class="dim small">Log workouts to see volume trends.</p>'}</div>`;
-  const cPR = `<div class="card" id="pg-lifts"><h3>Strength <span class="dim small">· best estimated 1-rep max</span></h3>
-    ${prRows.length ? `<p class="dim small" style="margin-bottom:6px">Tap a lift for its full history. <span class="green">▲</span> gaining · <span class="dim">▬</span> flat · <span class="red">▼</span> slipping (last 3 sessions).</p><table><thead><tr><th>Exercise</th><th class="num">Best set</th><th class="num">e1RM</th></tr></thead><tbody>
-    ${prRows.map(([id, p]) => `<tr style="cursor:pointer" onclick="exChart('${id}')"><td style="color:var(--blue);font-weight:600">${esc(EXBY[id] ? EXBY[id].n : id)}${tick(momentum(id))}</td><td class="num">${p.w}×${p.r}</td><td class="num"><b>${Math.round(p.v)}</b></td></tr>`).join("")}</tbody></table>` : '<p class="dim small">Appears after your first logged workout.</p>'}
+    }).join("") : (mView === "this" ? '<p class="dim small">No sets yet this week. Tap Last week to see where you finished.</p>' : '<p class="dim small">No sets logged last week.</p>')}</div>`;
+  const goalN = (S.profile && S.profile.days) || 4, wkNow = weeks[weeks.length - 1], wkPrev = weeks[weeks.length - 2], kfmt = v => v >= 1000 ? (v / 1000).toFixed(1) + "k" : String(v);
+  const cVol = `<div class="card"><h3>Workouts per week <span class="dim small">· goal ${goalN}</span></h3>${weeks.length ? `<canvas id="volchart" class="hkcv" height="160"></canvas>
+    <p class="dim small" style="margin-top:6px;line-height:1.5">Green = goal hit. This week so far: <b>${wkNow.n} of ${goalN}</b>.${wkPrev ? ` Weight lifted last week: <b>${kfmt(wkPrev.vol)} lb</b>${weeks.length > 2 && weeks[weeks.length - 3].vol ? ` (week before: ${kfmt(weeks[weeks.length - 3].vol)})` : ""}.` : ""}</p>` : '<p class="dim small">Log workouts to see your weeks.</p>'}</div>`;
+  const planIds = [...new Set(((S.plan && S.plan.days) || []).flatMap(d => d.exercises.map(e => e.ex)))].filter(id => EXBY[id] && EXBY[id].u !== "time");
+  const liftIds = planIds.length ? planIds : prRows.map(([id]) => id);
+  const groupOf = id => { const e = EXBY[id], m = e.m || ""; switch (e.p) { case "pushH": case "pushV": return "Push"; case "pullH": case "pullV": return "Pull"; case "shoulders": return /Trap/i.test(m) || /face/i.test(id) ? "Pull" : "Push"; case "arms": return /Tri/i.test(m) ? "Push" : "Pull"; case "core": return "Core"; default: return "Legs"; } };
+  const change4 = id => { const ses = lastSessions(id, 60); if (!ses.length) return null; const cut = shiftDate(today(), -28), old = ses.find(x => x.date <= cut); return old ? Math.round(ses[0].best - old.best) : null; };
+  const liftRow = id => { const p = prs[id], ch = change4(id);
+    return `<tr style="cursor:pointer" onclick="exChart('${id}')"><td style="color:var(--blue);font-weight:600">${esc(EXBY[id].n)}${p ? tick(momentum(id)) : ""}</td><td class="num">${p && p.w ? p.w + "×" + p.r : '<span class="dim">—</span>'}</td><td class="num">${p && p.w ? "<b>" + Math.round(p.v) + "</b>" : ""}</td><td class="num">${ch == null ? '<span class="dim small">' + (p ? "new" : "") + "</span>" : `<span class="${ch > 0 ? "green" : ch < 0 ? "red" : "dim"}">${ch > 0 ? "+" : ""}${ch}</span>`}</td></tr>`; };
+  const cPR = `<div class="card" id="pg-lifts"><h3>Strength <span class="dim small">· ${planIds.length ? "your current plan" : "best estimated 1-rep max"}</span></h3>
+    ${prRows.length ? `<p class="dim small" style="margin-bottom:6px">e1RM = estimated 1-rep max. <b>4 wk</b> = change vs 4 weeks ago. Tap a lift for its history. <span class="green">▲</span> gaining · <span class="dim">▬</span> flat · <span class="red">▼</span> slipping.</p><table><thead><tr><th>Exercise</th><th class="num" style="white-space:nowrap">Best set</th><th class="num">e1RM</th><th class="num" style="white-space:nowrap">4 wk</th></tr></thead><tbody>
+    ${["Push", "Pull", "Legs", "Core"].map(g => { const ids = liftIds.filter(id => groupOf(id) === g); return ids.length ? `<tr><td colspan="4" class="dim small" style="font-weight:700;padding-top:10px">${g.toUpperCase()}</td></tr>` + ids.map(liftRow).join("") : ""; }).join("")}</tbody></table>` : '<p class="dim small">Appears after your first logged workout.</p>'}
     ${exList.length ? `<details class="more" style="margin-top:10px"><summary class="small blue">Every exercise (${exList.length})</summary><div style="margin-top:6px">${exList.map(id => { const ex = EXBY[id]; return `<div class="exline" style="cursor:pointer" onclick="exChart('${id}')"><span style="color:var(--blue);font-weight:600">${esc(ex ? ex.n : id)}${tick(momentum(id))}</span><span class="dim small">${loggedEx[id]} session${loggedEx[id] === 1 ? "" : "s"} ›</span></div>`; }).join("")}</div></details>` : ""}
   </div>`;
-  const hist = [...logs].reverse(), hrow = l => `<div class="exline"><span>${new Date(l.date + "T12:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} · <b>${esc(l.dayName || "Workout")}</b></span><span class="dim small">${l.entries.reduce((a, en) => a + en.sets.length, 0)} sets · ${l.min}m</span></div>`;
+  const hist = [...logs].reverse(), hweeks = [];
+  for (const l of hist) { const k = weekStartOf(l.date); let g = hweeks.find(w => w.k === k); if (!g) hweeks.push(g = { k, train: [], walks: [] }); (l.quick ? g.walks : g.train).push(l); }
+  const thisWk = weekStartOf(today()), lastWk = shiftDate(thisWk, -7), goalH = (S.profile && S.profile.days) || 4;
+  const hweek = g => { const t = g.k === thisWk ? "This week" : g.k === lastWk ? "Last week" : "Week of " + new Date(g.k + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const wm = g.walks.reduce((a, l) => a + (l.min || 0), 0);
+    return `<div style="margin-top:10px"><div class="small" style="display:flex;justify-content:space-between;font-weight:700"><span>${t}</span><span class="${g.train.length >= goalH ? "green" : "dim"}">${g.train.length} of ${goalH} workouts</span></div>
+      ${g.train.map(hrow).join("")}${g.walks.length ? `<div class="exline"><span class="dim">🚶 ${g.walks.length} walk${g.walks.length === 1 ? "" : "s"}</span><span class="dim small">${wm} min</span></div>` : ""}</div>`; };
+  if (!hweeks.length || hweeks[0].k !== thisWk) hweeks.unshift({ k: thisWk, train: [], walks: [] });
+  const hrow = l => `<div class="exline"><span>${new Date(l.date + "T12:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} · <b>${esc(l.dayName || "Workout")}</b></span><span class="dim small">${l.entries.reduce((a, en) => a + en.sets.length, 0)} sets · ${l.min}m</span></div>`;
   const cHist = `<div class="card" id="pg-history"><h3>History <span class="dim small">· ${trainLogs().length} workouts</span></h3>
-    ${logs.length ? hist.slice(0, 8).map(hrow).join("") + (hist.length > 8 ? `<details class="more"><summary class="small blue">${hist.length - 8} older</summary>${hist.slice(8, 60).map(hrow).join("")}</details>` : "") : '<p class="dim small">No workouts yet.</p>'}</div>`;
+    ${logs.length ? hweeks.slice(0, 2).map(hweek).join("") + (hweeks.length > 2 ? `<details class="more" style="margin-top:8px"><summary class="small blue">${hweeks.length - 2} older week${hweeks.length - 2 === 1 ? "" : "s"}</summary>${hweeks.slice(2, 26).map(hweek).join("")}</details>` : "") : '<p class="dim small">No workouts yet.</p>'}</div>`;
   V.innerHTML = `
   <h1>Progress</h1>
   <div class="jumps">${[["pg-road", "🗺 Roadmap"], ["pg-weight", "⚖️ Weight"], ["pg-photos", "📸 Photos"], ["pg-health", "⌚ Watch"], ["pg-labs", "🩸 Labs"], ["pg-lifts", "🏋️ Strength"], ["pg-history", "🗓 History"]].map(([id, l]) => `<span class="pill" onclick="const e=document.getElementById('${id}');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})">${l}</span>`).join("")}</div>
@@ -1774,7 +1794,7 @@ function renderProgress(){
     </div>
   </div>
   <div id="chartmodal"></div>`;
-  drawBars("volchart", weeks.map(w => w.vol), weeks.map(w => w.label));
+  drawWeeks("volchart", weeks, goalN);
   drawWeightChart();
   drawHealthCharts();
 }
@@ -1876,6 +1896,30 @@ function weeklyVolume(logs){
     byWeek[k] = (byWeek[k] || 0) + l.entries.reduce((a, en) => a + en.sets.reduce((x, s) => x + (s.w || 0) * (s.r || 0), 0), 0);
   }
   return Object.entries(byWeek).sort((a, b) => a[0].localeCompare(b[0])).slice(-10).map(([k, vol]) => ({ label: k.slice(5), vol: Math.round(vol) }));
+}
+// Every Mon–Sun week from the first workout to now (last 10), zero weeks included
+function weeklyWorkouts(){
+  const tl = trainLogs(); if (!tl.length) return [];
+  const first = tl.reduce((m, l) => l.date < m ? l.date : m, tl[0].date), out = [];
+  for (let k = weekStartOf(first), cur = weekStartOf(today()); k <= cur; k = shiftDate(k, 7)) {
+    const end = shiftDate(k, 7), ls = tl.filter(l => l.date >= k && l.date < end);
+    out.push({ k, label: new Date(k + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }), n: ls.length, vol: Math.round(ls.reduce((a, l) => a + l.entries.reduce((b, en) => b + en.sets.reduce((x, s) => x + (s.w || 0) * (s.r || 0), 0), 0), 0)), now: k === cur });
+  }
+  return out.slice(-10);
+}
+function drawWeeks(id, weeks, goal){
+  const c = document.getElementById(id); if (!c || !weeks.length) return;
+  const { x, W, H, bar, ink, dim } = fitCanvas(c), cs = getComputedStyle(document.documentElement), green = cs.getPropertyValue("--green").trim() || "#2e7d4f";
+  const max = Math.max(goal, ...weeks.map(w => w.n)) || 1, top = 18, base = H - 22, slot = (W - 20) / weeks.length, bw = Math.min(34, slot - 8), y = v => base - (v / max) * (base - top);
+  x.font = "10px Onest, -apple-system, sans-serif"; x.textAlign = "center";
+  weeks.forEach((w, i) => {
+    const px = 10 + i * slot + (slot - bw) / 2, h = Math.max(w.n ? 3 : 1.5, base - y(w.n));
+    x.globalAlpha = w.now && w.n < goal ? 0.45 : 1; x.fillStyle = w.n >= goal ? green : bar; x.beginPath(); x.roundRect(px, base - h, bw, h, [4, 4, 0, 0]); x.fill(); x.globalAlpha = 1;
+    x.fillStyle = ink; x.font = "600 10px Onest, -apple-system, sans-serif"; x.fillText(String(w.n), px + bw / 2, base - h - 4);
+    x.fillStyle = dim; x.font = (w.now ? "600 " : "") + "10px Onest, -apple-system, sans-serif"; x.fillText(w.now ? "Now" : w.label, px + bw / 2, H - 7);
+  });
+  x.strokeStyle = dim; x.setLineDash([4, 4]); x.lineWidth = 1; x.beginPath(); x.moveTo(6, y(goal)); x.lineTo(W - 6, y(goal)); x.stroke(); x.setLineDash([]);
+  x.fillStyle = dim; x.textAlign = "right"; x.fillText("goal " + goal, W - 6, y(goal) - 4);
 }
 function chartColors(){
   const dark = document.documentElement.getAttribute("data-theme") === "dark";
@@ -3269,7 +3313,7 @@ function drawWeightChart(){
 
 /* Photos: pick any two dates per pose and drag the slider to compare. */
 let phCmp = { a: null, b: null, mode: "side" };
-let showPhotos = false; // photos stay hidden until tapped, every time the app opens
+let showPhotos = false, muscView = null; // photos stay hidden until tapped, every time the app opens
 function photoCompare(mine){
   if (mine.length < 2) return "";
   const a = mine.find(p => p.path === phCmp.a) || mine[0], b = mine.find(p => p.path === phCmp.b) || mine[mine.length - 1];
