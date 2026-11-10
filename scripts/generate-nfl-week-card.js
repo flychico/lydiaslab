@@ -42,12 +42,16 @@ function loadWeek(targetDate) {
   const sameSeason = f => { const d = f.slice(0, 10); const y = +d.slice(0, 4), mo = +d.slice(5, 7);
     const s = mo >= 3 ? y : y - 1; return String(s) === (+targetDate.slice(5, 7) >= 3 ? season : String(+season - 1)); };
   const games = [], prev = [];
+  const byWeek = new Map();   // week -> { dates, graded, early }
   let latestWeek = 0;
   for (const f of files.filter(sameSeason)) {
     for (const m of read(f)) {
       // SEO-18 (DEC-20261107-51): early reads for next week do not make it
       // "the latest week", so /nfl/week/ keeps the week still being played.
       if (!(m.leo && m.leo.early)) latestWeek = Math.max(latestWeek, Number(m.week) || 0);
+      const w = Number(m.week) || 0, e = byWeek.get(w) || { dates: new Set(), all: 0, graded: 0 };
+      e.dates.add(m.date); e.all++; if (m.final_report && m.final_report.home_score != null) e.graded++;
+      byWeek.set(w, e);
       if (String(m.week) === week) games.push(m);
       if (Number(m.week) === Number(week) - 1) prev.push(m);
     }
@@ -55,7 +59,15 @@ function loadWeek(targetDate) {
   games.sort((a, b) => a.date.localeCompare(b.date) || String(a.kickoff).localeCompare(String(b.kickoff)));
   const seasonYear = +targetDate.slice(5, 7) >= 3 ? season : String(+season - 1);
   const early = games.some(m => m.leo && m.leo.early);
-  return { week, season: seasonYear, games, prev, latestWeek, early, isLatest: Number(week) >= latestWeek };
+  // SEO-19 (DEC-20261110-50): /nfl/week/ moves to the next week as soon as
+  // the latest frozen week is fully graded (normally Tuesday, after Monday
+  // night) and the next week's early reads exist; until then it stays on the
+  // week being played. latestWeek (the SEO-12 guard) is unchanged.
+  const lw = byWeek.get(latestWeek), nx = byWeek.get(latestWeek + 1);
+  const currentWeek = latestWeek && lw && lw.graded === lw.all && nx ? latestWeek + 1 : latestWeek;
+  const cur = byWeek.get(currentWeek);
+  const currentDate = cur ? [...cur.dates].sort()[0] : null;
+  return { week, season: seasonYear, games, prev, latestWeek, currentWeek, currentDate, early, isLatest: Number(week) === Number(currentWeek) };
 }
 
 function record() {
@@ -265,9 +277,14 @@ function build(targetDate, opts = {}) {
   fs.writeFileSync(path.join(dir, "index.html"), page(wk, rec, `/nfl/week/${slug}/`));
   // /nfl/week/ is the same page as this week's permalink, so it points search
   // engines at the permalink (one URL per week ranks; no duplicate).
-  const main = wk.isLatest && !opts.permalinkOnly;
+  // Early runs (opts.permalinkOnly) write /nfl/week/ only when their week is
+  // the current week under SEO-19, i.e. the week before is fully graded.
+  const main = wk.isLatest;
   if (main) fs.writeFileSync(path.join(ROOT, "nfl/week/index.html"), page(wk, rec, `/nfl/week/${slug}/`));
   console.log(`  week card: Week ${wk.week} (${wk.games.length} games) -> /nfl/week/${slug}/${main ? " and /nfl/week/" : ""}`);
+  // The grade run that finishes a week re-renders that week, not the next:
+  // write the current week's card too, so /nfl/week/ switches right then.
+  if (!main && !opts.nested && wk.currentDate && Number(wk.currentWeek) > Number(wk.week)) build(wk.currentDate, { nested: true });
   return slug;
 }
 
