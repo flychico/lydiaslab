@@ -259,7 +259,7 @@ mark { background: rgba(201,168,76,.32); color: inherit; padding: 0 1px; border-
     const today = bySection('Today')[0];
     if (today) h += `<a class="hero-card" href="#/doc/${today.id}"><span class="kicker">Today · ${fmt(today.date)}</span><div class="t">${escH(today.title)}</div><p>${escH(today.summary)}</p><span class="go">Open the desk →</span></a>`;
     if (latest) h += `<a class="hero-card" href="#/doc/${latest.id}"><span class="kicker">Latest · ${escH(latest.section)} · ${fmt(latest.date)}</span><div class="t">${escH(latest.title)}</div><p>${escH(latest.summary)}</p><span class="go">Read it →</span></a>`;
-    h += `<h2 class="sec">Tickers</h2><div class="chips">${TICKERS.map((t) => `<a class="chip" href="#/t/${t}">${t}</a>`).join('')}</div>`;
+    h += `<h2 class="sec">Tickers</h2><div class="chips">${((today && today.tickers && today.tickers.length) ? today.tickers : TICKERS).map((t) => `<a class="chip" href="#/t/${t}">${t}</a>`).join('')}</div>`;
     h += `<h2 class="sec">Recent reports</h2><div class="list">${reports.slice(1, 9).map((x) => rowHTML(x, true)).join('')}</div>`;
     h += `<h2 class="sec">Everything</h2>`;
     for (const [g, secs] of IDX.groups) {

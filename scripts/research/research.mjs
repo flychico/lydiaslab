@@ -228,7 +228,9 @@ function parseNote(file, relFolder, raw) {
   const firstPara = body.split('\n\n').map((p) => p.trim()).find((p) => p && !/^(#|\||```|- \[|>|<)/.test(p)) || '';
   const summary = firstPara.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, a, b) => b || a).replace(/[*_`#>]/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\s+/g, ' ').slice(0, 220);
   const id = slug((date ? '' : section + ' ') + name);
-  return { id, name, title, section, date, snapshot, summary, body, page: fm.page || '', words: body.split(/\s+/).length };
+  // `tickers: SPY QQQ DAL ...` in frontmatter (the Today note) drives the ticker chips on the home page.
+  const tickers = (fm.tickers || '').toUpperCase().match(/[A-Z][A-Z.]{0,5}/g) || undefined;
+  return { id, name, title, section, date, snapshot, summary, body, page: fm.page || '', tickers, words: body.split(/\s+/).length };
 }
 function walk(dir, rel = '') {
   let files = [];
@@ -249,7 +251,7 @@ function render(n, links) {
   return { id: n.id, title: n.title, section: n.section, date: n.date, page: n.page, html: md2html(n.body, links) };
 }
 function indexEntry(n) {
-  return { id: n.id, name: n.name, title: n.title, section: n.section, date: n.date, snapshot: n.snapshot || undefined, summary: n.summary, words: n.words, page: n.page };
+  return { id: n.id, name: n.name, title: n.title, section: n.section, date: n.date, snapshot: n.snapshot || undefined, summary: n.summary, words: n.words, page: n.page, tickers: n.tickers };
 }
 
 // ---------------------------------------------------------------- io
