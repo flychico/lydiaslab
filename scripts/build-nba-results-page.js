@@ -29,7 +29,7 @@ const VIEW = require("./lib/nba-results-view");
 
 const ROOT = path.join(__dirname, ".."), DIR = path.join(ROOT, "data", "nba"), MDIR = path.join(DIR, "misses");
 const PAGE = path.join(ROOT, "nba", "results", "index.html");
-const VERSION = "20261110";
+const VERSION = "20261110b";
 const nyDate = d => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(d);
 const num = v => v === "" || v == null || !Number.isFinite(+v) ? null : +v;
 const readJson = (f, d) => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch (e) { return d; } };
