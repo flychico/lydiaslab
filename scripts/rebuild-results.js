@@ -15,6 +15,14 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..");
 const { rebuildAll, rebuildResultsPage } = require("./lib/results-rebuild");
 
+/* Off-season (data/mlb-offseason.json, 2026-11-09): /results/ is the season
+   review from scripts/build-mlb-results-page.js; live grading must not
+   overwrite it with the in-season page. */
+function resultsPageIsSeasonReview() {
+  try { return JSON.parse(fs.readFileSync(path.join(ROOT, "data", "mlb-offseason.json"), "utf8")).results_page === "season_review"; }
+  catch (e) { return false; }
+}
+
 function main() {
   const results = rebuildAll();
   const dateCount = Object.keys(results.days).length;
@@ -27,7 +35,8 @@ function main() {
   fs.writeFileSync(path.join(ROOT, "data", "results.json"), JSON.stringify(results, null, 2) + "\n");
 
   fs.mkdirSync(path.join(ROOT, "results"), { recursive: true });
-  fs.writeFileSync(path.join(ROOT, "results", "index.html"), rebuildResultsPage(results));
+  if (!resultsPageIsSeasonReview()) fs.writeFileSync(path.join(ROOT, "results", "index.html"), rebuildResultsPage(results));
+  else console.log("results/index.html left as the off-season season review (data/mlb-offseason.json)");
 
   console.log(`Rebuilt data/results.json and results/index.html from ${dateCount} date(s) in results_log.csv.`);
 }

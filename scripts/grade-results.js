@@ -144,6 +144,15 @@ async function gradeDay() {
   return added;
 }
 
+
+/* Off-season (data/mlb-offseason.json, 2026-11-09): /results/ is the season
+   review from scripts/build-mlb-results-page.js; live grading must not
+   overwrite it with the in-season page. */
+function resultsPageIsSeasonReview() {
+  try { return JSON.parse(fs.readFileSync(path.join(ROOT, "data", "mlb-offseason.json"), "utf8")).results_page === "season_review"; }
+  catch (e) { return false; }
+}
+
 async function main() {
   const added = await gradeDay();
   console.log(`results_log.csv: ${added} new row(s) for ${DATE}.`);
@@ -154,6 +163,7 @@ async function main() {
   const today = results.days[DATE];
   if (today) console.log(`graded ${DATE}: ${today.wins}-${today.losses}${today.units !== null ? `, ${today.units > 0 ? "+" : ""}${today.units}u` : ""}`);
 
+  if (resultsPageIsSeasonReview()) { console.log("data/results.json rebuilt; results/index.html left as the off-season season review"); return; }
   fs.mkdirSync(path.join(ROOT, "results"), { recursive: true });
   fs.writeFileSync(path.join(ROOT, "results", "index.html"), rebuildResultsPage(results));
   console.log("data/results.json and results/index.html rebuilt from results_log.csv");

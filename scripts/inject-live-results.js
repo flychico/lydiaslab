@@ -7,6 +7,9 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..");
 const file = path.join(ROOT, "results", "index.html");
 
+// Off-season: /results/ is the season review; nothing to inject (data/mlb-offseason.json).
+try { if (JSON.parse(fs.readFileSync(path.join(ROOT, "data", "mlb-offseason.json"), "utf8")).results_page === "season_review") { console.log("off-season: results page left as the season review"); process.exit(0); } } catch (e) {}
+
 if (!fs.existsSync(file)) {
   throw new Error("results/index.html is missing. Run scripts/grade-results.js first.");
 }
