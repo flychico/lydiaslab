@@ -181,6 +181,18 @@ export function md2html(src, links) {
 }
 
 // ---------------------------------------------------------------- notes
+// After redaction a heading can be left with nothing under it; drop such headings.
+function dropEmptySections(body) {
+  const lines = body.split('\n');
+  const lvl = (l) => { const m = l.match(/^(#{1,6})\s/); return m ? m[1].length : 0; };
+  const keep = lines.map(() => true);
+  for (let i = 0; i < lines.length; i++) {
+    const L = lvl(lines[i]); if (!L) continue;
+    let j = i + 1; while (j < lines.length && !lines[j].trim()) j++;
+    if (j >= lines.length || (lvl(lines[j]) && lvl(lines[j]) <= L) || /^(---|\*\*\*)\s*$/.test(lines[j])) keep[i] = false;
+  }
+  return lines.filter((_, i) => keep[i]).join('\n');
+}
 function parseNote(file, relFolder, raw) {
   const name = path.basename(file).replace(/\.(md|txt)$/i, '');
   let body = raw.replace(/^﻿/, '').replace(/\r\n?/g, '\n');
@@ -191,17 +203,21 @@ function parseNote(file, relFolder, raw) {
     for (const line of m[1].split('\n')) { const kv = line.match(/^([\w-]+):\s*(.*)$/); if (kv) fm[kv[1]] = kv[2].replace(/^["']|["']$/g, ''); }
   }
   body = body.split('\n').filter((l) => !REDACT.some((r) => r.test(l))).join('\n');
+  body = dropEmptySections(body);
   if (/\.txt$/i.test(file)) body = '```\n' + body + '\n```';
   let title = name;
   const h1 = body.match(/^#\s+(.+)$/m);
   if (h1 && body.trim().startsWith('#')) { title = h1[1].trim(); body = body.replace(/^#\s+.+\n?/m, ''); }
+  // Reports carry `date`; reference notes and screens carry `as_of` (a snapshot) or `updated`.
   const dm = (fm.date || name).match(/(\d{4}-\d{2}-\d{2})/);
-  const date = dm ? dm[1] : (fm.updated || '').slice(0, 10);
+  const am = !dm && (fm.as_of || fm.updated || '').match(/(\d{4}-\d{2}-\d{2})/);
+  const date = dm ? dm[1] : am ? am[1] : '';
+  const snapshot = !dm && !!am;
   const section = sectionFor(relFolder, name);
   const firstPara = body.split('\n\n').map((p) => p.trim()).find((p) => p && !/^(#|\||```|- \[|>|<)/.test(p)) || '';
   const summary = firstPara.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, a, b) => b || a).replace(/[*_`#>]/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\s+/g, ' ').slice(0, 220);
   const id = slug((date ? '' : section + ' ') + name);
-  return { id, name, title, section, date, summary, body, page: fm.page || '', words: body.split(/\s+/).length };
+  return { id, name, title, section, date, snapshot, summary, body, page: fm.page || '', words: body.split(/\s+/).length };
 }
 function walk(dir, rel = '') {
   let files = [];
@@ -222,7 +238,7 @@ function render(n, links) {
   return { id: n.id, title: n.title, section: n.section, date: n.date, page: n.page, html: md2html(n.body, links) };
 }
 function indexEntry(n) {
-  return { id: n.id, name: n.name, title: n.title, section: n.section, date: n.date, summary: n.summary, words: n.words, page: n.page };
+  return { id: n.id, name: n.name, title: n.title, section: n.section, date: n.date, snapshot: n.snapshot || undefined, summary: n.summary, words: n.words, page: n.page };
 }
 
 // ---------------------------------------------------------------- io

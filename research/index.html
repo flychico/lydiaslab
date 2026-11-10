@@ -118,6 +118,8 @@ h2.sec { font-family: var(--serif); font-weight: 600; font-size: 1.55rem; margin
 .pager a span { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); font-weight: 800; }
 .pager a.next { text-align: right; margin-left: auto; }
 .empty { color: var(--text-dim); padding: 24px 0; }
+.stale { border-left: 4px solid var(--accent); background: var(--bg-card); border-radius: 6px; padding: 12px 16px; margin: 0 0 22px; font-size: .95rem; line-height: 1.5; }
+.stale a { font-weight: 700; }
 .busy { color: var(--text-dim); padding: 30px 0; }
 mark { background: rgba(201,168,76,.32); color: inherit; padding: 0 1px; border-radius: 2px; }
 .foot { margin-top: 50px; font-size: .78rem; color: var(--text-dim); }
@@ -266,6 +268,15 @@ mark { background: rgba(201,168,76,.32); color: inherit; padding: 0 1px; border-
     if (!cache.has(id)) cache.set(id, getJSON(DATA + 'docs/' + id + '.json').then((b) => dec(b)));
     return cache.get(id);
   }
+  // Reference notes and screens are snapshots: flag them once they are a week old.
+  function staleNote(meta) {
+    const reportSecs = ['Pre-Market', 'Daily Reports', 'Week Ahead', 'Weekly Reports'];
+    if (!meta.date || reportSecs.includes(meta.section)) return '';
+    const days = Math.floor((Date.now() - new Date(meta.date + 'T12:00:00').getTime()) / 864e5);
+    if (days < 7) return '';
+    const latest = IDX.items.filter((x) => reportSecs.includes(x.section) && x.date).sort((a, b) => b.date.localeCompare(a.date))[0];
+    return `<div class="stale"><strong>Snapshot from ${fmt(meta.date)}.</strong> Prices, earnings dates and calendars in this note are from then and may be out of date.${latest ? ` <a href="#/doc/${latest.id}">Latest report: ${escH(latest.title)} →</a>` : ''}</div>`;
+  }
   async function doc(id) {
     const meta = IDX.items.find((x) => x.id === id);
     if (!meta) return notFound();
@@ -277,7 +288,7 @@ mark { background: rgba(201,168,76,.32); color: inherit; padding: 0 1px; border-
     $('#view').innerHTML = `<p class="crumb"><a href="#/">Market Desk</a> / <a href="#/s/${sectionSlug(meta.section)}">${escH(meta.section)}</a></p>
       <h1 class="page-h1">${escH(d.title)}</h1>
       <div class="doc-meta">${meta.date ? `<span>${fmt(meta.date)}</span>` : ''}<span>${Math.max(1, Math.round(meta.words / 230))} min read</span>${d.page ? `<a href="${escH(d.page)}" target="_blank" rel="noopener">Open the styled report →</a>` : ''}</div>
-      <article class="doc">${d.html}</article>
+      ${staleNote(meta)}<article class="doc">${d.html}</article>
       <nav class="pager" aria-label="More in ${escH(meta.section)}">${older ? `<a href="#/doc/${older.id}"><span>${meta.date ? 'Earlier' : 'Next'}</span>${escH(older.title)}</a>` : ''}${newer ? `<a class="next" href="#/doc/${newer.id}"><span>${meta.date ? 'Later' : 'Previous'}</span>${escH(newer.title)}</a>` : ''}</nav>`;
     document.title = d.title + ' · Market Desk';
     window.scrollTo(0, 0);
