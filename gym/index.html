@@ -2140,6 +2140,7 @@ function mergeBackup(inc){
   if (inc.hk) { S.hk = S.hk || {}; Object.keys(inc.hk).forEach(d => { S.hk[d] = { ...inc.hk[d], ...(S.hk[d] || {}) }; }); }
   S.supps = uniq([...(S.supps || []), ...(inc.supps || [])], x => x.id);
   S.inboxDone = [...new Set([...(S.inboxDone || []), ...(inc.inboxDone || [])])].slice(-200);
+  if (inc.rest) S.rest = { ...inc.rest, ...(S.rest || {}) };
   if (inc.hkManual) { S.hkManual = S.hkManual || {}; Object.entries(inc.hkManual).forEach(([d, v]) => { S.hkManual[d] = { ...v, ...(S.hkManual[d] || {}) }; }); }
   hkApplyManual();
   if (inc.suppLog) { S.suppLog = S.suppLog || {}; Object.keys(inc.suppLog).forEach(d => { S.suppLog[d] = [...new Set([...(S.suppLog[d] || []), ...inc.suppLog[d]])]; }); }
@@ -2233,11 +2234,10 @@ const MENU_DEFAULT = { updated: "2026-11-06", meals: [
                           { n: "Chipotle bowl (double chicken, half rice, beans, salsa, no cheese)", cal: 650, p: 75, c: 50, f: 15, fib: 10, na: 1500, fv: 1.5 }] },
   { slot: "Snack", opts: [{ n: "Apple", cal: 95, p: 0.5, c: 25, f: 0.3, fib: 4.4, fv: 1 }, { n: "Orange", cal: 62, p: 1.2, c: 15, f: 0.2, fib: 3, fv: 1 }] },
   { slot: "Dinner", opts: [{ n: "6 oz chicken + 1 cup rice + salad with olive oil", cal: 635, p: 54, c: 50, f: 21, fib: 4, na: 500, fv: 2 },
-                           { n: "6 oz salmon + 1 cup rice + veggies", cal: 645, p: 43, c: 50, f: 25, fib: 4, na: 450, fv: 2 },
                            { n: "6 oz steak + 1 cup rice + salad", cal: 635, p: 52, c: 50, f: 22, fib: 4, na: 450, fv: 2 }] },
   { slot: "Night", opts: [{ n: "FAGE 0% (3/4 cup) + berries", cal: 135, p: 18, c: 16, f: 0, fib: 2.5, sug: 12, na: 65, fv: 1 },
                           { n: "FAGE 0% + 1 scoop casein", cal: 210, p: 42, c: 9, f: 1, na: 230 }] }
-], note: "Fish (salmon) twice a week for your HDL." };
+], note: "Olive oil, nuts and avocado for your HDL. No seafood." };
 let menuPick = {};
 function theMenu(){ return (S.menu && S.menu.meals && S.menu.meals.length) ? S.menu : MENU_DEFAULT; }
 function menuLogged(date, n){ return (S.nutrition || []).some(x => x.date === date && x.n === String(n).slice(0, 60)); }
@@ -2664,7 +2664,7 @@ function trainingCard(date){
     return `<div class="card trainstrip"><span class="ico">🏋️</span><div><b>${isToday ? "Trained today" : "Training day"}: ${esc(l.dayName || "Workout")}</b><div class="dim small">${l.min} min · ${sets} set${sets === 1 ? "" : "s"} — get your protein in; carbs help you recover for the next one.</div></div></div>`;
   }
   const next = S.plan && S.plan.days.length ? S.plan.days[S.plan.nextDay % S.plan.days.length] : null;
-  return `<div class="card trainstrip rest"><span class="ico">🌙</span><div><b>${isToday ? "No workout logged yet" : "Rest day"}</b><div class="dim small">${isToday && next ? "Next up: " + esc(next.name) + ". " : ""}Protein target stays the same on rest days — that's when muscle gets built.</div></div></div>`;
+  return `<div class="card trainstrip rest"><span class="ico">🌙</span><div><b>${isRest(date) ? "Rest day" + (isToday ? " today" : "") : isToday ? "No workout logged yet" : "Rest day"}</b><div class="dim small">${isToday && next ? "Next up: " + esc(next.name) + ". " : ""}Protein target stays the same on rest days — that's when muscle gets built.</div></div></div>`;
 }
 function nutHistory(){
   const days = {};
@@ -3388,6 +3388,18 @@ function cardioStrip(){
     ${Array.from({ length: COACH.walkWeek }, (_, i) => box(c.walk.length > i, "outdoor walk")).join("")}
   </div>`;
 }
+/* Rest days you choose. With a 4-day plan you get 3 a week (7 - target). */
+function restAllowed(){ return Math.max(0, 7 - ((S.profile && S.profile.days) || 4)); }
+function restsInWeek(date){ const ws = weekStartOf(date); return Object.keys(S.rest || {}).filter(d => S.rest[d] && d >= ws && d <= date).length; }
+function isRest(date){ return !!(S.rest && S.rest[date]) && !trainLogs().some(l => l.date === date); }
+function toggleRest(){
+  const d = today(); S.rest = S.rest || {};
+  if (S.rest[d]) { S.rest[d] = false; save(); render(); return toast("Rest day removed"); }
+  const ws = weekStartOf(d), done = sessionsBetween(ws, d), left = 7 - Math.round((new Date(d + "T12:00") - new Date(ws + "T12:00")) / 864e5) - 1, need = ((S.profile && S.profile.days) || 4) - done;
+  if (restsInWeek(shiftDate(d, -1)) >= restAllowed()) return toast(`You've used all ${restAllowed()} rest days this week`);
+  if (need > left) return toast(`Can't rest today: ${need} sessions left and only ${left} day${left === 1 ? "" : "s"} after today`);
+  S.rest[d] = true; save(); render(); toast("🌙 Rest day set. Still hit protein, steps and sleep.");
+}
 /* Grade one day. Returns { items:[{k,label,ok,detail}], pass, total, won } */
 function gradeDay(date){
   if (S.fresh && date < S.fresh) return { items: [], pass: 0, total: 0, won: false, pre: true };
@@ -3397,7 +3409,8 @@ function gradeDay(date){
   const elapsed = Math.round((new Date(date + "T12:00") - new Date(ws + "T12:00")) / 864e5) + 1; // counted days of the week through `date`
   const done = sessionsBetween(ws, date), needBy = Math.floor(tgt * elapsed / 7);
   const trained = trainLogs().some(l => l.date === date);
-  add("train", "Training", trained || done >= needBy, trained ? "Trained" : done >= needBy ? "Planned rest day" : `Skipped: ${done} of ${tgt} sessions this week, should be at ${needBy}`);
+  const restOk = !trained && S.rest && S.rest[date] && restsInWeek(date) <= restAllowed();
+  add("train", "Training", trained || restOk || done >= needBy, trained ? "Trained" : restOk ? `Rest day (${restsInWeek(date)} of ${restAllowed()} this week)` : done >= needBy ? "Rest day, on pace" : `Skipped: ${done} of ${tgt} sessions this week, should be at ${needBy}`);
   const n = dayNutrition(date), t = effTargets();
   if (!n.n) add("log", "Food logged", false, "Nothing logged");
   else {
@@ -3434,7 +3447,8 @@ function todaysMission(){
   const weekDays = 7 - Math.round((new Date(ws + "T12:00") - new Date(ws0 + "T12:00")) / 864e5);
   const tgt = Math.ceil(tgt0 * weekDays / 7); // partial first week after a fresh start
   const need = tgt - done;
-  if (!trainedToday && need > 0) m.push(need > daysLeft ? `<b>Train today: not optional.</b> ${tgt} this week is already out of reach (${done} done, ${daysLeft} day${daysLeft === 1 ? "" : "s"} left). Train every remaining day to salvage it.` : need === daysLeft ? `<b>Train today: not optional.</b> ${need} session${need === 1 ? "" : "s"} left and exactly ${daysLeft} day${daysLeft === 1 ? "" : "s"} to do them.` : `Train today: ${need} of ${tgt} sessions still to do this week.`);
+  if (!trainedToday && isRest(today())) m.push(`<b>Rest day</b> (${restsInWeek(today())} of ${restAllowed()} this week). ${need} session${need === 1 ? "" : "s"} left in ${daysLeft - 1} day${daysLeft - 1 === 1 ? "" : "s"}. Still hit protein, steps and 7+ hours of sleep.`);
+  else if (!trainedToday && need > 0) m.push(need > daysLeft ? `<b>Train today: not optional.</b> ${tgt} this week is already out of reach (${done} done, ${daysLeft} day${daysLeft === 1 ? "" : "s"} left). Train every remaining day to salvage it.` : need === daysLeft ? `<b>Train today: not optional.</b> ${need} session${need === 1 ? "" : "s"} left and exactly ${daysLeft} day${daysLeft === 1 ? "" : "s"} to do them.` : `Train today: ${need} of ${tgt} sessions still to do this week.`);
   if (ws === ws0) { const c = cardioWeek(ws, today()), ivLeft = COACH.ivWeek - c.iv.length, wLeft = COACH.walkWeek - c.walk.length;
     if (ivLeft > 0 && daysLeft <= 3) m.push(`<b>Your 4×4 isn't done this week.</b> ${daysLeft === 1 ? "Today is the last chance" : `${daysLeft} days left`}. It can be a second session tonight, just not on leg day.`);
     if (wLeft > 0 && wLeft >= daysLeft - 1) m.push(`<b>${wLeft} outdoor walk${wLeft === 1 ? "" : "s"} still to do</b> this week (25–35 min, started as Outdoor Walk on your Watch so it updates VO₂ max).`); }
@@ -3477,6 +3491,7 @@ function coachCard(compact){
     ${compact ? "" : rows}
     <div class="dim small" style="font-weight:700;margin:10px 0 4px">TODAY'S STANDARD</div>
     <ul class="mission">${mission.slice(0, 3).map(x => `<li>${x}</li>`).join("")}</ul>
+    ${trainLogs().some(l => l.date === today()) ? "" : `<div style="margin-top:6px"><span class="pill ${isRest(today()) ? "on" : ""}" onclick="toggleRest()">🌙 ${isRest(today()) ? "Rest day ✓ · tap to undo" : "Make today a rest day"}</span><span class="dim small">${restAllowed() - restsInWeek(shiftDate(today(), -1)) - (isRest(today()) ? 1 : 0)} left this week</span></div>`}
     ${mission.length > 3 ? `<details class="more"><summary class="small blue">${mission.length - 3} more for today</summary><ul class="mission">${mission.slice(3).map(x => `<li>${x}</li>`).join("")}</ul></details>` : ""}
   </div>`;
 }
@@ -3787,7 +3802,7 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 /* ---- Supplements ----
    A short list you tick off each day. Anything with real calories or
    protein (a protein shake) still belongs in the food log. */
-const SUPP_IDEAS = [["Creatine", "5 g"], ["Vitamin D3", "1,000–2,000 IU"], ["Fish oil", "1–2 g EPA+DHA"], ["Magnesium", "200–400 mg"], ["Multivitamin", "1 tablet"], ["HBOT session", "as scheduled", 1]];
+const SUPP_IDEAS = [["Creatine", "5 g"], ["Vitamin D3", "1,000–2,000 IU"], ["Magnesium", "200–400 mg"], ["Multivitamin", "1 tablet"], ["HBOT session", "as scheduled", 1]];
 function dailySupps(){ return (S.supps || []).filter(x => !x.opt); }
 // The week before a blood retest, creatine is paused so creatinine reads clean.
 function creatineOffOn(date){ const rt = S.labs && S.labs.retest; return !!(rt && date >= (rt.creatineOff || shiftDate(rt.from, -7)) && date <= rt.to && !(S.labs.draws || []).some(x => x.date >= rt.from && x.date <= date)); }
