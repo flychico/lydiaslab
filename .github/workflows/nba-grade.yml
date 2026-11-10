@@ -42,6 +42,11 @@ jobs:
           D="${{ github.event.inputs.date }}"
           if [ -n "$D" ]; then node scripts/grade-nba-results.js --date="$D"; else node scripts/grade-nba-results.js; fi
 
+      # Results page, day by day: miss reasons, upsets and what Leo is learning
+      # (HO-0031, DEC-20261110-30). Built from the graded files; never blocks the run.
+      - name: Results page
+        run: node scripts/build-nba-results-page.js || echo "::warning::NBA results page not rebuilt"
+
       # Every player's points per game and game log for /nba/players/ and the
       # matchup pages' box scores (display only). Never blocks the run.
       - name: Player scoring log
