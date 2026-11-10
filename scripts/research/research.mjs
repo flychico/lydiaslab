@@ -43,6 +43,7 @@ const GROUPS = [
   ['Research', ['Watchlist & Levels', 'Technical Analysis', 'Options', 'Sectors']],
   ['Federal Reserve', ['Fed & Macro', 'FOMC Minutes', 'Beige Book']],
   ['Library', ['Banks & Funds', 'Masters', 'Plan & Notes']],
+  ['Archive', ['Archive']],
 ];
 function sectionFor(folder, name) {
   const f = folder.replace(/\\/g, '/');
@@ -319,6 +320,21 @@ if (cmd === 'build') {
   idx.items = idx.items.filter((x) => x.id !== n.id).concat([indexEntry(n)]);
   writeIndex(k, idx);
   console.log(`${prior ? 'Replaced' : 'Added'} "${n.title}" in ${n.section} (${idx.items.length} notes total).`);
+} else if (cmd === 'move') {
+  // Re-file a published note under another section (e.g. --section Archive) without touching the vault.
+  const want = opt('title'), section = opt('section');
+  if (!want || !section) { console.error('move needs --title "<exact title>" --section <name>'); process.exit(1); }
+  const meta = loadMeta();
+  const k = key(password(), meta.salt);
+  const idx = readIndex(k);
+  const x = idx.items.find((i) => i.title === want || i.id === want);
+  if (!x) { console.error(`No note titled "${want}".`); process.exit(1); }
+  const f = path.join(DOCS, x.id + '.json');
+  const doc = decrypt(k, JSON.parse(fs.readFileSync(f, 'utf8')));
+  doc.section = section; x.section = section;
+  writeJSON(f, encrypt(k, doc));
+  writeIndex(k, idx);
+  console.log(`Moved "${x.title}" to ${section}.`);
 } else if (cmd === 'list') {
   const meta = loadMeta();
   const k = key(password(), meta.salt);
@@ -326,5 +342,5 @@ if (cmd === 'build') {
   for (const x of idx.items) console.log(`${x.date || '          '}  ${x.section.padEnd(20)} ${x.title}`);
   console.log(`${idx.items.length} notes, updated ${idx.updated}`);
 } else {
-  console.log('Usage: RESEARCH_PASSWORD=... node scripts/research/research.mjs build --src <vault> | add --file <note.md> [--folder <name>] | list');
+  console.log('Usage: RESEARCH_PASSWORD=... node scripts/research/research.mjs build --src <vault> | add --file <note.md> [--folder <name>] | move --title <title> --section <name> | list');
 }
