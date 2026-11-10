@@ -26,8 +26,8 @@ const REASON_HELP = {
   market_knew: "The line moved away from Leo before tip, and was right to.",
   overtime: "Level after regulation, settled in overtime.",
   blowout: "A runaway that the line missed about as badly.",
-  variance: "The line was no closer than Leo. Shooting and luck.",
-  model_error: "The line was clearly closer than Leo. These drive model changes."
+  variance: "The line missed by about as much as Leo, within 3 points. Shooting and luck.",
+  model_error: "The line was closer than Leo by more than 3 points. These drive model changes."
 };
 
 function make(nick) {

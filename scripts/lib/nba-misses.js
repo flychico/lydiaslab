@@ -29,10 +29,10 @@
  *                   miss when Leo's own margin was under 10.
  *   4 blowout       decided by 20+ and the line missed about as badly
  *                   (line_miss >= 0.8 x leo_miss).
- *   5 variance      the line was not clearly closer than Leo (Leo's miss is
- *                   less than 2 points worse than the line's), or no line
- *                   was saved to compare against.
- *   6 model_error   everything else: the line was clearly closer than Leo.
+ *   5 variance      the line missed by about as much as Leo, within 3 points,
+ *                   or more (line_miss >= leo_miss - 3; the band shared with
+ *                   NFL and MLB, HO-0038), or no line was saved to compare.
+ *   6 model_error   everything else: the line was closer than Leo by more than 3.
  *                   cost_pts = Leo's miss minus the line's miss.
  *
  * Upset: the team with the shorter DraftKings moneyline at the read of
@@ -41,7 +41,7 @@
 (function () {
 'use strict';
 
-const MARGIN_MISS = 10, INJ_MIN_PTS = 1, MKT_MOVE = 1.5, BLOWOUT = 20, CLEAR = 2;
+const MARGIN_MISS = 10, INJ_MIN_PTS = 1, MKT_MOVE = 1.5, BLOWOUT = 20, CLEAR = 3;
 const LABEL = { injury_input: "Injury input", market_knew: "Market knew", overtime: "Overtime", blowout: "Blowout", variance: "Variance", model_error: "Model error" };
 const ORDER = ["injury_input", "market_knew", "overtime", "blowout", "variance", "model_error"];
 const num = v => v === "" || v == null || !Number.isFinite(+v) ? null : +v;
@@ -159,7 +159,7 @@ function classify(row, ctx) {
   }
   const cmp = `The DraftKings line missed the margin by ${lineMiss.toFixed(1)}, Leo by ${leoMiss.toFixed(1)}.`;
   if (am >= BLOWOUT && lineMiss >= 0.8 * leoMiss) return set("blowout", `Decided by ${am}. ${cmp}`, null);
-  if (leoMiss - lineMiss < CLEAR) return set("variance", `${cmp} The line was not clearly closer.`, null);
+  if (lineMiss >= leoMiss - CLEAR) return set("variance", `${cmp} The line was not clearly closer.`, null);
   return set("model_error", `${cmp} The line was ${(leoMiss - lineMiss).toFixed(1)} points closer.`, leoMiss - lineMiss);
 }
 
