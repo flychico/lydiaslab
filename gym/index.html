@@ -1322,6 +1322,7 @@ function renderToday(){
   <h1>Today</h1>
   ${offerStrong ? `<div class="card" style="border-color:var(--gold)"><b>New program: Strong &amp; Lean</b><div class="dim small" style="margin:5px 0 10px;line-height:1.55">Strength first, muscle second, built for getting strong without getting bulky. 5 days, about 60 minutes: Upper and Lower heavy days (3–5 reps), then Push, Pull and Legs muscle days. Every muscle twice a week, every set with an effort target. Your history and progress stay; the plan is rebuilt.</div><button class="btn small-btn" onclick="switchToStrong()">Switch my plan</button> <button class="btn ghost small-btn" onclick="S.strongDismissed=true;save();render()">Not now</button></div>` : ""}
   <p class="dim small">${new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})} · ${streakText()}</p>
+  ${weighInCard()}
   ${reviewCard()}
   ${coachCard()}
   ${doneToday ? "" : readinessCard()}
@@ -1335,9 +1336,26 @@ function renderToday(){
     ${doneToday ? `<div class="dim small" style="margin-top:10px;line-height:1.5">Already trained today. A second session (say, cardio tonight) still counts as <b>one training day</b>, and its cardio counts toward your weekly cardio.</div>` : ""}
     <button class="btn full blue-btn" style="margin-top:12px" onclick="startWorkout(${dayIdx})">${doneToday ? "Start a second session" : "Start workout"}</button>
   </div>
+  ${(() => { const ws0 = weekStartOf(today()), c = cardioWeek(ws0, shiftDate(ws0, 6)), done = c.iv.length >= COACH.ivWeek;
+    return `<div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer${done ? "" : ";border-color:var(--blue)"}" onclick="ivSoloOpen()"><span style="font-size:1.5rem">⚡</span><div style="flex:1"><b>${done ? "4×4 done this week ✓" : "Do your 4×4 · about 30 min"}</b><div class="dim small">${done ? "Tap to log another one." : "Its own short session, any day, even a rest day. The app talks you through it. This is what raises your VO₂ max."}</div></div><span class="blue" style="font-weight:700">▶</span></div>`; })()}
   <div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="quickWalkOpen()"><span style="font-size:1.5rem">🚶</span><div style="flex:1"><b>Log a quick walk</b><div class="dim small">Walked outside or on the treadmill? Log it in 2 taps. Counts toward your weekly cardio, not your training days.</div></div><span class="blue" style="font-weight:700">＋</span></div>
   <h2>Or jump to another day</h2>
   ${plan.days.map((d, i) => i === dayIdx ? "" : `<div class="card daycard" onclick="startWorkout(${i})"><b>${esc(d.name)}</b> <span class="dim small">· ${d.exercises.length} exercises · tap to start</span></div>`).join("")}`;
+}
+/* Morning weigh-in: first thing on Today until it's logged. */
+function weighInCard(){
+  if ((S.weights || []).some(w => w.date === today())) return "";
+  const ws = (S.weights || []).slice().sort((a, b) => a.date.localeCompare(b.date)), last = ws[ws.length - 1];
+  const wk = ws.filter(w => w.date >= shiftDate(today(), -7)).length;
+  return `<div class="card" style="border-color:var(--blue)"><b>⚖️ Weigh in first</b>
+    <div class="dim small" style="margin:4px 0 8px;line-height:1.5">After the bathroom, before food. ${last ? `Last: <b>${last.lbs} lb</b> on ${new Date(last.date + "T12:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}. ` : ""}<b>${wk} of the last 7 days</b> logged${wk < 4 ? ": too few for the coach to judge your pace" : ""}.</div>
+    <div style="display:flex;gap:8px"><input type="number" inputmode="decimal" step="0.1" id="bw-today" placeholder="lbs this morning" onkeydown="if(event.key==='Enter')logBw('bw-today')"><button class="btn blue-btn small-btn" onclick="logBw('bw-today')">Log</button></div></div>`;
+}
+/* Bedtime that gives 7.5 h before your alarm (Settings → wake-up time). */
+function bedtimeText(){
+  const [h, m] = String(S.wake || "07:00").split(":").map(Number), fmt = mins => { mins = ((mins % 1440) + 1440) % 1440; const H = Math.floor(mins / 60), M = mins % 60; return (H % 12 || 12) + ":" + String(M).padStart(2, "0") + (H < 12 ? " AM" : " PM"); };
+  const wake = (h || 0) * 60 + (m || 0);
+  return { bed: fmt(wake - 450), wake: fmt(wake) };
 }
 function switchToStrong(){
   if (!confirm("Rebuild your plan as Strong & Lean (5 days, 60 min, full gym)? Your logged workouts and progress are kept.")) return;
@@ -1767,9 +1785,9 @@ function renderProgress(){
   for (const l of hist) { const k = weekStartOf(l.date); let g = hweeks.find(w => w.k === k); if (!g) hweeks.push(g = { k, train: [], walks: [] }); (l.quick ? g.walks : g.train).push(l); }
   const thisWk = weekStartOf(today()), lastWk = shiftDate(thisWk, -7), goalH = (S.profile && S.profile.days) || 4;
   const hweek = g => { const t = g.k === thisWk ? "This week" : g.k === lastWk ? "Last week" : "Week of " + new Date(g.k + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    const wm = g.walks.reduce((a, l) => a + (l.min || 0), 0);
+    const iv4 = g.walks.filter(l => /4×4/.test(l.dayName || "")), wk = g.walks.filter(l => !iv4.includes(l)), wm = wk.reduce((a, l) => a + (l.min || 0), 0);
     return `<div style="margin-top:10px"><div class="small" style="display:flex;justify-content:space-between;font-weight:700"><span>${t}</span><span class="${g.train.length >= goalH ? "green" : "dim"}">${g.train.length} of ${goalH} workouts</span></div>
-      ${g.train.map(hrow).join("")}${g.walks.length ? `<div class="exline"><span class="dim">🚶 ${g.walks.length} walk${g.walks.length === 1 ? "" : "s"}</span><span class="dim small">${wm} min</span></div>` : ""}</div>`; };
+      ${g.train.map(hrow).join("")}${iv4.length ? `<div class="exline"><span class="dim">⚡ ${iv4.length > 1 ? iv4.length + " × " : ""}4×4 intervals</span><span class="dim small">${iv4.reduce((a, l) => a + (l.min || 0), 0)} min</span></div>` : ""}${wk.length ? `<div class="exline"><span class="dim">🚶 ${wk.length} walk${wk.length === 1 ? "" : "s"}</span><span class="dim small">${wm} min</span></div>` : ""}</div>`; };
   if (!hweeks.length || hweeks[0].k !== thisWk) hweeks.unshift({ k: thisWk, train: [], walks: [] });
   const hrow = l => `<div class="exline"><span>${new Date(l.date + "T12:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} · <b>${esc(l.dayName || "Workout")}</b></span><span class="dim small">${l.entries.reduce((a, en) => a + en.sets.length, 0)} sets · ${l.min}m</span></div>`;
   const cHist = `<div class="card" id="pg-history"><h3>History <span class="dim small">· ${trainLogs().length} workouts</span></h3>
@@ -1964,8 +1982,8 @@ function logActivity(){
   S.activity.sort((a, b) => a.date.localeCompare(b.date));
   save(); render(); toast("Activity logged");
 }
-function logBw(){
-  const v = Number(document.getElementById("bw-in").value);
+function logBw(id){
+  const v = Number(document.getElementById(id || "bw-in").value);
   if (!v || v < 50 || v > 700) return toast("Enter a weight in lbs");
   S.weights = S.weights.filter(w => w.date !== today());
   S.weights.push({ date: today(), lbs: v });
@@ -2037,6 +2055,7 @@ function renderSettings(){
     <input type="file" accept=".xml" onchange="importHealthWeights(this)">
   </div>
   ${syncCardHTML()}
+  ${coachFactsHTML()}
   ${coachSettingsHTML()}
   <div class="card"><h3>Backup & move devices</h3>
     <p class="dim small" style="margin-bottom:10px">${syncCfg ? "Sync keeps your devices up to date, so you only need this for an extra copy." : "Without sync, your data lives only on this device. Turn on sync above, or bring data across by hand here."} Clearing the browser wipes this device's copy.</p>
@@ -2141,6 +2160,8 @@ function mergeBackup(inc){
   S.supps = uniq([...(S.supps || []), ...(inc.supps || [])], x => x.id);
   S.inboxDone = [...new Set([...(S.inboxDone || []), ...(inc.inboxDone || [])])].slice(-200);
   if (inc.rest) S.rest = { ...inc.rest, ...(S.rest || {}) };
+  if (inc.coachNote && (!S.coachNote || (inc.coachNote.at || 0) > (S.coachNote.at || 0))) S.coachNote = inc.coachNote;
+  if (inc.wake && !S.wake) S.wake = inc.wake;
   if (inc.hkManual) { S.hkManual = S.hkManual || {}; Object.entries(inc.hkManual).forEach(([d, v]) => { S.hkManual[d] = { ...v, ...(S.hkManual[d] || {}) }; }); }
   hkApplyManual();
   if (inc.suppLog) { S.suppLog = S.suppLog || {}; Object.keys(inc.suppLog).forEach(d => { S.suppLog[d] = [...new Set([...(S.suppLog[d] || []), ...inc.suppLog[d]])]; }); }
@@ -2709,7 +2730,8 @@ function renderNutrition(){
     ${(() => { const fv = dayFV(date); return `<div style="display:flex;justify-content:space-between;font-size:.88rem;margin-top:12px"><span>🍎 Fruit &amp; veg</span><span><b class="${fv >= COACH.fv - 0.5 ? "green" : ""}">${fv.toFixed(1)}</b> / ${COACH.fv} servings</span></div><div class="cbar"><div style="width:${pct(fv, COACH.fv)}%;background:var(--green)"></div></div>`; })()}
     <div style="display:flex;justify-content:space-between;font-size:.88rem;margin-top:12px"><span>🌾 Fiber</span><span><b class="${d.fib >= 30 ? "green" : ""}">${Math.round(d.fib)}</b> / 30 g</span></div><div class="cbar"><div style="width:${pct(d.fib, 30)}%;background:var(--gold)"></div></div>
     <div class="dim small" style="margin-top:8px">${Math.round(d.c)}g carbs · ${Math.round(d.f)}g fat${d.sat ? ` (${Math.round(d.sat)}g sat.)` : ""} · ${d.n} item${d.n === 1 ? "" : "s"}</div>
-    ${d.xn ? `<div class="small" style="margin-top:4px"><span class="${d.sug > 50 ? "gold" : "dim"}">Sugars <b>${Math.round(d.sug)}</b> g</span> · <span class="${d.na > 2300 ? "gold" : "dim"}">Sodium <b>${Math.round(d.na).toLocaleString()}</b> / 2,300 mg</span> <span class="dim">· from ${d.xn} scanned/looked-up item${d.xn === 1 ? "" : "s"}</span></div>` : ""}
+    ${d.xn ? `<div style="display:flex;justify-content:space-between;font-size:.88rem;margin-top:12px"><span>🧂 Sodium</span><span><b class="${d.na > NA_MAX ? "red" : ""}">${Math.round(d.na).toLocaleString()}</b> / ${NA_MAX.toLocaleString()} <span class="dim">· ${d.na > NA_MAX ? Math.round(d.na - NA_MAX).toLocaleString() + " over" : Math.round(NA_MAX - d.na).toLocaleString() + " left"}</span></span></div><div class="cbar"><div style="width:${pct(d.na, NA_MAX)}%;background:${d.na > NA_MAX ? "var(--red)" : d.na > NA_MAX * 0.8 ? "var(--gold)" : "var(--blue)"}"></div></div>
+    <div class="small" style="margin-top:6px"><span class="${d.sug > 50 ? "gold" : "dim"}">Sugars <b>${Math.round(d.sug)}</b> g</span> <span class="dim">· sodium and sugars from ${d.xn} of ${d.n} item${d.n === 1 ? "" : "s"}</span></div>` : ""}
   </div>
 
   ${menuCard(date)}
@@ -3057,7 +3079,7 @@ function readiness(){
 }
 function readinessCard(){
   const r = readiness(); if (!r || !r.low) return "";
-  return `<div class="card" style="border-color:var(--gold)"><b class="gold">Recovery looks low today</b><div class="dim small" style="margin-top:4px;line-height:1.55">Your Watch shows ${r.flags.join(", ")}. Still train, but keep the weights you used last time instead of adding, and stop a rep or two shy of failure. Skip any hard cardio finisher.</div></div>`;
+  return `<div class="card" style="border-color:var(--gold)"><b class="gold">Recovery looks low today</b><div class="dim small" style="margin-top:4px;line-height:1.55">Your Watch shows ${r.flags.join(", ")}. Still train, but keep the weights you used last time instead of adding, and stop a rep or two shy of failure. Save the 4×4 for a better day if you have one left this week.</div></div>`;
 }
 function hkTile(label, val, sub, cls){ return `<div class="card"><div class="dim small">${label}</div><div class="big ${cls || ""}">${val}</div><div class="dim small">${sub || "&nbsp;"}</div></div>`; }
 function vsAvg(v, a, unit, goodUp){
@@ -3388,6 +3410,7 @@ function cardioStrip(){
     ${Array.from({ length: COACH.walkWeek }, (_, i) => box(c.walk.length > i, "outdoor walk")).join("")}
   </div>`;
 }
+const NA_MAX = 2300; // sodium limit, mg a day
 /* Rest days you choose. With a 4-day plan you get 3 a week (7 - target). */
 function restAllowed(){ return Math.max(0, 7 - ((S.profile && S.profile.days) || 4)); }
 function restsInWeek(date){ const ws = weekStartOf(date); return Object.keys(S.rest || {}).filter(d => S.rest[d] && d >= ws && d <= date).length; }
@@ -3403,7 +3426,8 @@ function toggleRest(){
 /* Grade one day. Returns { items:[{k,label,ok,detail}], pass, total, won } */
 function gradeDay(date){
   if (S.fresh && date < S.fresh) return { items: [], pass: 0, total: 0, won: false, pre: true };
-  const items = [], add = (k, label, ok, detail) => items.push({ k, label, ok, detail });
+  const CORE = { train: 1, log: 1, protein: 1, cal: 1 }; // these decide the day; everything else is a note
+  const items = [], add = (k, label, ok, detail) => items.push({ k, label, ok, detail, core: !!CORE[k] });
   const ws0 = weekStartOf(date), ws = S.fresh && S.fresh > ws0 ? S.fresh : ws0; // a fresh start mid-week only counts the days since it
   const tgt = (S.profile && S.profile.days) || 5;
   const elapsed = Math.round((new Date(date + "T12:00") - new Date(ws + "T12:00")) / 864e5) + 1; // counted days of the week through `date`
@@ -3416,18 +3440,18 @@ function gradeDay(date){
   else {
     add("protein", "Protein", n.p >= t.protein * 0.9, `${Math.round(n.p)} / ${t.protein} g` + (n.p < t.protein * 0.9 ? ` (${Math.round(t.protein - n.p)} g short)` : ""));
     const off = (n.cal - t.cal) / t.cal;
-    add("cal", "Calories", off <= 0.10 && off >= -0.25, `${Math.round(n.cal)} / ${t.cal}` + (off > 0.10 ? " (over)" : off < -0.25 ? " (too low: you'll lose muscle, not just fat)" : off < -0.1 ? " (a little under: fine)" : ""));
+    add("cal", "Calories", off <= 0.10 && off >= -0.25, `${Math.round(n.cal)} / ${t.cal}` + (off > 0.10 ? " (over)" : off < -0.25 ? " (too low)" : off < -0.1 ? " (a little under: fine)" : ""));
     const fv = dayFV(date);
     add("fv", "Fruit & veg", fv >= COACH.fv - 0.5, `${fv.toFixed(1)} / ${COACH.fv} servings`);
+    if (n.xn) add("na", "Sodium", n.na <= NA_MAX, `${Math.round(n.na).toLocaleString()} / ${NA_MAX.toLocaleString()} mg` + (n.na > NA_MAX ? " (over)" : ""));
   }
   const ds = dailySupps().filter(x => !(creatineOffOn(date) && /creatine/i.test(x.n))); if (ds.length && (date >= (S.suppsSince || ""))) { const tk = suppsTaken(date), n = ds.filter(x => tk.has(x.id)).length; add("supps", "Supplements", n === ds.length, `${n} / ${ds.length} taken`); }
-  if (new Date(date + "T12:00").getDay() === 0 && ws === ws0) { const c = cardioWeek(ws, date), ok = c.iv.length >= COACH.ivWeek && c.walk.length >= COACH.walkWeek; add("cardio", "Weekly cardio", ok, `${c.iv.length}/${COACH.ivWeek} 4×4 · ${c.walk.length}/${COACH.walkWeek} outdoor walks`); }
   const h = (S.hk || {})[date] || {};
   // The Shortcut stores the night that FOLLOWS a day on that day's date (read when you wake up)
   if (h.sleep != null) add("sleep", "Sleep that night", h.sleep >= COACH.sleep, fmtSleep(h.sleep));
   if (h.steps != null) add("steps", "Steps", h.steps >= COACH.steps, h.steps.toLocaleString() + " / " + COACH.steps.toLocaleString());
-  const pass = items.filter(i => i.ok).length;
-  return { items, pass, total: items.length, won: items.length >= 2 && pass / items.length >= 0.8 };
+  const core = items.filter(i => i.core), pass = core.filter(i => i.ok).length;
+  return { items, pass, total: core.length, won: core.length >= 2 && pass === core.length, notes: items.filter(i => !i.core) };
 }
 function coachStreak(){
   let s = 0, d = shiftDate(today(), -1);
@@ -3450,7 +3474,7 @@ function todaysMission(){
   if (!trainedToday && isRest(today())) m.push(`<b>Rest day</b> (${restsInWeek(today())} of ${restAllowed()} this week). ${need} session${need === 1 ? "" : "s"} left in ${daysLeft - 1} day${daysLeft - 1 === 1 ? "" : "s"}. Still hit protein, steps and 7+ hours of sleep.`);
   else if (!trainedToday && need > 0) m.push(need > daysLeft ? `<b>Train today: not optional.</b> ${tgt} this week is already out of reach (${done} done, ${daysLeft} day${daysLeft === 1 ? "" : "s"} left). Train every remaining day to salvage it.` : need === daysLeft ? `<b>Train today: not optional.</b> ${need} session${need === 1 ? "" : "s"} left and exactly ${daysLeft} day${daysLeft === 1 ? "" : "s"} to do them.` : `Train today: ${need} of ${tgt} sessions still to do this week.`);
   if (ws === ws0) { const c = cardioWeek(ws, today()), ivLeft = COACH.ivWeek - c.iv.length, wLeft = COACH.walkWeek - c.walk.length;
-    if (ivLeft > 0 && daysLeft <= 3) m.push(`<b>Your 4×4 isn't done this week.</b> ${daysLeft === 1 ? "Today is the last chance" : `${daysLeft} days left`}. It can be a second session tonight, just not on leg day.`);
+    if (ivLeft > 0 && daysLeft <= 3) { const rl = readiness(), low = rl && rl.low; m.push(`<b>Your 4×4 isn't done this week.</b> ${daysLeft === 1 ? `Today is the last chance${low ? ": recovery is low, so go one level easier, but do it" : ""}` : low ? `Recovery is low today, so do it on one of the next ${daysLeft - 1} day${daysLeft - 1 === 1 ? "" : "s"}` : `${daysLeft} days left`}. It's its own 35-minute session (Today → ⚡), fine on a rest day.`); }
     if (wLeft > 0 && wLeft >= daysLeft - 1) m.push(`<b>${wLeft} outdoor walk${wLeft === 1 ? "" : "s"} still to do</b> this week (25–35 min, started as Outdoor Walk on your Watch so it updates VO₂ max).`); }
   { const rt = S.labs && S.labs.retest, td = today(); if (rt && td <= rt.to && !(S.labs.draws || []).some(x => x.date >= rt.from)) {
       if (td >= rt.from) m.push(`<b>Blood work retest this week</b> (${esc(rt.tests)}): morning, fasted, well hydrated, no heavy lifting the 2–3 days before.`);
@@ -3462,9 +3486,8 @@ function todaysMission(){
   const lastPhoto = (S.photos || []).map(x => x.date).sort().pop();
   if (coachCfg && (!lastPhoto || lastPhoto < shiftDate(today(), -6))) m.push(`<b>Take this week's progress photos</b> (Progress tab). Your Sunday review compares them.`);
   const lastW = (S.weights || []).map(x => x.date).sort().pop();
-  if (lastW !== today()) m.push(`<b>Weigh in</b> this morning (Progress → Body weight). Daily weigh-ins make the trend accurate.`);
   m.push(`Get to <b>${COACH.steps.toLocaleString()} steps</b>. A 20-minute walk after a meal is about 2,000.`);
-  m.push("In bed by a time that gives you <b>7+ hours</b>: muscle is built while you sleep.");
+  { const b = bedtimeText(); m.push(`In bed by <b>${b.bed}</b> for 7½ hours before your ${b.wake} alarm. Phone down 20 minutes earlier.`); }
   return m;
 }
 function freshDay(d){ return d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }); }
@@ -3478,11 +3501,11 @@ function coachCard(compact){
       <ul class="mission"><li>Shop and prep protein for the week: eggs, chicken, cottage cheese, Greek yogurt.</li><li>Pick your 5 training days and put them in your calendar.</li><li>First session: <b>${esc(next)}</b>.</li><li>Weigh in and take your first progress photos on day one.</li></ul></div>`;
   }
   const y = gradeDay(shiftDate(today(), -1)), streak = coachStreak(), wk = weekScore();
-  const misses = y.items.filter(i => !i.ok);
-  const head = y.pre ? `<b>Day one of your fresh start.</b> Nothing to grade yet, so today sets the standard.` : y.total ? (misses.length === 0 ? `<b class="green">Yesterday: ${y.pass}/${y.total}. Every standard met.</b> Do it again.`
-    : misses.length <= 1 && y.won ? `<b>Yesterday: ${y.pass}/${y.total}.</b> Close. Don't let ${misses[0].label.toLowerCase()} slide two days in a row.`
-    : `<b class="red">Yesterday: ${y.pass}/${y.total}. Not good enough.</b> You missed ${misses.map(i => i.label.toLowerCase()).join(", ")}.`) : "No data for yesterday yet.";
-  const rows = y.items.map(i => `<div class="exline"><span>${i.ok ? '<b class="green">✓</b>' : '<b class="red">✗</b>'} ${i.label}</span><span class="dim small">${esc(i.detail)}</span></div>`).join("");
+  const misses = y.items.filter(i => i.core && !i.ok), soft = (y.notes || []).filter(i => !i.ok), softTxt = soft.map(i => i.label.toLowerCase()).join(", ");
+  const head = y.pre ? `<b>Day one of your fresh start.</b> Nothing to grade yet, so today sets the standard.` : y.total ? (misses.length === 0 ? `<b class="green">Yesterday: day won (${y.pass}/${y.total}).</b> ${soft.length ? `Training, protein and calories all hit. To tighten up: ${softTxt}.` : "Every standard met. Do it again."}`
+    : `<b class="red">Yesterday: ${y.pass}/${y.total} on the big three. Not good enough.</b> You missed ${misses.map(i => i.label.toLowerCase()).join(", ")}.${soft.length ? ` Also off: ${softTxt}.` : ""}`) : "No data for yesterday yet.";
+  const rowOf = i => `<div class="exline"><span>${i.ok ? '<b class="green">✓</b>' : i.core ? '<b class="red">✗</b>' : '<b class="gold">–</b>'} ${i.label}</span><span class="dim small">${esc(i.detail)}</span></div>`;
+  const rows = y.items.filter(i => i.core).map(rowOf).join("") + (y.notes && y.notes.length ? `<div class="dim small" style="font-weight:700;margin:8px 0 2px">ALSO TRACKED · doesn't decide the day</div>` + y.notes.map(rowOf).join("") : "");
   const mission = todaysMission();
   return `<div class="card coachcard ${y.total && !y.won ? "bad" : ""}">
     <div class="exhead"><h3>🗿 Coach</h3><span class="small">${streak ? `<b>${streak}-day streak</b> 🔥` : '<span class="dim">streak: 0</span>'}${wk.pct != null ? ` · <span class="dim">7-day ${wk.pct}%</span>` : ""}</span></div>
@@ -3534,6 +3557,8 @@ async function coachSync(force){
     if (fs0 && fs0.content) { const m = unb64(fs0.content).match(/\d{4}-\d{2}-\d{2}/); if (m && S.fresh !== m[0]) { S.fresh = m[0]; save(); render(); } }
     const mn = await repoGet("coach/menu.json");
     if (mn && mn.content) { try { const Mn = JSON.parse(unb64(mn.content)); if (Mn && Mn.updated && Mn.meals && (!S.menu || S.menu.updated !== Mn.updated)) { S.menu = Mn; save(); render(); } } catch (e) {} }
+    const fx = await repoGet("coach/facts.json");
+    if (fx && fx.content) { try { const Fx = JSON.parse(unb64(fx.content)); if (Fx && Fx.updated && Fx.items && (!S.facts || S.facts.updated !== Fx.updated)) { S.facts = Fx; save(); render(); } } catch (e) {} }
     const lb = await repoGet("coach/labs.json");
     if (lb && lb.content) { try { const L = JSON.parse(unb64(lb.content)); if (L && L.updated && (!S.labs || S.labs.updated !== L.updated)) { S.labs = L; save(); render(); toast("🩸 Blood work updated"); } } catch (e) {} }
     const rv = await repoGet("coach/review.json");
@@ -3690,6 +3715,21 @@ async function connectCoach(){
     await coachSync(true); render(); toast("AI coach connected ✓");
   } catch (e) { toast(e.status === 404 ? "Repo not found — check the name, and that the token includes it" : e.status === 401 ? "GitHub didn't accept that token" : "Couldn't reach GitHub"); }
 }
+/* What the coach believes about you (coach/facts.json), so you can check it,
+   plus a note back to the coach and your wake-up time for the bedtime target. */
+function coachFactsHTML(){
+  const F = S.facts, n = S.coachNote;
+  return `<div class="card" id="set-facts"><h3>What your coach knows <span class="dim small">${F && F.updated ? "· updated " + new Date(F.updated.slice(0, 10) + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}</span></h3>
+    <p class="dim small" style="margin:4px 0 8px;line-height:1.5">Every review, check-in and menu is built from this list. If a line is wrong or out of date, tell the coach below and it gets fixed at the next review.</p>
+    ${F && F.items && F.items.length ? F.items.map(i => `<div class="exline" style="align-items:flex-start"><span class="dim small" style="font-weight:700;min-width:92px">${esc(i.label)}</span><span class="small" style="text-align:right;line-height:1.45">${esc(i.v)}</span></div>`).join("") : `<p class="dim small">${coachCfg ? "Loads at the next sync." : "Connect the AI coach to see this."}</p>`}
+    <label style="margin-top:12px">Tell your coach <span class="dim small">(a correction, a schedule change, something you can't eat)</span></label>
+    <textarea id="coach-note" rows="2" placeholder="e.g. I'm off this Friday. I don't like oats.">${n && n.text ? esc(n.text) : ""}</textarea>
+    <button class="btn small-btn" style="margin-top:6px" onclick="saveCoachNote()">Send to coach</button>${n && n.text ? ` <span class="dim small">sent ${new Date(n.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>` : ""}
+    <label style="margin-top:12px">Wake-up time on work days <span class="dim small">(sets your bedtime target)</span></label>
+    <input type="time" value="${esc(S.wake || "07:00")}" onchange="S.wake=this.value;save();toast('Bedtime target: '+bedtimeText().bed)">
+  </div>`;
+}
+function saveCoachNote(){ const t = (document.getElementById("coach-note").value || "").trim().slice(0, 600); S.coachNote = t ? { text: t, at: Date.now() } : null; save(); render(); toast(t ? "Sent. Your coach reads it at the next check-in." : "Note cleared"); if (coachCfg) coachSync(true); }
 function coachSettingsHTML(){
   if (!coachCfg) return `<div class="card" id="set-coach"><h3>AI coach <span class="dim small">· weekly review</span></h3>
     <p class="dim small" style="margin:6px 0 10px;line-height:1.55">Every Sunday Claude reads your week (workouts, food, sleep, steps, photos), writes you a straight review and adjusts your plan. Your data goes to a <b>private repo</b> only you can see.</p>
@@ -3795,7 +3835,40 @@ function finishIntervals(complete){
   if (ei != null && S.active && S.active.entries[ei]) {
     const en = S.active.entries[ei]; let st = en.sets.find(s => !s.done); if (!st) { en.sets.push({ w: "", r: "", done: false }); st = en.sets[en.sets.length - 1]; }
     st.r = mins; st.done = true; if (full) st.iv = key; save(); render(); toast("Logged " + mins + " min · " + name + ". Add the level you used.");
-  } else toast((complete ? "Done: " : "Stopped: ") + mins + " min");
+  } else if (ivSolo && ivSolo.run) { ivSolo.run = false; ivSoloLog(mins, full); }
+  else toast((complete ? "Done: " : "Stopped: ") + mins + " min");
+}
+/* 4×4 on its own: a short session that counts for weekly cardio, not as a lifting day. */
+let ivSolo = { ex: "stair-climber", lv: "", day: 0, run: false };
+const IV_SOLO_EX = [["stair-climber", "Stair climber"], ["incline-walk", "Treadmill"], ["bike", "Bike"], ["row-erg", "Rower"], ["outdoor-run", "Outside (hill or run)"]];
+function ivSoloOpen(){
+  let m = document.getElementById("qwmodal"); if (!m) { m = document.createElement("div"); m.id = "qwmodal"; document.body.appendChild(m); }
+  const pill = (on, txt, js) => `<span class="pill ${on ? "on" : ""}" onclick="${js};ivSoloOpen()">${txt}</span>`;
+  const last = lastLevel(ivSolo.ex), low = (() => { const r = readiness(); return r && r.low; })();
+  m.innerHTML = `<div class="modal" onclick="if(event.target===this)this.parentNode.innerHTML=''"><div class="inner">
+    <h3>⚡ 4×4 intervals</h3>
+    <p class="dim small" style="margin:4px 0 8px;line-height:1.5">5 min warm-up, then 4 minutes hard and 3 minutes easy, four times, and a 5 min cool-down: 35 minutes door to door. Hard means you can only say a few words.</p>
+    ${low ? `<p class="small gold" style="margin-bottom:8px;line-height:1.5"><b>Recovery is low today.</b> If you have another day this week, do it then. If not, go one level easier.</p>` : ""}
+    <label>On what?</label>
+    <div class="qopt">${IV_SOLO_EX.map(([id, l]) => pill(ivSolo.ex === id, l, `ivSolo.ex='${id}'`)).join("")}</div>
+    ${ivSolo.ex === "outdoor-run" ? `<p class="dim small" style="margin-top:8px">Start an Outdoor Run on your Watch too, so it updates your VO₂ max.</p>` : `<label>Level or speed on the hard parts</label>
+    <input type="number" inputmode="decimal" step="0.5" id="ivs-lv" placeholder="${last != null ? "last time: " + last : "e.g. 10"}" value="${ivSolo.lv}" oninput="ivSolo.lv=this.value">`}
+    <button class="btn blue-btn full" style="margin-top:12px" onclick="ivSoloStart()">▶ Start the guided timer</button>
+    <details style="margin-top:10px"><summary class="small blue" style="cursor:pointer;font-weight:600">Already did it? Log it</summary>
+      <div class="qopt" style="margin-top:8px">${pill(ivSolo.day === 0, "Today", "ivSolo.day=0")}${pill(ivSolo.day === -1, "Yesterday", "ivSolo.day=-1")}</div>
+      <button class="btn full" style="margin-top:8px" onclick="ivSoloLog(35,true,true)">Log a finished 4×4</button></details>
+    <button class="btn ghost full" style="margin-top:8px" onclick="document.getElementById('qwmodal').innerHTML=''">Cancel</button>
+  </div></div>`;
+}
+function ivSoloStart(){ ivSolo.run = true; ivSolo.day = 0; document.getElementById("qwmodal").innerHTML = ""; startIntervals("4x4", null); }
+function ivSoloLog(mins, full, manual){
+  const date = shiftDate(today(), manual ? ivSolo.day : 0), st = { w: 0, r: mins, done: true };
+  if (ivSolo.lv !== "" && isFinite(+ivSolo.lv)) st.lv = +ivSolo.lv;
+  if (full) st.iv = "4x4";
+  S.logs.push({ date, quick: true, dayIdx: -1, dayName: full ? "4×4 intervals" : "Cardio (4×4 cut short)", min: mins, entries: [{ ex: ivSolo.ex, rpe: null, sets: [st] }] });
+  S.logs.sort((a, b) => a.date.localeCompare(b.date));
+  save(); const q = document.getElementById("qwmodal"); if (q) q.innerHTML = ""; render();
+  toast(full ? "⚡ 4×4 logged. That's this week's interval session." : `Logged ${mins} min. Under 80% of the session, so it doesn't count as the 4×4.`);
 }
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && iv) { ivWakeLock(true); iv.idx = -2; ivStep(); } });
 
@@ -3862,7 +3935,7 @@ function quickWalkSave(){
   S.logs.sort((a, b) => a.date.localeCompare(b.date));
   save(); document.getElementById("qwmodal").innerHTML = ""; render(); toast(`Logged ${min} min ${qw.ex === "incline-walk" ? "treadmill walk" : name.toLowerCase().replace("quick ", "")}`);
 }
-function deleteQuick(date, min){ const i = S.logs.findIndex(l => l.quick && l.date === date && l.min === min); if (i < 0 || !confirm("Delete this walk?")) return; S.logs.splice(i, 1); save(); render(); }
+function deleteQuick(date, min){ const i = S.logs.findIndex(l => l.quick && l.date === date && l.min === min); if (i < 0 || !confirm("Delete this entry?")) return; S.logs.splice(i, 1); save(); render(); }
 /* ---- Workout summary + feedback (Today tab) ----
    Compares each lift with the last time you did it, spots PRs, checks what
    the plan called for, and turns that into a few plain-English notes. */
@@ -3924,6 +3997,7 @@ function workoutFeedback(l){
 }
 function workoutSummaryCard(logsToday){
   return logsToday.map((l, k) => {
+    if (l.quick && !WALK_IDS.has(l.entries[0].ex) && l.entries[0].ex !== "incline-walk" || (l.quick && /4×4/.test(l.dayName))) { const st = l.entries[0].sets[0] || {}; return `<div class="card" style="display:flex;align-items:center;gap:12px"><span style="font-size:1.4rem">⚡</span><div style="flex:1"><b>${esc(l.dayName)} · ${l.min} min</b><div class="dim small">${esc((EXBY[l.entries[0].ex] || {}).n || "")}${st.lv != null ? " · level " + st.lv : ""} · ${st.iv ? "✓ Counts as this week's 4×4" : "Cardio minutes"}</div></div><span class="red small" style="cursor:pointer" onclick="deleteQuick('${l.date}',${l.min})">delete</span></div>`; }
     if (l.quick) return `<div class="card" style="display:flex;align-items:center;gap:12px"><span style="font-size:1.4rem">🚶</span><div style="flex:1"><b>${esc(l.dayName)} · ${l.min} min</b><div class="dim small">${l.entries[0].ex === "incline-walk" ? "Treadmill · cardio minutes" : l.min >= 20 ? "✓ Counts as an outdoor walk this week" : "Cardio minutes (under 20 min doesn't count as a weekly walk)"}</div></div><span class="red small" style="cursor:pointer" onclick="deleteQuick('${l.date}',${l.min})">delete</span></div>`;
     const f = workoutFeedback(l), icon = t => t === "good" ? "✅" : "⚠️";
     return `<div class="card wsum"><div class="exhead"><h3>✓ ${(() => { const tl = logsToday.filter(x => !x.quick); return tl.length > 1 ? `Session ${tl.indexOf(l) + 1}: ` : ""; })()}${esc(l.dayName || "Workout")} done</h3><span class="dim small">${l.min} min</span></div>
