@@ -118,6 +118,15 @@ h2.sec { font-family: var(--serif); font-weight: 600; font-size: 1.55rem; margin
 .pager a span { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); font-weight: 800; }
 .pager a.next { text-align: right; margin-left: auto; }
 .empty { color: var(--text-dim); padding: 24px 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
+.chip { display: inline-block; padding: 6px 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg-card); color: var(--text); font-weight: 750; font-size: .85rem; letter-spacing: .02em; }
+.chip:hover { border-color: var(--accent); }
+figure.chart { margin: 18px 0 22px; padding: 10px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; }
+figure.chart svg { display: block; width: 100%; height: auto; min-width: 600px; }
+figure.chart .c-ink { fill: var(--text); } figure.chart .c-dim { fill: var(--text-dim); } figure.chart .c-grid { stroke: var(--border); }
+figure.chart .c-up { fill: var(--good); stroke: var(--good); } figure.chart .c-dn { fill: var(--danger); stroke: var(--danger); }
+figure.chart .l-white { stroke: var(--text); } figure.chart .t-white { fill: var(--text); }
+.tk-sec { margin-top: 26px; }
 .stale { border-left: 4px solid var(--accent); background: var(--bg-card); border-radius: 6px; padding: 12px 16px; margin: 0 0 22px; font-size: .95rem; line-height: 1.5; }
 .stale a { font-weight: 700; }
 .busy { color: var(--text-dim); padding: 30px 0; }
@@ -247,7 +256,10 @@ mark { background: rgba(201,168,76,.32); color: inherit; padding: 0 1px; border-
     const latest = reports[0];
     let h = `<p class="eyebrow">Updated ${escH(new Date(IDX.updated).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</p>
       <h1 class="page-h1">Market Desk</h1><p class="lead">Your reports, levels, the Fed archive and the research library, all in one place. ${IDX.items.length} notes.</p>`;
+    const today = bySection('Today')[0];
+    if (today) h += `<a class="hero-card" href="#/doc/${today.id}"><span class="kicker">Today · ${fmt(today.date)}</span><div class="t">${escH(today.title)}</div><p>${escH(today.summary)}</p><span class="go">Open the desk →</span></a>`;
     if (latest) h += `<a class="hero-card" href="#/doc/${latest.id}"><span class="kicker">Latest · ${escH(latest.section)} · ${fmt(latest.date)}</span><div class="t">${escH(latest.title)}</div><p>${escH(latest.summary)}</p><span class="go">Read it →</span></a>`;
+    h += `<h2 class="sec">Tickers</h2><div class="chips">${TICKERS.map((t) => `<a class="chip" href="#/t/${t}">${t}</a>`).join('')}</div>`;
     h += `<h2 class="sec">Recent reports</h2><div class="list">${reports.slice(1, 9).map((x) => rowHTML(x, true)).join('')}</div>`;
     h += `<h2 class="sec">Everything</h2>`;
     for (const [g, secs] of IDX.groups) {
@@ -294,12 +306,54 @@ mark { background: rgba(201,168,76,.32); color: inherit; padding: 0 1px; border-
     window.scrollTo(0, 0);
   }
   let allLoaded = null;
+  const TICKERS = ['SPY', 'QQQ', 'DAL', 'PLTR', 'BA', 'RCL', 'HLT', 'XOM', 'V', 'AMZN', 'BE', 'DELL', 'SMH', 'NVDA', 'NOW', 'AAPL', 'TSLA', 'MU', 'AMD', 'ABNB', 'GOOGL', 'LMT', 'KO', 'SMCI', 'DRAM', 'SPCX', 'ET', 'OSCR', 'IWM', 'XLE', 'TLT'];
+  function loadAll() {
+    if (!allLoaded) allLoaded = Promise.all(IDX.items.map((x) => getDoc(x.id).then((d) => [x, new DOMParser().parseFromString(d.html, 'text/html').body.textContent.replace(/\s+/g, ' '), d])));
+    return allLoaded;
+  }
+  // One page per ticker: his levels, plays on it, its latest chart, and every note that mentions it.
+  async function ticker(sym) {
+    sym = sym.toUpperCase().replace(/[^A-Z.]/g, '');
+    mark('');
+    $('#view').innerHTML = `<p class="crumb"><a href="#/">Market Desk</a> / Tickers</p><h1 class="page-h1">${escH(sym)}</h1><p class="busy">Gathering everything on ${escH(sym)}…</p>`;
+    const all = await loadAll();
+    const re = new RegExp('(^|[^A-Za-z0-9$])' + sym.replace('.', '\\.') + '(?![A-Za-z0-9])');
+    const parse = (html) => new DOMParser().parseFromString(html, 'text/html').body;
+    let levels = '', plays = '', chart = '';
+    for (const [x, , d] of all.filter(([x]) => x.section === 'Fib Library')) {
+      const b = parse(d.html);
+      for (const hd of b.querySelectorAll('h3,h4')) {
+        if (!new RegExp('^' + sym + '\\b').test(hd.textContent.trim())) continue;
+        let n = hd.nextElementSibling, buf = '';
+        while (n && !/^H[1-4]$/.test(n.tagName)) { buf += n.outerHTML; n = n.nextElementSibling; }
+        levels += `<h3>${escH(hd.textContent)}</h3>${buf}`;
+      }
+    }
+    for (const [x, , d] of all.filter(([x]) => x.section === 'Scorecard')) {
+      const b = parse(d.html);
+      for (const tbl of b.querySelectorAll('table')) {
+        const rows = [...tbl.querySelectorAll('tbody tr')].filter((r) => re.test(r.textContent));
+        if (!rows.length) continue;
+        const sec = tbl.closest('.tw')?.previousElementSibling;
+        plays += `${sec && /^H/.test(sec.tagName) ? `<h4>${escH(sec.textContent)}</h4>` : ''}<div class="tw"><table><thead>${tbl.querySelector('thead').innerHTML}</thead><tbody>${rows.map((r) => r.outerHTML).join('')}</tbody></table></div>`;
+      }
+    }
+    const dated = all.filter(([x]) => x.date).sort((a, b) => b[0].date.localeCompare(a[0].date));
+    for (const [x, , d] of dated) { const m = d.html.match(new RegExp('<figure class="chart"><svg[^>]*data-ticker="' + sym + '"[\\s\\S]*?</svg></figure>')); if (m) { chart = `${m[0]}<p class="lead" style="font-size:.85rem">From <a href="#/doc/${x.id}">${escH(x.title)}</a></p>`; break; } }
+    const hits = all.filter(([x, text]) => re.test(x.title) || re.test(text)).sort((a, b) => (b[0].date || '').localeCompare(a[0].date || ''));
+    const snipOf = (text) => { const m = text.match(re); if (!m) return ''; const p = m.index; return escH(text.slice(Math.max(0, p - 70), p + 150)).replace(new RegExp('\\b(' + sym + ')\\b', 'g'), '<mark>$1</mark>'); };
+    $('#view').innerHTML = `<p class="crumb"><a href="#/">Market Desk</a> / Tickers</p><h1 class="page-h1">${escH(sym)}</h1><p class="lead">${hits.length} note${hits.length === 1 ? '' : 's'} mention ${escH(sym)}.</p>
+      ${chart ? `<h2 class="sec tk-sec">Latest chart</h2>${chart}` : ''}
+      ${levels ? `<h2 class="sec tk-sec">Your levels</h2><article class="doc">${levels}</article>` : ''}
+      ${plays ? `<h2 class="sec tk-sec">Plays on ${escH(sym)}</h2><article class="doc">${plays}</article>` : ''}
+      <h2 class="sec tk-sec">Every mention</h2>${hits.length ? `<div class="list">${hits.slice(0, 40).map(([x, text]) => `<a class="row" href="#/doc/${x.id}"><span class="d">${fmt(x.date)}</span><span class="tt"><span class="tag">${escH(x.section)}</span>${escH(x.title)}</span><span class="sm">…${snipOf(text)}…</span></a>`).join('')}</div>` : '<p class="empty">No notes mention it yet.</p>'}`;
+    document.title = sym + ' · Market Desk';
+  }
   async function search(q) {
     mark('');
     q = q.trim(); if (!q) return home();
     $('#view').innerHTML = `<h1 class="page-h1">Search</h1><p class="busy">Searching ${IDX.items.length} notes…</p>`;
-    if (!allLoaded) allLoaded = Promise.all(IDX.items.map((x) => getDoc(x.id).then((d) => [x, new DOMParser().parseFromString(d.html, 'text/html').body.textContent.replace(/\s+/g, ' ')])));
-    const all = await allLoaded;
+    const all = await loadAll();
     const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
     const hits = [];
     for (const [x, text] of all) {
@@ -323,6 +377,7 @@ mark { background: rgba(201,168,76,.32); color: inherit; padding: 0 1px; border-
     const h = decodeURIComponent(location.hash.replace(/^#\/?/, ''));
     if (h.startsWith('doc/')) doc(h.slice(4)).catch((e) => { $('#view').innerHTML = `<p class="empty">This note could not be opened (${escH(e.message)}).</p>`; });
     else if (h.startsWith('s/')) section(h.slice(2));
+    else if (h.startsWith('t/')) ticker(h.slice(2)).catch((e) => { $('#view').innerHTML = `<p class="empty">Could not build this page (${escH(e.message)}).</p>`; });
     else if (h.startsWith('search/')) { const q = h.slice(7); if ($('#q').value !== q) $('#q').value = q; search(q); }
     else home();
   }
