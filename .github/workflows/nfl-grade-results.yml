@@ -118,6 +118,11 @@ jobs:
       - name: Build head-to-head tracker
         run: node scripts/generate-nfl-tracker.js
 
+      # Day by day review for /nfl/results/: upsets, misses and one data based
+      # reason per miss (business/RESULTS_DESIGN.md). Reads the tracker; display only.
+      - name: Build results review
+        run: node scripts/build-nfl-results-review.js || true
+
       # Closing line value (DEC-20261101-02): did the market move toward Leo
       # between his first read and kickoff? Private; feeds the owner brief.
       - name: Closing line value
