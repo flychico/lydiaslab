@@ -612,7 +612,7 @@ function load(){
   try { const f = JSON.parse(localStorage.getItem("forge-v1")); if (f && f.v === 1) { f.profile = null; return f; } } catch(e){}
   return { v:1, profile:null, plan:null, logs:[], weights:[], active:null, theme:"auto" };
 }
-const APP_V = 40; // written into the saved data so the coach can see which version a device runs before sending it something new
+const APP_V = 41; // written into the saved data so the coach can see which version a device runs before sending it something new
 function save(){ S.updatedAt = Date.now(); S.appV = APP_V; localStorage.setItem(KEY, JSON.stringify(S)); try { scheduleSync(); } catch (e) {} }
 
 /* ============ Theme ============ */
@@ -2248,6 +2248,16 @@ function defaultTargets(){
   }
   return { cal: cal || 2000, protein: protein || 130 };
 }
+/* Calorie target for one day. Base target plus extra for a big day: 75% of the Watch's active
+   calories above your 30-day average (capped at +450), or +150 once a workout is logged
+   if the Watch number isn't in yet. Protein never changes. */
+function dayCal(date){
+  const base = effTargets().cal, hk = (S.hk || {})[date] || {};
+  const ks = Object.keys(S.hk || {}).filter(d => d < date && d >= shiftDate(date, -30) && S.hk[d].kcal != null), avg = ks.length >= 5 ? ks.reduce((a, d) => a + S.hk[d].kcal, 0) / ks.length : null;
+  const watch = hk.kcal != null && avg != null ? Math.max(0, Math.min(450, Math.round((hk.kcal - avg) * 0.75 / 10) * 10)) : 0;
+  const trained = trainLogs().some(l => l.date === date) ? 150 : 0, bonus = Math.max(watch, trained);
+  return { base, bonus, cal: base + bonus, why: !bonus ? "" : watch >= trained ? `+${bonus} for a high-burn day (${Math.round(hk.kcal).toLocaleString()} active calories vs your usual ${Math.round(avg).toLocaleString()})` : `+${bonus} for a training day` };
+}
 function effTargets(){ const d = defaultTargets(); return { cal: (S.targets && S.targets.cal) || d.cal, protein: (S.targets && S.targets.protein) || d.protein }; }
 function dayNutrition(date){
   return (S.nutrition || []).filter(x => x.date === date).reduce((a, x) => ({ cal: a.cal + (x.cal || 0), p: a.p + (x.p || 0), c: a.c + (x.c || 0), f: a.f + (x.f || 0), fib: a.fib + (x.fib || 0), sug: a.sug + (x.sug || 0), na: a.na + (x.na || 0), sat: a.sat + (x.sat || 0), xn: a.xn + (x.sug != null || x.na != null ? 1 : 0), n: a.n + 1 }), { cal: 0, p: 0, c: 0, f: 0, fib: 0, sug: 0, na: 0, sat: 0, xn: 0, n: 0 });
@@ -2733,7 +2743,7 @@ function renderNutrition(){
   const items = (S.nutrition || []).map((x, i) => ({ x, i })).filter(o => o.x.date === date);
   const meals = S.foods || [], recent = recentFoods();
   const pct = (v, m) => Math.min(100, Math.round(v / (m || 1) * 100));
-  const left = Math.max(0, t.protein - d.p), calLeft = t.cal - d.cal;
+  const dc = dayCal(date), left = Math.max(0, t.protein - d.p), calLeft = dc.cal - d.cal;
   const yItems = (S.nutrition || []).filter(x => x.date === shiftDate(date, -1)).length;
   V.innerHTML = `
   <h1>Food</h1>
@@ -2744,8 +2754,9 @@ function renderNutrition(){
       <div class="pleft ${left ? "" : "green"}">${left ? `<b>${Math.round(left)}g</b> to go` : "✓ Target hit"}</div></div>
     <div class="pbar" style="position:relative"><div style="width:${pct(d.p, t.protein)}%"></div>${isToday && left ? `<span style="position:absolute;top:-3px;bottom:-3px;left:${proteinPace()}%;width:2px;background:var(--dim);border-radius:1px"></span>` : ""}</div>
     ${isToday && left ? (() => { const want = Math.round(t.protein * proteinPace() / 100); return `<div class="small ${d.p >= want - 5 ? "green" : "gold"}" style="margin-top:6px">${d.p >= want - 5 ? "On pace" : `Behind pace: by now you'd want about <b>${want} g</b>`} <span class="dim">· aim for 30–40 g a meal</span></div>`; })() : ""}
-    <div style="display:flex;justify-content:space-between;font-size:.88rem;margin-top:12px"><span>Calories</span><span><b>${Math.round(d.cal)}</b> / ${t.cal} <span class="dim">· ${calLeft >= 0 ? Math.round(calLeft) + " left" : Math.round(-calLeft) + " over"}</span></span></div>
-    <div class="cbar"><div style="width:${pct(d.cal, t.cal)}%"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:.88rem;margin-top:12px"><span>Calories</span><span><b>${Math.round(d.cal)}</b> / ${dc.cal} <span class="dim">· ${calLeft >= 0 ? Math.round(calLeft) + " left" : Math.round(-calLeft) + " over"}</span></span></div>
+    <div class="cbar"><div style="width:${pct(d.cal, dc.cal)}%"></div></div>
+    ${dc.bonus ? `<div class="dim small" style="margin-top:4px">Target today is ${dc.base.toLocaleString()} ${dc.why}.</div>` : ""}
     ${(() => { const fv = dayFV(date); return `<div style="display:flex;justify-content:space-between;font-size:.88rem;margin-top:12px"><span>🍎 Fruit &amp; veg</span><span><b class="${fv >= COACH.fv - 0.5 ? "green" : ""}">${fv.toFixed(1)}</b> / ${COACH.fv} servings</span></div><div class="cbar"><div style="width:${pct(fv, COACH.fv)}%;background:var(--green)"></div></div>`; })()}
     <div style="display:flex;justify-content:space-between;font-size:.88rem;margin-top:12px"><span>🌾 Fiber</span><span><b class="${d.fib >= 30 ? "green" : ""}">${Math.round(d.fib)}</b> / 30 g</span></div><div class="cbar"><div style="width:${pct(d.fib, 30)}%;background:var(--gold)"></div></div>
     <div class="dim small" style="margin-top:8px">${Math.round(d.c)}g carbs · ${Math.round(d.f)}g fat${d.sat ? ` (${Math.round(d.sat)}g sat.)` : ""} · ${d.n} item${d.n === 1 ? "" : "s"}</div>
@@ -3094,10 +3105,15 @@ function readiness(){
   if (y.rhr && rhrA && y.rhr >= rhrA + 5) flags.push("resting heart rate up " + Math.round(y.rhr - rhrA) + " bpm");
   if (y.hrv && hrvA && y.hrv <= hrvA * 0.8) flags.push("HRV " + Math.round((1 - y.hrv / hrvA) * 100) + "% below normal");
   if (!y.sleep && !y.rhr && !y.hrv) return null;
-  return { low: flags.length > 0, flags, y };
+  const good = [];
+  if (y.rhr && rhrA && y.rhr <= rhrA - 3) good.push("resting heart rate " + Math.round(rhrA - y.rhr) + " bpm below your average");
+  if (y.hrv && hrvA && y.hrv >= hrvA * 1.15) good.push("HRV " + Math.round((y.hrv / hrvA - 1) * 100) + "% above your average");
+  return { low: flags.length > 0, flags, y, strong: !flags.length && good.length > 0, good };
 }
 function readinessCard(){
-  const r = readiness(); if (!r || !r.low) return "";
+  const r = readiness(); if (!r) return "";
+  if (r.strong) return `<div class="card" style="border-color:var(--green)"><b class="green">Recovery looks strong today</b><div class="dim small" style="margin-top:4px;line-height:1.55">Yesterday's ${r.good.join(" and ")}. Both point the same way: your body is recovered. Good day to go for an extra rep on your top sets${r.good.length > 1 ? ", or to do the 4×4" : ""}.</div></div>`;
+  if (!r.low) return "";
   return `<div class="card" style="border-color:var(--gold)"><b class="gold">Recovery looks low today</b><div class="dim small" style="margin-top:4px;line-height:1.55">Your Watch shows ${r.flags.join(", ")}. Still train, but keep the weights you used last time instead of adding, and stop a rep or two shy of failure. Save the 4×4 for a better day if you have one left this week.</div></div>`;
 }
 function hkTile(label, val, sub, cls){ return `<div class="card"><div class="dim small">${label}</div><div class="big ${cls || ""}">${val}</div><div class="dim small">${sub || "&nbsp;"}</div></div>`; }
@@ -3159,7 +3175,8 @@ function hkChartBlock(c){
   </div>`;
 }
 function hkCharts(){
-  return `<div class="hkc-range"><span class="dim small" style="font-weight:700">TRENDS</span><span>${[7, 14, 30].map(n => `<span class="pill ${hkRange === n ? "on" : ""}" onclick="setHkRange(${n})">${n}d</span>`).join("")}</span></div>
+  const rd = readiness(), read = rd && rd.strong ? `<div class="small green" style="margin:2px 0 10px;line-height:1.5"><b>What this means:</b> ${rd.good.join(" and ")}. A lower resting heart rate with a higher HRV means you're well recovered.</div>` : rd && rd.low ? `<div class="small gold" style="margin:2px 0 10px;line-height:1.5"><b>What this means:</b> ${rd.flags.join(", ")}. Recovery is low: keep today's weights the same and don't force the 4×4.</div>` : "";
+  return read + `<div class="hkc-range"><span class="dim small" style="font-weight:700">TRENDS</span><span>${[7, 14, 30].map(n => `<span class="pill ${hkRange === n ? "on" : ""}" onclick="setHkRange(${n})">${n}d</span>`).join("")}</span></div>
     ${HK_CHARTS.map(hkChartBlock).join("")}
     <div class="dim small" style="margin-top:4px">● under a date = workout day</div>`;
 }
@@ -3237,7 +3254,8 @@ function bwNear(date){ // weigh-ins within a week either side, else the closest 
 }
 function addMonths(date, m){ const d = new Date(date + "T12:00"); d.setMonth(d.getMonth() + m); return d.toLocaleDateString("en-CA"); }
 function daysBetween(a, b){ return Math.round((new Date(b + "T12:00") - new Date(a + "T12:00")) / 864e5); }
-function vo2Near(date){ const ks = Object.keys(S.hk || {}).sort(); let v = null; for (const d of ks) { if (d > shiftDate(date, 14)) break; if (S.hk[d].vo2 != null) v = S.hk[d].vo2; } return v; }
+/* Starting VO₂ max: the last reading before the start date, else the first one in the two weeks after it. It never moves once set. */
+function vo2Near(date){ const ks = Object.keys(S.hk || {}).sort().filter(d => S.hk[d].vo2 != null); const before = ks.filter(d => d < date).pop(); if (before) return S.hk[before].vo2; const after = ks.find(d => d >= date && d <= shiftDate(date, 14)); return after ? S.hk[after].vo2 : null; }
 function roadmap(){
   const start = (S.roadmap && S.roadmap.start) || S.fresh || (S.profile && S.profile.started) || today();
   const w0 = (S.roadmap && S.roadmap.w0) || Math.round((bwNear(start) || 170) * 10) / 10;
@@ -3274,16 +3292,17 @@ function roadmapCard(){
   const lift = keyLiftChange(r.start);
   const st = (ok, txt) => `<span class="small ${ok == null ? "dim" : ok ? "green" : "red"}" style="font-weight:700">${ok == null ? "—" : ok ? "✓ " : "✗ "}${txt}</span>`;
   const row = (icon, label, now, aim, ok, okTxt, badTxt) => `<div class="rmrow"><div><b>${icon} ${label}</b><div class="dim small">${now}${aim ? ` · ${aim}` : ""}</div></div>${st(ok, ok == null ? "" : ok ? okTxt : badTxt)}</div>`;
-  const wOk = wNow == null ? null : wNow <= r.expW + 1.5;
+  const wIns = bwSorted().filter(w => w.date > shiftDate(today(), -7)).length;
+  const wOk = wNow == null || wIns < 4 ? null : wNow <= r.expW + 0.5;
   const marks = Array.from({ length: 6 }, (_, i) => { const d = addMonths(r.start, i + 1); return { d, w: Math.round(r.w0 + (r.w1 - r.w0) * (i + 1) / 6), v: (r.vo20 + (r.vo21 - r.vo20) * (i + 1) / 6).toFixed(1), past: d <= td, cur: i + 1 === r.month }; });
   const fmtD = d => new Date(d + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
   return `<div class="card rmcard" id="pg-road">
     <div class="exhead"><h3>6-month roadmap</h3><span class="small"><b>Month ${r.month} of 6</b> <span class="dim">· day ${r.el + 1}</span></span></div>
     <div class="rmbar">${marks.map((m, i) => `<div class="${m.past ? "done" : m.cur ? "cur" : ""}"><span style="width:${m.past ? 100 : m.cur ? Math.round((r.el - i * r.total / 6) / (r.total / 6) * 100) : 0}%"></span></div>`).join("")}</div>
     <div class="dim small" style="display:flex;justify-content:space-between;margin:4px 0 10px"><span>${fmtD(r.start)}</span><span>${fmtD(r.end)} · ${r.total - r.el} days left</span></div>
-    ${row("⚖️", "Body weight", wNow != null ? `${wNow.toFixed(1)} lb (7-day avg)` : "No weigh-ins yet", `on pace: ${r.expW.toFixed(1)} · goal ${r.w1}`, wOk, "On pace", wNow == null ? "" : `${(wNow - r.expW).toFixed(1)} lb behind`)}
+    ${row("⚖️", "Body weight", wNow != null ? `${wNow.toFixed(1)} lb (7-day avg)` : "No weigh-ins yet", `on pace: ${r.expW.toFixed(1)} · goal ${r.w1}${wIns < 4 ? ` · only ${wIns} weigh-in${wIns === 1 ? "" : "s"} this week, need 4 to judge` : ""}`, wOk, "On pace", wNow == null ? "" : `${(wNow - r.expW).toFixed(1)} lb behind`)}
     ${row("🏋️", "Training", `${trainedDays} day${trainedDays === 1 ? "" : "s"} trained`, `should be ${needDays}`, r.el < 2 ? null : trainedDays >= needDays, "On pace", `${needDays - trainedDays} behind`)}
-    ${row("❤️", "VO₂ max", vNow != null ? vNow.toFixed(1) : "—", `on pace: ${r.expV.toFixed(1)} · goal ${r.vo21}`, vNow == null || r.el < 14 ? null : vNow >= r.expV - 0.3, "On pace", "Behind")}
+    ${row("❤️", "VO₂ max", vNow != null ? `${vNow.toFixed(1)}${Math.abs(vNow - r.vo20) >= 0.1 ? ` (${vNow > r.vo20 ? "up" : "down"} ${Math.abs(vNow - r.vo20).toFixed(1)} from ${r.vo20.toFixed(1)})` : ""}` : "—", `on pace: ${r.expV.toFixed(1)} · goal ${r.vo21}`, vNow == null || r.el < 3 ? null : vNow >= r.expV - 0.3, vNow != null && vNow >= r.expV + 0.3 ? "Ahead of pace" : "On pace", "Behind")}
     ${row("💪", "Strength", lift ? `${lift.pct >= 0 ? "+" : ""}${lift.pct.toFixed(0)}% on ${lift.n} lift${lift.n === 1 ? "" : "s"}` : "Builds after a few sessions", "keep it rising while you lose weight", lift ? lift.pct >= -2 : null, "Holding/rising", "Slipping: eat more protein")}
     ${row("📸", "Photos", `${photoWeeks} of ${weeks} week${weeks === 1 ? "" : "s"}`, "one set every week", photoWeeks >= weeks - (new Date().getDay() === 0 ? 0 : 1), "Up to date", photoWeeks ? "Missing weeks" : "Take day-one photos")}
     <details class="more" style="margin-top:8px"><summary class="small blue">Monthly checkpoints · change goals</summary>
@@ -3299,9 +3318,9 @@ function roadmapCard(){
 /* Body weight: daily weigh-ins, 7-day average, pace line to the goal. */
 function weightCard(){
   const ws = bwSorted(), r = roadmap(), td = today(), avg = bwAvg7(td), todayW = ws.find(w => w.date === td);
-  const tr = bwTrend(), rate = tr ? tr.perWeek : null, pct = tr ? tr.pct : null;
+  const recent = ws.filter(w => w.date > shiftDate(td, -14)).length, tr = recent >= 6 ? bwTrend() : null, rate = tr ? tr.perWeek : null, pct = tr ? tr.pct : null;
   let msg = "", cls = "dim";
-  if (ws.length < 3) msg = "Weigh in every morning: after the bathroom, before eating or drinking. One day's number jumps around with water and food; the 7-day average is the real trend.";
+  if (!tr) msg = `Only ${recent} weigh-in${recent === 1 ? "" : "s"} in the last 14 days, so there's no real trend yet. ` + "Weigh in every morning: after the bathroom, before eating or drinking. One day's number jumps around with water and food; the 7-day average is the real trend.";
   else if (rate > 0.1) { msg = `Going up ${rate.toFixed(1)} lb a week. For your goal you want about −0.8. Tighten the calories (hit the target every day, log everything) before cutting more.`; cls = "red"; }
   else if (pct > -0.4) { msg = "Barely moving. If it stays flat two more weeks, the Sunday coach drops calories by ~150."; cls = "gold"; }
   else if (pct < -1.2) { msg = `Dropping fast (${Math.abs(rate).toFixed(1)} lb/wk). Faster than ~1%/week risks muscle. Eat a bit more and keep protein at target.`; cls = "gold"; }
@@ -3310,7 +3329,7 @@ function weightCard(){
     <div style="display:flex;gap:8px;margin:8px 0"><input type="number" inputmode="decimal" step="0.1" id="bw-in" placeholder="${todayW ? "update today's weight" : "lbs this morning"}"><button class="btn small-btn" onclick="logBw()">Log</button></div>
     <div class="statgrid" style="grid-template-columns:repeat(3,1fr);margin:10px 0 6px">
       <div class="card"><div class="dim small">7-DAY AVG</div><div class="big">${avg != null ? avg.toFixed(1) : "—"}</div></div>
-      <div class="card"><div class="dim small">PER WEEK</div><div class="big ${rate == null ? "" : rate < -0.1 ? "green" : rate > 0.1 ? "red" : ""}">${rate == null ? "—" : (rate > 0 ? "+" : "") + rate.toFixed(1)}</div></div>
+      <div class="card"><div class="dim small">PER WEEK</div><div class="big ${rate == null ? "" : rate < -0.1 ? "green" : rate > 0.1 ? "red" : ""}">${rate == null ? "—" : (rate > 0 ? "+" : "") + rate.toFixed(1)}</div>${rate == null ? '<div class="dim small">needs 6 weigh-ins</div>' : ""}</div>
       <div class="card"><div class="dim small">TO GOAL</div><div class="big">${avg != null ? Math.max(0, avg - r.w1).toFixed(1) : "—"}</div></div>
     </div>
     ${ws.length ? `<canvas id="bwchart2" class="hkcv"></canvas><div class="dim small" id="bwchart2-tip">Line = 7-day average · dots = daily weigh-ins · dashed = pace to ${r.w1} lb</div>` : ""}
@@ -3458,8 +3477,8 @@ function gradeDay(date){
   if (!n.n) add("log", "Food logged", false, "Nothing logged");
   else {
     add("protein", "Protein", n.p >= t.protein * 0.9, `${Math.round(n.p)} / ${t.protein} g` + (n.p < t.protein * 0.9 ? ` (${Math.round(t.protein - n.p)} g short)` : ""));
-    const off = (n.cal - t.cal) / t.cal;
-    add("cal", "Calories", off <= 0.10 && off >= -0.25, `${Math.round(n.cal)} / ${t.cal}` + (off > 0.10 ? " (over)" : off < -0.25 ? " (too low)" : off < -0.1 ? " (a little under: fine)" : ""));
+    const dc = dayCal(date), off = (n.cal - dc.cal) / dc.cal;
+    add("cal", "Calories", off <= 0.10 && off >= -0.25, `${Math.round(n.cal)} / ${dc.cal}${dc.bonus ? ` (${dc.base} + ${dc.bonus} big day)` : ""}` + (off > 0.10 ? " (over)" : off < -0.25 ? " (too low)" : off < -0.1 ? " (a little under: fine)" : ""));
     const fv = dayFV(date);
     add("fv", "Fruit & veg", fv >= COACH.fv - 0.5, `${fv.toFixed(1)} / ${COACH.fv} servings`);
     if (n.xn) add("na", "Sodium", n.na <= NA_MAX, `${Math.round(n.na).toLocaleString()} / ${NA_MAX.toLocaleString()} mg` + (n.na > NA_MAX ? " (over)" : ""));
