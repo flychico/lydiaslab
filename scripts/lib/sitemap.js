@@ -9,7 +9,7 @@ const path = require("path");
 
 const ORIGIN = "https://ndhorizon.com";
 const SKIP = new Set([".git", ".github", "node_modules", "data", "scripts", "css", "js",
-  "cloudflare-worker", "img", "images", "assets", "fonts", "gym"]);
+  "cloudflare-worker", "img", "images", "assets", "fonts"]);
 
 function isIndexable(file) {
   const head = fs.readFileSync(file, "utf8").slice(0, 6000).toLowerCase();

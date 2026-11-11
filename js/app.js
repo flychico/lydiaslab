@@ -119,10 +119,10 @@ function renderNav(active) {
   // One menu shape for every sport (Lynold, 2026-11-10: "Everything we create
   // should be easy and logical to find"): Scoreboard, Picks (drop menu with
   // the other ways to browse predictions), Props or Pitchers, Teams, Lab (drop
-  // menu), Stats, Results. A third item on a link is its drop menu.
+  // menu), Stats, Results, More. A third item on a link is its drop menu.
   // NBA has no Props tab: no free source for NBA prop lines yet (2026-10-31).
   // NFL and NBA recaps are folded into Results (HO-0035, HO-0043), so no
-  // Recaps tab there; MLB keeps its daily recaps.
+  // Recaps tab there; MLB's daily recaps sit under its Results drop menu.
   const LAB = sport === "NBA"
     ? [
         [prefix + "tools/model-tuner/", "Model Tuner"],
@@ -166,8 +166,10 @@ function renderNav(active) {
     ["/mlb/teams/", "Teams"],
     ["/tools/", "Lab", LAB],
     ["/stats/", "Stats"],
-    ["/results/", "Results"],
-    ["/recaps/", "Recaps"]
+    ["/results/", "Results", [
+      ["/results/", "Season results"],
+      ["/recaps/", "Daily recaps"]
+    ]]
   ] : [
     [prefix + "scoreboard/", "Scoreboard"],
     [prefix + "previews/", "Picks", [
@@ -182,13 +184,21 @@ function renderNav(active) {
     [prefix + "results/", "Results"]
   ];
   
+  // "More" holds what Leo offers outside the three sports, the same on every
+  // sport's menu: the free workout planner (/gym/, launched 2026-11-11,
+  // HO-0053) and the betting guides. Market Desk joins when it opens (HO-0050).
+  links.push(["/#more", "More", [
+    ["/gym/", "Free workout planner"],
+    ["/articles/", "Betting guides"]
+  ]]);
+
   // A page may report an old or more specific path than the tab it belongs to.
   const ALIASES = {};
   ALIASES[prefix + "picks/"] = prefix + "previews/";
   // Pages that live under a tab's drop menu light that tab.
   if (sport === "NFL") { ALIASES["/nfl/week/"] = "/nfl/previews/"; ALIASES["/nfl/games/"] = "/nfl/previews/"; ALIASES["/nfl/recaps/"] = "/nfl/results/"; }
   if (sport === "NBA") { ALIASES["/nba/predictions/"] = "/nba/previews/"; ALIASES["/nba/games/"] = "/nba/previews/"; ALIASES["/nba/recaps/"] = "/nba/results/"; }
-  if (sport === "MLB") { ALIASES["/mlb/matchups/"] = "/previews/"; }
+  if (sport === "MLB") { ALIASES["/mlb/matchups/"] = "/previews/"; ALIASES["/recaps/"] = "/results/"; }
   ALIASES["/articles/"] = null;
   ALIASES["/"] = null;
   

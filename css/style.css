@@ -205,8 +205,9 @@ footer {
 }
 .loading { color: var(--text-dim); padding: 24px 0; }
 
-/* Mobile nav menu */
-@media (max-width: 760px) {
+/* Mobile nav menu. The full row of tabs needs about 1100px, so below 1120px
+   the tabs fold into the menu button (was 760px; tabs were cut off between). */
+@media (max-width: 1120px) {
   .nav-toggle { display: inline-block; }
   .nav-links {
     display: none; position: absolute; top: 60px; left: 0; right: 0;
@@ -223,6 +224,8 @@ footer {
   main { padding: 20px 14px 48px; }
 }
 
+/* Tabs never break onto two lines (the drop menu arrow stays beside its word). */
+.nav-links .navlink { white-space: nowrap; }
 /* Lab dropdown */
 .nav-drop { position: relative; display: inline-block; }
 .nav-drop-menu { display: none; position: absolute; top: 100%; left: 0; min-width: 185px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-md); z-index: 60; padding: 6px 0; }
@@ -230,7 +233,7 @@ footer {
 .nav-drop-menu a { display: block; padding: 8px 14px; color: var(--text); font-size: .92rem; white-space: nowrap; }
 .nav-drop-menu a:hover { background: var(--bg-elev); color: var(--accent2); text-decoration: none; }
 /* Phones: a drop menu opens in line inside the stacked panel, so it never covers the tabs under it (2026-11-10). */
-@media (max-width: 760px) { .nav-drop-menu { position: static; min-width: 0; box-shadow: none; border: 0; border-radius: 0; padding: 0 0 6px 14px; background: transparent; } .nav-drop:hover .nav-drop-menu, .nav-drop:focus-within .nav-drop-menu { display: none; } .nav-drop.open .nav-drop-menu { display: block; } .nav-drop-menu a { padding: 13px 16px; font-size: 1rem; border-bottom: 1px solid var(--border); } .nav-drop-menu a:last-child { border-bottom: none; } }
+@media (max-width: 1120px) { .nav-drop-menu { position: static; min-width: 0; box-shadow: none; border: 0; border-radius: 0; padding: 0 0 6px 14px; background: transparent; } .nav-drop:hover .nav-drop-menu, .nav-drop:focus-within .nav-drop-menu { display: none; } .nav-drop.open .nav-drop-menu { display: block; } .nav-drop-menu a { padding: 13px 16px; font-size: 1rem; border-bottom: 1px solid var(--border); } .nav-drop-menu a:last-child { border-bottom: none; } }
 
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
@@ -258,7 +261,7 @@ h1, h2, .score-hero h1 { font-family:"EB Garamond", Georgia, "Times New Roman", 
    Markup is fixed; these are the guards that keep it fixed. */
 html, body { max-width: 100%; overflow-x: hidden; }
 .nav-inner { max-width: 100%; }
-@media (max-width: 760px) {
+@media (max-width: 1120px) {
   .nav-inner { padding: 0 14px; gap: 6px; }
   .brand { margin-right: 10px; }
   .nav-toggle { display: inline-block; margin-left: auto; }
