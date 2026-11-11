@@ -113,7 +113,7 @@ h2.sec { font-family: var(--serif); font-weight: 600; font-size: 1.55rem; margin
 .doc th { text-align: left; font-size: .7rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); background: var(--bg-elev); padding: 9px 11px; white-space: nowrap; }
 .doc td { padding: 8px 11px; border-top: 1px solid var(--border); vertical-align: top; }
 .doc td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }
-.pager { display: flex; justify-content: space-between; gap: 12px; margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.pager { background: none; box-shadow: none; display: flex; justify-content: space-between; gap: 12px; margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--border); flex-wrap: wrap; }
 .pager a { display: flex; flex-direction: column; max-width: 48%; font-weight: 700; }
 .pager a span { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); font-weight: 800; }
 .pager a.next { text-align: right; margin-left: auto; }
@@ -301,10 +301,13 @@ mark { background: rgba(201,168,76,.32); color: inherit; padding: 0 1px; border-
       <h1 class="page-h1">${escH(d.title)}</h1>
       <div class="doc-meta">${meta.date ? `<span>${fmt(meta.date)}</span>` : ''}<span>${Math.max(1, Math.round(meta.words / 230))} min read</span>${d.page ? `<a href="${escH(d.page)}" target="_blank" rel="noopener">Open the styled report →</a>` : ''}</div>
       ${staleNote(meta)}<article class="doc">${d.html}</article>
-      <nav class="pager" aria-label="More in ${escH(meta.section)}">${older ? `<a href="#/doc/${older.id}"><span>${meta.date ? 'Earlier' : 'Next'}</span>${escH(older.title)}</a>` : ''}${newer ? `<a class="next" href="#/doc/${newer.id}"><span>${meta.date ? 'Later' : 'Previous'}</span>${escH(newer.title)}</a>` : ''}</nav>`;
+      ${(older || newer) ? `<nav class="pager" aria-label="More in ${escH(meta.section)}">${older ? `<a href="#/doc/${older.id}"><span>${meta.date ? 'Earlier' : 'Next'}</span>${escH(older.title)}</a>` : ''}${newer ? `<a class="next" href="#/doc/${newer.id}"><span>${meta.date ? 'Later' : 'Previous'}</span>${escH(newer.title)}</a>` : ''}</nav>` : ''}`;
+    chartsToLatest();
     document.title = d.title + ' · Market Desk';
     window.scrollTo(0, 0);
   }
+  // On a phone a chart is wider than the screen: start it scrolled to the right, where the latest bars and the level labels are.
+  function chartsToLatest() { requestAnimationFrame(() => document.querySelectorAll('figure.chart').forEach((f) => { f.scrollLeft = f.scrollWidth; })); }
   let allLoaded = null;
   const TICKERS = ['SPY', 'QQQ', 'DAL', 'PLTR', 'BA', 'RCL', 'HLT', 'XOM', 'V', 'AMZN', 'BE', 'DELL', 'SMH', 'NVDA', 'NOW', 'AAPL', 'TSLA', 'MU', 'AMD', 'ABNB', 'GOOGL', 'LMT', 'KO', 'SMCI', 'DRAM', 'SPCX', 'ET', 'OSCR', 'IWM', 'XLE', 'TLT'];
   function loadAll() {
@@ -348,6 +351,7 @@ mark { background: rgba(201,168,76,.32); color: inherit; padding: 0 1px; border-
       ${plays ? `<h2 class="sec tk-sec">Plays on ${escH(sym)}</h2><article class="doc">${plays}</article>` : ''}
       <h2 class="sec tk-sec">Every mention</h2>${hits.length ? `<div class="list">${hits.slice(0, 40).map(([x, text]) => `<a class="row" href="#/doc/${x.id}"><span class="d">${fmt(x.date)}</span><span class="tt"><span class="tag">${escH(x.section)}</span>${escH(x.title)}</span><span class="sm">…${snipOf(text)}…</span></a>`).join('')}</div>` : '<p class="empty">No notes mention it yet.</p>'}`;
     document.title = sym + ' · Market Desk';
+    chartsToLatest();
   }
   async function search(q) {
     mark('');
