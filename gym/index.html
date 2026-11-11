@@ -612,7 +612,7 @@ function load(){
   try { const f = JSON.parse(localStorage.getItem("forge-v1")); if (f && f.v === 1) { f.profile = null; return f; } } catch(e){}
   return { v:1, profile:null, plan:null, logs:[], weights:[], active:null, theme:"auto" };
 }
-const APP_V = 39; // written into the saved data so the coach can see which version a device runs before sending it something new
+const APP_V = 40; // written into the saved data so the coach can see which version a device runs before sending it something new
 function save(){ S.updatedAt = Date.now(); S.appV = APP_V; localStorage.setItem(KEY, JSON.stringify(S)); try { scheduleSync(); } catch (e) {} }
 
 /* ============ Theme ============ */
@@ -942,6 +942,18 @@ function weeklySetsByMuscle(back){
   }
   return acc;
 }
+/* Hard sets per muscle over the 7 days ending on `to` (rolling, so Monday doesn't wipe it). */
+function setsByMuscle7(to, skipLog){
+  const from = shiftDate(to || today(), -6), acc = {};
+  for (const l of S.logs) {
+    if (l === skipLog || l.date < from || l.date > (to || today())) continue;
+    for (const en of l.entries) { const ex = EXBY[en.ex]; if (!ex || ex.u === "time") continue; for (const [mus, w] of musclesFor(en.ex)) acc[mus] = (acc[mus] || 0) + en.sets.length * w; }
+  }
+  return acc;
+}
+const MUSC_HIGH = 20; // above this in 7 days, more work for that muscle is optional
+/* For a plan exercise: its main muscle and how loaded that muscle already is. */
+function loadFor(exId, acc){ const m = musclesFor(exId)[0]; if (!m) return null; const n = (acc || setsByMuscle7())[m[0]] || 0; return { mus: m[0], n: Math.round(n), high: n >= MUSC_HIGH }; }
 // e1RM momentum over the last few sessions: up / flat / down
 function momentum(exId){
   const ses = lastSessions(exId, 3); // newest first
@@ -1333,7 +1345,8 @@ function renderToday(){
   <div class="card">
     <div class="exhead"><h3>${esc(day.name)}</h3><span class="dim small">${day.exercises.length} exercises</span></div>
     ${(() => { const dm = dayMuscles(day); return dm.primary.length ? `<div class="dim small" style="margin-bottom:8px"><b>Targets:</b> ${dm.primary.join(", ")}${dm.secondary.length ? ` · also ${dm.secondary.join(", ")}` : ""}</div>` : ""; })()}
-    ${day.exercises.map(s => { const ex = EXBY[s.ex] || { n: s.ex }; return `<div class="exline"><span>${esc(ex.n)}${ex.m ? ` <span class="dim small">· ${esc(ex.m)}</span>` : ""}</span><span class="dim">${ex.u === "time" ? s.lo + "–" + s.hi + " min" : s.sets + "×" + s.lo + "–" + s.hi + (s.rpe ? " @" + s.rpe : "")}</span></div>`; }).join("")}
+    ${(() => { const acc = setsByMuscle7(), hi = [...new Set(day.exercises.map(s => loadFor(s.ex, acc)).filter(x => x && x.high).map(x => `${x.mus.toLowerCase()} (${x.n} sets)`))]; return hi.length ? `<div class="small gold" style="margin-bottom:8px;line-height:1.5"><b>Already well worked in the last 7 days:</b> ${hi.join(", ")}. Exercises marked optional can be skipped today with no penalty.</div>` : ""; })()}
+    ${day.exercises.map(s => { const ex = EXBY[s.ex] || { n: s.ex }; const ld = loadFor(s.ex); return `<div class="exline"><span>${esc(ex.n)}${ld && ld.high ? ' <span class="gold small" style="font-weight:700">· optional today</span>' : ex.m ? ` <span class="dim small">· ${esc(ex.m)}</span>` : ""}</span><span class="dim">${ex.u === "time" ? s.lo + "–" + s.hi + " min" : s.sets + "×" + s.lo + "–" + s.hi + (s.rpe ? " @" + s.rpe : "")}</span></div>`; }).join("")}
     ${doneToday ? `<div class="dim small" style="margin-top:10px;line-height:1.5">Already trained today. A second session (say, cardio tonight) still counts as <b>one training day</b>, and its cardio counts toward your weekly cardio.</div>` : ""}
     <button class="btn full blue-btn" style="margin-top:12px" onclick="startWorkout(${dayIdx})">${doneToday ? "Start a second session" : "Start workout"}</button>
   </div>
@@ -1422,6 +1435,7 @@ function renderWorkout(){
       <div class="exhead"><h3>${esc(ex.n)}</h3><span class="dim small">${isTime ? en.lo + "–" + en.hi + " min" : en.lo + "–" + en.hi + " reps"}</span></div>
       ${en.rpeT && !isTime ? `<div class="effort">Effort: RPE ${en.rpeT} · stop with ${10 - en.rpeT} good rep${10 - en.rpeT === 1 ? "" : "s"} left in the tank</div>` : ""}
       <div class="dim small" style="margin-bottom:4px">${esc(ex.m)}</div>
+      ${(() => { const ld = loadFor(en.ex); return ld && ld.high ? `<div class="small gold" style="margin-bottom:6px;line-height:1.5"><b>Optional today.</b> Your ${ld.mus.toLowerCase()} already has ${ld.n} hard sets in the last 7 days (the useful range is 10–20). Skip it, or do 1–2 easy sets.</div>` : ""; })()}
       ${CUES[en.ex] ? `<div class="small" style="font-style:italic;color:var(--dim);margin-bottom:6px">☝ ${esc(CUES[en.ex])} <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(ex.n + " form")}" target="_blank" rel="noopener" style="color:var(--blue);font-style:normal">demo ↗</a></div>` : ""}
       ${isTime
         ? (last ? `<div class="lastinfo">Last (${last.date.slice(5)}): ${last.sets.map(s => s.r + " min" + (s.lv != null ? " @ " + s.lv : "") + (s.iv ? " · " + (IV_PRESETS[s.iv] ? IV_PRESETS[s.iv].name.split(" ·")[0] : s.iv) : "")).join(" · ")}${lastLevel(en.ex) != null ? `. Beat level ${lastLevel(en.ex)} on the hard parts if it felt doable.` : ""}</div>` : "")
@@ -1751,8 +1765,8 @@ function renderProgress(){
   const weeks = weeklyWorkouts();
   const b = bmi();
   const muscNow = weeklySetsByMuscle(), muscLast = weeklySetsByMuscle(1), sumOf = o => Object.values(o).reduce((a, v) => a + v, 0);
-  const mView = muscView || (sumOf(muscNow) > 0 ? "this" : "last");
-  const musc = mView === "this" ? muscNow : muscLast, muscTotal = sumOf(musc);
+  const mView = muscView || "7d";
+  const musc = mView === "7d" ? setsByMuscle7() : mView === "this" ? muscNow : muscLast, muscTotal = sumOf(musc);
   const tr = bwTrend();
   const act = S.activity || [];
   const todayAct = act.find(a => a.date === today());
@@ -1764,14 +1778,14 @@ function renderProgress(){
   const exList = Object.keys(loggedEx).sort((a, b) => (EXBY[a] ? EXBY[a].n : a).localeCompare(EXBY[b] ? EXBY[b].n : b));
   const tick = mo => mo === "up" ? ' <span class="green">▲</span>' : mo === "down" ? ' <span class="red">▼</span>' : mo === "flat" ? ' <span class="dim">▬</span>' : "";
   const cMuscle = `<div class="card"><h3>Weekly sets per muscle <span class="dim small">· target 10–20</span></h3>
-    <div style="margin:6px 0 4px">${[["this", "This week"], ["last", "Last week"]].map(([k, t]) => `<span class="pill ${mView === k ? "on" : ""}" onclick="muscView='${k}';render()">${t}</span>`).join("")}</div>
-    <p class="dim small" style="margin-bottom:10px">${mView === "this" ? "Hard sets since Monday." : "Hard sets last Mon–Sun."} 10–20 a week per muscle is the growth sweet spot.</p>
+    <div style="margin:6px 0 4px">${[["7d", "Last 7 days"], ["this", "This week"], ["last", "Last week"]].map(([k, t]) => `<span class="pill ${mView === k ? "on" : ""}" onclick="muscView='${k}';render()">${t}</span>`).join("")}</div>
+    <p class="dim small" style="margin-bottom:10px">${mView === "7d" ? "Hard sets over the last 7 days, today included. This is what today's workout is checked against." : mView === "this" ? "Hard sets since Monday." : "Hard sets last Mon–Sun."} 10–20 a week per muscle is the growth sweet spot.</p>
     ${muscTotal > 0 ? MUSCLE_ORDER.map(mus => {
       const v = Math.round((musc[mus] || 0) * 10) / 10, inRange = v >= 10 && v <= 20, col = inRange ? "var(--green)" : v > 20 ? "var(--red)" : "var(--fill)";
       const note = v === 0 ? "not yet" : v < 10 ? "add volume" : v > 20 ? "very high" : "on target";
       return `<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:.85rem"><span>${mus}</span><span><b>${v}</b> <span class="dim small">· ${note}</span></span></div>
         <div style="height:6px;background:var(--bg2);border-radius:4px;overflow:hidden;margin-top:3px;position:relative"><div style="height:100%;width:${Math.min(100, v / 20 * 100)}%;background:${col}"></div><div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--dim);opacity:.5"></div></div></div>`;
-    }).join("") : (mView === "this" ? '<p class="dim small">No sets yet this week. Tap Last week to see where you finished.</p>' : '<p class="dim small">No sets logged last week.</p>')}</div>`;
+    }).join("") : (mView === "this" ? '<p class="dim small">No sets yet this week.</p>' : '<p class="dim small">No sets logged in that period.</p>')}</div>`;
   const goalN = (S.profile && S.profile.days) || 4, wkNow = weeks[weeks.length - 1], wkPrev = weeks[weeks.length - 2], kfmt = v => v >= 1000 ? (v / 1000).toFixed(1) + "k" : String(v);
   const cVol = `<div class="card"><h3>Workouts per week <span class="dim small">· goal ${goalN}</span></h3>${weeks.length ? `<canvas id="volchart" class="hkcv" height="160"></canvas>
     <p class="dim small" style="margin-top:6px;line-height:1.5">Green = goal hit. This week so far: <b>${wkNow.n} of ${goalN}</b>.${wkPrev ? ` Weight lifted last week: <b>${kfmt(wkPrev.vol)} lb</b>${weeks.length > 2 && weeks[weeks.length - 3].vol ? ` (week before: ${kfmt(weeks[weeks.length - 3].vol)})` : ""}.` : ""}</p>` : '<p class="dim small">Log workouts to see your weeks.</p>'}</div>`;
@@ -1794,7 +1808,7 @@ function renderProgress(){
     return `<div style="margin-top:10px"><div class="small" style="display:flex;justify-content:space-between;font-weight:700"><span>${t}</span><span class="${g.train.length >= goalH ? "green" : "dim"}">${g.train.length} of ${goalH} workouts</span></div>
       ${g.train.map(hrow).join("")}${iv4.length ? `<div class="exline"><span class="dim">⚡ ${iv4.length > 1 ? iv4.length + " × " : ""}4×4 intervals</span><span class="dim small">${iv4.reduce((a, l) => a + (l.min || 0), 0)} min</span></div>` : ""}${wk.length ? `<div class="exline"><span class="dim">🚶 ${wk.length} walk${wk.length === 1 ? "" : "s"}</span><span class="dim small">${wm} min</span></div>` : ""}</div>`; };
   if (!hweeks.length || hweeks[0].k !== thisWk) hweeks.unshift({ k: thisWk, train: [], walks: [] });
-  const hrow = l => `<div class="exline"><span>${new Date(l.date + "T12:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} · <b>${esc(l.dayName || "Workout")}</b></span><span class="dim small">${l.entries.reduce((a, en) => a + en.sets.length, 0)} sets · ${l.min}m</span></div>`;
+  const hrow = l => `<div class="exline" style="cursor:pointer" onclick="logEditOpen(${S.logs.indexOf(l)})"><span>${new Date(l.date + "T12:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} · <b>${esc(l.dayName || "Workout")}</b></span><span class="dim small">${l.entries.reduce((a, en) => a + en.sets.length, 0)} sets · ${l.min}m <span class="blue">✎</span></span></div>`;
   const cHist = `<div class="card" id="pg-history"><h3>History <span class="dim small">· ${trainLogs().length} workouts</span></h3>
     ${logs.length ? hweeks.slice(0, 2).map(hweek).join("") + (hweeks.length > 2 ? `<details class="more" style="margin-top:8px"><summary class="small blue">${hweeks.length - 2} older week${hweeks.length - 2 === 1 ? "" : "s"}</summary>${hweeks.slice(2, 26).map(hweek).join("")}</details>` : "") : '<p class="dim small">No workouts yet.</p>'}</div>`;
   V.innerHTML = `
@@ -3941,6 +3955,41 @@ function quickWalkSave(){
   save(); document.getElementById("qwmodal").innerHTML = ""; render(); toast(`Logged ${min} min ${qw.ex === "incline-walk" ? "treadmill walk" : name.toLowerCase().replace("quick ", "")}`);
 }
 function deleteQuick(date, min){ const i = S.logs.findIndex(l => l.quick && l.date === date && l.min === min); if (i < 0 || !confirm("Delete this entry?")) return; S.logs.splice(i, 1); save(); render(); }
+/* Every exercise and set of one logged workout, as text. */
+function logBreakdown(l){
+  return l.entries.map(en => { const ex = EXBY[en.ex] || { n: en.ex }, t = ex.u === "time";
+    const sets = en.sets.map(s => t ? `${s.r} min${s.lv != null ? " @ " + s.lv : ""}` : `${s.w || "bw"}×${s.r}`).join(" · ");
+    return `<div class="exline" style="align-items:flex-start"><span style="font-weight:600;flex:1;min-width:0;padding-right:10px">${esc(ex.n)}</span><span class="small" style="text-align:right;line-height:1.5;max-width:58%">${sets}${en.wu && en.wu.length ? `<br><span class="dim">warm-up ${en.wu.map(x => x.w + "×" + x.r).join(" · ")}</span>` : ""}</span></div>`; }).join("");
+}
+/* Edit a logged workout yourself: change an exercise, fix a weight or reps, add or delete sets. */
+let logEd = null;
+function logEditOpen(i){ const l = S.logs[i]; if (!l) return; logEd = { i, d: JSON.parse(JSON.stringify(l.entries)) }; logEditDraw(); }
+function logEditDraw(){
+  let m = document.getElementById("qwmodal"); if (!m) { m = document.createElement("div"); m.id = "qwmodal"; document.body.appendChild(m); }
+  if (!logEd) { m.innerHTML = ""; return; }
+  const l = S.logs[logEd.i], opts = cur => Object.values(EXBY).sort((a, b) => a.n.localeCompare(b.n)).map(e => `<option value="${e.id}" ${e.id === cur ? "selected" : ""}>${esc(e.n)}</option>`).join("");
+  m.innerHTML = `<div class="modal"><div class="inner" style="max-height:88vh;overflow:auto">
+    <h3>Edit ${esc(l.dayName || "workout")} <span class="dim small">· ${new Date(l.date + "T12:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</span></h3>
+    <p class="dim small" style="margin:4px 0 10px">Pick the right exercise, fix any weight or reps, add or remove sets. Nothing changes until you tap Save.</p>
+    ${logEd.d.map((en, ei) => { const t = EXBY[en.ex] && EXBY[en.ex].u === "time"; return `<div class="card" style="margin-bottom:10px">
+      <select onchange="logEd.d[${ei}].ex=this.value;logEditDraw()" style="font-weight:600">${opts(en.ex)}</select>
+      ${en.sets.map((st, si) => `<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><span class="dim small" style="width:16px">${si + 1}</span>
+        ${t ? "" : `<input type="number" inputmode="decimal" value="${st.w}" placeholder="lb" oninput="logEd.d[${ei}].sets[${si}].w=+this.value||0"><span class="dim">×</span>`}
+        <input type="number" inputmode="numeric" value="${st.r}" placeholder="${t ? "min" : "reps"}" oninput="logEd.d[${ei}].sets[${si}].r=+this.value||0">${t ? '<span class="dim small">min</span>' : ""}
+        <span class="red" style="cursor:pointer;padding:0 6px" onclick="logEd.d[${ei}].sets.splice(${si},1);logEditDraw()">✕</span></div>`).join("")}
+      <div style="margin-top:8px"><span class="pill" onclick="(function(e){const s=e.sets[e.sets.length-1]||{w:0,r:10};e.sets.push({w:s.w,r:s.r,done:true})})(logEd.d[${ei}]);logEditDraw()">+ set</span><span class="pill" onclick="if(confirm('Remove this exercise from the workout?')){logEd.d.splice(${ei},1);logEditDraw()}">remove exercise</span></div></div>`; }).join("")}
+    <span class="pill" onclick="logEd.d.push({ex:'bb-bench',rpe:null,sets:[{w:0,r:10,done:true}]});logEditDraw()">+ add an exercise</span>
+    <button class="btn blue-btn full" style="margin-top:12px" onclick="logEditSave()">Save changes</button>
+    <button class="btn ghost full" style="margin-top:8px" onclick="logEd=null;logEditDraw()">Cancel</button>
+  </div></div>`;
+}
+function logEditSave(){
+  const l = S.logs[logEd.i]; if (!l) return;
+  const d = logEd.d.map(en => ({ ...en, sets: en.sets.filter(s => (+s.r || 0) > 0) })).filter(en => EXBY[en.ex] && en.sets.length);
+  if (!d.length) return toast("Keep at least one set, or cancel");
+  l.entries = d; if (l.quick) l.min = d.reduce((a, en) => a + cardioMin(en), 0) || l.min;
+  logEd = null; save(); logEditDraw(); render(); toast("Workout updated");
+}
 /* ---- Workout summary + feedback (Today tab) ----
    Compares each lift with the last time you did it, spots PRs, checks what
    the plan called for, and turns that into a few plain-English notes. */
@@ -3986,7 +4035,10 @@ function workoutFeedback(l){
   if (prs.length) notes.push(["good", `New best${prs.length > 1 ? "s" : ""}: <b>${prs.map(esc).join(", ")}</b>.`]);
   if (compared) notes.push([up >= compared / 2 ? "good" : "warn", `Up on <b>${up} of ${compared}</b> lift${compared === 1 ? "" : "s"} vs last time.${up < compared / 2 ? " Push to beat last session's top set next time." : ""}`]);
   if (prevVol > 0 && vol > 0) { const ch = Math.round((vol - prevVol) / prevVol * 100); if (Math.abs(ch) >= 10) notes.push([ch > 0 ? "good" : "warn", `Volume ${ch > 0 ? "up" : "down"} ${Math.abs(ch)}% vs your last ${esc(l.dayName)} (${Math.round(vol).toLocaleString()} lb).`]); }
-  if (skipped.length) notes.push(["warn", `Skipped: <b>${skipped.map(s => esc((EXBY[s.ex] || { n: s.ex }).n)).join(", ")}</b>.${skipped.some(s => EXBY[s.ex] && EXBY[s.ex].u === "time") ? " The cardio is part of your VO₂ goal." : " Do them first next time this day comes up."}`]);
+  if (skipped.length) { const acc = setsByMuscle7(l.date), nm = s => esc((EXBY[s.ex] || { n: s.ex }).n), ld = s => loadFor(s.ex, acc);
+    const fine = skipped.filter(s => { const x = ld(s); return x && x.n >= 10; }), low = skipped.filter(s => !fine.includes(s) && EXBY[s.ex] && EXBY[s.ex].u !== "time");
+    if (fine.length) { const ms = [...new Set(fine.map(s => { const x = ld(s); return `${x.mus.toLowerCase()} ${x.n} sets`; }))]; notes.push(["good", `Left out <b>${fine.map(nm).join(", ")}</b>: good call. In the last 7 days you already have ${ms.join(", ")} (10–20 is the useful range).`]); }
+    if (low.length) notes.push(["warn", `Not done: <b>${low.map(nm).join(", ")}</b>. ${[...new Set(low.map(s => { const x = ld(s); return x ? `${x.mus} is only at ${x.n} sets in the last 7 days` : ""; }).filter(Boolean))].join("; ")}, so fit ${low.length === 1 ? "it" : "them"} in next time.`]); }
   const ready = lifts.map(en => ({ en, sug: suggestFor(en.ex, (day && (day.exercises.find(s => s.ex === en.ex) || {}).lo) || 6, (day && (day.exercises.find(s => s.ex === en.ex) || {}).hi) || 12) })).filter(x => x.sug && !x.sug.deload && x.sug.w > (bestSet(x.en.sets).w || 0));
   if (ready.length) notes.push(["good", `Ready to add weight next time: <b>${ready.slice(0, 3).map(x => esc(EXBY[x.en.ex].n) + " → " + x.sug.w + " lb").join(", ")}</b>.`]);
   l.entries.filter(en => EXBY[en.ex] && EXBY[en.ex].u === "time" && !WALK_IDS.has(en.ex)).forEach(en => {
@@ -4006,15 +4058,19 @@ function workoutSummaryCard(logsToday){
     if (l.quick && !WALK_IDS.has(l.entries[0].ex) && l.entries[0].ex !== "incline-walk" || (l.quick && /4×4/.test(l.dayName))) { const st = l.entries[0].sets[0] || {}; return `<div class="card" style="display:flex;align-items:center;gap:12px"><span style="font-size:1.4rem">⚡</span><div style="flex:1"><b>${esc(l.dayName)} · ${l.min} min</b><div class="dim small">${esc((EXBY[l.entries[0].ex] || {}).n || "")}${st.lv != null ? " · level " + st.lv : ""} · ${st.iv ? "✓ Counts as this week's 4×4" : "Cardio minutes"}</div></div><span class="red small" style="cursor:pointer" onclick="deleteQuick('${l.date}',${l.min})">delete</span></div>`; }
     if (l.quick) return `<div class="card" style="display:flex;align-items:center;gap:12px"><span style="font-size:1.4rem">🚶</span><div style="flex:1"><b>${esc(l.dayName)} · ${l.min} min</b><div class="dim small">${l.entries[0].ex === "incline-walk" ? "Treadmill · cardio minutes" : l.min >= 20 ? "✓ Counts as an outdoor walk this week" : "Cardio minutes (under 20 min doesn't count as a weekly walk)"}</div></div><span class="red small" style="cursor:pointer" onclick="deleteQuick('${l.date}',${l.min})">delete</span></div>`;
     const f = workoutFeedback(l), icon = t => t === "good" ? "✅" : "⚠️";
+    const dayCardio = Math.round(S.logs.filter(x => x.date === l.date).reduce((a, x) => a + x.entries.reduce((b, en) => b + (EXBY[en.ex] && EXBY[en.ex].u === "time" ? cardioMin(en) : 0), 0), 0));
     return `<div class="card wsum"><div class="exhead"><h3>✓ ${(() => { const tl = logsToday.filter(x => !x.quick); return tl.length > 1 ? `Session ${tl.indexOf(l) + 1}: ` : ""; })()}${esc(l.dayName || "Workout")} done</h3><span class="dim small">${l.min} min</span></div>
       <div class="wstats">
         <div><b>${f.sets}</b><span>sets</span></div>
         <div><b>${f.vol >= 1000 ? (f.vol / 1000).toFixed(1) + "k" : Math.round(f.vol)}</b><span>lb lifted</span></div>
-        <div><b>${f.cardio}</b><span>cardio min</span></div>
+        <div><b>${dayCardio}</b><span>cardio min</span></div>
         <div><b>${f.prs.length}</b><span>PR${f.prs.length === 1 ? "" : "s"}</span></div>
       </div>
       ${f.notes.length ? `<div style="margin:10px 0 6px">${f.notes.map(([t, m]) => `<div class="small" style="display:flex;gap:8px;padding:5px 0;line-height:1.5"><span>${icon(t)}</span><span>${m}</span></div>`).join("")}</div>` : ""}
-      <details class="more"><summary class="small blue">Exercise by exercise</summary><div style="margin-top:6px">${f.rows.join("") || '<p class="dim small">Cardio only.</p>'}</div></details>
+      <div class="dim small" style="font-weight:700;margin:10px 0 2px">WHAT YOU DID</div>
+      ${logBreakdown(l)}
+      <button class="btn small-btn" style="margin-top:10px" onclick="logEditOpen(${S.logs.indexOf(l)})">✎ Edit this workout</button>
+      <details class="more" style="margin-top:8px"><summary class="small blue">Compared with last time</summary><div style="margin-top:6px">${f.rows.join("") || '<p class="dim small">Cardio only.</p>'}</div></details>
       ${S.health ? `<a class="btn ghost small-btn" style="margin-top:10px;display:inline-block;text-decoration:none" href="${healthWorkoutURL(l.min)}">❤️ Log to Apple Health</a>` : ""}
     </div>`;
   }).join("");
