@@ -123,6 +123,7 @@ function renderNav(active) {
     [prefix + "previews/", "Picks"],
     [prefix + "tools/", "Lab"],
     [prefix + "stats/", "Stats"],
+    [prefix + "teams/", "Teams"],      // NBA team pages (SEO-07; Lynold's named instruction in the NBA chat, 2026-11-10, HO-0042)
     [prefix + "results/", "Results"],
     [prefix + "recaps/", "Recaps"]
   ] : [
