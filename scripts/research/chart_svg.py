@@ -5,6 +5,7 @@ Usage:
     svg = chart_svg("XOM", bars, levels, title="XOM · daily · your extension levels")
 
 bars:   list of (date "YYYY-MM-DD", open, high, low, close), oldest first. ~60-160 bars reads best.
+        About 18% of the plot width is left empty after the last bar, so the latest candles stay clear of the labels.
 levels: list of dicts {"p": price, "t": "2.0 ext", "c": "white" | "gold" | "cyan" | "green" | "red" | "dim",
                         "dash": True (extension style) / False (solid: retracement anchors, 50%, stops)}
         Lynold's colors: white = 0.5 / 2.0 / 3.0, gold = 0.786 / 1.618 / 2.618, cyan = 1.382 / 2.382.
@@ -41,7 +42,10 @@ def chart_svg(sym, bars, levels, title=None, now=None):
     ph, pw = H - PAD_T - PAD_B, W - PAD_L - PAD_R
     y = lambda p: PAD_T + (ymax - p) / (ymax - ymin) * ph
     n = len(bars)
-    step = pw / n
+    # Empty space after the last bar (Lynold, Nov 10: "need more bars to the right so the chart doesn't look so
+    # cluttered"), like the right margin on a trading platform, so the latest candles never sit on the level labels.
+    slots = n + max(8, round(n * 0.18))
+    step = pw / slots
     bw = max(1.2, step * 0.62)
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" data-ticker="{escape(sym)}" viewBox="0 0 {W} {H}" role="img" aria-label="{escape(title or sym)} chart" font-family="Arial, sans-serif">']
     out.append(f'<text x="{PAD_L}" y="18" font-size="13" font-weight="700" fill="#20242C" class="c-ink">{escape(title or sym)}</text>')
@@ -59,7 +63,7 @@ def chart_svg(sym, bars, levels, title=None, now=None):
         top, bot = y(max(o, c)), y(min(o, c))
         out.append(f'<rect x="{cx - bw / 2:.1f}" y="{top:.1f}" width="{bw:.1f}" height="{max(1, bot - top):.1f}" fill="{col}" class="{cls}"/>')
     # date ticks: first, middle, last
-    for i, anc in ((0, "start"), (n // 2, "middle"), (n - 1, "end")):
+    for i, anc in ((0, "start"), (n // 2, "middle"), (n - 1, "middle")):
         cx = PAD_L + step * (i + 0.5)
         out.append(f'<text x="{cx:.1f}" y="{H - 8}" font-size="10" text-anchor="{anc}" fill="#6B6152" class="c-dim">{escape(bars[i][0][5:])}</text>')
     # levels, with labels spread so they never overlap
@@ -79,7 +83,7 @@ def chart_svg(sym, bars, levels, title=None, now=None):
         out.append(f'<text x="{PAD_L + pw + 6}" y="{ty:.1f}" font-size="11" fill="{col}"{tcls}><tspan font-weight="700">{escape(_fmt(l["p"]))}</tspan> {escape(l.get("t", ""))[:22]}</text>')
     # last price marker
     last = now if now is not None else bars[-1][4]
-    out.append(f'<circle cx="{PAD_L + pw - step / 2:.1f}" cy="{y(last):.1f}" r="3.5" fill="#C9A84C" stroke="#20242C" stroke-width="1"/>')
+    out.append(f'<circle cx="{PAD_L + step * (n - 0.5):.1f}" cy="{y(last):.1f}" r="3.5" fill="#C9A84C" stroke="#20242C" stroke-width="1"/>')
     if hidden:
         txt = " · ".join(f'{l.get("t", "")} {_fmt(l["p"])}' for l in sorted(hidden, key=lambda l: -l["p"]))
         out.append(f'<text x="{PAD_L}" y="{PAD_T - 6}" font-size="10" fill="#6B6152" class="c-dim">Off chart: {escape(txt)[:140]}</text>')
