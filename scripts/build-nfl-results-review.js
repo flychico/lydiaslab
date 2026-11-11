@@ -32,6 +32,7 @@
 const fs = require("fs");
 const path = require("path");
 const TEAMS = require("./lib/nfl-teams");
+const CALLS = require("./lib/nfl-calls");   // three calls per game from RULES.FROM (DEC-20261102-01)
 
 const ROOT = path.resolve(__dirname, "..");
 const DIR = path.join(ROOT, "data", "nfl");
@@ -186,9 +187,21 @@ function build() {
 
     // Calls: only graded calls (W, L or P).
     const calls = [];
-    if (pick && pick.result) calls.push({ market: "ml", text: `${nick(pick.pick)} to win, ${Math.round(pick.leo_prob * 100)}%`, result: pick.result });
-    if (sp.side && sp.result) calls.push({ market: "spread", text: `${spreadCallText(g, sp)}, Leo had ${marginWords(g, sp.leo)}`, result: sp.result });
-    if (tot && tot.side && tot.result) calls.push({ market: "total", text: `${String(tot.side).charAt(0).toUpperCase() + String(tot.side).slice(1).toLowerCase()} ${r1(tot.line)}, Leo projected ${r1(tot.leo)}`, result: tot.result });
+    // From the three calls (RULES.FROM) each graded call carries its units:
+    // moneyline at the frozen price, spread and total at -110.
+    const three = g.date >= CALLS.RULES.FROM;
+    const units = (res, price) => res === "W" ? Math.round(100 * (price > 0 ? price / 100 : 100 / -price)) / 100 : res === "L" ? -1 : 0;
+    if (pick && pick.result) calls.push({ market: "ml", text: three && pick.price != null ? `${nick(pick.pick)} ${pick.price > 0 ? "+" : ""}${pick.price}, Leo ${Math.round(pick.leo_prob * 100)}%` : `${nick(pick.pick)} to win, ${Math.round(pick.leo_prob * 100)}%`, result: pick.result, ...(three && pick.price != null ? { units: units(pick.result, pick.price) } : {}) });
+    if (sp.side && sp.result) calls.push({ market: "spread", text: `${spreadCallText(g, sp)}, Leo had ${marginWords(g, sp.leo)}`, result: sp.result, ...(three ? { units: units(sp.result, -110) } : {}) });
+    if (tot && tot.side && tot.result) calls.push({ market: "total", text: `${String(tot.side).charAt(0).toUpperCase() + String(tot.side).slice(1).toLowerCase()} ${r1(tot.line)}, Leo projected ${r1(tot.leo)}`, result: tot.result, ...(three ? { units: units(tot.result, -110) } : {}) });
+    // Leo's read in calls, not two models' raw numbers (the win chance and the
+    // margin are separate models and can disagree): one verdict per market.
+    let read = null;
+    if (three && read1) {
+      const c = CALLS.calls(read1);
+      const v = (x, name) => x.call ? { market: name, call: x.label.replace(/^([A-Z]{2,3})\b/, a => nick(a)) } : { market: name, pass: x.short || x.pass || "no line" };
+      read = [v(c.ml, "Moneyline"), v(c.spread, "Spread"), v(c.total, "Total")];
+    }
 
     const lostSpreadish = calls.some(c => c.result === "L" && c.market !== "total");
     const lostTotal = calls.some(c => c.result === "L" && c.market === "total");
@@ -210,7 +223,7 @@ function build() {
       line: { spread: sp.line, total: tot ? tot.line : null, fav, fav_prob: favProb },
       actual_margin: sp.actual, leo_miss: sp.err, line_miss: sp.lerr,
       leo_right_winner: winner && leoPick ? leoPick === winner : null,
-      upset, calls, miss,
+      upset, calls, miss, three, read,
     });
   }
 
@@ -270,6 +283,16 @@ function build() {
     generated_at: new Date().toISOString(), through: t.through, weeks,
     counts: { games: games.length, misses: games.filter(g => g.miss).length, upsets: games.filter(g => g.upset).length, upsets_seen: games.filter(g => g.upset && g.upset.leo_saw_it).length },
     tally, games, prop_misses,
+    // The three calls since RULES.FROM, per market: record and units.
+    three: (() => {
+      const o = { from: CALLS.RULES.FROM };
+      for (const mk of ["ml", "spread", "total"]) {
+        const cs = games.filter(x => x.three).flatMap(x => x.calls.filter(c => c.market === mk));
+        o[mk] = { w: cs.filter(c => c.result === "W").length, l: cs.filter(c => c.result === "L").length, p: cs.filter(c => c.result === "P").length,
+          units: Math.round(100 * cs.reduce((a, c) => a + (c.units || 0), 0)) / 100 };
+      }
+      return o;
+    })(),
   };
   fs.writeFileSync(path.join(DIR, "results-review.json"), JSON.stringify(out));
   console.log(`NFL results review: ${games.length} games, ${out.counts.misses} misses, ${out.counts.upsets} upsets (${out.counts.upsets_seen} seen), ${prop_misses.length} prop misses -> data/nfl/results-review.json`);

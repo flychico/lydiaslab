@@ -123,6 +123,13 @@ jobs:
       - name: Build results review
         run: node scripts/build-nfl-results-review.js || true
 
+      # The results page and one permanent page per week, written with the
+      # same renderer the page script uses (DEC-20261110-51). Display only.
+      - name: Build results pages
+        run: |
+          node scripts/build-nfl-results-pages.js || true
+          node scripts/generate-sitemap.js || true
+
       # Closing line value (DEC-20261101-02): did the market move toward Leo
       # between his first read and kickoff? Private; feeds the owner brief.
       - name: Closing line value
