@@ -612,7 +612,8 @@ function load(){
   try { const f = JSON.parse(localStorage.getItem("forge-v1")); if (f && f.v === 1) { f.profile = null; return f; } } catch(e){}
   return { v:1, profile:null, plan:null, logs:[], weights:[], active:null, theme:"auto" };
 }
-function save(){ S.updatedAt = Date.now(); localStorage.setItem(KEY, JSON.stringify(S)); try { scheduleSync(); } catch (e) {} }
+const APP_V = 39; // written into the saved data so the coach can see which version a device runs before sending it something new
+function save(){ S.updatedAt = Date.now(); S.appV = APP_V; localStorage.setItem(KEY, JSON.stringify(S)); try { scheduleSync(); } catch (e) {} }
 
 /* ============ Theme ============ */
 function applyTheme(){
@@ -3604,7 +3605,7 @@ async function coachInbox(){
     }
     if (it.type === "setup") {
       if (it.days >= 2 && it.days <= 7 && S.profile) S.profile.days = Math.round(it.days);
-      if (it.plan && Array.isArray(it.plan.days) && it.plan.days.length) { const days = it.plan.days.map(d => ({ name: String(d.name || "Day"), exercises: (d.exercises || []).filter(x => EXBY[x.ex]).map(x => ({ ex: x.ex, sets: Math.max(1, Math.min(8, +x.sets || 3)), lo: +x.lo || 8, hi: +x.hi || 12 })) })).filter(d => d.exercises.length); if (days.length) S.plan = { ...S.plan, days, nextDay: 0 }; }
+      if (it.plan && Array.isArray(it.plan.days) && it.plan.days.length) { const days = it.plan.days.map(d => ({ name: String(d.name || "Day"), exercises: (d.exercises || []).filter(x => EXBY[x.ex]).map(x => ({ ex: x.ex, sets: Math.max(1, Math.min(8, +x.sets || 3)), lo: +x.lo || 8, hi: +x.hi || 12 })) })).filter(d => d.exercises.length); if (days.length) S.plan = { ...S.plan, days, nextDay: it.plan.nextDay != null && isFinite(+it.plan.nextDay) ? +it.plan.nextDay : (it.keepPlace && days.length === S.plan.days.length ? S.plan.nextDay : 0) }; }
       if (it.standards && typeof it.standards === "object") S.standards = { ...(S.standards || {}), ...it.standards };
       got.push(it.label || "New schedule");
     }

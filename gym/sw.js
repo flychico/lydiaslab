@@ -1,5 +1,5 @@
 /* Michelangelo offline cache */
-const C = "mangelo-v38";
+const C = "mangelo-v39";
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(C).then(c => c.addAll(["/gym/", "/gym/index.html", "/gym/manifest.json"])));
   self.skipWaiting();
