@@ -1426,7 +1426,7 @@ function renderWorkout(){
         ? (last ? `<div class="lastinfo">Last (${last.date.slice(5)}): ${last.sets.map(s => s.r + " min" + (s.lv != null ? " @ " + s.lv : "") + (s.iv ? " · " + (IV_PRESETS[s.iv] ? IV_PRESETS[s.iv].name.split(" ·")[0] : s.iv) : "")).join(" · ")}${lastLevel(en.ex) != null ? `. Beat level ${lastLevel(en.ex)} on the hard parts if it felt doable.` : ""}</div>` : "")
         : last ? `<div class="lastinfo">Last (${last.date.slice(5)}): ${last.sets.map(s => `${s.w || "bw"}×${s.r}`).join(" · ")}</div>` : `<div class="lastinfo">First time — pick a weight you could do ~${en.hi + 2} reps with, stop at ${en.hi}</div>`}
       ${sug ? `<div class="suggest" ${sug.deload ? 'style="color:var(--red)"' : ""}>▲ ${esc(sug.text)}</div>` : ""}
-      ${(() => { const w0 = Number(en.sets[0] && en.sets[0].w); if (!COMPOUND.has(ex.p) || !isFinite(w0) || w0 < 95 || ex.u === "time") return ""; const ramp = [[Math.max(45, Math.round(w0 * 0.4 / 5) * 5), 8], [Math.round(w0 * 0.6 / 5) * 5, 5], [Math.round(w0 * 0.8 / 5) * 5, 3]]; return `<div class="small dim" style="background:var(--bg2);border-radius:8px;padding:6px 9px;margin-bottom:8px"><b>Warm-up ramp</b> (not logged): ${ramp.map(r => r[0] + "×" + r[1]).join(" → ")} → work sets</div>`; })()}
+      ${(() => { const w0 = Number(en.sets[0] && en.sets[0].w); if (!COMPOUND.has(ex.p) || !isFinite(w0) || w0 < 95 || ex.u === "time") return ""; const ramp = [[Math.max(45, Math.round(w0 * 0.4 / 5) * 5), 8], [Math.round(w0 * 0.6 / 5) * 5, 5], [Math.round(w0 * 0.8 / 5) * 5, 3]]; const wu = en.wu || []; return `<div class="small" style="background:var(--bg2);border-radius:8px;padding:8px 9px;margin-bottom:8px"><b>Warm-up</b> <span class="dim">· tap each one as you do it. It's logged and counts in your pounds lifted.</span><div class="qopt" style="margin-top:6px">${ramp.map(r => { const on = wu.some(x => x.w === r[0] && x.r === r[1]); return `<span class="pill ${on ? "on" : ""}" onclick="toggleWu(${ei},${r[0]},${r[1]})">${on ? "✓ " : ""}${r[0]}×${r[1]}</span>`; }).join("")}</div>${wu.filter(x => !ramp.some(r => r[0] === x.w && r[1] === x.r)).length ? `<div class="dim small" style="margin-top:4px">Also logged: ${wu.filter(x => !ramp.some(r => r[0] === x.w && r[1] === x.r)).map(x => x.w + "×" + x.r).join(", ")}</div>` : ""}</div>`; })()}
       ${(() => { const w0 = Number(en.sets[0] && en.sets[0].w); const pl = BARBELL.has(en.ex) ? platesFor(w0) : null; return pl ? `<div class="small dim" style="margin-bottom:6px">🏋️ ${w0} lb = ${pl}</div>` : ""; })()}
       ${isTime ? `<div class="small dim" style="display:grid;grid-template-columns:34px 1fr 1fr 44px;gap:8px;margin-bottom:2px"><span></span><span>minutes</span><span>level / speed on hard parts</span><span></span></div>` : ""}
       ${en.sets.map((st, si) => isTime ? `<div class="setrow" style="grid-template-columns:34px 1fr 1fr 44px">
@@ -1479,6 +1479,10 @@ function jumpToExercise(i){
 }
 function setVal(ei, si, k, v){ S.active.entries[ei].sets[si][k] = v === "" ? "" : Number(v); save(); }
 function setRpe(ei, val){ const en = S.active.entries[ei]; en.rpe = en.rpe === val ? null : val; save(); render(); }
+/* Warm-up sets: logged on the entry (en.wu), counted in pounds lifted, kept out of
+   hard-set counts and progression so they never change your next target. */
+function toggleWu(ei, w, r){ const en = S.active && S.active.entries[ei]; if (!en) return; en.wu = en.wu || []; const i = en.wu.findIndex(x => x.w === w && x.r === r); if (i >= 0) en.wu.splice(i, 1); else en.wu.push({ w, r }); save(); render(); }
+function wuVol(en){ return (en.wu || []).reduce((a, x) => a + (+x.w || 0) * (+x.r || 0), 0); }
 function toggleSet(ei, si){
   const a = S.active;
   const en = a.entries[ei];
@@ -1523,7 +1527,7 @@ function finishWorkout(){
   const a = S.active;
   const logged = a.entries.filter(en => en.sets.some(s => s.done));
   if (!logged.length) return toast("Check off at least one set");
-  S.logs.push({ date: a.date, dayIdx: a.dayIdx, dayName: S.plan.days[a.dayIdx].name, min: Math.max(1, Math.round((Date.now() - a.start) / 60000)), entries: a.entries.map(en => ({ ex: en.ex, rpe: en.rpe || null, sets: en.sets.filter(s => s.done).map(s => { const o = { w: Number(s.w) || 0, r: Number(s.r) || 0, done: true }; if (s.lv !== "" && s.lv != null && isFinite(+s.lv)) o.lv = +s.lv; if (s.iv) o.iv = s.iv; return o; }) })).filter(en => en.sets.length) });
+  S.logs.push({ date: a.date, dayIdx: a.dayIdx, dayName: S.plan.days[a.dayIdx].name, min: Math.max(1, Math.round((Date.now() - a.start) / 60000)), entries: a.entries.map(en => { const o = { ex: en.ex, rpe: en.rpe || null, sets: en.sets.filter(s => s.done).map(s => { const o = { w: Number(s.w) || 0, r: Number(s.r) || 0, done: true }; if (s.lv !== "" && s.lv != null && isFinite(+s.lv)) o.lv = +s.lv; if (s.iv) o.iv = s.iv; return o; }) }; if (en.wu && en.wu.length) o.wu = en.wu.map(x => ({ w: x.w, r: x.r })); return o; }).filter(en => en.sets.length) });
   const trained = new Set(S.logs[S.logs.length - 1].entries.map(e => e.ex));
   const tune = autoProgress(a.dayIdx, trained);
   if (tune.length) S.tune = { date: today(), msgs: tune };
@@ -1911,7 +1915,7 @@ function weeklyVolume(logs){
     const d = new Date(l.date + "T12:00");
     const monday = new Date(d); monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
     const k = monday.toLocaleDateString("en-CA");
-    byWeek[k] = (byWeek[k] || 0) + l.entries.reduce((a, en) => a + en.sets.reduce((x, s) => x + (s.w || 0) * (s.r || 0), 0), 0);
+    byWeek[k] = (byWeek[k] || 0) + l.entries.reduce((a, en) => a + wuVol(en) + en.sets.reduce((x, s) => x + (s.w || 0) * (s.r || 0), 0), 0);
   }
   return Object.entries(byWeek).sort((a, b) => a[0].localeCompare(b[0])).slice(-10).map(([k, vol]) => ({ label: k.slice(5), vol: Math.round(vol) }));
 }
@@ -1921,7 +1925,7 @@ function weeklyWorkouts(){
   const first = tl.reduce((m, l) => l.date < m ? l.date : m, tl[0].date), out = [];
   for (let k = weekStartOf(first), cur = weekStartOf(today()); k <= cur; k = shiftDate(k, 7)) {
     const end = shiftDate(k, 7), ls = tl.filter(l => l.date >= k && l.date < end);
-    out.push({ k, label: new Date(k + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }), n: ls.length, vol: Math.round(ls.reduce((a, l) => a + l.entries.reduce((b, en) => b + en.sets.reduce((x, s) => x + (s.w || 0) * (s.r || 0), 0), 0), 0)), now: k === cur });
+    out.push({ k, label: new Date(k + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }), n: ls.length, vol: Math.round(ls.reduce((a, l) => a + l.entries.reduce((b, en) => b + wuVol(en) + en.sets.reduce((x, s) => x + (s.w || 0) * (s.r || 0), 0), 0), 0)), now: k === cur });
   }
   return out.slice(-10);
 }
@@ -3960,11 +3964,12 @@ function workoutFeedback(l){
     }
     rows.push(`<div class="exline"><span>${esc(ex.n)} <span class="dim small">· best ${b.w ? b.w + "×" + b.r : b.r + " reps"}</span></span><span class="small">${tag}</span></div>`);
   });
-  const vol = lifts.reduce((a, en) => a + en.sets.reduce((b, s) => b + (+s.w || 0) * (+s.r || 0), 0), 0);
-  const sets = lifts.reduce((a, en) => a + en.sets.length, 0);
+  const vol = lifts.reduce((a, en) => a + wuVol(en) + en.sets.reduce((b, s) => b + (+s.w || 0) * (+s.r || 0), 0), 0);
+  const wuN = lifts.reduce((a, en) => a + (en.wu || []).length, 0);
+  const sets = lifts.reduce((a, en) => a + en.sets.length, 0) + wuN;
   // Same plan day last time, for a volume comparison
   const prev = [...S.logs].reverse().find(x => x.date < l.date && x.dayName === l.dayName);
-  const prevVol = prev ? prev.entries.reduce((a, en) => a + (EXBY[en.ex] && EXBY[en.ex].u !== "time" ? en.sets.reduce((b, s) => b + (+s.w || 0) * (+s.r || 0), 0) : 0), 0) : 0;
+  const prevVol = prev ? prev.entries.reduce((a, en) => a + (EXBY[en.ex] && EXBY[en.ex].u !== "time" ? wuVol(en) + en.sets.reduce((b, s) => b + (+s.w || 0) * (+s.r || 0), 0) : 0), 0) : 0;
   // What the plan called for vs what got done (a same-pattern exercise counts as a swap)
   const day = S.plan.days[l.dayIdx] && S.plan.days[l.dayIdx].name === l.dayName ? S.plan.days[l.dayIdx] : S.plan.days.find(d => d.name === l.dayName);
   const doneIds = new Set(l.entries.map(e => e.ex)), donePat = l.entries.map(e => EXBY[e.ex] && EXBY[e.ex].p);
