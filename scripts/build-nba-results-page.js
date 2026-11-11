@@ -29,7 +29,7 @@ const VIEW = require("./lib/nba-results-view");
 
 const ROOT = path.join(__dirname, ".."), DIR = path.join(ROOT, "data", "nba"), MDIR = path.join(DIR, "misses");
 const PAGE = path.join(ROOT, "nba", "results", "index.html");
-const VERSION = "20261110b";
+const VERSION = "20261110c";
 const nyDate = d => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(d);
 const num = v => v === "" || v == null || !Number.isFinite(+v) ? null : +v;
 const readJson = (f, d) => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch (e) { return d; } };
@@ -249,6 +249,7 @@ ${navM ? navM[0] : '<nav id="nav"></nav>'}
     <h1>Leo&rsquo;s NBA results</h1>
     <p class="subtitle">Day by day: the upsets, what Leo got right, and what Leo missed and why. Each game is graded on the last read Leo made before tip. Nothing is changed after the fact, and losses stay on the record.</p>
     <p class="updated" id="updated">${upd}</p>
+    <p style="margin:10px 0 0"><a class="chip-reset" href="/nba/teams/" style="text-decoration:none;display:inline-block">Browse by team</a></p>
   </section>
   <div id="status"></div>
   <div id="app">${app}</div>
@@ -264,7 +265,7 @@ renderNav("/nba/results/"); renderFooter();
 let DOC = null, ALL = false, F = { date: "", team: "" };
 try { const q = new URLSearchParams(location.search); F.date = q.get("date") || ""; F.team = (q.get("team") || "").toUpperCase(); } catch (e) {}
 const VIEWER = NBA_RESULTS_VIEW.make(c => NBA_URLS.nick(c));
-function draw() { document.getElementById("app").innerHTML = VIEWER.render(DOC, { team: F.team, date: F.date, all: ALL }); }
+function draw() { document.getElementById("app").innerHTML = VIEWER.render(DOC, { team: F.team, date: F.date, all: ALL, teamUrl: c => "/nba/teams/" + NBA_URLS.slugify(NBA_URLS.nick(c)) + "/" }); }
 function setFilter(k, v) {
   F[k] = v;
   try { const q = new URLSearchParams(); if (F.date) q.set("date", F.date); if (F.team) q.set("team", F.team); history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q : "")); } catch (e) {}

@@ -215,6 +215,7 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
   <p class="eyebrow"><a href="/nba/scoreboard/">NBA</a> &middot; ${esc(longDate(g.date))} &middot; ${esc(tip(g.tip_utc))}${g.venue ? " &middot; " + esc(g.venue) : ""}</p>
   <h1>${esc(g.away_name)} vs ${esc(g.home_name)}: Prediction and Odds</h1>
   <p class="dim">Leo&rsquo;s read, frozen before tip. ${esc(A)} at ${esc(H)}.</p>
+  <p style="margin:6px 0 0;font-size:.92rem">Every game this season: <a href="/nba/teams/${URLS.slugify(URLS.nick(g.away))}/">${esc(URLS.nick(g.away, g.away_name))} team page</a> &middot; <a href="/nba/teams/${URLS.slugify(URLS.nick(g.home))}/">${esc(URLS.nick(g.home, g.home_name))} team page</a></p>
 
   <div class="hdr">
     <div class="tm"><img src="${logo(A)}" alt="" onerror="this.style.visibility='hidden'"><b>${esc(g.away_name)}</b><span class="p">${pct(L.p_away)}</span><span class="dim">Leo win chance</span></div>

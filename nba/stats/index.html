@@ -88,6 +88,7 @@ table.t tbody tr:hover{background:var(--bg-elev);}
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script src="/scripts/lib/nba-urls.js?v=20261107"></script>
 <script>
+const tl=t=>window.NBA_URLS?'<a href="/nba/teams/'+NBA_URLS.slugify(NBA_URLS.nick(t))+'/" style="color:inherit;text-decoration:underline;text-decoration-color:var(--border);text-underline-offset:3px">'+esc(t)+"</a>":esc(t);
 renderNav(location.pathname); renderFooter();
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -121,7 +122,7 @@ const cl=v=>v>0?"pos":v<0?"neg":"";
     '<article class="kpi"><div class="label">Fastest pace</div><div class="value">'+esc(fast.team)+'</div><div class="sub">'+fast.pace+' possessions</div></article>'+
     '<article class="kpi"><div class="label">Home court</div><div class="value">'+sg(d.home_court)+'</div><div class="sub">points, this season</div></article>';
   document.getElementById("divs").innerHTML=d.divisions.map(dv=>'<div class="div-card"><div class="div-head">'+esc(dv)+'</div><div class="scroller"><table class="t"><thead><tr><th>Team</th><th>W-L</th><th>Home</th><th>Away</th><th>L10</th><th>Strk</th><th>Diff</th><th>Leo</th></tr></thead><tbody>'+
-    T.filter(t=>t.div===dv).sort((a,b)=>(b.w-b.l)-(a.w-a.l)||b.margin-a.margin).map(t=>'<tr><td><span class="tm">'+logo(t.team)+esc(t.team)+'</span></td><td>'+rec(t)+'</td><td>'+rec(t.home)+'</td><td>'+rec(t.away)+'</td><td>'+rec(t.last10)+'</td><td>'+esc(t.streak)+'</td><td class="'+cl(t.margin)+'">'+sg(t.margin)+'</td><td class="'+cl(t.leo_rating)+'">'+sg(t.leo_rating)+'</td></tr>').join("")+'</tbody></table></div></div>').join("");
+    T.filter(t=>t.div===dv).sort((a,b)=>(b.w-b.l)-(a.w-a.l)||b.margin-a.margin).map(t=>'<tr><td><span class="tm">'+logo(t.team)+tl(t.team)+'</span></td><td>'+rec(t)+'</td><td>'+rec(t.home)+'</td><td>'+rec(t.away)+'</td><td>'+rec(t.last10)+'</td><td>'+esc(t.streak)+'</td><td class="'+cl(t.margin)+'">'+sg(t.margin)+'</td><td class="'+cl(t.leo_rating)+'">'+sg(t.leo_rating)+'</td></tr>').join("")+'</tbody></table></div></div>').join("");
   map(); board();
 })();
 function map(){
@@ -140,7 +141,7 @@ const COLS=[["leo_rank","#"],["team","Team"],["w","W-L"],["ppg","PPG"],["opp_ppg
 function board(){
   const rows=T.slice().sort((a,b)=>{const k=SORT.k,va=k==="w"?a.w-a.l:a[k],vb=k==="w"?b.w-b.l:b[k];return (typeof va==="string"?va.localeCompare(vb):va-vb)*SORT.d;});
   document.getElementById("board").innerHTML='<thead><tr>'+COLS.map(c=>'<th data-k="'+c[0]+'" style="cursor:pointer">'+c[1]+'</th>').join("")+'</tr></thead><tbody>'+
-    rows.map(t=>'<tr><td>'+t.leo_rank+'</td><td><span class="tm">'+logo(t.team)+esc(t.team)+'</span></td><td>'+rec(t)+'</td><td>'+t.ppg+'</td><td>'+t.opp_ppg+'</td><td class="'+cl(t.margin)+'">'+sg(t.margin)+'</td><td>'+t.pace+'</td><td>'+t.off_rtg+'</td><td>'+t.def_rtg+'</td><td class="'+cl(t.leo_rating)+'">'+sg(t.leo_rating)+'</td></tr>').join("")+'</tbody>';
+    rows.map(t=>'<tr><td>'+t.leo_rank+'</td><td><span class="tm">'+logo(t.team)+tl(t.team)+'</span></td><td>'+rec(t)+'</td><td>'+t.ppg+'</td><td>'+t.opp_ppg+'</td><td class="'+cl(t.margin)+'">'+sg(t.margin)+'</td><td>'+t.pace+'</td><td>'+t.off_rtg+'</td><td>'+t.def_rtg+'</td><td class="'+cl(t.leo_rating)+'">'+sg(t.leo_rating)+'</td></tr>').join("")+'</tbody>';
   document.querySelectorAll("#board th").forEach(th=>th.addEventListener("click",()=>{const k=th.dataset.k;SORT={k,d:SORT.k===k?-SORT.d:(k==="leo_rank"||k==="team"||k==="opp_ppg"||k==="def_rtg"?1:-1)};board();}));
 }
 

@@ -125,7 +125,8 @@ function make(nick) {
         doc.days.map(d => opt(d.date, esc(dayShort(d.date)) + " &middot; " + d.games.length + " games" + (d.calls.n ? " &middot; calls " + rec(d.calls) : ""), date === d.date)).join("") + "</select></div>" +
       '<div class="field"><label for="f-team">Team</label><select id="f-team" onchange="setFilter(\'team\',this.value)">' + opt("", "All teams", !team) +
         doc.teams.map(t => opt(t, N(t), team === t)).join("") + "</select></div>" +
-      (date || team ? '<button class="chip-reset" type="button" onclick="clearFilters()">Show everything</button>' : "") + "</section>";
+      (date || team ? '<button class="chip-reset" type="button" onclick="clearFilters()">Show everything</button>' : "") +
+      (team && opts.teamUrl ? '<a class="chip-reset" style="text-decoration:none" href="' + esc(opts.teamUrl(team)) + '">Open the ' + N(team) + " team page</a>" : "") + "</section>";
 
     const blocks = list.map((d, i) => dayBlock(d, !!date || !!team || i === 0 || d.date >= cut, team)).join("");
     return tiles([
