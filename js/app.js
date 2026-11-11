@@ -116,29 +116,79 @@ function renderNav(active) {
   const sport = Sport.get();
   const prefix = Sport.prefix();
   
-  // NBA has the same tabs as NFL except Props: no free source for NBA prop
-  // lines yet, so no props until there is one (Lynold, 2026-10-31).
+  // One menu shape for every sport (Lynold, 2026-11-10: "Everything we create
+  // should be easy and logical to find"): Scoreboard, Picks (drop menu with
+  // the other ways to browse predictions), Props or Pitchers, Teams, Lab (drop
+  // menu), Stats, Results. A third item on a link is its drop menu.
+  // NBA has no Props tab: no free source for NBA prop lines yet (2026-10-31).
+  // NFL and NBA recaps are folded into Results (HO-0035, HO-0043), so no
+  // Recaps tab there; MLB keeps its daily recaps.
+  const LAB = sport === "NBA"
+    ? [
+        [prefix + "tools/model-tuner/", "Model Tuner"],
+        [prefix + "tools/injury-tracker/", "Injury Tracker"],
+        [prefix + "players/", "Player Scoring"],
+        [prefix + "stats/", "Team Ratings"]
+      ]
+    : sport === "MLB"
+    ? [
+        [prefix + "member-brief/", "Daily Member Brief"],
+        [prefix + "tools/offense-matchups/", "Offense Matchup"],
+        [prefix + "tools/pitcher-matchups/", "Pitcher Matchup"],
+        [prefix + "tools/bullpen-fatigue/", "Bullpen Fatigue"],
+        [prefix + "tools/strikeout-projections/", "Strikeout Projections"],
+        [prefix + "tools/totals-projections/", "Totals Projections"]
+      ]
+    : [
+        [prefix + "tools/model-tuner/", "Model Tuner"],
+        [prefix + "member-brief/", "Daily Member Brief"],
+        [prefix + "tools/player-props/", "Player Props"],
+        [prefix + "tools/injury-tracker/", "Injury Tracker"]
+      ];
   const links = sport === "NBA" ? [
     [prefix + "scoreboard/", "Scoreboard"],
-    [prefix + "previews/", "Picks"],
-    [prefix + "tools/", "Lab"],
+    [prefix + "previews/", "Picks", [
+      [prefix + "previews/", "Tonight\u2019s picks"],
+      [prefix + "predictions/", "Predictions by night"],
+      [prefix + "games/", "Every game"]
+    ]],
+    [prefix + "teams/", "Teams"],
+    [prefix + "tools/", "Lab", LAB],
     [prefix + "stats/", "Stats"],
-    [prefix + "teams/", "Teams"],      // NBA team pages (SEO-07; Lynold's named instruction in the NBA chat, 2026-11-10, HO-0042)
-    [prefix + "results/", "Results"],
-    [prefix + "recaps/", "Recaps"]
+    [prefix + "results/", "Results"]
+  ] : sport === "MLB" ? [
+    ["/scoreboard/", "Scoreboard"],
+    ["/previews/", "Picks", [
+      ["/previews/", "Daily previews"],
+      ["/mlb/matchups/", "Every game"]
+    ]],
+    ["/tools/strikeout-projections/", "Pitchers"],
+    ["/mlb/teams/", "Teams"],
+    ["/tools/", "Lab", LAB],
+    ["/stats/", "Stats"],
+    ["/results/", "Results"],
+    ["/recaps/", "Recaps"]
   ] : [
     [prefix + "scoreboard/", "Scoreboard"],
-    [prefix + "previews/", "Picks"],
-    [sport === "MLB" ? "/tools/strikeout-projections/" : prefix + "tools/player-props/", sport === "MLB" ? "Pitchers" : "Props"],
-    [prefix + "tools/", "Lab"],
+    [prefix + "previews/", "Picks", [
+      [prefix + "previews/", "This week\u2019s picks"],
+      [prefix + "week/", "Week card"],
+      [prefix + "games/", "Every game"]
+    ]],
+    [prefix + "tools/player-props/", "Props"],
+    [prefix + "teams/", "Teams"],
+    [prefix + "tools/", "Lab", LAB],
     [prefix + "stats/", "Stats"],
-    [prefix + "results/", "Results"],
-    [prefix + "recaps/", "Recaps"]
+    [prefix + "results/", "Results"]
   ];
   
   // A page may report an old or more specific path than the tab it belongs to.
   const ALIASES = {};
   ALIASES[prefix + "picks/"] = prefix + "previews/";
+  // Pages that live under a tab's drop menu light that tab.
+  if (sport === "NFL") { ALIASES["/nfl/week/"] = "/nfl/previews/"; ALIASES["/nfl/games/"] = "/nfl/previews/"; ALIASES["/nfl/recaps/"] = "/nfl/results/"; }
+  if (sport === "NBA") { ALIASES["/nba/predictions/"] = "/nba/previews/"; ALIASES["/nba/games/"] = "/nba/previews/"; ALIASES["/nba/recaps/"] = "/nba/results/"; }
+  if (sport === "MLB") { ALIASES["/mlb/matchups/"] = "/previews/"; }
   ALIASES["/articles/"] = null;
   ALIASES["/"] = null;
   
@@ -166,33 +216,11 @@ function renderNav(active) {
   navHtml += '<div class="nav-links">';
 
   navHtml += links.map(function (l) {
-        if (l[0] === prefix + "tools/") {
-          var tools = sport === "NBA"
-            ? [
-                [prefix + "tools/model-tuner/", "Model Tuner"],
-                [prefix + "tools/injury-tracker/", "Injury Tracker"],
-                [prefix + "players/", "Player Scoring"],
-                [prefix + "stats/", "Team Ratings"]
-              ]
-            : sport === "MLB" 
-            ? [
-                [prefix + "member-brief/", "Daily Member Brief"],
-                [prefix + "tools/offense-matchups/", "Offense Matchup"],
-                [prefix + "tools/pitcher-matchups/", "Pitcher Matchup"],
-                [prefix + "tools/bullpen-fatigue/", "Bullpen Fatigue"],
-                [prefix + "tools/strikeout-projections/", "Strikeout Projections"],
-                [prefix + "tools/totals-projections/", "Totals Projections"]
-              ]
-            : [
-                [prefix + "tools/model-tuner/", "Model Tuner"],
-                [prefix + "member-brief/", "Daily Member Brief"],
-                [prefix + "tools/player-props/", "Player Props"],
-                [prefix + "tools/injury-tracker/", "Injury Tracker"]
-              ];
-          return '<span class="nav-drop' + (current === prefix + "tools/" ? ' active-wrap' : '') + '">'
-            + '<a class="navlink nav-drop-toggle' + (current === prefix + "tools/" ? ' active' : '') + '" href="' + l[0] + '">Lab ▾</a>'
+        if (l[2]) {
+          return '<span class="nav-drop' + (isActive(l[0]) ? ' active-wrap' : '') + '">'
+            + '<a class="navlink nav-drop-toggle' + (isActive(l[0]) ? ' active' : '') + '" href="' + l[0] + '">' + l[1] + ' \u25BE</a>'
             + '<span class="nav-drop-menu">'
-            + tools.map(function (t) { return '<a href="' + t[0] + '">' + t[1] + '</a>'; }).join("")
+            + l[2].map(function (t) { return '<a href="' + t[0] + '">' + t[1] + '</a>'; }).join("")
             + '</span></span>';
         }
         return '<a class="navlink' + (isActive(l[0]) ? ' active' : '') + '" href="' + l[0] + '">' + l[1] + '</a>';
@@ -259,20 +287,25 @@ function renderNav(active) {
     });
   }
 
-  // Mobile/touch: first tap on "Lab ▾" opens the menu instead of navigating;
-  // tapping elsewhere closes it. Desktop hover keeps working via CSS.
-  var toggle = el.querySelector(".nav-drop-toggle");
-  var drop = el.querySelector(".nav-drop");
-  if (toggle && drop) {
+  // Mobile/touch: first tap on a drop menu tab ("Picks ▾", "Lab ▾") opens
+  // its menu instead of navigating; tapping elsewhere closes it. A second tap
+  // follows the tab's own link. Desktop hover keeps working via CSS.
+  var drops = el.querySelectorAll(".nav-drop");
+  drops.forEach(function (drop) {
+    var toggle = drop.querySelector(".nav-drop-toggle");
+    if (!toggle) return;
     toggle.addEventListener("click", function (e) {
       if (!drop.classList.contains("open")) {
         e.preventDefault();
+        e.stopPropagation();   // keep the phone panel open while the menu shows
+        drops.forEach(function (d) { if (d !== drop) d.classList.remove("open"); });
         drop.classList.add("open");
       }
-      // second tap (menu already open) follows the link to /tools/
     });
+  });
+  if (drops.length) {
     document.addEventListener("click", function (e) {
-      if (!drop.contains(e.target)) drop.classList.remove("open");
+      drops.forEach(function (drop) { if (!drop.contains(e.target)) drop.classList.remove("open"); });
     });
   }
 }

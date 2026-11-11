@@ -229,7 +229,8 @@ footer {
 .nav-drop:hover .nav-drop-menu, .nav-drop:focus-within .nav-drop-menu, .nav-drop.open .nav-drop-menu { display: block; }
 .nav-drop-menu a { display: block; padding: 8px 14px; color: var(--text); font-size: .92rem; white-space: nowrap; }
 .nav-drop-menu a:hover { background: var(--bg-elev); color: var(--accent2); text-decoration: none; }
-@media (max-width: 760px) { .nav-drop-menu { position: fixed; left: 10px; right: 10px; top: auto; min-width: 0; box-shadow: var(--shadow-md); } .nav-drop-menu a { padding: 13px 16px; font-size: 1rem; border-bottom: 1px solid var(--border); } .nav-drop-menu a:last-child { border-bottom: none; } }
+/* Phones: a drop menu opens in line inside the stacked panel, so it never covers the tabs under it (2026-11-10). */
+@media (max-width: 760px) { .nav-drop-menu { position: static; min-width: 0; box-shadow: none; border: 0; border-radius: 0; padding: 0 0 6px 14px; background: transparent; } .nav-drop:hover .nav-drop-menu, .nav-drop:focus-within .nav-drop-menu { display: none; } .nav-drop.open .nav-drop-menu { display: block; } .nav-drop-menu a { padding: 13px 16px; font-size: 1rem; border-bottom: 1px solid var(--border); } .nav-drop-menu a:last-child { border-bottom: none; } }
 
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }

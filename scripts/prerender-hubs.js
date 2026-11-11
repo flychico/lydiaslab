@@ -27,8 +27,8 @@ const http = require("http");
 const ROOT = path.join(__dirname, "..");
 const PAGES = [
   "/",
-  "/nfl/scoreboard/", "/nfl/previews/", "/nfl/results/", "/nfl/recaps/", "/nfl/stats/", "/nfl/tools/injury-tracker/",
-  "/nba/scoreboard/", "/nba/previews/", "/nba/results/", "/nba/recaps/", "/nba/stats/", "/nba/tools/injury-tracker/",
+  "/nfl/scoreboard/", "/nfl/previews/", "/nfl/results/", "/nfl/stats/", "/nfl/tools/injury-tracker/",
+  "/nba/scoreboard/", "/nba/previews/", "/nba/results/", "/nba/stats/", "/nba/tools/injury-tracker/",
 ];
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".json": "application/json",
   ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".ico": "image/x-icon", ".csv": "text/csv", ".xml": "application/xml" };
