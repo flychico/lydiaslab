@@ -232,10 +232,12 @@ async function loadScoreboard(opts={}){
   gamesEl.innerHTML=""; kpisEl.innerHTML="";
   try{
     if(!allRows||opts.force){
+      // Keep the day only on a refresh. On first load the selected option is
+      // whatever the prerendered snapshot saved, so start from today instead.
+      const keep=allRows?datePick.value:null;
       const r=await fetch(FEED, opts.force?{cache:"reload"}:{});
       if(!r.ok) throw new Error("Feed HTTP "+r.status);
       allRows=parseCSV(await r.text());
-      const keep=datePick.value;
       buildGameDays();
       datePick.value = GAME_DAYS.some(d=>d.date===keep) ? keep : defaultGameDay();
     }
