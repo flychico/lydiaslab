@@ -146,7 +146,7 @@ function nba() {
     description: `Every NBA game Leo has called this season, night by night: win chance and Leo's own spread beside the DraftKings line, each graded after the final. ${games.length} games so far.`,
     h1: "Every NBA game Leo has called",
     intro: "Each game page shows Leo&rsquo;s win chance and spread, the injury report Leo used, and how the read held up once the game was final.",
-    links: [["/nba/scoreboard/", "Tonight\u2019s NBA card"], ["/nba/predictions/", "NBA predictions by night"], ["/nba/results/", "Leo\u2019s NBA record"], ["/nba/stats/", "NBA team stats"], ["/nfl/games/", "Every NFL game"]],
+    links: [["/nba/scoreboard/", "Tonight\u2019s NBA card"], ["/nba/teams/", "NBA team predictions"], ["/nba/predictions/", "NBA predictions by night"], ["/nba/results/", "Leo\u2019s NBA record"], ["/nba/stats/", "NBA team stats"], ["/nfl/games/", "Every NFL game"]],
     body,
   });
   fs.mkdirSync(path.join(dir, "games"), { recursive: true });
