@@ -9,12 +9,12 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Leo">
 <meta property="og:title" content="Learning Dashboard | Leo">
-<meta property="og:description" content="Analyze how Leo">
+<meta property="og:description" content="Analyze how Leo&#39;s model and reads held up across every graded game.">
 <meta property="og:url" content="https://ndhorizon.com/learning/">
 <meta property="og:image" content="https://ndhorizon.com/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Learning Dashboard | Leo">
-<meta name="twitter:description" content="Analyze how Leo">
+<meta name="twitter:description" content="Analyze how Leo&#39;s model and reads held up across every graded game.">
 <meta name="twitter:image" content="https://ndhorizon.com/img/og-card.png">
 
 <meta name="description" content="Analyze how Leo's model and reads held up across every graded game.">
@@ -87,7 +87,7 @@ tr.filter-row select.col-filter,tr.filter-row input.col-filter{width:100%;min-wi
 <main>
   <p class="eyebrow">Leo's Lab</p>
   <h1>Learning Dashboard</h1>
-  <p class="subtitle">Slice every graded game by the dimensions that matter — where the model is right and wrong, whether the edge is real, and which reads actually predict. Measurement only; it never changes a pick.</p>
+  <p class="subtitle">Slice every graded game by the dimensions that matter: where the model is right and wrong, whether the edge is real, and which reads actually predict. Measurement only; it never changes a pick.</p>
   <div id="status" class="loading">Loading the learning ledgers…</div>
   <div id="dash" style="display:none">
     <div class="controls">
@@ -110,7 +110,7 @@ tr.filter-row select.col-filter,tr.filter-row input.col-filter{width:100%;min-wi
     </div>
 
     <section class="tab on" id="tab-summary">
-      <p class="sec-note">The daily learning summary (<code>data/learning-summary.json</code>) — headline, findings, official-pick gates, and the multi-day record, straight from the same file the pipeline writes every night. This did not appear anywhere on the site before 2026-08-08.</p>
+      <p class="sec-note">The daily learning summary (<code>data/learning-summary.json</code>): headline, findings, official-pick gates, and the multi-day record, straight from the same file the pipeline writes every night. This did not appear anywhere on the site before 2026-08-08.</p>
       <div id="summaryBody" class="loading">Loading learning summary…</div>
     </section>
 
@@ -129,7 +129,7 @@ tr.filter-row select.col-filter,tr.filter-row input.col-filter{width:100%;min-wi
     </section>
 
     <section class="tab" id="tab-confidence">
-      <p class="sec-note">From <code>data/calibration/confidence_report.json</code>, written nightly by <code>scripts/grade-confidence.js</code> (the "Grade confidence" workflow step) — does the Lab Rating actually predict the outcome, and which of its components are earning their points?</p>
+      <p class="sec-note">From <code>data/calibration/confidence_report.json</code>, written nightly by <code>scripts/grade-confidence.js</code> (the "Grade confidence" workflow step). Does the Lab Rating actually predict the outcome, and which of its components are earning their points?</p>
       <div id="calibration"></div>
       <h2 class="sec">Which Lab Rating components earn their points</h2>
       <div id="components"></div>
@@ -143,7 +143,7 @@ tr.filter-row select.col-filter,tr.filter-row input.col-filter{width:100%;min-wi
     <section class="tab" id="tab-kprops"><div id="kpropsWrap"></div></section>
 
     <section class="tab" id="tab-shadow">
-      <p class="sec-note">Leo is the official model — calibrated, drives real picks. <code>v3.1-bullpen</code> ("shadow") runs beside it on every graded game, never drives a pick, and is never shown to members. This compares them game by game and night by night: who called it, whose probability was closer to the truth (Brier score — lower is better), and where they disagreed.</p>
+      <p class="sec-note">Leo is the official model: calibrated, and it drives real picks. <code>v3.1-bullpen</code> ("shadow") runs beside it on every graded game, never drives a pick, and is never shown to members. This compares them game by game and night by night: who called it, whose probability was closer to the truth (Brier score, lower is better), and where they disagreed.</p>
       <div class="kpis" id="shadowKpis"></div>
       <h2 class="sec">Night by night</h2>
       <p class="sec-note">Click a date to see every game that night: both models' probabilities, which side each favored, and the actual result. A red Brier delta means shadow was worse that night; green means shadow was better.</p>
@@ -152,7 +152,7 @@ tr.filter-row select.col-filter,tr.filter-row input.col-filter{width:100%;min-wi
     </section>
 
     <section class="tab" id="tab-detail">
-      <p class="sec-note">Pick any past graded date and game to see the real inputs the model used — starter quality, bullpen state, offense form, market price — and the shadow model's read alongside Leo's. Then try swapping a pitcher, a bullpen, or an offense in the what-if panel below and see both models' probabilities recompute live.</p>
+      <p class="sec-note">Pick any past graded date and game to see the real inputs the model used (starter quality, bullpen state, offense form, market price) and the shadow model's read alongside Leo's. Then try swapping a pitcher, a bullpen, or an offense in the what-if panel below and see both models' probabilities recompute live.</p>
       <div class="controls">
         <label>Date <input type="date" id="detDate"></label>
         <label>Game <select id="detGame"><option value="">Pick a date…</option></select></label>
