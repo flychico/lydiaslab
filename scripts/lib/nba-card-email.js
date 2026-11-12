@@ -66,7 +66,7 @@ function card(g, date, why) {
     </tr>`)}
     ${tbl(`${teamRow(g, "away")}${teamRow(g, "home")}`, "margin-top:6px")}
     ${tbl(`<tr><td width="${pa}%" style="height:8px;line-height:8px;font-size:0;background:${T.gold};border-radius:999px 0 0 999px">&nbsp;</td><td width="${100 - pa}%" style="height:8px;line-height:8px;font-size:0;background:${T.navy};border-radius:0 999px 999px 0">&nbsp;</td></tr>`, "margin:10px 0 12px")}
-    ${tbl(`<tr>${box("Leo spread", LS == null ? "&mdash;" : `${esc(g.home)} ${sgn(LS)}`, "expected margin", true)}${box("DraftKings", mk.home_spread == null ? "&mdash;" : `${esc(g.home)} ${sgn(mk.home_spread)}`, mk.p_home != null ? `market ${esc(g.home)} ${pct(mk.p_home)}` : "&nbsp;")}${box("Call", esc(PKS.callBox(g).value), esc(PKS.callBox(g).sub))}</tr>`)}
+    ${tbl(`<tr>${box("Leo spread", LS == null ? "&mdash;" : esc(NW.favLine(g, LS)), "Leo's favorite, by", true)}${box("DraftKings", mk.home_spread == null ? "&mdash;" : esc(NW.favLine(g, mk.home_spread)), mk.p_home != null ? `market ${esc(g.home)} ${pct(mk.p_home)}` : "&nbsp;")}${box("Call", esc(PKS.callBox(g).value), esc(PKS.callBox(g).sub))}</tr>`)}
     ${PT ? `<div style="font-family:${SANS};font-size:14px;line-height:1.5;color:${T.text};${PT.ok ? `background:${T.leanBg};font-weight:700;` : `color:${T.dim};`}border-radius:10px;padding:${PT.ok ? "9px 12px" : "0"};margin-top:12px">${esc(PT.line)}</div>` : ""}
     ${leanLine}
     ${W && W.summary ? `<div style="font-family:${SANS};font-size:14px;line-height:1.55;color:${T.dim};border-top:1px solid ${T.border};margin-top:12px;padding-top:11px">${esc(W.summary)}</div>` : ""}

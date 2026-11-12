@@ -150,7 +150,19 @@ function why(g, opts = {}) {
   return out;
 }
 
-const api = { why, by, leoLine, gapShown, compare, projScore };
+/**
+ * A spread written from the favourite's side, so it never reads as a call on
+ * the underdog: home spread +4.5 -> "ORL -4.5" (the away team gives 4.5), not
+ * "UTAH +4.5" (Lynold, 2026-11-11: the Jazz card read like a lean on the Jazz).
+ * Pass a label function to show nicknames. 0 -> "Pick'em". Display only.
+ */
+function favLine(g, homeSpread, label) {
+  if (homeSpread == null || !Number.isFinite(+homeSpread)) return null;
+  const v = +homeSpread, name = label || (c => c);
+  return v === 0 ? "Pick'em" : `${name(v < 0 ? g.home : g.away)} -${Math.abs(v)}`;
+}
+
+const api = { why, by, leoLine, gapShown, compare, projScore, favLine };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else if (typeof window !== "undefined") window.NBA_WHY = api;
 })();

@@ -223,8 +223,8 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
     <div class="tm"><img src="${logo(H)}" alt="" onerror="this.style.visibility='hidden'"><b>${esc(g.home_name)}</b><span class="p">${pct(L.p_home)}</span><span class="dim">Leo win chance</span></div>
   </div>
   <div class="boxes">
-    <div class="box"><div class="l">Leo spread</div><div class="v">${esc(H)} ${LS === 0 ? "PK" : sgn(LS)}</div><div class="s">Expected margin</div></div>
-    <div class="box"><div class="l">DraftKings</div><div class="v">${mk.home_spread == null ? "&mdash;" : esc(H) + " " + sgn(mk.home_spread)}</div><div class="s">Moneyline ${esc(A)} ${am(mk.away_ml)}, ${esc(H)} ${am(mk.home_ml)}</div></div>
+    <div class="box"><div class="l">Leo spread</div><div class="v">${esc(require("./lib/nba-why").favLine(g, LS))}</div><div class="s">Leo&rsquo;s favorite, by</div></div>
+    <div class="box"><div class="l">DraftKings</div><div class="v">${mk.home_spread == null ? "&mdash;" : esc(require("./lib/nba-why").favLine(g, mk.home_spread))}</div><div class="s">Moneyline ${esc(A)} ${am(mk.away_ml)}, ${esc(H)} ${am(mk.home_ml)}</div></div>
     <div class="box"><div class="l">Call</div><div class="v">${esc(PKS.callBox(g).value)}</div><div class="s">${esc(PKS.callBox(g).sub)}</div></div>
   </div>
   ${gapTxt && !L.lean ? `<p class="gapread">${gapTxt}</p>` : ""}
