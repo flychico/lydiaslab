@@ -8,7 +8,10 @@
  * stored at Leo's read of record (the last capture before tip): 1 unit, a win
  * pays 100/|price| for a favourite or price/100 for an underdog, a loss -1.
  *
- * Leans (Leo 4+ points off the spread) are graded in units too, at the
+ * Leans (Leo 4+ points off the spread) ENDED after the 2026-11-10 games
+ * (LEANS_UNTIL; Lynold, 2026-11-11: 5-7 and -2.44 units, and past seasons
+ * show a gap from the spread covers about 51 to 52%). Leans already on the
+ * record stay there as history. They were graded in units too, at the
  * DraftKings spread price on Leo's side at the read of record; -110 is
  * assumed (price_source "assumed") where no spread price was stored.
  *
@@ -23,7 +26,9 @@
 (function () {
 'use strict';
 
-const PICK_P = 0.60, PRICE_LIMIT = -230, TRACK_FROM = "2026-11-02";
+const PICK_P = 0.60, PRICE_LIMIT = -230, TRACK_FROM = "2026-11-02", LEANS_UNTIL = "2026-11-10";
+/** Leans were recorded for games through LEANS_UNTIL and not after. */
+const leansOn = date => !!date && String(date).slice(0, 10) <= LEANS_UNTIL;
 const num = v => v === "" || v == null || !Number.isFinite(+v) || +v === 0 ? null : +v;
 
 /** Units for one 1-unit bet: result "win" | "loss" | "push", American price. */
@@ -75,12 +80,9 @@ function pickText(g) {
  * { value, sub, on } - what Leo is tracking on this game, or why nothing.
  */
 function callBox(g) {
-  const L = g.leo || {}, pk = (L.pick !== undefined) ? L.pick : pickForGame(g), ln = L.lean;
+  const L = g.leo || {}, pk = (L.pick !== undefined) ? L.pick : pickForGame(g);
   const sg = v => (v > 0 ? "+" : "") + v;
-  const leanTxt = ln ? `${ln.team} ${sg(ln.line)}` : "";
-  if (pk && pk.ok && ln) return { on: true, value: `${pk.team} ${fmtPrice(pk.price)}`, sub: `Pick, plus lean ${leanTxt}` };
   if (pk && pk.ok) return { on: true, value: `${pk.team} ${fmtPrice(pk.price)}`, sub: "Leo Pick, to win" };
-  if (ln) return { on: true, value: leanTxt, sub: "Lean, on the spread" };
   let why = "Under 60%, close to DraftKings";
   if (pk && (pk.under || pk.p < PICK_P)) why = `${pk.team} ${(pk.p * 100).toFixed(1)}%, under 60%`;
   else if (pk && pk.price == null) why = "No moneyline yet";
@@ -134,7 +136,7 @@ function priceMove(g, nowMl) {
     text: `Price: ${fmtPrice(pk.price)} at Leo's read, ${fmtPrice(to)} now${toward === true ? " (moved toward Leo)" : toward === false ? " (moved against Leo)" : " (no real move)"}` };
 }
 
-const api = { PICK_P, PRICE_LIMIT, TRACK_FROM, payout, units, pick, pickForGame, fmtPrice, pickText, callBox, settle, espnMoneyline, priceMove, imp };
+const api = { PICK_P, PRICE_LIMIT, TRACK_FROM, LEANS_UNTIL, leansOn, payout, units, pick, pickForGame, fmtPrice, pickText, callBox, settle, espnMoneyline, priceMove, imp };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else if (typeof window !== "undefined") window.NBA_PICKS = api;
 })();

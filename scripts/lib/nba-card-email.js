@@ -5,7 +5,8 @@
  * wordmark, the headline panel, summary tiles, then one card per game with
  * the two team-colour stripe, logos, Leo's win chance with the bar, the three
  * boxes (Leo spread, DraftKings, gap), the lean line and the why line. Uses
- * the shared theme (scripts/lib/email-theme.js). Leans first; a lean line
+ * the shared theme (scripts/lib/email-theme.js). Leans ended after 2026-11-10
+ * (nba-picks LEANS_UNTIL), so the card no longer lists them. Picks first; a lean line
  * says in plain words whether Leo and DraftKings have the same winner, by how
  * much each, and Leo's side of the spread (scripts/lib/nba-why.js compare(); was
  * "Leo has BOS by 3.5; DraftKings has
@@ -86,7 +87,7 @@ function build(doc, { why, record } = {}) {
   const picks = games.filter(isPick), pickList = picks.map(g => PKS.pickText(g).badge.replace(/^Pick /, "") );
   const first = games.map(g => g.tip_utc).sort()[0];
   const big = games.length ? Math.max(...games.map(gap)) : null;
-  const subject = `Leo NBA card, ${nice}: ${games.length} game${games.length === 1 ? "" : "s"}, ${picks.length} pick${picks.length === 1 ? "" : "s"}, ${leans.length ? `${leans.length} lean${leans.length === 1 ? "" : "s"} (${leanList.join(", ")})` : "no leans"}`;
+  const subject = `Leo NBA card, ${nice}: ${games.length} game${games.length === 1 ? "" : "s"}, ${picks.length} pick${picks.length === 1 ? "" : "s"}${pickList.length ? ` (${pickList.join(", ")})` : ""}`;
   const pickRows = picks.length
     ? tbl(picks.map(g => `<tr><td style="padding:6px 0;font-family:${SANS};font-size:16px;font-weight:800;color:${T.text};white-space:nowrap">${esc(PKS.pickText(g).badge.replace(/^Pick /, ""))}</td>
         <td align="right" style="padding:6px 0;font-family:${SANS};font-size:13px;color:${T.dim}">${esc(g.away)} at ${esc(g.home)} &middot; ${esc(tip(g.tip_utc))}<br>Leo ${Math.round(g.leo.pick ? g.leo.pick.p * 100 : Math.max(g.leo.p_home, g.leo.p_away) * 100)}% to win</td></tr>`).join(`<tr><td colspan="2" style="border-top:1px solid ${T.border};font-size:0;line-height:0;height:1px">&nbsp;</td></tr>`))
@@ -100,33 +101,31 @@ function build(doc, { why, record } = {}) {
     E.hero({
       eyebrow: `Leo NBA &middot; ${esc(nice)}`,
       title: `Tonight&rsquo;s card: ${games.length} game${games.length === 1 ? "" : "s"}`,
-      subtitle: "Leo&rsquo;s win chance and spread for every game, with DraftKings beside it. A Leo Pick is a team Leo gives 60% or more at a price better than -230; a lean is Leo 4 or more points off the spread. Both are a public test, graded every morning in units, not bets.",
+      subtitle: "Leo&rsquo;s win chance and spread for every game, with DraftKings beside it. A Leo Pick is a team Leo gives 60% or more at a price better than -230. Picks are a public test, graded every morning in units, not bets.",
       chips: ["&#127936; Full slate", "&#129657; Injury report built in", "&#128274; Frozen before tip"]
     }),
     E.tiles([
       { label: "Games", value: games.length, sub: first ? `first tip ${esc(tip(first))}` : esc(nice.split(",")[0]) },
       { label: "Leo Picks tonight", value: picks.length, sub: "60%+, better than -230" },
-      { label: "Leans tonight", value: leans.length, sub: "on the spread" },
       // Running record from results.json season.picks (DEC-20261102-33)
       { label: "Leo Picks so far", value: record && record.n ? `${record.won}-${record.lost}` : "0-0",
         sub: record && record.n ? `${record.units > 0 ? "+" : ""}${(+record.units).toFixed(2)} units since ${new Date(record.from + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}` : "first picks graded tomorrow" }
     ]),
     E.panel("Tonight&rsquo;s Leo Picks (moneyline)", pickRows),
-    E.panel("Tonight&rsquo;s leans (spread)", leanRows),
     games.map(g => card(g, date, why)).join(""),
     E.footer({
       links: [[`${SITE}/nba/scoreboard/`, "Live scores and every card"], [`${SITE}/nba/results/`, "Leo&rsquo;s record"]],
-      note: "Every number is frozen before tip and graded on the site, wins and losses alike. Under 50 graded leans is an early read."
+      note: "Every number is frozen before tip and graded on the site, wins and losses alike. Under 50 graded picks is an early read."
     })
   ].join("\n");
-  const html = E.shell({ title: subject, preheader: [picks.length ? `Leo Picks: ${pickList.join(", ")}.` : "", leans.length ? `Leans: ${leanList.join(", ")}.` : ""].filter(Boolean).join(" ") || "No picks or leans tonight. Leo's read on every game.", body });
+  const html = E.shell({ title: subject, preheader: [picks.length ? `Leo Picks: ${pickList.join(", ")}.` : "", leans.length ? `Leans: ${leanList.join(", ")}.` : ""].filter(Boolean).join(" ") || "No Leo Picks tonight. Leo's read on every game.", body });
   const text = [`Leo NBA card, ${nice}`, "",
     picks.length ? `Leo Picks (moneyline): ${pickList.join(", ")}` : "No Leo Picks tonight.",
     ...(record && record.n ? [`Leo Picks so far: ${record.won}-${record.lost}, ${record.units > 0 ? "+" : ""}${(+record.units).toFixed(2)} units since ${record.from}`] : []),
-    leans.length ? `Leans (spread): ${leanList.join(", ")}` : "No leans tonight.", "",
+    "",
     ...games.map(g => { const L = g.leo, mk = g.market || {}, W = why ? why.why(g) : null;
       return `${tip(g.tip_utc)}  ${g.away} at ${g.home}  ${[PKS.pickText(g) && PKS.pickText(g).ok ? PKS.pickText(g).badge.toUpperCase() : "", L.lean ? `LEAN ${L.lean.team} ${sgn(L.lean.line)}` : ""].filter(Boolean).join("  ") || "No call"}\n  Leo win chance: ${g.away} ${Math.round(L.p_away * 100)}%, ${g.home} ${Math.round(L.p_home * 100)}%\n  ${NW.compare(g)}\n${W && W.summary ? "  " + W.summary + "\n" : ""}  ${pageUrl(g, date)}\n`; }),
-    "", `Every card: ${SITE}/nba/scoreboard/`, "Picks and leans are a public test, not bets. Analysis only, not betting advice. 21+. 1-800-MY-RESET.",
+    "", `Every card: ${SITE}/nba/scoreboard/`, "Leo Picks are a public test, not bets. Analysis only, not betting advice. 21+. 1-800-MY-RESET.",
     ...((process.env.EMAIL_POSTAL_ADDRESS || "").trim() ? [(process.env.EMAIL_POSTAL_ADDRESS || "").trim()] : []), 'Reply "unsubscribe" to stop these.'].join("\n").replace(/&mdash;/g, "-").replace(/&rsquo;/g, "'");
   return { subject, html, text, leans: leanList };
 }

@@ -8,7 +8,6 @@
  *
  * A game is a MISS when any of these is true:
  *   pick_lost     a Leo Pick lost (picks count from nba-picks TRACK_FROM)
- *   lean_lost     a lean lost
  *   wrong_winner  the team Leo gave 50%+ lost
  *   margin        Leo's margin missed the final margin by 10+ points
  *
@@ -25,7 +24,7 @@
  *                   and the close was nearer the result than the first line.
  *   3 overtime      the game went to overtime (level after regulation) and
  *                   Leo's side was fine at that point: a wrong winner or lost
- *                   pick, a lost lean on the team getting points, or a margin
+ *                   pick, or a margin
  *                   miss when Leo's own margin was under 10.
  *   4 blowout       decided by 20+ and the line missed about as badly
  *                   (line_miss >= 0.8 x leo_miss).
@@ -111,7 +110,6 @@ function classify(row, ctx) {
   const ot = wentToOvertime(ctx.box);
   const kinds = [];
   if (row.pick_result === "loss" && row.date >= (ctx.trackFrom || "")) kinds.push("pick_lost");
-  if (row.lean_result === "loss") kinds.push("lean_lost");
   if (+row.leo_winner_correct === 0) kinds.push("wrong_winner");
   if (leoMiss >= MARGIN_MISS) kinds.push("margin");
 
@@ -146,9 +144,7 @@ function classify(row, ctx) {
   }
   // 3 overtime
   if (ot) {
-    const leanOnDog = kinds.includes("lean_lost") && num(row.lean_line) > 0;
-    const fine = (kinds.includes("wrong_winner") || kinds.includes("pick_lost") || leanOnDog || (kinds.length === 1 && kinds[0] === "margin" && Math.abs(m) < MARGIN_MISS))
-      && !(kinds.includes("lean_lost") && !leanOnDog);
+    const fine = kinds.includes("wrong_winner") || kinds.includes("pick_lost") || (kinds.length === 1 && kinds[0] === "margin" && Math.abs(m) < MARGIN_MISS);
     if (fine) return set("overtime", "The game went to overtime, so it was level after regulation and settled in the extra period.", null);
   }
   // 4 blowout, 5 variance, 6 model error
