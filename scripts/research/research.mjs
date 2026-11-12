@@ -40,7 +40,7 @@ const ITER = 600000;
 const GROUPS = [
   ['Desk', ['Today', 'Scorecard', 'Growth', 'Fib Library']],
   ['Reports', ['Pre-Market', 'Daily Reports', 'Week Ahead', 'Weekly Reports']],
-  ['Research', ['Watchlist & Levels', 'Technical Analysis', 'Options', 'Sectors']],
+  ['Research', ['Earnings', 'Watchlist & Levels', 'Technical Analysis', 'Options', 'Sectors']],
   ['Federal Reserve', ['Fed & Macro', 'FOMC Minutes', 'Beige Book']],
   ['Library', ['Banks & Funds', 'Masters', 'Plan & Notes']],
   ['Archive', ['Archive']],
@@ -58,6 +58,7 @@ function sectionFor(folder, name) {
   if (/FOMC Minutes$/.test(f)) return 'FOMC Minutes';
   if (/Beige Book$/.test(f)) return 'Beige Book';
   if (/^(Federal Reserve|Fed & Macro)/.test(f)) return 'Fed & Macro';
+  if (/^Earnings/.test(f)) return 'Earnings';
   if (/^Watchlist/.test(f)) return 'Watchlist & Levels';
   if (/^Technical Analysis/.test(f)) return 'Technical Analysis';
   if (/^Options/.test(f)) return 'Options';

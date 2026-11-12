@@ -283,7 +283,7 @@ mark { background: rgba(201,168,76,.32); color: inherit; padding: 0 1px; border-
   // Reference notes and screens are snapshots: flag them once they are a week old.
   function staleNote(meta) {
     const reportSecs = ['Pre-Market', 'Daily Reports', 'Week Ahead', 'Weekly Reports'];
-    if (!meta.date || reportSecs.includes(meta.section)) return '';
+    if (!meta.date || reportSecs.includes(meta.section) || meta.section === 'Earnings') return '';
     const days = Math.floor((Date.now() - new Date(meta.date + 'T12:00:00').getTime()) / 864e5);
     if (days < 7) return '';
     const latest = IDX.items.filter((x) => reportSecs.includes(x.section) && x.date).sort((a, b) => b.date.localeCompare(a.date))[0];
@@ -341,11 +341,14 @@ mark { background: rgba(201,168,76,.32); color: inherit; padding: 0 1px; border-
         plays += `${sec && /^H/.test(sec.tagName) ? `<h4>${escH(sec.textContent)}</h4>` : ''}<div class="tw"><table><thead>${tbl.querySelector('thead').innerHTML}</thead><tbody>${rows.map((r) => r.outerHTML).join('')}</tbody></table></div>`;
       }
     }
+    const earn = all.filter(([x]) => x.section === 'Earnings' && new RegExp('^' + sym + '\\b').test(x.title)).sort((a, b) => (b[0].date || '').localeCompare(a[0].date || ''));
+    const earnHtml = earn.length ? `<h2 class="sec tk-sec">Earnings</h2><div class="list">${earn.map(([x]) => `<a class="row" href="#/doc/${x.id}"><span class="d">${fmt(x.date)}</span><span class="tt"><span class="tag">Earnings</span>${escH(x.title)}</span><span class="sm">${escH(x.summary || '')}</span></a>`).join('')}</div>` : '';
     const dated = all.filter(([x]) => x.date).sort((a, b) => b[0].date.localeCompare(a[0].date));
     for (const [x, , d] of dated) { const m = d.html.match(new RegExp('<figure class="chart"><svg[^>]*data-ticker="' + sym + '"[\\s\\S]*?</svg></figure>')); if (m) { chart = `${m[0]}<p class="lead" style="font-size:.85rem">From <a href="#/doc/${x.id}">${escH(x.title)}</a></p>`; break; } }
     const hits = all.filter(([x, text]) => re.test(x.title) || re.test(text)).sort((a, b) => (b[0].date || '').localeCompare(a[0].date || ''));
     const snipOf = (text) => { const m = text.match(re); if (!m) return ''; const p = m.index; return escH(text.slice(Math.max(0, p - 70), p + 150)).replace(new RegExp('\\b(' + sym + ')\\b', 'g'), '<mark>$1</mark>'); };
     $('#view').innerHTML = `<p class="crumb"><a href="#/">Market Desk</a> / Tickers</p><h1 class="page-h1">${escH(sym)}</h1><p class="lead">${hits.length} note${hits.length === 1 ? '' : 's'} mention ${escH(sym)}.</p>
+      ${earnHtml}
       ${chart ? `<h2 class="sec tk-sec">Latest chart</h2>${chart}` : ''}
       ${levels ? `<h2 class="sec tk-sec">Your levels</h2><article class="doc">${levels}</article>` : ''}
       ${plays ? `<h2 class="sec tk-sec">Plays on ${escH(sym)}</h2><article class="doc">${plays}</article>` : ''}
