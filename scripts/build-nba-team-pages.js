@@ -226,7 +226,7 @@ function teamPage(abbr, division, games, sched) {
     <li><b>${esc(N)} result</b> is whether the ${esc(N)} won or lost.</li>
     <li><b>Leo&rsquo;s read</b> is Right when the team Leo favored won, and Wrong when it lost.</li>
     <li><b>Leo&rsquo;s spread</b> and <b>DraftKings</b> are the ${esc(N)}&rsquo; side of the spread: a minus number means favored by that many points.</li>
-    <li><b>Call</b> is Leo&rsquo;s official call on the game. A Leo Pick is a team to win at the moneyline price shown; a lean is a side of the spread. One unit each, a tracked test, not a bet.</li>
+    <li><b>Call</b> is Leo&rsquo;s official call on the game. A Leo Pick is a team to win at the moneyline price shown; a lean was a side of the spread, recorded through November 10 and then ended. One unit each, a tracked test, not a bet.</li>
   </ul>
   <div class="table-wrap"><table class="team-table"><thead><tr><th>Date</th><th>Opponent</th><th>Leo&rsquo;s chance (${esc(N)})</th><th>Leo favored</th><th>Final score</th><th>${esc(N)} result</th><th>Leo&rsquo;s read</th><th>Leo&rsquo;s spread</th><th>DraftKings</th><th>Call</th></tr></thead><tbody>${rows}</tbody></table></div>
   <p class="dim small">Opponents link to Leo&rsquo;s full game analysis: win chance, spread, injury report and box score.</p>

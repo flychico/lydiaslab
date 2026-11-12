@@ -53,7 +53,8 @@ function intro(date, games, res) {
       ? `Leo Picks, teams Leo gives 60% or more at a price better than -230: ${picks.map(g => PKS.pickText(g).badge.replace(/^Pick /, "")).join(", ")}. Tracked in units, not bets.`
       : "No team tonight is 60% or more with Leo at a price better than -230, so there is no Leo Pick.");
     const leans = read.filter(g => g.leo.lean);
-    out.push(leans.length
+    // Leans ended after PKS.LEANS_UNTIL; later nights say nothing about them.
+    if (read.length && PKS.leansOn(read[0].date)) out.push(leans.length
       ? `Leo is 4 or more points off the DraftKings spread in ${leans.length} game${leans.length === 1 ? "" : "s"}, so ${leans.length === 1 ? "that is a lean" : "those are leans"}: ${leans.map(g => `${g.leo.lean.team} ${g.leo.lean.line > 0 ? "+" : ""}${g.leo.lean.line}`).join(", ")}. Leans are a tracked test, not bets.`
       : "Leo is within 4 points of the DraftKings spread in every game, so there are no leans.");
   }
@@ -161,7 +162,7 @@ function buildIndex(all) {
   const url = "/nba/predictions/";
   const list = [...all].reverse().map(d => `<li><a href="/nba/predictions/${d}/">NBA predictions for ${esc(longDay(d))}</a></li>`).join("");
   const title = "NBA Predictions by Night, 2026-27 Season | Leo";
-  const desc = "Every night of Leo's NBA predictions this season: win chance and spread for every game beside the DraftKings line, with the leans and the graded results.";
+  const desc = "Every night of Leo's NBA predictions this season: win chance and spread for every game beside the DraftKings line, with the Leo Picks and the graded results.";
   const body = `  <section class="card"><p style="margin:0">Leo's NBA read for every night of the season, newest first. Each night lists every game with Leo's win chance, Leo's spread beside DraftKings and how it turned out.</p>
   <p class="small" style="margin:10px 0 0"><a href="/nba/scoreboard/">Tonight's NBA card</a> &middot; <a href="/nba/games/">Every NBA game</a> &middot; <a href="/nba/results/">Leo's NBA record</a></p></section>
   <ul class="dn-list">${list}</ul>`;

@@ -132,11 +132,11 @@ function make(nick) {
     return tiles([
         ["All calls", S.calls.n ? rec(S.calls) : "0-0", S.calls.n ? unitsTxt(S.calls.units) + ". " + (S.calls.n < 50 ? "Under 50 graded calls is an early read." : S.calls.n + " graded calls.") : "none graded yet"],
         ["Leo Picks", S.picks.n ? rec(S.picks) : "0-0", S.picks.n ? unitsTxt(S.picks.units) + " on the moneyline, since " + esc(dayShort(S.picks.from).replace(/^\w+, /, "")) : "to win, 60% or more"],
-        ["Leans", S.leans.n ? rec(S.leans) : "0-0", S.leans.n ? unitsTxt(S.leans.units) + " on the spread" : "4 or more points off the spread"],
+        ["Leans (ended Nov 10)", S.leans.n ? rec(S.leans) : "0-0", S.leans.n ? unitsTxt(S.leans.units) + " on the spread, final" : "ended Nov 10"],
         ["Winner right", S.games ? S.right + " of " + S.games : "0", "DraftKings favorite " + S.mkt_right + " of " + S.mkt_games],
         ["Average miss", S.miss_leo == null ? "" : S.miss_leo.toFixed(1), "points on the margin. DraftKings spread " + (S.miss_line == null ? "" : S.miss_line.toFixed(1))]
       ]) +
-      '<p class="sec-p">A <b>Leo Pick</b> is a team Leo gives 60% or more to win when the DraftKings moneyline on it is better than -230. A <b>lean</b> is Leo 4 or more points off the DraftKings spread. One unit each, at the price saved before tip. A public test, not bets.</p>' +
+      '<p class="sec-p">A <b>Leo Pick</b> is a team Leo gives 60% or more to win when the DraftKings moneyline on it is better than -230. One unit each, at the price saved before tip. A public test, not bets. A <b>lean</b> was Leo 4 or more points off the DraftKings spread. Leans ended after the November 10 games: they went 5-7, and past seasons show that gap covers about 51 to 52% of the time, which is not an edge. The leans already graded stay on the record.</p>' +
       learning(doc) +
       '<h2 class="sec-h">Day by day</h2>' +
       '<p class="sec-p">Newest first. Each day: the upsets, what Leo got right, what Leo missed and why, then every other game. Tap a day to open or close it.</p>' +

@@ -141,7 +141,7 @@ function summarize() {
   const last7 = dates.slice(-7);
   const doc = {
     updated_at: new Date().toISOString(), model_version: M.MODEL_VERSION,
-    note: "Leo Picks (60%+ and priced better than -230) and leans (4+ pts off the spread) are a tracked test, not bets. Units: 1 unit each at the DraftKings price stored before tip (leans at -110 where no spread price was stored). Picks are counted from " + PK.TRACK_FROM + "; earlier games are shown as a replay. Under 50 graded items is an early read.",
+    note: "Leo Picks (60%+ and priced better than -230) are a tracked test, not bets. Leans (4+ pts off the spread) ended after " + PK.LEANS_UNTIL + " and stay on the record. Units: 1 unit each at the DraftKings price stored before tip (leans at -110 where no spread price was stored). Picks are counted from " + PK.TRACK_FROM + "; earlier games are shown as a replay. Under 50 graded items is an early read.",
     season: block(rows), last_7_days: block(rows.filter(r => last7.includes(r.date))),
     by_date: dates.map(d => ({ date: d, ...block(rows.filter(r => r.date === d)) })).reverse(),
     games: rows.slice().reverse().map(r => ({

@@ -90,7 +90,7 @@ function whyBlock(g) {
   <div class="card why">
   ${w.drivers.length ? `<ol>${w.drivers.map(d => `<li>${esc(d.text)}.</li>`).join("")}</ol>` : ""}
   ${w.swing.length ? `<p class="dim"><b>What could still move it.</b> ${w.swing.map(esc).join(" ")}</p>` : ""}
-  <p class="dim">Leo only knows team results, rest and the injury report. It does not know matchups, lineups announced after the read, or motivation, so a small gap from DraftKings is usually noise, which is why nothing under ${MODEL.lean_edge_pts || 4} points is a call.</p></div>`;
+  <p class="dim">Leo only knows team results, rest and the injury report. It does not know matchups, lineups announced after the read, or motivation, so a gap from DraftKings is usually noise. Past seasons show the side of the spread Leo likes covers about 51 to 52% of the time, so the gap is shown for information and is not a call.</p></div>`;
 }
 
 function partsTable(g) {
@@ -228,7 +228,7 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
     <div class="box"><div class="l">Call</div><div class="v">${esc(PKS.callBox(g).value)}</div><div class="s">${esc(PKS.callBox(g).sub)}</div></div>
   </div>
   ${gapTxt && !L.lean ? `<p class="gapread">${gapTxt}</p>` : ""}
-  ${WHY.projScore(g) ? `<p class="gapread">Projected score: ${esc(A)} ${WHY.projScore(g).away}, ${esc(H)} ${WHY.projScore(g).home} (total ${WHY.projScore(g).total}). Information only; Leo does not lean on totals.</p>` : ""}
+  ${WHY.projScore(g) ? `<p class="gapread">Projected score: ${esc(A)} ${WHY.projScore(g).away}, ${esc(H)} ${WHY.projScore(g).home} (total ${WHY.projScore(g).total}). Information only; Leo makes no call on totals.</p>` : ""}
   ${leanTxt}
   ${finalBlock(g, res)}
   ${boxBlock(g, res)}
@@ -255,7 +255,7 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
     </form>
   </div>
   <p class="dim" style="margin-top:18px">Leo&rsquo;s win chance and spread come from team results, rest and the injury report. The DraftKings line is shown for comparison and is never an input. Every read is graded on the <a href="/nba/results/">results page</a>. Analysis only, not betting advice. 21+.</p>
-${require("./lib/game-page-seo").relatedLinks({sport:"NBA",root:ROOT,slug:slug(g),away:g.away,home:g.home,teamSlug:a=>URLS.slugify(URLS.nick(a)),teamUrl:a=>"/nba/teams/"+URLS.slugify(URLS.nick(a))+"/",awayName:g.away_name,homeName:g.home_name,featured:[`/nba/predictions/${g.date}/`,`All NBA predictions for ${new Date(g.date+"T12:00:00Z").toLocaleDateString("en-US",{month:"long",day:"numeric",timeZone:"UTC"})}`,"Every game that night: Leo's win chance, spread, picks and leans"],hubs:[["/nba/scoreboard/","Tonight\u2019s NBA predictions"],["/nba/games/","Every NBA game"],["/nba/teams/","NBA team predictions"],["/nba/results/","Leo\u2019s NBA record"],["/nba/tools/injury-tracker/","NBA injury tracker"],["/nba/stats/","NBA team stats"],["/membership/#free","Free card by email"]]})}
+${require("./lib/game-page-seo").relatedLinks({sport:"NBA",root:ROOT,slug:slug(g),away:g.away,home:g.home,teamSlug:a=>URLS.slugify(URLS.nick(a)),teamUrl:a=>"/nba/teams/"+URLS.slugify(URLS.nick(a))+"/",awayName:g.away_name,homeName:g.home_name,featured:[`/nba/predictions/${g.date}/`,`All NBA predictions for ${new Date(g.date+"T12:00:00Z").toLocaleDateString("en-US",{month:"long",day:"numeric",timeZone:"UTC"})}`,"Every game that night: Leo's win chance, spread and picks"],hubs:[["/nba/scoreboard/","Tonight\u2019s NBA predictions"],["/nba/games/","Every NBA game"],["/nba/teams/","NBA team predictions"],["/nba/results/","Leo\u2019s NBA record"],["/nba/tools/injury-tracker/","NBA injury tracker"],["/nba/stats/","NBA team stats"],["/membership/#free","Free card by email"]]})}
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/nba/scoreboard/"); renderFooter();</script>
 </body>

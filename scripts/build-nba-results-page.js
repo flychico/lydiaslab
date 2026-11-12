@@ -29,7 +29,7 @@ const VIEW = require("./lib/nba-results-view");
 
 const ROOT = path.join(__dirname, ".."), DIR = path.join(ROOT, "data", "nba"), MDIR = path.join(DIR, "misses");
 const PAGE = path.join(ROOT, "nba", "results", "index.html");
-const VERSION = "20261110c";
+const VERSION = "20261111a";
 const nyDate = d => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(d);
 const num = v => v === "" || v == null || !Number.isFinite(+v) ? null : +v;
 const readJson = (f, d) => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch (e) { return d; } };
@@ -129,7 +129,7 @@ function buildDoc(rows) {
 
   return {
     updated_at: new Date().toISOString(), through: latest, model_version: M.MODEL_VERSION,
-    note: "Leo Picks and leans are a tracked test, not bets. One unit each at the DraftKings price saved before tip. Picks count from " + PK.TRACK_FROM + ". Under 50 graded calls is an early read.",
+    note: "Leo Picks are a tracked test, not bets. One unit each at the DraftKings price saved before tip. Picks count from " + PK.TRACK_FROM + ". Leans ended after " + PK.LEANS_UNTIL + " and stay on the record. Under 50 graded calls is an early read.",
     season: { games: rows.length, right: rows.filter(r => +r.leo_winner_correct === 1).length, mkt_games: lined.length, mkt_right: lined.filter(r => +r.mkt_winner_correct === 1).length,
       miss_leo: avg(sp.map(r => +r.leo_miss)), miss_line: avg(sp.map(r => +r.line_miss)),
       calls: days.length ? days[0].running : { w: 0, l: 0, p: 0, units: 0, n: 0 },
@@ -227,7 +227,7 @@ function writePage(doc) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Leo NBA Results: Every Game Graded, Day by Day | Leo</title>
-<meta name="description" content="Leo's NBA record day by day: every pick and lean graded, the upsets, what Leo got right, and what Leo missed and why.">
+<meta name="description" content="Leo's NBA record day by day: every call graded, the upsets, what Leo got right, and what Leo missed and why.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Leo">
 <meta property="og:title" content="Leo NBA Results: Every Game Graded, Day by Day | Leo">

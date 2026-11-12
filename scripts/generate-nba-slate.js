@@ -201,7 +201,8 @@ function readHistory() {
     const mk = g.market && g.market.home_spread != null ? g.market : null;
     const edge = mk ? margin - (-mk.home_spread) : null;
     let lean = null;
-    if (edge != null && Math.abs(edge) >= model.lean_edge_pts) {
+    // Leans ended after PK.LEANS_UNTIL (Lynold, 2026-11-11). The gap (edge_pts) is still saved for study.
+    if (PK.leansOn(DATE) && edge != null && Math.abs(edge) >= model.lean_edge_pts) {
       const side = edge > 0 ? "home" : "away";
       lean = { side, team: g[side], line: side === "home" ? mk.home_spread : -mk.home_spread, edge_pts: r1(Math.abs(edge)) };
     }
