@@ -321,29 +321,18 @@ function renderNav(active) {
 }
 
 
-// ---------- Signup forms (Cloudflare Worker — replaces Netlify Forms) ----------
-// 2026-08-24: GitHub Pages has no server-side form processing, so the old
-// data-netlify="true" forms (footer, matchup pages, previews, membership page)
-// stopped working the moment DNS cut over from Netlify. This Worker receives
-// the POST instead and appends the signup to a CSV file on the repo's
-// "signups" branch — see cloudflare-worker/signup-worker.js and DEPLOY.md in
-// this same delivery folder for the full design and why it's a separate branch.
-//
-// If you deploy the Worker at a different URL than the one below (e.g. you
-// skip the custom-domain step in DEPLOY.md and use the default *.workers.dev
-// address instead), this is the one line to change.
-// 2026-10-17: the Worker moves to signup.ndhorizon.com (lydiaslab.com is being
-// dropped). Until that route is live, a network failure on the new address
-// falls back to the old one, so no signup is lost during the switch. Once a
-// test signup lands through the new address, delete SIGNUP_FALLBACK.
-const SIGNUP_ENDPOINT = "https://signup.ndhorizon.com/";
-const SIGNUP_FALLBACK = "https://signup.lydiaslab.com/";
-// 2026-10-17 (DEC-20261017-11): signups move to Buttondown, a hosted email
-// list. The Cloudflare Worker above never saved a signup. Set this to the
-// Buttondown username and every form on the site posts there instead; it
-// stores the address, sends a confirmation email and handles unsubscribes.
-// The list name becomes a Buttondown tag ("newsletter" counts as free-preview).
+// ---------- Sign up forms ----------
+// The site is static (GitHub Pages), so forms post to a Cloudflare Worker,
+// cloudflare-worker/signup-worker.js, deployed in the dashboard as "leo-signup".
+// 2026-11-12 (launch plan, access B): every sign up goes to Leo's own sign up
+// service, which saves it to the private leo-signups repository (name, email,
+// list, page). Until the day 3 switch, the same email is ALSO sent to
+// Buttondown, which still sends the confirmation email and is the list the
+// card emails read (scripts/lib/subscribers.js). Remove BUTTONDOWN_USER once
+// the card emails read the private list.
+const SIGNUP_ENDPOINT = "https://leo-signup.lynoldmercado.workers.dev/";
 const BUTTONDOWN_USER = "flychico";
+const SIGNUP_TERMS_LINE = 'By signing up you confirm you are 21 or over and agree to the <a href="/terms/">Terms of Use</a> and <a href="/privacy/">Privacy Policy</a>. Leo publishes analysis, not betting advice.';
 
 // Wires every <form class="lydia-signup-form"> on the page (static ones already
 // in the HTML, e.g. matchup pages, previews, membership — plus any injected
@@ -371,74 +360,66 @@ function wireAllSignupForms(root) {
       const botEl = form.querySelector('[name="bot-field"]');
       const subIdEl = form.querySelector('[name="subscription-id"]');
       const list = form.getAttribute("data-list") || "newsletter";
-      const thanks = form.getAttribute("data-thanks")
-        || "You’re on the list — first card arrives tomorrow morning. ⚾";
+      const thanks = form.getAttribute("data-thanks") || "You are on the list.";
       const errorEl = form.querySelector(".signup-error");
       const submitBtn = form.querySelector('button[type="submit"]');
 
       if (errorEl) errorEl.textContent = "";
       if (submitBtn) submitBtn.disabled = true;
 
+      const nameEl = form.querySelector('[name="name"]');
+      if (botEl && botEl.value) {   // honeypot filled: a bot, drop it quietly
+        form.outerHTML = '<div class="small" style="color:#2f9e44;font-weight:600">' + thanks + '</div>';
+        return;
+      }
       try {
-        const post = url => fetch(url, {
+        const res = await fetch(SIGNUP_ENDPOINT, {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
           body: new URLSearchParams({
             email: email,
+            name: nameEl ? nameEl.value.trim() : "",
             list: list,
-            "bot-field": botEl ? botEl.value : "",
+            source: location.pathname,
+            "bot-field": "",
             "subscription-id": subIdEl ? subIdEl.value : ""
           }).toString()
         });
+        if (!res.ok) {
+          let message = "We could not save your sign up. Please try again in a minute.";
+          try { const body = await res.json(); if (body && body.error) message = body.error; } catch (_) { /* keep default */ }
+          showSignupError(form, errorEl, message);
+          return;
+        }
+        let confirmNote = "";
         if (BUTTONDOWN_USER) {
-          // Email only: tags are a paid Buttondown feature. Everyone who signs up
-          // is on the free list (scripts/lib/subscribers.js treats untagged
-          // subscribers as free-preview). There are no paying members yet.
-          const fd = new URLSearchParams({ email: email });
-          if (botEl && botEl.value) return;   // honeypot filled: a bot, drop it quietly
-          // Buttondown's embed endpoint does not answer cross-site requests
-          // with readable headers, so the response is opaque; a network error
-          // still lands in the catch below.
-          await fetch("https://buttondown.com/api/emails/embed-subscribe/" + encodeURIComponent(BUTTONDOWN_USER),
-                      { method: "POST", mode: "no-cors", body: fd });
-          form.outerHTML = '<div class="small" style="color:#2f9e44;font-weight:600">Almost there. Check your inbox and confirm your email to get the card.</div>';
-          return;
+          // Buttondown's embed endpoint answers with an opaque response; it
+          // sends its own confirmation email. A failure here does not undo the
+          // saved sign up above.
+          try {
+            await fetch("https://buttondown.com/api/emails/embed-subscribe/" + encodeURIComponent(BUTTONDOWN_USER),
+                        { method: "POST", mode: "no-cors", body: new URLSearchParams({ email: email }) });
+            confirmNote = " Check your inbox and confirm your email to get the card.";
+          } catch (_) { /* saved already; nothing to show */ }
         }
-        let res;
-        try { res = await post(SIGNUP_ENDPOINT); }
-        catch (e) {
-          if (typeof SIGNUP_FALLBACK === "string" && SIGNUP_FALLBACK) res = await post(SIGNUP_FALLBACK);
-          else throw e;
-        }
-
-        if (res.ok) {
-          form.outerHTML = '<div class="small" style="color:#2f9e44;font-weight:600">' + thanks + '</div>';
-          return;
-        }
-
-        let message = "Signup failed — try again shortly.";
-        try {
-          const body = await res.json();
-          if (body && body.error) message = body.error;
-        } catch (_) { /* non-JSON error response, keep default message */ }
-
-        if (errorEl) {
-          errorEl.textContent = message;
-        } else {
-          form.insertAdjacentHTML("beforeend", '<div class="signup-error small" style="color:#c0392b;margin-top:6px">' + message + '</div>');
-        }
+        form.outerHTML = '<div class="small" style="color:#2f9e44;font-weight:600">' + thanks + confirmNote + '</div>';
       } catch (err) {
-        const message = "Signup hiccup — check your connection and try again.";
-        if (errorEl) {
-          errorEl.textContent = message;
-        } else {
-          form.insertAdjacentHTML("beforeend", '<div class="signup-error small" style="color:#c0392b;margin-top:6px">' + message + '</div>');
-        }
+        showSignupError(form, errorEl, "We could not save your sign up. Check your connection and try again.");
       } finally {
-        if (submitBtn) submitBtn.disabled = false;
+        if (submitBtn && submitBtn.isConnected) submitBtn.disabled = false;
       }
     });
+    // The terms line under every sign up form (launch plan day 2).
+    const next = form.nextElementSibling;
+    if (!(next && next.classList && next.classList.contains("signup-terms"))) {
+      form.insertAdjacentHTML("afterend", '<div class="signup-terms dim small" style="margin-top:6px;font-size:.75rem;line-height:1.4">' + SIGNUP_TERMS_LINE + '</div>');
+    }
   });
+}
+
+function showSignupError(form, errorEl, message) {
+  if (errorEl) { errorEl.textContent = message; return; }
+  form.insertAdjacentHTML("beforeend", '<div class="signup-error small" style="color:#c0392b;margin-top:6px">' + escapeHtml(message) + '</div>');
 }
 
 function renderFooter() {
@@ -456,7 +437,8 @@ function renderFooter() {
     + "Odds and stats can change quickly; always verify with your sportsbook. "
     // 1-800-GAMBLER moved to a New Jersey operator in Jan 2026; NCPG's national
     // helpline is now 1-800-MY-RESET (1-800-697-3738).
-    + "21+. Please bet responsibly. If gambling stops being fun, call 1-800-MY-RESET (1-800-697-3738).";
+    + "21+. Please bet responsibly. If gambling stops being fun, call 1-800-MY-RESET (1-800-697-3738)."
+    + '<div style="margin-top:8px"><a href="/privacy/">Privacy</a> &middot; <a href="/terms/">Terms</a> &middot; <a href="/refunds/">Refunds</a> &middot; <a href="mailto:support@ndhorizon.com">Contact</a></div>';
   wireAllSignupForms(el);
 }
 
