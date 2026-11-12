@@ -29,7 +29,7 @@ const VIEW = require("./lib/nba-results-view");
 
 const ROOT = path.join(__dirname, ".."), DIR = path.join(ROOT, "data", "nba"), MDIR = path.join(DIR, "misses");
 const PAGE = path.join(ROOT, "nba", "results", "index.html");
-const VERSION = "20261111a";
+const VERSION = "20261111b";
 const nyDate = d => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(d);
 const num = v => v === "" || v == null || !Number.isFinite(+v) ? null : +v;
 const readJson = (f, d) => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch (e) { return d; } };
@@ -89,16 +89,10 @@ function buildDoc(rows) {
       const leoSpread = dk == null ? Math.round(sp * 2) / 2 : sp > dk ? Math.floor(sp * 2) / 2 : Math.ceil(sp * 2) / 2;   // .5 grid toward DraftKings (DEC-20261102-03)
       const g = { id: r.game_id, away: r.away, home: r.home, as: +r.away_score, hs: +r.home_score, ot: !!x.overtime,
         url: URLS.gamePath({ away: r.away, home: r.home, date }), p_home: +r.leo_p_home, leo_spread: leoSpread, mkt_spread: dk,
-        leo_right: +r.leo_winner_correct === 1, leo_miss: +r.leo_miss, line_miss: num(r.line_miss), pick: null, lean: null, miss: x.miss || null, upset: x.upset || null };
+        leo_right: +r.leo_winner_correct === 1, leo_miss: +r.leo_miss, line_miss: num(r.line_miss), pick: null, miss: x.miss || null, upset: x.upset || null };
       if (r.pick_result && date >= PK.TRACK_FROM) {
         g.pick = { team: r.pick_team, price: +r.pick_price, p: +r.pick_p, result: r.pick_result, units: +r.pick_units };
         add(calls, g.pick.result, g.pick.units); add(run, g.pick.result, g.pick.units);
-      }
-      if (r.lean_result) {
-        const units = r.lean_units !== "" ? +r.lean_units : PK.units(r.lean_result, -110);
-        g.lean = { team: r.lean_side === "home" ? r.home : r.away, line: +r.lean_line, price: r.lean_price !== "" ? +r.lean_price : -110, assumed: r.price_source !== "dk_at_read",
-          gap: Math.abs(+r.edge_pts), result: r.lean_result, units };
-        add(calls, g.lean.result, units); add(run, g.lean.result, units);
       }
       return g;
     });
@@ -107,7 +101,7 @@ function buildDoc(rows) {
   }
   const days = dates.map(d => byDate[d]), all = days.flatMap(d => d.games.map(g => ({ ...g, date: d.date })));
   const recOf = list => { const c = { w: 0, l: 0, p: 0, units: 0, n: 0 }; for (const [res, units] of list) add(c, res, units); c.units = +c.units.toFixed(2); return c; };
-  const picks = recOf(all.filter(g => g.pick).map(g => [g.pick.result, g.pick.units])), leans = recOf(all.filter(g => g.lean).map(g => [g.lean.result, g.lean.units]));
+  const picks = recOf(all.filter(g => g.pick).map(g => [g.pick.result, g.pick.units]));
   const lined = rows.filter(r => r.mkt_p_home !== ""), sp = rows.filter(r => r.line_miss !== "");
   const avg = a => a.length ? +(a.reduce((t, v) => t + v, 0) / a.length).toFixed(2) : null;
 
@@ -129,11 +123,11 @@ function buildDoc(rows) {
 
   return {
     updated_at: new Date().toISOString(), through: latest, model_version: M.MODEL_VERSION,
-    note: "Leo Picks are a tracked test, not bets. One unit each at the DraftKings price saved before tip. Picks count from " + PK.TRACK_FROM + ". Leans ended after " + PK.LEANS_UNTIL + " and stay on the record. Under 50 graded calls is an early read.",
+    note: "Leo Picks are a tracked test, not bets. One unit each at the DraftKings price saved before tip. Picks count from " + PK.TRACK_FROM + ". Under 50 graded calls is an early read.",
     season: { games: rows.length, right: rows.filter(r => +r.leo_winner_correct === 1).length, mkt_games: lined.length, mkt_right: lined.filter(r => +r.mkt_winner_correct === 1).length,
       miss_leo: avg(sp.map(r => +r.leo_miss)), miss_line: avg(sp.map(r => +r.line_miss)),
       calls: days.length ? days[0].running : { w: 0, l: 0, p: 0, units: 0, n: 0 },
-      picks: { ...picks, from: PK.TRACK_FROM }, leans },
+      picks: { ...picks, from: PK.TRACK_FROM } },
     learning: { week_of: thisW, order: MISS.ORDER, labels: MISS.LABEL, tally, trend, rule: L.rule || "", tests: L.tests || [], tests_updated: L.updated || "" },
     teams: [...new Set(rows.flatMap(r => [r.away, r.home]))].sort((a, b) => nick(a).localeCompare(nick(b))),
     days
@@ -227,7 +221,7 @@ function writePage(doc) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Leo NBA Results: Every Game Graded, Day by Day | Leo</title>
-<meta name="description" content="Leo's NBA record day by day: every call graded, the upsets, what Leo got right, and what Leo missed and why.">
+<meta name="description" content="Leo's NBA record day by day: every Leo Pick graded, the upsets, what Leo got right, and what Leo missed and why.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Leo">
 <meta property="og:title" content="Leo NBA Results: Every Game Graded, Day by Day | Leo">

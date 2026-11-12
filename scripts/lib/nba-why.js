@@ -86,7 +86,7 @@ function compare(g, leanPts = 4) {
   const leoWin = v < 0 ? g.home : v > 0 ? g.away : null, mkWin = m < 0 ? g.home : m > 0 ? g.away : null;
   const sgn = x => (x > 0 ? "+" : "") + x;
   const pts = x => `${x} ${x === 1 ? "pt" : "pts"}`;
-  const side = L.lean ? `${L.lean.team} ${sgn(L.lean.line)}` : null;
+  const side = null;   // leans ended (DEC-20261111-31); old cards' leo.lean is ignored
   let head;
   if (leoWin && leoWin === mkWin) head = `Both have ${leoWin} winning: Leo by ${Math.abs(v)}, DraftKings by ${Math.abs(m)}.`;
   else if (!leoWin && !mkWin) head = `Leo and DraftKings both call it a pick'em.`;
@@ -139,8 +139,7 @@ function why(g, opts = {}) {
   const edge = L.edge_pts;
   if (mk.home_spread == null || edge == null) {
     out.lean = { status: "no_line", text: "No DraftKings line yet, so no comparison." };
-  } else if (L.lean) {
-    out.lean = { status: "lean", text: out.compare };
+  } else if (false) {
   } else {
     out.lean = { status: "none", text: out.compare };
   }

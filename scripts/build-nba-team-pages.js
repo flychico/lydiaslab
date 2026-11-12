@@ -12,7 +12,7 @@
     - Final score, then "<Team> result" (the team's own win or loss).
     - Leo's read: Right when the team Leo favored won, Wrong when it lost.
     - Leo's spread for this team beside the DraftKings spread, and the call
-      on the game (Leo Pick, lean or no call) with its result.
+      on the game (Leo Pick or no call) with its result.
   Games not played yet come from the latest card, marked "latest, freezes at
   tip" until they tip.
 
@@ -61,20 +61,18 @@ function loadGames(now) {
   const out = new Map();
   for (const r of readCsv(path.join(DIR, "results-ledger.csv"))) {
     const g = { id: r.game_id, date: r.date, away: r.away, home: r.home, played: true, frozen: true, hs: +r.home_score, as: +r.away_score,
-      p_home: +r.leo_p_home, margin: +r.leo_home_margin, dk: num(r.mkt_home_spread), pick: null, lean: null };
+      p_home: +r.leo_p_home, margin: +r.leo_home_margin, dk: num(r.mkt_home_spread), pick: null };
     if (r.pick_result && r.date >= PK.TRACK_FROM) g.pick = { team: r.pick_team, price: num(r.pick_price), result: r.pick_result, units: num(r.pick_units) };
-    if (r.lean_side) g.lean = { team: r.lean_side === "home" ? r.home : r.away, line: num(r.lean_line), result: r.lean_result, units: r.lean_units !== "" ? +r.lean_units : PK.units(r.lean_result, -110) };
     out.set(g.id, g);
   }
   const cards = fs.readdirSync(DIR).filter(f => /^picks-\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort().slice(-3);
   for (const f of cards) for (const c of (readJson(path.join(DIR, f), { games: [] }).games || [])) {
     const id = String(c.game_id), L = c.leo || {};
     if (out.has(id) || L.p_home == null) continue;
-    const tipped = c.tip_utc && Date.parse(c.tip_utc) <= now, pk = L.pick && L.pick.ok ? L.pick : null, ln = L.lean || null;
+    const tipped = c.tip_utc && Date.parse(c.tip_utc) <= now, pk = L.pick && L.pick.ok ? L.pick : null;
     out.set(id, { id, date: c.date, away: c.away, home: c.home, played: false, frozen: !!tipped, url: c.url, hs: null, as: null,
       p_home: +L.p_home, margin: +L.home_margin, dk: num((c.market || {}).home_spread),
-      pick: pk ? { team: pk.team, price: pk.price, result: "", units: null } : null,
-      lean: ln ? { team: ln.team, line: ln.line, result: "", units: null } : null });
+      pick: pk ? { team: pk.team, price: pk.price, result: "", units: null } : null });
   }
   return [...out.values()];
 }
@@ -107,8 +105,8 @@ function summary(games, abbr) {
   const w = done.filter(g => g.result === "W").length, l = done.length - w;
   const judged = done.filter(g => g.right !== null), right = judged.filter(g => g.right).length;
   const fav = done.filter(g => g.chance > 0.5), dog = done.filter(g => g.chance < 0.5);
-  // Leo's official calls ON this team (a pick on them to win, or a lean on their side of the spread).
-  const calls = done.flatMap(g => [g.pick, g.lean].filter(c => c && c.team === abbr && c.result));
+  // Leo's official calls ON this team (a Leo Pick on them to win).
+  const calls = done.flatMap(g => [g.pick].filter(c => c && c.team === abbr && c.result));
   const cw = calls.filter(c => c.result === "win").length, cl = calls.filter(c => c.result === "loss").length;
   return { done, w, l, judged, right, fav, favW: fav.filter(g => g.result === "W").length, dog, dogW: dog.filter(g => g.result === "W").length,
     calls, cw, cl, cu: calls.reduce((t, c) => t + (c.units || 0), 0), upcoming: games.filter(g => !g.played) };
@@ -166,7 +164,7 @@ ${GA_HEAD}
 <nav id="nav"></nav>
 <main>
 ${body}
-<div class="notice warn" style="margin-top:28px">For entertainment and informational purposes. Leo&rsquo;s win chances, picks and leans are a tracked public test, not betting advice, and no model can promise outcomes. 21+. If gambling stops being fun, call 1-800-MY-RESET.</div>
+<div class="notice warn" style="margin-top:28px">For entertainment and informational purposes. Leo&rsquo;s win chances and picks are a tracked public test, not betting advice, and no model can promise outcomes. 21+. If gambling stops being fun, call 1-800-MY-RESET.</div>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/nba/teams/"); renderFooter();</script>
 </body>
@@ -178,7 +176,6 @@ function callCell(g) {
   const res = c => c.result === "win" ? ` <span class="w">Won</span> ${units(c.units)}` : c.result === "loss" ? ` <span class="l">Lost</span> ${units(c.units)}` : c.result === "push" ? " Push" : "";
   const parts = [];
   if (g.pick) parts.push(`Pick ${esc(nick(g.pick.team))} ${sgn(g.pick.price)}${res(g.pick)}`);
-  if (g.lean) parts.push(`Lean ${esc(nick(g.lean.team))} ${sgn(g.lean.line)}${res(g.lean)}`);
   return parts.length ? parts.join("<br>") : `<span class="dim">No call</span>`;
 }
 
@@ -217,7 +214,7 @@ function teamPage(abbr, division, games, sched) {
     <div class="card"><div class="v">${rec(s.w, s.l)}</div><div class="k">${esc(N)} record in games Leo analyzed</div></div>
     <div class="card"><div class="v">${s.fav.length ? rec(s.favW, s.fav.length - s.favW) : "None yet"}</div><div class="k">${esc(N)} record when Leo favored them</div></div>
     <div class="card"><div class="v">${s.right}-${s.judged.length - s.right}</div><div class="k">Leo&rsquo;s reads on ${esc(N)} games (right&#8209;wrong)</div></div>
-    <div class="card"><div class="v">${s.calls.length ? `${rec(s.cw, s.cl)}, ${units(s.cu)}` : "None yet"}</div><div class="k">Leo Picks and leans on the ${esc(N)}, in units</div></div>
+    <div class="card"><div class="v">${s.calls.length ? `${rec(s.cw, s.cl)}, ${units(s.cu)}` : "None yet"}</div><div class="k">Leo Picks on the ${esc(N)}, in units</div></div>
   </div>
   <h2>Every ${esc(N)} game</h2>
   <ul class="key dim small">
@@ -226,7 +223,7 @@ function teamPage(abbr, division, games, sched) {
     <li><b>${esc(N)} result</b> is whether the ${esc(N)} won or lost.</li>
     <li><b>Leo&rsquo;s read</b> is Right when the team Leo favored won, and Wrong when it lost.</li>
     <li><b>Leo&rsquo;s spread</b> and <b>DraftKings</b> are the ${esc(N)}&rsquo; side of the spread: a minus number means favored by that many points.</li>
-    <li><b>Call</b> is Leo&rsquo;s official call on the game. A Leo Pick is a team to win at the moneyline price shown; a lean was a side of the spread, recorded through November 10 and then ended. One unit each, a tracked test, not a bet.</li>
+    <li><b>Call</b> is Leo&rsquo;s official call on the game. A Leo Pick is a team to win at the moneyline price shown. One unit each, a tracked test, not a bet.</li>
   </ul>
   <div class="table-wrap"><table class="team-table"><thead><tr><th>Date</th><th>Opponent</th><th>Leo&rsquo;s chance (${esc(N)})</th><th>Leo favored</th><th>Final score</th><th>${esc(N)} result</th><th>Leo&rsquo;s read</th><th>Leo&rsquo;s spread</th><th>DraftKings</th><th>Call</th></tr></thead><tbody>${rows}</tbody></table></div>
   <p class="dim small">Opponents link to Leo&rsquo;s full game analysis: win chance, spread, injury report and box score.</p>

@@ -57,7 +57,7 @@
 <body>
 <nav id="nav"><div class="nav-inner"><a class="brand" href="/" aria-label="Leo home"><span class="brand-leo">Leo</span></a><div class="nav-sport-selector"><button class="nav-sport" data-sport="MLB">MLB</button><button class="nav-sport" data-sport="NFL">NFL</button><button class="nav-sport active" data-sport="NBA">NBA</button></div><button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">☰</button><div class="nav-links"><a class="navlink" href="/nba/scoreboard/">Scoreboard</a><span class="nav-drop active-wrap"><a class="navlink nav-drop-toggle active" href="/nba/previews/">Picks ▾</a><span class="nav-drop-menu"><a href="/nba/previews/">Tonight’s picks</a><a href="/nba/predictions/">Predictions by night</a><a href="/nba/games/">Every game</a></span></span><a class="navlink" href="/nba/teams/">Teams</a><span class="nav-drop"><a class="navlink nav-drop-toggle" href="/nba/tools/">Lab ▾</a><span class="nav-drop-menu"><a href="/nba/tools/model-tuner/">Model Tuner</a><a href="/nba/tools/injury-tracker/">Injury Tracker</a><a href="/nba/players/">Player Scoring</a><a href="/nba/stats/">Team Ratings</a></span></span><a class="navlink" href="/nba/stats/">Stats</a><a class="navlink" href="/nba/results/">Results</a><span class="nav-drop"><a class="navlink nav-drop-toggle" href="/#more">More ▾</a><span class="nav-drop-menu"><a href="/gym/">Free workout planner</a><a href="/articles/">Betting guides</a></span></span><a class="navlink navlink-cta" href="/membership/">Join $30/mo</a></div></div></nav>
 <main class="scoreboard-shell">
-<!-- prerendered 2026-11-12T00:56:33.047Z by scripts/prerender-hubs.js; replaced by the page script on load -->
+<!-- prerendered 2026-11-12T01:04:48.858Z by scripts/prerender-hubs.js; replaced by the page script on load -->
 <section class="score-hero">
     <p class="eyebrow">Every game. Leo's read, ranked.</p>
     <h1>NBA Picks and Leo’s Reads</h1>
@@ -72,8 +72,8 @@
   <p class="data-note">Leo’s spread comes from team ratings, rest and the injury report. The DraftKings line is shown for comparison and is never an input. Leo Picks are graded on the <a href="/nba/results/">results page</a>. Analysis only, not betting advice. 21+.</p>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
-<script src="/scripts/lib/nba-why.js?v=20261111b"></script>
-<script src="/scripts/lib/nba-picks.js?v=20261111"></script>
+<script src="/scripts/lib/nba-why.js?v=20261111c"></script>
+<script src="/scripts/lib/nba-picks.js?v=20261111b"></script>
 <script src="/scripts/lib/nba-urls.js?v=20261107"></script>
 <script>
 const fav=(g,v)=>v==null?"—":(window.NBA_WHY&&NBA_WHY.favLine)?NBA_WHY.favLine(g,v):(v===0?"Pick'em":(v<0?g.home:g.away)+" -"+Math.abs(v));
@@ -107,9 +107,9 @@ let MODEL=null;
   st.style.display="none";
   const games=d.games.filter(g=>g.leo).map(g=>({...g,date:d.date}));
   const gap=g=>{const v=(window.NBA_WHY&&NBA_WHY.gapShown)?NBA_WHY.gapShown(g):(g.leo.edge_pts==null?null:Math.abs(g.leo.edge_pts));return v==null?-1:v;};
-  const tracked=g=>{const t=window.NBA_PICKS?NBA_PICKS.pickText(g):null;return !!(t&&t.ok)||!!g.leo.lean;};
+  const tracked=g=>{const t=window.NBA_PICKS?NBA_PICKS.pickText(g):null;return !!(t&&t.ok);};
   games.sort((a,b)=>(tracked(b)-tracked(a))||a.tip_utc.localeCompare(b.tip_utc)||gap(b)-gap(a));
-  const leans=games.filter(g=>g.leo.lean).length, big=games.length?Math.max(...games.map(gap)):null;
+  const big=games.length?Math.max(...games.map(gap)):null;
   kp.innerHTML=
     '<article class="kpi"><div class="label">Games</div><div class="value">'+games.length+'</div><div class="sub">'+esc(longDay(d.date))+'</div></article>'+
     '<article class="kpi"><div class="label">Leo Picks</div><div class="value">'+games.filter(g=>{const t=window.NBA_PICKS?NBA_PICKS.pickText(g):null;return t&&t.ok}).length+'</div><div class="sub">60%+, better than -230</div></article>'+
@@ -122,10 +122,10 @@ let MODEL=null;
     const PT=window.NBA_PICKS?NBA_PICKS.pickText(g):null, CB=window.NBA_PICKS&&NBA_PICKS.callBox?NBA_PICKS.callBox(g):null;
     const gs=(window.NBA_WHY&&NBA_WHY.gapShown)?NBA_WHY.gapShown(g):(L.edge_pts==null?null:Math.abs(L.edge_pts));
     const W=window.NBA_WHY?NBA_WHY.why(g,{lostCoef:MODEL&&MODEL.coef&&MODEL.coef.lost_d,leanPts:MODEL&&MODEL.lean_edge_pts}):null;
-    const row=(side,p)=>'<div class="side'+(L.lean&&L.lean.side===side?" lean":"")+'">'+logo(g[side])+
+    const row=(side,p)=>'<div class="side'+""+'">'+logo(g[side])+
       '<span class="nm">'+esc(g[side+"_name"]||g[side])+'</span><span><span class="pr">'+pct(p)+'</span><span class="pb">Leo win chance</span></span></div>';
     return '<article class="pick-card"><div class="pick-top"><span class="pick-when">'+esc(tip(g.tip_utc))+' &middot; '+esc(g.away)+' at '+esc(g.home)+'</span>'+
-      '<span class="badges">'+(PT&&PT.ok?'<span class="badge b-pick">'+esc(PT.badge)+'</span>':'')+(L.lean?'<span class="badge b-pick">Lean '+esc(L.lean.team)+' '+sgn(L.lean.line)+'</span>':'')+(!(PT&&PT.ok)&&!L.lean?'<span class="badge b-pass">No call</span>':'')+'</span></div>'+
+      '<span class="badges">'+(PT&&PT.ok?'<span class="badge b-pick">'+esc(PT.badge)+'</span>':'')+(!(PT&&PT.ok)&&1?'<span class="badge b-pass">No call</span>':'')+'</span></div>'+
       '<div class="pick-body">'+row("away",L.p_away)+row("home",L.p_home)+
       '<div class="wbar"><i style="width:'+(L.p_away*100).toFixed(1)+'%;background:var(--accent)"></i><i style="width:'+(L.p_home*100).toFixed(1)+'%;background:var(--accent2)"></i></div>'+
       '<div class="market-grid" style="grid-template-columns:repeat(3,1fr);margin-top:10px">'+

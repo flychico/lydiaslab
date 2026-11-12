@@ -7,7 +7,7 @@
   night's card had no address of its own. This writes one page per slate
   date from data/nba/picks-<date>.json: a written intro, then every game with
   Leo's win chance, Leo's spread beside DraftKings in the same plain words as
-  the scoreboard (scripts/lib/nba-why.js), the lean, the final and whether
+  the scoreboard (scripts/lib/nba-why.js), the Leo Pick, the final and whether
   Leo had the winner. Plus /nba/predictions/ listing every night.
 
   Display only: reads the frozen slate and results.json, changes no number.
@@ -52,18 +52,12 @@ function intro(date, games, res) {
     if (read.length && read[0].date >= PKS.TRACK_FROM) out.push(picks.length
       ? `Leo Picks, teams Leo gives 60% or more at a price better than -230: ${picks.map(g => PKS.pickText(g).badge.replace(/^Pick /, "")).join(", ")}. Tracked in units, not bets.`
       : "No team tonight is 60% or more with Leo at a price better than -230, so there is no Leo Pick.");
-    const leans = read.filter(g => g.leo.lean);
-    // Leans ended after PKS.LEANS_UNTIL; later nights say nothing about them.
-    if (read.length && PKS.leansOn(read[0].date)) out.push(leans.length
-      ? `Leo is 4 or more points off the DraftKings spread in ${leans.length} game${leans.length === 1 ? "" : "s"}, so ${leans.length === 1 ? "that is a lean" : "those are leans"}: ${leans.map(g => `${g.leo.lean.team} ${g.leo.lean.line > 0 ? "+" : ""}${g.leo.lean.line}`).join(", ")}. Leans are a tracked test, not bets.`
-      : "Leo is within 4 points of the DraftKings spread in every game, so there are no leans.");
   }
   if (res.length) {
     const w = res.filter(r => r.leo_winner_correct === 1).length, l = res.filter(r => r.leo_winner_correct === 0).length;
-    const lw = res.filter(r => r.lean_result === "win").length, ll = res.filter(r => r.lean_result === "loss").length, lp = res.filter(r => r.lean_result === "push").length;
     const pk = res.filter(r => r.pick_result && !r.pick_replay), pw = pk.filter(r => r.pick_result === "win").length;
     const pu = pk.reduce((t, r) => t + (r.pick_units || 0), 0);
-    out.push(`Graded: Leo had the winner in ${w} of ${w + l}${pk.length ? `, the Leo Picks went ${pw}-${pk.length - pw} (${pu >= 0 ? "+" : ""}${pu.toFixed(2)} units)` : ""}${lw + ll + lp ? `, and the leans went ${lw}-${ll}${lp ? "-" + lp : ""}` : ""}.`);
+    out.push(`Graded: Leo had the winner in ${w} of ${w + l}${pk.length ? `, the Leo Picks went ${pw}-${pk.length - pw} (${pu >= 0 ? "+" : ""}${pu.toFixed(2)} units)` : ""}.`);
   }
   return out.join(" ");
 }
@@ -74,12 +68,12 @@ function card(g, r) {
   const leoLine = WHY.leoLine(g);
   const leoTxt = leoLine == null ? "n/a" : leoLine === 0 ? "pick'em" : `${leoLine < 0 ? g.home : g.away} by ${Math.abs(leoLine)}`;
   const mkTxt = mk.home_spread == null ? "no line" : mk.home_spread === 0 ? "pick'em" : `${mk.home_spread < 0 ? g.home : g.away} by ${Math.abs(mk.home_spread)}`;
-  const final = r ? `<p class="dn-final"><b>Final: ${esc(g.away)} ${r.away_score}, ${esc(g.home)} ${r.home_score}.</b> ${r.leo_winner_correct === 1 ? "Leo had the winner." : r.leo_winner_correct === 0 ? "Leo had the other team." : ""}${r.pick_result && !r.pick_replay ? ` Leo Pick ${esc(r.pick_team)} ${esc(r.pick_result)} (${r.pick_units >= 0 ? "+" : ""}${(+r.pick_units).toFixed(2)}u).` : ""}${r.lean_result ? ` Lean ${esc(r.lean_result)}.` : ""}</p>`
+  const final = r ? `<p class="dn-final"><b>Final: ${esc(g.away)} ${r.away_score}, ${esc(g.home)} ${r.home_score}.</b> ${r.leo_winner_correct === 1 ? "Leo had the winner." : r.leo_winner_correct === 0 ? "Leo had the other team." : ""}${r.pick_result && !r.pick_replay ? ` Leo Pick ${esc(r.pick_team)} ${esc(r.pick_result)} (${r.pick_units >= 0 ? "+" : ""}${(+r.pick_units).toFixed(2)}u).` : ""}</p>`
     : (g.completed && g.hs != null ? `<p class="dn-final"><b>Final: ${esc(g.away)} ${g.as}, ${esc(g.home)} ${g.hs}.</b> Grading pending.</p>` : "");
   return `<article class="dn-game">
     <div class="dn-when">${esc(tip(g.tip_utc))}${g.venue ? " &middot; " + esc(g.venue) : ""}</div>
     <h3><a href="${gameUrl(g)}">${esc(g.away_name)} at ${esc(g.home_name)} prediction</a></h3>
-    ${ph != null ? `<p class="dn-line">Leo win chance: <b>${esc(g.away)} ${100 - Math.round(ph * 100)}%</b>, <b>${esc(g.home)} ${Math.round(ph * 100)}%</b>. Leo spread ${esc(leoTxt)}; DraftKings ${esc(mkTxt)}.${g.date >= PKS.TRACK_FROM && (PKS.pickText(g) || {}).ok ? ` <span class="dn-lean">${esc(PKS.pickText(g).badge)}</span>` : ""}${L.lean ? ` <span class="dn-lean">Lean ${esc(L.lean.team)} ${L.lean.line > 0 ? "+" : ""}${esc(L.lean.line)}</span>` : ""}</p>
+    ${ph != null ? `<p class="dn-line">Leo win chance: <b>${esc(g.away)} ${100 - Math.round(ph * 100)}%</b>, <b>${esc(g.home)} ${Math.round(ph * 100)}%</b>. Leo spread ${esc(leoTxt)}; DraftKings ${esc(mkTxt)}.${g.date >= PKS.TRACK_FROM && (PKS.pickText(g) || {}).ok ? ` <span class="dn-lean">${esc(PKS.pickText(g).badge)}</span>` : ""}</p>
     <p class="dn-why">${esc(WHY.compare(g))}</p>` : `<p class="dn-line">No Leo read for this game.</p>`}
     ${final}
     <a class="dn-more" href="${gameUrl(g)}">Full preview: why Leo has this number, injuries and box score &rarr;</a>
@@ -140,8 +134,7 @@ function buildDay(date, all, results) {
   const i = all.indexOf(date), prevD = all[i - 1], nextD = all[i + 1];
   const url = `/nba/predictions/${date}/`;
   const title = `NBA Predictions for ${monthDay(date)}: Picks, Spreads and Win Chances | Leo`;
-  const leans = games.filter(g => g.leo && g.leo.lean).length;
-  const desc = `Leo's NBA predictions for ${longDay(date)}: a win chance and spread for all ${games.length} games beside the DraftKings line${leans ? `, ${leans} lean${leans === 1 ? "" : "s"}` : ""}, graded after the final.`;
+  const desc = `Leo's NBA predictions for ${longDay(date)}: a win chance and spread for all ${games.length} games beside the DraftKings line, graded after the final.`;
   const nav = `<p class="small" style="margin:10px 0 0">${prevD ? `<a href="/nba/predictions/${prevD}/">&larr; ${esc(monthDay(prevD))}</a> &middot; ` : ""}<a href="/nba/predictions/">Every night</a> &middot; <a href="/nba/scoreboard/">Tonight's NBA card</a> &middot; <a href="/nba/results/">Leo's NBA record</a>${nextD ? ` &middot; <a href="/nba/predictions/${nextD}/">${esc(monthDay(nextD))} &rarr;</a>` : ""}</p>`;
   const body = `  <section class="card"><p style="margin:0">${esc(intro(date, games, res))}</p>${nav}</section>
   <section class="dn-grid">

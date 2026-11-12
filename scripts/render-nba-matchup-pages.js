@@ -137,14 +137,12 @@ function playersBlock(g, side) {
 function finalBlock(g, res) {
   if (!res) return "";
   const H = g.home, A = g.away, margin = res.home_score - res.away_score;
-  const lean = res.lean_result ? `<li>Lean ${esc(res.lean_side === "home" ? H : A)} ${sgn(res.lean_line)}: <b class="${res.lean_result === "win" ? "ok" : res.lean_result === "loss" ? "no" : ""}">${esc(res.lean_result)}</b></li>` : "";
   return `<h2>Final</h2><div class="card final">
     <p class="score">${esc(A)} ${res.away_score}, ${esc(H)} ${res.home_score}</p>
     <ul>
       <li>Leo had ${esc(res.leo_p_home >= .5 ? H : A)} to win: <b class="${res.leo_winner_correct ? "ok" : "no"}">${res.leo_winner_correct ? "right" : "wrong"}</b></li>
       <li>Leo expected ${esc(H)} ${(res.leo_home_margin > 0 ? "+" : "") + res.leo_home_margin.toFixed(1)}; it finished ${(margin > 0 ? "+" : "") + margin}. Leo missed by ${Math.abs(res.leo_home_margin - margin).toFixed(1)}${res.mkt_home_spread != null ? `, the DraftKings spread by ${Math.abs(-res.mkt_home_spread - margin).toFixed(1)}` : ""}.</li>
       ${res.pick_result && !res.pick_replay ? `<li>Leo Pick ${esc(res.pick_team)} ${PKS.fmtPrice(res.pick_price)}: <b class="${res.pick_result === "win" ? "ok" : "no"}">${res.pick_result === "win" ? "won" : "lost"}</b>, ${res.pick_units > 0 ? "+" : ""}${(+res.pick_units).toFixed(2)} units${res.pick_close_price != null ? `. Price at tip ${PKS.fmtPrice(res.pick_close_price)}` : ""}.</li>` : ""}
-      ${lean}
     </ul></div>`;
 }
 
@@ -157,7 +155,7 @@ function page(g, res) {
   const LS = WHY.leoLine(g), GS = WHY.gapShown(g);
   const gapTxt = esc(WHY.compare(g, MODEL.lean_edge_pts || 4));
   const PT = PKS.pickText(g);
-  const leanTxt = (PT ? (PT.ok ? `<div class="lean">${esc(PT.line)}</div>` : `<p class="gapread">${esc(PT.line)}</p>`) : "") + (L.lean && gapTxt ? `<div class="lean">${gapTxt}</div>` : "");
+  const leanTxt = (PT ? (PT.ok ? `<div class="lean">${esc(PT.line)}</div>` : `<p class="gapread">${esc(PT.line)}</p>`) : "");
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -227,7 +225,7 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
     <div class="box"><div class="l">DraftKings</div><div class="v">${mk.home_spread == null ? "&mdash;" : esc(require("./lib/nba-why").favLine(g, mk.home_spread))}</div><div class="s">Moneyline ${esc(A)} ${am(mk.away_ml)}, ${esc(H)} ${am(mk.home_ml)}</div></div>
     <div class="box"><div class="l">Call</div><div class="v">${esc(PKS.callBox(g).value)}</div><div class="s">${esc(PKS.callBox(g).sub)}</div></div>
   </div>
-  ${gapTxt && !L.lean ? `<p class="gapread">${gapTxt}</p>` : ""}
+  ${gapTxt ? `<p class="gapread">${gapTxt}</p>` : ""}
   ${WHY.projScore(g) ? `<p class="gapread">Projected score: ${esc(A)} ${WHY.projScore(g).away}, ${esc(H)} ${WHY.projScore(g).home} (total ${WHY.projScore(g).total}). Information only; Leo makes no call on totals.</p>` : ""}
   ${leanTxt}
   ${finalBlock(g, res)}

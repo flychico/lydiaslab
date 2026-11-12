@@ -80,12 +80,9 @@ function pickText(g) {
  * { value, sub, on } - what Leo is tracking on this game, or why nothing.
  */
 function callBox(g) {
-  const L = g.leo || {}, pk = (L.pick !== undefined) ? L.pick : pickForGame(g), ln = L.lean;
+  const L = g.leo || {}, pk = (L.pick !== undefined) ? L.pick : pickForGame(g);
   const sg = v => (v > 0 ? "+" : "") + v;
-  const leanTxt = ln ? `${ln.team} ${sg(ln.line)}` : "";
-  if (pk && pk.ok && ln) return { on: true, value: `${pk.team} ${fmtPrice(pk.price)}`, sub: `Pick, plus lean ${leanTxt}` };
   if (pk && pk.ok) return { on: true, value: `${pk.team} ${fmtPrice(pk.price)}`, sub: "Leo Pick, to win" };
-  if (ln) return { on: true, value: leanTxt, sub: "Lean, on the spread" };
   let why = "Under 60%, close to DraftKings";
   if (pk && (pk.under || pk.p < PICK_P)) why = `${pk.team} ${(pk.p * 100).toFixed(1)}%, under 60%`;
   else if (pk && pk.price == null) why = "No moneyline yet";
