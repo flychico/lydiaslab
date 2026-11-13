@@ -1,0 +1,53 @@
+name: NBA member review
+
+# The morning-after review to members (HO-0061): every miss from the graded
+# night with its reason, the upsets, and what Leo got right. Content comes
+# from data/nba/results-days.json, built by the 2:10am ET grade.
+# The real trigger is the Claude scheduled task "Leo NBA member review
+# dispatch" (7:20am ET). GitHub's own cron runs hours late, so it is only a
+# backstop; the script sends between 7am and 1pm ET, once per date
+# (data/email-log/nba-review-<date>.json), and stays quiet otherwise.
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "YYYY-MM-DD graded night. Blank = yesterday in America/New_York."
+        required: false
+        type: string
+  schedule:
+    - cron: "25 12 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nba-member-review
+  cancel-in-progress: false
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Email the review to members
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY }}
+          LEO_SIGNUPS_TOKEN: ${{ secrets.LEO_SIGNUPS_TOKEN }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_REPLY_TO: ${{ secrets.EMAIL_REPLY_TO }}
+          EMAIL_POSTAL_ADDRESS: ${{ secrets.EMAIL_POSTAL_ADDRESS }}
+        run: node scripts/send-nba-member-review.js ${{ github.event.inputs.date }}
+      - name: Commit the email log
+        run: |
+          set -euo pipefail
+          git config user.name "lydia-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/email-log
+          if git diff --cached --quiet; then echo "No change."; exit 0; fi
+          git commit -m "NBA member review email log"
+          git pull --rebase
+          git push

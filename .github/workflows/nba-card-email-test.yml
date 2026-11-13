@@ -1,8 +1,9 @@
 name: NBA card email (test send)
 
-# One copy of the NBA card email for a date, sent through Resend exactly as
-# subscribers get it, to the owner only (AUDIT_EMAIL secret). Subject marked
-# TEST. No subscribers, no timing gates, no email log, no commit.
+# Test copies of the NBA emails for a date, sent through Resend to the owner
+# only (AUDIT_EMAIL secret), subjects marked TEST. "card" sends the member
+# brief and the free card for that slate; "review" sends the morning-after
+# review for that graded night. No subscribers, no timing gates, no email log.
 on:
   workflow_dispatch:
     inputs:
@@ -10,6 +11,12 @@ on:
         description: "YYYY-MM-DD card to send. Blank = today in America/New_York."
         required: false
         type: string
+      which:
+        description: "card (member brief and free card) or review (morning-after review)"
+        required: false
+        default: card
+        type: choice
+        options: [card, review]
 
 permissions:
   contents: read
@@ -32,4 +39,8 @@ jobs:
         run: |
           D="${{ github.event.inputs.date }}"
           [ -z "$D" ] && D=$(TZ="America/New_York" date +%F)
-          node scripts/send-nba-card-emails.js "$D" --test
+          if [ "${{ github.event.inputs.which }}" = "review" ]; then
+            node scripts/send-nba-member-review.js "$D" --test
+          else
+            node scripts/send-nba-card-emails.js "$D" --test
+          fi

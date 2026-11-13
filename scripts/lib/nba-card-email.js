@@ -13,7 +13,8 @@
  * BOS by 7.5") so a win chance and a lean on the other team never read as a
  * contradiction. Leans are a tracked test, never bets.
  *
- *   build(card, { why }) -> { subject, html, text, leans }
+ *   build(card, { why, record, memberLine }) -> { subject, html, text, leans }
+ * memberLine adds the line pointing free readers to membership (HO-0061).
  * card is data/nba/picks-<date>.json; why is scripts/lib/nba-why.js.
  */
 const E = require("./email-theme");
@@ -75,7 +76,9 @@ function card(g, date, why) {
   </td></tr>`, `background:${T.card};border:1px solid rgba(26,37,53,.16);border-radius:20px;margin:0 0 14px`);
 }
 
-function build(doc, { why, record } = {}) {
+const MEMBER_LINE = "Members get the full reasoning behind every call, and a review of every miss the next morning.";
+
+function build(doc, { why, record, memberLine = false } = {}) {
   const date = doc.date;
   const nice = new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" });
   const games = doc.games.filter(g => g.leo && g.state !== "post");
@@ -113,6 +116,8 @@ function build(doc, { why, record } = {}) {
     ]),
     E.panel("Tonight&rsquo;s Leo Picks (moneyline)", pickRows),
     games.map(g => card(g, date, why)).join(""),
+    // Free list only (HO-0061 item 3): one line pointing to the member emails.
+    memberLine ? tbl(`<tr><td style="padding:14px 16px;font-family:${SANS};font-size:15px;line-height:1.55;color:${T.text}">${MEMBER_LINE} <a href="${SITE}/membership/" style="color:${T.navy};font-weight:800;text-decoration:none">See membership &rarr;</a></td></tr>`, `background:${T.heroBg};border:1px solid ${T.border};border-radius:16px;margin:0 0 16px`) : "",
     E.footer({
       links: [[`${SITE}/nba/scoreboard/`, "Live scores and every card"], [`${SITE}/nba/results/`, "Leo&rsquo;s record"]],
       note: "Every number is frozen before tip and graded on the site, wins and losses alike. Under 50 graded picks is an early read."
@@ -125,9 +130,10 @@ function build(doc, { why, record } = {}) {
     "",
     ...games.map(g => { const L = g.leo, mk = g.market || {}, W = why ? why.why(g) : null;
       return `${tip(g.tip_utc)}  ${g.away} at ${g.home}  ${[PKS.pickText(g) && PKS.pickText(g).ok ? PKS.pickText(g).badge.toUpperCase() : "", L.lean ? `LEAN ${L.lean.team} ${sgn(L.lean.line)}` : ""].filter(Boolean).join("  ") || "No call"}\n  Leo win chance: ${g.away} ${Math.round(L.p_away * 100)}%, ${g.home} ${Math.round(L.p_home * 100)}%\n  ${NW.compare(g)}\n${W && W.summary ? "  " + W.summary + "\n" : ""}  ${pageUrl(g, date)}\n`; }),
+    ...(memberLine ? ["", `${MEMBER_LINE} ${SITE}/membership/`] : []),
     "", `Every card: ${SITE}/nba/scoreboard/`, "Leo Picks are a public test, not bets. Analysis only, not betting advice. 21+. 1-800-MY-RESET.",
     ...((process.env.EMAIL_POSTAL_ADDRESS || "").trim() ? [(process.env.EMAIL_POSTAL_ADDRESS || "").trim()] : []), 'Reply "unsubscribe" to stop these.'].join("\n").replace(/&mdash;/g, "-").replace(/&rsquo;/g, "'");
   return { subject, html, text, leans: leanList };
 }
 
-module.exports = { build };
+module.exports = { build, MEMBER_LINE };
