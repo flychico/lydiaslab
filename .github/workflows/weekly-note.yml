@@ -1,0 +1,59 @@
+name: Weekly note to members
+
+# "What Leo learned", once a week to members (launch plan section 3, item c).
+# scripts/send-weekly-note.js covers the 7 days ending yesterday (Tuesday to
+# Monday, so Monday night football is in it), sends only on Tuesdays 7am to
+# 1pm ET, once per week (data/email-log/weekly-note-<date>.json), and stays
+# quiet otherwise. Two runs in case GitHub's cron is late. Owned by the
+# Leo Manager chat.
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "YYYY-MM-DD last day of the week. Blank = yesterday in America/New_York."
+        required: false
+        type: string
+      test:
+        description: "Send one TEST copy to the AUDIT_EMAIL secret only"
+        required: false
+        type: boolean
+        default: false
+  schedule:
+    - cron: "20 13 * * 2"
+    - cron: "20 15 * * 2"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: weekly-note
+  cancel-in-progress: false
+
+jobs:
+  note:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Email the weekly note
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY }}
+          LEO_SIGNUPS_TOKEN: ${{ secrets.LEO_SIGNUPS_TOKEN }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_REPLY_TO: ${{ secrets.EMAIL_REPLY_TO }}
+          EMAIL_POSTAL_ADDRESS: ${{ secrets.EMAIL_POSTAL_ADDRESS }}
+          AUDIT_EMAIL: ${{ secrets.AUDIT_EMAIL }}
+        run: node scripts/send-weekly-note.js ${{ github.event.inputs.date }} ${{ github.event.inputs.test == 'true' && '--test' || '' }}
+      - name: Commit the email log
+        run: |
+          set -euo pipefail
+          git config user.name "lydia-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/email-log
+          if git diff --cached --quiet; then echo "No change."; exit 0; fi
+          git commit -m "Weekly note email log"
+          git pull --rebase
+          git push
