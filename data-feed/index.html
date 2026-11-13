@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XVWTMDNBJK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XVWTMDNBJK');
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leo Data Feed: NFL, NBA and MLB Predictions and Graded Results | Leo</title>
+<meta name="description" content="Leo's own predictions and graded results as one clean file per sport: win chances, margins, calls, results, units and the reason for every miss, frozen before the game. Free samples, price by inquiry.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Leo">
+<meta property="og:title" content="Leo Data Feed: NFL, NBA and MLB Predictions and Graded Results">
+<meta property="og:description" content="Leo's own predictions and graded results as one clean file per sport. Free samples, price by inquiry.">
+<meta property="og:url" content="https://ndhorizon.com/data-feed/">
+<meta property="og:image" content="https://ndhorizon.com/img/og-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://ndhorizon.com/data-feed/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9918;</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+<style>
+.feed-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:14px}
+.feed-grid .card{margin:0}
+.feed-grid h3{margin:0 0 6px}
+.dl{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.cols{font-size:.88rem;line-height:1.6}
+.cols code{font-size:.82rem}
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main>
+  <h1>Leo Data Feed</h1>
+  <p class="subtitle">Leo&rsquo;s own predictions and graded results, as one clean file per sport, for sites, apps, newsletters and researchers.</p>
+
+  <div class="card">
+    <p style="margin-top:0">Every row is one game Leo read and graded: Leo&rsquo;s win chance for each team, Leo&rsquo;s margin and total where it makes one, the calls Leo made, the final score, the result and units of each call, and the reason for every miss. Every number is the read of record, the last one saved before the game started. Nothing written after the start is in the file.</p>
+    <p style="margin-bottom:0">The file holds Leo&rsquo;s output only. It carries no sportsbook line, price or market number, and no third party stats beyond the final score.</p>
+  </div>
+
+  <h2>Free samples</h2>
+  <div class="feed-grid">
+    <div class="card">
+      <h3>NFL</h3>
+      <p class="small dim" style="margin:0">Win chance, margin and total for every game; the three calls (moneyline, spread and total) since November 2, 2026.</p>
+      <div class="dl"><a class="btn secondary" href="/data/feed/nfl/sample.csv" download>Sample CSV</a><a class="btn secondary" href="/data/feed/nfl/sample.json">JSON</a><a class="btn secondary" href="/data/feed/nfl/schema.json">Columns</a></div>
+    </div>
+    <div class="card">
+      <h3>NBA</h3>
+      <p class="small dim" style="margin:0">Win chance and Leo&rsquo;s own spread for every game; Leo Picks with result and units.</p>
+      <div class="dl"><a class="btn secondary" href="/data/feed/nba/sample.csv" download>Sample CSV</a><a class="btn secondary" href="/data/feed/nba/sample.json">JSON</a><a class="btn secondary" href="/data/feed/nba/schema.json">Columns</a></div>
+    </div>
+    <div class="card">
+      <h3>MLB</h3>
+      <p class="small dim" style="margin:0">The 2026 season: win chance for every game, moneyline calls and strikeout calls frozen before first pitch.</p>
+      <div class="dl"><a class="btn secondary" href="/data/feed/mlb/sample.csv" download>Sample CSV</a><a class="btn secondary" href="/data/feed/mlb/sample-strikeouts.csv" download>Strikeouts</a><a class="btn secondary" href="/data/feed/mlb/schema.json">Columns</a></div>
+    </div>
+  </div>
+  <p class="small dim">Each sample is the last 7 graded days and is rebuilt after every grade. The full file covers the whole season.</p>
+
+  <h2>What is in every file</h2>
+  <div class="card cols">
+    <p style="margin-top:0">Common columns, in this order where they apply: <code>sport</code>, <code>season</code>, <code>week</code> (NFL), <code>game_date</code>, <code>game_id</code>, <code>away_team</code>, <code>home_team</code>, <code>start_utc</code>, <code>read_saved_utc</code>, <code>leo_win_prob_away</code>, <code>leo_win_prob_home</code>, <code>leo_margin_home</code>, <code>leo_total</code>, <code>final_away</code>, <code>final_home</code>, <code>overtime</code>, then each call as <code>side</code>, <code>result</code> and <code>units</code>, then <code>leo_right_winner</code>, <code>miss_reason</code> and <code>model_version</code>.</p>
+    <p style="margin-bottom:0">Team names are written out in full. Miss reasons use the same labels as Leo&rsquo;s public record pages: injury input, market knew, overtime, blowout, variance, model error. The column files above give every column&rsquo;s type, unit and meaning.</p>
+  </div>
+
+  <h2>What Leo promises about the data</h2>
+  <div class="grid grid-3">
+    <div class="card"><h3>Frozen before the game</h3><p>Every number is the last read saved before the start. Late changes never reach the file.</p></div>
+    <div class="card"><h3>Every result included</h3><p>Losses and misses stay in the file beside the wins, the same as on the public record.</p></div>
+    <div class="card"><h3>No guarantees</h3><p>The data shows what Leo said and how it turned out. It is not betting advice and it does not promise future results.</p></div>
+  </div>
+
+  <h2>Get the full file</h2>
+  <div class="card">
+    <p style="margin-top:0">The full season file, updated after every slate, is priced by inquiry. Tell us what you are building, which sports you need and how often you want the file, and we will reply with a price.</p>
+    <p style="margin-bottom:0"><a class="btn blue" href="mailto:support@ndhorizon.com?subject=Leo%20data%20feed">Ask about the data feed</a></p>
+  </div>
+
+  <p class="small dim" style="margin-top:26px">Leo provides analysis and education only, not betting advice. 21+. If you or someone you know has a gambling problem, call 1-800-MY-RESET.</p>
+</main>
+<footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/data-feed/"); renderFooter();</script>
+</body>
+</html>
