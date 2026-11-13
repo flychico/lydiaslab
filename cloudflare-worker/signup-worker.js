@@ -22,6 +22,8 @@
     member-email              -> signups/member.csv   (paid members; the
                                  PayPal subscription ID links a payment)
 
+  PayPal membership events arrive at /paypal (see handlePaypal below).
+
   Worker settings (Cloudflare dashboard, Settings, Variables and Secrets)
     GITHUB_TOKEN    secret. Fine-grained token limited to flychico/leo-signups,
                     Contents: Read and write. Never in this file or the repo.
@@ -197,6 +199,121 @@ function respond(wantsJson, origin, allowedOrigin, status, jsonBody, thanksMessa
   return new Response(thanksPage(thanksMessage || jsonBody.error || "Something went wrong."), { status, headers });
 }
 
+
+// ---------- PayPal membership webhook (launch plan day 4, item C) ----------
+// PayPal posts subscription events to /paypal. Each event is verified with
+// PayPal's own verify-webhook-signature API before anything is saved, then the
+// member's row in signups/members.csv (private leo-signups repo) is created or
+// updated, keyed by the PayPal subscription ID.
+//
+// Worker settings needed (Cloudflare dashboard, Settings, Variables and Secrets;
+// Lynold enters them, they are never in this file or the repo):
+//   PAYPAL_CLIENT_ID      from the PayPal REST app (Live)
+//   PAYPAL_CLIENT_SECRET  secret, from the same app
+//   PAYPAL_WEBHOOK_ID     secret, the ID PayPal shows for the webhook
+// members.csv columns: subscription_id, status, email, name, plan_id, updated_at, last_event
+const PAYPAL_API = "https://api-m.paypal.com";
+const MEMBERS_PATH = "signups/members.csv";
+const MEMBERS_HEADER = "subscription_id,status,email,name,plan_id,updated_at,last_event";
+const STATUS_BY_EVENT = {
+  "BILLING.SUBSCRIPTION.ACTIVATED": "active",
+  "BILLING.SUBSCRIPTION.RE-ACTIVATED": "active",
+  "BILLING.SUBSCRIPTION.UPDATED": null,          // keep status, refresh details
+  "BILLING.SUBSCRIPTION.CANCELLED": "cancelled",
+  "BILLING.SUBSCRIPTION.SUSPENDED": "suspended",
+  "BILLING.SUBSCRIPTION.EXPIRED": "expired",
+  "BILLING.SUBSCRIPTION.PAYMENT.FAILED": "payment_failed",
+  "PAYMENT.SALE.COMPLETED": "active"
+};
+
+async function paypalToken(env) {
+  const res = await fetch(PAYPAL_API + "/v1/oauth2/token", {
+    method: "POST",
+    headers: { Authorization: "Basic " + btoa(env.PAYPAL_CLIENT_ID + ":" + env.PAYPAL_CLIENT_SECRET), "Content-Type": "application/x-www-form-urlencoded" },
+    body: "grant_type=client_credentials"
+  });
+  if (!res.ok) throw new Error("PayPal token failed: HTTP " + res.status);
+  return (await res.json()).access_token;
+}
+
+async function verifyPaypal(env, request, event) {
+  const h = n => request.headers.get(n) || "";
+  const token = await paypalToken(env);
+  const res = await fetch(PAYPAL_API + "/v1/notifications/verify-webhook-signature", {
+    method: "POST",
+    headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      auth_algo: h("paypal-auth-algo"), cert_url: h("paypal-cert-url"),
+      transmission_id: h("paypal-transmission-id"), transmission_sig: h("paypal-transmission-sig"),
+      transmission_time: h("paypal-transmission-time"), webhook_id: env.PAYPAL_WEBHOOK_ID,
+      webhook_event: event
+    })
+  });
+  if (!res.ok) return false;
+  return (await res.json()).verification_status === "SUCCESS";
+}
+
+async function upsertMember(env, row) {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const existing = await getFile(env, MEMBERS_PATH);
+    const lines = existing ? existing.content.split("\n").filter(l => l.trim()) : [MEMBERS_HEADER];
+    if (!/^subscription_id,/.test(lines[0] || "")) lines.unshift(MEMBERS_HEADER);
+    const at = lines.findIndex((l, i) => i > 0 && parseCsvLine(l)[0] === row.subscription_id);
+    const old = at > 0 ? parseCsvLine(lines[at]) : [];
+    const merged = [
+      row.subscription_id,
+      row.status || old[1] || "",
+      row.email || old[2] || "",
+      row.name || old[3] || "",
+      row.plan_id || old[4] || "",
+      new Date().toISOString(),
+      row.event
+    ].map(csv).join(",");
+    if (at > 0) lines[at] = merged; else lines.push(merged);
+    const body = { message: "Member update (" + row.event + ")", content: toBase64(lines.join("\n") + "\n"), branch: BRANCH };
+    if (existing) body.sha = existing.sha;
+    const put = await gh(env, MEMBERS_PATH, { method: "PUT", body: JSON.stringify(body) });
+    if (put.ok) return;
+    if (put.status !== 409 && put.status !== 422) throw new Error("GitHub write failed: HTTP " + put.status);
+  }
+  throw new Error("GitHub write failed: file kept changing");
+}
+
+async function handlePaypal(request, env) {
+  if (!env.PAYPAL_CLIENT_ID || !env.PAYPAL_CLIENT_SECRET || !env.PAYPAL_WEBHOOK_ID) {
+    return new Response("not configured", { status: 503 });
+  }
+  const text = await request.text();
+  if (text.length > 100000) return new Response("too large", { status: 413 });
+  let event;
+  try { event = JSON.parse(text); } catch (e) { return new Response("bad json", { status: 400 }); }
+  let ok = false;
+  try { ok = await verifyPaypal(env, request, event); } catch (e) { console.error(String(e.message || e)); }
+  if (!ok) return new Response("not verified", { status: 400 });
+
+  const type = String(event.event_type || "");
+  if (!(type in STATUS_BY_EVENT)) return new Response("ignored", { status: 200 });
+  const r = event.resource || {};
+  const sub = r.subscriber || {};
+  const subscription_id = clean(type === "PAYMENT.SALE.COMPLETED" ? r.billing_agreement_id : r.id, 40).replace(/[^A-Za-z0-9\-]/g, "");
+  if (!subscription_id) return new Response("no subscription", { status: 200 });
+  const nm = sub.name || {};
+  try {
+    await upsertMember(env, {
+      subscription_id,
+      status: STATUS_BY_EVENT[type],
+      email: isValidEmail(sub.email_address) ? clean(sub.email_address, 254) : "",
+      name: clean([nm.given_name, nm.surname].filter(Boolean).join(" "), 80),
+      plan_id: clean(r.plan_id, 40),
+      event: type
+    });
+  } catch (e) {
+    console.error(String(e.message || e));
+    return new Response("save failed", { status: 500 });   // PayPal retries
+  }
+  return new Response("ok", { status: 200 });
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get("origin") || "";
@@ -204,6 +321,7 @@ export default {
 
     if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders(origin, allowedOrigin) });
     if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
+    if (new URL(request.url).pathname === "/paypal") return handlePaypal(request, env);
 
     const wantsJson = (request.headers.get("accept") || "").includes("application/json")
       || (request.headers.get("content-type") || "").includes("application/json");
