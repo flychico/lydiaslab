@@ -1,0 +1,176 @@
+{
+  "sport": "MLB",
+  "season": 2026,
+  "description": "Leo's own MLB output: the read of record for every graded game, the official calls frozen before first pitch, their grades and the reason for every game Leo's side lost. No sportsbook number appears in any column.",
+  "rules": [
+    "One row per graded game. Only the read of record is used: the last read Leo saved before the scheduled first pitch. Nothing written after first pitch is in the file.",
+    "Official calls count only if they were published before first pitch. Calls added after the start are not in the file.",
+    "Units are Leo's result at the price the call was graded on (1 unit risked per call). The price itself is not in the file.",
+    "Team names are full names, never abbreviations. Dates are Eastern time; timestamps are UTC."
+  ],
+  "files": {
+    "sample.csv": {
+      "columns": [
+        "sport",
+        "season",
+        "game_date",
+        "game_id",
+        "away_team",
+        "home_team",
+        "start_utc",
+        "read_saved_utc",
+        "leo_win_prob_away",
+        "leo_win_prob_home",
+        "final_away",
+        "final_home",
+        "ml_side",
+        "ml_result",
+        "ml_units",
+        "leo_right_winner",
+        "miss_reason",
+        "model_version"
+      ]
+    },
+    "sample-strikeouts.csv": {
+      "columns": [
+        "sport",
+        "season",
+        "game_date",
+        "game_id",
+        "away_team",
+        "home_team",
+        "start_utc",
+        "read_saved_utc",
+        "pitcher",
+        "team",
+        "leo_projection",
+        "side",
+        "result",
+        "units",
+        "model_version"
+      ]
+    }
+  },
+  "columns": {
+    "sport": {
+      "type": "string",
+      "unit": "",
+      "meaning": "Always MLB."
+    },
+    "season": {
+      "type": "integer",
+      "unit": "year",
+      "meaning": "The MLB season."
+    },
+    "game_date": {
+      "type": "date",
+      "unit": "YYYY-MM-DD, Eastern time",
+      "meaning": "The date the game was scheduled to start."
+    },
+    "game_id": {
+      "type": "string",
+      "unit": "",
+      "meaning": "MLB's game id (gamePk)."
+    },
+    "away_team": {
+      "type": "string",
+      "unit": "",
+      "meaning": "Full name of the away team."
+    },
+    "home_team": {
+      "type": "string",
+      "unit": "",
+      "meaning": "Full name of the home team."
+    },
+    "start_utc": {
+      "type": "datetime",
+      "unit": "ISO 8601, UTC",
+      "meaning": "Scheduled first pitch."
+    },
+    "read_saved_utc": {
+      "type": "datetime",
+      "unit": "ISO 8601, UTC",
+      "meaning": "When Leo saved the read used in this row; always before start_utc."
+    },
+    "leo_win_prob_away": {
+      "type": "number",
+      "unit": "probability 0 to 1, three decimals",
+      "meaning": "Leo's chance that the away team wins."
+    },
+    "leo_win_prob_home": {
+      "type": "number",
+      "unit": "probability 0 to 1, three decimals",
+      "meaning": "Leo's chance that the home team wins."
+    },
+    "final_away": {
+      "type": "integer",
+      "unit": "runs",
+      "meaning": "Away team's final runs. Empty when the score is not in Leo's files."
+    },
+    "final_home": {
+      "type": "integer",
+      "unit": "runs",
+      "meaning": "Home team's final runs. Empty when the score is not in Leo's files."
+    },
+    "ml_side": {
+      "type": "string",
+      "unit": "",
+      "meaning": "The team Leo's official moneyline call took. Empty when there was no call."
+    },
+    "ml_result": {
+      "type": "string",
+      "unit": "W, L, P or empty",
+      "meaning": "Result of the moneyline call: W won, L lost, P stake returned (push or void), empty when there was no call."
+    },
+    "ml_units": {
+      "type": "number",
+      "unit": "units, 1 risked",
+      "meaning": "Units won or lost by the moneyline call. Empty when there was no call."
+    },
+    "leo_right_winner": {
+      "type": "boolean",
+      "unit": "",
+      "meaning": "True when the team Leo gave the higher win chance won."
+    },
+    "miss_reason": {
+      "type": "string",
+      "unit": "label",
+      "meaning": "Why Leo's side lost, the same label as Leo's results page: starter_changed (the starter in Leo's read did not start), starter (Leo's side's starter did not hold up), bullpen (Leo's side's bullpen gave up the game), model_error (Leo disagreed with the consensus and lost), variance (the favorite lost). Empty when Leo's side won."
+    },
+    "model_version": {
+      "type": "string",
+      "unit": "",
+      "meaning": "The model that produced the read. Games file: leo-mlb-moneyline followed by the model generation (leo is the model used from August 2026; earlier generations ran in July). Strikeouts file: leo-kprop."
+    },
+    "pitcher": {
+      "type": "string",
+      "unit": "",
+      "meaning": "Starting pitcher the strikeout call is on."
+    },
+    "team": {
+      "type": "string",
+      "unit": "",
+      "meaning": "Full name of the pitcher's team. Empty when it could not be matched."
+    },
+    "leo_projection": {
+      "type": "number",
+      "unit": "strikeouts, two decimals",
+      "meaning": "Leo's projected strikeouts for the pitcher from its last read before first pitch. Empty when no read before first pitch was saved."
+    },
+    "side": {
+      "type": "string",
+      "unit": "over or under",
+      "meaning": "The side of the strikeout call. The line it was made against is not in the file."
+    },
+    "result": {
+      "type": "string",
+      "unit": "W, L or P",
+      "meaning": "Result of the strikeout call: W won, L lost, P stake returned (push or void)."
+    },
+    "units": {
+      "type": "number",
+      "unit": "units, 1 risked",
+      "meaning": "Units won or lost by the strikeout call."
+    }
+  }
+}
