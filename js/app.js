@@ -186,10 +186,10 @@ function renderNav(active) {
   
   // "More" holds what Leo offers outside the three sports, the same on every
   // sport's menu: the free workout planner (/gym/, launched 2026-11-11,
-  // HO-0053), the betting guides and the data feed (launch plan day 9). Market Desk joins when it opens (HO-0050).
+  // HO-0053), the MLB game analysis archive and the data feed (launch plan day 9). Market Desk joins when it opens (HO-0050).
   links.push(["/#more", "More", [
     ["/gym/", "Free workout planner"],
-    ["/articles/", "Betting guides"],
+    ["/articles/", "MLB game analysis"],
     ["/data-feed/", "Data feed"]
   ]]);
 
