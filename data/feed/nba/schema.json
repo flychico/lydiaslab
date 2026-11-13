@@ -1,0 +1,132 @@
+{
+ "sport": "NBA",
+ "file": "One row per graded game. Read of record only: the last read Leo saved before tip.",
+ "columns": [
+  {
+   "name": "sport",
+   "type": "string",
+   "unit": "",
+   "meaning": "Always NBA."
+  },
+  {
+   "name": "season",
+   "type": "string",
+   "unit": "",
+   "meaning": "The NBA season, for example 2026-27."
+  },
+  {
+   "name": "game_date",
+   "type": "date",
+   "unit": "YYYY-MM-DD, US Eastern",
+   "meaning": "The day the game was played, in Eastern time."
+  },
+  {
+   "name": "game_id",
+   "type": "string",
+   "unit": "",
+   "meaning": "ESPN's game id."
+  },
+  {
+   "name": "away_team",
+   "type": "string",
+   "unit": "",
+   "meaning": "The visiting team's full name."
+  },
+  {
+   "name": "home_team",
+   "type": "string",
+   "unit": "",
+   "meaning": "The home team's full name."
+  },
+  {
+   "name": "start_utc",
+   "type": "datetime",
+   "unit": "ISO 8601, UTC",
+   "meaning": "Scheduled tip time."
+  },
+  {
+   "name": "read_saved_utc",
+   "type": "datetime",
+   "unit": "ISO 8601, UTC",
+   "meaning": "When Leo saved the read this row uses: the last read saved before tip. Nothing written after tip is used."
+  },
+  {
+   "name": "leo_win_prob_away",
+   "type": "number",
+   "unit": "probability 0 to 1, three decimals",
+   "meaning": "Leo's chance that the away team wins."
+  },
+  {
+   "name": "leo_win_prob_home",
+   "type": "number",
+   "unit": "probability 0 to 1, three decimals",
+   "meaning": "Leo's chance that the home team wins."
+  },
+  {
+   "name": "leo_margin_home",
+   "type": "number",
+   "unit": "points, one decimal",
+   "meaning": "Leo's own margin: positive means Leo has the home team winning by that many, negative the away team."
+  },
+  {
+   "name": "leo_total",
+   "type": "number",
+   "unit": "points",
+   "meaning": "Leo's projected combined score. Empty when the saved card does not match the read of record."
+  },
+  {
+   "name": "final_away",
+   "type": "integer",
+   "unit": "points",
+   "meaning": "The away team's final score."
+  },
+  {
+   "name": "final_home",
+   "type": "integer",
+   "unit": "points",
+   "meaning": "The home team's final score."
+  },
+  {
+   "name": "overtime",
+   "type": "boolean",
+   "unit": "true or false",
+   "meaning": "Whether the game went to overtime."
+  },
+  {
+   "name": "pick_side",
+   "type": "string",
+   "unit": "",
+   "meaning": "The team Leo picked to win (a Leo Pick: 60% or more with Leo at a price better than -230). Empty when there was no pick."
+  },
+  {
+   "name": "pick_result",
+   "type": "string",
+   "unit": "W, L, P or empty",
+   "meaning": "The Leo Pick's result. Empty when there was no pick."
+  },
+  {
+   "name": "pick_units",
+   "type": "number",
+   "unit": "units, three decimals",
+   "meaning": "Units won or lost on a one unit Leo Pick at the price it was graded on. The price itself is not in the file."
+  },
+  {
+   "name": "leo_right_winner",
+   "type": "boolean",
+   "unit": "true or false",
+   "meaning": "Whether the team Leo gave 50% or more won."
+  },
+  {
+   "name": "miss_reason",
+   "type": "string",
+   "unit": "injury_input, market_knew, overtime, blowout, variance, model_error or empty",
+   "meaning": "Why the game counts as a miss, the same reason the results page shows (ndhorizon.com/nba/results/). Empty when the game is not a miss."
+  },
+  {
+   "name": "model_version",
+   "type": "string",
+   "unit": "",
+   "meaning": "The Leo model that made the read."
+  }
+ ]
+}

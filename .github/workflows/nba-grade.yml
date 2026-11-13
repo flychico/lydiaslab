@@ -47,6 +47,12 @@ jobs:
       - name: Results page
         run: node scripts/build-nba-results-page.js || echo "::warning::NBA results page not rebuilt"
 
+      # Leo data feed sample (HO-0063 part B): the last 7 graded days and the
+      # schema in data/feed/nba/. Leo's own output only, no sportsbook numbers.
+      # The full season file is only written with --out and is never committed.
+      - name: Data feed sample
+        run: node scripts/build-nba-feed.js || echo "::warning::NBA feed sample not rebuilt"
+
       # Every player's points per game and game log for /nba/players/ and the
       # matchup pages' box scores (display only). Never blocks the run.
       - name: Player scoring log
@@ -74,7 +80,7 @@ jobs:
           set -euo pipefail
           git config user.name "lydia-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/nba nba sitemap.xml
+          git add data/nba data/feed/nba nba sitemap.xml
           if git diff --cached --quiet; then echo "No change."; exit 0; fi
           git commit -m "NBA grade results $(TZ=America/New_York date +%F)"
           git pull --rebase
