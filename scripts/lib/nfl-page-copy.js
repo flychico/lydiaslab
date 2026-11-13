@@ -133,10 +133,13 @@ function loadModel() {
   return MODEL && INPUTS;
 }
 
-function drivers(m) {
+// row: optional inputs from the same read (picks-<date>.json ml_inputs, used
+// by the member brief); the check below still requires they reproduce the
+// published chance.
+function drivers(m, row) {
   if (!loadModel() || !MODEL.features) return null;
-  const r = INPUTS[m.game_id];
-  if (!r || r.model_version !== MODEL.model_version) return null;
+  const r = row || INPUTS[m.game_id];
+  if (!r || (r.model_version || MODEL.model_version) !== MODEL.model_version) return null;
   const parts = { home: MODEL.intercept };
   MODEL.features.forEach((f, k) => { parts[f] = MODEL.beta[k] * (Number(r[f]) - MODEL.scaler.mean[f]) / MODEL.scaler.sd[f]; });
   const eta = Object.values(parts).reduce((a, b) => a + b, 0);
@@ -190,4 +193,4 @@ function why(m) {
   <p class="dim" style="margin:8px 0 0">Leo knows team results, quarterback play and the injury report as of its last read${when ? ` (${esc(when)})` : ""}. It does not know game plans, weather changes or news after that read.</p>`;
 }
 
-module.exports = { summary, why, finalSentence };
+module.exports = { summary, why, finalSentence, drivers };

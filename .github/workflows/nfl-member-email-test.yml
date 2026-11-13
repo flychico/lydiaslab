@@ -1,0 +1,50 @@
+name: NFL member emails (test send)
+
+# Manual only (HO-0060). Sends one copy of an NFL member email to the
+# AUDIT_EMAIL secret, subject marked TEST, no send log, so the real send for
+# that date is untouched. Nobody on any list gets it.
+#   brief  = the member brief and the free card for a slate already in the repo
+#   review = the morning after review for a graded game day
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "YYYY-MM-DD, a slate (brief) or a graded game day (review)"
+        required: true
+        type: string
+      email:
+        description: "Which email"
+        required: true
+        default: brief
+        type: choice
+        options: [brief, review]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Send the test copy
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_REPLY_TO: ${{ secrets.EMAIL_REPLY_TO }}
+          AUDIT_EMAIL: ${{ secrets.AUDIT_EMAIL }}
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.email }}" = "brief" ]; then
+            node scripts/send-nfl-card-emails.js "${{ inputs.date }}" --test
+          else
+            node scripts/send-nfl-review-email.js "${{ inputs.date }}" --test
+          fi

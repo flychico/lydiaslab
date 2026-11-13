@@ -248,7 +248,7 @@ function main(review, tracker, season) {
   return html;
 }
 
-const api = { records, learning, weekSection, weekList, main, weekSlug, longDate };
+const api = { records, learning, weekSection, weekList, main, weekSlug, longDate, REASON, REASON_HELP };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else if (typeof window !== "undefined") window.NFL_RESULTS = api;
 })();

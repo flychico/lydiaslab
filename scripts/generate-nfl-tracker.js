@@ -93,6 +93,21 @@ function scoreIndex() {
       if (g.week != null) idx[`${g.week}|${g.matchup}`] = { away: g.away_score, home: g.home_score };
     }
   }
+  // The grader writes each final into matchups/<date>.json at grading time,
+  // while results-<date>.json with that game is only written by the next
+  // slate's run (after the 7:39am grade), so without this a game day reached
+  // the results review one grading run late (Nov 12, found 2026-11-13).
+  const mdir = path.join(DIR, "matchups");
+  if (fs.existsSync(mdir)) for (const f of fs.readdirSync(mdir)) {
+    if (!/^\d{4}-\d{2}-\d{2}\.json$/.test(f)) continue;
+    let rows; try { rows = JSON.parse(fs.readFileSync(path.join(mdir, f), "utf8")); } catch (e) { continue; }
+    for (const m of Array.isArray(rows) ? rows : []) {
+      const F = m.final_report;
+      if (!F || F.away_score == null || F.home_score == null || m.week == null) continue;
+      const k = `${m.week}|${m.matchup}`;
+      if (!idx[k]) idx[k] = { away: F.away_score, home: F.home_score };
+    }
+  }
   return idx;
 }
 

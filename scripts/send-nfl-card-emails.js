@@ -1,9 +1,15 @@
 #!/usr/bin/env node
 /**
- * Leo: email the NFL card for a slate date to the free list and to members.
+ * Leo: email the NFL card for a slate date to the free list and the member
+ * brief to members (HO-0060, DEC-20261113-50).
  *
- *   node scripts/send-nfl-card-emails.js YYYY-MM-DD          send (needs RESEND_API_KEY, EMAIL_FROM)
- *   node scripts/send-nfl-card-emails.js YYYY-MM-DD --dry    print the email, send nothing
+ *   node scripts/send-nfl-card-emails.js YYYY-MM-DD                send (needs RESEND_API_KEY, EMAIL_FROM)
+ *   node scripts/send-nfl-card-emails.js YYYY-MM-DD --dry          print the free card, send nothing
+ *   node scripts/send-nfl-card-emails.js YYYY-MM-DD --dry --member print the member brief
+ *   node scripts/send-nfl-card-emails.js YYYY-MM-DD --html=f.html [--member]  write the html
+ *   node scripts/send-nfl-card-emails.js YYYY-MM-DD --test         send both, subject marked TEST,
+ *                                                                  to the AUDIT_EMAIL secret only,
+ *                                                                  any time, no log
  *
  * Content comes only from data/nfl/matchups/<date>.json, the same frozen
  * pre-kickoff reads the matchup pages and the weekly card show: each team's
@@ -15,11 +21,14 @@
  *   - Never after the slate's first kickoff. A late scheduled run stays quiet.
  *   - Missing secrets, no games or no recipients: logs and exits 0, so the
  *     publish never fails because of email.
- * Recipients, from the "signups" branch:
- *   members (member-email.csv)  the full card: everything below, plus Leo's
- *                               read on every QB, RB and WR yardage line
- *                               and every touchdown chance of 25% or more
- *   free list (free-preview.csv, minus members)  the short card
+ * Recipients (scripts/lib/subscribers.js):
+ *   members (getList("member-email"), active PayPal members)  the member
+ *       brief from scripts/lib/nfl-member-email.js: the three calls, the
+ *       reasoning and the inputs for every game; no prop reads and no
+ *       touchdown chances (Lynold, 2026-11-13)
+ *   free list (getList("free-preview"), minus members)  the short card, with
+ *       one line about what members get. On Thanksgiving 2026-11-26 only, the
+ *       free list gets the member brief as a marked sample (HO-0060 item 4).
  */
 const fs = require("fs");
 const path = require("path");
@@ -33,6 +42,9 @@ const EMAIL_REPLY_TO = process.env.EMAIL_REPLY_TO || "";
 const SITE = "https://ndhorizon.com";
 const SIGNUPS = "https://raw.githubusercontent.com/flychico/lydiaslab/signups/data/signups";
 const DRY = process.argv.includes("--dry");
+const TEST = process.argv.includes("--test");
+const SAMPLE_DATES = new Set(["2026-11-26"]);   // Thanksgiving sample, approved by Lynold 2026-11-13
+const M = require("./lib/nfl-member-email");
 const DATE = (process.argv.find(a => /^\d{4}-\d{2}-\d{2}$/.test(a)))
   || new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 const LOG = path.join(ROOT, "data/email-log", `nfl-card-${DATE}.json`);
@@ -56,27 +68,6 @@ async function list(name) {
     if (!res.ok) { console.log(`  ${name}: none (HTTP ${res.status})`); return []; }
     return (await res.text()).split(/\r?\n/).slice(1).map(l => (l.split(",")[0] || "").trim().toLowerCase()).filter(isEmail);
   } catch (e) { console.log(`  ${name}: unreadable (${e.message})`); return []; }
-}
-
-const UNIT = { QB_PASS_YARDS: "pass yds", RB_RUSH_YARDS: "rush yds", WR_REC_YARDS: "rec yds" };
-// Members' extra section: the yardage lines with Leo's number and side, from
-// the merged props file (lines attached), and every TD chance of 25%+.
-function memberExtra(m, props) {
-  const mine = props.filter(p => p.matchup === m.matchup);
-  const yards = mine.filter(p => UNIT[p.market] && p.line != null)
-    .sort((a, b) => a.market.localeCompare(b.market) || b.projection - a.projection);
-  const tds = mine.filter(p => p.market === "ANYTIME_TD" && p.projection >= 0.25).sort((a, b) => b.projection - a.projection);
-  if (!yards.length && !tds.length) return { html: "", text: "" };
-  const yl = yards.map(p => `${p.player} (${p.team}) ${UNIT[p.market]}: Leo ${p.projection} vs line ${p.line}${p.lean && p.lean !== "none" ? `, leans ${String(p.lean).toUpperCase()}` : ", no lean"}`);
-  const tl = tds.map(p => `${p.player} (${p.team}) ${pct(p.projection)}`);
-  const cell = `style="font-family:${E.SANS};font-size:12px;padding:5px 0;border-top:1px solid ${E.X.line};color:${E.T.text}"`;
-  const yrows = yards.map(p => { const side = p.lean && p.lean !== "none" ? String(p.lean).toUpperCase() : "";
-    return `<tr><td ${cell}><b>${esc(p.player)}</b> <span style="color:${E.T.dim}">${esc(p.team)} ${esc(UNIT[p.market])}</span></td><td align="right" ${cell}>Leo <b>${esc(p.projection)}</b></td><td align="right" ${cell}>line ${esc(p.line)}</td><td align="right" ${cell}>${side ? E.pill(side, side === "UNDER" ? "gold" : "navy") : `<span style="color:${E.T.dim}">no lean</span>`}</td></tr>`; }).join("");
-  return {
-    html: `${yl.length ? `<div style="font-weight:800;color:${E.T.text};margin-bottom:4px">Prop reads (members)</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${yrows}</table>` : ""}
-      ${tl.length ? `<div style="margin-top:8px"><b style="color:${E.T.text}">Touchdown chances 25%+:</b> ${esc(tl.join(", "))}</div>` : ""}`,
-    text: (yl.length ? `\n  Prop reads:\n    ${yl.join("\n    ")}` : "") + (tl.length ? `\n  TD chances 25%+: ${tl.join(", ")}` : "")
-  };
 }
 
 // QBs as Leo used them (depth chart, DEC-20261031-08); the schedule feed's
@@ -151,19 +142,21 @@ function cardHtml(games, rows, props, nice, week, subject) {
           { label: "Total", value: esc(g && g.total_line != null ? g.total_line : (m.total_line ?? "n/a")), sub: g && g.proj_total != null ? `Leo ${esc(g.proj_total)}` : "", tone: "steel" },
           { label: isPick ? "Leo pick" : "Leo", value: g ? `${esc(g.pick)} ${Math.round(g.prob * 100)}%` : "n/a", sub: isPick ? "more than 60%, graded" : "under 60%, no pick", tone: isPick ? "good" : "gold" }
         ],
-        notes: [td, props ? memberExtra(m, props).html : ""],
+        notes: [td],
         cta: "Full preview: injuries, props and why"
       });
     }),
+    M.upsell().html,
     E.footer({
       links: [[`${E.SITE}/nfl/scoreboard/`, "Live scores"], [`${E.SITE}/nfl/results/`, "Leo&rsquo;s record"]],
-      note: (props ? "Prop reads are Leo&rsquo;s side of each posted line, not wagers. Inside 5% of the line there is no lean.<br>" : "") + "Leo&rsquo;s top touchdown pick in a game scored 47% of the time in 2023 to 2025. These are chances, not promises."
+      note: "Leo&rsquo;s top touchdown pick in a game scored 47% of the time in 2023 to 2025. These are chances, not promises."
     })
   ].join("\n");
   return E.shell({ title: subject, preheader: picks.length ? `Leo picks: ${picks.map(({ g }) => `${g.pick} ${Math.round(g.prob * 100)}%`).join(", ")}` : `${games.length} games, Leo's read on each`, body });
 }
 
-function build(games, props = null) {
+function build(games) {
+  const props = null;   // the free card only; members get the brief
   const nice = new Date(`${DATE}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" });
   const week = games[0].week;
   const rows = games.map(m => {
@@ -178,8 +171,8 @@ function build(games, props = null) {
   const subject = `${props ? "Members: " : ""}Leo NFL card, Week ${week}: ${games.length} game${games.length === 1 ? "" : "s"} ${games.length > 1 ? "on " : ""}${nice}`;
   const html = cardHtml(games, rows, props, nice, week, subject);
   const text = [`Leo's NFL card, Week ${week}, ${nice}`, "",
-    ...rows.map(({ m, g, top, winner }) => `${TEAMS.full(m.away)} at ${TEAMS.full(m.home)} (${clock(m.kickoff)})\n  Leo: ${winner}\n  Leo total: ${g && g.proj_total != null ? g.proj_total : "n/a"}\n  Most likely TD: ${top.map(x => `${x.player} ${pct(x.prob)}`).join(", ") || "n/a"}${props ? memberExtra(m, props).text : ""}\n  ${SITE}${m.url}`),
-    "", `Full card: ${SITE}/nfl/week/`, "Analysis only, not betting advice. 21+. 1-800-MY-RESET.", 'Reply "unsubscribe" to stop these.'].join("\n");
+    ...rows.map(({ m, g, top, winner }) => `${TEAMS.full(m.away)} at ${TEAMS.full(m.home)} (${clock(m.kickoff)})\n  Leo: ${winner}\n  Leo total: ${g && g.proj_total != null ? g.proj_total : "n/a"}\n  Most likely TD: ${top.map(x => `${x.player} ${pct(x.prob)}`).join(", ") || "n/a"}\n  ${SITE}${m.url}`),
+    "", M.upsell().text, "", `Full card: ${SITE}/nfl/week/`, "Analysis only, not betting advice. 21+. 1-800-MY-RESET.", 'Reply "unsubscribe" to stop these.'].join("\n");
   return { subject, html, text };
 }
 
@@ -189,14 +182,26 @@ async function main() {
   const games = JSON.parse(fs.readFileSync(src, "utf8"))
     .sort((a, b) => String(a.kickoff).localeCompare(String(b.kickoff)));
   if (!games.length) { console.log(`NFL card: no games on ${DATE}.`); return; }
-  const pf = path.join(ROOT, "data/nfl", `props-${DATE}.json`);
-  const props = fs.existsSync(pf) ? JSON.parse(fs.readFileSync(pf, "utf8")) : [];
-  const freeEmail = build(games), memberEmail = build(games, props);
+  const memberEmail = M.brief(games);
+  const freeEmail = SAMPLE_DATES.has(DATE) ? M.brief(games, { sample: true }) : build(games);
   const HTMLOUT = (process.argv.find(a => a.startsWith("--html=")) || "").slice(7);
   if (HTMLOUT) { fs.writeFileSync(HTMLOUT, (process.argv.includes("--member") ? memberEmail : freeEmail).html); console.log(`NFL card preview written to ${HTMLOUT}`); return; }
   if (DRY) {
     const which = process.argv.includes("--member") ? memberEmail : freeEmail;
     console.log(`SUBJECT: ${which.subject}\n\n${which.text}`); return;
+  }
+  if (TEST) {
+    const to = (process.env.AUDIT_EMAIL || "").trim();
+    if (!RESEND_API_KEY || !EMAIL_FROM || !to) { console.log("NFL card test: RESEND_API_KEY, EMAIL_FROM or AUDIT_EMAIL not set."); process.exitCode = 1; return; }
+    for (const email of [memberEmail, freeEmail]) {
+      const res = await fetch("https://api.resend.com/emails", { method: "POST",
+        headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ from: EMAIL_FROM, to: [to], reply_to: EMAIL_REPLY_TO || undefined, subject: `TEST ${email.subject}`, html: email.html, text: email.text }) });
+      console.log(`NFL card test "${email.subject}": HTTP ${res.status}`);
+      if (!res.ok) process.exitCode = 1;
+      await new Promise(r => setTimeout(r, 600));
+    }
+    return;
   }
 
   if (fs.existsSync(LOG)) { console.log(`NFL card for ${DATE} already sent (${path.relative(ROOT, LOG)}).`); return; }

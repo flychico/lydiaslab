@@ -130,6 +130,19 @@ jobs:
           node scripts/build-nfl-results-pages.js || true
           node scripts/generate-sitemap.js || true
 
+      # Members' morning after review (HO-0060, DEC-20261113-50): every miss
+      # with its reason, the upsets and what Leo got right, for each game day
+      # this run finished grading. Members only, once per date
+      # (data/email-log/nfl-review-<date>.json), never before 7am ET, only
+      # recent game days, and a no-op when secrets or members are missing.
+      - name: Email members the morning review
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_REPLY_TO: ${{ secrets.EMAIL_REPLY_TO }}
+          LEO_SIGNUPS_TOKEN: ${{ secrets.LEO_SIGNUPS_TOKEN }}
+        run: node scripts/send-nfl-review-email.js ${{ steps.dates.outputs.list }} || true
+
       # Closing line value (DEC-20261101-02): did the market move toward Leo
       # between his first read and kickoff? Private; feeds the owner brief.
       - name: Closing line value
