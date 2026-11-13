@@ -5,13 +5,17 @@
  *   node scripts/send-nba-card-emails.js YYYY-MM-DD          send (needs RESEND_API_KEY, EMAIL_FROM)
  *   node scripts/send-nba-card-emails.js YYYY-MM-DD --dry    print the email, send nothing
  *   node scripts/send-nba-card-emails.js YYYY-MM-DD --html=<file>   write the HTML preview, send nothing
- *   node scripts/send-nba-card-emails.js YYYY-MM-DD --test   one copy to the owner (AUDIT_EMAIL secret)
- *        through Resend, as subscribers get it, subject marked TEST. No timing
- *        gates, no subscribers, no email log. Workflow: "NBA card email (test send)".
+ *   node scripts/send-nba-card-emails.js YYYY-MM-DD --html=<file> --member   the member brief preview
+ *   node scripts/send-nba-card-emails.js YYYY-MM-DD --test   one copy of each email (member brief and
+ *        free card) to the owner (AUDIT_EMAIL secret) through Resend, subjects
+ *        marked TEST. No timing gates, no subscribers, no email log.
+ *        Workflow: "NBA card email (test send)".
  *
- * Content is data/nba/picks-<date>.json, the card the site shows, laid out
- * like the scoreboard cards (scripts/lib/nba-card-email.js). Free list and
- * members get the same card: NBA has no member-only content yet.
+ * Content is data/nba/picks-<date>.json. Members get the member brief
+ * (scripts/lib/nba-member-email.js: every call with the reasoning and the
+ * inputs as Leo read them; HO-0061). The free list gets the short card
+ * (scripts/lib/nba-card-email.js) with one line pointing to membership.
+ * A member is never also sent the free card.
  *
  * When it sends: the first publish run that is within 3 hours of the slate's
  * first tip, so the injury report is as late as possible (a 7pm slate goes
@@ -26,6 +30,7 @@ const fs = require("fs");
 const path = require("path");
 const E = require("./lib/nba-card-email");
 const WHY = require("./lib/nba-why");
+const M = require("./lib/nba-member-email");
 
 const ROOT = path.join(__dirname, "..");
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
@@ -45,18 +50,23 @@ async function main() {
   const games = (doc.games || []).filter(g => g.leo);
   if (!games.length) { console.log(`NBA card email: no games on ${DATE}.`); return; }
   const record = (() => { try { return JSON.parse(fs.readFileSync(path.join(ROOT, "data/nba/results.json"), "utf8")).season.picks || null; } catch (e) { return null; } })();
-  const email = E.build(doc, { why: WHY, record });
-  if (HTML) { fs.writeFileSync(HTML, email.html); console.log(`NBA card email preview written to ${HTML}. ${email.subject}`); return; }
-  if (DRY) { console.log(`SUBJECT: ${email.subject}\n\n${email.text}`); return; }
+  const email = E.build(doc, { why: WHY, record, memberLine: true });
+  const brief = M.brief(doc, { record });
+  const MEMBER = process.argv.includes("--member");
+  if (HTML) { const e = MEMBER ? brief : email; fs.writeFileSync(HTML, e.html); console.log(`NBA ${MEMBER ? "member brief" : "card email"} preview written to ${HTML}. ${e.subject}`); return; }
+  if (DRY) { const e = MEMBER ? brief : email; console.log(`SUBJECT: ${e.subject}\n\n${e.text}`); return; }
   if (process.argv.includes("--test")) {
     const to = (process.env.AUDIT_EMAIL || "").trim();
     if (!RESEND_API_KEY || !EMAIL_FROM || !to) { console.log("NBA card test: RESEND_API_KEY, EMAIL_FROM or AUDIT_EMAIL not set."); process.exitCode = 1; return; }
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST", headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: EMAIL_FROM, to: [to], reply_to: EMAIL_REPLY_TO || undefined, subject: "TEST: " + email.subject, html: email.html, text: email.text })
-    });
-    console.log(res.ok ? `NBA card test for ${DATE} sent to the owner address.` : `NBA card test failed: HTTP ${res.status} ${await res.text()}`);
-    if (!res.ok) process.exitCode = 1;
+    for (const [name, e] of [["member brief", brief], ["free card", email]]) {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST", headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ from: EMAIL_FROM, to: [to], reply_to: EMAIL_REPLY_TO || undefined, subject: "TEST: " + e.subject, html: e.html, text: e.text })
+      });
+      console.log(res.ok ? `NBA ${name} test for ${DATE} sent to the owner address.` : `NBA ${name} test failed: HTTP ${res.status} ${await res.text()}`);
+      if (!res.ok) process.exitCode = 1;
+      await new Promise(r => setTimeout(r, 600));
+    }
     return;
   }
   if (fs.existsSync(LOG)) { console.log(`NBA card for ${DATE} already sent (${path.relative(ROOT, LOG)}).`); return; }
@@ -68,20 +78,20 @@ async function main() {
   const { getList, personalize } = require("./lib/subscribers");
   const members = [...new Set(await getList("member-email"))];
   const free = [...new Set(await getList("free-preview"))].filter(e => !members.includes(e));
-  const to = [...members, ...free];
+  const to = [...members.map(a => [a, brief]), ...free.map(a => [a, email])];
   if (!to.length) { console.log("NBA card email: no recipients yet."); return; }
   let sent = 0, failed = 0;
-  for (const addr of to) {
+  for (const [addr, e] of to) {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify(personalize({ from: EMAIL_FROM, to: [addr], reply_to: EMAIL_REPLY_TO || undefined, subject: email.subject, html: email.html, text: email.text }))
+      body: JSON.stringify(personalize({ from: EMAIL_FROM, to: [addr], reply_to: EMAIL_REPLY_TO || undefined, subject: e.subject, html: e.html, text: e.text }))
     });
     res.ok ? sent++ : (failed++, console.warn(`  send failed: HTTP ${res.status}`));
     await new Promise(r => setTimeout(r, 600));   // Resend rate limit
   }
   fs.mkdirSync(path.dirname(LOG), { recursive: true });
-  fs.writeFileSync(LOG, JSON.stringify({ date: DATE, sent_at: new Date().toISOString(), games: games.length, leans: email.leans,
+  fs.writeFileSync(LOG, JSON.stringify({ date: DATE, sent_at: new Date().toISOString(), games: games.length, picks: brief.picks,
     members: members.length, free: free.length, sent, failed }, null, 2) + "\n");
   console.log(`NBA card ${DATE}: sent ${sent} (${members.length} members, ${free.length} free), failed ${failed}.`);
 }
