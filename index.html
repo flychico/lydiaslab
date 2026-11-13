@@ -64,29 +64,53 @@
   "publisher": { "@type": "Organization", "@id": "https://ndhorizon.com/#organization", "name": "Leo", "url": "https://ndhorizon.com/" }
 }
 </script>
+<style>
+.hero-signup{margin-top:18px;max-width:560px}
+.hero-signup-row{display:flex;gap:8px;flex-wrap:wrap}
+.hero-signup-row input{flex:1 1 220px;min-width:0}
+.glance{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px}
+.glance .card{margin:0}
+.glance .big{font-size:1.7rem;font-weight:800;letter-spacing:-.02em;margin:4px 0 2px}
+.glance .lbl{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim)}
+.glance p{margin:4px 0 0}
+</style>
 </head>
 <body>
 <nav id="nav"><div class="nav-inner"><a class="brand" href="/" aria-label="Leo home"><span class="brand-leo">Leo</span></a><div class="nav-sport-selector"><button class="nav-sport" data-sport="MLB">MLB</button><button class="nav-sport active" data-sport="NFL">NFL</button><button class="nav-sport" data-sport="NBA">NBA</button></div><button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">☰</button><div class="nav-links"><a class="navlink" href="/nfl/scoreboard/">Scoreboard</a><span class="nav-drop"><a class="navlink nav-drop-toggle" href="/nfl/previews/">Picks ▾</a><span class="nav-drop-menu"><a href="/nfl/previews/">This week’s picks</a><a href="/nfl/week/">Week card</a><a href="/nfl/games/">Every game</a></span></span><a class="navlink" href="/nfl/tools/player-props/">Props</a><a class="navlink" href="/nfl/teams/">Teams</a><span class="nav-drop"><a class="navlink nav-drop-toggle" href="/nfl/tools/">Lab ▾</a><span class="nav-drop-menu"><a href="/nfl/tools/model-tuner/">Model Tuner</a><a href="/nfl/member-brief/">Daily Member Brief</a><a href="/nfl/tools/player-props/">Player Props</a><a href="/nfl/tools/injury-tracker/">Injury Tracker</a></span></span><a class="navlink" href="/nfl/stats/">Stats</a><a class="navlink" href="/nfl/results/">Results</a><span class="nav-drop"><a class="navlink nav-drop-toggle" href="/#more">More ▾</a><span class="nav-drop-menu"><a href="/gym/">Free workout planner</a><a href="/articles/">Betting guides</a></span></span><a class="navlink navlink-cta" href="/membership/">Join $30/mo</a></div></div></nav>
 <main>
-<!-- prerendered 2026-11-13T20:49:14.932Z by scripts/prerender-hubs.js; replaced by the page script on load -->
+<!-- prerendered 2026-11-13T21:31:25.840Z by scripts/prerender-hubs.js; replaced by the page script on load -->
 <section class="home-hero">
     <p class="eyebrow">NFL every week · NBA every night · MLB returns March 25, 2027</p>
     <h1>Predictions from a model that shows its work.</h1>
-    <p class="lead">Leo gives every NFL and NBA game a win chance for each team. In the NFL it adds a projected total and the players most likely to score; in the NBA, Leo’s own spread. Every number is frozen before the game starts and graded after it ends, and the full record, wins and losses, stays on the site.</p>
+    <p class="lead">Leo gives every NFL and NBA game a win chance, makes its calls, and explains why. Every number is frozen before the game starts and graded after it ends, and the full record, wins and losses, stays on the site.</p>
     <div class="hero-actions">
       <a class="btn blue" href="/nfl/week/">This week’s NFL card</a>
       <a class="btn blue" href="/nba/scoreboard/">Tonight’s NBA card</a>
       <a class="btn secondary" href="/nfl/results/">NFL record</a>
       <a class="btn secondary" href="/nba/results/">NBA record</a>
     </div>
+    <div class="hero-signup">
+      <p class="small" style="margin:0 0 6px"><b>Get the free card by email</b> before every NFL and NBA slate.</p>
+      <form class="lydia-signup-form" data-list="free-preview" data-thanks="You’re on the list. The next card goes to that inbox." data-signup-wired="1">
+        <input type="hidden" name="bot-field">
+        <div class="hero-signup-row">
+          <input type="email" name="email" required="" placeholder="you@example.com" aria-label="Email address">
+          <button type="submit">Send me the free card</button>
+        </div>
+        <div class="signup-error small" style="color:#c92a2a"></div>
+      </form><div class="signup-terms dim small" style="margin-top:6px;font-size:.75rem;line-height:1.4">By signing up you confirm you are 21 or over and agree to the <a href="/terms/">Terms of Use</a> and <a href="/privacy/">Privacy Policy</a>. Leo publishes analysis, not betting advice.</div>
+    </div>
   </section>
+
+  <div class="section-head"><h2>Leo’s record at a glance</h2></div>
+  <div id="record-glance"><div class="glance"><div class="card"><div class="lbl">NFL · the three calls since Nov 2</div><div class="big">11-9</div><p class="small dim">+0.15u · early read, 20 of 50. Moneyline 2-1, spread 6-4, total 3-4.</p><p class="small">Latest graded day, Monday, November 9: 1-1. <a href="/nfl/results/">Every miss and why →</a></p></div><div class="card"><div class="lbl">NBA · Leo Picks since Nov 2</div><div class="big">11-4</div><p class="small dim">+1.66u · early read, 15 of 50.</p><p class="small">Latest graded night, Thursday, November 12: 2-0, +0.89u. <a href="/nba/results/">Every miss and why →</a></p></div><div class="card"><div class="lbl">MLB · 2026 season, final</div><div class="big">45-31</div><p class="small dim">Moneyline, +1.78u. Strikeouts 223-216, -31.47u. Only picks saved before first pitch count.</p><p class="small"><a href="/results/">The full season →</a></p></div></div><p class="small dim" style="margin-top:8px">Every number is frozen before the game and graded after it, wins and losses alike. Under 50 graded calls is an early read.</p></div>
 
   <div class="section-head">
     <h2>This week in the NFL</h2>
     <a class="dim small" href="/nfl/week/">Full week card →</a>
   </div>
-  <div id="nfl-week"><p class="small dim" style="margin:0 0 10px">Prop calls this season <b>499-496</b> · <a href="/nfl/results/">full record</a></p><div class="feat-grid"><a class="feat-card" href="/nfl/commanders-vs-giants-prediction-odds-2026-11-12/"><div class="teams">WAS @ NYG</div>
-      <div class="meta">Win chance: <b>NYG 51%</b></div>
+  <div id="nfl-week"><div class="feat-grid"><a class="feat-card" href="/nfl/commanders-vs-giants-prediction-odds-2026-11-12/"><div class="teams">Commanders at Giants</div>
+      <div class="meta">Win chance: <b>Giants 51%</b></div>
       <div class="meta">Leo total 45.4 · most likely TD: Cam Skattebo 46%, Malik Nabers 40%</div></a></div><p class="small dim" style="margin-top:10px">Win chances are information, not picks. Touchdown chances are chances, not promises: Leo’s top pick in a game scored 47% of the time in 2023 to 2025.</p></div>
 
   <div class="section-head">
@@ -154,20 +178,21 @@
   <div class="member-band">
     <div class="member-grid">
       <div>
-        <p class="eyebrow">Football season</p>
-        <h3 style="margin-top:0;font-size:1.5rem">The full NFL card in your inbox before every game day</h3>
+        <p class="eyebrow">Leo Member</p>
+        <h3 style="margin-top:0;font-size:1.5rem">The full reasoning before the games, the full accounting after</h3>
         <ul class="member-list">
-          <li>Every game’s win chance, projected total and touchdown chances</li>
-          <li>Leo’s read on every QB, RB and WR prop line</li>
-          <li>Every touchdown chance of 25% or more</li>
-          <li>The same public record, graded after every game</li>
+          <li>The member brief before every NFL and NBA slate: every call with its inputs and reasons</li>
+          <li>The morning review: every miss and why, the day after</li>
+          <li>A weekly note on what Leo learned and what changed</li>
+          <li>By email, no account. The site and the record stay free</li>
         </ul>
+        <p class="small" style="margin:6px 0 0"><a href="/membership/#samples">See real sample emails →</a></p>
       </div>
       <div style="text-align:center">
         <div class="price-tag">$30<span class="dim" style="font-size:1rem;font-weight:600">/mo</span></div>
         <p class="dim small" style="margin:4px 0 14px">Founding rate. Cancel anytime.</p>
         <p><a class="btn blue" href="/membership/">Join Leo</a></p>
-        <p style="margin-top:8px"><a class="dim small" href="/membership/#free">or get the free NFL card →</a></p>
+        <p style="margin-top:8px"><a class="dim small" href="/membership/#free">or get the free card →</a></p>
       </div>
     </div>
   </div>
@@ -181,17 +206,58 @@ renderNav("/"); renderFooter();
 
 async function loadJson(u){ try{ const r=await fetch(`${u}?v=${Date.now()}`,{cache:"no-store"}); return r.ok?await r.json():null; }catch(e){ return null; } }
 
+
+/* Leo's record at a glance (launch plan day 8): the official call record per
+   sport from the files the record pages read, and the latest graded day.
+   Under 50 graded calls is an early read. Numbers only from the files. */
+(async function glance(){
+  const el=document.getElementById("record-glance"); if(!el) return;
+  const [nfl, nba, nbaDays, mlb] = await Promise.all([
+    loadJson("/data/nfl/results-review.json"), loadJson("/data/nba/results.json"),
+    loadJson("/data/nba/results-days.json"), loadJson("/data/review/mlb-2026/summary.json")]);
+  const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const u=x=>(x>0?"+":"")+Number(x).toFixed(2)+"u";
+  const early=n=>n<50?`early read, ${n} of 50`:`${n} graded`;
+  const day=d=>new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
+  const cards=[];
+  const t=nfl&&nfl.three;
+  if(t){
+    const ms=["ml","spread","total"].map(k=>t[k]||{w:0,l:0,p:0,units:0});
+    const w=ms.reduce((a,x)=>a+x.w,0), l=ms.reduce((a,x)=>a+x.l,0), un=ms.reduce((a,x)=>a+x.units,0);
+    let last="";
+    const g3=(nfl.games||[]).filter(g=>g.three&&Array.isArray(g.calls)&&g.calls.length);
+    const ld=g3.map(g=>g.date).sort().pop();
+    if(ld){ const cs=g3.filter(g=>g.date===ld).flatMap(g=>g.calls); const lw=cs.filter(c=>c.result==="W").length, ll=cs.filter(c=>c.result==="L").length;
+      last=`<p class="small">Latest graded day, ${esc(day(ld))}: ${lw}-${ll}. <a href="/nfl/results/">Every miss and why &rarr;</a></p>`; }
+    cards.push(`<div class="card"><div class="lbl">NFL &middot; the three calls since Nov 2</div><div class="big">${w}-${l}</div><p class="small dim">${u(un)} &middot; ${early(w+l)}. Moneyline ${ms[0].w}-${ms[0].l}, spread ${ms[1].w}-${ms[1].l}, total ${ms[2].w}-${ms[2].l}.</p>${last}</div>`);
+  }
+  const pk=nba&&nba.season&&nba.season.picks;
+  if(pk){
+    let last="";
+    const d0=nbaDays&&Array.isArray(nbaDays.days)?nbaDays.days[0]:null;
+    if(d0&&d0.calls){ last=`<p class="small">Latest graded night, ${esc(day(d0.date))}: ${d0.calls.n?`${d0.calls.w}-${d0.calls.l}, ${u(d0.calls.units)}`:"no Leo Picks"}. <a href="/nba/results/">Every miss and why &rarr;</a></p>`; }
+    cards.push(`<div class="card"><div class="lbl">NBA &middot; Leo Picks since Nov 2</div><div class="big">${pk.won}-${pk.lost}</div><p class="small dim">${u(pk.units)} &middot; ${early(pk.won+pk.lost)}.</p>${last}</div>`);
+  }
+  const op=mlb&&mlb.official_picks;
+  if(op&&op.moneyline&&op.moneyline.frozen){
+    const ml=op.moneyline.frozen, k=op.pitcher_strikeouts&&op.pitcher_strikeouts.frozen;
+    cards.push(`<div class="card"><div class="lbl">MLB &middot; 2026 season, final</div><div class="big">${esc(ml.record)}</div><p class="small dim">Moneyline, ${u(ml.units)}.${k?` Strikeouts ${esc(k.record)}, ${u(k.units)}.`:""} Only picks saved before first pitch count.</p><p class="small"><a href="/results/">The full season &rarr;</a></p></div>`);
+  }
+  el.innerHTML=cards.length?`<div class="glance">${cards.join("")}</div><p class="small dim" style="margin-top:8px">Every number is frozen before the game and graded after it, wins and losses alike. Under 50 graded calls is an early read.</p>`:`<p class="dim small"><a href="/nfl/results/">NFL record</a> &middot; <a href="/nba/results/">NBA record</a> &middot; <a href="/results/">MLB 2026</a></p>`;
+})();
+
 /* This week in the NFL: the current slate from the published NFL feed (the
    same files the scoreboard reads), Leo's two most likely scorers per game
    and the season record split the way /nfl/results/ shows it. */
 (async function nflWeek(){
   const el=document.getElementById("nfl-week"); if(!el) return;
-  const [picks, props, tracker] = await Promise.all([
-    loadJson("/data/nfl/picks-today.json"), loadJson("/data/nfl/props-today.json"), loadJson("/data/nfl/tracker.json")]);
+  const [picks, props] = await Promise.all([
+    loadJson("/data/nfl/picks-today.json"), loadJson("/data/nfl/props-today.json")]);
   const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const pct=p=>Math.round(p*100)+"%";
-  const pr=tracker&&tracker.summary&&tracker.summary.props&&tracker.summary.props.all;
-  const recHtml=pr&&pr.decided?`<p class="small dim" style="margin:0 0 10px">Prop calls this season <b>${pr.w}-${pr.l}</b> &middot; <a href="/nfl/results/">full record</a></p>`:"";
+  const NICK={ARI:"Cardinals",ATL:"Falcons",BAL:"Ravens",BUF:"Bills",CAR:"Panthers",CHI:"Bears",CIN:"Bengals",CLE:"Browns",DAL:"Cowboys",DEN:"Broncos",DET:"Lions",GB:"Packers",HOU:"Texans",IND:"Colts",JAX:"Jaguars",KC:"Chiefs",LV:"Raiders",LAC:"Chargers",LAR:"Rams",LA:"Rams",MIA:"Dolphins",MIN:"Vikings",NE:"Patriots",NO:"Saints",NYG:"Giants",NYJ:"Jets",PHI:"Eagles",PIT:"Steelers",SF:"49ers",SEA:"Seahawks",TB:"Buccaneers",TEN:"Titans",WAS:"Commanders",WSH:"Commanders"};
+  const nk=a=>NICK[String(a).toUpperCase()]||a;
+  const recHtml="";
   if(!Array.isArray(picks)||!picks.length){ el.innerHTML=recHtml+`<div class="dim small">The next NFL slate posts on game week. <a href="/nfl/week/">See the latest week card &rarr;</a></div>`; return; }
   const td={};
   (Array.isArray(props)?props:[]).filter(p=>p.market==="ANYTIME_TD").forEach(p=>{(td[p.matchup]=td[p.matchup]||[]).push(p);});
@@ -206,8 +272,8 @@ async function loadJson(u){ try{ const r=await fetch(`${u}?v=${Date.now()}`,{cac
   const cards=picks.slice().sort((a,b)=>String(a.date+a.kickoff).localeCompare(String(b.date+b.kickoff))).slice(0,8).map(g=>{
     const top=(td[g.matchup]||[]).sort((a,b)=>b.projection-a.projection).slice(0,2);
     // Win chance only; winner picks retired 2026-10-17.
-    const call=`Win chance: <b>${esc(g.pick)} ${pct(g.model_prob)}</b>`;
-    return `<a class="feat-card" href="${slug(g)}"><div class="teams">${esc(g.away)} @ ${esc(g.home)}</div>
+    const call=`Win chance: <b>${esc(nk(g.pick))} ${pct(g.model_prob)}</b>`;
+    return `<a class="feat-card" href="${slug(g)}"><div class="teams">${esc(nk(g.away))} at ${esc(nk(g.home))}</div>
       <div class="meta">${call}</div>
       <div class="meta">Leo total ${esc(g.proj_total)}${top.length?` &middot; most likely TD: ${top.map(x=>`${esc(x.player)} ${pct(x.projection)}`).join(", ")}`:""}</div></a>`;
   }).join("");
