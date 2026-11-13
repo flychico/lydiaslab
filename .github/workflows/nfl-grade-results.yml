@@ -130,6 +130,12 @@ jobs:
           node scripts/build-nfl-results-pages.js || true
           node scripts/generate-sitemap.js || true
 
+      # Leo data feed (HO-0063, DEC-20261113-51): the public 7 day sample and
+      # the schema in data/feed/nfl/. The full season file is only written with
+      # --out and is never committed.
+      - name: Build data feed sample
+        run: node scripts/build-nfl-feed.js || true
+
       # Members' morning after review (HO-0060, DEC-20261113-50): every miss
       # with its reason, the upsets and what Leo got right, for each game day
       # this run finished grading. Members only, once per date

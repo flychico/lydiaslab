@@ -1,0 +1,175 @@
+{
+ "sport": "NFL",
+ "rows": "One row per graded game, Leo's read of record only (the last read saved before kickoff).",
+ "contains": "Leo's own output: win chances, margin and total, calls with result and units, miss reasons, plus final scores. No sportsbook line, price or market number in any column.",
+ "columns": [
+  {
+   "name": "sport",
+   "type": "string",
+   "unit": "",
+   "meaning": "Always NFL."
+  },
+  {
+   "name": "season",
+   "type": "integer",
+   "unit": "year",
+   "meaning": "The season the game belongs to (the year it started)."
+  },
+  {
+   "name": "week",
+   "type": "integer",
+   "unit": "week",
+   "meaning": "Regular season week number."
+  },
+  {
+   "name": "game_date",
+   "type": "date",
+   "unit": "YYYY-MM-DD, Eastern time",
+   "meaning": "The day the game was played, Eastern time."
+  },
+  {
+   "name": "game_id",
+   "type": "string",
+   "unit": "",
+   "meaning": "Game identifier (nflverse format: season_week_away_home), stable across files."
+  },
+  {
+   "name": "away_team",
+   "type": "string",
+   "unit": "",
+   "meaning": "Full name of the away team."
+  },
+  {
+   "name": "home_team",
+   "type": "string",
+   "unit": "",
+   "meaning": "Full name of the home team."
+  },
+  {
+   "name": "start_utc",
+   "type": "datetime",
+   "unit": "ISO 8601 UTC",
+   "meaning": "Scheduled kickoff."
+  },
+  {
+   "name": "read_saved_utc",
+   "type": "datetime",
+   "unit": "ISO 8601 UTC",
+   "meaning": "When Leo's read of record was saved: the last read before kickoff. Nothing in the row was written after it."
+  },
+  {
+   "name": "leo_win_prob_away",
+   "type": "number",
+   "unit": "probability 0 to 1",
+   "meaning": "Leo's chance that the away team wins, at the read of record."
+  },
+  {
+   "name": "leo_win_prob_home",
+   "type": "number",
+   "unit": "probability 0 to 1",
+   "meaning": "Leo's chance that the home team wins, at the read of record."
+  },
+  {
+   "name": "leo_margin_home",
+   "type": "number",
+   "unit": "points",
+   "meaning": "Leo's expected margin: positive means the home team by that many, negative means the away team. It comes from Leo's margin model, separate from the win chance model, so the two can point to different winners in a close game."
+  },
+  {
+   "name": "leo_total",
+   "type": "number",
+   "unit": "points",
+   "meaning": "Leo's projected total points for both teams."
+  },
+  {
+   "name": "final_away",
+   "type": "integer",
+   "unit": "points",
+   "meaning": "Final score of the away team."
+  },
+  {
+   "name": "final_home",
+   "type": "integer",
+   "unit": "points",
+   "meaning": "Final score of the home team."
+  },
+  {
+   "name": "overtime",
+   "type": "boolean",
+   "unit": "",
+   "meaning": "True when the game went to overtime."
+  },
+  {
+   "name": "ml_side",
+   "type": "string",
+   "unit": "team name",
+   "meaning": "Moneyline call: the team Leo took to win. Empty when Leo made no moneyline call or before the three calls began on 2026-11-02."
+  },
+  {
+   "name": "ml_result",
+   "type": "string",
+   "unit": "W, L or P",
+   "meaning": "Result of the moneyline call. Empty when there was no call."
+  },
+  {
+   "name": "ml_units",
+   "type": "number",
+   "unit": "units",
+   "meaning": "Units won or lost on the moneyline call, one unit risked, graded at the price when Leo made the call (the price is not in the file)."
+  },
+  {
+   "name": "spread_side",
+   "type": "string",
+   "unit": "team name",
+   "meaning": "Spread call: the team Leo took against the spread. Empty when no call."
+  },
+  {
+   "name": "spread_result",
+   "type": "string",
+   "unit": "W, L or P",
+   "meaning": "Result of the spread call. Empty when there was no call."
+  },
+  {
+   "name": "spread_units",
+   "type": "number",
+   "unit": "units",
+   "meaning": "Units won or lost on the spread call, graded at standard -110."
+  },
+  {
+   "name": "total_side",
+   "type": "string",
+   "unit": "Over or Under",
+   "meaning": "Total call: Over or Under. Empty when no call."
+  },
+  {
+   "name": "total_result",
+   "type": "string",
+   "unit": "W, L or P",
+   "meaning": "Result of the total call. Empty when there was no call."
+  },
+  {
+   "name": "total_units",
+   "type": "number",
+   "unit": "units",
+   "meaning": "Units won or lost on the total call, graded at standard -110."
+  },
+  {
+   "name": "leo_right_winner",
+   "type": "boolean",
+   "unit": "",
+   "meaning": "True when the team Leo gave the higher win chance won. Empty for an exact 50% read or a tie."
+  },
+  {
+   "name": "miss_reason",
+   "type": "string",
+   "unit": "",
+   "meaning": "When Leo missed (a lost call, the wrong winner, or the margin off by 14 or more), the reason as shown on ndhorizon.com/nfl/results/: Injury input, The market knew, Overtime, Blowout, Variance or Leo's error. Empty when there was no miss."
+  },
+  {
+   "name": "model_version",
+   "type": "string",
+   "unit": "",
+   "meaning": "Version of Leo's win chance model that made the read."
+  }
+ ]
+}
