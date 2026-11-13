@@ -38,7 +38,7 @@ const ITER = 600000;
 // ---------------------------------------------------------------- sections
 // Vault folder (relative path) -> section shown on the site.
 const GROUPS = [
-  ['Desk', ['Today', 'Scorecard', 'Growth', 'Fib Library']],
+  ['Desk', ['Scorecard', 'Growth', 'Fib Library']],
   ['Reports', ['Pre-Market', 'Daily Reports', 'Week Ahead', 'Weekly Reports']],
   ['Research', ['Earnings', 'Watchlist & Levels', 'Technical Analysis', 'Options', 'Sectors']],
   ['Federal Reserve', ['Fed & Macro', 'FOMC Minutes', 'Beige Book']],
@@ -314,6 +314,8 @@ if (cmd === 'build') {
   try { decrypt(k, meta.check); } catch { console.error('Wrong RESEARCH_PASSWORD (it does not match the published data).'); process.exit(1); }
   const idx = readIndex(k);
   const n = parseNote(file, opt('folder') || path.basename(path.dirname(file)), fs.readFileSync(file, 'utf8'));
+  // The Today page was retired by Lynold on Nov 12, 2026 ("The today report needs to end. I just want the Daily Debrief").
+  if (n.section === 'Today') { console.log('Skipped: the Today page is retired; the Daily Debrief is the nightly read. Nothing was published for it.'); process.exit(0); }
   const prior = idx.items.find((x) => x.name === n.name);
   if (prior) n.id = prior.id;
   const known = idx.items.map((x) => ({ name: x.name, title: x.title, id: x.id })).concat([n]);
@@ -356,6 +358,19 @@ if (cmd === 'build') {
   writeJSON(f, encrypt(k, doc));
   writeIndex(k, idx);
   console.log(`Attached the designed page to "${x.title}".`);
+} else if (cmd === 'remove') {
+  // Take a published note off the site: remove --id <id or exact title>
+  const want = opt('id') || opt('title');
+  if (!want) { console.error('remove needs --id <id or exact title>'); process.exit(1); }
+  const meta = loadMeta();
+  const k = key(password(), meta.salt);
+  const idx = readIndex(k);
+  const x = idx.items.find((i) => i.id === want || i.title === want);
+  if (!x) { console.error(`No note "${want}".`); process.exit(1); }
+  fs.rmSync(path.join(DOCS, x.id + '.json'), { force: true });
+  idx.items = idx.items.filter((i) => i.id !== x.id);
+  writeIndex(k, idx);
+  console.log(`Removed "${x.title}" (${idx.items.length} notes left).`);
 } else if (cmd === 'list') {
   const meta = loadMeta();
   const k = key(password(), meta.salt);
@@ -363,5 +378,5 @@ if (cmd === 'build') {
   for (const x of idx.items) console.log(`${x.date || '          '}  ${x.section.padEnd(20)} ${x.title}`);
   console.log(`${idx.items.length} notes, updated ${idx.updated}`);
 } else {
-  console.log('Usage: RESEARCH_PASSWORD=... node scripts/research/research.mjs build --src <vault> | add --file <note.md> [--folder <name>] [--styled <page.html>] | style --id <id> --styled <page.html> | move --title <title> --section <name> | list');
+  console.log('Usage: RESEARCH_PASSWORD=... node scripts/research/research.mjs build --src <vault> | add --file <note.md> [--folder <name>] [--styled <page.html>] | style --id <id> --styled <page.html> | remove --id <id> | move --title <title> --section <name> | list');
 }
