@@ -65,7 +65,7 @@ async function main() {
   if (now >= first.getTime()) { console.log(`NBA card email: first tip (${first.toISOString()}) has passed, not sending.`); return; }
   if (first.getTime() - now > WINDOW_H * 36e5) { console.log(`NBA card email: first tip is more than ${WINDOW_H} hours away; a later run sends it.`); return; }
   if (!RESEND_API_KEY || !EMAIL_FROM) { console.log("NBA card email: RESEND_API_KEY or EMAIL_FROM not set, skipped."); return; }
-  const { getList } = require("./lib/subscribers");
+  const { getList, personalize } = require("./lib/subscribers");
   const members = [...new Set(await getList("member-email"))];
   const free = [...new Set(await getList("free-preview"))].filter(e => !members.includes(e));
   const to = [...members, ...free];
@@ -75,7 +75,7 @@ async function main() {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: EMAIL_FROM, to: [addr], reply_to: EMAIL_REPLY_TO || undefined, subject: email.subject, html: email.html, text: email.text })
+      body: JSON.stringify(personalize({ from: EMAIL_FROM, to: [addr], reply_to: EMAIL_REPLY_TO || undefined, subject: email.subject, html: email.html, text: email.text }))
     });
     res.ok ? sent++ : (failed++, console.warn(`  send failed: HTTP ${res.status}`));
     await new Promise(r => setTimeout(r, 600));   // Resend rate limit

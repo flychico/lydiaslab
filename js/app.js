@@ -326,12 +326,10 @@ function renderNav(active) {
 // cloudflare-worker/signup-worker.js, deployed in the dashboard as "leo-signup".
 // 2026-11-12 (launch plan, access B): every sign up goes to Leo's own sign up
 // service, which saves it to the private leo-signups repository (name, email,
-// list, page). Until the day 3 switch, the same email is ALSO sent to
-// Buttondown, which still sends the confirmation email and is the list the
-// card emails read (scripts/lib/subscribers.js). Remove BUTTONDOWN_USER once
-// the card emails read the private list.
+// list, page). 2026-11-13 (day 3): that service also sends the confirmation
+// email and handles unsubscribe, and the card emails read the private list
+// (scripts/lib/subscribers.js), so forms no longer post to Buttondown.
 const SIGNUP_ENDPOINT = "https://leo-signup.lynoldmercado.workers.dev/";
-const BUTTONDOWN_USER = "flychico";
 const SIGNUP_TERMS_LINE = 'By signing up you confirm you are 21 or over and agree to the <a href="/terms/">Terms of Use</a> and <a href="/privacy/">Privacy Policy</a>. Leo publishes analysis, not betting advice.';
 
 // Wires every <form class="lydia-signup-form"> on the page (static ones already
@@ -391,18 +389,9 @@ function wireAllSignupForms(root) {
           showSignupError(form, errorEl, message);
           return;
         }
-        let confirmNote = "";
-        if (BUTTONDOWN_USER) {
-          // Buttondown's embed endpoint answers with an opaque response; it
-          // sends its own confirmation email. A failure here does not undo the
-          // saved sign up above.
-          try {
-            await fetch("https://buttondown.com/api/emails/embed-subscribe/" + encodeURIComponent(BUTTONDOWN_USER),
-                        { method: "POST", mode: "no-cors", body: new URLSearchParams({ email: email }) });
-            confirmNote = " Check your inbox and confirm your email to get the card.";
-          } catch (_) { /* saved already; nothing to show */ }
-        }
-        form.outerHTML = '<div class="small" style="color:#2f9e44;font-weight:600">' + thanks + confirmNote + '</div>';
+        let emailed = false;
+        try { const body = await res.json(); emailed = !!(body && body.emailed); } catch (_) { /* older service: no note */ }
+        form.outerHTML = '<div class="small" style="color:#2f9e44;font-weight:600">' + thanks + (emailed ? ' A confirmation email is on its way.' : '') + '</div>';
       } catch (err) {
         showSignupError(form, errorEl, "We could not save your sign up. Check your connection and try again.");
       } finally {
