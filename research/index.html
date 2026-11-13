@@ -87,6 +87,11 @@ h2.sec { font-family: var(--serif); font-weight: 600; font-size: 1.55rem; margin
 .crumb a { font-weight: 600; }
 .doc-meta { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; color: var(--text-dim); font-size: .9rem; margin-bottom: 22px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
 .doc-meta a { font-weight: 700; }
+.styled-wrap { margin: 6px -16px 0; }
+iframe.styled { display: block; width: 100%; border: 0; min-height: 60vh; background: transparent; }
+@media (min-width: 820px) { .styled-wrap { margin: 6px 0 0; max-width: 760px; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; } }
+details.plain { margin-top: 28px; border-top: 1px solid var(--border); padding-top: 14px; }
+details.plain > summary { cursor: pointer; font-weight: 700; color: var(--text-dim); }
 .doc { max-width: 760px; font-size: 1.02rem; line-height: 1.68; }
 .doc > * + * { margin-top: 14px; }
 .doc h2, .doc h3, .doc h4 { font-family: var(--serif); font-weight: 600; color: var(--accent2); letter-spacing: -.005em; line-height: 1.25; }
@@ -298,13 +303,23 @@ mark { background: rgba(201,168,76,.32); color: inherit; padding: 0 1px; border-
     const sib = bySection(meta.section); const i = sib.findIndex((x) => x.id === id);
     const newer = sib[i - 1], older = sib[i + 1];
     $('#view').innerHTML = `<p class="crumb"><a href="#/">Market Desk</a> / <a href="#/s/${sectionSlug(meta.section)}">${escH(meta.section)}</a></p>
-      <h1 class="page-h1">${escH(d.title)}</h1>
-      <div class="doc-meta">${meta.date ? `<span>${fmt(meta.date)}</span>` : ''}<span>${Math.max(1, Math.round(meta.words / 230))} min read</span>${d.page ? `<a href="${escH(d.page)}" target="_blank" rel="noopener">Open the styled report →</a>` : ''}</div>
-      ${staleNote(meta)}<article class="doc">${d.html}</article>
+      ${d.styled ? '' : `<h1 class="page-h1">${escH(d.title)}</h1>`}
+      <div class="doc-meta"${d.styled ? ' hidden' : ''}>${meta.date ? `<span>${fmt(meta.date)}</span>` : ''}<span>${Math.max(1, Math.round(meta.words / 230))} min read</span>${d.page ? `<a href="${escH(d.page)}" target="_blank" rel="noopener">Open the styled report →</a>` : ''}</div>
+      ${d.styled ? `<div class="styled-wrap"><iframe class="styled" title="${escH(d.title)}" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" scrolling="no"></iframe></div><details class="plain"><summary>Plain text version</summary><article class="doc">${d.html}</article></details>` : `${staleNote(meta)}<article class="doc">${d.html}</article>`}
       ${(older || newer) ? `<nav class="pager" aria-label="More in ${escH(meta.section)}">${older ? `<a href="#/doc/${older.id}"><span>${meta.date ? 'Earlier' : 'Next'}</span>${escH(older.title)}</a>` : ''}${newer ? `<a class="next" href="#/doc/${newer.id}"><span>${meta.date ? 'Later' : 'Previous'}</span>${escH(newer.title)}</a>` : ''}</nav>` : ''}`;
+    if (d.styled) showStyled(d.styled);
     chartsToLatest();
     document.title = d.title + ' · Market Desk';
     window.scrollTo(0, 0);
+  }
+  // A report published with its own designed page (the nightly debrief) is shown as that page, in a script-less frame sized to its content.
+  function showStyled(html) {
+    const f = document.querySelector('iframe.styled'); if (!f) return;
+    const fit = () => { try { const d = f.contentDocument; if (d && d.documentElement) f.style.height = Math.max(d.documentElement.scrollHeight, d.body ? d.body.scrollHeight : 0) + 'px'; } catch (e) {} };
+    f.addEventListener('load', () => { fit(); setTimeout(fit, 400); setTimeout(fit, 1500); try { f.contentDocument.fonts.ready.then(fit); } catch (e) {} });
+    window.addEventListener('resize', fit);
+    const extra = '<base target="_blank"><style>html,body{overflow:hidden!important}</style>';
+    f.srcdoc = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, (m) => m + extra) : extra + html;
   }
   // On a phone a chart is wider than the screen: start it scrolled to the right, where the latest bars and the level labels are.
   function chartsToLatest() { requestAnimationFrame(() => document.querySelectorAll('figure.chart').forEach((f) => { f.scrollLeft = f.scrollWidth; })); }

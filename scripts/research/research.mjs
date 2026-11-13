@@ -317,8 +317,12 @@ if (cmd === 'build') {
   const prior = idx.items.find((x) => x.name === n.name);
   if (prior) n.id = prior.id;
   const known = idx.items.map((x) => ({ name: x.name, title: x.title, id: x.id })).concat([n]);
-  writeJSON(path.join(DOCS, n.id + '.json'), encrypt(k, render(n, linker(known))));
-  idx.items = idx.items.filter((x) => x.id !== n.id).concat([indexEntry(n)]);
+  const out = render(n, linker(known));
+  // --styled <page.html>: the report's own designed page; Market Desk shows it in place of the plain rendering.
+  const styled = opt('styled');
+  if (styled) { if (!fs.existsSync(styled)) { console.error('add: --styled file not found: ' + styled); process.exit(1); } out.styled = fs.readFileSync(styled, 'utf8').replace(/<script[\s\S]*?<\/script>/gi, ''); }
+  writeJSON(path.join(DOCS, n.id + '.json'), encrypt(k, out));
+  idx.items = idx.items.filter((x) => x.id !== n.id).concat([Object.assign(indexEntry(n), styled ? { styled: true } : {})]);
   writeIndex(k, idx);
   console.log(`${prior ? 'Replaced' : 'Added'} "${n.title}" in ${n.section} (${idx.items.length} notes total).`);
 } else if (cmd === 'move') {
@@ -336,6 +340,22 @@ if (cmd === 'build') {
   writeJSON(f, encrypt(k, doc));
   writeIndex(k, idx);
   console.log(`Moved "${x.title}" to ${section}.`);
+} else if (cmd === 'style') {
+  // Attach a report's designed page to a note that is already published: style --id <id or exact title> --styled <page.html>
+  const want = opt('id') || opt('title'), styled = opt('styled');
+  if (!want || !styled || !fs.existsSync(styled)) { console.error('style needs --id <id or exact title> --styled <page.html>'); process.exit(1); }
+  const meta = loadMeta();
+  const k = key(password(), meta.salt);
+  const idx = readIndex(k);
+  const x = idx.items.find((i) => i.id === want || i.title === want);
+  if (!x) { console.error(`No note "${want}".`); process.exit(1); }
+  const f = path.join(DOCS, x.id + '.json');
+  const doc = decrypt(k, JSON.parse(fs.readFileSync(f, 'utf8')));
+  doc.styled = fs.readFileSync(styled, 'utf8').replace(/<script[\s\S]*?<\/script>/gi, '');
+  x.styled = true;
+  writeJSON(f, encrypt(k, doc));
+  writeIndex(k, idx);
+  console.log(`Attached the designed page to "${x.title}".`);
 } else if (cmd === 'list') {
   const meta = loadMeta();
   const k = key(password(), meta.salt);
@@ -343,5 +363,5 @@ if (cmd === 'build') {
   for (const x of idx.items) console.log(`${x.date || '          '}  ${x.section.padEnd(20)} ${x.title}`);
   console.log(`${idx.items.length} notes, updated ${idx.updated}`);
 } else {
-  console.log('Usage: RESEARCH_PASSWORD=... node scripts/research/research.mjs build --src <vault> | add --file <note.md> [--folder <name>] | move --title <title> --section <name> | list');
+  console.log('Usage: RESEARCH_PASSWORD=... node scripts/research/research.mjs build --src <vault> | add --file <note.md> [--folder <name>] [--styled <page.html>] | style --id <id> --styled <page.html> | move --title <title> --section <name> | list');
 }
