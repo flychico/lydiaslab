@@ -25,7 +25,10 @@ const pct = p => p == null ? "&mdash;" : Math.round(p * 100) + "%";
 const am = v => v == null ? "&mdash;" : (v > 0 ? "+" : "") + v;
 const nick = name => String(name || "").split(" ").slice(-1)[0].replace("Blazers", "Trail Blazers");
 const logo = t => "https://a.espncdn.com/i/teamlogos/nba/500/" + String(t).toLowerCase() + ".png";
-const URLS = require("./lib/nba-urls");   // one address helper for page, nightly page, email, picks data (SEO-09, DEC-20261107-30)
+const URLS = require("./lib/nba-urls");
+const COPY = require("./lib/nba-game-copy");   // unique opening and What happened (HO-0069 part B)
+const SCHED = (() => { try { return JSON.parse(fs.readFileSync(path.join(__dirname, "..", "data", "nba", "schedule.json"), "utf8")); } catch (e) { return null; } })();
+const HOW = "/nba/how-leo-works/";   // the explainers every page used to repeat   // one address helper for page, nightly page, email, picks data (SEO-09, DEC-20261107-30)
 const slug = g => URLS.gameSlug(g);
 const longDate = d => new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
 const tip = iso => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) + " ET";
@@ -79,33 +82,34 @@ function boxBlock(g, res) {
     <tr class="tot"><td>Team</td><td></td><td><b>${tot}</b></td><td colspan="${full ? 6 : 2}"></td></tr>
     </tbody></table></div>`;
   };
-  return `<h2>Box score</h2><p class="dim">${eb ? "ESPN box score, saved the night of the game." : "Minutes, points, rebounds and assists from the open ESPN box score files."} Players Leo counted as out or day to day are tagged with whether they played.</p>${side("away")}${side("home")}`;
+  return `<h2>Box score</h2><p class="dim">${eb ? "ESPN box score." : "From ESPN box score files."} <a href="${HOW}#players">Tags show who Leo counted.</a></p>${side("away")}${side("home")}`;
 }
 
 const MODEL = (() => { try { return JSON.parse(fs.readFileSync(path.join(DIR, "model.json"), "utf8")); } catch (e) { return {}; } })();
 function whyBlock(g) {
   const w = WHY.why(g, { lostCoef: MODEL.coef && MODEL.coef.lost_d, leanPts: MODEL.lean_edge_pts });
   if (!w.leo) return "";
-  return `<h2>Why Leo has ${esc(w.leo)}</h2>
+  const nm = COPY.names(g);
+  return `<h2>Why Leo has ${esc(nm(w.leo))}</h2>
   <div class="card why">
-  ${w.drivers.length ? `<ol>${w.drivers.map(d => `<li>${esc(d.text)}.</li>`).join("")}</ol>` : ""}
-  ${w.swing.length ? `<p class="dim"><b>What could still move it.</b> ${w.swing.map(esc).join(" ")}</p>` : ""}
-  <p class="dim">Leo only knows team results, rest and the injury report. It does not know matchups, lineups announced after the read, or motivation, so a gap from DraftKings is usually noise. Past seasons show the side of the spread Leo likes covers about 51 to 52% of the time, so the gap is shown for information and is not a call.</p></div>`;
+  ${w.drivers.length ? `<ol>${w.drivers.map(d => `<li>${esc(nm(d.text))}.</li>`).join("")}</ol>` : ""}
+  ${w.swing.length ? `<p class="dim"><b>What could still move it.</b> ${w.swing.map(x => esc(nm(x))).join(" ")}</p>` : ""}
+  <p class="dim"><a href="${HOW}#knows">What Leo knows and does not</a></p></div>`;
 }
 
 function partsTable(g) {
   const p = g.leo.parts; if (!p) return "";
-  const H = esc(g.home), row = (label, v, note) => `<tr><td>${label}</td><td class="num"><b>${v == null ? "&mdash;" : (v > 0 ? "+" : "") + v.toFixed(1)}</b></td><td class="dim">${note}</td></tr>`;
+  const H = esc(URLS.nick(g.home, g.home_name)), AW = esc(URLS.nick(g.away, g.away_name)), row = (label, v, note) => `<tr><td>${label}</td><td class="num"><b>${v == null ? "&mdash;" : (v > 0 ? "+" : "") + v.toFixed(1)}</b></td><td class="dim">${note}</td></tr>`;
   const L = g.leo;
   return `<h2>What moves Leo&rsquo;s number</h2>
-  <p class="dim">Points added to ${H}&rsquo;s expected margin. Positive helps ${H}, negative helps ${esc(g.away)}.</p>
+  <p class="dim">Points added to ${H}&rsquo;s expected margin. Positive helps the ${H}, negative helps the ${AW}.</p>
   <div class="card tbl"><table>
-    ${row("Home court", p.home_court, `Average home edge, fitted on the last three seasons`)}
-    ${row("Team ratings", p.ratings, `${H} rated ${sgn(L.rating && L.rating.home)}, ${esc(g.away)} ${sgn(L.rating && L.rating.away)} points against an average team`)}
-    ${row("Back to back", p.back_to_back, L.back_to_back ? [L.back_to_back.home ? H + " played last night" : "", L.back_to_back.away ? esc(g.away) + " played last night" : ""].filter(Boolean).join(", ") || "Neither team played last night" : "")}
-    ${row("Rest", p.rest, L.rest ? `${H} ${L.rest.home} ${L.rest.home === 1 ? "day" : "days"}, ${esc(g.away)} ${L.rest.away} ${L.rest.away === 1 ? "day" : "days"} (capped at 4)` : "")}
-    ${row("Missing players", p.missing_players, `Value of regulars on the injury report: ${H} ${L.lost.home}, ${esc(g.away)} ${L.lost.away}`)}
-    <tr class="total"><td>Leo&rsquo;s margin</td><td class="num"><b>${(L.home_margin > 0 ? "+" : "") + L.home_margin}</b></td><td class="dim">${L.home_margin < 0 ? esc(g.away) : H} by ${Math.abs(L.home_margin)} expected</td></tr>
+    ${row("Home court", p.home_court, `Average home edge`)}
+    ${row("Team ratings", p.ratings, `${H} ${sgn(L.rating && L.rating.home)}, ${AW} ${sgn(L.rating && L.rating.away)} against an average team`)}
+    ${row("Back to back", p.back_to_back, L.back_to_back ? [L.back_to_back.home ? H + " played last night" : "", L.back_to_back.away ? AW + " played last night" : ""].filter(Boolean).join(", ") || "Neither team played last night" : "")}
+    ${row("Rest", p.rest, L.rest ? `${H} ${L.rest.home}, ${AW} ${L.rest.away} ${L.rest.away === 1 ? "day" : "days"}` : "")}
+    ${row("Missing players", p.missing_players, `Value out: ${H} ${L.lost.home}, ${AW} ${L.lost.away}`)}
+    <tr class="total"><td>Leo&rsquo;s margin</td><td class="num"><b>${(L.home_margin > 0 ? "+" : "") + L.home_margin}</b></td><td class="dim">${L.home_margin < 0 ? AW : H} by ${Math.abs(L.home_margin)}</td></tr>
   </table></div>`;
 }
 
@@ -116,15 +120,15 @@ function injuries(g, side) {
   if (!list.length) return `<p class="dim">Nobody listed.</p>`;
   return `<ul class="inj">${list.map(p => {
     const k = counted.get(p.name);
-    return `<li><b>${esc(p.name)}</b> <span class="tag">${esc(statusTxt(p.status))}</span>${p.detail ? ` <span class="dim">${esc(p.detail)}</span>` : ""}${k ? ` <span class="dim">&middot; in Leo&rsquo;s number${(k.weight ?? 1) < 1 ? ` at ${Math.round(k.weight * 100)}%` : ""}, plays ${k.mpg} min a game</span>` : ""}</li>`;
+    return `<li><b>${esc(p.name)}</b> <span class="tag">${esc(statusTxt(p.status))}</span>${p.detail ? ` <span class="dim">${esc(p.detail)}</span>` : ""}${k ? ` <span class="dim">&middot; counted${(k.weight ?? 1) < 1 ? ` ${Math.round(k.weight * 100)}%` : ""}, ${k.mpg} min</span>` : ""}</li>`;
   }).join("")}</ul>`;
 }
 
 function formBlock(g, side) {
   const c = g.context && g.context[side]; if (!c) return `<p class="dim">Not available for this read.</p>`;
   const f = c.form;
-  const last = f.last5.map(x => `<li><span class="${x.won ? "ok" : "no"}">${x.won ? "W" : "L"}</span> ${x.pts}-${x.opp_pts} ${x.home ? "vs" : "at"} ${esc(x.opp)} <span class="dim">${esc(x.date.slice(5))}</span></li>`).join("");
-  return `<p><b>${f.wins}-${f.losses}</b> this season &middot; ${f.ppg ?? "&mdash;"} scored, ${f.opp_ppg ?? "&mdash;"} allowed a game</p>${last ? `<ul class="last5">${last}</ul>` : ""}`;
+  const last = f.last5.map(x => `<li><span class="${x.won ? "ok" : "no"}">${x.won ? "W" : "L"}</span> ${x.pts}-${x.opp_pts} ${x.home ? "vs" : "at"} ${esc(URLS.nick(x.opp))} <span class="dim">${esc(x.date.slice(5))}</span></li>`).join("");
+  return `<p><b>${f.wins}-${f.losses}</b> &middot; ${f.ppg ?? "&mdash;"} scored, ${f.opp_ppg ?? "&mdash;"} allowed</p>${last ? `<ul class="last5">${last}</ul>` : ""}`;
 }
 
 function playersBlock(g, side) {
@@ -134,15 +138,20 @@ function playersBlock(g, side) {
   </tbody></table></div>`;
 }
 
+const MISSES = {};
+function missOf(g) {
+  if (!(g.date in MISSES)) { const f = path.join(DIR, "misses", `${g.date}.json`); MISSES[g.date] = fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, "utf8")).games : null; }
+  return MISSES[g.date] ? MISSES[g.date].find(x => String(x.game_id) === String(g.game_id)) || {} : null;
+}
 function finalBlock(g, res) {
   if (!res) return "";
-  const H = g.home, A = g.away, margin = res.home_score - res.away_score;
-  return `<h2>Final</h2><div class="card final">
-    <p class="score">${esc(A)} ${res.away_score}, ${esc(H)} ${res.home_score}</p>
+  const H = URLS.nick(g.home, g.home_name), A = URLS.nick(g.away, g.away_name), margin = res.home_score - res.away_score;
+  return `<h2>What happened</h2><div class="card final">
+    <p class="score">${esc(g.away_name)} ${res.away_score}, ${esc(g.home_name)} ${res.home_score}</p>
+    <p>${COPY.whatHappened(g, res, missOf(g)).map(esc).join(" ")}</p>
     <ul>
-      <li>Leo had ${esc(res.leo_p_home >= .5 ? H : A)} to win: <b class="${res.leo_winner_correct ? "ok" : "no"}">${res.leo_winner_correct ? "right" : "wrong"}</b></li>
-      <li>Leo expected ${esc(H)} ${(res.leo_home_margin > 0 ? "+" : "") + res.leo_home_margin.toFixed(1)}; it finished ${(margin > 0 ? "+" : "") + margin}. Leo missed by ${Math.abs(res.leo_home_margin - margin).toFixed(1)}${res.mkt_home_spread != null ? `, the DraftKings spread by ${Math.abs(-res.mkt_home_spread - margin).toFixed(1)}` : ""}.</li>
-      ${res.pick_result && !res.pick_replay ? `<li>Leo Pick ${esc(res.pick_team)} ${PKS.fmtPrice(res.pick_price)}: <b class="${res.pick_result === "win" ? "ok" : "no"}">${res.pick_result === "win" ? "won" : "lost"}</b>, ${res.pick_units > 0 ? "+" : ""}${(+res.pick_units).toFixed(2)} units${res.pick_close_price != null ? `. Price at tip ${PKS.fmtPrice(res.pick_close_price)}` : ""}.</li>` : ""}
+      <li>Leo&rsquo;s margin for the ${esc(H)} was ${(res.leo_home_margin > 0 ? "+" : "") + res.leo_home_margin.toFixed(1)} and they finished ${(margin > 0 ? "+" : "") + margin}, so Leo missed by ${Math.abs(res.leo_home_margin - margin).toFixed(1)}${res.mkt_home_spread != null ? ` and the DraftKings spread by ${Math.abs(-res.mkt_home_spread - margin).toFixed(1)}` : ""}.</li>
+      ${res.pick_result && !res.pick_replay ? `<li>Leo Pick ${esc(URLS.nick(res.pick_team))} ${PKS.fmtPrice(res.pick_price)}: <b class="${res.pick_result === "win" ? "ok" : "no"}">${res.pick_result === "win" ? "won" : "lost"}</b>, ${res.pick_units > 0 ? "+" : ""}${(+res.pick_units).toFixed(2)} units${res.pick_close_price != null ? `. Price at tip ${PKS.fmtPrice(res.pick_close_price)}` : ""}.</li>` : ""}
     </ul></div>`;
 }
 
@@ -153,9 +162,11 @@ function page(g, res) {
   const url = `https://ndhorizon.com/nba/${slug(g)}/`;
   // Same winner or not, by how much, and Leo's side (shared with the card and email).
   const LS = WHY.leoLine(g), GS = WHY.gapShown(g);
-  const gapTxt = esc(WHY.compare(g, MODEL.lean_edge_pts || 4));
+  const NM = COPY.names(g), NA = URLS.nick(A, g.away_name), NH = URLS.nick(H, g.home_name), lbl = c => URLS.nick(c, c === H ? g.home_name : g.away_name);
+  const gapTxt = esc(NM(WHY.compare(g, MODEL.lean_edge_pts || 4)));
   const PT = PKS.pickText(g);
-  const leanTxt = (PT ? (PT.ok ? `<div class="lean">${esc(PT.line)}</div>` : `<p class="gapread">${esc(PT.line)}</p>`) : "");
+  const leanTxt = (PT ? (PT.ok ? `<div class="lean">${esc(NM(PT.line))}</div>` : `<p class="gapread">${esc(NM(PT.line))}</p>`) : "");
+  const lede = COPY.opening(g, { sched: SCHED, lostCoef: MODEL.coef && MODEL.coef.lost_d });
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -199,6 +210,9 @@ ul.inj,ul.last5{margin:6px 0 0;padding-left:18px;font-size:.86rem;line-height:1.
 .ok{color:var(--good);font-weight:800}.no{color:var(--danger);font-weight:800}
 .why{padding:12px 16px}.why ol{margin:6px 0 8px;padding-left:20px;line-height:1.6;font-size:.9rem}.why p{margin:6px 0}
 .final{padding:14px 16px}.final .score{font-size:1.25rem;font-weight:800;margin:0 0 6px}
+.lede{font-size:1rem;line-height:1.6;margin:10px 0 4px}
+.lede2{font-size:.9rem;line-height:1.55;margin:6px 0 4px;color:var(--text-dim)}
+.final p{margin:0 0 8px;line-height:1.55}
 .final ul{margin:0;padding-left:18px;line-height:1.6;font-size:.9rem}
 .nfl-signup{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;align-items:center;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin:26px 0 6px;box-shadow:var(--shadow-sm)}
 .nfl-signup p{margin:4px 0 0;color:var(--text-dim);font-size:.86rem}
@@ -212,48 +226,49 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
 <main class="mx">
   <p class="eyebrow"><a href="/nba/scoreboard/">NBA</a> &middot; ${esc(longDate(g.date))} &middot; ${esc(tip(g.tip_utc))}${g.venue ? " &middot; " + esc(g.venue) : ""}</p>
   <h1>${esc(g.away_name)} vs ${esc(g.home_name)}: Prediction and Odds</h1>
-  <p class="dim">Leo&rsquo;s read, frozen before tip. ${esc(A)} at ${esc(H)}.</p>
+  ${lede.length ? `<p class="lede">${lede.slice(0, lede.indexOf(null)).map(esc).join(" ")}</p><p class="lede2">${lede.slice(lede.indexOf(null) + 1).map(esc).join(" ")}</p>` : ""}
+  <p class="dim"><a href="${HOW}#read">Read frozen before tip</a></p>
   <p style="margin:6px 0 0;font-size:.92rem">Every game this season: <a href="/nba/teams/${URLS.slugify(URLS.nick(g.away))}/">${esc(URLS.nick(g.away, g.away_name))} team page</a> &middot; <a href="/nba/teams/${URLS.slugify(URLS.nick(g.home))}/">${esc(URLS.nick(g.home, g.home_name))} team page</a></p>
 
+  ${finalBlock(g, res)}
   <div class="hdr">
     <div class="tm"><img src="${logo(A)}" alt="" onerror="this.style.visibility='hidden'"><b>${esc(g.away_name)}</b><span class="p">${pct(L.p_away)}</span><span class="dim">Leo win chance</span></div>
     <div class="mid">at</div>
     <div class="tm"><img src="${logo(H)}" alt="" onerror="this.style.visibility='hidden'"><b>${esc(g.home_name)}</b><span class="p">${pct(L.p_home)}</span><span class="dim">Leo win chance</span></div>
   </div>
   <div class="boxes">
-    <div class="box"><div class="l">Leo spread</div><div class="v">${esc(require("./lib/nba-why").favLine(g, LS))}</div><div class="s">Leo&rsquo;s favorite, by</div></div>
-    <div class="box"><div class="l">DraftKings</div><div class="v">${mk.home_spread == null ? "&mdash;" : esc(require("./lib/nba-why").favLine(g, mk.home_spread))}</div><div class="s">Moneyline ${esc(A)} ${am(mk.away_ml)}, ${esc(H)} ${am(mk.home_ml)}</div></div>
-    <div class="box"><div class="l">Call</div><div class="v">${esc(PKS.callBox(g).value)}</div><div class="s">${esc(PKS.callBox(g).sub)}</div></div>
+    <div class="box"><div class="l">Leo spread</div><div class="v">${esc(require("./lib/nba-why").favLine(g, LS, lbl))}</div><div class="s">Leo&rsquo;s favorite, by</div></div>
+    <div class="box"><div class="l">DraftKings</div><div class="v">${mk.home_spread == null ? "&mdash;" : esc(require("./lib/nba-why").favLine(g, mk.home_spread, lbl))}</div><div class="s">Moneyline ${esc(NA)} ${am(mk.away_ml)}, ${esc(NH)} ${am(mk.home_ml)}</div></div>
+    <div class="box"><div class="l">Call</div><div class="v">${esc(NM(PKS.callBox(g).value))}</div><div class="s">${esc(NM(PKS.callBox(g).sub))}</div></div>
   </div>
   ${gapTxt ? `<p class="gapread">${gapTxt}</p>` : ""}
-  ${WHY.projScore(g) ? `<p class="gapread">Projected score: ${esc(A)} ${WHY.projScore(g).away}, ${esc(H)} ${WHY.projScore(g).home} (total ${WHY.projScore(g).total}). Information only; Leo makes no call on totals.</p>` : ""}
+  ${WHY.projScore(g) ? `<p class="gapread">Projected score: ${esc(NA)} ${WHY.projScore(g).away}, ${esc(NH)} ${WHY.projScore(g).home}, total ${WHY.projScore(g).total} (<a href="${HOW}#total">information only</a>).</p>` : ""}
   ${leanTxt}
-  ${finalBlock(g, res)}
   ${boxBlock(g, res)}
   ${whyBlock(g)}
   ${partsTable(g)}
 
   <h2>Injury report</h2>
-  <p class="dim">The injury report when Leo made its read. A player marked <b>in Leo&rsquo;s number</b> is a regular whose value Leo has taken off his team: all of it when he is out, 40% of it when he is day to day, because Leo assumes about 4 in 10 day-to-day players end up sitting. Players without the mark play too little to move the number.</p>
+  <p class="dim">As of Leo&rsquo;s read. <a href="${HOW}#injuries">How Leo counts injuries</a></p>
   <div class="two"><div><b>${esc(g.away_name)}</b>${injuries(g, "away")}</div><div><b>${esc(g.home_name)}</b>${injuries(g, "home")}</div></div>
 
   <h2>Form</h2>
   <div class="two"><div><b>${esc(g.away_name)}</b>${formBlock(g, "away")}</div><div><b>${esc(g.home_name)}</b>${formBlock(g, "home")}</div></div>
 
   <h2>Key players this season</h2>
-  <p class="dim">Points per game this season and over each player&rsquo;s last 5 games before this one. Every player&rsquo;s game log is on <a href="/nba/players/">Player Scoring</a>.</p>
+  <p class="dim">Last 5: the prior five games. <a href="/nba/players/">Player Scoring</a></p>
   <div class="two"><div><b>${esc(g.away_name)}</b>${playersBlock(g, "away")}</div><div><b>${esc(g.home_name)}</b>${playersBlock(g, "home")}</div></div>
 
   <div class="nfl-signup">
-    <div><b>Get Leo&rsquo;s card by email</b><p>Leo&rsquo;s reads before every game day. Free. Unsubscribe anytime.</p></div>
+    <div><b>Get Leo&rsquo;s card by email</b><p>Free, before every game day.</p></div>
     <form class="lydia-signup-form" data-list="free-preview" data-thanks="You&rsquo;re on the list.">
       <input type="email" name="email" required placeholder="you@email.com" aria-label="Email address">
       <input type="hidden" name="bot-field">
       <button class="btn blue" type="submit">Send me the card</button>
     </form>
   </div>
-  <p class="dim" style="margin-top:18px">Leo&rsquo;s win chance and spread come from team results, rest and the injury report. The DraftKings line is shown for comparison and is never an input. Every read is graded on the <a href="/nba/results/">results page</a>. Analysis only, not betting advice. 21+.</p>
-${require("./lib/game-page-seo").relatedLinks({sport:"NBA",root:ROOT,slug:slug(g),away:g.away,home:g.home,teamSlug:a=>URLS.slugify(URLS.nick(a)),teamUrl:a=>"/nba/teams/"+URLS.slugify(URLS.nick(a))+"/",awayName:g.away_name,homeName:g.home_name,featured:[`/nba/predictions/${g.date}/`,`All NBA predictions for ${new Date(g.date+"T12:00:00Z").toLocaleDateString("en-US",{month:"long",day:"numeric",timeZone:"UTC"})}`,"Every game that night: Leo's win chance, spread and picks"],hubs:[["/nba/scoreboard/","Tonight\u2019s NBA predictions"],["/nba/games/","Every NBA game"],["/nba/teams/","NBA team predictions"],["/nba/results/","Leo\u2019s NBA record"],["/nba/tools/injury-tracker/","NBA injury tracker"],["/nba/stats/","NBA team stats"],["/membership/#free","Free card by email"]]})}
+  <p class="dim" style="margin-top:18px">Not betting advice. <a href="${HOW}">How Leo works</a> &middot; <a href="/nba/results/">Results</a></p>
+${require("./lib/game-page-seo").relatedLinks({sport:"NBA",root:ROOT,slug:slug(g),away:g.away,home:g.home,teamSlug:a=>URLS.slugify(URLS.nick(a)),teamUrl:a=>"/nba/teams/"+URLS.slugify(URLS.nick(a))+"/",awayName:g.away_name,homeName:g.home_name,featured:[`/nba/predictions/${g.date}/`,`NBA predictions, ${new Date(g.date+"T12:00:00Z").toLocaleDateString("en-US",{month:"long",day:"numeric",timeZone:"UTC"})}`,"Win chance, spread and picks"],hubs:[["/nba/scoreboard/","Tonight\u2019s NBA predictions"],["/nba/games/","Every NBA game"],["/nba/teams/","NBA team predictions"],["/nba/results/","Leo\u2019s NBA record"],["/nba/tools/injury-tracker/","NBA injury tracker"],["/nba/stats/","NBA team stats"],["/membership/#free","Free card by email"]]})}
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script><script>renderNav("/nba/scoreboard/"); renderFooter();</script>
 </body>
