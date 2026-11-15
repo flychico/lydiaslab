@@ -27,6 +27,21 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127944;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/scoreboard.css">
+<style>
+/* Live touchdown tracker (DEC-20261115-51). NFL page only. */
+.td-box{margin-top:10px;padding:10px 12px;border:1px solid var(--line,#ddd);border-radius:10px;background:var(--panel2,rgba(0,0,0,.025));font-size:.82rem;line-height:1.4}
+.td-box h4{margin:0 0 6px;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,#666);font-weight:700}
+.td-list{list-style:none;margin:0;padding:0}
+.td-list li{display:flex;gap:8px;align-items:baseline;padding:3px 0;border-top:1px dashed var(--line,#e3e3e3)}
+.td-list li:first-child{border-top:0}
+.td-when{flex:0 0 auto;min-width:54px;color:var(--muted,#666);font-variant-numeric:tabular-nums}
+.td-who{flex:1 1 auto;min-width:0}
+.td-leo{flex:0 0 auto;font-weight:700;font-variant-numeric:tabular-nums}
+.td-leo.none{font-weight:400;color:var(--muted,#666)}
+.td-top{margin:8px 0 0;color:var(--muted,#666)}
+.td-top b{color:var(--text,inherit)}
+.td-top .hit{color:var(--good,#1a7f37);font-weight:700}
+</style>
 </head>
 <body>
 <nav id="nav"><div class="nav-inner"><a class="brand" href="/" aria-label="Leo home"><span class="brand-leo">Leo</span></a><div class="nav-sport-selector"><button class="nav-sport" data-sport="MLB">MLB</button><button class="nav-sport active" data-sport="NFL">NFL</button><button class="nav-sport" data-sport="NBA">NBA</button></div><button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">☰</button><div class="nav-links"><a class="navlink" href="/nfl/scoreboard/">Scoreboard</a><span class="nav-drop"><a class="navlink nav-drop-toggle" href="/nfl/previews/">Picks ▾</a><span class="nav-drop-menu"><a href="/nfl/previews/">This week’s picks</a><a href="/nfl/week/">Week card</a><a href="/nfl/games/">Every game</a></span></span><a class="navlink" href="/nfl/tools/player-props/">Props</a><a class="navlink" href="/nfl/teams/">Teams</a><span class="nav-drop"><a class="navlink nav-drop-toggle" href="/nfl/tools/">Lab ▾</a><span class="nav-drop-menu"><a href="/nfl/tools/model-tuner/">Model Tuner</a><a href="/nfl/member-brief/">Daily Member Brief</a><a href="/nfl/tools/player-props/">Player Props</a><a href="/nfl/tools/injury-tracker/">Injury Tracker</a></span></span><a class="navlink" href="/nfl/stats/">Stats</a><a class="navlink" href="/nfl/results/">Results</a><span class="nav-drop"><a class="navlink nav-drop-toggle" href="/#more">More ▾</a><span class="nav-drop-menu"><a href="/gym/">Free workout planner</a><a href="/articles/">MLB game analysis</a><a href="/data-feed/">Data feed</a></span></span><a class="navlink navlink-cta" href="/membership/">Join $30/mo</a></div></div></nav>
@@ -179,7 +194,10 @@ const fromEspn=a=>({LAR:"LA",WSH:"WAS"})[a]||a;
 async function pollLive(){
   clearTimeout(liveTimer);
   const date=datePick.value;
-  if(date!==localISODate(new Date())||!renderedGames.length) return;
+  const isToday=date===localISODate(new Date());
+  if(!renderedGames.length) return;
+  // Past days: one read for the touchdown list, no timer.
+  if(!isToday&&!TDREADS) return;
   try{
     const r=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates="+date.replace(/-/g,""),{cache:"no-store"});
     if(r.ok){
@@ -188,14 +206,66 @@ async function pollLive(){
         const c=(ev.competitions||[])[0]||{}, t=(c.status||ev.status||{}).type||{};
         const h=(c.competitors||[]).find(x=>x.homeAway==="home"), a=(c.competitors||[]).find(x=>x.homeAway==="away");
         if(!h||!a) continue;
-        LIVE[fromEspn(a.team.abbreviation)+" @ "+fromEspn(h.team.abbreviation)]={state:t.state,detail:t.shortDetail||"",as:a.score,hs:h.score};
+        LIVE[fromEspn(a.team.abbreviation)+" @ "+fromEspn(h.team.abbreviation)]={id:ev.id,state:t.state,detail:t.shortDetail||"",as:a.score,hs:h.score};
       }
+      await pollTDs(date);
       renderKPIs(); renderCards();
     }
   }catch(e){}
-  if(renderedGames.some(g=>stateKey(g)!=="final")) liveTimer=setTimeout(pollLive,60000);
+  if(isToday&&renderedGames.some(g=>stateKey(g)!=="final")) liveTimer=setTimeout(pollLive,60000);
 }
 function liveOf(g){return LIVE[g.away_team+" @ "+g.home_team]||null;}
+/* Live touchdown tracker (DEC-20261115-51). Who scored, from ESPN's public
+   game summary (scoringPlays), beside the anytime touchdown chance Leo gave
+   that player before kickoff. Leo's chances come from
+   data/nfl/td-reads-<date>.json, built at publish from the last capture
+   before kickoff (scripts/build-nfl-td-reads.js), never from a later read.
+   Display only; nothing here feeds Leo and nothing here is a bet. */
+let TDREADS=null; const TDS={}, TD_DONE={};
+const tdName=n=>String(n||"").toLowerCase().replace(/\b(jr|sr|ii|iii|iv|v)\b\.?/g,"").replace(/[^a-z]/g,"");
+function tdScorer(text){
+  const m=String(text||"").match(/^(.*?)\s+\d+\s*(?:yd|yds|yrd|yard|yards)\b/i);
+  return m?m[1].trim():"";
+}
+async function pollTDs(date){
+  const jobs=[];
+  for(const [key,lv] of Object.entries(LIVE)){
+    if(!lv.id||lv.state==="pre"||TD_DONE[key]) continue;
+    jobs.push(fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event="+encodeURIComponent(lv.id),{cache:"no-store"})
+      .then(r=>r.ok?r.json():null).then(d=>{
+        if(!d) return;
+        TDS[key]=(d.scoringPlays||[]).filter(p=>{
+          const t=((p.scoringType||{}).abbreviation||(p.type||{}).abbreviation||"")+" "+((p.scoringType||{}).displayName||(p.type||{}).text||"");
+          return /\bTD\b|touchdown/i.test(t);
+        }).map(p=>({who:tdScorer(p.text),text:p.text||"",team:fromEspn((p.team||{}).abbreviation||""),
+          q:(p.period||{}).number,clock:(p.clock||{}).displayValue||""}));
+        if(lv.state==="post") TD_DONE[key]=true;
+      }).catch(()=>{}));
+  }
+  await Promise.all(jobs);
+}
+function leoTd(key,team,who){
+  const g=TDREADS&&TDREADS.games&&TDREADS.games[key]; if(!g||!who) return null;
+  const n=tdName(who);
+  return g.players.find(p=>p.team===team&&tdName(p.player)===n)||g.players.find(p=>tdName(p.player)===n)||null;
+}
+function tdBox(g){
+  const key=g.away_team+" @ "+g.home_team, list=TDS[key];
+  const reads=TDREADS&&TDREADS.games&&TDREADS.games[key];
+  if(!list||!reads||!(Date.parse(reads.kickoff_utc)<=Date.now())) return "";
+  const q=n=>n>4?"OT":"Q"+n;
+  const rows=list.map(t=>{
+    const r=leoTd(key,t.team,t.who);
+    return '<li><span class="td-when">'+escapeHtml(t.q?q(t.q)+" "+t.clock:"")+'</span>'+
+      '<span class="td-who">'+escapeHtml(t.who||t.text)+(t.team?' <span style="color:var(--muted,#666)">'+escapeHtml(TEAM_NICKS[t.team]||t.team)+'</span>':'')+'</span>'+
+      (r?'<span class="td-leo">Leo '+Math.round(r.chance*100)+'%</span>':'<span class="td-leo none">not on Leo\'s list</span>')+'</li>';
+  }).join("");
+  const scored=new Set(list.map(t=>tdName(t.who)).filter(Boolean));
+  const top=reads.players.slice(0,3).map(p=>(scored.has(tdName(p.player))?'<span class="hit">\u2713 ':'<span>')+escapeHtml(p.player)+' '+Math.round(p.chance*100)+'%</span>').join(" \u00b7 ");
+  return '<div class="td-box" onclick="event.stopPropagation()"><h4>Touchdowns'+(list.length?' ('+list.length+')':'')+'</h4>'+
+    (list.length?'<ul class="td-list">'+rows+'</ul>':'<div>No touchdowns yet.</div>')+
+    '<p class="td-top">Leo\'s top chances before kickoff: '+top+'</p></div>';
+}
 /* Leo's three calls as three boxes. Each shows the call (or PASS and why);
    after the final, whether it was right. */
 function callsGrid(g, leo, isFinal, as, hs){
@@ -245,12 +315,14 @@ async function loadScoreboard(opts={}){
     // Leo's own numbers and team records. Absent for most dates; the card
     // falls back to market-only rather than breaking.
     LEO={}; REC={};
-    const [pk,ts]=await Promise.all([
+    const [pk,ts,td]=await Promise.all([
       fetch("/data/nfl/picks-"+date+".json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null),
-      fetch("/data/nfl/team-stats-today.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
+      fetch("/data/nfl/team-stats-today.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null),
+      fetch("/data/nfl/td-reads-"+date+".json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
     ]);
     if(Array.isArray(pk)) pk.forEach(g=>{LEO[g.matchup]=g;});
     if(Array.isArray(ts)) ts.forEach(t=>{REC[t.team]=t;});
+    TDREADS=td&&td.games?td:null; for(const k in TDS) delete TDS[k]; for(const k in TD_DONE) delete TD_DONE[k]; LIVE={};
 
     renderedGames=allRows.filter(x=>x.gameday===date)
                          .sort((a,b)=>String(a.gametime).localeCompare(String(b.gametime)));
@@ -274,6 +346,10 @@ function renderKPIs(){
     '<article class="kpi"><div class="label">Games</div><div class="value">'+total+'</div><div class="sub">'+(total-finals-lives)+' pregame \u00b7 '+(lives?lives+' live \u00b7 ':'')+finals+' final</div></article>'+
     '<article class="kpi"><div class="label">First kickoff</div><div class="value">'+(first?fmtTime(first.gametime):"\u2014")+'</div><div class="sub">'+(first?escapeHtml(first.gameday):"\u2014")+'</div></article>'+
     '<article class="kpi"><div class="label">Slate</div><div class="value">'+(first?"Week "+escapeHtml(first.week):"\u2014")+'</div><div class="sub">'+(first?escapeHtml(first.weekday):"\u2014")+'</div></article>'+
+    (()=>{const all=Object.entries(TDS);if(!all.length||!TDREADS)return "";
+      let n=0,top=0;for(const [k,l] of all){const g=TDREADS.games[k];const t3=new Set(((g&&g.players)||[]).slice(0,3).map(p=>tdName(p.player)));
+        for(const t of l){n++;if(t3.has(tdName(t.who)))top++;}}
+      return '<article class="kpi"><div class="label">Touchdowns</div><div class="value">'+n+'</div><div class="sub">'+top+' by a player in Leo\'s top 3 for that game</div></article>';})()+
     '<article class="kpi"><div class="label">Totals posted</div><div class="value">'+withTotals+'/'+total+'</div><div class="sub">market and model context</div></article>';
 }
 
@@ -368,6 +444,7 @@ function renderCards(){
             '<span class="market-sub">'+(!leo?"Model pending":isPick?"More than 60%, graded":paused?"Leo win chance":"Too close to call")+'</span></div>';})()+
         '</div>'
         ))+
+        tdBox(g)+
         // Starting QBs as Leo used them (depth chart, DEC-20261031-08); the
         // schedule feed's names can be stale (it still named Jalen Hurts).
         (()=>{const aq=(leo&&leo.away_qb)||g.away_qb_name, hq=(leo&&leo.home_qb)||g.home_qb_name;

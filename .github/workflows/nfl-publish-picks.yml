@@ -108,6 +108,8 @@ jobs:
           node scripts/build-game-archives.js nfl
           node scripts/build-nfl-team-pages.js || true
           node scripts/generate-sitemap.js
+          # Leo's frozen touchdown chances for the scoreboard's live tracker.
+          node scripts/build-nfl-td-reads.js "${{ steps.slate_date.outputs.date }}" || true
 
       # The one safety net, matching the spirit of publish-picks.yml: refuse
       # to publish something structurally broken. An EMPTY slate is not an
