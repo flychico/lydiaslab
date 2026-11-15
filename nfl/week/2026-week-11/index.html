@@ -24,24 +24,34 @@
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/scoreboard.css">
 <style>
-.wk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-top:16px}
-.wk-game{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:8px}
-.wk-when{color:var(--text-dim);font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
-.wk-teams{display:grid;grid-template-columns:28px 1fr;gap:4px 8px;align-items:center;font-weight:800;color:var(--text)}
-.wk-teams img{width:28px;height:28px;object-fit:contain}
-.wk-teams .at{grid-column:2;color:var(--text-dim);font-size:.72rem;font-weight:700;text-transform:uppercase}
-.wk-read{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;margin:0;font-size:.9rem}
-.wk-read dt{color:var(--text-dim);font-weight:700;font-size:.76rem;text-transform:uppercase;letter-spacing:.04em;padding-top:2px}
-.wk-read dd{margin:0}
-.wk-final{font-weight:800}
-.wk-more{font-size:.86rem;font-weight:700;margin-top:auto}
+.wc-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;margin-top:16px}
+.wc{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-sm);overflow:hidden;display:flex;flex-direction:column;gap:10px;padding:0 16px 16px}
+.wc-stripe{height:5px;margin:0 -16px}
+.wc-top{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--text-dim);font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.wc-badge{flex:none;border:1px solid var(--border);border-radius:999px;padding:2px 9px;font-size:.7rem}.wc-badge.on{border-color:var(--good);color:var(--good)}
+.wc-team{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center}
+.wc-team img{width:34px;height:34px;object-fit:contain}
+.wc-name{display:flex;flex-direction:column;min-width:0}.wc-name b{font-size:1rem;line-height:1.2}.wc-name span{color:var(--text-dim);font-size:.78rem}
+.wc-num{text-align:right;display:flex;flex-direction:column;align-items:flex-end}.wc-num b{font-size:1.25rem}.wc-num span{font-weight:800;font-size:.95rem}
+.wc-bar{display:flex;height:8px;border-radius:999px;overflow:hidden;background:var(--border)}.wc-bar i{display:block;height:100%}
+.wc-boxes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.wc-box{border:1px solid var(--border);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.wc-box b{font-size:.92rem;overflow-wrap:anywhere}.wc-box.on{border-color:var(--good)}.wc-box.win{background:rgba(46,125,50,.08)}.wc-box.loss{border-color:var(--danger);background:rgba(198,40,40,.06)}
+.wc-k{color:var(--text-dim);font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.wc-s{color:var(--text-dim);font-size:.74rem;line-height:1.3}
+.wc-tag{font-weight:800}.wc-tag.ok{color:var(--good)}.wc-tag.no{color:var(--danger)}
+.wc-why{margin:0;font-size:.9rem;line-height:1.5}
+.wc-btn{align-self:stretch;text-align:center;margin-top:auto}
+.wc-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.wc-tile{border:1px solid var(--border);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:2px;font-size:.8rem}.wc-tile b{font-size:1.4rem}
 .ok{color:var(--good);font-weight:800}.no{color:var(--danger);font-weight:800}.dim{color:var(--text-dim)}
 .wk-rec{margin:8px 0 0}
+details.wk-more{margin-top:24px}details.wk-more summary{cursor:pointer;font-weight:800}
 .fxw{overflow-x:auto}.fx{width:100%;border-collapse:collapse;font-size:.9rem}.fx th,.fx td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:left}.fx th{font-size:.74rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}
 .nfl-signup{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;align-items:center;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin:22px 0 4px;box-shadow:var(--shadow-sm)}
 .nfl-signup p{margin:4px 0 0;color:var(--text-dim);font-size:.86rem}
 .nfl-signup form{display:flex;gap:8px}.nfl-signup input[type=email]{flex:1;min-width:0}
-@media (max-width:640px){.nfl-signup{grid-template-columns:1fr}.wk-grid{grid-template-columns:1fr}}
+@media (max-width:640px){.nfl-signup{grid-template-columns:1fr}.wc-list{grid-template-columns:1fr}.wc-tile{padding:8px}}
 </style>
 </head>
 <body>
@@ -50,14 +60,35 @@
   <section class="score-hero">
     <p class="eyebrow">NFL 2026 &middot; Week 11</p>
     <h1>Leo&rsquo;s Week 11 card</h1>
-    <p class="subtitle">Every game this week: each team&rsquo;s chance to win, Leo&rsquo;s projected total, and the two players most likely to score a touchdown. Every number is frozen before kickoff and graded after the game.</p>
-    <p class="wk-rec small">Prop calls this season: <b>499-496</b> &middot; <a href="/nfl/results/">full record</a></p>
-    <p class="wk-rec small">Some games show an early read: Leo updates it every morning until game day, adds touchdown chances on game day, and grades only the last read before kickoff.</p>
+    <p class="subtitle">1 game, Thu, Nov 19. First kickoff Thu, Nov 19 at 8:15pm ET.</p>
+    <p class="wk-rec small">Games marked Early read update every morning; the last read before kickoff is the one graded.</p>
   </section>
 
-  <section class="card"><p style="margin:0">Week 11 of the 2026 NFL season has 1 game, on Thursday, November 19. Leo&#39;s strongest read is the Texans over the Colts at 73%. 1 game has a team above 60%, Leo&#39;s line for a pick.</p></section>
+<section class="card wc-sum">
+    <h2 class="sec" style="margin-top:0">This week&rsquo;s calls</h2>
+    <div class="wc-tiles"><div class="wc-tile"><span class="wc-k">Moneyline</span><b>0</b><span>calls</span><span class="dim">2-1, -0.04u</span></div><div class="wc-tile"><span class="wc-k">Spread</span><b>0</b><span>calls</span><span class="dim">6-5, +0.46u</span></div><div class="wc-tile"><span class="wc-k">Total</span><b>0</b><span>calls</span><span class="dim">4-4, -0.36u</span></div></div>
+    <p class="small dim" style="margin:8px 0 0">Calls this week, and each record since Nov 2. Early read: each under 50 graded calls.</p>
+    <p class="small dim" style="margin:10px 0 0"><a href="/nfl/how-leo-works/#calls">How calls work</a></p>
+  </section>
 
-  <div class="notice note">How to read it: every game gets three calls from Leo, moneyline, spread and total, and each is a call or a PASS. A moneyline call needs more than a 60% win chance and a price better than -230. A spread call needs Leo&rsquo;s margin 1 point off the line. A total call needs Leo 1.5 to 7 points off the line. Every call is graded after the game, wins and losses alike. Leo&rsquo;s top touchdown pick in a game scored 47% of the time in 2023 to 2025, so treat touchdown chances as chances, not promises. Nothing here is betting advice.</div>
+  <section class="wc-list">
+<article class="wc">
+    <div class="wc-stripe" style="background:linear-gradient(90deg,#002C5F 0 50%,#03202F 50% 100%)"></div>
+    <div class="wc-top"><span>Thu, Nov 19 &middot; 8:15pm ET &middot; Reliant Stadium</span><span class="wc-badge">Early read</span></div>
+    <div class="wc-team"><img src="/img/nfl/IND.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Indianapolis Colts</b><span>QB Daniel Jones</span></div>
+      <div class="wc-num"><span>27%</span></div></div>
+    <div class="wc-team"><img src="/img/nfl/HOU.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Houston Texans</b><span>QB C.J. Stroud</span></div>
+      <div class="wc-num"><span>73%</span></div></div>
+    <div class="wc-bar" role="img" aria-label="Leo win chance: Colts 27%, Texans 73%"><i style="width:27%;background:#002C5F"></i><i style="width:73%;background:#03202F"></i></div>
+    <div class="wc-boxes"><div class="wc-box"><span class="wc-k">Moneyline</span><b>No call</b><span class="wc-s">Texans -455, past -230</span></div><div class="wc-box"><span class="wc-k">Spread</span><b>No call</b><span class="wc-s">too close to the line</span></div><div class="wc-box"><span class="wc-k">Total</span><b>No call</b><span class="wc-s">too close to the line</span></div></div>
+    <p class="wc-why">The quarterbacks are the biggest reason for Leo&#39;s number: C.J. Stroud rates ahead of Daniel Jones, worth about 13 points of win chance to the Texans.</p>
+    <a class="btn wc-btn" href="/nfl/colts-vs-texans-prediction-odds-2026-11-19/">Full game page &rarr;</a>
+  </article>
+  </section>
+
+  <section class="card" style="margin-top:18px"><h2 class="sec" style="margin-top:0">Week 11 at a glance</h2><p style="margin:0">Week 11 of the 2026 NFL season has 1 game, on Thursday, November 19. Leo&#39;s strongest read is the Texans over the Colts at 73%. No game has a moneyline call, a team above 60% at a price better than -230.</p></section>
 
   <div class="nfl-signup">
     <div><b>Get this card by email</b><p>Free, before kickoff on game days. Unsubscribe anytime.</p></div>
@@ -68,25 +99,8 @@
     </form>
   </div>
 
-  <section class="wk-grid">
-<article class="wk-game">
-    <div class="wk-when">Thu, Nov 19 &middot; 8:15pm ET &middot; Reliant Stadium</div>
-    <a class="wk-teams" href="/nfl/colts-vs-texans-prediction-odds-2026-11-19/">
-      <img src="/img/nfl/IND.png" alt="" loading="lazy"><span>Indianapolis Colts</span>
-      <span class="at">at</span>
-      <img src="/img/nfl/HOU.png" alt="" loading="lazy"><span>Houston Texans</span>
-    </a>
-    <dl class="wk-read">
-      <dt>Win chance</dt><dd>Texans 73% <span class="dim">price past -230, PASS</span></dd>
-      <dt>Leo total</dt><dd>45.8 points <span class="dim">(line 44.5)</span></dd>
-      <dt>Most likely TD</dt><dd><span class="dim">n/a</span></dd>
-    </dl>
-    
-    <a class="wk-more" href="/nfl/colts-vs-texans-prediction-odds-2026-11-19/">Full matchup, injuries and props &rarr;</a>
-  </article>
-  </section>
 
-
+  <p class="small dim" style="margin-top:14px"><a href="/nfl/how-leo-works/">How Leo works</a>: what each number means, when it freezes and how calls are graded.</p>
   <p class="data-note">Player and team statistics from the open nflverse dataset. For entertainment and information only. 21+. If you or someone you know has a gambling problem, call 1-800-MY-RESET.</p>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>

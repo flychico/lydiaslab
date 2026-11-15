@@ -274,7 +274,8 @@ function biggestAbsence(m) {
   const P = B.u.p, vol = B.x.pos === "RB" ? `${P.car || 0} carries and ${P.tgt || 0} targets` : `${P.tgt || 0} targets`;
   return `The biggest absence is ${posName} ${B.x.player}, ${st} for the ${city(B.team)} after ${vol} in ${B.u.games} games; that moves the projections for the ${city(B.team)} players, not the win chance.`;
 }
-function opening(m) {
+// The biggest driver of Leo's number in one sentence (also used on the week card).
+function biggestDriver(m) {
   const g = m.leo && m.leo.game, out = [];
   const D = g && g.pick ? driversAny(m) : null;
   if (D) {
@@ -289,6 +290,11 @@ function opening(m) {
       else if (k === "home") out.push(`Home field is the biggest part of Leo's number for the ${city(m.home)} against the ${city(m.away)}, about ${n} point${n === 1 ? "" : "s"} of win chance, because the teams otherwise rate close.`);
     }
   }
+  return out[0] || "";
+}
+function opening(m) {
+  const out = [], d = biggestDriver(m);
+  if (d) out.push(d);
   const fa = form(m.away, m.date), fh = form(m.home, m.date);
   if (fa) out.push(fa);
   if (fh) out.push(fh);
@@ -319,4 +325,4 @@ function whatHappened(m) {
 </section>`;
 }
 
-module.exports = { summary, why, finalSentence, drivers, opening, whatHappened };
+module.exports = { summary, why, finalSentence, drivers, opening, whatHappened, biggestDriver };

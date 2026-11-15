@@ -24,24 +24,34 @@
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/scoreboard.css">
 <style>
-.wk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-top:16px}
-.wk-game{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:8px}
-.wk-when{color:var(--text-dim);font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
-.wk-teams{display:grid;grid-template-columns:28px 1fr;gap:4px 8px;align-items:center;font-weight:800;color:var(--text)}
-.wk-teams img{width:28px;height:28px;object-fit:contain}
-.wk-teams .at{grid-column:2;color:var(--text-dim);font-size:.72rem;font-weight:700;text-transform:uppercase}
-.wk-read{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;margin:0;font-size:.9rem}
-.wk-read dt{color:var(--text-dim);font-weight:700;font-size:.76rem;text-transform:uppercase;letter-spacing:.04em;padding-top:2px}
-.wk-read dd{margin:0}
-.wk-final{font-weight:800}
-.wk-more{font-size:.86rem;font-weight:700;margin-top:auto}
+.wc-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;margin-top:16px}
+.wc{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-sm);overflow:hidden;display:flex;flex-direction:column;gap:10px;padding:0 16px 16px}
+.wc-stripe{height:5px;margin:0 -16px}
+.wc-top{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--text-dim);font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.wc-badge{flex:none;border:1px solid var(--border);border-radius:999px;padding:2px 9px;font-size:.7rem}.wc-badge.on{border-color:var(--good);color:var(--good)}
+.wc-team{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center}
+.wc-team img{width:34px;height:34px;object-fit:contain}
+.wc-name{display:flex;flex-direction:column;min-width:0}.wc-name b{font-size:1rem;line-height:1.2}.wc-name span{color:var(--text-dim);font-size:.78rem}
+.wc-num{text-align:right;display:flex;flex-direction:column;align-items:flex-end}.wc-num b{font-size:1.25rem}.wc-num span{font-weight:800;font-size:.95rem}
+.wc-bar{display:flex;height:8px;border-radius:999px;overflow:hidden;background:var(--border)}.wc-bar i{display:block;height:100%}
+.wc-boxes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.wc-box{border:1px solid var(--border);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.wc-box b{font-size:.92rem;overflow-wrap:anywhere}.wc-box.on{border-color:var(--good)}.wc-box.win{background:rgba(46,125,50,.08)}.wc-box.loss{border-color:var(--danger);background:rgba(198,40,40,.06)}
+.wc-k{color:var(--text-dim);font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.wc-s{color:var(--text-dim);font-size:.74rem;line-height:1.3}
+.wc-tag{font-weight:800}.wc-tag.ok{color:var(--good)}.wc-tag.no{color:var(--danger)}
+.wc-why{margin:0;font-size:.9rem;line-height:1.5}
+.wc-btn{align-self:stretch;text-align:center;margin-top:auto}
+.wc-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.wc-tile{border:1px solid var(--border);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:2px;font-size:.8rem}.wc-tile b{font-size:1.4rem}
 .ok{color:var(--good);font-weight:800}.no{color:var(--danger);font-weight:800}.dim{color:var(--text-dim)}
 .wk-rec{margin:8px 0 0}
+details.wk-more{margin-top:24px}details.wk-more summary{cursor:pointer;font-weight:800}
 .fxw{overflow-x:auto}.fx{width:100%;border-collapse:collapse;font-size:.9rem}.fx th,.fx td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:left}.fx th{font-size:.74rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}
 .nfl-signup{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;align-items:center;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin:22px 0 4px;box-shadow:var(--shadow-sm)}
 .nfl-signup p{margin:4px 0 0;color:var(--text-dim);font-size:.86rem}
 .nfl-signup form{display:flex;gap:8px}.nfl-signup input[type=email]{flex:1;min-width:0}
-@media (max-width:640px){.nfl-signup{grid-template-columns:1fr}.wk-grid{grid-template-columns:1fr}}
+@media (max-width:640px){.nfl-signup{grid-template-columns:1fr}.wc-list{grid-template-columns:1fr}.wc-tile{padding:8px}}
 </style>
 </head>
 <body>
@@ -50,14 +60,217 @@
   <section class="score-hero">
     <p class="eyebrow">NFL 2026 &middot; Week 10</p>
     <h1>Leo&rsquo;s Week 10 card</h1>
-    <p class="subtitle">Every game this week: each team&rsquo;s chance to win, Leo&rsquo;s projected total, and the two players most likely to score a touchdown. Every number is frozen before kickoff and graded after the game.</p>
-    <p class="wk-rec small">Prop calls this season: <b>499-496</b> &middot; <a href="/nfl/results/">full record</a></p>
-    <p class="wk-rec small">Some games show an early read: Leo updates it every morning until game day, adds touchdown chances on game day, and grades only the last read before kickoff.</p>
+    <p class="subtitle">14 games, Thu, Nov 12 to Mon, Nov 16. First kickoff Thu, Nov 12 at 8:15pm ET.</p>
+    <p class="wk-rec small">Games marked Early read update every morning; the last read before kickoff is the one graded.</p>
   </section>
 
-  <section class="card"><p style="margin:0">Week 10 of the 2026 NFL season has 14 games, from Thursday, November 12 to Monday, November 16. Leo&#39;s strongest read is the Jaguars over the Titans at 79%. The closest game is the Dolphins at the Colts, where Leo gives the Colts 51%. 10 games have a team above 60%, Leo&#39;s line for a pick. Leo&#39;s highest projected total is the 49ers at the Cowboys at 54.8 points, and the lowest is the Chargers at the Ravens at 40.2. The most likely touchdown scorer this week is Jahmyr Gibbs of the Lions (72%). Last week (Week 9) Leo&#39;s picks went 9-1.</p></section>
+<section class="card wc-sum">
+    <h2 class="sec" style="margin-top:0">This week&rsquo;s calls</h2>
+    <div class="wc-tiles"><div class="wc-tile"><span class="wc-k">Moneyline</span><b>6</b><span>calls</span><span class="dim">2-1, -0.04u</span></div><div class="wc-tile"><span class="wc-k">Spread</span><b>6</b><span>calls</span><span class="dim">6-5, +0.46u</span></div><div class="wc-tile"><span class="wc-k">Total</span><b>6</b><span>calls</span><span class="dim">4-4, -0.36u</span></div></div>
+    <p class="small dim" style="margin:8px 0 0">Calls this week, and each record since Nov 2. Early read: each under 50 graded calls.</p>
+    <p class="small" style="margin:10px 0 0">Graded so far this week: <b>1-1</b>. <a href="/nfl/results/">Leo&rsquo;s record</a></p>
+  </section>
 
-  <div class="notice note">How to read it: every game gets three calls from Leo, moneyline, spread and total, and each is a call or a PASS. A moneyline call needs more than a 60% win chance and a price better than -230. A spread call needs Leo&rsquo;s margin 1 point off the line. A total call needs Leo 1.5 to 7 points off the line. Every call is graded after the game, wins and losses alike. Leo&rsquo;s top touchdown pick in a game scored 47% of the time in 2023 to 2025, so treat touchdown chances as chances, not promises. Nothing here is betting advice.</div>
+  <section class="wc-list">
+<article class="wc">
+    <div class="wc-stripe" style="background:linear-gradient(90deg,#5A1414 0 50%,#0B2265 50% 100%)"></div>
+    <div class="wc-top"><span>Thu, Nov 12 &middot; 8:15pm ET &middot; MetLife Stadium</span><span class="wc-badge">Final</span></div>
+    <div class="wc-team"><img src="/img/nfl/WAS.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Washington Commanders</b><span>QB Jayden Daniels</span></div>
+      <div class="wc-num"><b class="">24</b><span>Leo 49%</span></div></div>
+    <div class="wc-team"><img src="/img/nfl/NYG.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>New York Giants</b><span>QB J.J. McCarthy</span></div>
+      <div class="wc-num"><b class="dim">21</b><span>Leo 51%</span></div></div>
+    <div class="wc-bar" role="img" aria-label="Leo win chance: Commanders 49%, Giants 51%"><i style="width:49%;background:#5A1414"></i><i style="width:51%;background:#0B2265"></i></div>
+    <div class="wc-boxes"><div class="wc-box"><span class="wc-k">Moneyline</span><b>No call</b><span class="wc-s">under 60%</span></div><div class="wc-box on loss"><span class="wc-k">Spread</span><b>Giants -1.5</b><span class="wc-s"><span class="wc-tag no">Lost</span></span></div><div class="wc-box on win"><span class="wc-k">Total</span><b>Over 40.5</b><span class="wc-s"><span class="wc-tag ok">Won</span></span></div></div>
+    <p class="wc-why">The quarterbacks are the biggest reason for Leo&#39;s number: Jayden Daniels rates ahead of J.J. McCarthy, worth about 5 points of win chance to the Commanders. Why Leo missed: Leo&#39;s error.</p>
+    <a class="btn wc-btn" href="/nfl/commanders-vs-giants-prediction-odds-2026-11-12/">Full game page &rarr;</a>
+  </article>
+<article class="wc">
+    <div class="wc-stripe" style="background:linear-gradient(90deg,#002244 0 50%,#0076B6 50% 100%)"></div>
+    <div class="wc-top"><span>Sun, Nov 15 &middot; 9:30am ET &middot; FC Bayern Munich Stadium</span><span class="wc-badge on">1 call</span></div>
+    <div class="wc-team"><img src="/img/nfl/NE.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>New England Patriots</b><span>QB Drake Maye</span></div>
+      <div class="wc-num"><span>47%</span></div></div>
+    <div class="wc-team"><img src="/img/nfl/DET.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Detroit Lions</b><span>QB Jared Goff</span></div>
+      <div class="wc-num"><span>53%</span></div></div>
+    <div class="wc-bar" role="img" aria-label="Leo win chance: Patriots 47%, Lions 53%"><i style="width:47%;background:#002244"></i><i style="width:53%;background:#0076B6"></i></div>
+    <div class="wc-boxes"><div class="wc-box"><span class="wc-k">Moneyline</span><b>No call</b><span class="wc-s">under 60%</span></div><div class="wc-box"><span class="wc-k">Spread</span><b>No call</b><span class="wc-s">too close to the line</span></div><div class="wc-box on"><span class="wc-k">Total</span><b>Over 50.5</b><span class="wc-s"></span></div></div>
+    <p class="wc-why">Home field is the biggest part of Leo&#39;s number for the Lions against the Patriots, about 5 points of win chance, because the teams otherwise rate close.</p>
+    <a class="btn wc-btn" href="/nfl/patriots-vs-lions-prediction-odds-2026-11-15/">Full game page &rarr;</a>
+  </article>
+<article class="wc">
+    <div class="wc-stripe" style="background:linear-gradient(90deg,#E31837 0 50%,#A71930 50% 100%)"></div>
+    <div class="wc-top"><span>Sun, Nov 15 &middot; 1:00pm ET &middot; Mercedes-Benz Stadium</span><span class="wc-badge on">2 calls</span></div>
+    <div class="wc-team"><img src="/img/nfl/KC.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Kansas City Chiefs</b><span>QB Patrick Mahomes</span></div>
+      <div class="wc-num"><span>61%</span></div></div>
+    <div class="wc-team"><img src="/img/nfl/ATL.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Atlanta Falcons</b><span>QB Michael Penix Jr.</span></div>
+      <div class="wc-num"><span>39%</span></div></div>
+    <div class="wc-bar" role="img" aria-label="Leo win chance: Chiefs 61%, Falcons 39%"><i style="width:61%;background:#E31837"></i><i style="width:39%;background:#A71930"></i></div>
+    <div class="wc-boxes"><div class="wc-box on"><span class="wc-k">Moneyline</span><b>Chiefs -180</b><span class="wc-s"></span></div><div class="wc-box on"><span class="wc-k">Spread</span><b>Chiefs -3</b><span class="wc-s"></span></div><div class="wc-box"><span class="wc-k">Total</span><b>No call</b><span class="wc-s">too close to the line</span></div></div>
+    <p class="wc-why">The quarterbacks are the biggest reason for Leo&#39;s number: Patrick Mahomes rates ahead of Michael Penix Jr., worth about 7 points of win chance to the Chiefs.</p>
+    <a class="btn wc-btn" href="/nfl/chiefs-vs-falcons-prediction-odds-2026-11-15/">Full game page &rarr;</a>
+  </article>
+<article class="wc">
+    <div class="wc-stripe" style="background:linear-gradient(90deg,#03202F 0 50%,#FF3C00 50% 100%)"></div>
+    <div class="wc-top"><span>Sun, Nov 15 &middot; 1:00pm ET &middot; Huntington Bank Field</span><span class="wc-badge on">2 calls</span></div>
+    <div class="wc-team"><img src="/img/nfl/HOU.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Houston Texans</b><span>QB C.J. Stroud</span></div>
+      <div class="wc-num"><span>64%</span></div></div>
+    <div class="wc-team"><img src="/img/nfl/CLE.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Cleveland Browns</b><span>QB Deshaun Watson</span></div>
+      <div class="wc-num"><span>36%</span></div></div>
+    <div class="wc-bar" role="img" aria-label="Leo win chance: Texans 64%, Browns 36%"><i style="width:64%;background:#03202F"></i><i style="width:36%;background:#FF3C00"></i></div>
+    <div class="wc-boxes"><div class="wc-box on"><span class="wc-k">Moneyline</span><b>Texans -225</b><span class="wc-s"></span></div><div class="wc-box"><span class="wc-k">Spread</span><b>No call</b><span class="wc-s">too close to the line</span></div><div class="wc-box on"><span class="wc-k">Total</span><b>Over 40.5</b><span class="wc-s"></span></div></div>
+    <p class="wc-why">The offenses are the biggest reason for Leo&#39;s number: the Texans rate ahead of the Browns with the ball, worth about 10 points of win chance to the Texans.</p>
+    <a class="btn wc-btn" href="/nfl/texans-vs-browns-prediction-odds-2026-11-15/">Full game page &rarr;</a>
+  </article>
+<article class="wc">
+    <div class="wc-stripe" style="background:linear-gradient(90deg,#4F2683 0 50%,#203731 50% 100%)"></div>
+    <div class="wc-top"><span>Sun, Nov 15 &middot; 1:00pm ET &middot; Lambeau Field</span><span class="wc-badge on">1 call</span></div>
+    <div class="wc-team"><img src="/img/nfl/MIN.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Minnesota Vikings</b><span>QB Kirk Cousins</span></div>
+      <div class="wc-num"><span>38%</span></div></div>
+    <div class="wc-team"><img src="/img/nfl/GB.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Green Bay Packers</b><span>QB Jordan Love</span></div>
+      <div class="wc-num"><span>62%</span></div></div>
+    <div class="wc-bar" role="img" aria-label="Leo win chance: Vikings 38%, Packers 62%"><i style="width:38%;background:#4F2683"></i><i style="width:62%;background:#203731"></i></div>
+    <div class="wc-boxes"><div class="wc-box on"><span class="wc-k">Moneyline</span><b>Packers -148</b><span class="wc-s"></span></div><div class="wc-box"><span class="wc-k">Spread</span><b>No call</b><span class="wc-s">too close to the line</span></div><div class="wc-box"><span class="wc-k">Total</span><b>No call</b><span class="wc-s">too close to the line</span></div></div>
+    <p class="wc-why">The offenses are the biggest reason for Leo&#39;s number: the Packers rate ahead of the Vikings with the ball, worth about 9 points of win chance to the Packers.</p>
+    <a class="btn wc-btn" href="/nfl/vikings-vs-packers-prediction-odds-2026-11-15/">Full game page &rarr;</a>
+  </article>
+<article class="wc">
+    <div class="wc-stripe" style="background:linear-gradient(90deg,#008E97 0 50%,#002C5F 50% 100%)"></div>
+    <div class="wc-top"><span>Sun, Nov 15 &middot; 1:00pm ET &middot; Lucas Oil Stadium</span><span class="wc-badge on">1 call</span></div>
+    <div class="wc-team"><img src="/img/nfl/MIA.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Miami Dolphins</b><span>QB Malik Willis</span></div>
+      <div class="wc-num"><span>49%</span></div></div>
+    <div class="wc-team"><img src="/img/nfl/IND.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Indianapolis Colts</b><span>QB Daniel Jones</span></div>
+      <div class="wc-num"><span>51%</span></div></div>
+    <div class="wc-bar" role="img" aria-label="Leo win chance: Dolphins 49%, Colts 51%"><i style="width:49%;background:#008E97"></i><i style="width:51%;background:#002C5F"></i></div>
+    <div class="wc-boxes"><div class="wc-box"><span class="wc-k">Moneyline</span><b>No call</b><span class="wc-s">under 60%</span></div><div class="wc-box"><span class="wc-k">Spread</span><b>No call</b><span class="wc-s">too close to the line</span></div><div class="wc-box on"><span class="wc-k">Total</span><b>Over 37.5</b><span class="wc-s"></span></div></div>
+    <p class="wc-why">The quarterbacks are the biggest reason for Leo&#39;s number: Kyle McCord rates ahead of Daniel Jones, worth about 7 points of win chance to the Dolphins.</p>
+    <a class="btn wc-btn" href="/nfl/dolphins-vs-colts-prediction-odds-2026-11-15/">Full game page &rarr;</a>
+  </article>
+<article class="wc">
+    <div class="wc-stripe" style="background:linear-gradient(90deg,#0085CA 0 50%,#D3BC8D 50% 100%)"></div>
+    <div class="wc-top"><span>Sun, Nov 15 &middot; 1:00pm ET &middot; Caesars Superdome</span><span class="wc-badge">No calls</span></div>
+    <div class="wc-team"><img src="/img/nfl/CAR.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Carolina Panthers</b><span>QB Bryce Young</span></div>
+      <div class="wc-num"><span>53%</span></div></div>
+    <div class="wc-team"><img src="/img/nfl/NO.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>New Orleans Saints</b><span>QB Tyler Shough</span></div>
+      <div class="wc-num"><span>47%</span></div></div>
+    <div class="wc-bar" role="img" aria-label="Leo win chance: Panthers 53%, Saints 47%"><i style="width:53%;background:#0085CA"></i><i style="width:47%;background:#D3BC8D"></i></div>
+    <div class="wc-boxes"><div class="wc-box"><span class="wc-k">Moneyline</span><b>No call</b><span class="wc-s">under 60%</span></div><div class="wc-box"><span class="wc-k">Spread</span><b>No call</b><span class="wc-s">too close to the line</span></div><div class="wc-box"><span class="wc-k">Total</span><b>No call</b><span class="wc-s">too close to the line</span></div></div>
+    <p class="wc-why">The offenses are the biggest reason for Leo&#39;s number: the Panthers rate ahead of the Saints with the ball, worth about 8 points of win chance to the Panthers.</p>
+    <a class="btn wc-btn" href="/nfl/panthers-vs-saints-prediction-odds-2026-11-15/">Full game page &rarr;</a>
+  </article>
+<article class="wc">
+    <div class="wc-stripe" style="background:linear-gradient(90deg,#00338D 0 50%,#125740 50% 100%)"></div>
+    <div class="wc-top"><span>Sun, Nov 15 &middot; 1:00pm ET &middot; MetLife Stadium</span><span class="wc-badge on">1 call</span></div>
+    <div class="wc-team"><img src="/img/nfl/BUF.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Buffalo Bills</b><span>QB Josh Allen</span></div>
+      <div class="wc-num"><span>72%</span></div></div>
+    <div class="wc-team"><img src="/img/nfl/NYJ.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>New York Jets</b><span>QB Geno Smith</span></div>
+      <div class="wc-num"><span>28%</span></div></div>
+    <div class="wc-bar" role="img" aria-label="Leo win chance: Bills 72%, Jets 28%"><i style="width:72%;background:#00338D"></i><i style="width:28%;background:#125740"></i></div>
+    <div class="wc-boxes"><div class="wc-box"><span class="wc-k">Moneyline</span><b>No call</b><span class="wc-s">Bills -455, past -230</span></div><div class="wc-box on"><span class="wc-k">Spread</span><b>Bills -8.5</b><span class="wc-s"></span></div><div class="wc-box"><span class="wc-k">Total</span><b>No call</b><span class="wc-s">too close to the line</span></div></div>
+    <p class="wc-why">The offenses are the biggest reason for Leo&#39;s number: the Bills rate ahead of the Jets with the ball, worth about 18 points of win chance to the Bills.</p>
+    <a class="btn wc-btn" href="/nfl/bills-vs-jets-prediction-odds-2026-11-15/">Full game page &rarr;</a>
+  </article>
+<article class="wc">
+    <div class="wc-stripe" style="background:linear-gradient(90deg,#006778 0 50%,#4B92DB 50% 100%)"></div>
+    <div class="wc-top"><span>Sun, Nov 15 &middot; 1:00pm ET &middot; Nissan Stadium</span><span class="wc-badge on">1 call</span></div>
+    <div class="wc-team"><img src="/img/nfl/JAX.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Jacksonville Jaguars</b><span>QB Trevor Lawrence</span></div>
+      <div class="wc-num"><span>79%</span></div></div>
+    <div class="wc-team"><img src="/img/nfl/TEN.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Tennessee Titans</b><span>QB Cam Ward</span></div>
+      <div class="wc-num"><span>21%</span></div></div>
+    <div class="wc-bar" role="img" aria-label="Leo win chance: Jaguars 79%, Titans 21%"><i style="width:79%;background:#006778"></i><i style="width:21%;background:#4B92DB"></i></div>
+    <div class="wc-boxes"><div class="wc-box"><span class="wc-k">Moneyline</span><b>No call</b><span class="wc-s">Jaguars -700, past -230</span></div><div class="wc-box on"><span class="wc-k">Spread</span><b>Jaguars -10.5</b><span class="wc-s"></span></div><div class="wc-box"><span class="wc-k">Total</span><b>No call</b><span class="wc-s">too close to the line</span></div></div>
+    <p class="wc-why">The quarterbacks are the biggest reason for Leo&#39;s number: Trevor Lawrence rates ahead of Cam Ward, worth about 13 points of win chance to the Jaguars.</p>
+    <a class="btn wc-btn" href="/nfl/jaguars-vs-titans-prediction-odds-2026-11-15/">Full game page &rarr;</a>
+  </article>
+<article class="wc">
+    <div class="wc-stripe" style="background:linear-gradient(90deg,#003594 0 50%,#97233F 50% 100%)"></div>
+    <div class="wc-top"><span>Sun, Nov 15 &middot; 4:05pm ET &middot; State Farm Stadium</span><span class="wc-badge">No calls</span></div>
+    <div class="wc-team"><img src="/img/nfl/LA.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Los Angeles Rams</b><span>QB Matthew Stafford</span></div>
+      <div class="wc-num"><span>67%</span></div></div>
+    <div class="wc-team"><img src="/img/nfl/ARI.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Arizona Cardinals</b><span>QB Gardner Minshew</span></div>
+      <div class="wc-num"><span>33%</span></div></div>
+    <div class="wc-bar" role="img" aria-label="Leo win chance: Rams 67%, Cardinals 33%"><i style="width:67%;background:#003594"></i><i style="width:33%;background:#97233F"></i></div>
+    <div class="wc-boxes"><div class="wc-box"><span class="wc-k">Moneyline</span><b>No call</b><span class="wc-s">Rams -485, past -230</span></div><div class="wc-box"><span class="wc-k">Spread</span><b>No call</b><span class="wc-s">too close to the line</span></div><div class="wc-box"><span class="wc-k">Total</span><b>No call</b><span class="wc-s">too far off to trust</span></div></div>
+    <p class="wc-why">The offenses are the biggest reason for Leo&#39;s number: the Rams rate ahead of the Cardinals with the ball, worth about 9 points of win chance to the Rams.</p>
+    <a class="btn wc-btn" href="/nfl/rams-vs-cardinals-prediction-odds-2026-11-15/">Full game page &rarr;</a>
+  </article>
+<article class="wc">
+    <div class="wc-stripe" style="background:linear-gradient(90deg,#002244 0 50%,#000000 50% 100%)"></div>
+    <div class="wc-top"><span>Sun, Nov 15 &middot; 4:05pm ET &middot; Allegiant Stadium</span><span class="wc-badge on">2 calls</span></div>
+    <div class="wc-team"><img src="/img/nfl/SEA.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Seattle Seahawks</b><span>QB Sam Darnold</span></div>
+      <div class="wc-num"><span>68%</span></div></div>
+    <div class="wc-team"><img src="/img/nfl/LV.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Las Vegas Raiders</b><span>QB Fernando Mendoza</span></div>
+      <div class="wc-num"><span>32%</span></div></div>
+    <div class="wc-bar" role="img" aria-label="Leo win chance: Seahawks 68%, Raiders 32%"><i style="width:68%;background:#002244"></i><i style="width:32%;background:#000000"></i></div>
+    <div class="wc-boxes"><div class="wc-box"><span class="wc-k">Moneyline</span><b>No call</b><span class="wc-s">Seahawks -290, past -230</span></div><div class="wc-box on"><span class="wc-k">Spread</span><b>Seahawks -6.5</b><span class="wc-s"></span></div><div class="wc-box on"><span class="wc-k">Total</span><b>Over 40.5</b><span class="wc-s"></span></div></div>
+    <p class="wc-why">The defenses are the biggest reason for Leo&#39;s number: the Seahawks rate ahead of the Raiders without the ball, worth about 10 points of win chance to the Seahawks.</p>
+    <a class="btn wc-btn" href="/nfl/seahawks-vs-raiders-prediction-odds-2026-11-15/">Full game page &rarr;</a>
+  </article>
+<article class="wc">
+    <div class="wc-stripe" style="background:linear-gradient(90deg,#AA0000 0 50%,#002244 50% 100%)"></div>
+    <div class="wc-top"><span>Sun, Nov 15 &middot; 4:25pm ET &middot; AT&amp;T Stadium</span><span class="wc-badge on">1 call</span></div>
+    <div class="wc-team"><img src="/img/nfl/SF.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>San Francisco 49ers</b><span>QB Brock Purdy</span></div>
+      <div class="wc-num"><span>63%</span></div></div>
+    <div class="wc-team"><img src="/img/nfl/DAL.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Dallas Cowboys</b><span>QB Dak Prescott</span></div>
+      <div class="wc-num"><span>37%</span></div></div>
+    <div class="wc-bar" role="img" aria-label="Leo win chance: 49ers 63%, Cowboys 37%"><i style="width:63%;background:#AA0000"></i><i style="width:37%;background:#002244"></i></div>
+    <div class="wc-boxes"><div class="wc-box on"><span class="wc-k">Moneyline</span><b>49ers -218</b><span class="wc-s"></span></div><div class="wc-box"><span class="wc-k">Spread</span><b>No call</b><span class="wc-s">too close to the line</span></div><div class="wc-box"><span class="wc-k">Total</span><b>No call</b><span class="wc-s">too close to the line</span></div></div>
+    <p class="wc-why">The defenses are the biggest reason for Leo&#39;s number: the 49ers rate ahead of the Cowboys without the ball, worth about 7 points of win chance to the 49ers.</p>
+    <a class="btn wc-btn" href="/nfl/49ers-vs-cowboys-prediction-odds-2026-11-15/">Full game page &rarr;</a>
+  </article>
+<article class="wc">
+    <div class="wc-stripe" style="background:linear-gradient(90deg,#FFB612 0 50%,#FB4F14 50% 100%)"></div>
+    <div class="wc-top"><span>Sun, Nov 15 &middot; 8:20pm ET &middot; Paycor Stadium</span><span class="wc-badge on">1 call</span></div>
+    <div class="wc-team"><img src="/img/nfl/PIT.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Pittsburgh Steelers</b><span>QB Aaron Rodgers</span></div>
+      <div class="wc-num"><span>36%</span></div></div>
+    <div class="wc-team"><img src="/img/nfl/CIN.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Cincinnati Bengals</b><span>QB Joe Burrow</span></div>
+      <div class="wc-num"><span>64%</span></div></div>
+    <div class="wc-bar" role="img" aria-label="Leo win chance: Steelers 36%, Bengals 64%"><i style="width:36%;background:#FFB612"></i><i style="width:64%;background:#FB4F14"></i></div>
+    <div class="wc-boxes"><div class="wc-box on"><span class="wc-k">Moneyline</span><b>Bengals -192</b><span class="wc-s"></span></div><div class="wc-box"><span class="wc-k">Spread</span><b>No call</b><span class="wc-s">too close to the line</span></div><div class="wc-box"><span class="wc-k">Total</span><b>No call</b><span class="wc-s">too close to the line</span></div></div>
+    <p class="wc-why">The quarterbacks are the biggest reason for Leo&#39;s number: Joe Burrow rates ahead of Aaron Rodgers, worth about 16 points of win chance to the Bengals.</p>
+    <a class="btn wc-btn" href="/nfl/steelers-vs-bengals-prediction-odds-2026-11-15/">Full game page &rarr;</a>
+  </article>
+<article class="wc">
+    <div class="wc-stripe" style="background:linear-gradient(90deg,#007BC7 0 50%,#241773 50% 100%)"></div>
+    <div class="wc-top"><span>Mon, Nov 16 &middot; 8:15pm ET &middot; M&amp;T Bank Stadium</span><span class="wc-badge">Early read</span></div>
+    <div class="wc-team"><img src="/img/nfl/LAC.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Los Angeles Chargers</b><span>QB Justin Herbert</span></div>
+      <div class="wc-num"><span>28%</span></div></div>
+    <div class="wc-team"><img src="/img/nfl/BAL.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>Baltimore Ravens</b><span>QB Tyler Huntley</span></div>
+      <div class="wc-num"><span>72%</span></div></div>
+    <div class="wc-bar" role="img" aria-label="Leo win chance: Chargers 28%, Ravens 72%"><i style="width:28%;background:#007BC7"></i><i style="width:72%;background:#241773"></i></div>
+    <div class="wc-boxes"><div class="wc-box on"><span class="wc-k">Moneyline</span><b>Ravens -218</b><span class="wc-s"></span></div><div class="wc-box on"><span class="wc-k">Spread</span><b>Ravens -4.5</b><span class="wc-s"></span></div><div class="wc-box on"><span class="wc-k">Total</span><b>Over 38.5</b><span class="wc-s"></span></div></div>
+    <p class="wc-why">The offenses are the biggest reason for Leo&#39;s number: the Ravens rate ahead of the Chargers with the ball, worth about 13 points of win chance to the Ravens.</p>
+    <a class="btn wc-btn" href="/nfl/chargers-vs-ravens-prediction-odds-2026-11-16/">Full game page &rarr;</a>
+  </article>
+  </section>
+
+  <section class="card" style="margin-top:18px"><h2 class="sec" style="margin-top:0">Week 10 at a glance</h2><p style="margin:0">Week 10 of the 2026 NFL season has 14 games, from Thursday, November 12 to Monday, November 16. Leo&#39;s strongest read is the Jaguars over the Titans at 79%. The closest game is the Dolphins at the Colts, where Leo gives the Colts 51%. 6 games have a moneyline call, a team above 60% at a price better than -230. Leo&#39;s highest projected total is the 49ers at the Cowboys at 54.8 points, and the lowest is the Chargers at the Ravens at 40.2. The most likely touchdown scorer this week is Jahmyr Gibbs of the Lions (72%). Last week (Week 9) Leo&#39;s moneyline calls went 2-1.</p></section>
 
   <div class="nfl-signup">
     <div><b>Get this card by email</b><p>Free, before kickoff on game days. Unsubscribe anytime.</p></div>
@@ -68,221 +281,8 @@
     </form>
   </div>
 
-  <section class="wk-grid">
-<article class="wk-game">
-    <div class="wk-when">Thu, Nov 12 &middot; 8:15pm ET &middot; MetLife Stadium</div>
-    <a class="wk-teams" href="/nfl/commanders-vs-giants-prediction-odds-2026-11-12/">
-      <img src="/img/nfl/WAS.png" alt="" loading="lazy"><span>Washington Commanders</span>
-      <span class="at">at</span>
-      <img src="/img/nfl/NYG.png" alt="" loading="lazy"><span>New York Giants</span>
-    </a>
-    <dl class="wk-read">
-      <dt>Win chance</dt><dd>Giants 51% <span class="dim">too close to call</span></dd>
-      <dt>Leo total</dt><dd>45.4 points <span class="dim">(line 40.5)</span></dd>
-      <dt>Most likely TD</dt><dd>Cam Skattebo <span class="dim">NYG 46%</span> <span class="ok">scored</span><br>Malik Nabers <span class="dim">NYG 40%</span> <span class="no">no TD</span></dd>
-    </dl>
-    <div class="wk-final">Final: WAS 24, NYG 21</div>
-    <a class="wk-more" href="/nfl/commanders-vs-giants-prediction-odds-2026-11-12/">Full matchup, injuries and props &rarr;</a>
-  </article>
-<article class="wk-game">
-    <div class="wk-when">Sun, Nov 15 &middot; 9:30am ET &middot; FC Bayern Munich Stadium</div>
-    <a class="wk-teams" href="/nfl/patriots-vs-lions-prediction-odds-2026-11-15/">
-      <img src="/img/nfl/NE.png" alt="" loading="lazy"><span>New England Patriots</span>
-      <span class="at">at</span>
-      <img src="/img/nfl/DET.png" alt="" loading="lazy"><span>Detroit Lions</span>
-    </a>
-    <dl class="wk-read">
-      <dt>Win chance</dt><dd>Lions 53% <span class="dim">too close to call</span></dd>
-      <dt>Leo total</dt><dd>53.1 points <span class="dim">(line 50.5)</span></dd>
-      <dt>Most likely TD</dt><dd>Jahmyr Gibbs <span class="dim">DET 72%</span><br>Amon-Ra St. Brown <span class="dim">DET 52%</span></dd>
-    </dl>
-    
-    <a class="wk-more" href="/nfl/patriots-vs-lions-prediction-odds-2026-11-15/">Full matchup, injuries and props &rarr;</a>
-  </article>
-<article class="wk-game">
-    <div class="wk-when">Sun, Nov 15 &middot; 1:00pm ET &middot; Mercedes-Benz Stadium</div>
-    <a class="wk-teams" href="/nfl/chiefs-vs-falcons-prediction-odds-2026-11-15/">
-      <img src="/img/nfl/KC.png" alt="" loading="lazy"><span>Kansas City Chiefs</span>
-      <span class="at">at</span>
-      <img src="/img/nfl/ATL.png" alt="" loading="lazy"><span>Atlanta Falcons</span>
-    </a>
-    <dl class="wk-read">
-      <dt>Win chance</dt><dd>Leo pick: Chiefs 61%</dd>
-      <dt>Leo total</dt><dd>46.5 points <span class="dim">(line 47.5)</span></dd>
-      <dt>Most likely TD</dt><dd>Kenneth Walker III <span class="dim">KC 62%</span><br>Bijan Robinson <span class="dim">ATL 54%</span></dd>
-    </dl>
-    
-    <a class="wk-more" href="/nfl/chiefs-vs-falcons-prediction-odds-2026-11-15/">Full matchup, injuries and props &rarr;</a>
-  </article>
-<article class="wk-game">
-    <div class="wk-when">Sun, Nov 15 &middot; 1:00pm ET &middot; Huntington Bank Field</div>
-    <a class="wk-teams" href="/nfl/texans-vs-browns-prediction-odds-2026-11-15/">
-      <img src="/img/nfl/HOU.png" alt="" loading="lazy"><span>Houston Texans</span>
-      <span class="at">at</span>
-      <img src="/img/nfl/CLE.png" alt="" loading="lazy"><span>Cleveland Browns</span>
-    </a>
-    <dl class="wk-read">
-      <dt>Win chance</dt><dd>Leo pick: Texans 64%</dd>
-      <dt>Leo total</dt><dd>42.9 points <span class="dim">(line 40.5)</span></dd>
-      <dt>Most likely TD</dt><dd>Quinshon Judkins <span class="dim">CLE 39%</span><br>Nico Collins <span class="dim">HOU 38%</span></dd>
-    </dl>
-    
-    <a class="wk-more" href="/nfl/texans-vs-browns-prediction-odds-2026-11-15/">Full matchup, injuries and props &rarr;</a>
-  </article>
-<article class="wk-game">
-    <div class="wk-when">Sun, Nov 15 &middot; 1:00pm ET &middot; Lambeau Field</div>
-    <a class="wk-teams" href="/nfl/vikings-vs-packers-prediction-odds-2026-11-15/">
-      <img src="/img/nfl/MIN.png" alt="" loading="lazy"><span>Minnesota Vikings</span>
-      <span class="at">at</span>
-      <img src="/img/nfl/GB.png" alt="" loading="lazy"><span>Green Bay Packers</span>
-    </a>
-    <dl class="wk-read">
-      <dt>Win chance</dt><dd>Leo pick: Packers 62%</dd>
-      <dt>Leo total</dt><dd>42.7 points <span class="dim">(line 42.5)</span></dd>
-      <dt>Most likely TD</dt><dd>Matthew Golden <span class="dim">GB 37%</span><br>Christian Watson <span class="dim">GB 32%</span></dd>
-    </dl>
-    
-    <a class="wk-more" href="/nfl/vikings-vs-packers-prediction-odds-2026-11-15/">Full matchup, injuries and props &rarr;</a>
-  </article>
-<article class="wk-game">
-    <div class="wk-when">Sun, Nov 15 &middot; 1:00pm ET &middot; Lucas Oil Stadium</div>
-    <a class="wk-teams" href="/nfl/dolphins-vs-colts-prediction-odds-2026-11-15/">
-      <img src="/img/nfl/MIA.png" alt="" loading="lazy"><span>Miami Dolphins</span>
-      <span class="at">at</span>
-      <img src="/img/nfl/IND.png" alt="" loading="lazy"><span>Indianapolis Colts</span>
-    </a>
-    <dl class="wk-read">
-      <dt>Win chance</dt><dd>Colts 51% <span class="dim">too close to call</span></dd>
-      <dt>Leo total</dt><dd>44.2 points <span class="dim">(line 37.5)</span></dd>
-      <dt>Most likely TD</dt><dd>Jonathan Taylor <span class="dim">IND 63%</span><br>Tyler Warren <span class="dim">IND 33%</span></dd>
-    </dl>
-    
-    <a class="wk-more" href="/nfl/dolphins-vs-colts-prediction-odds-2026-11-15/">Full matchup, injuries and props &rarr;</a>
-  </article>
-<article class="wk-game">
-    <div class="wk-when">Sun, Nov 15 &middot; 1:00pm ET &middot; Caesars Superdome</div>
-    <a class="wk-teams" href="/nfl/panthers-vs-saints-prediction-odds-2026-11-15/">
-      <img src="/img/nfl/CAR.png" alt="" loading="lazy"><span>Carolina Panthers</span>
-      <span class="at">at</span>
-      <img src="/img/nfl/NO.png" alt="" loading="lazy"><span>New Orleans Saints</span>
-    </a>
-    <dl class="wk-read">
-      <dt>Win chance</dt><dd>Panthers 53% <span class="dim">too close to call</span></dd>
-      <dt>Leo total</dt><dd>48.3 points <span class="dim">(line 48.5)</span></dd>
-      <dt>Most likely TD</dt><dd>Chuba Hubbard <span class="dim">CAR 48%</span><br>Chris Olave <span class="dim">NO 42%</span></dd>
-    </dl>
-    
-    <a class="wk-more" href="/nfl/panthers-vs-saints-prediction-odds-2026-11-15/">Full matchup, injuries and props &rarr;</a>
-  </article>
-<article class="wk-game">
-    <div class="wk-when">Sun, Nov 15 &middot; 1:00pm ET &middot; MetLife Stadium</div>
-    <a class="wk-teams" href="/nfl/bills-vs-jets-prediction-odds-2026-11-15/">
-      <img src="/img/nfl/BUF.png" alt="" loading="lazy"><span>Buffalo Bills</span>
-      <span class="at">at</span>
-      <img src="/img/nfl/NYJ.png" alt="" loading="lazy"><span>New York Jets</span>
-    </a>
-    <dl class="wk-read">
-      <dt>Win chance</dt><dd>Bills 72% <span class="dim">price past -230, PASS</span></dd>
-      <dt>Leo total</dt><dd>50.4 points <span class="dim">(line 50.5)</span></dd>
-      <dt>Most likely TD</dt><dd>James Cook <span class="dim">BUF 67%</span><br>Josh Allen <span class="dim">BUF 48%</span></dd>
-    </dl>
-    
-    <a class="wk-more" href="/nfl/bills-vs-jets-prediction-odds-2026-11-15/">Full matchup, injuries and props &rarr;</a>
-  </article>
-<article class="wk-game">
-    <div class="wk-when">Sun, Nov 15 &middot; 1:00pm ET &middot; Nissan Stadium</div>
-    <a class="wk-teams" href="/nfl/jaguars-vs-titans-prediction-odds-2026-11-15/">
-      <img src="/img/nfl/JAX.png" alt="" loading="lazy"><span>Jacksonville Jaguars</span>
-      <span class="at">at</span>
-      <img src="/img/nfl/TEN.png" alt="" loading="lazy"><span>Tennessee Titans</span>
-    </a>
-    <dl class="wk-read">
-      <dt>Win chance</dt><dd>Jaguars 79% <span class="dim">price past -230, PASS</span></dd>
-      <dt>Leo total</dt><dd>45.2 points <span class="dim">(line 45.5)</span></dd>
-      <dt>Most likely TD</dt><dd>Bhayshul Tuten <span class="dim">JAX 47%</span><br>Tony Pollard <span class="dim">TEN 42%</span></dd>
-    </dl>
-    
-    <a class="wk-more" href="/nfl/jaguars-vs-titans-prediction-odds-2026-11-15/">Full matchup, injuries and props &rarr;</a>
-  </article>
-<article class="wk-game">
-    <div class="wk-when">Sun, Nov 15 &middot; 4:05pm ET &middot; State Farm Stadium</div>
-    <a class="wk-teams" href="/nfl/rams-vs-cardinals-prediction-odds-2026-11-15/">
-      <img src="/img/nfl/LA.png" alt="" loading="lazy"><span>Los Angeles Rams</span>
-      <span class="at">at</span>
-      <img src="/img/nfl/ARI.png" alt="" loading="lazy"><span>Arizona Cardinals</span>
-    </a>
-    <dl class="wk-read">
-      <dt>Win chance</dt><dd>Rams 67% <span class="dim">price past -230, PASS</span></dd>
-      <dt>Leo total</dt><dd>47.6 points <span class="dim">(line 38.5)</span></dd>
-      <dt>Most likely TD</dt><dd>Kyren Williams <span class="dim">LA 55%</span><br>Trey McBride <span class="dim">ARI 43%</span></dd>
-    </dl>
-    
-    <a class="wk-more" href="/nfl/rams-vs-cardinals-prediction-odds-2026-11-15/">Full matchup, injuries and props &rarr;</a>
-  </article>
-<article class="wk-game">
-    <div class="wk-when">Sun, Nov 15 &middot; 4:05pm ET &middot; Allegiant Stadium</div>
-    <a class="wk-teams" href="/nfl/seahawks-vs-raiders-prediction-odds-2026-11-15/">
-      <img src="/img/nfl/SEA.png" alt="" loading="lazy"><span>Seattle Seahawks</span>
-      <span class="at">at</span>
-      <img src="/img/nfl/LV.png" alt="" loading="lazy"><span>Las Vegas Raiders</span>
-    </a>
-    <dl class="wk-read">
-      <dt>Win chance</dt><dd>Seahawks 68% <span class="dim">price past -230, PASS</span></dd>
-      <dt>Leo total</dt><dd>47.4 points <span class="dim">(line 40.5)</span></dd>
-      <dt>Most likely TD</dt><dd>Jaxon Smith-Njigba <span class="dim">SEA 55%</span><br>Ashton Jeanty <span class="dim">LV 44%</span></dd>
-    </dl>
-    
-    <a class="wk-more" href="/nfl/seahawks-vs-raiders-prediction-odds-2026-11-15/">Full matchup, injuries and props &rarr;</a>
-  </article>
-<article class="wk-game">
-    <div class="wk-when">Sun, Nov 15 &middot; 4:25pm ET &middot; AT&amp;T Stadium</div>
-    <a class="wk-teams" href="/nfl/49ers-vs-cowboys-prediction-odds-2026-11-15/">
-      <img src="/img/nfl/SF.png" alt="" loading="lazy"><span>San Francisco 49ers</span>
-      <span class="at">at</span>
-      <img src="/img/nfl/DAL.png" alt="" loading="lazy"><span>Dallas Cowboys</span>
-    </a>
-    <dl class="wk-read">
-      <dt>Win chance</dt><dd>Leo pick: 49ers 63%</dd>
-      <dt>Leo total</dt><dd>54.8 points <span class="dim">(line 55.5)</span></dd>
-      <dt>Most likely TD</dt><dd>Christian McCaffrey <span class="dim">SF 66%</span><br>Javonte Williams <span class="dim">DAL 62%</span></dd>
-    </dl>
-    
-    <a class="wk-more" href="/nfl/49ers-vs-cowboys-prediction-odds-2026-11-15/">Full matchup, injuries and props &rarr;</a>
-  </article>
-<article class="wk-game">
-    <div class="wk-when">Sun, Nov 15 &middot; 8:20pm ET &middot; Paycor Stadium</div>
-    <a class="wk-teams" href="/nfl/steelers-vs-bengals-prediction-odds-2026-11-15/">
-      <img src="/img/nfl/PIT.png" alt="" loading="lazy"><span>Pittsburgh Steelers</span>
-      <span class="at">at</span>
-      <img src="/img/nfl/CIN.png" alt="" loading="lazy"><span>Cincinnati Bengals</span>
-    </a>
-    <dl class="wk-read">
-      <dt>Win chance</dt><dd>Leo pick: Bengals 64%</dd>
-      <dt>Leo total</dt><dd>48.8 points <span class="dim">(line 49.5)</span></dd>
-      <dt>Most likely TD</dt><dd>Ja&#39;Marr Chase <span class="dim">CIN 52%</span><br>Chase Brown <span class="dim">CIN 44%</span></dd>
-    </dl>
-    
-    <a class="wk-more" href="/nfl/steelers-vs-bengals-prediction-odds-2026-11-15/">Full matchup, injuries and props &rarr;</a>
-  </article>
-<article class="wk-game">
-    <div class="wk-when">Mon, Nov 16 &middot; 8:15pm ET &middot; M&amp;T Bank Stadium</div>
-    <a class="wk-teams" href="/nfl/chargers-vs-ravens-prediction-odds-2026-11-16/">
-      <img src="/img/nfl/LAC.png" alt="" loading="lazy"><span>Los Angeles Chargers</span>
-      <span class="at">at</span>
-      <img src="/img/nfl/BAL.png" alt="" loading="lazy"><span>Baltimore Ravens</span>
-    </a>
-    <dl class="wk-read">
-      <dt>Win chance</dt><dd>Leo pick: Ravens 72%</dd>
-      <dt>Leo total</dt><dd>40.2 points <span class="dim">(line 38.5)</span></dd>
-      <dt>Most likely TD</dt><dd><span class="dim">n/a</span></dd>
-    </dl>
-    
-    <a class="wk-more" href="/nfl/chargers-vs-ravens-prediction-odds-2026-11-16/">Full matchup, injuries and props &rarr;</a>
-  </article>
-  </section>
-
-  <h2 class="sec" style="margin-top:28px">Week 10 anytime touchdown scorer predictions</h2>
-  <p class="sub">The 15 players Leo gives the best chance to score a touchdown this week, from the frozen pre-game read. Leo's top pick in a game scored 47% of the time in 2023 to 2025, so these are chances, not promises.</p>
+  <details class="wk-more"><summary>Week 10 anytime touchdown scorer predictions</summary>
+  <p class="sub">The 15 players Leo gives the best chance to score a touchdown this week, from the frozen pre-game read. Chances, not promises; each game page has its own table.</p>
   <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Game</th><th>Leo chance</th><th>Result</th></tr></thead><tbody>
     <tr><td><b>Jahmyr Gibbs</b> <span class="dim">DET RB1</span></td><td><a href="/nfl/patriots-vs-lions-prediction-odds-2026-11-15/">Patriots at Lions</a></td><td>72%</td><td></td></tr>
     <tr><td><b>James Cook</b> <span class="dim">BUF RB1</span></td><td><a href="/nfl/bills-vs-jets-prediction-odds-2026-11-15/">Bills at Jets</a></td><td>67%</td><td></td></tr>
@@ -299,8 +299,9 @@
     <tr><td><b>Chuba Hubbard</b> <span class="dim">CAR RB1</span></td><td><a href="/nfl/panthers-vs-saints-prediction-odds-2026-11-15/">Panthers at Saints</a></td><td>48%</td><td></td></tr>
     <tr><td><b>Josh Allen</b> <span class="dim">BUF QB1</span></td><td><a href="/nfl/bills-vs-jets-prediction-odds-2026-11-15/">Bills at Jets</a></td><td>48%</td><td></td></tr>
     <tr><td><b>Bhayshul Tuten</b> <span class="dim">JAX RB1</span></td><td><a href="/nfl/jaguars-vs-titans-prediction-odds-2026-11-15/">Jaguars at Titans</a></td><td>47%</td><td></td></tr>
-  </tbody></table></div>
+  </tbody></table></div></details>
 
+  <p class="small dim" style="margin-top:14px"><a href="/nfl/how-leo-works/">How Leo works</a>: what each number means, when it freezes and how calls are graded.</p>
   <p class="data-note">Player and team statistics from the open nflverse dataset. For entertainment and information only. 21+. If you or someone you know has a gambling problem, call 1-800-MY-RESET.</p>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>

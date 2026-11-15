@@ -78,36 +78,89 @@ function record() {
   } catch (e) { return null; }
 }
 
+// HO-0073 (DEC-20261115-50): each game is a card like the NFL card email
+// (scripts/lib/email-cards.js look): team colour stripe, logos, win chance
+// bar, the three calls with their result once graded, one sentence of why,
+// starting quarterbacks and a button to the game page.
+const CALLS = require("./lib/nfl-calls");
+const COPY = require("./lib/nfl-page-copy");
+const { NFL_COLORS, pairColors } = require("./lib/email-cards");
+let REVIEW = null;
+function reviewGame(m) {
+  if (REVIEW === null) { try { REVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data/nfl/results-review.json"), "utf8")); } catch (e) { REVIEW = false; } }
+  return REVIEW ? REVIEW.games.find(x => x.date === m.date && x.away === m.away && x.home === m.home) || null : null;
+}
+const nickify = (m, t) => String(t == null ? "" : t).replace(new RegExp(`\\b(${m.away}|${m.home})\\b`, "g"), a => TEAMS.nick(a));
+function callsOf(m) {
+  const g = m.leo && m.leo.game;
+  if (!g || m.date < CALLS.RULES.FROM) return null;
+  return g.calls || CALLS.calls({ ...g, away: m.away, home: m.home, model_prob: g.prob });
+}
+const MK = { ml: "Moneyline", spread: "Spread", total: "Total" };
 function gameCard(m) {
   const g = m.leo && m.leo.game, F = m.final_report;
-  const T = m.td_props || {};
-  const top = [...(T[m.away] || []), ...(T[m.home] || [])].filter(x => x.prob != null)
-    .sort((a, b) => b.prob - a.prob).slice(0, 2);
-  const scored = F && F.td_scored || null;
-  const tdTag = x => !scored ? "" : ((scored[x.player] || 0) > 0 ? ' <span class="ok">scored</span>' : ' <span class="no">no TD</span>');
-  // Leo pick above 60% from 2026-11-01 (DEC-20261101-01); paused Oct 17-31.
-  const paused = m.date >= "2026-10-17" && m.date <= "2026-10-31";
-  const isCall = g && (g.calls ? !!(g.calls.ml && g.calls.ml.call) : g.call === "leo_pick");
-  const winner = !g ? '<span class="dim">No pre-game read</span>'
-    : (!paused && isCall) ? `Leo pick: ${esc(TEAMS.nick(g.pick))} ${pct(g.prob)}`
-    : `${esc(TEAMS.nick(g.pick))} ${pct(g.prob)}${paused ? "" : (g.calls && g.prob > 0.6) ? ' <span class="dim">price past -230, PASS</span>' : ' <span class="dim">too close to call</span>'}`;
-  const final = F && F.away_score != null
-    ? `<div class="wk-final">Final: ${esc(m.away)} ${F.away_score}, ${esc(m.home)} ${F.home_score}</div>` : "";
-  return `<article class="wk-game">
-    <div class="wk-when">${esc(dayLabel(m.date))} &middot; ${esc(clock(m.kickoff))}${m.stadium ? " &middot; " + esc(m.stadium) : ""}</div>
-    <a class="wk-teams" href="${esc(m.url)}">
-      <img src="/img/nfl/${encodeURIComponent(m.away)}.png" alt="" loading="lazy"><span>${esc(TEAMS.full(m.away))}</span>
-      <span class="at">at</span>
-      <img src="/img/nfl/${encodeURIComponent(m.home)}.png" alt="" loading="lazy"><span>${esc(TEAMS.full(m.home))}</span>
-    </a>
-    <dl class="wk-read">
-      <dt>Win chance</dt><dd>${winner}</dd>
-      <dt>Leo total</dt><dd>${g && g.proj_total != null ? `${esc(g.proj_total)} points <span class="dim">(line ${esc(m.total_line ?? "n/a")})</span>` : '<span class="dim">n/a</span>'}</dd>
-      <dt>Most likely TD</dt><dd>${top.length ? top.map(x => `${esc(x.player)} <span class="dim">${esc(x.team)} ${pct(x.prob)}</span>${tdTag(x)}`).join("<br>") : '<span class="dim">n/a</span>'}</dd>
-    </dl>
-    ${final}
-    <a class="wk-more" href="${esc(m.url)}">Full matchup, injuries and props &rarr;</a>
+  const final = F && F.away_score != null && F.home_score != null;
+  const [ac, hc] = pairColors(NFL_COLORS, m.away, m.home);
+  const pHome = g && g.prob != null ? (g.pick === m.home ? g.prob : 1 - g.prob) : null;
+  const C = callsOf(m), R = final ? reviewGame(m) : null;
+  const res = mk => { const c = R && R.three && (R.calls || []).find(x => x.market === mk); return c ? c.result : null; };
+  const tag = r => r === "W" ? '<span class="wc-tag ok">Won</span>' : r === "L" ? '<span class="wc-tag no">Lost</span>' : r === "P" ? '<span class="wc-tag">Push</span>' : "";
+  const box = mk => {
+    const c = C && C[mk];
+    if (!c) return `<div class="wc-box"><span class="wc-k">${MK[mk]}</span><b>n/a</b></div>`;
+    const r = c.call ? res(mk) : null;
+    return `<div class="wc-box${c.call ? " on" : ""}${r === "W" ? " win" : r === "L" ? " loss" : ""}"><span class="wc-k">${MK[mk]}</span><b>${c.call ? esc(nickify(m, c.label)) : "No call"}</b><span class="wc-s">${c.call ? tag(r) : esc(nickify(m, c.short || c.pass || ""))}</span></div>`;
+  };
+  const side = t => {
+    const p = pHome == null ? null : (t === m.home ? pHome : 1 - pHome);
+    const qb = t === m.home ? m.home_qb_name : m.away_qb_name;
+    const score = final ? (t === m.home ? F.home_score : F.away_score) : null;
+    const won = final && score > (t === m.home ? F.away_score : F.home_score);
+    return `<div class="wc-team"><img src="/img/nfl/${encodeURIComponent(t)}.png" alt="" loading="lazy" width="34" height="34">
+      <div class="wc-name"><b>${esc(TEAMS.full(t))}</b>${qb ? `<span>QB ${esc(qb)}</span>` : ""}</div>
+      <div class="wc-num">${final ? `<b class="${won ? "" : "dim"}">${score}</b>` : ""}${p != null ? `<span>${final ? "Leo " : ""}${pct(p)}</span>` : ""}</div></div>`;
+  };
+  const badge = final ? '<span class="wc-badge">Final</span>' : m.leo && m.leo.early ? '<span class="wc-badge">Early read</span>'
+    : C ? `<span class="wc-badge${C.count ? " on" : ""}">${C.count ? `${C.count} call${C.count === 1 ? "" : "s"}` : "No calls"}</span>` : "";
+  const why = g ? COPY.biggestDriver(m) : "";
+  const miss = R && R.miss ? ` Why Leo missed: ${({ injury_input: "injury input", market_knew: "the market knew", overtime: "overtime", blowout: "blowout", variance: "variance", model_error: "Leo's error" })[R.miss.reason] || R.miss.reason}.` : "";
+  return `<article class="wc">
+    <div class="wc-stripe" style="background:linear-gradient(90deg,${ac} 0 50%,${hc} 50% 100%)"></div>
+    <div class="wc-top"><span>${esc(dayLabel(m.date))} &middot; ${esc(clock(m.kickoff))}${m.stadium ? " &middot; " + esc(m.stadium) : ""}</span>${badge}</div>
+    ${side(m.away)}
+    ${side(m.home)}
+    ${pHome != null ? `<div class="wc-bar" role="img" aria-label="Leo win chance: ${esc(TEAMS.nick(m.away))} ${pct(1 - pHome)}, ${esc(TEAMS.nick(m.home))} ${pct(pHome)}"><i style="width:${Math.round((1 - pHome) * 100)}%;background:${ac}"></i><i style="width:${100 - Math.round((1 - pHome) * 100)}%;background:${hc}"></i></div>` : '<p class="dim small">No pre-game read yet.</p>'}
+    ${C ? `<div class="wc-boxes">${box("ml")}${box("spread")}${box("total")}</div>` : ""}
+    ${why || miss ? `<p class="wc-why">${esc(why)}${esc(miss)}</p>` : ""}
+    <a class="btn wc-btn" href="${esc(m.url)}">Full game page &rarr;</a>
   </article>`;
+}
+
+// "This week's calls": counts this week, results so far, and the season
+// record since Nov 2 from data/nfl/results-review.json with its early read label.
+function callsSummary(games) {
+  const n = { ml: 0, spread: 0, total: 0 }, so = { w: 0, l: 0, p: 0 };
+  for (const m of games) {
+    const C = callsOf(m); if (!C) continue;
+    for (const k of Object.keys(n)) if (C[k] && C[k].call) n[k]++;
+    const R = reviewGame(m);
+    if (R && R.three) for (const c of R.calls || []) c.result === "W" ? so.w++ : c.result === "L" ? so.l++ : c.result === "P" && so.p++;
+  }
+  if (!(n.ml + n.spread + n.total) && !games.some(m => callsOf(m))) return "";
+  reviewGame({});
+  const T = REVIEW && REVIEW.three;
+  const rec = t => `${t.w}-${t.l}${t.p ? `-${t.p}` : ""}`;
+  const u = v => (v > 0 ? "+" : v < 0 ? "-" : "") + Math.abs(v).toFixed(2) + "u";
+  const season = T ? ["ml", "spread", "total"].map(k => { const t = T[k], c = t.w + t.l + t.p; return `<div class="wc-tile"><span class="wc-k">${MK[k]}</span><b>${n[k]}</b><span>${n[k] === 1 ? "call" : "calls"}</span><span class="dim">${rec(t)}, ${u(t.units)}</span></div>`; }).join("") : "";
+  const counted = T ? ["ml", "spread", "total"].map(k => T[k].w + T[k].l + T[k].p) : [];
+  const early = counted.some(c => c < 50) ? ` Early read: ${counted.every(c => c < 50) ? "each" : "some"} under 50 graded calls.` : "";
+  const done = so.w + so.l + so.p;
+  return `<section class="card wc-sum">
+    <h2 class="sec" style="margin-top:0">This week&rsquo;s calls</h2>
+    <div class="wc-tiles">${season}</div>
+    ${T ? `<p class="small dim" style="margin:8px 0 0">Calls this week, and each record since Nov 2.${early}</p>` : ""}
+    ${done ? `<p class="small" style="margin:10px 0 0">Graded so far this week: <b>${rec(so)}</b>. <a href="/nfl/results/">Leo&rsquo;s record</a></p>` : `<p class="small dim" style="margin:10px 0 0"><a href="/nfl/how-leo-works/#calls">How calls work</a></p>`}
+  </section>`;
 }
 
 // SEO-16 (2026-11-02): each week gets its own written intro and an anytime
@@ -126,11 +179,11 @@ function readRecord(games) {
   for (const m of games) {
     const g = m.leo && m.leo.game, F = m.final_report;
     if (!g || !F || F.home_score == null || F.home_score === F.away_score) continue;
-    if (!paused && g.call !== "leo_pick") continue;
+    if (!paused && (m.date >= CALLS.RULES.FROM ? !(g.calls && g.calls.ml && g.calls.ml.call) : g.call !== "leo_pick")) continue;
     const won = (F.home_score > F.away_score ? m.home : m.away) === g.pick;
     won ? w++ : l++;
   }
-  return w + l ? { w, l, label: paused ? "winner reads" : "picks" } : null;
+  return w + l ? { w, l, label: paused ? "winner reads" : games.some(m => m.date >= CALLS.RULES.FROM) ? "moneyline calls" : "picks" } : null;
 }
 function intro({ week, season, games, prev }) {
   const read = games.filter(m => m.leo && m.leo.game && m.leo.game.prob != null);
@@ -143,8 +196,8 @@ function intro({ week, season, games, prev }) {
     out.push(`Leo's strongest read is the ${TEAMS.nick(tg.pick)} over the ${TEAMS.nick(opp)} at ${Math.round(tg.prob * 100)}%.`);
     const close = [...read].sort((a, b) => a.leo.game.prob - b.leo.game.prob)[0];
     if (close !== top) out.push(`The closest game is the ${TEAMS.nick(close.away)} at the ${TEAMS.nick(close.home)}, where Leo gives the ${TEAMS.nick(close.leo.game.pick)} ${Math.round(close.leo.game.prob * 100)}%.`);
-    const picks = read.filter(m => m.leo.game.call === "leo_pick" && !pausedDate(m.date)).length;
-    if (!read.some(m => pausedDate(m.date))) out.push(`${picks === 0 ? "No team is" : picks + " game" + (picks === 1 ? " has a team" : "s have a team")} above 60%, Leo's line for a pick.`);
+    const calls = read.filter(m => m.date >= CALLS.RULES.FROM && m.leo.game.calls && m.leo.game.calls.ml && m.leo.game.calls.ml.call).length;
+    if (read.some(m => m.date >= CALLS.RULES.FROM)) out.push(`${calls === 0 ? "No game has" : calls + " game" + (calls === 1 ? " has" : "s have")} a moneyline call, a team above 60% at a price better than -230.`);
     const tot = read.filter(m => m.leo.game.proj_total != null).sort((a, b) => b.leo.game.proj_total - a.leo.game.proj_total);
     if (tot.length > 1) out.push(`Leo's highest projected total is the ${TEAMS.nick(tot[0].away)} at the ${TEAMS.nick(tot[0].home)} at ${tot[0].leo.game.proj_total} points, and the lowest is the ${TEAMS.nick(tot[tot.length - 1].away)} at the ${TEAMS.nick(tot[tot.length - 1].home)} at ${tot[tot.length - 1].leo.game.proj_total}.`);
   }
@@ -167,18 +220,20 @@ function tdTable({ week, games }) {
   if (!rows.length) return "";
   const res = r => { const s = r.m.final_report && r.m.final_report.td_scored; if (!s) return ""; return (s[r.player] || 0) > 0 ? '<span class="ok">scored</span>' : '<span class="no">no TD</span>'; };
   return `
-  <h2 class="sec" style="margin-top:28px">Week ${esc(week)} anytime touchdown scorer predictions</h2>
-  <p class="sub">The 15 players Leo gives the best chance to score a touchdown this week, from the frozen pre-game read. Leo's top pick in a game scored 47% of the time in 2023 to 2025, so these are chances, not promises.</p>
+  <details class="wk-more"><summary>Week ${esc(week)} anytime touchdown scorer predictions</summary>
+  <p class="sub">The 15 players Leo gives the best chance to score a touchdown this week, from the frozen pre-game read. Chances, not promises; each game page has its own table.</p>
   <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Game</th><th>Leo chance</th><th>Result</th></tr></thead><tbody>
 ${rows.map(r => `    <tr><td><b>${esc(r.player)}</b> <span class="dim">${esc(r.team)} ${esc(r.depth || "")}</span></td><td><a href="${esc(r.m.url)}">${esc(TEAMS.nick(r.m.away))} at ${esc(TEAMS.nick(r.m.home))}</a></td><td>${Math.round(r.prob * 100)}%</td><td>${res(r)}</td></tr>`).join("\n")}
-  </tbody></table></div>`;
+  </tbody></table></div></details>`;
 }
 
+function slateLine(games) {
+  const days = [...new Set(games.map(m => m.date))].sort(), f = games[0];
+  return `${games.length} game${games.length === 1 ? "" : "s"}${days.length > 1 ? `, ${dayLabel(days[0])} to ${dayLabel(days[days.length - 1])}` : `, ${dayLabel(days[0])}`}. First kickoff ${dayLabel(f.date)} at ${clock(f.kickoff)}.`;
+}
 function page({ week, season, games, prev, early }, rec, canonical) {
   const title = `NFL Week ${week} Predictions ${season}: Picks, Win Chances and Touchdown Scorers | Leo`;
   const desc = `Leo's NFL Week ${week} ${season} card: a win chance and projected total for all ${games.length} games, plus the two most likely touchdown scorers in each, frozen before kickoff and graded after.`;
-  const recLine = rec && rec.props && rec.props.decided
-    ? `Prop calls this season: <b>${rec.props.w}-${rec.props.l}</b> &middot; <a href="/nfl/results/">full record</a>` : "";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -198,24 +253,34 @@ ${GA_HEAD}
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/scoreboard.css">
 <style>
-.wk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-top:16px}
-.wk-game{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:8px}
-.wk-when{color:var(--text-dim);font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
-.wk-teams{display:grid;grid-template-columns:28px 1fr;gap:4px 8px;align-items:center;font-weight:800;color:var(--text)}
-.wk-teams img{width:28px;height:28px;object-fit:contain}
-.wk-teams .at{grid-column:2;color:var(--text-dim);font-size:.72rem;font-weight:700;text-transform:uppercase}
-.wk-read{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;margin:0;font-size:.9rem}
-.wk-read dt{color:var(--text-dim);font-weight:700;font-size:.76rem;text-transform:uppercase;letter-spacing:.04em;padding-top:2px}
-.wk-read dd{margin:0}
-.wk-final{font-weight:800}
-.wk-more{font-size:.86rem;font-weight:700;margin-top:auto}
+.wc-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;margin-top:16px}
+.wc{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-sm);overflow:hidden;display:flex;flex-direction:column;gap:10px;padding:0 16px 16px}
+.wc-stripe{height:5px;margin:0 -16px}
+.wc-top{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--text-dim);font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.wc-badge{flex:none;border:1px solid var(--border);border-radius:999px;padding:2px 9px;font-size:.7rem}.wc-badge.on{border-color:var(--good);color:var(--good)}
+.wc-team{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center}
+.wc-team img{width:34px;height:34px;object-fit:contain}
+.wc-name{display:flex;flex-direction:column;min-width:0}.wc-name b{font-size:1rem;line-height:1.2}.wc-name span{color:var(--text-dim);font-size:.78rem}
+.wc-num{text-align:right;display:flex;flex-direction:column;align-items:flex-end}.wc-num b{font-size:1.25rem}.wc-num span{font-weight:800;font-size:.95rem}
+.wc-bar{display:flex;height:8px;border-radius:999px;overflow:hidden;background:var(--border)}.wc-bar i{display:block;height:100%}
+.wc-boxes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.wc-box{border:1px solid var(--border);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.wc-box b{font-size:.92rem;overflow-wrap:anywhere}.wc-box.on{border-color:var(--good)}.wc-box.win{background:rgba(46,125,50,.08)}.wc-box.loss{border-color:var(--danger);background:rgba(198,40,40,.06)}
+.wc-k{color:var(--text-dim);font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.wc-s{color:var(--text-dim);font-size:.74rem;line-height:1.3}
+.wc-tag{font-weight:800}.wc-tag.ok{color:var(--good)}.wc-tag.no{color:var(--danger)}
+.wc-why{margin:0;font-size:.9rem;line-height:1.5}
+.wc-btn{align-self:stretch;text-align:center;margin-top:auto}
+.wc-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.wc-tile{border:1px solid var(--border);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:2px;font-size:.8rem}.wc-tile b{font-size:1.4rem}
 .ok{color:var(--good);font-weight:800}.no{color:var(--danger);font-weight:800}.dim{color:var(--text-dim)}
 .wk-rec{margin:8px 0 0}
+details.wk-more{margin-top:24px}details.wk-more summary{cursor:pointer;font-weight:800}
 .fxw{overflow-x:auto}.fx{width:100%;border-collapse:collapse;font-size:.9rem}.fx th,.fx td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:left}.fx th{font-size:.74rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}
 .nfl-signup{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;align-items:center;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin:22px 0 4px;box-shadow:var(--shadow-sm)}
 .nfl-signup p{margin:4px 0 0;color:var(--text-dim);font-size:.86rem}
 .nfl-signup form{display:flex;gap:8px}.nfl-signup input[type=email]{flex:1;min-width:0}
-@media (max-width:640px){.nfl-signup{grid-template-columns:1fr}.wk-grid{grid-template-columns:1fr}}
+@media (max-width:640px){.nfl-signup{grid-template-columns:1fr}.wc-list{grid-template-columns:1fr}.wc-tile{padding:8px}}
 </style>
 </head>
 <body>
@@ -224,14 +289,17 @@ ${GA_HEAD}
   <section class="score-hero">
     <p class="eyebrow">NFL ${esc(season)} &middot; Week ${esc(week)}</p>
     <h1>Leo&rsquo;s Week ${esc(week)} card</h1>
-    <p class="subtitle">Every game this week: each team&rsquo;s chance to win, Leo&rsquo;s projected total, and the two players most likely to score a touchdown. Every number is frozen before kickoff and graded after the game.</p>
-    ${recLine ? `<p class="wk-rec small">${recLine}</p>` : ""}
-    ${early ? `<p class="wk-rec small">Some games show an early read: Leo updates it every morning until game day, adds touchdown chances on game day, and grades only the last read before kickoff.</p>` : ""}
+    <p class="subtitle">${esc(slateLine(games))}</p>
+    ${early ? `<p class="wk-rec small">Games marked Early read update every morning; the last read before kickoff is the one graded.</p>` : ""}
   </section>
 
-  <section class="card"><p style="margin:0">${esc(intro({ week, season, games, prev }))}</p></section>
+${callsSummary(games)}
 
-  <div class="notice note">How to read it: every game gets three calls from Leo, moneyline, spread and total, and each is a call or a PASS. A moneyline call needs more than a 60% win chance and a price better than -230. A spread call needs Leo&rsquo;s margin 1 point off the line. A total call needs Leo 1.5 to 7 points off the line. Every call is graded after the game, wins and losses alike. Leo&rsquo;s top touchdown pick in a game scored 47% of the time in 2023 to 2025, so treat touchdown chances as chances, not promises. Nothing here is betting advice.</div>
+  <section class="wc-list">
+${games.map(gameCard).join("\n")}
+  </section>
+
+  <section class="card" style="margin-top:18px"><h2 class="sec" style="margin-top:0">Week ${esc(week)} at a glance</h2><p style="margin:0">${esc(intro({ week, season, games, prev }))}</p></section>
 
   <div class="nfl-signup">
     <div><b>Get this card by email</b><p>Free, before kickoff on game days. Unsubscribe anytime.</p></div>
@@ -241,12 +309,9 @@ ${GA_HEAD}
       <button class="btn blue" type="submit">Send me the card</button>
     </form>
   </div>
-
-  <section class="wk-grid">
-${games.map(gameCard).join("\n")}
-  </section>
 ${tdTable({ week, games })}
 
+  <p class="small dim" style="margin-top:14px"><a href="/nfl/how-leo-works/">How Leo works</a>: what each number means, when it freezes and how calls are graded.</p>
   <p class="data-note">Player and team statistics from the open nflverse dataset. For entertainment and information only. 21+. If you or someone you know has a gambling problem, call 1-800-MY-RESET.</p>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
