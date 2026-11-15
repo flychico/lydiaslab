@@ -129,6 +129,7 @@ function brief(doc, { record } = {}) {
       subtitle: `Every call with the reasoning and the inputs behind it, as Leo read them at ${esc(readAt)}. Leo Picks so far: ${esc(rec)}. A public test, graded in units, not bets.` }),
     E.panel("Tonight&rsquo;s Leo Picks", picks.length
       ? ul(picks.map(g => `<b>${esc(N(g.leo.pick.team))} ${esc(money(g.leo.pick.price))}</b>, ${esc(N(g.away))} at ${esc(N(g.home))}, ${esc(tip(g.tip_utc))}. Leo ${pct(g.leo.pick.p)} to win.`))
+      + P("Graded at the price at Leo&rsquo;s last read before tip, which can move.", `color:${T.dim};font-size:13px;margin:6px 0 0`)
       : P("No team tonight is 60% or more with Leo at a price better than -230.", `color:${T.dim};margin:0`)),
     blocks.map(b => b.html).join(""),
     E.footer({ links: [[`${SITE}/nba/scoreboard/`, "Live scores"], [`${SITE}/nba/results/`, "Leo&rsquo;s record"]],
@@ -136,7 +137,7 @@ function brief(doc, { record } = {}) {
   ].join("\n");
   const html = E.shell({ title: subject, preheader: picks.length ? `Leo Picks: ${pickList.join(", ")}.` : "No Leo Picks tonight. The reasoning behind every game.", body });
   const text = [`Leo NBA member brief, ${nice}`, `Read at ${readAt}. Leo Picks so far: ${rec}.`, "",
-    picks.length ? `Leo Picks: ${pickList.join(", ")}` : "No Leo Picks tonight.", "", ...blocks.map(b => b.text),
+    picks.length ? `Leo Picks: ${pickList.join(", ")}. Graded at the price at Leo's last read before tip, which can move.` : "No Leo Picks tonight.", "", ...blocks.map(b => b.text),
     "Leo Picks are a public test, not bets. Analysis only, not betting advice. 21+. 1-800-MY-RESET.",
     ...((process.env.EMAIL_POSTAL_ADDRESS || "").trim() ? [(process.env.EMAIL_POSTAL_ADDRESS || "").trim()] : []), 'Reply "unsubscribe" to stop these.'].join("\n");
   return { subject, html, text, picks: pickList };
@@ -154,21 +155,39 @@ function leoRead(g) {
   return `Leo had ${the(f)} (${pct1(p)})${by ? `, by ${by}` : ", close to even"}`;
 }
 const dkRead = g => g.mkt_spread == null ? "No DraftKings line was saved" : g.mkt_spread === 0 ? "DraftKings had a pick'em" : `DraftKings had ${the(g.mkt_spread < 0 ? g.home : g.away)} by ${Math.abs(g.mkt_spread)}`;
-const pickWords = p => `Leo Pick ${N(p.team)} ${money(p.price)}: ${p.result === "win" ? "won" : p.result === "loss" ? "lost" : "push"}, ${units(p.units)}`;
+// emailed: { team code: price in that night's card email } from data/email-log/nba-card-<date>.json (null when unknown).
+const pickWords = (p, emailed) => {
+  const e = emailed ? emailed[p.team] : undefined;
+  const price = emailed == null || e === p.price ? money(p.price)
+    : e == null ? `${money(p.price)} at Leo's last read before tip (not a Leo Pick in the card email)`
+    : `${money(p.price)} at Leo's last read before tip (the card email showed ${money(e)})`;
+  return `Leo Pick ${N(p.team)} ${price}: ${p.result === "win" ? "won" : p.result === "loss" ? "lost" : "push"}, ${units(p.units)}`;
+};
+/** Prices in the card email, from its log's picks ("Grizzlies -125" or "MEM -125"). */
+function emailedPrices(log, games) {
+  if (!log || !Array.isArray(log.picks)) return null;
+  const out = {};
+  for (const s of log.picks) {
+    const m = String(s).match(/^(.*\S)\s+([+-]\d+)$/); if (!m) continue;
+    const g = games.find(x => [x.home, x.away].some(c => c === m[1] || N(c) === m[1]));
+    if (g) out[[g.home, g.away].find(c => c === m[1] || N(c) === m[1])] = +m[2];
+  }
+  return out;
+}
 
-function review(day, { season } = {}) {
-  const date = day.date, nice = niceDate(date), games = day.games || [];
+function review(day, { season, emailLog } = {}) {
+  const date = day.date, nice = niceDate(date), games = day.games || [], emailed = emailedPrices(emailLog, games);
   const misses = games.filter(g => g.miss), ups = games.filter(g => g.upset), wins = games.filter(g => g.pick && g.pick.result === "win");
   const right = games.filter(g => g.leo_right).length, c = day.calls || { n: 0 };
   const night = c.n ? `${c.w}-${c.l}${c.p ? "-" + c.p : ""}, ${units(c.units)}` : "no Leo Picks";
   const subject = `Leo NBA review, ${nice}: picks ${night}, ${misses.length} miss${misses.length === 1 ? "" : "es"} explained`;
   const missItems = misses.map(g => ({
     head: `${N(g.away)} at ${N(g.home)}: ${g.miss.label}`,
-    body: `${finalWords(g)}. ${leoRead(g)}. ${dkRead(g)}. Counted as a miss for: ${g.miss.kinds.map(k => KIND[k] || k).join(", ")}.${g.pick ? " " + pickWords(g.pick) + "." : ""}`,
+    body: `${finalWords(g)}. ${leoRead(g)}. ${dkRead(g)}. Counted as a miss for: ${g.miss.kinds.map(k => KIND[k] || k).join(", ")}.${g.pick ? " " + pickWords(g.pick, emailed) + "." : ""}`,
     why: g.miss.evidence, url: SITE + g.url
   }));
   const upItems = ups.map(g => `${finalWords(g)}. DraftKings gave ${the(g.upset.fav)} ${pct(g.upset.fav_prob_market)}. Leo gave ${the(g.upset.winner)} ${pct(g.upset.leo_prob_winner)}, so Leo ${g.upset.leo_saw_it ? "saw it" : "missed it"}.`);
-  const winItems = wins.map(g => `${pickWords(g.pick)}. ${finalWords(g)}.`);
+  const winItems = wins.map(g => `${pickWords(g.pick, emailed)}. ${finalWords(g)}.`);
   const S = season || {};
   const body = [
     E.header("NBA members"),
@@ -187,7 +206,7 @@ function review(day, { season } = {}) {
     E.panel("What Leo got right", (winItems.length ? ul(winItems.map(esc)) : P(c.n ? "No Leo Pick won." : "No Leo Picks last night.", `color:${T.dim};margin:0 0 6px`))
       + P(`Leo had the winner in ${right} of ${games.length} games.`, `color:${T.dim};margin:0`)),
     E.footer({ links: [[`${SITE}/nba/results/`, "The full results page"], [`${SITE}/nba/scoreboard/`, "Tonight&rsquo;s games"]],
-      note: "You get this as a Leo member. Miss reasons come from the box score, the injury report Leo read and how the DraftKings line moved." })
+      note: "You get this as a Leo member. Leo Picks are graded at the price at Leo&rsquo;s last read before tip, which can move from the card email. Miss reasons come from the box score, the injury report Leo read and how the DraftKings line moved." })
   ].join("\n");
   const html = E.shell({ title: subject, preheader: `Leo Picks ${night}. ${misses.length} misses, ${ups.length} upsets.`, body });
   const text = [`Leo NBA review, ${nice}`, `Leo Picks last night: ${night}. Winners right: ${right} of ${games.length}. Leo Picks so far: ${recordLine(S.picks && { ...S.picks })}.`, "",

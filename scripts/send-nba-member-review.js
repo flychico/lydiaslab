@@ -50,7 +50,9 @@ async function main() {
   catch (e) { console.log("NBA review: data/nba/results-days.json not readable, nothing to send."); return; }
   const day = (doc.days || []).find(d => d.date === DATE);
   if (!day || !day.games || !day.games.length) { console.log(`NBA review: ${DATE} is not graded yet (or had no games), nothing to send.`); return; }
-  const email = M.review(day, { season: doc.season });
+  let emailLog = null;
+  try { emailLog = JSON.parse(fs.readFileSync(path.join(ROOT, "data/email-log", `nba-card-${DATE}.json`), "utf8")); } catch (e) {}
+  const email = M.review(day, { season: doc.season, emailLog });
   if (HTML) { fs.writeFileSync(HTML, email.html); console.log(`NBA review preview written to ${HTML}. ${email.subject}`); return; }
   if (DRY) { console.log(`SUBJECT: ${email.subject}\n\n${email.text}`); return; }
   if (TEST) {

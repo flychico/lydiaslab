@@ -114,7 +114,7 @@ function build(doc, { why, record, memberLine = false } = {}) {
       { label: "Leo Picks so far", value: record && record.n ? `${record.won}-${record.lost}` : "0-0",
         sub: record && record.n ? `${record.units > 0 ? "+" : ""}${(+record.units).toFixed(2)} units since ${new Date(record.from + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}` : "first picks graded tomorrow" }
     ]),
-    E.panel("Tonight&rsquo;s Leo Picks (moneyline)", pickRows),
+    E.panel("Tonight&rsquo;s Leo Picks (moneyline)", pickRows + (picks.length ? `<div style="font-family:${SANS};font-size:13px;color:${T.dim};padding-top:8px">Graded at the price at Leo&rsquo;s last read before tip, which can move.</div>` : "")),
     games.map(g => card(g, date, why)).join(""),
     // Free list only (HO-0061 item 3): one line pointing to the member emails.
     memberLine ? tbl(`<tr><td style="padding:14px 16px;font-family:${SANS};font-size:15px;line-height:1.55;color:${T.text}">${MEMBER_LINE} <a href="${SITE}/membership/" style="color:${T.navy};font-weight:800;text-decoration:none">See membership &rarr;</a></td></tr>`, `background:${T.heroBg};border:1px solid ${T.border};border-radius:16px;margin:0 0 16px`) : "",
@@ -125,7 +125,7 @@ function build(doc, { why, record, memberLine = false } = {}) {
   ].join("\n");
   const html = E.shell({ title: subject, preheader: [picks.length ? `Leo Picks: ${pickList.join(", ")}.` : "", leans.length ? `Leans: ${leanList.join(", ")}.` : ""].filter(Boolean).join(" ") || "No Leo Picks tonight. Leo's read on every game.", body });
   const text = [`Leo NBA card, ${nice}`, "",
-    picks.length ? `Leo Picks (moneyline): ${pickList.join(", ")}` : "No Leo Picks tonight.",
+    picks.length ? `Leo Picks (moneyline): ${pickList.join(", ")}. Graded at the price at Leo's last read before tip, which can move.` : "No Leo Picks tonight.",
     ...(record && record.n ? [`Leo Picks so far: ${record.won}-${record.lost}, ${record.units > 0 ? "+" : ""}${(+record.units).toFixed(2)} units since ${record.from}`] : []),
     "",
     ...games.map(g => { const L = g.leo, mk = g.market || {}, W = why ? why.why(g) : null;
