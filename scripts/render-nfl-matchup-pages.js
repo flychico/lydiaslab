@@ -40,11 +40,11 @@ function topScorers(m){
 /* Free email signup, in the page body. Posts to the same signup Worker and
    list as the footer form (free-preview); scripts/send-nfl-card-emails.js
    sends that list the NFL card on game days. */
-function signupBox(){
+function signupBox(m){
   return `
   <div class="nfl-signup">
-    <div><b>Get Leo&rsquo;s NFL card by email</b>
-    <p>Every game, Leo&rsquo;s winner and total, and the most likely touchdown scorers, before kickoff. Free. Unsubscribe anytime.</p></div>
+    <div><b>Free NFL card by email</b>
+    <p>${esc(TEAMS.nick(m.away))} at ${esc(TEAMS.nick(m.home))} and every other game, before kickoff. Free.</p></div>
     <form class="lydia-signup-form" data-list="free-preview" data-thanks="You&rsquo;re on the list. The next NFL card goes to that inbox.">
       <input type="email" name="email" required placeholder="you@email.com" aria-label="Email address">
       <input type="hidden" name="bot-field">
@@ -163,7 +163,7 @@ function ratingsSection(m){
   const sg=x=>x==null?"—":(x>0?"+":"")+x;
   return `
   <h2 class="sec">Leo ratings, head to head</h2>
-  <p class="sub">Each rating is 0 to 100 against the league this season, built from efficiency rather than record: 50 is average, every 15 points is one standard deviation. They describe the teams; the &ldquo;Why Leo has&rdquo; section above says which of them push Leo&rsquo;s number.</p>
+  <p class="sub">0 to 100, 50 is average. <a href="/nfl/how-leo-works/">How Leo works</a></p>
 
   <div class="rcard">
     <div class="rhead">
@@ -178,14 +178,14 @@ function ratingsSection(m){
       ${ratingRow("Overall", A.overall, H.overall)}
     </div>
     ${Ap&&Hp?`<div class="rprior">
-      <span class="rpv">QB ${Ap.qb_rating.toFixed(0)} &middot; OFF ${Ap.off_rating.toFixed(0)} &middot; DEF ${Ap.def_rating.toFixed(0)}</span>
+      <span class="rpv"><span>QB ${Ap.qb_rating.toFixed(0)}</span> <span>OFF ${Ap.off_rating.toFixed(0)}</span> <span>DEF ${Ap.def_rating.toFixed(0)}</span></span>
       <span class="rpl">Last season</span>
-      <span class="rpv rr">QB ${Hp.qb_rating.toFixed(0)} &middot; OFF ${Hp.off_rating.toFixed(0)} &middot; DEF ${Hp.def_rating.toFixed(0)}</span>
+      <span class="rpv rr"><span>QB ${Hp.qb_rating.toFixed(0)}</span> <span>OFF ${Hp.off_rating.toFixed(0)}</span> <span>DEF ${Hp.def_rating.toFixed(0)}</span></span>
     </div>`:""}
   </div>
 
   <h2 class="sec">The turnover battle</h2>
-  <p class="sub">Interceptions thrown against interceptions caught, and the same for fumbles. Bold is the better side of each line.</p>
+  <p class="sub">Bold is the better side.</p>
   <table class="vs">
     ${vsHead(m, "Per game, this season")}
     ${statRow("Interceptions thrown", A.ints_thrown_pg, H.ints_thrown_pg, d2, true)}
@@ -198,7 +198,7 @@ function ratingsSection(m){
   </table>
 
   <h2 class="sec">Efficiency detail</h2>
-  <p class="sub">The inputs behind the ratings above, shown raw so you can check the work.</p>
+  <p class="sub">The raw inputs behind the ratings.</p>
   <table class="vs">
     ${vsHead(m, "Offense")}
     ${statRow("EPA per dropback", A.epa_per_dropback, H.epa_per_dropback, x=>x==null?"—":(x>0?"+":"")+x.toFixed(3))}
@@ -260,10 +260,10 @@ function leoSection(m){
     ${callBox("Spread",C.spread,"spread",`Leo ${fav(m,g.proj_spread)}`)}
     ${callBox("Total",C.total,"total",`Leo ${v(g.proj_total)}`)}
   </div>
-  <p class="dim" style="margin:0 0 10px">A call is graded after the game. PASS means no call: a moneyline needs more than 60% and a price better than -230; a spread needs Leo 1 point off the line and his two models agreeing on the winner; a total needs Leo 1.5 to 7 points off the line.</p>`:"";
+  <p class="dim" style="margin:0 0 10px">PASS means no call. <a href="/nfl/how-leo-works/#calls">How calls work</a></p>`:"";
   const game=g?`${callsHtml}
   <div class="leo-grid">
-    <div class="box"><span class="lbl">${pickPaused(m.date)||g.calls?"Leo win chance":g.call==="leo_pick"?"Leo pick":"Too close to call"}</span><span class="val">${esc(g.pick)} ${pct(g.prob)}</span><span class="lbl2">${pickPaused(m.date)?"chance to win; picks were paused this week":g.calls?"chance to win; the moneyline call is in the box above":g.call==="leo_pick"?"Leo gives this team more than 60%"+(g.price!=null&&g.price!==""?"; price "+esc((+g.price>0?"+":"")+g.price)+" at the read":""):"under 60%, so no pick; win chance only"}</span></div>
+    <div class="box"><span class="lbl">${pickPaused(m.date)||g.calls?"Leo win chance":g.call==="leo_pick"?"Leo pick":"Too close to call"}</span><span class="val">${esc(g.pick)} ${pct(g.prob)}</span><span class="lbl2">${pickPaused(m.date)?"chance to win; picks were paused this week":g.calls?"chance to win":g.call==="leo_pick"?"Leo gives this team more than 60%"+(g.price!=null&&g.price!==""?"; price "+esc((+g.price>0?"+":"")+g.price)+" at the read":""):"under 60%, so no pick; win chance only"}</span></div>
     <div class="box"><span class="lbl">Leo total</span><span class="val">${v(g.proj_total)}</span><span class="lbl2">points, both teams</span></div>
     <div class="box"><span class="lbl">Leo margin</span><span class="val">${esc(fav(m,g.proj_spread))}</span><span class="lbl2">expected winning margin</span></div>
   </div>`:"";
@@ -280,7 +280,7 @@ function leoSection(m){
   }).join("");
   return `
   <h2 class="sec">Leo&rsquo;s read</h2>
-  <p class="sub">${L.early?`Early read${when?" ("+esc(when)+")":""}. Leo updates it every morning and again on game day; the last read before kickoff is frozen and graded. Player props are added on game day.`:`What the model expected, frozen before kickoff${when?" ("+esc(when)+")":""}.`} Each player projection is rate &times; volume &times; opponent adjustment, and the columns show every input. None of this is a wager.</p>
+  <p class="sub">${L.early?`Early read on ${esc(TEAMS.nick(m.away))} at ${esc(TEAMS.nick(m.home))}${when?", "+esc(when):""}. It updates until kickoff.`:`Leo&rsquo;s last read on ${esc(TEAMS.nick(m.away))} at ${esc(TEAMS.nick(m.home))}${when?", "+esc(when):""}.`} <a href="/nfl/how-leo-works/">How Leo works</a></p>
   ${game}${props}`;
 }
 
@@ -373,7 +373,7 @@ function injurySection(m){
   const when=I.captured_at?new Date(I.captured_at).toLocaleString("en-US",{timeZone:"America/New_York",weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})+" ET":"";
   return `
   <h2 class="sec">Injury report</h2>
-  <p class="sub">The official Week ${esc(I.week)} report for each side${when?", as captured "+esc(when):""}. Teams file game statuses on the last practice day; anyone not listed is expected to play. Final inactives come 90 minutes before kickoff.</p>
+  <p class="sub">${esc(TEAMS.nick(m.away))} and ${esc(TEAMS.nick(m.home))}, Week ${esc(I.week)}${when?", "+esc(when):""}. <a href="/how-to-read-an-nfl-injury-report/">Reading the report</a></p>
   <div class="tdgrid">${injCard(I.away)}${injCard(I.home)}</div>`;
 }
 
@@ -386,10 +386,10 @@ function tdSection(m){
   const a=T[m.away]||[], h=T[m.home]||[];
   if(!a.length && !h.length) return "";
   const top=topScorers(m);
-  const topLine=top.length?`<div class="top2">Most likely to score: ${top.map(x=>`<b>${esc(x.player)}</b> (${esc(x.team)}, ${Math.round(x.prob*100)}%)`).join(" and ")}. In 2023 to 2025, Leo&rsquo;s top pick in a game scored 47% of the time, and at least one of its top two scored 69% of the time.</div>`:"";
+  const topLine=top.length?`<div class="top2">Most likely to score: ${top.map(x=>`<b>${esc(x.player)}</b> (${esc(x.team)}, ${Math.round(x.prob*100)}%)`).join(" and ")}.</div>`:"";
   return `
   <h2 class="sec">Touchdown props</h2>
-  <p class="sub">Leo&rsquo;s chance that each player scores a rushing or receiving touchdown in this game, the three most likely on each side, from its last read before kickoff.</p>
+  <p class="sub">Top three on each side. <a href="/nfl/how-leo-works/">How Leo works</a></p>
   ${topLine}
   <div class="tdgrid">${tdCard(m,m.away,a)}${tdCard(m,m.home,h)}</div>`;
 }
@@ -415,7 +415,7 @@ function boxScore(F){
   const a=boxTable(F.box.away), h=boxTable(F.box.home);
   if(!a && !h) return "";
   return `<h3 class="sec3">How the game was played</h3>
-  <p class="sub">Quarterback, the backs who carried it and the receivers who caught it.</p>
+  
   <div class="bxgrid">${a}${h}</div>`;
 }
 
@@ -457,9 +457,9 @@ function finalReport(m){
       &ndash; <b>${F.home_score}</b> ${esc(m.home)} <img src="/img/nfl/${encodeURIComponent(m.home)}.png" alt="">${F.overtime?' <span class="mut">(OT)</span>':""}</p>
     ${boxScore(F)}
     <h3 class="sec3">How Leo&rsquo;s read held up</h3>
-    <p class="sub">What Leo expected before kickoff, the posted number he was calling against, and what happened. A winner call is only made when one side is above 60%; a yardage or points call needs a real gap from the line before Leo takes a side.</p>
+    <p class="sub">Leo before kickoff, the line, the result.</p>
     ${F.graded?games:'<p class="sub">Grading runs the morning after the game; the comparison appears once it has.</p>'}
-    ${props?`<p class="sub" style="margin-top:14px">&ldquo;Main reason&rdquo; names which of Leo&rsquo;s two inputs was further off, how much the player was used, or how efficient he was when he was.</p>`+props:""}
+    ${props?`<p class="sub" style="margin-top:14px"><a href="/nfl/how-leo-works/#props">How props are graded</a></p>`+props:""}
   </section>`;
 }
 
@@ -662,23 +662,25 @@ ${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternT
     <div class="box"><span class="lbl">Total</span><span class="val">${v(m.total_line)}</span></div>
   </section>
   <h1 class="mh-title">${esc(TEAMS.full(m.away))} at ${esc(TEAMS.full(m.home))}</h1>
-  <p style="text-align:center;margin:0"><a class="wk-link" href="${weekUrl(m)}">Every game this week on Leo&rsquo;s Week ${v(m.week,"")} card &rarr;</a></p>
+  <p style="text-align:center;margin:0"><a class="wk-link" href="${weekUrl(m)}">Week ${v(m.week,"")} card &rarr;</a></p>
   ${COPY.summary(m)}
 
-  <div class="notice note">This is a pre-game analysis page. Every stat above the Final result comes from games played <b>before</b> this one${m.pregame_through_week?" (through Week "+m.pregame_through_week+")":""}, and ${m.leo&&m.leo.early?"Leo&rsquo;s numbers are an early read that updates until kickoff, when the last read is frozen":"Leo&rsquo;s numbers were frozen before kickoff"}. Market numbers are ${m.leo&&m.leo.early?"the latest posted line":"the closing line"}. Nothing here is a wager. Calls are a public test, graded after every game.</div>
+  ${COPY.whatHappened(m)}
+
+  <p class="dim" style="text-align:center;margin:6px 0 0">${m.leo&&m.leo.early?"Early read, frozen at kickoff.":"Frozen before kickoff."} <a href="/nfl/how-leo-works/">How Leo works</a></p>
 
   ${leoSection(m)}
 
   ${COPY.why(m)}
 
-  ${signupBox()}
+  ${signupBox(m)}
 
   ${injurySection(m)}
 
   ${ratingsSection(m)}
 
   <h2 class="sec">Team comparison</h2>
-  <p class="sub">Season totals on both sides of the ball. Left column is ${esc(m.away)}, right is ${esc(m.home)}.</p>
+  <p class="sub">${esc(TEAMS.nick(m.away))} left, ${esc(TEAMS.nick(m.home))} right.</p>
   <table class="vs">
     ${vsHead(m, "This season")}
     ${cmp("Games", ao.this_season.games, ho.this_season.games)}
@@ -699,19 +701,19 @@ ${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternT
   </table>
 
   <h2 class="sec">This season</h2>
-  <p class="sub">Starting quarterback, lead backs and top receivers, by actual usage this season, from games before this one only.</p>
+  <p class="sub">Leaders by usage, before this game.</p>
   <div class="grid2">${sideBlock(A,"this_season",m.date.slice(0,4),cur&&cur.away)}${sideBlock(H,"this_season",m.date.slice(0,4),cur&&cur.home)}</div>
 
   <h2 class="sec">Last season</h2>
-  <p class="sub">The same players' full prior season, for a baseline the early-season sample cannot give you.</p>
+  <p class="sub">The same players, last season.</p>
   <div class="grid2">${sideBlock(A,"last_season",String(Number(m.date.slice(0,4))-1),pri&&pri.away)}${sideBlock(H,"last_season",String(Number(m.date.slice(0,4))-1),pri&&pri.home)}</div>
 
   ${tdSection(m)}
 
   ${finalReport(m)}
 
-  <p class="data-note">Player and team statistics from the open nflverse dataset. Roles assigned by actual usage (most attempts, carries and targets), not depth chart.</p>
-${SEO.relatedLinks({sport:"NFL",root:ROOT,slug:m.slug||String(m.url).split("/").filter(Boolean).pop(),away:m.away,home:m.home,awayName:TEAMS.full(m.away),homeName:TEAMS.full(m.home),teamUrl:abbr=>"/nfl/teams/"+require("./build-nfl-team-pages").teamSlug(abbr)+"/",featured:[weekUrl(m),"All Week "+v(m.week,"")+" NFL predictions","Every game that week: Leo\u2019s win chance, spread, total and touchdown scorer chances"],hubs:[["/nfl/games/","Every NFL game"],["/nfl/teams/","NFL team predictions"],["/nfl/results/","Leo\u2019s NFL record"],["/nfl/tools/injury-tracker/","Injury tracker"],["/membership/#free","Free NFL card by email"]]})}
+  <p class="data-note">Stats: nflverse. <a href="/nfl/how-leo-works/">How Leo works</a></p>
+${SEO.relatedLinks({sport:"NFL",root:ROOT,slug:m.slug||String(m.url).split("/").filter(Boolean).pop(),away:m.away,home:m.home,awayName:TEAMS.full(m.away),homeName:TEAMS.full(m.home),teamUrl:abbr=>"/nfl/teams/"+require("./build-nfl-team-pages").teamSlug(abbr)+"/",featured:[weekUrl(m),"Week "+v(m.week,"")+" NFL predictions","Every Week "+v(m.week,"")+" game"],hubs:[["/nfl/games/","Every NFL game"],["/nfl/teams/","NFL team predictions"],["/nfl/results/","Leo\u2019s NFL record"],["/nfl/tools/injury-tracker/","Injury tracker"],["/membership/#free","Free NFL card by email"]]})}
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script>renderNav("/nfl/scoreboard/"); renderFooter();</script>
