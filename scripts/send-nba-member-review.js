@@ -39,11 +39,9 @@ const FROM_H = 7, UNTIL_H = 13;
 
 async function send(to, e) {
   const { personalize } = require("./lib/subscribers");
+  const { sendOne } = require("./lib/nba-send");
   const body = { from: EMAIL_FROM, to: [to], reply_to: EMAIL_REPLY_TO || undefined, subject: e.subject, html: e.html, text: e.text };
-  return fetch("https://api.resend.com/emails", {
-    method: "POST", headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify(TEST ? body : personalize(body))
-  });
+  return sendOne(TEST ? body : personalize(body), { key: RESEND_API_KEY });
 }
 
 async function main() {
@@ -59,7 +57,7 @@ async function main() {
     const to = (process.env.AUDIT_EMAIL || "").trim();
     if (!RESEND_API_KEY || !EMAIL_FROM || !to) { console.log("NBA review test: RESEND_API_KEY, EMAIL_FROM or AUDIT_EMAIL not set."); process.exitCode = 1; return; }
     const res = await send(to, { ...email, subject: "TEST: " + email.subject });
-    console.log(res.ok ? `NBA review test for ${DATE} sent to the owner address.` : `NBA review test failed: HTTP ${res.status} ${await res.text()}`);
+    console.log(res.ok ? `NBA review test for ${DATE} sent to the owner address.` : `NBA review test failed: HTTP ${res.status} ${res.name}: ${res.message}`);
     if (!res.ok) process.exitCode = 1;
     return;
   }
@@ -70,14 +68,15 @@ async function main() {
   const { getList } = require("./lib/subscribers");
   const members = [...new Set(await getList("member-email"))];
   if (!members.length) { console.log("NBA review: no members yet."); return; }
-  let sent = 0, failed = 0;
-  for (const addr of members) {
-    const res = await send(addr, email);
-    res.ok ? sent++ : (failed++, console.warn(`  send failed: HTTP ${res.status}`));
+  let sent = 0, failed = 0; const errors = [];
+  for (let i = 0; i < members.length; i++) {
+    const res = await send(members[i], email);
+    if (res.ok) sent++;
+    else { failed++; errors.push({ list: "member-email", n: i + 1, status: res.status, name: res.name, message: res.message }); console.warn(`  send failed: member-email #${i + 1}, HTTP ${res.status} ${res.name}: ${res.message}`); }
     await new Promise(r => setTimeout(r, 600));   // Resend rate limit
   }
   fs.mkdirSync(path.dirname(LOG), { recursive: true });
-  fs.writeFileSync(LOG, JSON.stringify({ date: DATE, sent_at: new Date().toISOString(), games: day.games.length, misses: email.misses, members: members.length, sent, failed }, null, 2) + "\n");
+  fs.writeFileSync(LOG, JSON.stringify({ date: DATE, sent_at: new Date().toISOString(), games: day.games.length, misses: email.misses, members: members.length, sent, failed, ...(errors.length ? { errors } : {}) }, null, 2) + "\n");
   console.log(`NBA review ${DATE}: sent ${sent} to members, failed ${failed}.`);
 }
 main().catch(e => { console.error("NBA review error:", e.message); process.exit(0); });

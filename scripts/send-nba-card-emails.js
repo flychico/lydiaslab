@@ -80,19 +80,22 @@ async function main() {
   const free = [...new Set(await getList("free-preview"))].filter(e => !members.includes(e));
   const to = [...members.map(a => [a, brief]), ...free.map(a => [a, email])];
   if (!to.length) { console.log("NBA card email: no recipients yet."); return; }
-  let sent = 0, failed = 0;
-  for (const [addr, e] of to) {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify(personalize({ from: EMAIL_FROM, to: [addr], reply_to: EMAIL_REPLY_TO || undefined, subject: e.subject, html: e.html, text: e.text }))
-    });
-    res.ok ? sent++ : (failed++, console.warn(`  send failed: HTTP ${res.status}`));
+  const { sendOne } = require("./lib/nba-send");
+  let sent = 0, failed = 0; const errors = [];
+  for (let i = 0; i < to.length; i++) {
+    const [addr, e] = to[i], list = i < members.length ? "member-email" : "free-preview", n = list === "member-email" ? i + 1 : i - members.length + 1;
+    const r = await sendOne(personalize({ from: EMAIL_FROM, to: [addr], reply_to: EMAIL_REPLY_TO || undefined, subject: e.subject, html: e.html, text: e.text }), { key: RESEND_API_KEY });
+    if (r.ok) sent++;
+    else {
+      // No address in the public log: the list and the reader's place in it (after duplicates are removed).
+      failed++; errors.push({ list, n, status: r.status, name: r.name, message: r.message });
+      console.warn(`  send failed: ${list} #${n}, HTTP ${r.status} ${r.name}: ${r.message}`);
+    }
     await new Promise(r => setTimeout(r, 600));   // Resend rate limit
   }
   fs.mkdirSync(path.dirname(LOG), { recursive: true });
   fs.writeFileSync(LOG, JSON.stringify({ date: DATE, sent_at: new Date().toISOString(), games: games.length, picks: brief.picks,
-    members: members.length, free: free.length, sent, failed }, null, 2) + "\n");
+    members: members.length, free: free.length, sent, failed, ...(errors.length ? { errors } : {}) }, null, 2) + "\n");
   console.log(`NBA card ${DATE}: sent ${sent} (${members.length} members, ${free.length} free), failed ${failed}.`);
 }
 main().catch(e => { console.error("NBA card email error:", e.message); process.exit(0); });
