@@ -11,6 +11,21 @@ const ORIGIN = "https://ndhorizon.com";
 const SKIP = new Set([".git", ".github", "node_modules", "data", "scripts", "css", "js",
   "cloudflare-worker", "img", "images", "assets", "fonts"]);
 
+// Pages that stay on the site but are left out of the sitemap, so Google
+// spends its visits on pages people search for now. 2026-11-14 (Lynold, "Trim
+// the sitemap"): Google had found 533 Leo pages and not visited them; 317 of
+// the sitemap's URLs were MLB game pages from the finished 2026 season. MLB
+// game pages are left out while the offseason flag exists (data/mlb-offseason.json,
+// HO-0037) and, in season, when their game is from an earlier year. The pages
+// themselves are unchanged and still linked from the MLB team pages.
+const MLB_GAME = /^\/mlb\/[a-z0-9-]+-prediction-odds-(\d{4})-\d{2}-\d{2}(-game-\d)?\/$/;
+function leftOut(root, page) {
+  const m = MLB_GAME.exec(page);
+  if (!m) return false;
+  if (fs.existsSync(path.join(root, "data", "mlb-offseason.json"))) return true;
+  return Number(m[1]) < new Date().getUTCFullYear();
+}
+
 function isIndexable(file) {
   const head = fs.readFileSync(file, "utf8").slice(0, 6000).toLowerCase();
   if (/<meta[^>]+name=["']robots["'][^>]*noindex/.test(head)) return false;
@@ -34,7 +49,7 @@ function listPages(root) {
       walk(path.join(dir, e.name), rel ? `${rel}/${e.name}` : e.name);
     }
   })(root, "");
-  return out.sort((a, b) => (a === "/" ? -1 : b === "/" ? 1 : a.localeCompare(b)));
+  return out.filter(p => !leftOut(root, p)).sort((a, b) => (a === "/" ? -1 : b === "/" ? 1 : a.localeCompare(b)));
 }
 
 function render(pages) {
@@ -60,4 +75,4 @@ function checkSitemap(root) {
   };
 }
 
-module.exports = { listPages, writeSitemap, checkSitemap, ORIGIN };
+module.exports = { listPages, writeSitemap, checkSitemap, leftOut, ORIGIN };
