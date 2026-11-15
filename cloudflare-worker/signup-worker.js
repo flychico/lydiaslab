@@ -35,6 +35,14 @@
   and EMAIL_FROM; EMAIL_POSTAL_ADDRESS is printed in the footer when set.
   Without RESEND_API_KEY the sign-up is saved and no email is sent.
 
+  Member welcome (2026-11-14, business/launch/2026-11-14-member-welcome-and-
+  first-week.md): when PayPal reports a new membership active, the member gets
+  "Welcome to Leo membership: what arrives and when" once per subscription,
+  at the address they typed after paying when there is one, else PayPal's.
+  members.csv column welcomed_at records it, so a PayPal retry or a later
+  re-activation never sends a second welcome. An address typed after the
+  welcome went out gets a short "Saved" note instead.
+
   Worker settings (Cloudflare dashboard, Settings, Variables and Secrets)
     GITHUB_TOKEN    secret. Fine-grained token limited to flychico/leo-signups,
                     Contents: Read and write. Never in this file or the repo.
@@ -297,47 +305,89 @@ async function handleUnsubscribe(request, env) {
   return page("Unsubscribed", `<h1>You are unsubscribed</h1><p>${safe} will not get Leo's emails anymore. Changed your mind? Sign up again on the site.</p>`);
 }
 
-// ---------- Confirmation email ----------
+// ---------- Emails ----------
 function unsubLink(email, token) {
   return `${SELF}/unsubscribe?e=${encodeURIComponent(email)}&t=${token}`;
 }
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const P = "font-size:15px;line-height:1.6;margin:0 0 12px";
+const A = "color:#1F2A44;font-weight:700";
 
-async function sendConfirmation(env, row, token) {
-  if (!env.RESEND_API_KEY || !env.EMAIL_FROM || !token) return false;
-  const member = row.list === "member";
-  const hi = row.name ? `Hi ${row.name.split(" ")[0]},` : "Hi,";
-  const what = member
-    ? "Thanks for joining Leo as a member. Your member emails come to this address: the full brief before each NFL and NBA slate, the morning after review of every miss, and a weekly note on what Leo learned."
-    : "You are on the Leo list. Leo's free card comes to this address before NFL and NBA games: Leo's calls and the reasons behind them.";
-  const unsub = unsubLink(row.email, token);
+// One Leo email through Resend. paras: [{ html, text }]. Same look and footer
+// for every email the Worker sends (21+, problem gambling line, postal address,
+// the reader's own unsubscribe link and the one-click headers).
+async function sendEmail(env, to, token, subject, heading, paras) {
+  if (!env.RESEND_API_KEY || !env.EMAIL_FROM || !token || !isValidEmail(to)) return false;
+  const unsub = unsubLink(to, token);
   const addr = String(env.EMAIL_POSTAL_ADDRESS || "").trim();
-  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const html = `<div style="background:#F5F0E8;padding:24px 12px;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#2B2620">
 <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #E3DACB;border-radius:16px;padding:24px">
 <div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#8C8273">Leo</div>
-<h1 style="font-size:22px;margin:8px 0 14px">${member ? "Welcome to Leo membership" : "You are on the list"}</h1>
-<p style="font-size:15px;line-height:1.6;margin:0 0 12px">${esc(hi)}</p>
-<p style="font-size:15px;line-height:1.6;margin:0 0 12px">${esc(what)}</p>
-<p style="font-size:15px;line-height:1.6;margin:0 0 18px">Every call Leo makes is graded in public, misses included: <a href="${SITE}/" style="color:#1F2A44;font-weight:700">ndhorizon.com</a>.</p>
-<p style="font-size:12px;line-height:1.6;color:#8C8273;border-top:1px solid #E3DACB;padding-top:14px;margin:0">
+<h1 style="font-size:22px;margin:8px 0 14px">${esc(heading)}</h1>
+${paras.map(p => `<p style="${P}">${p.html}</p>`).join("\n")}
+<p style="font-size:12px;line-height:1.6;color:#8C8273;border-top:1px solid #E3DACB;padding-top:14px;margin:18px 0 0">
 Leo provides analysis and education only, not betting advice. 21+. If you or someone you know has a gambling problem, call 1-800-MY-RESET (1-800-697-3738).<br>
 ${addr ? esc(addr) + "<br>" : ""}You are getting this because this address was entered at ndhorizon.com. Not you, or changed your mind? <a href="${unsub}" style="color:#8C8273">Unsubscribe</a>.</p>
 </div></div>`;
-  const text = [hi, "", what, "", `Every call Leo makes is graded in public, misses included: ${SITE}/`, "",
-    "Analysis and education only, not betting advice. 21+. 1-800-MY-RESET (1-800-697-3738).", ...(addr ? [addr] : []),
-    `Unsubscribe: ${unsub}`].join("\n");
+  const text = [...paras.flatMap(p => [p.text, ""]),
+    "Analysis and education only, not betting advice. 21+. If you or someone you know has a gambling problem, call 1-800-MY-RESET (1-800-697-3738).",
+    ...(addr ? [addr] : []), `Unsubscribe: ${unsub}`].join("\n");
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: env.EMAIL_FROM, to: [row.email], reply_to: "support@ndhorizon.com",
-      subject: member ? "Welcome to Leo membership" : "You are on the Leo list",
-      html, text,
+      from: env.EMAIL_FROM, to: [to], reply_to: "support@ndhorizon.com", subject, html, text,
       headers: { "List-Unsubscribe": `<${unsub}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" }
     })
   });
-  if (!res.ok) console.error("Confirmation email failed: HTTP " + res.status);
+  if (!res.ok) console.error(`Email "${subject}" failed: HTTP ${res.status}`);
   return res.ok;
+}
+
+const t = s => ({ html: esc(s), text: s });
+function hiLine(name) {
+  const first = clean(name, 80).split(" ")[0];
+  return first ? `Hi ${first},` : "Hi,";
+}
+
+// Free list: what they joined.
+function sendConfirmation(env, row, token) {
+  return sendEmail(env, row.email, token, "You are on the Leo list", "You are on the list", [
+    t(hiLine(row.name)),
+    t("You are on the Leo list. Leo's free card comes to this address before NFL and NBA games: Leo's calls and the reasons behind them."),
+    { html: `Every call Leo makes is graded in public, misses included: <a href="${SITE}/" style="${A}">ndhorizon.com</a>.`,
+      text: `Every call Leo makes is graded in public, misses included: ${SITE}/` }
+  ]);
+}
+
+// New paid member: what arrives and when (sent once per subscription).
+function sendWelcome(env, to, name, token) {
+  return sendEmail(env, to, token, "Welcome to Leo membership: what arrives and when", "Welcome to Leo membership", [
+    t(hiLine(name)),
+    t("Thanks for joining Leo. Here is what comes to this inbox and when."),
+    { html: "<strong>Before every NFL and NBA slate: the member brief.</strong> Every call Leo makes, the reasoning in plain words, and the inputs Leo read: starting quarterbacks, players counted out, the ratings behind the number, and Leo's number beside the line at read time.",
+      text: "Before every NFL and NBA slate: the member brief. Every call Leo makes, the reasoning in plain words, and the inputs Leo read: starting quarterbacks, players counted out, the ratings behind the number, and Leo's number beside the line at read time." },
+    { html: "<strong>The morning after: the review.</strong> Every miss with its reason, every upset, and what Leo got right. It arrives after 7am Eastern, never overnight.",
+      text: "The morning after: the review. Every miss with its reason, every upset, and what Leo got right. It arrives after 7am Eastern, never overnight." },
+    { html: "<strong>Every Tuesday: the weekly note</strong> on what Leo learned and what is being tested.",
+      text: "Every Tuesday: the weekly note on what Leo learned and what is being tested." },
+    t("Your first brief arrives before the next NFL or NBA games. During the season that is usually the same day."),
+    { html: `While you wait, here is the record as it stands, misses included: <a href="${SITE}/nfl/results/" style="${A}">NFL results</a> and <a href="${SITE}/nba/results/" style="${A}">NBA results</a>. Under 50 graded calls is an early read, and Leo says so on every page.`,
+      text: `While you wait, here is the record as it stands, misses included: ${SITE}/nfl/results/ and ${SITE}/nba/results/. Under 50 graded calls is an early read, and Leo says so on every page.` },
+    { html: `Your membership is $30 a month through PayPal. Cancel anytime in your PayPal account or by writing to support@ndhorizon.com, and you are not charged again. Payments are not refunded, except a charge after you cancelled or a double charge, which we refund in full (<a href="${SITE}/refunds/" style="${A}">Refunds and Cancellation</a>). Questions go to support@ndhorizon.com, or just reply to this email, and a person reads them.`,
+      text: `Your membership is $30 a month through PayPal. Cancel anytime in your PayPal account or by writing to support@ndhorizon.com, and you are not charged again. Payments are not refunded, except a charge after you cancelled or a double charge, which we refund in full (${SITE}/refunds/). Questions go to support@ndhorizon.com, or just reply to this email, and a person reads them.` },
+    t("Leo")
+  ]);
+}
+
+// An address typed on the member form when no welcome is due for it.
+function sendSaved(env, to, token) {
+  return sendEmail(env, to, token, "Saved: your Leo member emails come here", "Saved", [
+    t("Leo member emails for your membership will come to this address from now on: the brief before every NFL and NBA slate, the review the morning after, and the Tuesday note."),
+    { html: `If your membership is not active yet, nothing arrives until it is: <a href="${SITE}/membership/" style="${A}">ndhorizon.com/membership</a>. Questions go to support@ndhorizon.com.`,
+      text: `If your membership is not active yet, nothing arrives until it is: ${SITE}/membership/. Questions go to support@ndhorizon.com.` },
+    t("Leo")
+  ]);
 }
 
 function respond(wantsJson, origin, allowedOrigin, status, jsonBody, thanksMessage) {
@@ -363,10 +413,12 @@ function respond(wantsJson, origin, allowedOrigin, status, jsonBody, thanksMessa
 //   PAYPAL_CLIENT_ID      from the PayPal REST app (Live)
 //   PAYPAL_CLIENT_SECRET  secret, from the same app
 //   PAYPAL_WEBHOOK_ID     secret, the ID PayPal shows for the webhook
-// members.csv columns: subscription_id, status, email, name, plan_id, updated_at, last_event, unsub_token
+// members.csv columns: subscription_id, status, email, name, plan_id, updated_at, last_event, unsub_token, welcomed_at
 const PAYPAL_API = "https://api-m.paypal.com";
 const MEMBERS_PATH = "signups/members.csv";
-const MEMBERS_HEADER = "subscription_id,status,email,name,plan_id,updated_at,last_event,unsub_token";
+const MEMBERS_HEADER = "subscription_id,status,email,name,plan_id,updated_at,last_event,unsub_token,welcomed_at";
+// Events that start a membership: the welcome goes out on the first of these.
+const WELCOME_EVENTS = new Set(["BILLING.SUBSCRIPTION.ACTIVATED", "PAYMENT.SALE.COMPLETED"]);
 const STATUS_BY_EVENT = {
   "BILLING.SUBSCRIPTION.ACTIVATED": "active",
   "BILLING.SUBSCRIPTION.RE-ACTIVATED": "active",
@@ -405,6 +457,9 @@ async function verifyPaypal(env, request, event) {
   return (await res.json()).verification_status === "SUCCESS";
 }
 
+// Creates or updates one subscription's row. With row.claimWelcome, an empty
+// welcomed_at is set to now in the same write and claimed is true: only that
+// event sends the welcome. Returns the merged row.
 async function upsertMember(env, row) {
   for (let attempt = 0; attempt < 4; attempt++) {
     const existing = await getFile(env, MEMBERS_PATH);
@@ -413,25 +468,74 @@ async function upsertMember(env, row) {
     lines[0] = MEMBERS_HEADER;
     const at = lines.findIndex((l, i) => i > 0 && parseCsvLine(l)[0] === row.subscription_id);
     const old = at > 0 ? parseCsvLine(lines[at]) : [];
-    const merged = [
-      row.subscription_id,
-      row.status || old[1] || "",
-      row.email || old[2] || "",
-      row.name || old[3] || "",
-      row.plan_id || old[4] || "",
-      new Date().toISOString(),
-      row.event,
-      old[7] || newToken()
-    ].map(csv).join(",");
+    const claimed = !!row.claimWelcome && !old[8];
+    const m = {
+      subscription_id: row.subscription_id,
+      status: row.status || old[1] || "",
+      email: row.email || old[2] || "",
+      name: row.name || old[3] || "",
+      plan_id: row.plan_id || old[4] || "",
+      updated_at: new Date().toISOString(),
+      last_event: row.event,
+      unsub_token: old[7] || newToken(),
+      welcomed_at: old[8] || (claimed ? new Date().toISOString() : "")
+    };
+    const merged = [m.subscription_id, m.status, m.email, m.name, m.plan_id, m.updated_at, m.last_event, m.unsub_token, m.welcomed_at].map(csv).join(",");
     if (at > 0) lines[at] = merged; else lines.push(merged);
     fillTokens(lines, 7);
     const body = { message: "Member update (" + row.event + ")", content: toBase64(lines.join("\n") + "\n"), branch: BRANCH };
     if (existing) body.sha = existing.sha;
     const put = await gh(env, MEMBERS_PATH, { method: "PUT", body: JSON.stringify(body) });
+    if (put.ok) return { ...m, claimed };
+    if (put.status !== 409 && put.status !== 422) throw new Error("GitHub write failed: HTTP " + put.status);
+  }
+  throw new Error("GitHub write failed: file kept changing");
+}
+
+// Sets welcomed_at on one subscription's row ("" clears it so a retry sends).
+async function setWelcomed(env, subscription_id, value) {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const existing = await getFile(env, MEMBERS_PATH);
+    if (!existing) return;
+    const lines = existing.content.split("\n").filter(l => l.trim());
+    const at = lines.findIndex((l, i) => i > 0 && parseCsvLine(l)[0] === subscription_id);
+    if (at < 0) return;
+    const f = parseCsvLine(lines[at]);
+    while (f.length < 9) f.push("");
+    if (f[8] === value) return;
+    f[8] = value;
+    lines[at] = f.map(csv).join(",");
+    lines[0] = MEMBERS_HEADER;
+    const body = { message: "Member welcome", content: toBase64(lines.join("\n") + "\n"), branch: BRANCH, sha: existing.sha };
+    const put = await gh(env, MEMBERS_PATH, { method: "PUT", body: JSON.stringify(body) });
     if (put.ok) return;
     if (put.status !== 409 && put.status !== 422) throw new Error("GitHub write failed: HTTP " + put.status);
   }
   throw new Error("GitHub write failed: file kept changing");
+}
+
+// The row in members.csv for a subscription, or null.
+async function findMember(env, subscription_id) {
+  if (!subscription_id) return null;
+  const f = await getFile(env, MEMBERS_PATH);
+  if (!f) return null;
+  for (const l of f.content.split("\n").slice(1)) {
+    const r = parseCsvLine(l);
+    if (r[0] === subscription_id) return { status: r[1] || "", email: r[2] || "", name: r[3] || "", unsub_token: r[7] || "", welcomed_at: r[8] || "" };
+  }
+  return null;
+}
+
+// The address the member typed after paying (member.csv), or null.
+async function findTyped(env, subscription_id) {
+  const f = await getFile(env, LISTS["member-email"]);
+  if (!f) return null;
+  let found = null;
+  for (const l of f.content.split("\n").slice(1)) {
+    const r = parseCsvLine(l);
+    if (r[7] === subscription_id && isValidEmail(r[3]) && r[8]) found = { email: r[3].trim(), name: r[2] || "", token: r[8] };
+  }
+  return found;   // the latest row wins
 }
 
 async function handlePaypal(request, env) {
@@ -453,18 +557,40 @@ async function handlePaypal(request, env) {
   const subscription_id = clean(type === "PAYMENT.SALE.COMPLETED" ? r.billing_agreement_id : r.id, 40).replace(/[^A-Za-z0-9\-]/g, "");
   if (!subscription_id) return new Response("no subscription", { status: 200 });
   const nm = sub.name || {};
+  let saved;
   try {
-    await upsertMember(env, {
+    saved = await upsertMember(env, {
       subscription_id,
       status: STATUS_BY_EVENT[type],
       email: isValidEmail(sub.email_address) ? clean(sub.email_address, 254) : "",
       name: clean([nm.given_name, nm.surname].filter(Boolean).join(" "), 80),
       plan_id: clean(r.plan_id, 40),
-      event: type
+      event: type,
+      claimWelcome: WELCOME_EVENTS.has(type) && !!env.RESEND_API_KEY
     });
   } catch (e) {
     console.error(String(e.message || e));
     return new Response("save failed", { status: 500 });   // PayPal retries
+  }
+
+  if (saved.claimed) {
+    // First event of a new membership: send the welcome once. The address the
+    // member typed after paying wins over PayPal's.
+    let sent = false;
+    try {
+      const typed = await findTyped(env, subscription_id);
+      const to = typed ? typed.email : saved.email;
+      const token = typed ? typed.token : saved.unsub_token;
+      // A new payment means they want member emails, even if this address
+      // unsubscribed from the free list before.
+      if (isValidEmail(to)) await setUnsubscribed(env, to, false);
+      sent = await sendWelcome(env, to, saved.name || (typed && typed.name), token);
+    } catch (e) { console.error("Welcome email error: " + String(e.message || e)); }
+    if (!sent) {
+      // Clear the mark so PayPal's retry of this event tries the welcome again.
+      try { await setWelcomed(env, subscription_id, ""); } catch (e) { console.error(String(e.message || e)); }
+      return new Response("saved, welcome not sent", { status: 500 });
+    }
   }
   return new Response("ok", { status: 200 });
 }
@@ -520,10 +646,26 @@ export default {
       const saved = await saveSignup(env, LISTS[list], row);
       // Signing up again cancels an earlier unsubscribe.
       const wasOff = await setUnsubscribed(env, email, false);
-      if (saved.added || wasOff) {
-        try { emailed = await sendConfirmation(env, row, saved.token); }
-        catch (e) { console.error("Confirmation email error: " + String(e.message || e)); }
-      }
+      try {
+        if (row.list === "member") {
+          // Member form (after paying, or the "register your address" box).
+          const m = await findMember(env, row.subscription_id);
+          if (m && m.status === "active" && !m.welcomed_at) {
+            // Paid, but PayPal's event has not sent the welcome yet: send it here.
+            emailed = await sendWelcome(env, email, row.name || m.name, saved.token);
+            if (emailed) await setWelcomed(env, row.subscription_id, new Date().toISOString());
+          } else if ((saved.added || saved.updated || wasOff)
+            // With a subscription ID but no PayPal event yet, stay quiet: the
+            // welcome is on its way and will go to this address.
+            && (!row.subscription_id || (m && m.welcomed_at))
+            // The welcome already went to this same PayPal address.
+            && !(m && m.welcomed_at && m.email.toLowerCase() === email.toLowerCase())) {
+            emailed = await sendSaved(env, email, saved.token);
+          }
+        } else if (saved.added || wasOff) {
+          emailed = await sendConfirmation(env, row, saved.token);
+        }
+      } catch (e) { console.error("Confirmation email error: " + String(e.message || e)); }
     } catch (err) {
       console.error(String(err && err.message || err));   // never logs the person's details
       return respond(wantsJson, origin, allowedOrigin, 502, { ok: false, error: "Sign up failed, try again shortly." });
