@@ -38,6 +38,7 @@ function partOfDay(m) {
 // A home-stated line or margin as "Commanders by 6" / "Commanders -6".
 function byTeam(m, x) { if (x == null) return null; if (x === 0) return "even"; return `${TEAMS.nick(x > 0 ? m.home : m.away)} by ${r1(Math.abs(x))}`; }
 function lineTeam(m, x) { if (x == null) return null; if (x === 0) return "a pick'em"; return `${TEAMS.nick(x > 0 ? m.home : m.away)} ${"−"}${Math.abs(x)}`; }
+const nickLabel = (m, t) => String(t || "").replace(new RegExp(`\\b(${m.away}|${m.home})\\b`, "g"), a => TEAMS.nick(a));
 function list(a) { return a.length <= 1 ? (a[0] || "") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1]; }
 
 function topTd(m, n) {
@@ -54,7 +55,7 @@ function finalSentence(m) {
   const score = win ? `${city(win)} ${Math.max(hs, as)}, ${city(lose)} ${Math.min(hs, as)}` : `${city(m.away)} ${as}, ${city(m.home)} ${hs}`;
   const out = [`Final: ${score}${F.overtime ? " in overtime" : ""}.`];
   if (g && g.pick && g.prob != null && win) out.push(`Leo gave ${the(g.pick)} ${aPct(g.prob)} chance, so the winner read was ${g.pick === win ? "right" : "wrong"}.`);
-  if (g && g.proj_total != null) out.push(`The game totaled ${hs + as} points against Leo's ${g.proj_total}${m.total_line != null ? ` and the posted ${m.total_line}` : ""}.`);
+  if (g && g.proj_total != null) out.push(`The ${city(m.away)} and ${city(m.home)} combined for ${hs + as} points against Leo's ${g.proj_total}${m.total_line != null ? ` and the posted ${m.total_line}` : ""}.`);
   const C = g && g.calls;
   if (C) {
     const graded = [];
@@ -66,7 +67,7 @@ function finalSentence(m) {
     };
     for (const [key, name] of [["ml", "moneyline"], ["spread", "spread"], ["total", "total"]]) {
       const c = C[key], r = res(key, c);
-      if (r) graded.push(`${name} ${c.label} ${r}`);
+      if (r) graded.push(`${name} ${nickLabel(m, c.label)} ${r}`);
     }
     if (graded.length) out.push(`Leo's calls: ${list(graded)}.`);
   }
@@ -90,7 +91,7 @@ function summary(m) {
     if (tot || mar) parts.push(`${tot}${tot && mar ? " and " : ""}${tot ? mar : mar.charAt(0).toUpperCase() + mar.slice(1)}.`);
     const C = g.calls;
     if (C) {
-      const c = [["moneyline", C.ml], ["spread", C.spread], ["total", C.total]].filter(([, x]) => x).map(([k, x]) => `${k} ${x.call ? x.label : "PASS"}`);
+      const c = [["moneyline", C.ml], ["spread", C.spread], ["total", C.total]].filter(([, x]) => x).map(([k, x]) => `${k} ${x.call ? nickLabel(m, x.label) : "PASS"}`);
       if (c.length) parts.push(`Leo's calls: ${list(c)}.`);
     }
   } else {
@@ -99,9 +100,10 @@ function summary(m) {
   const td = topTd(m, 2);
   if (td.length) parts.push(`The players Leo thinks are most likely to score a touchdown: ${list(td.map(p => `${p.player} (${pct(p.prob)})`))}.`);
   if (m.away_qb_name && m.home_qb_name) parts.push(`Starting quarterbacks: ${m.away_qb_name} for the ${city(m.away)} and ${m.home_qb_name} for the ${city(m.home)}.`);
-  const fin = finalSentence(m);
-  return `<section class="card summary">
-  <p style="margin:0">${esc(parts.join(" "))}</p>${fin ? `\n  <p style="margin:10px 0 0"><b>${esc(fin)}</b></p>` : ""}
+  const open = opening(m);
+  return `<section class="card summary">${open.length ? `
+  <p style="margin:0 0 10px">${esc(open.join(" "))}</p>` : ""}
+  <p style="margin:0">${esc(parts.join(" "))}</p>
 </section>`;
 }
 
@@ -156,7 +158,7 @@ function drivers(m, row) {
 function why(m) {
   const g = m.leo && m.leo.game;
   if (!g || !g.pick) return "";
-  const D = drivers(m);
+  const D = driversAny(m);
   const items = [];
   const push = (label, p, words) => {
     if (p == null) return;
@@ -178,7 +180,7 @@ function why(m) {
   const SKILL = /^(QB|RB|WR|TE)$/;
   const outs = side => ((m.injuries && m.injuries[side] && m.injuries[side].listed) || []).filter(p => SKILL.test(p.pos) && /^(Out|Doubtful)$/i.test(p.status));
   const missing = ["away", "home"].map(side => { const o = outs(side); return o.length ? `${city(side === "away" ? m.away : m.home)}: ${list(o.map(p => `${p.pos} ${p.player}${/doubtful/i.test(p.status) ? " (doubtful)" : ""}`))}` : null; }).filter(Boolean);
-  if (missing.length) items.push(`<li><b>Who is out:</b> ${esc(missing.join("; "))}. Leo's win chance adjusts for the starting quarterback only; other absences are listed for context and do move the player projections.</li>`);
+  if (missing.length) items.push(`<li><b>Who is out:</b> ${esc(missing.join("; "))}.</li>`);
   const marginTeam = g.proj_spread > 0 ? m.home : g.proj_spread < 0 ? m.away : null;
   let note = "";
   if (g.proj_spread != null && (marginTeam !== g.pick || Math.abs(g.proj_spread) < 1.5)) {
@@ -188,9 +190,133 @@ function why(m) {
   const when = m.leo.captured_at ? new Date(m.leo.captured_at).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + " ET" : "";
   return `
   <h2 class="sec">Why Leo has the ${esc(TEAMS.nick(g.pick))} at ${pct(g.prob)}</h2>
-  <p class="sub">What moved Leo's win chance away from a coin flip for this game, ${m.leo.early ? "from Leo's early read, which updates until kickoff" : "from the inputs frozen before kickoff"}.</p>
+  <p class="sub">What moved ${esc(TEAMS.nick(m.away))} at ${esc(TEAMS.nick(m.home))} away from a coin flip${m.leo.early ? ", early read" : ""}.</p>
   <ul style="margin:0 0 6px;padding-left:20px;line-height:1.7">${items.join("")}</ul>${note}
-  <p class="dim" style="margin:8px 0 0">Leo knows team results, quarterback play and the injury report as of its last read${when ? ` (${esc(when)})` : ""}. It does not know game plans, weather changes or news after that read.</p>`;
+  <p class="dim" style="margin:8px 0 0">As of ${esc(when || "the last read")}. <a href="/nfl/how-leo-works/#read">What Leo knows</a></p>`;
 }
 
-module.exports = { summary, why, finalSentence, drivers };
+// drivers() with the picks file's ml_inputs as a fallback, so early reads
+// (which write no ml-inputs-history row) still get the split. Same check.
+function driversAny(m) {
+  const D = drivers(m);
+  if (D) return D;
+  try {
+    const P = JSON.parse(fs.readFileSync(path.join(ROOT, "data/nfl", `picks-${m.date}.json`), "utf8")).find(p => p.game_id === m.game_id || p.matchup === m.matchup);
+    if (P && P.ml_inputs) return drivers(m, { ...P.ml_inputs, home_qb_name: P.home_qb, away_qb_name: P.away_qb });
+  } catch (e) { /* no picks file */ }
+  return null;
+}
+
+/* ---- HO-0069: an opening only true of this game, and "What happened". ---- */
+
+// Every completed 2026 game, from the results-<date>.json files (each holds
+// the games finished before that slate). Deduplicated by game_id.
+let GAMES = null;
+function games() {
+  if (GAMES) return GAMES;
+  const by = new Map();
+  try {
+    for (const f of fs.readdirSync(path.join(ROOT, "data/nfl"))) {
+      if (!/^results-\d{4}-\d{2}-\d{2}\.json$/.test(f)) continue;
+      let rows; try { rows = JSON.parse(fs.readFileSync(path.join(ROOT, "data/nfl", f), "utf8")); } catch (e) { continue; }
+      for (const r of Array.isArray(rows) ? rows : []) if (r.game_id && r.home_score != null && r.away_score != null) by.set(r.game_id, r);
+    }
+  } catch (e) { /* none */ }
+  GAMES = [...by.values()].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  return GAMES;
+}
+const words = ["no", "one", "two", "three"];
+function form(team, before) {
+  const last = games().filter(g => g.date < before && (g.home === team || g.away === team)).slice(-3);
+  if (!last.length) return "";
+  const res = last.map(g => {
+    const us = g.home === team ? g.home_score : g.away_score, them = g.home === team ? g.away_score : g.home_score;
+    const opp = city(g.home === team ? g.away : g.home);
+    return us === them ? `tied the ${opp} ${us} to ${them}` : us > them ? `beat the ${opp} ${us} to ${them}` : `lost to the ${opp} ${them} to ${us}`;
+  }).reverse();
+  const w = last.filter(g => (g.home === team ? g.home_score > g.away_score : g.away_score > g.home_score)).length;
+  const head = w === last.length ? `have won ${last.length === 1 ? "their last game" : `${words[last.length]} straight`}`
+    : w === 0 ? `have lost ${last.length === 1 ? "their last game" : `${words[last.length]} straight`}`
+    : `are ${w} and ${last.length - w} in their last ${words[last.length]}`;
+  return `The ${city(team)} ${head}: they ${list(res)}.`;
+}
+function lastMeeting(m) {
+  const g = games().filter(x => x.date < m.date && ((x.home === m.home && x.away === m.away) || (x.home === m.away && x.away === m.home))).pop();
+  if (!g) return "";
+  const w = g.home_score === g.away_score ? null : g.home_score > g.away_score ? g.home : g.away;
+  const hi = Math.max(g.home_score, g.away_score), lo = Math.min(g.home_score, g.away_score);
+  return w ? `They met in Week ${g.week}, when the ${city(w)} won ${hi} to ${lo}${w === g.home ? " at home" : " on the road"}.` : `They met in Week ${g.week} and tied ${hi} to ${lo}.`;
+}
+// The absence that matters most: a starting quarterback first, then the most
+// used back, receiver or tight end listed Out or Doubtful. Only the
+// quarterback moves the win chance; the others move the player projections.
+function biggestAbsence(m) {
+  const best = [];
+  for (const side of ["away", "home"]) {
+    const team = m[side], listed = (m.injuries && m.injuries[side] && m.injuries[side].listed) || [];
+    const S = (m.sides && m.sides[side] && m.sides[side].this_season) || {};
+    const usage = {};
+    for (const k of Object.keys(S)) { const p = S[k]; if (p && p.name) usage[p.name] = { pos: p.pos, touches: (p.att || 0) * (p.pos === "QB" ? 1 : 0) + (p.car || 0) + (p.tgt || 0), games: p.games, p }; }
+    for (const x of listed) {
+      if (!/^(Out|Doubtful)$/i.test(x.status) || !/^(QB|RB|WR|TE)$/.test(x.pos)) continue;
+      const u = usage[x.player]; if (!u) continue;
+      best.push({ team, x, u, score: (x.pos === "QB" ? 1e6 : 0) + u.touches });
+    }
+  }
+  best.sort((a, b) => b.score - a.score);
+  const B = best[0]; if (!B) return "";
+  const st = /doubtful/i.test(B.x.status) ? "doubtful" : "out";
+  const posName = { QB: "quarterback", RB: "running back", WR: "receiver", TE: "tight end" }[B.x.pos];
+  if (B.x.pos === "QB") {
+    const qb = B.team === m.home ? m.home_qb_name : m.away_qb_name;
+    return `The biggest absence is ${posName} ${B.x.player}, ${st} for the ${city(B.team)}${qb && qb !== B.x.player ? `, so Leo's win chance is built on ${qb} instead` : ""}.`;
+  }
+  const P = B.u.p, vol = B.x.pos === "RB" ? `${P.car || 0} carries and ${P.tgt || 0} targets` : `${P.tgt || 0} targets`;
+  return `The biggest absence is ${posName} ${B.x.player}, ${st} for the ${city(B.team)} after ${vol} in ${B.u.games} games; that moves the projections for the ${city(B.team)} players, not the win chance.`;
+}
+function opening(m) {
+  const g = m.leo && m.leo.game, out = [];
+  const D = g && g.pick ? driversAny(m) : null;
+  if (D) {
+    const k = ["qb_diff", "off_diff", "def_diff", "home"].sort((a, b) => Math.abs(D.pts[b] || 0) - Math.abs(D.pts[a] || 0))[0];
+    const p = D.pts[k], n = Math.round(Math.abs(p)), team = p > 0 ? m.home : m.away, other = team === m.home ? m.away : m.home;
+    if (n >= 1) {
+      const worth = `worth about ${n} point${n === 1 ? "" : "s"} of win chance to the ${city(team)}`;
+      const hq = D.row.home_qb_name || m.home_qb_name, aq = D.row.away_qb_name || m.away_qb_name;
+      if (k === "qb_diff" && hq && aq) out.push(`The quarterbacks are the biggest reason for Leo's number: ${team === m.home ? hq : aq} rates ahead of ${team === m.home ? aq : hq}, ${worth}.`);
+      else if (k === "off_diff") out.push(`The offenses are the biggest reason for Leo's number: the ${city(team)} rate ahead of the ${city(other)} with the ball, ${worth}.`);
+      else if (k === "def_diff") out.push(`The defenses are the biggest reason for Leo's number: the ${city(team)} rate ahead of the ${city(other)} without the ball, ${worth}.`);
+      else if (k === "home") out.push(`Home field is the biggest part of Leo's number for the ${city(m.home)} against the ${city(m.away)}, about ${n} point${n === 1 ? "" : "s"} of win chance, because the teams otherwise rate close.`);
+    }
+  }
+  const fa = form(m.away, m.date), fh = form(m.home, m.date);
+  if (fa) out.push(fa);
+  if (fh) out.push(fh);
+  const lm = lastMeeting(m); if (lm) out.push(lm);
+  const ab = biggestAbsence(m); if (ab) out.push(ab);
+  return out;
+}
+
+// After the game: the score, Leo right or wrong, the calls, and the miss
+// reason with its evidence, from data/nfl/results-review.json (the labels of
+// /nfl/results/). Shown near the top once the game is final.
+let REVIEW = null;
+function reviewFor(m) {
+  if (REVIEW === null) { try { REVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data/nfl/results-review.json"), "utf8")); } catch (e) { REVIEW = false; } }
+  if (!REVIEW) return null;
+  return REVIEW.games.find(x => x.date === m.date && x.away === m.away && x.home === m.home) || null;
+}
+const REASON = { injury_input: "Injury input", market_knew: "The market knew", overtime: "Overtime", blowout: "Blowout", variance: "Variance", model_error: "Leo's error" };
+function whatHappened(m) {
+  const fin = finalSentence(m);
+  if (!fin) return "";
+  const R = reviewFor(m), miss = R && R.miss;
+  const why = miss ? `<p style="margin:10px 0 0"><b>Why Leo missed: ${esc(REASON[miss.reason] || miss.reason)}.</b> ${esc(miss.evidence)} <a href="/nfl/results/">Leo&rsquo;s record</a></p>`
+    : R ? `<p style="margin:10px 0 0">No miss for Leo in this game. <a href="/nfl/results/">Leo&rsquo;s record</a></p>` : "";
+  return `<section class="card summary">
+  <h2 class="sec" style="margin-top:0">What happened</h2>
+  <p style="margin:0">${esc(fin)}</p>${why}
+</section>`;
+}
+
+module.exports = { summary, why, finalSentence, drivers, opening, whatHappened };
