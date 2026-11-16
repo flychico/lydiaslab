@@ -379,7 +379,8 @@ function wireAllSignupForms(root) {
             email: email,
             name: nameEl ? nameEl.value.trim() : "",
             list: list,
-            source: location.pathname,
+            // The page, plus the X post it came from (utm_campaign), short enough for the worker's 80 character limit (SEO-24).
+            source: (function () { var c = ""; try { c = new URLSearchParams(location.search).get("utm_campaign") || ""; } catch (_) {} return location.pathname + (c ? " x:" + c.slice(0, 30) : ""); })(),
             "bot-field": "",
             "subscription-id": subIdEl ? subIdEl.value : ""
           }).toString()
