@@ -92,7 +92,7 @@ ${GA_HEAD}
 <link rel="canonical" href="${ORIGIN}${url}">
 <meta property="og:type" content="article"><meta property="og:site_name" content="Leo">
 <meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}">
-<meta property="og:url" content="${ORIGIN}${url}"><meta property="og:image" content="${ORIGIN}/img/og-card.png">
+<meta property="og:url" content="${ORIGIN}${url}"><meta property="og:image" content="${ORIGIN}/img/leo-card.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/scoreboard.css">

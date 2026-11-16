@@ -169,7 +169,7 @@ function sanitizePublicLanguage(html) {
 // --- Head tags: analytics + social cards, single source of truth ---
 function ensureHeadTags(html, rel) {
   const GA_ID = "G-XVWTMDNBJK";
-  const OG_IMAGE = "https://ndhorizon.com/img/og-card.png";
+  const OG_IMAGE = "https://ndhorizon.com/img/leo-card.png";
   let out = html;
   if (!/<head[\s>]/i.test(out)) return out;
 

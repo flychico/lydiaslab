@@ -188,7 +188,7 @@ ${GA_HEAD}
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(desc)}">
 <link rel="canonical" href="${ORIGIN}/results/">
-<meta property="og:type" content="website"><meta property="og:site_name" content="Leo"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${ORIGIN}/results/"><meta property="og:image" content="${ORIGIN}/img/og-card.png"><meta name="twitter:card" content="summary_large_image">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Leo"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${ORIGIN}/results/"><meta property="og:image" content="${ORIGIN}/img/leo-card.png"><meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="/css/style.css">
 <style>
 .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:16px 0}

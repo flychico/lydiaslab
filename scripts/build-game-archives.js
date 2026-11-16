@@ -55,7 +55,7 @@ function shell({ sport, url, title, description, h1, intro, body, links }) {
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:url" content="${ORIGIN}${url}">
-<meta property="og:image" content="${ORIGIN}/img/og-card.png">
+<meta property="og:image" content="${ORIGIN}/img/leo-card.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="/css/style.css">
 <style>

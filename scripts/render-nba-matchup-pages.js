@@ -178,7 +178,7 @@ function page(g, res) {
 <meta name="description" content="${esc(desc)}">
 <meta property="og:type" content="article"><meta property="og:site_name" content="Leo">
 <meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}">
-<meta property="og:url" content="${url}"><meta property="og:image" content="https://ndhorizon.com/img/og-card.png">
+<meta property="og:url" content="${url}"><meta property="og:image" content="https://ndhorizon.com/img/leo-card.png">
 <link rel="canonical" href="${url}">
 <link rel="stylesheet" href="/css/style.css">
 <style>
