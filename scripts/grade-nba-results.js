@@ -48,6 +48,7 @@ const COLS = ["date", "game_id", "away", "home", "away_score", "home_score", "ma
   "home_ml", "away_ml", "pick_side", "pick_team", "pick_p", "pick_price", "pick_result", "pick_units",
   "lean_price", "lean_units", "price_source", "pick_close_price", "pick_close_source"];
 const PK = require("./lib/nba-picks");
+const LOCK = require("./lib/nba-pick-lock");   // from 2026-11-16 a Leo Pick is graded at its locked price (DEC-20261116-30)
 /* Leo Pick and lean units from the read of record (DEC-20261102-30). p is that
    prediction-history row (or null when it cannot be found). Prices are the
    DraftKings numbers stored before tip; nothing is looked up after the game. */
@@ -55,7 +56,7 @@ function moneyFields(p, margin, leanSide, leanResult) {
   const o = { home_ml: p ? p.home_ml ?? "" : "", away_ml: p ? p.away_ml ?? "" : "", pick_side: "", pick_team: "", pick_p: "", pick_price: "", pick_result: "", pick_units: "",
     lean_price: "", lean_units: "", price_source: "" };
   if (p) {
-    const pk = PK.pick({ p_home: p.leo_p_home, home_ml: p.home_ml, away_ml: p.away_ml, home: p.home, away: p.away });
+    const pk = LOCK.apply(p.date, p.game_id, PK.pick({ p_home: p.leo_p_home, home_ml: p.home_ml, away_ml: p.away_ml, home: p.home, away: p.away }));
     if (pk && pk.ok) {
       const res = pk.side === "home" ? (margin > 0 ? "win" : "loss") : (margin < 0 ? "win" : "loss");
       Object.assign(o, { pick_side: pk.side, pick_team: pk.team, pick_p: pk.p.toFixed(3), pick_price: pk.price, pick_result: res, pick_units: PK.units(res, pk.price).toFixed(3) });

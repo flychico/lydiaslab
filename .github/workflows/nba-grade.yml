@@ -98,6 +98,11 @@ jobs:
       - name: Grading waves
         run: node scripts/build-nba-waves.js "${{ steps.g.outputs.date }}" || echo "::warning::NBA waves not written"
 
+      # X post words for each new wave and the whole night (HO-0087 part B), from the
+      # waves file, ledger, misses and box scores. Never rewrites a post; never blocks the run.
+      - name: Social posts
+        run: node scripts/build-nba-social.js "${{ steps.g.outputs.date }}" || echo "::warning::NBA social posts not written"
+
       - name: Commit and push if changed
         run: |
           set -euo pipefail
