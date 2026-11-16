@@ -154,6 +154,11 @@ jobs:
       - name: Build game day waves
         run: node scripts/build-nfl-waves.js ${{ steps.dates.outputs.list }} || true
 
+      # X post text (HO-0087, DEC-20261116-50): one results post per new wave and
+      # one for the day once every game with a Leo read is graded; never rewritten.
+      - name: Build X posts
+        run: node scripts/build-nfl-social.js ${{ steps.dates.outputs.list }} || true
+
       # Leo data feed (HO-0063, DEC-20261113-51): the public 7 day sample and
       # the schema in data/feed/nfl/. The full season file is only written with
       # --out and is never committed.

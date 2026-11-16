@@ -110,6 +110,8 @@ jobs:
           node scripts/generate-sitemap.js
           # Leo's frozen touchdown chances for the scoreboard's live tracker.
           node scripts/build-nfl-td-reads.js "${{ steps.slate_date.outputs.date }}" || true
+          # X post text for the slate (HO-0087): refreshed until the first kickoff, then frozen.
+          node scripts/build-nfl-social.js "${{ steps.slate_date.outputs.date }}" || true
 
       # The one safety net, matching the spirit of publish-picks.yml: refuse
       # to publish something structurally broken. An EMPTY slate is not an
