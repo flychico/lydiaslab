@@ -139,9 +139,11 @@ function main() {
     }
   }
 
-  const games = parseCSV(execFileSync("curl",
+  // Finals from nflverse; on game day ESPN fills games nflverse has not
+  // finished yet, only once ESPN marks them completed (HO-0076, DEC-20261115-52).
+  const games = require("./lib/nfl-finals").espnOverlay(parseCSV(execFileSync("curl",
     ["-sSL","--fail","--max-time","120", FEED],
-    { maxBuffer: 1024*1024*512, encoding: "utf8" }));
+    { maxBuffer: 1024*1024*512, encoding: "utf8" })), DATE);
 
   /*
     NEVER GRADE A LIVE GAME.

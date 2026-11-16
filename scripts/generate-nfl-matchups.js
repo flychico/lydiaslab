@@ -99,7 +99,8 @@ function teamProfile(rows, team, active){
 (function main(){
   const target = process.argv[2] || new Date(Date.now()+864e5).toISOString().slice(0,10);
   console.log(`NFL matchups for ${target}`);
-  const games = get(FEED).filter(g=>g.gameday===target)
+  // ESPN fills finals nflverse has not posted yet (HO-0076, DEC-20261115-52).
+  const games = require("./lib/nfl-finals").espnOverlay(get(FEED), target).filter(g=>g.gameday===target)
                   .sort((a,b)=>String(a.gametime).localeCompare(String(b.gametime)));
   if(!games.length){ console.log("No games on that date. Nothing written."); return; }
 

@@ -285,6 +285,10 @@ for (const f of ["css/style.css","css/scoreboard.css"]) {
     const t = JSON.parse(fs.readFileSync(tf, "utf8"));
     const ledgerDates = new Set(fs.readFileSync(pf, "utf8").split(/\r?\n/).slice(1)
       .filter(Boolean).map(l => l.split(",")[0]));
+    // Game calls can be graded on game day (waves, HO-0076) before props are,
+    // so the tracker is current when it reaches the newest date in either ledger.
+    const gf = P("data/nfl/nfl-results-log.csv");
+    if (fs.existsSync(gf)) for (const l of fs.readFileSync(gf, "utf8").split(/\r?\n/).slice(1)) if (l) ledgerDates.add(l.split(",")[0]);
     const newest = [...ledgerDates].sort().pop();
     if (t.through !== newest) {
       fail("TRACKER", `tracker covers through ${t.through} but the ledger has ${newest} — rebuild it`);

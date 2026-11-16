@@ -20,6 +20,13 @@ name: NFL grade results
 # stats on a lag that varies, and late windows (Sunday night, Monday night)
 # land on the following calendar day in UTC.
 #
+# WAVE MODE (HO-0076, DEC-20261115-52): dispatched with wave=true on game day
+# about an hour after each kickoff window. Game calls are graded from ESPN's
+# final scores when nflverse has not posted the game yet (scripts/lib/nfl-finals.js),
+# the pages rebuild, and data/nfl/waves/<date>.json gets the finished window.
+# Props, the feed, CLV, learning and every email wait for the morning run,
+# which works exactly as before.
+#
 # UTC/DST: same caveat as every other workflow here. Times are given as
 # EDT / EST; from 2026-11-01 each fires an hour earlier in ET (DEC-20261031-03).
 
@@ -39,6 +46,11 @@ on:
         description: "YYYY-MM-DD to grade. Blank = grade yesterday and today."
         required: false
         type: string
+      wave:
+        description: "Game day wave: grade game calls only (moneyline, spread, total) from ESPN finals, rebuild pages and write data/nfl/waves/. Skips props, feed, CLV, learning and emails."
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -92,6 +104,7 @@ jobs:
           done
 
       - name: Grade player props
+        if: ${{ github.event.inputs.wave != 'true' }}
         run: |
           set -euo pipefail
           for D in ${{ steps.dates.outputs.list }}; do
@@ -128,12 +141,24 @@ jobs:
       - name: Build results pages
         run: |
           node scripts/build-nfl-results-pages.js || true
+          # The week card reads the results review for Won or Lost, so it is
+          # rebuilt once the review is current (the render above ran before it).
+          for d in ${{ steps.dates.outputs.list }}; do
+            node scripts/generate-nfl-week-card.js "$d" || true
+          done
           node scripts/generate-sitemap.js || true
+
+      # Game day waves (HO-0076): each kickoff window, once all its games are
+      # graded, appended to data/nfl/waves/<date>.json. Runs on every grade run
+      # so a missed wave dispatch is filled by the next run. Display only.
+      - name: Build game day waves
+        run: node scripts/build-nfl-waves.js ${{ steps.dates.outputs.list }} || true
 
       # Leo data feed (HO-0063, DEC-20261113-51): the public 7 day sample and
       # the schema in data/feed/nfl/. The full season file is only written with
       # --out and is never committed.
       - name: Build data feed sample
+        if: ${{ github.event.inputs.wave != 'true' }}
         run: node scripts/build-nfl-feed.js || true
 
       # Members' morning after review (HO-0060, DEC-20261113-50): every miss
@@ -142,6 +167,7 @@ jobs:
       # (data/email-log/nfl-review-<date>.json), never before 7am ET, only
       # recent game days, and a no-op when secrets or members are missing.
       - name: Email members the morning review
+        if: ${{ github.event.inputs.wave != 'true' }}
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
@@ -152,20 +178,24 @@ jobs:
       # Closing line value (DEC-20261101-02): did the market move toward Leo
       # between his first read and kickoff? Private; feeds the owner brief.
       - name: Closing line value
+        if: ${{ github.event.inputs.wave != 'true' }}
         run: node scripts/generate-nfl-clv.js || true
 
       # Factor attribution per market, from frozen pre-kickoff projections.
       # Answers WHICH input made a projection wrong, not just that it was.
       - name: Learning — factor reports
+        if: ${{ github.event.inputs.wave != 'true' }}
         run: node scripts/generate-nfl-learning.js
 
       - name: Health check
+        if: ${{ github.event.inputs.wave != 'true' }}
         run: node scripts/nfl-healthcheck.js
 
       # Owner audit (DEC-20261017-08): every game of a graded date, Leo's
       # frozen read against the result, emailed to the AUDIT_EMAIL secret.
       # Once per date, only when every game is final and graded.
       - name: Email the owner audit
+        if: ${{ github.event.inputs.wave != 'true' }}
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
@@ -185,6 +215,12 @@ jobs:
             echo "No new grades to commit."
             exit 0
           fi
-          git commit -m "NFL grade results ${{ steps.dates.outputs.list }}"
-          git pull --rebase
-          git push
+          git commit -m "NFL grade results${{ github.event.inputs.wave == 'true' && ' (wave)' || '' }} ${{ steps.dates.outputs.list }}"
+          # Sunday NBA and NFL runs push in the same minutes; retry instead of
+          # losing the grade (the NBA side lost a card this way on Nov 15).
+          for i in 1 2 3 4 5; do
+            if git pull --rebase -X theirs && git push; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((i * 6))
+          done
+          echo "Push failed after 5 tries."; exit 1
