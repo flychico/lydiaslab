@@ -157,6 +157,36 @@ function frozenPredictions(file, date) {
 }
 
 /*
+  Every read saved before kickoff for a date, by game_id, oldest first, in the
+  same shape as frozenPredictions(). Used with nfl-calls.js held(): a call made
+  by an earlier read before kickoff is not removed by a later one
+  (DEC-20261115-53).
+*/
+function preKickoffReads(file, date) {
+  const out = new Map();
+  if (!fs.existsSync(file)) return out;
+  const lines = fs.readFileSync(file, "utf8").split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) return out;
+  const header = splitCsv(lines[0]);
+  const num = v => { const x = parseFloat(v); return Number.isFinite(x) ? x : null; };
+  for (let i = 1; i < lines.length; i++) {
+    const c = splitCsv(lines[i]);
+    const r = {}; header.forEach((h, j) => r[h] = c[j]);
+    if (date && r.date !== date) continue;
+    const cap = Date.parse(r.captured_at), kick = Date.parse(r.kickoff_utc);
+    if (!Number.isFinite(kick) || !Number.isFinite(cap) || !(cap < kick)) continue;
+    const row = { date: r.date, game_id: r.game_id, matchup: r.matchup, away: r.away, home: r.home,
+      captured_at: r.captured_at, kickoff_utc: r.kickoff_utc, pick: r.pick,
+      model_prob: num(r.model_prob), price: num(r.price), proj_total: num(r.proj_total), total_line: num(r.total_line),
+      proj_spread: num(r.proj_spread), spread_line: num(r.spread_line), exp_margin: num(r.exp_margin) };
+    if (!out.has(r.game_id)) out.set(r.game_id, []);
+    out.get(r.game_id).push(row);
+  }
+  for (const v of out.values()) v.sort((a, b) => a.captured_at.localeCompare(b.captured_at));
+  return out;
+}
+
+/*
   PROP PREDICTIONS — same freeze, same reason.
 
   generate-nfl-props.js rebuilds every projection from weekly player stats,
@@ -227,4 +257,4 @@ function frozenProps(file, date) {
   return out;
 }
 
-module.exports = { record, frozenPredictions, recordProps, frozenProps, kickoffUtc, COLS, PROP_COLS };
+module.exports = { record, frozenPredictions, preKickoffReads, recordProps, frozenProps, kickoffUtc, COLS, PROP_COLS };

@@ -206,7 +206,8 @@ function main() {
   // off). Line miss is |line - actual|, the same convention beat_market uses.
   const lines = { spread: [], total: [] };
   for (const r of gameRows) {
-    if (!lines[r.market] || r.status !== "frozen") continue;
+    // held_earlier_read: a call kept from an earlier read before kickoff (DEC-20261115-53).
+    if (!lines[r.market] || (r.status !== "frozen" && r.status !== "held_earlier_read")) continue;
     const leo = n(r.leo_value), mkt = n(r.market_value), act = n(r.actual_value);
     if (leo == null || act == null) continue;
     lines[r.market].push({

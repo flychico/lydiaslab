@@ -91,7 +91,29 @@ function grade(c, g, final) {
   return "";
 }
 
-const api = { RULES, calls, grade };
+/**
+ * Calls stay once made (Lynold, 2026-11-15, DEC-20261115-53): a reader who saw
+ * "Over 40.5" before kickoff could act on it, so a later read where the line
+ * moved never removes the call. reads = every capture saved before kickoff for
+ * one game, any order. For each market: the call of the last read when it has
+ * one (graded at that read, as before); otherwise the call of the latest
+ * earlier read that had one, graded at that read's line and price. A side
+ * change between two calls still follows the last read. Returns
+ * { ml, spread, total }, each { call, label, row } where row is the read whose
+ * numbers the call is graded on (null when no read ever made a call).
+ */
+function held(reads) {
+  const rows = (reads || []).slice().sort((a, b) => String(a.captured_at).localeCompare(String(b.captured_at)));
+  const out = {};
+  for (const mk of ["ml", "spread", "total"]) {
+    let hit = null;
+    for (let i = rows.length - 1; i >= 0; i--) { const c = calls(rows[i])[mk]; if (c.call) { hit = { call: c.call, label: c.label, row: rows[i], held: i !== rows.length - 1 }; break; } }
+    out[mk] = hit || { call: null, row: null };
+  }
+  return out;
+}
+
+const api = { RULES, calls, grade, held };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else if (typeof window !== "undefined") window.NFL_CALLS = api;
 })();

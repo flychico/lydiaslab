@@ -36,7 +36,7 @@ const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
 const { splitCsv } = require("./lib/odds-history");
-const { frozenPredictions } = require("./lib/prediction-history");
+const { frozenPredictions, preKickoffReads } = require("./lib/prediction-history");
 
 const FEED = "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv";
 const DIR  = path.join(__dirname, "..", "data", "nfl");
@@ -166,6 +166,12 @@ function main() {
   }
   if (live) console.log(`  ${live} game(s) have scores but no final result — in progress, not graded.`);
 
+  // DEC-20261115-53: a call made by any read before kickoff stays, even when a
+  // later read (the line moved) would have passed. held() keeps the last read's
+  // call when it has one, else the latest earlier call, graded at that read.
+  const READS = preKickoffReads(path.join(DIR, "prediction-history.csv"), DATE);
+  const heldFor = p => DATE >= CALLS.RULES.FROM ? CALLS.held(READS.get(p.game_id) || [p]) : null;
+
   const rows = [];
   const gradedAt = new Date().toISOString();
   let finished = 0, pending = 0, skipped = 0;
@@ -181,6 +187,7 @@ function main() {
     const total  = g.hs + g.as;
     const winner = margin > 0 ? p.home : margin < 0 ? p.away : "TIE";
 
+    const H = heldFor(p);
     const base = {
       date: DATE, graded_at: gradedAt, game_id: p.game_id, matchup: p.matchup,
       away: p.away, home: p.home, week: p.week, model_version: p.model_version
@@ -207,12 +214,13 @@ function main() {
       let res = (tooClose || retired) ? "" : winner === "TIE" ? "P" : (p.pick === winner ? "W" : "L");
       // DEC-20261102-01: from 2026-11-05 a moneyline call also needs a price
       // better than -230; a dearer favourite is a PASS, kept ungraded.
-      const mlCall = DATE >= CALLS.RULES.FROM ? CALLS.calls(p).ml : null;
-      if (mlCall) res = mlCall.call ? (winner === "TIE" ? "P" : (p.pick === winner ? "W" : "L")) : "";
+      const mlCall = H ? H.ml : null;
+      if (mlCall) res = mlCall.call ? (winner === "TIE" ? "P" : (mlCall.call === winner ? "W" : "L")) : "";
+      const mlRow = mlCall && mlCall.row ? mlCall.row : p;
       rows.push({ ...base, market: "moneyline",
         status: retired ? "win_probability" : tooClose ? "too_close_to_call" : (mlCall && !mlCall.call) ? "pass_price" : p.status,
-        leo_side: p.pick, leo_value: r3(p.model_prob), market_value: r3(p.market_prob),
-        market_price: p.price ?? "",
+        leo_side: mlRow.pick, leo_value: r3(p.model_prob), market_value: r3(p.market_prob),
+        market_price: mlRow.price ?? "",
         edge: r3(p.edge), actual_value: winner, result: res,
         market_result: mktHome == null ? "" : (mktHome >= 0.5) === (homeOutcome === 1) ? "W" : "L",
         beat_market: mktBrier == null ? "" : (leoBrier < mktBrier ? "Y" : "N"),
@@ -235,19 +243,20 @@ function main() {
 
     // ---- total ----------------------------------------------------------
     if (p.proj_total != null && !done("total")) {
-      const line = n(p.total_line);
+      const tRow = H && H.total.row ? H.total.row : p;
+      const line = n(tRow.total_line);
       const gap = line == null ? null : p.proj_total - line;
       // No side when the frozen prediction named none (DEC-20261017-03: totals
       // sides are off while no backtest supports them). Older captures always
       // carried the sign of the gap here, so their grading is unchanged.
       let side = gap == null || Math.abs(gap) < TOTAL_FLOOR || !p.total_side ? "" : (gap > 0 ? "Over" : "Under");
-      if (DATE >= CALLS.RULES.FROM) side = CALLS.calls(p).total.call || "";   // DEC-20261102-01
+      if (H) side = H.total.call || "";   // DEC-20261102-01, DEC-20261115-53
       const res = !side ? "" : total === line ? "P"
                 : ((total > line) === (side === "Over") ? "W" : "L");
-      const leoErr = Math.abs(p.proj_total - total);
+      const leoErr = Math.abs(tRow.proj_total - total);
       const mktErr = line == null ? null : Math.abs(line - total);
-      rows.push({ ...base, market: "total", status: p.total_status,
-        leo_side: side, leo_value: p.proj_total, market_value: line,
+      rows.push({ ...base, market: "total", status: H && H.total.held ? "held_earlier_read" : p.total_status,
+        leo_side: side, leo_value: tRow.proj_total, market_value: line,
         edge: r3(p.total_edge), actual_value: total, result: res,
         market_result: "", beat_market: mktErr == null ? "" : (leoErr < mktErr ? "Y" : "N"),
         abs_error: r3(leoErr), brier: "",
@@ -258,21 +267,22 @@ function main() {
     // spread_line is stated from the HOME side (NFL_WATCH_LIST #3): positive
     // means the home team is favoured by that many.
     if (p.proj_spread != null && !done("spread")) {
-      const line = n(p.spread_line);
+      const sRow = H && H.spread.row ? H.spread.row : p;
+      const line = n(sRow.spread_line);
       // both numbers are stated from the home side: Leo takes the home team
       // when he expects them to beat the line, the away team when he doesn't
-      const gap = line == null ? null : p.proj_spread - line;
+      const gap = line == null ? null : sRow.proj_spread - line;
       let side = gap == null || Math.abs(gap) < SPREAD_FLOOR ? "" : (gap > 0 ? p.home : p.away);
-      if (DATE >= CALLS.RULES.FROM) side = CALLS.calls(p).spread.call || "";  // DEC-20261102-01
+      if (H) side = H.spread.call || "";  // DEC-20261102-01, DEC-20261115-53
       let res = "";
       if (side) {
         res = "P";
         if (margin !== line) res = ((side === p.home) === (margin > line)) ? "W" : "L";
       }
-      const leoErr = Math.abs(p.proj_spread - margin);
+      const leoErr = Math.abs(sRow.proj_spread - margin);
       const mktErr = line == null ? null : Math.abs(line - margin);
-      rows.push({ ...base, market: "spread", status: p.spread_status,
-        leo_side: side, leo_value: p.proj_spread, market_value: line,
+      rows.push({ ...base, market: "spread", status: H && H.spread.held ? "held_earlier_read" : p.spread_status,
+        leo_side: side, leo_value: sRow.proj_spread, market_value: line,
         edge: r3(p.spread_edge), actual_value: margin, result: res,
         market_result: "", beat_market: mktErr == null ? "" : (leoErr < mktErr ? "Y" : "N"),
         abs_error: r3(leoErr), brier: "",
