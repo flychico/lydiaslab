@@ -75,8 +75,10 @@ function hashtags(codes) {
   for (const c of codes) { const t = (TAGS.teams[c] || {}).primary; if (t && !out.includes(t) && out.length < 4) out.push(t); }
   return out;
 }
-function compose(header, open, lines, facts, tags, link, season) {
-  const parts = [header, open ? `\n${open}` : "", "", ...lines, season ? `Season: ${season}` : null, facts.length ? "" : null, ...facts, "", tags.join(" "), `${link} · 21+`];
+// Same shape as the NFL posts (Lynold, NFL chat 2026-11-16): header, plain record, lines with
+// winners on top, facts, then the link, "21+" and the hashtags. No "BANG", no "Leo saw it", no ✨.
+function compose(header, open, lines, facts, tags, link, season, linkLine) {
+  const parts = [header, open || null, "", ...lines, season ? `Season: ${season}` : null, facts.length ? "" : null, ...facts, "", linkLine || link, `21+ ${tags.join(" ")}`];
   return parts.filter(x => x !== null).join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 function recordOf(items) {
@@ -104,15 +106,15 @@ function picksPost() {
       .forEach(({ g, side, p }) => items.push({ game_id: String(g.game_id), type: "read", side, p, team: nick(g, side), code: code(g, side) }));
   }
   const day = weekday(DATE).toUpperCase();
-  const header = kind === "picks" ? `NBA ${day}: ${items.length === 1 ? "LEO'S PICK" : "LEO'S PICKS"} 🏀` : `NBA ${day}: LEO'S READS 🏀`;
-  const lines = items.map(i => i.type === "pick" ? `${i.team} ML ${fmtPrice(i.price)} (${pct(i.p)})` : `${i.team} to win (${pct(i.p)})`);
-  const open1 = kind === "picks" ? "" : "No Leo Pick tonight. Strongest reads to win:";
-  // The price shown is the locked price the pick is graded at (DEC-20261116-30).
-  const facts = kind === "picks" ? ["The % is Leo's chance to win. Write it down 📝"] : ["Reads, not picks. Graded anyway 📝"];
+  const header = `NBA ${day} 🏀`;
+  // The price shown is the locked price the pick is graded at (DEC-20261116-30); the % is Leo's chance to win.
+  const lines = [kind === "picks" ? "Leo picks:" : "No Leo Pick tonight. Leo's strongest reads to win:",
+    ...items.map(i => i.type === "pick" ? `${i.team} ML ${fmtPrice(i.price)} (${pct(i.p)})` : `${i.team} (${pct(i.p)})`)];
+  const facts = [];
   const tags = hashtags(items.map(i => i.code));
-  const link = `ndhorizon.com/nba/predictions/${DATE}/`;
+  const link = `https://ndhorizon.com/nba/predictions/${DATE}/`;
   return { id: "picks", kind: "picks", created_at: NOW.toISOString(), header, lines, record: "", facts, hashtags: tags,
-    text: compose(header, open1, lines, facts, tags, link), link: `https://${link}`, items };
+    text: compose(header, "What would Leo do?", lines, facts, tags, link), link, items };
 }
 
 /* ---------- results posts ---------- */
@@ -145,17 +147,16 @@ function resultsPost(id, gids, last) {
     items.push({ gid, type: "winner", side, team: nick(g, side), opp: nick(g, side === "home" ? "away" : "home"), code: code(g, side), result: r.leo_winner_correct === "1" ? "win" : "loss" });
   }
   if (!items.length) return null;
+  const ORDER = { win: 0, push: 1, loss: 2 };   // winners on top, losers on bottom (Lynold); tip order within each
+  items.sort((a, b) => ORDER[a.result] - ORDER[b.result]);
   const lines = items.map(i => i.type === "pick" ? `${i.team} ML ${fmtPrice(i.price)} ${MARK[i.result]} ${fmtU(i.units)}`
     : (i.type === "read" ? `${i.team} to win` : `${i.team} over ${i.opp}`) + ` ${MARK[i.result]}`);
   // record counts calls (Leo Picks); on a night with none, the reads named in the picks post.
   // Leo's winner in each game is shown, never counted as a record (Lynold: people care about the calls).
   const counted = mode === "picks" ? items.filter(i => i.type === "pick") : mode === "reads" ? items : [];
   const rec = recordOf(counted);
-  const what = mode === "reads" ? " on the reads" : "";
   const hit = items.filter(i => i.result === "win").length;
-  const open = mode === "winners" ? (hit === items.length ? `Leo saw it. ${hit} for ${hit} on winners 👀` : `Leo had ${hit} of ${items.length} winners. Misses stay in 👀`)
-    : rec.l === 0 && rec.w >= 3 ? `Clean sweep. ${rec.short}${what} ✨` : rec.l === 0 && rec.w > 0 ? `BANG. ${rec.short}${what} ✨ Leo saw it.`
-    : rec.w > rec.l ? `BANG. ${rec.short}${what} ✨` : rec.w < rec.l ? `We move. ${rec.short}${what}` : `Even split. ${rec.short}${what}`;
+  const open = mode === "winners" ? `Leo had the winner in ${hit} of ${items.length}` : mode === "reads" ? `Leo's reads ${rec.text}` : rec.text;
   const facts = [];
   for (const i of items.filter(x => x.result === "loss" && x.type !== "winner")) {
     const m = (misses.get(i.gid) || {}).miss;
@@ -172,7 +173,7 @@ function resultsPost(id, gids, last) {
   const day = weekday(DATE).toUpperCase();
   const header = id === "day" || last ? `NBA ${day} RESULTS 🏀` : `NBA RESULTS SO FAR 🏀`;
   const tags = hashtags(items.filter(i => i.result !== "loss").concat(items).map(i => i.code));
-  const link = "ndhorizon.com/nba/results/";
+  const link = "https://ndhorizon.com/nba/results/";
   // Leo Picks season to date, from the day they were first counted (DEC-20261102-30), so units can be traced.
   let season = "";
   if (mode === "picks") {
@@ -181,7 +182,7 @@ function resultsPost(id, gids, last) {
     season = recordOf(all).short;
   }
   return { id, kind: "results", created_at: NOW.toISOString(), header, lines, record: counted.length ? rec.text : "", season, facts: facts.slice(0, 3), hashtags: tags,
-    text: compose(header, open, lines, facts.slice(0, 3), tags, link, season), link: `https://${link}` };
+    text: compose(header, open, lines, facts.slice(0, 3), tags, link, season, `Every call graded, misses included: ${link}`), link };
 }
 
 /* ---------- write ---------- */
