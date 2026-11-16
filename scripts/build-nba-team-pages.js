@@ -239,7 +239,7 @@ function teamPage(abbr, division, games, sched) {
       { "@type": "ListItem", position: 1, name: "Leo", item: `${ORIGIN}/` },
       { "@type": "ListItem", position: 2, name: "NBA teams", item: `${ORIGIN}/nba/teams/` },
       { "@type": "ListItem", position: 3, name, item: ORIGIN + url } ] } ] };
-  return { html: shell({ title, desc, url, jsonld, body }), record: s.done.length ? rec(s.w, s.l) : "" };
+  return { html: shell({ title, desc, url, jsonld, body }), record: s.judged.length ? rec(s.right, s.judged.length - s.right) : "" };   // Leo's reads right-wrong in this team's games (Lynold, 2026-11-16)
 }
 
 function hubPage(records, sched) {
@@ -247,9 +247,9 @@ function hubPage(records, sched) {
   const title = "NBA Team Predictions: Leo's Win Chance and Spread for Every Game, by Team | Leo";
   const desc = "Predictions for all 30 NBA teams: Leo's win chance and spread before every game beside the DraftKings line, who Leo favored, the final score and whether Leo's read was right.";
   const body = `<h1>NBA team predictions</h1>
-  <p class="subtitle">Pick a team to see every game Leo analyzed this season: Leo&rsquo;s win chance before tip, the team Leo favored, the final score, whether Leo&rsquo;s read was right, and Leo&rsquo;s spread beside DraftKings. The record beside each team is that team&rsquo;s own record in the games Leo analyzed. Leo&rsquo;s NBA reads start on October 31, 2026.</p>
+  <p class="subtitle">Pick a team to see every game Leo analyzed this season: Leo&rsquo;s win chance before tip, the team Leo favored, the final score, whether Leo&rsquo;s read was right, and Leo&rsquo;s spread beside DraftKings. The record beside each team is Leo&rsquo;s record in that team&rsquo;s games: right when the team Leo favored won, wrong when it lost (games Leo had at exactly 50% are left out). Leo&rsquo;s NBA reads start on October 31, 2026.</p>
   <div class="div-grid">${DIVISIONS.map(([div, teams]) => `<div class="card"><h2 style="margin:0;font-size:1.05rem">${esc(div)}</h2><ul>${teams.map(t =>
-    `<li><a href="${teamUrl(t)}">${esc(sched.names[t] || nick(t))}</a> <span class="dim small">${esc(records[t] || "")}</span></li>`).join("")}</ul></div>`).join("")}</div>
+    `<li><a href="${teamUrl(t)}">${esc(sched.names[t] || nick(t))}</a> ${records[t] ? `<span class="dim small">Leo ${esc(records[t])}</span>` : ""}</li>`).join("")}</ul></div>`).join("")}</div>
   <p class="dim small" style="margin-top:18px">Tonight: <a href="/nba/scoreboard/">NBA predictions</a> &middot; <a href="/nba/games/">every NBA game page</a> &middot; <a href="/nba/results/">Leo&rsquo;s NBA results</a>.</p>`;
   const jsonld = { "@context": "https://schema.org", "@graph": [
     { "@type": "CollectionPage", "@id": `${ORIGIN}${url}#page`, name: title.replace(/ \| Leo$/, ""), description: desc, url: ORIGIN + url },
