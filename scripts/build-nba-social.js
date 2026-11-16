@@ -51,6 +51,9 @@ const pct = p => `${Math.round(p * 100)}%`;
 const weekday = d => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
 const TAGS = readJson(path.join(SDIR, "hashtags.json"), { picks_tag: "#NBAPicks", teams: {} });
 const MARK = { win: "✅", loss: "❌", push: "➖" };
+const fmtPrice = x => (+x > 0 ? "+" : "") + Math.round(+x);
+const fmtU = u => (u >= 0 ? "+" : "") + (+u).toFixed(2) + "u";
+const PK = require("./lib/nba-picks");
 
 const card = readJson(arg("card") || path.join(DIR, `picks-${DATE}.json`), null);
 if (!card) { console.log(`NBA social ${DATE}: no card.`); process.exit(0); }
@@ -72,14 +75,16 @@ function hashtags(codes) {
   for (const c of codes) { const t = (TAGS.teams[c] || {}).primary; if (t && !out.includes(t) && out.length < 4) out.push(t); }
   return out;
 }
-function compose(header, open, lines, facts, tags, link) {
-  const parts = [header, open ? `\n${open}` : "", "", ...lines, facts.length ? "" : null, ...facts, "", tags.join(" "), `${link} · 21+`];
+function compose(header, open, lines, facts, tags, link, season) {
+  const parts = [header, open ? `\n${open}` : "", "", ...lines, season ? `Season: ${season}` : null, facts.length ? "" : null, ...facts, "", tags.join(" "), `${link} · 21+`];
   return parts.filter(x => x !== null).join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 function recordOf(items) {
   const w = items.filter(i => i.result === "win").length, l = items.filter(i => i.result === "loss").length, p = items.filter(i => i.result === "push").length;
   const s = `${w}-${l}${p ? `-${p}` : ""}`;
-  return { w, l, p, text: w + l ? `${s} (${Math.round(100 * w / (w + l))}%)` : s, short: s };
+  const priced = items.filter(i => i.units != null), u = priced.reduce((t, i) => t + i.units, 0);
+  const tail = priced.length ? `, ${fmtU(u)}` : "";
+  return { w, l, p, text: (w + l ? `${s} (${Math.round(100 * w / (w + l))}%)` : s) + tail, short: s + tail };
 }
 
 /* ---------- picks post ---------- */
@@ -89,7 +94,7 @@ function picksPost() {
   const items = [];
   for (const g of open) {
     const pk = g.leo.pick;
-    if (pk && pk.ok !== false) items.push({ game_id: String(g.game_id), type: "pick", side: pk.side, p: pk.p, team: nick(g, pk.side), code: code(g, pk.side) });
+    if (pk && pk.ok !== false) items.push({ game_id: String(g.game_id), type: "pick", side: pk.side, p: pk.p, price: pk.price, team: nick(g, pk.side), code: code(g, pk.side) });
   }
   let kind = "picks";
   if (!items.length) {
@@ -100,9 +105,10 @@ function picksPost() {
   }
   const day = weekday(DATE).toUpperCase();
   const header = kind === "picks" ? `NBA ${day}: ${items.length === 1 ? "LEO'S PICK" : "LEO'S PICKS"} 🏀` : `NBA ${day}: LEO'S READS 🏀`;
-  const lines = items.map(i => i.type === "pick" ? `${i.team} ML (${pct(i.p)})` : `${i.team} to win (${pct(i.p)})`);
+  const lines = items.map(i => i.type === "pick" ? `${i.team} ML ${fmtPrice(i.price)} (${pct(i.p)})` : `${i.team} to win (${pct(i.p)})`);
   const open1 = kind === "picks" ? "" : "No Leo Pick tonight. Strongest reads to win:";
-  const facts = [kind === "picks" ? "The % is Leo's chance to win. Write it down 📝" : "Reads, not picks. Graded anyway 📝"];
+  // Price is the one on Leo's read at post time; a Leo Pick is graded at the price on the last read before tip (DEC-20261114-33).
+  const facts = kind === "picks" ? ["The % is Leo's chance to win. 1 unit each, graded at the price on Leo's last read before tip 📝"] : ["Reads, not picks. Graded anyway 📝"];
   const tags = hashtags(items.map(i => i.code));
   const link = `ndhorizon.com/nba/predictions/${DATE}/`;
   return { id: "picks", kind: "picks", created_at: NOW.toISOString(), header, lines, record: "", facts, hashtags: tags,
@@ -128,7 +134,7 @@ function resultsPost(id, gids, last) {
   for (const gid of gids) {
     const r = ledger.get(gid), g = byGame.get(gid); if (!r || !g) continue;
     const winSide = +r.home_score > +r.away_score ? "home" : "away";
-    if (r.pick_result) { items.push({ gid, type: "pick", side: r.pick_side, team: nick(g, r.pick_side), code: code(g, r.pick_side), result: r.pick_result }); continue; }
+    if (r.pick_result) { items.push({ gid, type: "pick", side: r.pick_side, team: nick(g, r.pick_side), code: code(g, r.pick_side), result: r.pick_result, price: r.pick_price, units: +r.pick_units }); continue; }
     const rd = posted.find(i => i.game_id === gid && i.type === "read");
     if (rd) items.push({ gid, type: "read", side: rd.side, team: rd.team, code: rd.code, result: rd.side === winSide ? "win" : "loss" });
   }
@@ -139,7 +145,8 @@ function resultsPost(id, gids, last) {
     items.push({ gid, type: "winner", side, team: nick(g, side), opp: nick(g, side === "home" ? "away" : "home"), code: code(g, side), result: r.leo_winner_correct === "1" ? "win" : "loss" });
   }
   if (!items.length) return null;
-  const lines = items.map(i => (i.type === "pick" ? `${i.team} ML` : i.type === "read" ? `${i.team} to win` : `${i.team} over ${i.opp}`) + ` ${MARK[i.result]}`);
+  const lines = items.map(i => i.type === "pick" ? `${i.team} ML ${fmtPrice(i.price)} ${MARK[i.result]} ${fmtU(i.units)}`
+    : (i.type === "read" ? `${i.team} to win` : `${i.team} over ${i.opp}`) + ` ${MARK[i.result]}`);
   // record counts calls (Leo Picks); on a night with none, the reads named in the picks post.
   // Leo's winner in each game is shown, never counted as a record (Lynold: people care about the calls).
   const counted = mode === "picks" ? items.filter(i => i.type === "pick") : mode === "reads" ? items : [];
@@ -166,8 +173,15 @@ function resultsPost(id, gids, last) {
   const header = id === "day" || last ? `NBA ${day} RESULTS 🏀` : `NBA RESULTS SO FAR 🏀`;
   const tags = hashtags(items.filter(i => i.result !== "loss").concat(items).map(i => i.code));
   const link = "ndhorizon.com/nba/results/";
-  return { id, kind: "results", created_at: NOW.toISOString(), header, lines, record: counted.length ? rec.text : "", facts: facts.slice(0, 3), hashtags: tags,
-    text: compose(header, open, lines, facts.slice(0, 3), tags, link), link: `https://${link}` };
+  // Leo Picks season to date, from the day they were first counted (DEC-20261102-30), so units can be traced.
+  let season = "";
+  if (mode === "picks") {
+    const all = readCsv(path.join(DIR, "results-ledger.csv")).filter(r => r.pick_result && r.date >= PK.TRACK_FROM && r.date <= DATE)
+      .map(r => ({ result: r.pick_result, units: +r.pick_units }));
+    season = recordOf(all).short;
+  }
+  return { id, kind: "results", created_at: NOW.toISOString(), header, lines, record: counted.length ? rec.text : "", season, facts: facts.slice(0, 3), hashtags: tags,
+    text: compose(header, open, lines, facts.slice(0, 3), tags, link, season), link: `https://${link}` };
 }
 
 /* ---------- write ---------- */
