@@ -83,6 +83,11 @@ jobs:
           node scripts/build-nba-team-pages.js || true   # team pages (SEO-07); never fails the run
           node scripts/generate-sitemap.js
 
+      # X post words for the picks of the day (HO-0087 part B): data/nba/social/<date>.json,
+      # refreshed until the first tip, then frozen. Display only; never blocks the run.
+      - name: Social posts
+        run: node scripts/build-nba-social.js "${{ steps.d.outputs.date }}" || echo "::warning::NBA social posts not written"
+
       - name: Health check
         run: node scripts/nba-healthcheck.js "${{ steps.d.outputs.date }}"
 
