@@ -91,8 +91,12 @@ function summary(m) {
     if (tot || mar) parts.push(`${tot}${tot && mar ? " and " : ""}${tot ? mar : mar.charAt(0).toUpperCase() + mar.slice(1)}.`);
     const C = g.calls;
     if (C) {
-      const c = [["moneyline", C.ml], ["spread", C.spread], ["total", C.total]].filter(([, x]) => x).map(([k, x]) => `${k} ${x.call ? nickLabel(m, x.label) : "PASS"}`);
-      if (c.length) parts.push(`Leo's calls: ${list(c)}.`);
+      // Lynold (Nov 15): "PASS" read as jargon; say what Leo called and which markets have no call.
+      const mk = [["moneyline", C.ml], ["spread", C.spread], ["total", C.total]].filter(([, x]) => x);
+      const on = mk.filter(([, x]) => x.call).map(([k, x]) => `${k} ${nickLabel(m, x.label)}`);
+      const off = mk.filter(([, x]) => !x.call).map(([k]) => k);
+      if (on.length) parts.push(`Leo's calls: ${list(on)}${off.length ? `; no call on the ${list(off)}` : ""}.`);
+      else if (off.length) parts.push(`Leo makes no call on this game.`);
     }
   } else {
     parts.push(`${TEAMS.full(m.away)} at ${TEAMS.full(m.home)} on ${partOfDay(m)}, ${longDate(m.date)}${m.stadium ? ` at ${m.stadium}` : ""}.`);

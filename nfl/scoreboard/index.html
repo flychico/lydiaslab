@@ -275,7 +275,7 @@ function callsGrid(g, leo, isFinal, as, hs){
     const r=fin&&c.call?NFL_CALLS.grade(key,leo,fin):"";
     const tag=r==="W"?'<b style="color:var(--good)">RIGHT</b>':r==="L"?'<b style="color:var(--danger)">WRONG</b>':r==="P"?"<b>PUSH</b>":"";
     return '<div class="market-box '+cls+'"'+(c.call?'':' style="opacity:.72"')+' title="'+escapeHtml(c.call?sub:(c.pass||""))+'"><span class="market-label">'+label+'</span>'+
-      '<span class="market-value">'+(c.call?escapeHtml(c.label):"PASS")+'</span>'+
+      '<span class="market-value">'+(c.call?escapeHtml(c.label):"No call")+'</span>'+
       '<span class="market-sub">'+(tag||escapeHtml(c.call?sub:(c.short||c.pass||"")))+'</span></div>';
   };
   return '<div class="market-grid">'+

@@ -252,15 +252,14 @@ function leoSection(m){
       if(key==="total"){const l=+g.total_line,t=hs+as;r=t===l?"P":((t>l)===(c.call==="Over")?"W":"L");}
     }
     const tag=r==="W"?' <span class="ok">RIGHT</span>':r==="L"?' <span class="no">WRONG</span>':r==="P"?" PUSH":"";
-    return `<div class="box${c.call?" call":" pass"}"><span class="lbl">${label}</span><span class="val">${c.call?esc(c.label):"PASS"}${tag}</span><span class="lbl2">${esc(c.call?ctx:c.pass)}</span></div>`;
+    return `<div class="box${c.call?" call":" pass"}"><span class="lbl">${label}</span><span class="val">${c.call?esc(c.label):"No call"}${tag}</span><span class="lbl2">${esc(c.call?ctx:c.pass)}</span></div>`;
   };
   const callsHtml=C?`
   <div class="leo-grid calls">
     ${callBox("Moneyline",C.ml,"ml",`Leo gives ${g.pick} ${pct(g.prob)}`)}
     ${callBox("Spread",C.spread,"spread",`Leo ${fav(m,g.proj_spread)}`)}
     ${callBox("Total",C.total,"total",`Leo ${v(g.proj_total)}`)}
-  </div>
-  <p class="dim" style="margin:0 0 10px">PASS means no call. <a href="/nfl/how-leo-works/#calls">How calls work</a></p>`:"";
+  </div>`:"";
   const game=g?`${callsHtml}
   <div class="leo-grid">
     <div class="box"><span class="lbl">${pickPaused(m.date)||g.calls?"Leo win chance":g.call==="leo_pick"?"Leo pick":"Too close to call"}</span><span class="val">${esc(g.pick)} ${pct(g.prob)}</span><span class="lbl2">${pickPaused(m.date)?"chance to win; picks were paused this week":g.calls?"chance to win":g.call==="leo_pick"?"Leo gives this team more than 60%"+(g.price!=null&&g.price!==""?"; price "+esc((+g.price>0?"+":"")+g.price)+" at the read":""):"under 60%, so no pick; win chance only"}</span></div>
