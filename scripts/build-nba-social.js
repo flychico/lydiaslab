@@ -107,8 +107,8 @@ function picksPost() {
   const header = kind === "picks" ? `NBA ${day}: ${items.length === 1 ? "LEO'S PICK" : "LEO'S PICKS"} 🏀` : `NBA ${day}: LEO'S READS 🏀`;
   const lines = items.map(i => i.type === "pick" ? `${i.team} ML ${fmtPrice(i.price)} (${pct(i.p)})` : `${i.team} to win (${pct(i.p)})`);
   const open1 = kind === "picks" ? "" : "No Leo Pick tonight. Strongest reads to win:";
-  // Price is the one on Leo's read at post time; a Leo Pick is graded at the price on the last read before tip (DEC-20261114-33).
-  const facts = kind === "picks" ? ["The % is Leo's chance to win. 1 unit each, graded at the price on Leo's last read before tip 📝"] : ["Reads, not picks. Graded anyway 📝"];
+  // The price shown is the locked price the pick is graded at (DEC-20261116-30).
+  const facts = kind === "picks" ? ["The % is Leo's chance to win. Write it down 📝"] : ["Reads, not picks. Graded anyway 📝"];
   const tags = hashtags(items.map(i => i.code));
   const link = `ndhorizon.com/nba/predictions/${DATE}/`;
   return { id: "picks", kind: "picks", created_at: NOW.toISOString(), header, lines, record: "", facts, hashtags: tags,

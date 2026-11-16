@@ -44,7 +44,8 @@ const r1 = v => v == null ? null : Math.round(v * 10) / 10;
 const WHYL = require("./lib/nba-why");   // shown spread: .5 grid, rounded toward DraftKings (DEC-20261102-03)
 const half = v => Math.round(v * 2) / 2;
 const PK = require("./lib/nba-picks");   // Leo Pick rule: 60%+ and priced better than -230 (DEC-20261102-30)
-const URLS = require("./lib/nba-urls");   // game page addresses (SEO-09, DEC-20261107-30)
+const URLS = require("./lib/nba-urls");
+const LOCK = require("./lib/nba-pick-lock");   // one price per Leo Pick, locked at the first read that makes it (DEC-20261116-30)   // game page addresses (SEO-09, DEC-20261107-30)
 
 /* New history columns are added once at the end of the header; old rows keep every value and get blanks. */
 function upgradeHistory() {
@@ -183,6 +184,7 @@ function readHistory() {
   const previous = fs.existsSync(prevFile) ? Object.fromEntries(JSON.parse(fs.readFileSync(prevFile, "utf8")).games.map(g => [g.game_id, g])) : {};
   const now = new Date().toISOString();
   const out = [], hist = [];
+  let locksChanged = false;
   for (const g of slate) {
     const started = g.state !== "pre" || g.tip_utc <= now;
     // Once a game tips, the card keeps the last read made before tip.
@@ -222,7 +224,8 @@ function readHistory() {
         projected: PR ? (() => { const t = P.project(PR, g.home, g.away).total; return { total: Math.round(t), home: Math.round((t + margin) / 2), away: Math.round((t - margin) / 2) }; })() : null
       }
     };
-    { const pk = PK.pickForGame(game); game.leo.pick = pk ? { side: pk.side, team: pk.team, p: +pk.p.toFixed(4), price: pk.price, ok: pk.ok, why: pk.why, ...(pk.under ? { under: true } : {}) } : null; }
+    { const pk = LOCK.apply(DATE, g.game_id, PK.pickForGame(game)); if (LOCK.lock(DATE, g.game_id, pk, now)) locksChanged = true;
+      game.leo.pick = pk ? { side: pk.side, team: pk.team, p: +pk.p.toFixed(4), price: pk.price, ok: pk.ok, why: pk.why, ...(pk.under ? { under: true } : {}), ...(pk.locked ? { locked: true } : {}) } : null; }
     game.url = URLS.gamePath(game);   // the game page address, for the home page card and every link (SEO-09)
     out.push(game);
     if (!started) hist.push({
@@ -242,6 +245,7 @@ function readHistory() {
     data_through: prev.length ? prev[prev.length - 1].date : null, games_rated: prev.length, lean_edge_pts: model.lean_edge_pts,
     games: out.sort((a, b) => a.tip_utc.localeCompare(b.tip_utc))
   };
+  if (locksChanged) LOCK.save(DATE);
   fs.writeFileSync(prevFile, JSON.stringify(doc, null, 1) + "\n");
   if (DATE === today()) fs.writeFileSync(path.join(DIR, "picks-today.json"), JSON.stringify(doc, null, 1) + "\n");
   fs.writeFileSync(path.join(DIR, "injuries-today.json"), JSON.stringify({ as_of: inj.timestamp, players: inj.list }, null, 1) + "\n");
