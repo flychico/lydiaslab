@@ -137,6 +137,7 @@ function buildDay(date, all, results) {
   const desc = `Leo's NBA predictions for ${longDay(date)}: a win chance and spread for all ${games.length} games beside the DraftKings line, graded after the final.`;
   const nav = `<p class="small" style="margin:10px 0 0">${prevD ? `<a href="/nba/predictions/${prevD}/">&larr; ${esc(monthDay(prevD))}</a> &middot; ` : ""}<a href="/nba/predictions/">Every night</a> &middot; <a href="/nba/scoreboard/">Tonight's NBA card</a> &middot; <a href="/nba/results/">Leo's NBA record</a>${nextD ? ` &middot; <a href="/nba/predictions/${nextD}/">${esc(monthDay(nextD))} &rarr;</a>` : ""}</p>`;
   const body = `  <section class="card"><p style="margin:0">${esc(intro(date, games, res))}</p>${nav}</section>
+  ${require("./lib/nba-signup-box").box("night")}
   <section class="dn-grid">
 ${games.map(g => card(g, byId[String(g.game_id)])).join("\n")}
   </section>`;

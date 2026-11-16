@@ -132,7 +132,8 @@ function make(nick) {
         ["Winner right", S.games ? S.right + " of " + S.games : "0", "DraftKings favorite " + S.mkt_right + " of " + S.mkt_games],
         ["Average miss", S.miss_leo == null ? "" : S.miss_leo.toFixed(1), "points on the margin. DraftKings spread " + (S.miss_line == null ? "" : S.miss_line.toFixed(1))]
       ]) +
-      '<p class="sec-p">A <b>Leo Pick</b> is a team Leo gives 60% or more to win when the DraftKings moneyline on it is better than -230. One unit each, at the price saved before tip. A public test, not bets.</p>' +
+      (opts.signup || "") +   // free card box under the record tiles (SEO-24, HO-0093)
+      '<p class="sec-p">A <b>Leo Pick</b> is a team Leo gives 60% or more to win when the DraftKings moneyline on it is better than -230. One unit each, at the price locked when Leo makes the pick. A public test, not bets.</p>' +
       learning(doc) +
       '<h2 class="sec-h">Day by day</h2>' +
       '<p class="sec-p">Newest first. Each day: the upsets, what Leo got right, what Leo missed and why, then every other game. Tap a day to open or close it.</p>' +

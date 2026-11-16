@@ -77,6 +77,8 @@ function hashtags(codes) {
 }
 // Same shape as the NFL posts (Lynold, NFL chat 2026-11-16): header, plain record, lines with
 // winners on top, facts, then the link, "21+" and the hashtags. No "BANG", no "Leo saw it", no ✨.
+// Every post link carries the X campaign tag (SEO-24, HO-0093 part B), so a sign-up shows which post brought it.
+const tagged = (url, id) => `${url}?utm_source=x&utm_medium=social&utm_campaign=nba-${id}`;
 function compose(header, open, lines, facts, tags, link, season, linkLine) {
   const parts = [header, open || null, "", ...lines, season ? `Season: ${season}` : null, facts.length ? "" : null, ...facts, "", linkLine || link, `21+ ${tags.join(" ")}`];
   return parts.filter(x => x !== null).join("\n").replace(/\n{3,}/g, "\n\n").trim();
@@ -112,7 +114,7 @@ function picksPost() {
     ...items.map(i => i.type === "pick" ? `${i.team} ML ${fmtPrice(i.price)} (${pct(i.p)})` : `${i.team} (${pct(i.p)})`)];
   const facts = [];
   const tags = hashtags(items.map(i => i.code));
-  const link = `https://ndhorizon.com/nba/predictions/${DATE}/`;
+  const link = tagged(`https://ndhorizon.com/nba/predictions/${DATE}/`, "picks");
   return { id: "picks", kind: "picks", created_at: NOW.toISOString(), header, lines, record: "", facts, hashtags: tags,
     text: compose(header, "What would Leo do?", lines, facts, tags, link), link, items };
 }
@@ -173,7 +175,7 @@ function resultsPost(id, gids, last) {
   const day = weekday(DATE).toUpperCase();
   const header = id === "day" || last ? `NBA ${day} RESULTS 🏀` : `NBA RESULTS SO FAR 🏀`;
   const tags = hashtags(items.filter(i => i.result !== "loss").concat(items).map(i => i.code));
-  const link = "https://ndhorizon.com/nba/results/";
+  const link = tagged("https://ndhorizon.com/nba/results/", id);
   // Leo Picks season to date, from the day they were first counted (DEC-20261102-30), so units can be traced.
   let season = "";
   if (mode === "picks") {

@@ -29,7 +29,7 @@ const VIEW = require("./lib/nba-results-view");
 
 const ROOT = path.join(__dirname, ".."), DIR = path.join(ROOT, "data", "nba"), MDIR = path.join(DIR, "misses");
 const PAGE = path.join(ROOT, "nba", "results", "index.html");
-const VERSION = "20261111b";
+const VERSION = "20261116";
 const nyDate = d => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(d);
 const num = v => v === "" || v == null || !Number.isFinite(+v) ? null : +v;
 const readJson = (f, d) => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch (e) { return d; } };
@@ -203,7 +203,7 @@ ul.tests li{font-size:.88rem;line-height:1.5;padding:7px 0;border-bottom:1px sol
 }`;
 
 function writePage(doc) {
-  const view = VIEW.make(nick), app = view.render(doc, {});
+  const view = VIEW.make(nick), app = view.render(doc, { signup: require("./lib/nba-signup-box").box("results") });
   const prev = fs.existsSync(PAGE) ? fs.readFileSync(PAGE, "utf8") : "", navM = prev.match(/<nav id="nav">[\s\S]*?<\/nav>/);
   const upd = "Last updated " + new Date(doc.updated_at).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) +
     " ET &middot; games through " + new Date(doc.through + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
@@ -251,6 +251,7 @@ ${navM ? navM[0] : '<nav id="nav"></nav>'}
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script src="/scripts/lib/nba-urls.js?v=20261107"></script>
 <script src="/scripts/lib/nba-results-view.js?v=${VERSION}"></script>
+<script src="/scripts/lib/nba-signup-box.js?v=20261116"></script>
 <script>
 renderNav("/nba/results/"); renderFooter();
 /* NBA results, day by day (HO-0031, DEC-20261110-30). The page is built at grading time;
@@ -259,7 +260,10 @@ renderNav("/nba/results/"); renderFooter();
 let DOC = null, ALL = false, F = { date: "", team: "" };
 try { const q = new URLSearchParams(location.search); F.date = q.get("date") || ""; F.team = (q.get("team") || "").toUpperCase(); } catch (e) {}
 const VIEWER = NBA_RESULTS_VIEW.make(c => NBA_URLS.nick(c));
-function draw() { document.getElementById("app").innerHTML = VIEWER.render(DOC, { team: F.team, date: F.date, all: ALL, teamUrl: c => "/nba/teams/" + NBA_URLS.slugify(NBA_URLS.nick(c)) + "/" }); }
+function draw() {
+  document.getElementById("app").innerHTML = VIEWER.render(DOC, { team: F.team, date: F.date, all: ALL, signup: window.NBA_SIGNUP ? NBA_SIGNUP.box("results") : "", teamUrl: c => "/nba/teams/" + NBA_URLS.slugify(NBA_URLS.nick(c)) + "/" });
+  if (typeof wireAllSignupForms === "function") wireAllSignupForms(document.getElementById("app"));   // the box is rewritten with the view
+}
 function setFilter(k, v) {
   F[k] = v;
   try { const q = new URLSearchParams(); if (F.date) q.set("date", F.date); if (F.team) q.set("team", F.team); history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q : "")); } catch (e) {}
