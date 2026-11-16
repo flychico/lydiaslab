@@ -25,6 +25,20 @@ const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&a
 const pct = p => `${Math.round(p * 100)}%`;
 const r1 = x => Math.round(x * 10) / 10;
 const city = abbr => TEAMS.nick(abbr);   // nicknames, since two teams can share a city
+
+// HO-0086: when the quarterback in Leo's read is not the one who started the
+// team's last game, say so, so readers see why the number looks the way it
+// does. Starts = games he led the team in pass attempts, from the weekly stats.
+function qbChangeLine(m, side) {
+  const c = m.sides && m.sides[side] && m.sides[side].qb_change;
+  if (!c || !c.starter) return "";
+  const nick = city(m[side]);
+  const earlier = (c.earlier || []).map(x => `${x.name} (${x.starts} ${x.starts === 1 ? "start" : "starts"})`);
+  let out = `${c.starter} starts for the ${nick} in Leo's read, in place of ${c.last_starter}, who started their last game.`;
+  if (earlier.length) out += ` ${nick} starters this season: ${list(earlier)}.`;
+  out += ` The injury report lists only weekly game statuses, so a quarterback on injured reserve or out long term does not appear on it.`;
+  return out;
+}
 const aPct = p => { const n = Math.round(p * 100); return `${/^(8|11|18)/.test(String(n)) && (n < 100) && (String(n).startsWith("8") || n === 11 || n === 18) ? "an" : "a"} ${n}%`; };
 const the = abbr => `the ${TEAMS.full(abbr)}`;
 const longDate = d => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" });
@@ -104,6 +118,7 @@ function summary(m) {
   const td = topTd(m, 2);
   if (td.length) parts.push(`The players Leo thinks are most likely to score a touchdown: ${list(td.map(p => `${p.player} (${pct(p.prob)})`))}.`);
   if (m.away_qb_name && m.home_qb_name) parts.push(`Starting quarterbacks: ${m.away_qb_name} for the ${city(m.away)} and ${m.home_qb_name} for the ${city(m.home)}.`);
+  for (const side of ["away", "home"]) { const q = qbChangeLine(m, side); if (q) parts.push(q); }
   const open = opening(m);
   return `<section class="card summary">${open.length ? `
   <p style="margin:0 0 10px">${esc(open.join(" "))}</p>` : ""}

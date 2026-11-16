@@ -69,7 +69,26 @@ function agg(rows){
   };
 }
 
-function teamProfile(rows, team, active){
+// Who led the team in pass attempts each week: starts per QB, and the latest.
+function qbStarts(rows, team){
+  const wk={};
+  rows.filter(r=>r.team===team && r.position==="QB").forEach(r=>{
+    const w=Number(r.week), a=Number(r.attempts)||0;
+    if(a>0 && (!wk[w] || a>wk[w].a)) wk[w]={name:r.player_display_name, a};
+  });
+  const weeks=Object.keys(wk).map(Number).sort((a,b)=>a-b);
+  const count={}; weeks.forEach(w=>{count[wk[w].name]=(count[wk[w].name]||0)+1;});
+  return { last: weeks.length ? wk[weeks[weeks.length-1]].name : null,
+           starts: Object.entries(count).map(([name,starts])=>({name,starts})).sort((a,b)=>b.starts-a.starts||a.name.localeCompare(b.name)) };
+}
+
+/*
+  HO-0086: starter = the quarterback in Leo's read (picks file / prediction
+  history, the depth chart since DEC-20261031-08). The QB box shows him, with
+  his season line from another team when he changed teams, instead of the
+  team's leading passer. Without a starter (last season) it stays the leader.
+*/
+function teamProfile(rows, team, active, starter){
   const mine=rows.filter(r=>r.team===team);
   const byPlayer={};
   mine.forEach(r=>{(byPlayer[r.player_display_name]=byPlayer[r.player_display_name]||[]).push(r);});
@@ -79,7 +98,13 @@ function teamProfile(rows, team, active){
 
   const top=(pos,key,count)=>lines.filter(p=>p.pos===pos&&p[key]>0)
       .sort((a,b)=>b[key]-a[key]).slice(0,count);
-  const qb = top("QB","att",1)[0]||null;
+  let qb = top("QB","att",1)[0]||null;
+  if(starter && (!qb || qb.name!==starter)){
+    const own=lines.find(p=>p.name===starter && p.pos==="QB");
+    const else_=rows.filter(r=>r.player_display_name===starter && r.position==="QB");
+    qb = own || (else_.length ? { name:starter, pos:"QB", ...agg(else_), other_team: else_[else_.length-1].team }
+                              : { name:starter, pos:"QB", games:0, no_stats:true });
+  }
   const rbs= top("RB","car",2);
   const wrs= top("WR","tgt",2);
   const te = top("TE","tgt",1)[0]||null;
@@ -314,11 +339,34 @@ function teamProfile(rows, team, active){
     return now;
   };
 
+  // HO-0086: quarterback names people read come from the read the numbers
+  // came from (prediction history row, else picks-<date>.json), never from
+  // games.csv's named QB, which DEC-20261031-08 replaced in the models.
+  let PICKS_QB={};
+  try{ const pk=JSON.parse(fs.readFileSync(path.join(DATA,`picks-${target}.json`),"utf8"));
+       (Array.isArray(pk)?pk:[]).forEach(x=>{PICKS_QB[x.game_id]=x;}); }catch(e){}
+  const readQb=(g,side)=>{
+    const fg=FROZEN_GAMES.find(x=>x.game_id===g.game_id);
+    return (fg && fg[side+"_qb"]) || (PICKS_QB[g.game_id]||{})[side+"_qb"] || g[side+"_qb_name"] || "";
+  };
+
   const out=games.map(g=>{
     const pageSlug=URLS.gameSlug(g.away_team, g.home_team, target);
+    const QBN={ [g.away_team]: readQb(g,"away"), [g.home_team]: readQb(g,"home") };
+    const qbChange=team=>{
+      const st=qbStarts(wkCur, team), now=QBN[team];
+      if(!now || !st.last || st.last===now) return null;
+      return { starter:now, last_starter:st.last, earlier:st.starts.filter(x=>x.name!==now) };
+    };
+    // The player QB rating the moneyline model used for that starter (picks file), when it names the same QB.
+    const qbRating=team=>{ const side=team===g.home_team?"home":"away", P=PICKS_QB[g.game_id]||{};
+      return P[side+"_qb"]===QBN[team] && Number.isFinite(+P[side+"_qb_rating"]) ? +P[side+"_qb_rating"] : null; };
+    const profile=team=>{ const t=teamProfile(wkCur, team, active, QBN[team]); const r=qbRating(team);
+      if(t.qb && r!=null) t.qb={...t.qb, leo_rating:r}; return t; };
     const build=(team)=>({
       team,
-      this_season: teamProfile(wkCur, team, active),
+      this_season: profile(team),
+      qb_change: qbChange(team),
       last_season: teamProfile(wkPri, team, null),
       team_offense: { this_season: teamAgg(wkCur,team), last_season: teamAgg(wkPri,team) },
       team_defense: { this_season: defAgg(wkCur,team),  last_season: defAgg(wkPri,team) }
@@ -333,7 +381,8 @@ function teamProfile(rows, team, active){
       away_moneyline:n(g.away_moneyline)||null, home_moneyline:n(g.home_moneyline)||null,
       spread_line:g.spread_line===""?null:n(g.spread_line),
       total_line:g.total_line===""?null:n(g.total_line),
-      away_qb_name:g.away_qb_name, home_qb_name:g.home_qb_name,
+      away_qb_name:QBN[g.away_team], home_qb_name:QBN[g.home_team],
+      listed_qb:{ away:g.away_qb_name||"", home:g.home_qb_name||"" },   // games.csv, kept for reference only
       away_coach:g.away_coach, home_coach:g.home_coach,
       sides:{ away: build(g.away_team), home: build(g.home_team) },
       pregame_through_week: gameWeek-1,

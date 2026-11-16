@@ -59,7 +59,9 @@ const d2=x=>x==null?"\u2014":Number(x).toFixed(2);
 
 function qbRow(q){
   if(!q) return `<tr><td colspan="8" class="none">No qualifying passer</td></tr>`;
-  return `<tr><td class="pl">${esc(q.name)}</td><td>${v(q.games)}</td><td>${v(q.cmp)}/${v(q.att)}</td>
+  if(q.no_stats) return `<tr><td class="pl">${esc(q.name)} <span class="rl">no passes this season</span></td><td colspan="7" class="none">Starts in Leo\u2019s read</td></tr>`;
+  const with_ = q.other_team ? ` <span class="rl">with the ${esc(TEAMS.nick(q.other_team))}</span>` : "";
+  return `<tr><td class="pl">${esc(q.name)}${with_}</td><td>${v(q.games)}</td><td>${v(q.cmp)}/${v(q.att)}</td>
     <td>${v(q.comp_pct)}%</td><td><b>${v(q.pass_yds)}</b></td><td>${v(q.pass_ypg)}</td>
     <td>${v(q.pass_td)} / ${v(q.ints)}</td><td>${v(q.ypa)}</td></tr>`;
 }
@@ -86,6 +88,9 @@ function sideBlock(side, seasonKey, seasonLabel, rating){
   const p=side[seasonKey];
   // Leo's QB rating sits beside the passer's line so the two sides can be
   // compared directly without scrolling back up to the ratings band.
+  // HO-0086: the starter's own rating from Leo's read when the read carries it.
+  const own = p && p.qb && p.qb.leo_rating!=null ? p.qb.leo_rating : null;
+  if(own!=null) rating = { ...(rating||{}), qb_rating: own };
   const qbBadge = (rating && rating.qb_rating!=null)
     ? `<span class="qbr" title="Leo QB rating: 50 is league average, 15 points per standard deviation">
          <em>Leo QB</em><b>${rating.qb_rating.toFixed(0)}</b></span>` : "";
