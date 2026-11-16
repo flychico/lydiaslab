@@ -47,6 +47,8 @@ const etDate = d => d.toLocaleDateString("en-CA", { timeZone: "America/New_York"
 const nick = a => TEAMS.nick(a);
 const readJson = f => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch (e) { return null; } };
 const nameKey = n => String(n || "").toLowerCase().replace(/\b(jr|sr|ii|iii|iv|v)\b\.?/g, "").replace(/[^a-z]/g, "");
+// HO-0093: tag every post link so the sign up form can say which post brought the reader.
+const utm = (link, id) => `${link}${link.includes("?") ? "&" : "?"}utm_source=x&utm_medium=social&utm_campaign=nfl-${id}`;
 const MARK = { W: "✅", L: "❌", P: "➖" };
 
 function parseCsv(text) {
@@ -124,7 +126,7 @@ function picksPost(date, existing) {
   const td = tdReads(date).slice(0, 3).map(r => `${r.player} ${pct(r.chance)}% to score`);
   const week = games[0].week;
   const one = games.length === 1;
-  const link = one && games[0].game_id ? pageUrl(date, games[0]) : `${SITE}/nfl/week/${date.slice(0, 4)}-week-${week}/`;
+  const link = utm(one && games[0].game_id ? pageUrl(date, games[0]) : `${SITE}/nfl/week/${date.slice(0, 4)}-week-${week}/`, "picks");
   const header = slateHeader(date, week);
   const tags = hashtags([...teams, ...games.flatMap(g => [g.home, g.away])]);
   // Lynold, Nov 16: "what would Leo do?" then "Leo picks:".
@@ -173,7 +175,7 @@ function resultsPost(id, date, games, label, facts) {
   const header = id === "day" ? `NFL ${dayName(date)} RESULTS 🏈` : `NFL ${dayName(date)}: ${short.toUpperCase()} 🏈`;
   const winners = calls.filter(c => c.result === "W").map(c => c.g.winner).filter(Boolean);
   const tags = hashtags([...winners, ...games.flatMap(g => [g.winner, g.loser])]);
-  const link = `${SITE}/nfl/results/`;
+  const link = utm(`${SITE}/nfl/results/`, id);
   const record = `${t.rec}${t.pct != null ? ` (${t.pct}%)` : ""}`;
   const body = [header, opener(t), "", ...lines];
   if (facts.length) body.push("", ...facts);

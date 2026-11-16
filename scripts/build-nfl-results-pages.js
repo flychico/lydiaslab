@@ -45,6 +45,7 @@ function build() {
   page = fill(page, "learning", V.learning(review, tests));
   page = fill(page, "weekList", V.weekList(review, season, null));
   page = fill(page, "body", V.main(review, tracker, season));
+  if (/id="signup"/.test(page)) page = fill(page, "signup", V.signup());
   page = page.replace(/<!-- prerendered [^>]*-->\n?/, "");
   fs.writeFileSync(file, page);
 
@@ -76,6 +77,7 @@ function build() {
     <h1>NFL Week ${esc(w)} results</h1>
     <p class="subtitle">${esc(span)}. Every game Leo read in Week ${esc(w)}, day by day: the upsets, what Leo got right, and what Leo missed and why. Every read was frozen before kickoff and nothing is changed after the fact. Nothing here is a wager.</p>
   </section>
+  <section class="nfl-signup" aria-label="Free card by email">${V.signup()}</section>
   <section id="weekList" aria-label="Every week">${V.weekList(review, season, w)}</section>
   <section id="body">${V.weekSection(review, tracker, w, { open: true, season })}</section>
   <p class="small dim" style="margin:18px 0">The season record, the reasons behind every miss and how Leo is graded are on <a href="/nfl/results/">Leo&rsquo;s NFL record</a>.</p>

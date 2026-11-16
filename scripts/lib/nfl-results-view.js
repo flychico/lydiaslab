@@ -248,7 +248,18 @@ function main(review, tracker, season) {
   return html;
 }
 
-const api = { records, learning, weekSection, weekList, main, weekSlug, longDate, REASON, REASON_HELP };
+// Free card sign up box near the top of the results pages (HO-0093, SEO-24).
+// The page script writes it fresh on every load (the prerender saves the form
+// already wired, which would leave it dead), then wires it.
+function signup() {
+  return '<div><b>Every call here was made before the game</b><p>Get the next card free by email before the games start. Every result graded the next morning, misses included.</p></div>'
+    + '<form class="lydia-signup-form" data-list="free-preview" data-thanks="You are on the list. The next card arrives before the next slate.">'
+    + '<input type="email" name="email" required placeholder="you@email.com" aria-label="Email address">'
+    + '<input type="hidden" name="bot-field">'
+    + '<button class="btn blue" type="submit">Send me the free card</button></form>';
+}
+
+const api = { records, learning, weekSection, weekList, main, weekSlug, longDate, signup, REASON, REASON_HELP };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else if (typeof window !== "undefined") window.NFL_RESULTS = api;
 })();

@@ -277,7 +277,7 @@ ${GA_HEAD}
 .wk-rec{margin:8px 0 0}
 details.wk-more{margin-top:24px}details.wk-more summary{cursor:pointer;font-weight:800}
 .fxw{overflow-x:auto}.fx{width:100%;border-collapse:collapse;font-size:.9rem}.fx th,.fx td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:left}.fx th{font-size:.74rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}
-.nfl-signup{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;align-items:center;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin:22px 0 4px;box-shadow:var(--shadow-sm)}
+.nfl-signup{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;align-items:center;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin:4px 0 16px;box-shadow:var(--shadow-sm)}
 .nfl-signup p{margin:4px 0 0;color:var(--text-dim);font-size:.86rem}
 .nfl-signup form{display:flex;gap:8px}.nfl-signup input[type=email]{flex:1;min-width:0}
 @media (max-width:640px){.nfl-signup{grid-template-columns:1fr}.wc-list{grid-template-columns:1fr}.wc-tile{padding:8px}}
@@ -293,6 +293,15 @@ details.wk-more{margin-top:24px}details.wk-more summary{cursor:pointer;font-weig
     ${early ? `<p class="wk-rec small">Games marked Early read update every morning; the last read before kickoff is the one graded.</p>` : ""}
   </section>
 
+  <div class="nfl-signup">
+    <div><b>Get Leo&rsquo;s card before every slate</b><p>Free by email: Leo&rsquo;s calls for every NFL and NBA game before kickoff or tip, graded the next morning.</p></div>
+    <form class="lydia-signup-form" data-list="free-preview" data-thanks="You are on the list. The next card arrives before the next slate.">
+      <input type="email" name="email" required placeholder="you@email.com" aria-label="Email address">
+      <input type="hidden" name="bot-field">
+      <button class="btn blue" type="submit">Send me the free card</button>
+    </form>
+  </div>
+
 ${callsSummary(games)}
 
   <section class="wc-list">
@@ -301,14 +310,6 @@ ${games.map(gameCard).join("\n")}
 
   <section class="card" style="margin-top:18px"><h2 class="sec" style="margin-top:0">Week ${esc(week)} at a glance</h2><p style="margin:0">${esc(intro({ week, season, games, prev }))}</p></section>
 
-  <div class="nfl-signup">
-    <div><b>Get this card by email</b><p>Free, before kickoff on game days. Unsubscribe anytime.</p></div>
-    <form class="lydia-signup-form" data-list="free-preview" data-thanks="You&rsquo;re on the list. The next NFL card goes to that inbox.">
-      <input type="email" name="email" required placeholder="you@email.com" aria-label="Email address">
-      <input type="hidden" name="bot-field">
-      <button class="btn blue" type="submit">Send me the card</button>
-    </form>
-  </div>
 ${tdTable({ week, games })}
 
   <p class="small dim" style="margin-top:14px"><a href="/nfl/how-leo-works/">How Leo works</a>: what each number means, when it freezes and how calls are graded.</p>
