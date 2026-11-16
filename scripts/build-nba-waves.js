@@ -6,10 +6,12 @@
  *
  *   node scripts/build-nba-waves.js [YYYY-MM-DD]     default: today, New York
  *
- * Waves: "early" (tips before 9pm ET) and "late" (9pm ET and after). A wave
- * is appended once every game in it with a Leo read is graded in
- * data/nba/results-ledger.csv; a wave already in the file is never rewritten.
- * The top level "season" block is refreshed on every write.
+ * A wave is every game graded since the last wave: each run appends one new
+ * wave with the games in data/nba/results-ledger.csv for that date that are
+ * not in an earlier wave (ids wave-1, wave-2, ...), so a game is posted once,
+ * as soon as a run sees it final. Lynold, 2026-11-15: a 1pm game should not
+ * wait for the 8pm game. A wave already in the file is never rewritten. The
+ * top level "season" block is refreshed on every write.
  *
  * Game calls only (Leo Picks), from the read of record the grader stored.
  * No sportsbook number is written: a call's side is the team, as in the data
@@ -21,10 +23,8 @@ const PK = require("./lib/nba-picks");
 
 const ROOT = path.join(__dirname, ".."), DIR = path.join(ROOT, "data", "nba"), WDIR = path.join(DIR, "waves");
 const nyDate = d => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(d);
-const nyHour = iso => +new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hourCycle: "h23" }).format(new Date(iso));
 const DATE = process.argv.slice(2).find(a => /^\d{4}-\d{2}-\d{2}$/.test(a)) || nyDate(new Date());
-const LATE_FROM = 21;   // 9pm ET
-const WAVES = [{ id: "early", label: "Early games (tips before 9pm ET)" }, { id: "late", label: "Late games (9pm ET and after)" }];
+const tipLabel = iso => new Date(iso).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" }).replace(":00", "").replace(" ", "").toLowerCase();
 const readJson = (f, d) => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch (e) { return d; } };
 function readCsv(file) {
   if (!fs.existsSync(file)) return [];
@@ -50,36 +50,37 @@ function main() {
   const games = (card.games || []).filter(g => g.leo && g.tip_utc);
   const file = path.join(WDIR, `${DATE}.json`);
   const doc = readJson(file, null) || { sport: "nba", date: DATE, waves: [], season: {} };
-  const have = new Set(doc.waves.map(w => w.id));
+  const posted = new Set(doc.waves.flatMap(w => w.games.map(g => String(g.game_id))));
+  const fresh = games.filter(g => byId.has(String(g.game_id)) && !posted.has(String(g.game_id)))
+    .sort((x, y) => x.tip_utc.localeCompare(y.tip_utc));
+  const waiting = games.filter(g => !byId.has(String(g.game_id))).length;
   let added = 0;
-  for (const W of WAVES) {
-    if (have.has(W.id)) continue;
-    const inWave = games.filter(g => (nyHour(g.tip_utc) >= LATE_FROM) === (W.id === "late"));
-    if (!inWave.length) continue;
-    const waiting = inWave.filter(g => !byId.has(String(g.game_id)));
-    if (waiting.length) { console.log(`NBA waves ${DATE}: ${W.id} waits for ${waiting.length} of ${inWave.length} games.`); continue; }
-    const rows = inWave.map(g => byId.get(String(g.game_id)));
+  if (fresh.length) {
+    const rows = fresh.map(g => byId.get(String(g.game_id)));
+    const t0 = tipLabel(fresh[0].tip_utc), t1 = tipLabel(fresh[fresh.length - 1].tip_utc);
     doc.waves.push({
-      id: W.id, label: W.label, graded_at: new Date().toISOString(),
-      games: inWave.map(g => {
+      id: "wave-" + (doc.waves.length + 1),
+      label: (t0 === t1 ? `Games that tipped at ${t0} ET` : `Games that tipped ${t0} to ${t1} ET`) + (waiting ? "" : ", the last of the night"),
+      graded_at: new Date().toISOString(),
+      games: fresh.map(g => {
         const r = byId.get(String(g.game_id)), ph = +r.leo_p_home;
         const calls = r.pick_result ? [{ market: "pick", side: r.pick_side === "home" ? g.home_name : g.away_name, result: R[r.pick_result], units: u3(r.pick_units) }] : [];
-        return { away: g.away_name, home: g.home_name, final_away: +r.away_score, final_home: +r.home_score,
+        return { game_id: String(g.game_id), away: g.away_name, home: g.home_name, final_away: +r.away_score, final_home: +r.home_score,
           leo_win_prob_away: +(1 - ph).toFixed(3), leo_win_prob_home: +ph.toFixed(3), leo_right_winner: r.leo_winner_correct === "1",
           calls, url: g.url ? "https://ndhorizon.com" + g.url : "" };
       }),
-      totals: { pick: tally(rows) }
+      totals: { pick: tally(rows) },
+      still_playing: waiting
     });
-    have.add(W.id); added++;
+    added = 1;
   }
-  if (!added) { if (!fs.existsSync(file)) return; console.log(`NBA waves ${DATE}: nothing new.`); return; }
+  if (!added) { console.log(`NBA waves ${DATE}: nothing new${waiting ? `, ${waiting} games not final yet` : ""}.`); return; }
   // Season to date, Leo Picks from the day they were first counted (DEC-20261102-30).
   const season = ledger.filter(r => r.pick_result && r.date >= PK.TRACK_FROM && r.date <= DATE);
   doc.season = { pick: { ...tally(season), n: season.length } };
-  doc.waves.sort((a, b) => WAVES.findIndex(w => w.id === a.id) - WAVES.findIndex(w => w.id === b.id));
   fs.mkdirSync(WDIR, { recursive: true });
   fs.writeFileSync(file, JSON.stringify(doc, null, 1) + "\n");
   const last = doc.waves[doc.waves.length - 1];
-  console.log(`NBA waves ${DATE}: wrote ${doc.waves.map(w => w.id).join(", ")}. Last: ${last.games.length} games, picks ${last.totals.pick.w}-${last.totals.pick.l} (${last.totals.pick.units}u). Season ${doc.season.pick.w}-${doc.season.pick.l} (${doc.season.pick.units}u).`);
+  console.log(`NBA waves ${DATE}: wrote ${last.id} (${last.label}): ${last.games.length} games, ${last.still_playing} still playing, picks ${last.totals.pick.w}-${last.totals.pick.l} (${last.totals.pick.units}u). Season ${doc.season.pick.w}-${doc.season.pick.l} (${doc.season.pick.units}u).`);
 }
 main();
