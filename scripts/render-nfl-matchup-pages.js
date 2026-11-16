@@ -495,7 +495,7 @@ ${require("./lib/ga").GA_HEAD}
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(desc)}">
 <meta property="og:url" content="https://ndhorizon.com${m.url}">
-<meta property="og:image" content="https://ndhorizon.com/img/og-card.png">
+<meta property="og:image" content="https://ndhorizon.com/img/leo-card.png">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127944;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/scoreboard.css">
