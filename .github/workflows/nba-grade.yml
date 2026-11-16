@@ -3,6 +3,10 @@ name: NBA grade results
 # Grades yesterday's frozen NBA reads against ESPN finals, then re-grades any
 # frozen game from the last 14 days that is still missing (catch-up).
 # Writes data/nba/results-ledger.csv and data/nba/results.json.
+# Wave runs (input wave=true, HO-0076) grade today's games that are already
+# final, so results can be posted the same night. The grader writes each final
+# once and skips graded games, so the 2:10am run still grades the rest of the
+# date. Box scores and miss reasons are rebuilt for the last 3 days then.
 # Crons are UTC with no daylight saving. Times below are Eastern Standard
 # Time (from Nov 1, 2026); add one hour while daylight saving is on.
 #   07:00 UTC = 2:00am ET  after the late West Coast games
@@ -17,6 +21,11 @@ on:
         description: "YYYY-MM-DD to grade. Blank = yesterday in America/New_York."
         required: false
         type: string
+      wave:
+        description: "Wave run (HO-0076): grade today's games that are final, rebuild their pages and the results page, write data/nba/waves/<date>.json. The 2:10am run grades the rest."
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -38,9 +47,13 @@ jobs:
           node-version: "20"
 
       - name: Grade
+        id: g
         run: |
           D="${{ github.event.inputs.date }}"
-          if [ -n "$D" ]; then node scripts/grade-nba-results.js --date="$D"; else node scripts/grade-nba-results.js; fi
+          if [ -z "$D" ] && [ "${{ github.event.inputs.wave }}" = "true" ]; then D="$(TZ=America/New_York date +%F)"; fi
+          if [ -z "$D" ]; then D="$(TZ=America/New_York date -d '-1 day' +%F)"; fi
+          echo "date=$D" >> "$GITHUB_OUTPUT"
+          node scripts/grade-nba-results.js --date="$D"
 
       # Results page, day by day: miss reasons, upsets and what Leo is learning
       # (HO-0031, DEC-20261110-30). Built from the graded files; never blocks the run.
@@ -51,29 +64,39 @@ jobs:
       # schema in data/feed/nba/. Leo's own output only, no sportsbook numbers.
       # The full season file is only written with --out and is never committed.
       - name: Data feed sample
+        if: github.event.inputs.wave != 'true'
         run: node scripts/build-nba-feed.js || echo "::warning::NBA feed sample not rebuilt"
 
       # Every player's points per game and game log for /nba/players/ and the
       # matchup pages' box scores (display only). Never blocks the run.
       - name: Player scoring log
+        if: github.event.inputs.wave != 'true'
         run: node scripts/build-nba-player-log.js || echo "::warning::NBA player log not refreshed"
 
       # Standings, Leo ratings, pace and efficiency for /nba/stats/ (display only).
       - name: Team stats
+        if: github.event.inputs.wave != 'true'
         run: node scripts/build-nba-team-stats.js || echo "::warning::NBA team stats not refreshed"
 
       # Full season for the scoreboard's date picker (display only). Never blocks the run.
       - name: Season schedule
+        if: github.event.inputs.wave != 'true'
         run: node scripts/build-nba-schedule.js || echo "::warning::NBA schedule not refreshed"
 
       # Add the final and the grade to the last three days' game pages.
       - name: Matchup pages
         run: |
-          node scripts/render-nba-matchup-pages.js $(for k in 1 2 3; do TZ=America/New_York date -d "-$k day" +%F; done)
+          if [ "${{ github.event.inputs.wave }}" = "true" ]; then node scripts/render-nba-matchup-pages.js "${{ steps.g.outputs.date }}"; else
+          node scripts/render-nba-matchup-pages.js $(for k in 1 2 3; do TZ=America/New_York date -d "-$k day" +%F; done); fi
           node scripts/build-nba-daily-pages.js "$(TZ=America/New_York date +%F)" "$(TZ=America/New_York date -d '-1 day' +%F)" || node scripts/build-nba-daily-pages.js
           node scripts/build-game-archives.js nba
           node scripts/build-nba-team-pages.js || true   # team pages (SEO-07); never fails the run
           node scripts/generate-sitemap.js
+
+      # Grading waves for the share posts (HO-0076): appends any wave of the graded
+      # date whose games are all final; never rewrites one. Never blocks the run.
+      - name: Grading waves
+        run: node scripts/build-nba-waves.js "${{ steps.g.outputs.date }}" || echo "::warning::NBA waves not written"
 
       - name: Commit and push if changed
         run: |
@@ -82,7 +105,7 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add data/nba data/feed/nba nba sitemap.xml
           if git diff --cached --quiet; then echo "No change."; exit 0; fi
-          git commit -m "NBA grade results $(TZ=America/New_York date +%F)"
+          git commit -m "NBA grade results ${{ steps.g.outputs.date }}${{ github.event.inputs.wave == 'true' && ' (wave)' || '' }}"
           # Retry: on busy days other workflows push between our checkout and our push (Nov 15 12:41pm card lost).
           # On a sitemap.xml clash keep ours, then rebuild the sitemap from the merged tree.
           for i in 1 2 3 4 5; do
