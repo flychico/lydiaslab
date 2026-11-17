@@ -1,8 +1,8 @@
 {
  "date": "2026-11-17",
- "generated_at": "2026-11-17T17:41:35.226Z",
+ "generated_at": "2026-11-17T22:05:47.355Z",
  "model_version": "leo-nba-v1",
- "injuries_as_of": "2026-11-17T17:41:26Z",
+ "injuries_as_of": "2026-11-17T22:05:41Z",
  "data_through": "2026-11-16",
  "games_rated": 205,
  "lean_edge_pts": 4,
@@ -23,14 +23,14 @@
    "neutral": false,
    "venue": "Scotiabank Arena",
    "market": {
-    "provider": "DraftKings",
-    "home_spread": 3.5,
-    "home_ml": 142,
-    "away_ml": -169,
+    "provider": "Draft Kings",
+    "home_spread": 4.5,
+    "home_ml": 150,
+    "away_ml": -179,
     "total": 214.5,
-    "home_spread_odds": -104,
-    "away_spread_odds": -117,
-    "p_home": 0.39676686627924124
+    "home_spread_odds": -114,
+    "away_spread_odds": -106,
+    "p_home": 0.38403303509979353
    },
    "model_version": "leo-nba-v1",
    "context": {
@@ -342,7 +342,7 @@
      "home": 4.4,
      "away": 0
     },
-    "edge_pts": 1.6,
+    "edge_pts": 2.6,
     "lean": null,
     "parts": {
      "home_court": 1.7,
@@ -376,14 +376,14 @@
    "neutral": false,
    "venue": "Target Center",
    "market": {
-    "provider": "DraftKings",
-    "home_spread": -1.5,
-    "home_ml": -130,
-    "away_ml": 110,
-    "total": 228.5,
-    "home_spread_odds": -115,
-    "away_spread_odds": -105,
-    "p_home": 0.5427435387673957
+    "provider": "Draft Kings",
+    "home_spread": -2.5,
+    "home_ml": -146,
+    "away_ml": 123,
+    "total": 225.5,
+    "home_spread_odds": -113,
+    "away_spread_odds": -107,
+    "p_home": 0.5696140522761468
    },
    "model_version": "leo-nba-v1",
    "context": {
@@ -471,7 +471,7 @@
        "ppg": 12.4,
        "rpg": 5.7,
        "apg": 2.8,
-       "status": "day-to-day"
+       "status": "out"
       },
       {
        "name": "Rudy Gobert",
@@ -512,8 +512,13 @@
      ],
      "injuries": [
       {
+       "name": "Zyon Pullin",
+       "status": "out",
+       "detail": "Quadriceps Bruise"
+      },
+      {
        "name": "Jonathan Kuminga",
-       "status": "day-to-day",
+       "status": "out",
        "detail": "Shoulder"
       },
       {
@@ -590,7 +595,7 @@
        "ppg": 24.2,
        "rpg": 6.2,
        "apg": 6.1,
-       "status": ""
+       "status": "day-to-day"
       },
       {
        "name": "Damian Lillard",
@@ -658,9 +663,14 @@
      ],
      "injuries": [
       {
+       "name": "Deni Avdija",
+       "status": "day-to-day",
+       "detail": "Foot"
+      },
+      {
        "name": "Chris Youngblood",
        "status": "out",
-       "detail": "Foot Bruise"
+       "detail": "Heel Bruise"
       },
       {
        "name": "Vit Krejci",
@@ -681,10 +691,10 @@
     }
    },
    "leo": {
-    "home_margin": 2.1,
-    "home_spread": -2,
-    "p_home": 0.559,
-    "p_away": 0.441,
+    "home_margin": 2.7,
+    "home_spread": -2.5,
+    "p_home": 0.578,
+    "p_away": 0.422,
     "rating": {
      "home": 7.4,
      "away": 5.1,
@@ -714,8 +724,8 @@
        "id": "4433247",
        "mpg": 30.6,
        "value": 3.3,
-       "weight": 0.4,
-       "status": "day-to-day",
+       "weight": 1,
+       "status": "out",
        "detail": "Shoulder"
       },
       {
@@ -739,13 +749,22 @@
        "detail": "Hamstring Not Specified"
       },
       {
+       "name": "Deni Avdija",
+       "id": "4683021",
+       "mpg": 32.9,
+       "value": 12.4,
+       "weight": 0.4,
+       "status": "day-to-day",
+       "detail": "Foot"
+      },
+      {
        "name": "Chris Youngblood",
        "id": "4706557",
        "mpg": 13.5,
        "value": 0.8,
        "weight": 1,
        "status": "out",
-       "detail": "Foot Bruise"
+       "detail": "Heel Bruise"
       },
       {
        "name": "Vit Krejci",
@@ -759,24 +778,55 @@
      ]
     },
     "lost": {
-     "home": 17.5,
-     "away": 9.3
+     "home": 19.4,
+     "away": 14.3
     },
-    "edge_pts": 0.6,
+    "edge_pts": 0.2,
     "lean": null,
     "parts": {
      "home_court": 1.7,
      "ratings": 2.1,
      "back_to_back": 0,
      "rest": 0,
-     "missing_players": -1.8
+     "missing_players": -1.1
     },
     "projected": {
      "total": 225,
      "home": 114,
-     "away": 112
+     "away": 111
     },
-    "pick": null
+    "pick": null,
+    "depends": [
+     {
+      "if": "sits",
+      "scope": "player",
+      "team": "POR",
+      "players": [
+       {
+        "name": "Deni Avdija",
+        "status": "day-to-day",
+        "detail": "Foot",
+        "value": 12.4,
+        "weight": 0.4
+       }
+      ],
+      "before": {
+       "ok": false,
+       "side": null,
+       "p": null,
+       "price": null
+      },
+      "after": {
+       "ok": true,
+       "side": "home",
+       "p": 0.6228,
+       "price": -146,
+       "p_team": 0.6228
+      },
+      "home_margin": 4.34,
+      "text": "Depends on Deni Avdija (day-to-day, foot). If he sits, Leo moves to 62% on the Timberwolves at -146 and this is a Leo Pick."
+     }
+    ]
    },
    "url": "/nba/trail-blazers-vs-timberwolves-prediction-odds-2026-11-17/"
   },
@@ -796,11 +846,11 @@
    "neutral": false,
    "venue": "Frost Bank Center",
    "market": {
-    "provider": "DraftKings",
+    "provider": "Draft Kings",
     "home_spread": -9.5,
     "home_ml": -437,
     "away_ml": 340,
-    "total": 222.5,
+    "total": 221.5,
     "home_spread_odds": -116,
     "away_spread_odds": -105,
     "p_home": 0.7816895682575818
@@ -1068,6 +1118,11 @@
      ],
      "injuries": [
       {
+       "name": "Isaiah Joe",
+       "status": "out",
+       "detail": "Hip Bruise"
+      },
+      {
        "name": "Duncan Robinson",
        "status": "out",
        "detail": "Quadriceps Strain"
@@ -1081,11 +1136,6 @@
        "name": "Ronald Holland II",
        "status": "out",
        "detail": "Knee Bruise"
-      },
-      {
-       "name": "Isaiah Joe",
-       "status": "out",
-       "detail": "Hip Bruise"
       },
       {
        "name": "Jalen Duren",
@@ -1190,7 +1240,7 @@
    "neutral": false,
    "venue": "Intuit Dome",
    "market": {
-    "provider": "DraftKings",
+    "provider": "Draft Kings",
     "home_spread": -6.5,
     "home_ml": -238,
     "away_ml": 197,
@@ -1590,7 +1640,7 @@
    "neutral": false,
    "venue": "crypto.com Arena",
    "market": {
-    "provider": "DraftKings",
+    "provider": "Draft Kings",
     "home_spread": -7.5,
     "home_ml": -289,
     "away_ml": 236,
@@ -1955,5 +2005,12 @@
    "url": "/nba/hornets-vs-lakers-prediction-odds-2026-11-17/"
   }
  ],
- "rechecks": []
+ "rechecks": [
+  {
+   "game_id": "401910003",
+   "tip_utc": "2026-11-18T01:00:00.000Z",
+   "recheck_utc": "2026-11-18T00:20:00.000Z",
+   "player": "Deni Avdija"
+  }
+ ]
 }
