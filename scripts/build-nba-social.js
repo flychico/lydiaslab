@@ -54,6 +54,9 @@ const MARK = { win: "✅", loss: "❌", push: "➖" };
 const fmtPrice = x => (+x > 0 ? "+" : "") + Math.round(+x);
 const fmtU = u => (u >= 0 ? "+" : "") + (+u).toFixed(2) + "u";
 const PK = require("./lib/nba-picks");
+const SW = require("./lib/nba-swing");
+// "Depends on <player>" under a Leo Pick whose read rests on an open day-to-day status (HO-0097).
+const depends = i => { const g = games.find(x => String(x.game_id) === i.game_id); const t = g ? SW.line(g) : ""; return t ? [t] : []; };
 
 const card = readJson(arg("card") || path.join(DIR, `picks-${DATE}.json`), null);
 if (!card) { console.log(`NBA social ${DATE}: no card.`); process.exit(0); }
@@ -111,7 +114,7 @@ function picksPost() {
   const header = `NBA ${day} 🏀`;
   // The price shown is the locked price the pick is graded at (DEC-20261116-30); the % is Leo's chance to win.
   const lines = [kind === "picks" ? "Leo picks:" : "No Leo Pick tonight. Leo's strongest reads to win:",
-    ...items.map(i => i.type === "pick" ? `${i.team} ML ${fmtPrice(i.price)} (${pct(i.p)})` : `${i.team} (${pct(i.p)})`)];
+    ...items.flatMap(i => i.type === "pick" ? [`${i.team} ML ${fmtPrice(i.price)} (${pct(i.p)})`, ...depends(i)] : [`${i.team} (${pct(i.p)})`])];
   const facts = [];
   const tags = hashtags(items.map(i => i.code));
   const link = tagged(`https://ndhorizon.com/nba/predictions/${DATE}/`, "picks");

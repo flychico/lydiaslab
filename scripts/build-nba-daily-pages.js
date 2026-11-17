@@ -32,6 +32,7 @@ const monthDay = d => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { m
 const tip = iso => iso ? new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) + " ET" : "";
 const pct = p => `${Math.round(p * 100)}%`;
 const URLS = require("./lib/nba-urls");   // same address as the game page (SEO-09)
+const SW = require("./lib/nba-swing");   // "Depends on <player>" line (HO-0097)
 const gameUrl = g => g.url || URLS.gamePath(g);
 const readJson = f => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch (e) { return null; } };
 
@@ -74,7 +75,8 @@ function card(g, r) {
     <div class="dn-when">${esc(tip(g.tip_utc))}${g.venue ? " &middot; " + esc(g.venue) : ""}</div>
     <h3><a href="${gameUrl(g)}">${esc(g.away_name)} at ${esc(g.home_name)} prediction</a></h3>
     ${ph != null ? `<p class="dn-line">Leo win chance: <b>${esc(g.away)} ${100 - Math.round(ph * 100)}%</b>, <b>${esc(g.home)} ${Math.round(ph * 100)}%</b>. Leo spread ${esc(leoTxt)}; DraftKings ${esc(mkTxt)}.${g.date >= PKS.TRACK_FROM && (PKS.pickText(g) || {}).ok ? ` <span class="dn-lean">${esc(PKS.pickText(g).badge)}</span>` : ""}</p>
-    <p class="dn-why">${esc(WHY.compare(g))}</p>` : `<p class="dn-line">No Leo read for this game.</p>`}
+    <p class="dn-why">${esc(WHY.compare(g))}</p>${!g.completed && SW.line(g) ? `
+    <p class="dn-why"><b>${esc(SW.line(g))}</b></p>` : ""}` : `<p class="dn-line">No Leo read for this game.</p>`}
     ${final}
     <a class="dn-more" href="${gameUrl(g)}">Full preview: why Leo has this number, injuries and box score &rarr;</a>
   </article>`;

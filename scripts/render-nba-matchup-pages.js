@@ -44,6 +44,7 @@ function results() {
 // Leo's read in plain words (DEC-20261031-10). Same text as the nightly card.
 const WHY = require("./lib/nba-why");
 const PKS = require("./lib/nba-picks");   // Leo Pick rule (DEC-20261102-30)
+const SW = require("./lib/nba-swing");   // "Depends on <player>" line (HO-0097)
 // Player lines for finished games: ESPN's game summary saved at grading
 // (data/nba/boxscores/<date>.json, full line), else the season player log
 // (data/nba/player-log.json: minutes, points, rebounds, assists).
@@ -165,7 +166,8 @@ function page(g, res) {
   const NM = COPY.names(g), NA = URLS.nick(A, g.away_name), NH = URLS.nick(H, g.home_name), lbl = c => URLS.nick(c, c === H ? g.home_name : g.away_name);
   const gapTxt = esc(NM(WHY.compare(g, MODEL.lean_edge_pts || 4)));
   const PT = PKS.pickText(g);
-  const leanTxt = (PT ? (PT.ok ? `<div class="lean">${esc(NM(PT.line))}</div>` : `<p class="gapread">${esc(NM(PT.line))}</p>`) : "");
+  const leanTxt = (PT ? (PT.ok ? `<div class="lean">${esc(NM(PT.line))}</div>` : `<p class="gapread">${esc(NM(PT.line))}</p>`) : "")
+    + (!g.completed && SW.line(g) ? `<p class="gapread"><b>${esc(SW.line(g))}</b></p>` : "");   // HO-0097
   const lede = COPY.opening(g, { sched: SCHED, lostCoef: MODEL.coef && MODEL.coef.lost_d });
   return `<!DOCTYPE html>
 <html lang="en">

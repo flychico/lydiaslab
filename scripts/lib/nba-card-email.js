@@ -33,6 +33,7 @@ const logo = t => `https://a.espncdn.com/i/teamlogos/nba/500/${String(t).toLower
 const URLS = require("./nba-urls");   // same address as the game page (SEO-09)
 const pageUrl = (g, date) => SITE + (g.url || URLS.gamePath({ ...g, date: g.date || date }));
 const NW = require("./nba-why");
+const SW = require("./nba-swing");   // "Depends on <player>" line (HO-0097)
 const PKS = require("./nba-picks");   // Leo Pick rule and words (DEC-20261102-30)   // leoLine / gapShown / compare: the same rounding and wording as the site
 const byTxt = (m, home, away) => m == null ? null : Math.abs(m) < 0.25 ? "a pick'em" : `${m > 0 ? home : away} by ${Math.abs(Math.round(m * 2) / 2)}`;
 
@@ -70,6 +71,7 @@ function card(g, date, why) {
     ${tbl(`<tr><td width="${pa}%" style="height:8px;line-height:8px;font-size:0;background:${T.gold};border-radius:999px 0 0 999px">&nbsp;</td><td width="${100 - pa}%" style="height:8px;line-height:8px;font-size:0;background:${T.navy};border-radius:0 999px 999px 0">&nbsp;</td></tr>`, "margin:10px 0 12px")}
     ${tbl(`<tr>${box("Leo spread", LS == null ? "&mdash;" : esc(NW.favLine(g, LS)), "Leo's favorite, by", true)}${box("DraftKings", mk.home_spread == null ? "&mdash;" : esc(NW.favLine(g, mk.home_spread)), mk.p_home != null ? `market ${esc(g.home)} ${pct(mk.p_home)}` : "&nbsp;")}${box("Call", esc(PKS.callBox(g).value), esc(PKS.callBox(g).sub))}</tr>`)}
     ${PT ? `<div style="font-family:${SANS};font-size:14px;line-height:1.5;color:${T.text};${PT.ok ? `background:${T.leanBg};font-weight:700;` : `color:${T.dim};`}border-radius:10px;padding:${PT.ok ? "9px 12px" : "0"};margin-top:12px">${esc(PT.line)}</div>` : ""}
+    ${SW.line(g) ? `<div style="font-family:${SANS};font-size:14px;line-height:1.5;color:${T.text};border-left:3px solid ${T.gold};padding:2px 0 2px 10px;margin-top:10px">${esc(SW.line(g))}</div>` : ""}
     ${leanLine}
     ${W && W.summary ? `<div style="font-family:${SANS};font-size:14px;line-height:1.55;color:${T.dim};border-top:1px solid ${T.border};margin-top:12px;padding-top:11px">${esc(W.summary)}</div>` : ""}
     <div style="font-family:${SANS};font-size:14px;font-weight:800;margin-top:11px"><a href="${pageUrl(g, date)}" style="color:${T.navy};text-decoration:none">Full preview: why Leo has this number &rarr;</a></div>

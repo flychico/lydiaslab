@@ -25,6 +25,7 @@ const { T, SANS, SITE, esc, tbl } = E;
 const URLS = require("./nba-urls");
 const NW = require("./nba-why");
 const PK = require("./nba-picks");
+const SW = require("./nba-swing");   // "Depends on <player>" line (HO-0097)
 
 const N = c => URLS.nick(c);
 const the = c => "the " + N(c);
@@ -102,12 +103,13 @@ function gameBlock(g, readAt) {
     ${tbl(`<tr><td style="font-family:${SANS}"><div style="font-size:16px;font-weight:800;color:${T.text}">${esc(N(g.away))} at ${esc(N(g.home))}</div><div style="font-size:12px;color:${T.dim}">${esc(tip(g.tip_utc))}</div></td>
       <td align="right" valign="top"><span style="display:inline-block;font-family:${SANS};font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:5px 10px;border-radius:999px;background:${C.on ? T.leanBg : T.noBg};color:${C.on ? T.good : T.dim};white-space:nowrap">${esc(C.on ? C.head.replace("Leo Pick: ", "Pick ") : "No call")}</span></td></tr>`)}
     ${P(`<b>${esc(C.head)}.</b> ${esc(C.why)}`, "margin-top:10px")}
+    ${SW.line(g) ? P(esc(SW.line(g))) : ""}
     ${P(`Win chance: ${esc(N(g.away))} ${pct1(L.p_away)}, ${esc(N(g.home))} ${pct1(L.p_home)}. ${esc(spreadTxt)}`)}
     ${label("Why Leo has this number")}${ul(reasons(g).map(esc))}
     ${label("What Leo read")}${ul(inputs(g, readAt).map(esc))}
     <div style="font-family:${SANS};font-size:14px;font-weight:800;margin-top:8px"><a href="${pageUrl(g)}" style="color:${T.navy};text-decoration:none">Game page &rarr;</a></div>
   </td></tr>`, `background:${T.card};border:1px solid rgba(26,37,53,.16);border-radius:18px;margin:0 0 12px`);
-  const text = [`${tip(g.tip_utc)}  ${N(g.away)} at ${N(g.home)}`, `  ${C.head}. ${C.why}`,
+  const text = [`${tip(g.tip_utc)}  ${N(g.away)} at ${N(g.home)}`, `  ${C.head}. ${C.why}`, ...(SW.line(g) ? ["  " + SW.line(g)] : []),
     `  Win chance: ${N(g.away)} ${pct1(L.p_away)}, ${N(g.home)} ${pct1(L.p_home)}. ${spreadTxt}`,
     "  Why:", ...reasons(g).map(r => "   - " + r), "  What Leo read:", ...inputs(g, readAt).map(r => "   - " + r), `  ${pageUrl(g)}`, ""].join("\n");
   return { html, text, pick: C.on };

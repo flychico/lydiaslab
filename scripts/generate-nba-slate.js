@@ -45,6 +45,7 @@ const WHYL = require("./lib/nba-why");   // shown spread: .5 grid, rounded towar
 const half = v => Math.round(v * 2) / 2;
 const PK = require("./lib/nba-picks");   // Leo Pick rule: 60%+ and priced better than -230 (DEC-20261102-30)
 const URLS = require("./lib/nba-urls");
+const SW = require("./lib/nba-swing");   // day-to-day swing check (HO-0097, NBA-H36): flags only, never picks
 const LOCK = require("./lib/nba-pick-lock");   // one price per Leo Pick, locked at the first read that makes it (DEC-20261116-30)   // game page addresses (SEO-09, DEC-20261107-30)
 
 /* New history columns are added once at the end of the header; old rows keep every value and get blanks. */
@@ -226,6 +227,7 @@ function readHistory() {
     };
     { const pk = LOCK.apply(DATE, g.game_id, PK.pickForGame(game)); if (LOCK.lock(DATE, g.game_id, pk, now)) locksChanged = true;
       game.leo.pick = pk ? { side: pk.side, team: pk.team, p: +pk.p.toFixed(4), price: pk.price, ok: pk.ok, why: pk.why, ...(pk.under ? { under: true } : {}), ...(pk.locked ? { locked: true } : {}) } : null; }
+    { const sw = SW.check(game, model); if (sw.flags.length) game.leo.depends = sw.flags; }
     game.url = URLS.gamePath(game);   // the game page address, for the home page card and every link (SEO-09)
     out.push(game);
     if (!started) hist.push({
@@ -243,7 +245,9 @@ function readHistory() {
   const doc = {
     date: DATE, generated_at: now, model_version: model.model_version, injuries_as_of: inj.timestamp,
     data_through: prev.length ? prev[prev.length - 1].date : null, games_rated: prev.length, lean_edge_pts: model.lean_edge_pts,
-    games: out.sort((a, b) => a.tip_utc.localeCompare(b.tip_utc))
+    games: out.sort((a, b) => a.tip_utc.localeCompare(b.tip_utc)),
+    // Flagged games want one more injury read 30 to 45 minutes before tip (HO-0097 ask 4). The dispatch is the Manager's.
+    rechecks: out.filter(g => g.leo && g.leo.depends && g.state === "pre").map(g => ({ game_id: g.game_id, tip_utc: g.tip_utc, recheck_utc: new Date(Date.parse(g.tip_utc) - 40 * 60e3).toISOString(), player: g.leo.depends[0].players.map(p => p.name).join(", ") }))
   };
   if (locksChanged) LOCK.save(DATE);
   fs.writeFileSync(prevFile, JSON.stringify(doc, null, 1) + "\n");
