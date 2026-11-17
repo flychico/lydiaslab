@@ -42,10 +42,10 @@ function build() {
   const R = V.records(tracker, review);
   page = fill(page, "records", R.now);
   page = fill(page, "older", R.older);
+  page = fill(page, "extra", R.extra);
   page = fill(page, "learning", V.learning(review, tests));
   page = fill(page, "weekList", V.weekList(review, season, null));
-  page = fill(page, "body", V.main(review, tracker, season));
-  if (/id="signup"/.test(page)) page = fill(page, "signup", V.signup());
+  page = fill(page, "body", V.main(review, tracker, season, { signup: V.signupBox() }));
   page = page.replace(/<!-- prerendered [^>]*-->\n?/, "");
   fs.writeFileSync(file, page);
 
@@ -60,7 +60,7 @@ function build() {
     const dates = [...new Set(gs.map(g => g.date))].sort();
     const span = dates.length ? `${V.longDate(dates[0])} to ${V.longDate(dates[dates.length - 1])}` : "";
     const title = `NFL Week ${w} ${season} Results: Every Leo Call Graded | Leo`;
-    const desc = `Leo's NFL Week ${w} ${season} results, day by day: ${gs.length} games, the upsets, what Leo got right, and what Leo missed and why.`;
+    const desc = `Leo's NFL Week ${w} ${season} results, day by day: final scores for ${gs.length} games, every call graded with its units, and the reason behind every miss.`;
     let h = head
       .replace(/<title>[^<]*<\/title>/, `<title>${esc(title)}</title>`)
       .replace(/(<meta name="description" content=")[^"]*"/, `$1${esc(desc)}"`)
@@ -73,17 +73,16 @@ function build() {
     const body = `${nav}
 <main class="scoreboard-shell">
   <section class="score-hero">
-    <p class="eyebrow"><a href="/nfl/results/">Leo&rsquo;s NFL record</a></p>
+    <p class="eyebrow"><a href="/nfl/results/">Leo&rsquo;s NFL results</a></p>
     <h1>NFL Week ${esc(w)} results</h1>
-    <p class="subtitle">${esc(span)}. Every game Leo read in Week ${esc(w)}, day by day: the upsets, what Leo got right, and what Leo missed and why. Every read was frozen before kickoff and nothing is changed after the fact. Nothing here is a wager.</p>
+    <p class="subtitle">${esc(span)}. Final scores and every Leo call in Week ${esc(w)}, day by day: moneyline, spread and total, graded on the read frozen before kickoff, misses included.</p>
   </section>
-  <section class="nfl-signup" aria-label="Free card by email">${V.signup()}</section>
   <section id="weekList" aria-label="Every week">${V.weekList(review, season, w)}</section>
-  <section id="body">${V.weekSection(review, tracker, w, { open: true, season })}</section>
-  <p class="small dim" style="margin:18px 0">The season record, the reasons behind every miss and how Leo is graded are on <a href="/nfl/results/">Leo&rsquo;s NFL record</a>.</p>
+  <section id="body">${V.weekSection(review, tracker, w, { open: "all", season, afterFirst: V.signupBox() })}</section>
+  <p class="small dim" style="margin:18px 0">The season record, the reasons behind every miss and how Leo is graded are on <a href="/nfl/results/">Leo&rsquo;s NFL results</a>.</p>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
-<script>renderNav("/articles/"); renderFooter();</script>
+<script>renderNav("/nfl/results/"); renderFooter();</script>
 </body>
 </html>
 `;

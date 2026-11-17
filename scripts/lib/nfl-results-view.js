@@ -61,7 +61,7 @@ function threeTile(label, t, rule) {
   const n = t.w + t.l + t.p;
   if (!n) return tile(label, "None yet", rule);
   const sample = n < 50 ? "early read, " + n + " of 50 calls" : n + " calls";
-  return tile(label, rec(t.w, t.l, t.p), "<b>" + u(t.units) + "</b> &middot; " + sample + " &middot; " + rule);
+  return tile(label, rec(t.w, t.l, t.p), "<b>" + u(t.units) + "</b> &middot; " + sample);
 }
 function records(tracker, review) {
   const T = review.three || { ml: { w: 0, l: 0, p: 0, units: 0 }, spread: { w: 0, l: 0, p: 0, units: 0 }, total: { w: 0, l: 0, p: 0, units: 0 } };
@@ -72,9 +72,10 @@ function records(tracker, review) {
   const before = r => r.date < (T.from || "2026-11-02");
   const g = tracker.games || [];
   const now =
-    threeTile("Moneyline calls, since " + from, T.ml, "more than 60%, priced better than -230") +
-    threeTile("Spread calls, since " + from, T.spread, "1 point off the line, both models agree") +
-    threeTile("Total calls, since " + from, T.total, "1.5 to 7 points off the line") +
+    threeTile("Moneyline, since " + from, T.ml, "more than 60%, priced better than -230") +
+    threeTile("Spread, since " + from, T.spread, "1 point off the line, both models agree") +
+    threeTile("Total, since " + from, T.total, "1.5 to 7 points off the line");
+  const extra =
     (P.decided ? tile("Prop calls, season", rec(P.w, P.l), (P.win_pct || 0).toFixed(0) + "% right &middot; quarterbacks " + rec(qb.w, qb.l) + ", running backs " + rec(rb.w, rb.l) + ", receivers " + rec(wr.w, wr.l)) : "") +
     (td && td.n ? tile("Touchdown chances, season", Math.round(td.predicted_pct) + "%", "Leo&rsquo;s average chance &middot; <b>" + Math.round(td.scored_pct) + "%</b> scored &middot; " + td.n.toLocaleString("en-US") + " players") : "");
   const older =
@@ -83,7 +84,7 @@ function records(tracker, review) {
     oldTile("Week 2 winners, retired model", tallyFor(g.filter(x => x.model_version === "leo-nflml-v1")), "every game") +
     oldTile("Spread sides, before " + from, tallyFor((tracker.spreads || []).filter(x => x.side && before(x))), "1 point off the line") +
     oldTile("Total sides, before " + from, tallyFor((tracker.totals || []).filter(x => x.side && before(x))), "paused Oct 17 to Nov 4");
-  return { now, older };
+  return { now, older, extra };
 }
 
 /* ---- What Leo is learning ---------------------------------------------- */
@@ -166,46 +167,51 @@ function runningAfter(review) {
   return after;
 }
 
+// One game: the final score first, Leo's graded calls beside it (results rebuild, Nov 16).
+function gameRow(g, tracker, nick) {
+  const N = c => esc(nick(c));
+  const t = (c, sc) => '<div class="gr-t' + (g.winner === c ? ' w' : '') + '"><span>' + N(c) + '</span><b>' + sc + '</b></div>';
+  const MK = { ml: "Moneyline", moneyline: "Moneyline", spread: "Spread", total: "Total" };
+  const word = r => r === "W" ? "Won " : r === "L" ? "Lost " : "Push ";
+  const calls = g.calls.map(c => {
+    let side = String(c.text || "").split(/, Leo /)[0];
+    if (c.market === "ml" || c.market === "moneyline") side = side.replace(/ ([+-]\d+)$/, " ML $1");
+    return '<div class="gr-call ' + cls(c.result) + '"><span class="gr-mk">' + mark(c.result) + '</span><span><small>' + (MK[c.market] || esc(c.market)) + '</small><span class="nw">' + esc(side) + '</span>' +
+      (c.units != null ? '<em>' + word(c.result) + u(c.units) + '</em>' : '<em>' + word(c.result).trim() + '</em>') + '</span></div>';
+  }).join("") || '<div class="gr-call none-call"><span>No call</span></div>';
+  const passes = (g.read || []).filter(x => !x.call).map(x => x.market.toLowerCase() + " (" + esc(String(x.pass || "").replace(/^([A-Z]{2,3}) /, (m, c) => nick(c) + " ")) + ")");
+  const read = g.leo && g.leo.pick && g.leo.prob != null
+    ? 'Leo had the ' + N(g.leo.pick) + ' to win (' + Math.round(g.leo.prob) + '%).' + (g.leo_right_winner == null ? '' : ' <span class="' + (g.leo_right_winner ? 'ok">Right' : 'no">Wrong') + '</span>.')
+    : '';
+  const props = (tracker.props || []).filter(x => String(x.week) === String(g.week) && x.matchup === g.matchup);
+  const tags = [];
+  if (g.upset) tags.push('<span class="gr-tag">Upset' + (g.upset.leo_saw_it ? ', Leo saw it' : '') + '</span>');
+  if (g.overtime) tags.push('<span class="gr-tag">Overtime</span>');
+  return '<article class="gr"><div class="gr-main"><div class="gr-score">' + t(g.away, g.score.away) + t(g.home, g.score.home) + '</div><div class="gr-calls">' + calls + '</div></div>' +
+    (read ? '<p class="gr-read">' + read + (passes.length ? ' No call on the ' + passes.join(", ") + '.' : '') + '</p>' : '') +
+    (g.miss ? '<p class="gr-why">' + reasonTag(g.miss.reason) + esc(g.miss.evidence) + '</p>' : '') +
+    (props.length ? '<details class="gm"><summary>Prop calls on this game (' + props.filter(x => x.result === "W").length + '-' + props.filter(x => x.result === "L").length + ')</summary><div class="calls-in">' +
+      callsFor({ props }, g, nick) + '</div></details>' : '') +
+    '<div class="gr-foot">' + tags.join("") + (g.url ? '<a href="' + esc(g.url) + '">Game page</a>' : '') + '</div></article>';
+}
+
 function dayBlock(review, tracker, date, games, open, after, nick) {
-  const S = sentences(nick);
   const three = games.some(g => g.three);
   const s = sumCalls(games.flatMap(g => g.calls));
   const dayProps = (tracker.props || []).filter(x => x.date === date && String(x.week) === String(games[0].week));
   const pw = dayProps.filter(x => x.result === "W").length, pl = dayProps.filter(x => x.result === "L").length;
-  const upsets = games.filter(g => g.upset), misses = games.filter(g => g.miss), rights = games.filter(g => g.calls.some(c => c.result === "W"));
   const props = (review.prop_misses || []).filter(x => String(x.week) === String(games[0].week) && x.date === date);
-  const link = (g, t) => g.url ? '<a href="' + esc(g.url) + '">' + t + '</a>' : t;
-
-  const upHtml = upsets.length ? '<ul>' + upsets.map(g => '<li>' + link(g, S.finalWords(g)) + '. The market had the ' + esc(nick(g.upset.fav)) +
-      (g.upset.fav_prob_market != null ? ' at ' + Math.round(g.upset.fav_prob_market) + '%' : ' as the favorite') + '. ' +
-      (g.upset.leo_prob_winner != null ? 'Leo gave the ' + esc(nick(g.winner)) + ' ' + Math.round(g.upset.leo_prob_winner) + '%: ' : '') +
-      (g.upset.leo_saw_it ? '<span class="ok">Leo saw it</span>' : '<span class="no">Leo missed it</span>') + '.</li>').join("") + '</ul>'
-    : '<p class="none">No upsets. Every favorite won.</p>';
-  const rightHtml = rights.length ? '<ul>' + rights.map(g => g.calls.filter(c => c.result === "W").map(c => '<li><span class="ok">&#10004;</span> ' + esc(c.text) + (c.units != null ? ' <span class="dim">(' + u(c.units) + ')</span>' : '') + '. ' + S.finalWords(g) + '.</li>').join("")).join("") + '</ul>'
-    : '<p class="none">No winning calls on this day.</p>';
-  const missHtml = misses.length ? misses.map(g => '<div class="miss"><div class="t">' + link(g, esc(nick(g.away)) + ' at ' + esc(nick(g.home))) + '</div>' +
-      '<div>' + S.finalWords(g) + '. ' + S.leoRead(g) + '.</div>' +
-      (g.calls.some(c => c.result === "L") ? '<div><span class="no">&#10008;</span> ' + g.calls.filter(c => c.result === "L").map(c => esc(c.text)).join("; ") + '.</div>' : '') +
-      '<div style="margin-top:5px">' + reasonTag(g.miss.reason) + esc(g.miss.evidence) + '</div>' +
-      '<div class="why">Counted as a miss: ' + esc(g.miss.why.join(", ")) + '.</div></div>').join("")
-    : '<p class="none">Nothing missed on this day.</p>';
-  const propHtml = props.length ? '<ul>' + props.map(x => '<li><b>' + esc(x.player) + '</b>, ' + esc(x.team_name) + ': ' + esc(x.lean || "") + ' ' + esc(String(x.line)) + ' ' + esc(x.unit || "") +
-      '. Leo ' + x.leo + ', actual <b>' + x.actual + '</b>, off by ' + x.miss + '. ' + reasonTag(x.reason) + esc(x.evidence) + '</li>').join("") + '</ul>' : "";
-  const everyHtml = games.map(g => {
-    const v = g.leo_right_winner == null ? '' : g.leo_right_winner ? ' &middot; <span class="ok">Leo had the winner</span>' : ' &middot; <span class="no">Leo had the ' + esc(nick(g.leo.pick)) + '</span>';
-    return '<details class="gm"><summary>' + S.finalWords(g) + v + '</summary><div class="calls-in">' +
-      (g.url ? '<div class="small"><a href="' + esc(g.url) + '">Leo&rsquo;s full preview and final report</a></div>' : '') +
-      '<div class="small">' + S.leoRead(g) + '.</div>' + callsFor(tracker, g, nick) + '</div></details>';
-  }).join("");
-
+  const right = games.filter(g => g.leo_right_winner === true).length, judged = games.filter(g => g.leo_right_winner != null).length;
+  const order = games.filter(g => g.calls.length).concat(games.filter(g => !g.calls.length));
+  const n = s.w + s.l + s.p;
+  const head = (n ? 'Calls ' + rec(s.w, s.l, s.p) + (three ? ', ' + u(s.units) : '') : 'No calls') + ' &middot; winner right in ' + right + ' of ' + judged + (three ? '' : ' &middot; before the three calls');
   const run = after[date];
-  const head = three
-    ? 'calls ' + rec(s.w, s.l, s.p) + ' (' + u(s.units) + ') &middot; props ' + rec(pw, pl) + (run ? ' &middot; since ' + shortDate(review.three.from) + ' ' + rec(run.w, run.l, run.p) + ' (' + u(run.units) + ')' : '')
-    : 'calls ' + rec(s.w, s.l, s.p) + ' &middot; props ' + rec(pw, pl) + ' &middot; before the three calls';
+  const propHtml = props.length ? '<details class="gm"><summary>Biggest prop misses</summary><ul class="small">' + props.map(x => '<li><b>' + esc(x.player) + '</b>, ' + esc(x.team_name) + ': ' + esc(x.lean || "") + ' ' + esc(String(x.line)) + ' ' + esc(x.unit || "") +
+      '. Leo ' + x.leo + ', actual <b>' + x.actual + '</b>, off by ' + x.miss + '. ' + reasonTag(x.reason) + esc(x.evidence) + '</li>').join("") + '</ul></details>' : "";
   return '<details class="day"' + (open ? ' open' : '') + '><summary>' + esc(longDate(date)) +
-    '<span class="cnt">' + games.length + (games.length === 1 ? ' game' : ' games') + ' &middot; ' + head + '</span></summary><div class="day-body">' +
-    '<h3>Upsets</h3>' + upHtml + '<h3>What Leo got right</h3>' + rightHtml + '<h3>What Leo missed and why</h3>' + missHtml +
-    (propHtml ? '<h3>Biggest prop misses</h3>' + propHtml : '') + '<h3>Every game</h3>' + everyHtml + '</div></details>';
+    '<span class="cnt">' + head + '</span></summary><div class="day-body">' + order.map(g => gameRow(g, tracker, nick)).join("") +
+    '<p class="day-line">' + (three && run ? 'Calls since ' + shortDate(review.three.from) + ' after this day: <b>' + rec(run.w, run.l, run.p) + ', ' + u(run.units) + '</b>' : '') +
+    (dayProps.length ? (three && run ? ' &middot; ' : '') + 'Prop calls this day: ' + rec(pw, pl) : '') + '</p>' + propHtml + '</div></details>';
 }
 
 function weekSummary(gs) {
@@ -223,7 +229,10 @@ function weekSection(review, tracker, w, opts = {}) {
   const title = opts.link ? '<a href="/nfl/results/' + weekSlug(opts.season, w) + '/">Week ' + esc(w) + '</a>' : 'Week ' + esc(w);
   let html = '<div class="wk-head"><h2>' + title + '</h2><span class="cnt">' + weekSummary(gs) + '</span></div>';
   const dates = [...new Set(gs.map(g => g.date))].sort((a, b) => b.localeCompare(a));
-  for (const d of dates) html += dayBlock(review, tracker, d, gs.filter(g => g.date === d).sort((a, b) => a.matchup.localeCompare(b.matchup)), !!opts.open, after, nick);
+  dates.forEach((d, i) => {
+    html += dayBlock(review, tracker, d, gs.filter(g => g.date === d).sort((a, b) => a.matchup.localeCompare(b.matchup)), opts.open === "all" || (!!opts.open && i === 0), after, nick);
+    if (i === 0 && opts.afterFirst) html += opts.afterFirst;
+  });
   return html;
 }
 
@@ -234,11 +243,11 @@ function weekList(review, season, current) {
 }
 
 /** Main page: the two latest weeks in full (latest open), then the week list. */
-function main(review, tracker, season) {
+function main(review, tracker, season, opts = {}) {
   const weeks = review.weeks.slice().sort((a, b) => Number(b) - Number(a));
   const show = weeks.slice(0, 2);
   const older = weeks.slice(2);
-  let html = show.map((w, i) => weekSection(review, tracker, w, { open: i === 0, link: true, season })).join("");
+  let html = show.map((w, i) => weekSection(review, tracker, w, { open: i === 0, link: true, season, afterFirst: i === 0 ? opts.signup : "" })).join("");
   if (older.length) {
     html += '<div class="card older-weeks"><h2>Earlier weeks</h2><ul>' + older.map(w => {
       const gs = review.games.filter(g => String(g.week) === String(w));
@@ -252,14 +261,15 @@ function main(review, tracker, season) {
 // The page script writes it fresh on every load (the prerender saves the form
 // already wired, which would leave it dead), then wires it.
 function signup() {
-  return '<div><b>Every call here was made before the game</b><p>Get the next card free by email before the games start. Every result graded the next morning, misses included.</p></div>'
+  return '<div><b>Get the next card free</b><p>Leo&rsquo;s calls by email before the games start, then graded like the ones above, misses included.</p></div>'
     + '<form class="lydia-signup-form" data-list="free-preview" data-thanks="You are on the list. The next card arrives before the next slate.">'
     + '<input type="email" name="email" required placeholder="you@email.com" aria-label="Email address">'
     + '<input type="hidden" name="bot-field">'
     + '<button class="btn blue" type="submit">Send me the free card</button></form>';
 }
 
-const api = { records, learning, weekSection, weekList, main, weekSlug, longDate, signup, REASON, REASON_HELP };
+const signupBox = () => '<section class="nfl-signup" aria-label="Free card by email">' + signup() + '</section>';
+const api = { signupBox, records, learning, weekSection, weekList, main, weekSlug, longDate, signup, REASON, REASON_HELP };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else if (typeof window !== "undefined") window.NFL_RESULTS = api;
 })();

@@ -29,7 +29,7 @@ const VIEW = require("./lib/nba-results-view");
 
 const ROOT = path.join(__dirname, ".."), DIR = path.join(ROOT, "data", "nba"), MDIR = path.join(DIR, "misses");
 const PAGE = path.join(ROOT, "nba", "results", "index.html");
-const VERSION = "20261116";
+const VERSION = "20261117";
 const nyDate = d => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(d);
 const num = v => v === "" || v == null || !Number.isFinite(+v) ? null : +v;
 const readJson = (f, d) => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch (e) { return d; } };
@@ -200,7 +200,33 @@ ul.tests li{font-size:.88rem;line-height:1.5;padding:7px 0;border-bottom:1px sol
   table.tally td:not(:first-child),table.tally th:not(:first-child){width:54px;}
   table.tally th{font-size:.62rem;letter-spacing:.02em;}
   details.day>summary{padding:12px 13px;} .day-body{padding:4px 13px 12px;}
-}`;
+}
+/* Results rows: final score first, Leo's calls beside it (results rebuild, Nov 16). Same block on /nba/results/ and /nfl/results/. */
+.gr{border-bottom:1px solid var(--border);padding:12px 0;}
+.gr:last-of-type{border-bottom:0;}
+.gr-main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:12px;align-items:start;}
+.gr-t{display:flex;justify-content:space-between;gap:8px;font-size:.98rem;line-height:1.5;color:var(--text-dim);}
+.gr-t b{font-variant-numeric:tabular-nums;font-weight:700;}
+.gr-t.w{color:var(--text);font-weight:800;}
+.gr-t.w b{font-weight:800;}
+.gr-calls{display:flex;flex-direction:column;gap:6px;}
+.gr-call{display:flex;gap:7px;align-items:flex-start;font-size:.88rem;font-weight:700;line-height:1.35;background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;padding:6px 9px;}
+.gr-call small{display:block;font-size:.62rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);}
+.gr-call em{display:block;font-style:normal;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.nw{white-space:nowrap;}
+.gr-call.ok{border-color:rgba(47,110,74,.45);} .gr-call.ok .gr-mk,.gr-call.ok em{color:var(--good);}
+.gr-call.no{border-color:rgba(180,60,50,.45);} .gr-call.no .gr-mk,.gr-call.no em{color:var(--danger);}
+.gr-call.none-call{font-weight:600;color:var(--text-dim);background:transparent;}
+.gr-mk{font-weight:800;}
+.gr-read,.gr-why{font-size:.84rem;line-height:1.5;color:var(--text-dim);margin:8px 0 0;}
+.gr-why .reason{margin-right:6px;}
+.gr-foot{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-top:7px;font-size:.8rem;}
+.gr-foot a{margin-left:auto;font-weight:700;color:var(--text);text-decoration:underline;text-decoration-color:var(--border);text-underline-offset:3px;}
+.gr-tag{font-size:.66rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid var(--border);color:var(--text-dim);}
+details.learn{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:12px 16px;margin:22px 0 12px;}
+details.learn>summary{cursor:pointer;font-weight:800;}
+@media(min-width:760px){.gr-main{grid-template-columns:300px 280px;gap:24px;} .gr-read,.gr-why{max-width:620px;} .gr-foot{max-width:604px;} .filters .field{max-width:320px;}}
+@media(max-width:420px){.gr-main{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:10px;} .gr-t{font-size:.92rem;} .gr-call{font-size:.84rem;}}`;
 
 function writePage(doc) {
   const view = VIEW.make(nick), app = view.render(doc, { signup: require("./lib/nba-signup-box").box("results") });
@@ -221,7 +247,7 @@ function writePage(doc) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Leo NBA Results: Every Game Graded, Day by Day | Leo</title>
-<meta name="description" content="Leo's NBA record day by day: every Leo Pick graded, the upsets, what Leo got right, and what Leo missed and why.">
+<meta name="description" content="Leo's NBA results day by day: final scores, every Leo Pick graded with its price and units, and the reason behind every miss.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Leo">
 <meta property="og:title" content="Leo NBA Results: Every Game Graded, Day by Day | Leo">
@@ -239,11 +265,11 @@ ${navM ? navM[0] : '<nav id="nav"></nav>'}
 <main class="scoreboard-shell" id="main">
 <!-- Built by scripts/build-nba-results-page.js at grading time (HO-0031). The page script replaces #app with the same view (innerHTML =). -->
 <section class="score-hero">
-    <p class="eyebrow">Every read, graded against what actually happened.</p>
+    <p class="eyebrow">Every game, graded</p>
     <h1>Leo&rsquo;s NBA results</h1>
-    <p class="subtitle">Day by day: the upsets, what Leo got right, and what Leo missed and why. Each game is graded on the last read Leo made before tip. Nothing is changed after the fact, and losses stay on the record.</p>
+    <p class="subtitle">Final scores and every Leo Pick, newest first. Each game is graded on Leo&rsquo;s last read before tip, and misses stay on the record.</p>
     <p class="updated" id="updated">${upd}</p>
-    <p style="margin:10px 0 0"><a class="chip-reset" href="/nba/teams/" style="text-decoration:none;display:inline-block">Browse by team</a></p>
+    <p style="margin:10px 0 0;display:flex;gap:8px;flex-wrap:wrap"><a class="chip-reset" href="/nba/scoreboard/" style="text-decoration:none;display:inline-block">Tonight&rsquo;s games</a><a class="chip-reset" href="/nba/teams/" style="text-decoration:none;display:inline-block">Browse by team</a></p>
   </section>
   <div id="status"></div>
   <div id="app">${app}</div>
@@ -251,7 +277,7 @@ ${navM ? navM[0] : '<nav id="nav"></nav>'}
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script src="/scripts/lib/nba-urls.js?v=20261107"></script>
 <script src="/scripts/lib/nba-results-view.js?v=${VERSION}"></script>
-<script src="/scripts/lib/nba-signup-box.js?v=20261116"></script>
+<script src="/scripts/lib/nba-signup-box.js?v=20261117"></script>
 <script>
 renderNav("/nba/results/"); renderFooter();
 /* NBA results, day by day (HO-0031, DEC-20261110-30). The page is built at grading time;
@@ -289,6 +315,7 @@ function showAll() { ALL = true; draw(); }
 }
 
 (async () => {
+  if (process.argv.includes("--page-only")) { writePage(JSON.parse(fs.readFileSync(path.join(DIR, "results-days.json"), "utf8"))); console.log("NBA results page: page rewritten from results-days.json"); return; }
   const rows = readCsv(path.join(DIR, "results-ledger.csv"));
   if (!rows.length) { console.log("NBA results page: no graded games yet."); return; }
   const graded = [...new Set(rows.map(r => r.date))].sort(), args = process.argv.slice(2).filter(a => /^\d{4}-\d{2}-\d{2}$/.test(a));

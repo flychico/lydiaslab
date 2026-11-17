@@ -7,8 +7,8 @@
  */
 (function () {
 const COPY = {
-  results: ["Every call here was made before the game",
-    "Get the next card free by email before the games start. Every result graded the next morning, misses included."],
+  results: ["Get the next card free",
+    "Leo&rsquo;s calls by email before the games start, then graded like the ones above, misses included."],
   night: ["Get Leo&rsquo;s card before every slate",
     "Free by email: Leo&rsquo;s calls for every NFL and NBA game before kickoff or tip, graded the next morning."]
 };

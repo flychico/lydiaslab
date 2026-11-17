@@ -19,8 +19,7 @@ const pct = p => Math.round(p * 100) + "%";
 const dayLong = d => new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" });
 const dayShort = d => new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
 const rec = c => c.w + "-" + c.l + (c.p ? "-" + c.p : "");
-const STATIC_DAYS = 21, OPEN_DAYS = 7;
-const KIND = { pick_lost: "Pick lost", wrong_winner: "Wrong winner", margin: "Margin" };
+const STATIC_DAYS = 21;
 const REASON_HELP = {
   injury_input: "Leo had the wrong players in or out.",
   market_knew: "The line moved away from Leo before tip, and was right to.",
@@ -50,47 +49,33 @@ function make(nick) {
     if (g.mkt_spread === 0) return "DraftKings had it a pick'em";
     return "DraftKings had " + the(g.mkt_spread < 0 ? g.home : g.away) + " by " + Math.abs(g.mkt_spread);
   }
-  const resWord = r => '<span class="' + (r === "win" ? "ok" : r === "loss" ? "no" : "") + '">' + (r === "win" ? "Won" : r === "loss" ? "Lost" : "Push") + "</span>";
-  function callLines(g, only) {
-    const out = [];
-    if (g.pick && (!only || g.pick.result === only))
-      out.push('<span class="call-tag">Pick</span> ' + N(g.pick.team) + " to win at " + sgn(g.pick.price) + " (Leo " + pct(g.pick.p) + "). " + resWord(g.pick.result) + ", " + unitsTxt(g.pick.units) + ".");
-    return out;
-  }
-  function missCard(g) {
-    const m = g.miss, kinds = m.kinds.map(k => k === "margin" ? "Margin off by " + g.leo_miss.toFixed(1) : KIND[k]);
-    return '<article class="miss" data-reason="' + esc(m.reason) + '"><div class="miss-head"><h4>' + link(g) + '</h4><span class="kinds">' + kinds.map(k => '<span class="kind">' + esc(k) + "</span>").join("") + "</span></div>" +
-      "<p>" + finalWords(g) + ". " + leoRead(g) + ". " + dkRead(g) + ".</p>" +
-      callLines(g).map(c => '<p class="call-line">' + c + "</p>").join("") +
-      '<p class="why"><span class="reason r-' + esc(m.reason) + '">' + esc(m.label) + "</span> " + esc(m.evidence) +
-      "" + "</p></article>";
-  }
-  function upsetLine(g) {
-    const x = g.upset;
-    return "<li>" + link(g) + ": " + finalWords(g).replace(/^The /, "the ") + ". DraftKings gave " + the(x.fav) + " a " + pct(x.fav_prob_market) + " chance. Leo gave " + the(x.winner) + " " + pct(x.leo_prob_winner) + '. <span class="' + (x.leo_saw_it ? "ok" : "no") + '">' + (x.leo_saw_it ? "Leo saw it" : "Leo missed it") + "</span>.</li>";
-  }
-  function rightLine(g) {
-    return callLines(g, "win").map(c => "<li>" + c + " " + link(g) + ": " + finalWords(g).replace(/^The /, "the ") + ".</li>").join("");
-  }
-  function otherLine(g) {
-    return "<li>" + link(g) + ": " + finalWords(g).replace(/^The /, "the ") + ". " + leoRead(g) + '. <span class="' + (g.leo_right ? "ok" : "no") + '">' + (g.leo_right ? "Right" : "Wrong") + "</span>.</li>";
+  /** One game as a small final score, Leo's pick and read beside it (results first, Nov 16 rebuild). */
+  function gameRow(g) {
+    const t = (c, sc, w) => '<div class="gr-t' + (w ? " w" : "") + '"><span>' + N(c) + "</span><b>" + sc + "</b></div>";
+    const p = g.pick, mk = r => r === "win" ? "&#10004;" : r === "loss" ? "&#10008;" : "&#8213;";
+    const call = p
+      ? '<div class="gr-call ' + (p.result === "win" ? "ok" : p.result === "loss" ? "no" : "") + '"><span class="gr-mk">' + mk(p.result) + '</span><span><small>Leo Pick</small><span class="nw">' + N(p.team) + " ML " + sgn(p.price) + '</span><em>' + (p.result === "win" ? "Won " : p.result === "loss" ? "Lost " : "Push ") + u(p.units) + "u</em></span></div>"
+      : '<div class="gr-call none-call"><span>No Leo Pick</span></div>';
+    const tags = [];
+    if (g.upset) tags.push('<span class="gr-tag">Upset' + (g.upset.leo_saw_it ? ", Leo saw it" : "") + "</span>");
+    if (g.ot) tags.push('<span class="gr-tag">Overtime</span>');
+    return '<article class="gr" data-away="' + esc(g.away) + '" data-home="' + esc(g.home) + '"><div class="gr-main"><div class="gr-score">' +
+      t(g.away, g.as, g.as > g.hs) + t(g.home, g.hs, g.hs > g.as) + "</div>" + call + "</div>" +
+      '<p class="gr-read">' + leoRead(g) + '. <span class="' + (g.leo_right ? "ok" : "no") + '">' + (g.leo_right ? "Right" : "Wrong") + "</span>.</p>" +
+      (g.miss ? '<p class="gr-why"><span class="reason r-' + esc(g.miss.reason) + '">' + esc(g.miss.label) + "</span> " + esc(g.miss.evidence) + "</p>" : "") +
+      '<div class="gr-foot">' + tags.join("") + '<a href="' + esc(g.url) + '">Game page</a></div></article>';
   }
 
   function dayBlock(d, open, team) {
     const games = team ? d.games.filter(g => g.away === team || g.home === team) : d.games;
     if (!games.length) return "";
-    const ups = games.filter(g => g.upset), wins = games.filter(g => g.pick && g.pick.result === "win");
-    const misses = games.filter(g => g.miss), shown = new Set([...misses, ...wins].map(g => g.id)), others = games.filter(g => !shown.has(g.id));
+    const order = games.filter(g => g.pick).concat(games.filter(g => !g.pick));
     const right = games.filter(g => g.leo_right).length;
-    const callsTxt = d.calls.n ? "Calls " + rec(d.calls) + ", " + unitsTxt(d.calls.units) : "No calls";
-    const sec = (h, body) => '<section class="day-sec"><h3>' + h + "</h3>" + body + "</section>";
+    const callsTxt = d.calls.n ? "Leo Picks " + rec(d.calls) + ", " + u(d.calls.units) + "u" : "No Leo Pick";
     return '<details class="day" id="d-' + d.date + '" data-date="' + d.date + '"' + (open ? " open" : "") + '><summary><span class="day-date">' + esc(dayLong(d.date)) + '</span><span class="day-sum">' +
-      games.length + (games.length === 1 ? " game" : " games") + (team ? "" : " &middot; " + callsTxt + " &middot; season after the day " + rec(d.running) + ", " + unitsTxt(d.running.units)) + "</span></summary>" +
-      '<div class="day-body"><p class="day-line">Leo had the winner in ' + right + " of " + games.length + (games.length === 1 ? " game" : " games") + "." + (misses.length ? " " + misses.length + (misses.length === 1 ? " miss" : " misses") + " looked at below." : "") + "</p>" +
-      sec("Upsets", ups.length ? '<ul class="lines">' + ups.map(upsetLine).join("") + "</ul>" : '<p class="none">No upsets. Every DraftKings favorite won.</p>') +
-      sec("What Leo got right", wins.length ? '<ul class="lines">' + wins.map(rightLine).join("") + "</ul>" : '<p class="none">' + (games.some(g => g.pick) ? "No winning calls." : "No official calls on " + (team ? "these games" : "this day") + ".") + "</p>") +
-      sec("What Leo missed and why", misses.length ? misses.map(missCard).join("") : '<p class="none">Nothing missed: no losing call, no wrong winner and no margin off by 10 or more.</p>') +
-      (others.length ? sec("Every other game", '<ul class="lines">' + others.map(otherLine).join("") + "</ul>") : "") +
+      (team ? games.length + (games.length === 1 ? " game" : " games") : callsTxt + " &middot; winner right in " + right + " of " + games.length) + "</span></summary>" +
+      '<div class="day-body">' + order.map(gameRow).join("") +
+      (team ? "" : '<p class="day-line">Leo Picks this season after this day: <b>' + rec(d.running) + ", " + u(d.running.units) + "u</b></p>") +
       "</div></details>";
   }
 
@@ -101,11 +86,11 @@ function make(nick) {
     const rows = L.order.map(r => "<tr><td><span class=\"reason r-" + r + '">' + esc(L.labels[r]) + '</span><span class="help">' + esc(REASON_HELP[r] || "") + '</span></td><td data-l="This week">' + (T.this_week[r] || 0) + '</td><td data-l="Last week">' + (T.last_week[r] || 0) + '</td><td data-l="Season">' + (T.season[r] || 0) + "</td></tr>").join("");
     const st = { testing: "Testing", measuring: "Measuring", next: "Next test", proposed: "Proposed", adopted: "Adopted", rejected: "Rejected" };
     const tests = (L.tests || []).map(t => '<li><span class="t-status t-' + esc(t.status) + '">' + esc(st[t.status] || t.status) + "</span> <b>" + esc(t.title) + "</b>" + (t.result ? " " + esc(t.result) : "") + "</li>").join("");
-    return '<section class="learn"><h2 class="sec-h">What Leo is learning</h2>' +
+    return '<details class="card learn"><summary>Why Leo misses, and what it is testing</summary>' +
       '<p class="sec-p">Every miss gets one reason, worked out from the data: the box score, the injury report Leo read, and how the DraftKings line moved. ' + esc(L.trend) + "</p>" +
       '<section class="card tbl-card"><table class="calls tally"><thead><tr><th>Reason for the miss</th><th>This week</th><th>Last week</th><th>Season</th></tr></thead><tbody>' + rows + "</tbody></table></section>" +
       (tests ? '<h3 class="sub-h">Changes under test</h3><ul class="tests">' + tests + "</ul>" : "") +
-      '<p class="sec-p rule">' + esc(L.rule || "Changes are made one at a time, each backed by a backtest.") + "</p></section>";
+      '<p class="sec-p rule">' + esc(L.rule || "Changes are made one at a time, each backed by a backtest.") + "</p></details>";
   }
 
   /** opts: team (code), date (YYYY-MM-DD), all (show every day) */
@@ -116,30 +101,24 @@ function make(nick) {
     if (date) days = days.filter(d => d.date === date);
     const limited = !opts.all && !team && !date && days.length > STATIC_DAYS;
     const list = limited ? days.slice(0, STATIC_DAYS) : days;
-    const cut = doc.days.length ? new Date(new Date(doc.days[0].date + "T12:00:00Z").getTime() - (OPEN_DAYS - 1) * 864e5).toISOString().slice(0, 10) : "";
     const opt = (v, t, sel) => '<option value="' + esc(v) + '"' + (sel ? " selected" : "") + ">" + t + "</option>";
-    const filters = '<section class="filters" aria-label="Filter the record">' +
-      '<div class="field"><label for="f-date">Game day</label><select id="f-date" onchange="setFilter(\'date\',this.value)">' + opt("", "All days", !date) +
-        doc.days.map(d => opt(d.date, esc(dayShort(d.date)) + " &middot; " + d.games.length + " games" + (d.calls.n ? " &middot; calls " + rec(d.calls) : ""), date === d.date)).join("") + "</select></div>" +
-      '<div class="field"><label for="f-team">Team</label><select id="f-team" onchange="setFilter(\'team\',this.value)">' + opt("", "All teams", !team) +
+    const filters = '<section class="filters" aria-label="Filter by team">' +
+      '<div class="field"><label for="f-team">Show one team</label><select id="f-team" onchange="setFilter(\'team\',this.value)">' + opt("", "All teams", !team) +
         doc.teams.map(t => opt(t, N(t), team === t)).join("") + "</select></div>" +
-      (date || team ? '<button class="chip-reset" type="button" onclick="clearFilters()">Show everything</button>' : "") +
+      (date || team ? '<button class="chip-reset" type="button" onclick="clearFilters()">' + (team ? "Show every team" : "Show every day") + "</button>" : "") +
       (team && opts.teamUrl ? '<a class="chip-reset" style="text-decoration:none" href="' + esc(opts.teamUrl(team)) + '">Open the ' + N(team) + " team page</a>" : "") + "</section>";
 
-    const blocks = list.map((d, i) => dayBlock(d, !!date || !!team || i === 0 || d.date >= cut, team)).join("");
+    const blocks = list.map((d, i) => dayBlock(d, !!date || !!team || i === 0, team)).filter(Boolean);
+    const P = S.picks;
     return tiles([
-        ["Leo Picks", S.picks.n ? rec(S.picks) : "0-0", S.picks.n ? unitsTxt(S.picks.units) + " on the moneyline, since " + esc(dayShort(S.picks.from).replace(/^\w+, /, "")) + ". " + (S.picks.n < 50 ? "Under 50 graded picks is an early read." : S.picks.n + " graded picks.") : "to win, 60% or more"],
-        ["Winner right", S.games ? S.right + " of " + S.games : "0", "DraftKings favorite " + S.mkt_right + " of " + S.mkt_games],
-        ["Average miss", S.miss_leo == null ? "" : S.miss_leo.toFixed(1), "points on the margin. DraftKings spread " + (S.miss_line == null ? "" : S.miss_line.toFixed(1))]
+        ["Leo Picks", P.n ? rec(P) : "0-0", P.n ? u(P.units) + " units since " + esc(dayShort(P.from).replace(/^\w+, /, "")) + (P.n < 50 ? ". Early read, " + P.n + " of 50." : ".") : "to win, 60% or more"],
+        ["Winner right", S.games ? S.right + " of " + S.games : "0", "DraftKings favorite " + S.mkt_right + " of " + S.mkt_games]
       ]) +
-      (opts.signup || "") +   // free card box under the record tiles (SEO-24, HO-0093)
-      '<p class="sec-p">A <b>Leo Pick</b> is a team Leo gives 60% or more to win when the DraftKings moneyline on it is better than -230. One unit each, at the price locked when Leo makes the pick. A public test, not bets.</p>' +
-      learning(doc) +
-      '<h2 class="sec-h">Day by day</h2>' +
-      '<p class="sec-p">Newest first. Each day: the upsets, what Leo got right, what Leo missed and why, then every other game. Tap a day to open or close it.</p>' +
+      '<p class="sec-p">A <b>Leo Pick</b> is a team Leo gives 60% or more to win at a price better than -230, one unit each at the price locked when Leo makes the pick. Every game below is graded on Leo&rsquo;s last read before tip.</p>' +
       filters +
-      (blocks || '<div class="score-empty">No graded games for this filter.</div>') +
-      (limited ? '<p class="more"><button class="chip-reset" type="button" onclick="showAll()">Show earlier days (' + (days.length - STATIC_DAYS) + " more)</button></p>" : "");
+      (blocks.length ? blocks[0] + (team || date ? "" : (opts.signup || "")) + blocks.slice(1).join("") : '<div class="score-empty">No graded games for this filter.</div>') +
+      (limited ? '<p class="more"><button class="chip-reset" type="button" onclick="showAll()">Show earlier days (' + (days.length - STATIC_DAYS) + " more)</button></p>" : "") +
+      learning(doc);
   }
   return { render, finalWords, leoRead, dkRead };
 }
