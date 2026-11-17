@@ -89,7 +89,8 @@ function callText(g) {
   if (pt && pt.ok) return { on: true, head: `Leo Pick: ${N(pk.team)} ${money(pk.price)}`, why: `Leo gives the ${N(pk.team)} ${pct(pk.p)} to win, and the price is better than -230.` };
   const t = pk ? N(pk.team) : null;
   let why = "Neither team reaches 60% with Leo.";
-  if (pk && (pk.under || pk.p < PK.PICK_P)) why = `Leo has the ${t} at ${(pk.p * 100).toFixed(1)}%, under the 60% bar.`;
+  if (pk && pk.held) why = `Leo has the ${t} at ${pct(pk.p)}, but it rests on ${pk.why.replace(/^waiting on /, "")}. No pick until his status is known.`;
+  else if (pk && (pk.under || pk.p < PK.PICK_P)) why = `Leo has the ${t} at ${(pk.p * 100).toFixed(1)}%, under the 60% bar.`;
   else if (pk && pk.price == null) why = "There is no moneyline yet.";
   else if (pk) why = `Leo has the ${t} at ${pct(pk.p)}, but the price is ${money(pk.price)}, past -230.`;
   return { on: false, head: "No call", why, sub: cb.sub };

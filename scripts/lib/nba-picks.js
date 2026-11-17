@@ -70,6 +70,7 @@ function pickText(g) {
   if (!pk) return null;
   const pct = Math.round(pk.p * 100) + "%";
   if (pk.under || pk.p < PICK_P) return { ok: false, badge: "", line: `No pick: Leo has ${pk.team} ${(pk.p * 100).toFixed(1)}%, just under the 60% bar.` };
+  if (pk.held) return { ok: false, badge: "", line: `No pick yet: Leo has ${pk.team} ${pct}, but it depends on ${pk.why.replace(/^waiting on /, "")}. It becomes a Leo Pick only if his status is known before tip and Leo is still at 60% or more.` };
   if (pk.ok) return { ok: true, badge: `Pick ${pk.team} ${fmtPrice(pk.price)}`,
     line: `Leo Pick: ${pk.team} to win at ${fmtPrice(pk.price)} (Leo ${pct}). Tracked in units, not a bet.` };
   return { ok: false, badge: "", line: `No pick: Leo has ${pk.team} ${pct}, but ${pk.price == null ? "there is no moneyline yet" : `the price is ${fmtPrice(pk.price)}, -230 or dearer`}.` };
@@ -84,7 +85,8 @@ function callBox(g) {
   const sg = v => (v > 0 ? "+" : "") + v;
   if (pk && pk.ok) return { on: true, value: `${pk.team} ${fmtPrice(pk.price)}`, sub: "Leo Pick, to win" };
   let why = "Under 60%, close to DraftKings";
-  if (pk && (pk.under || pk.p < PICK_P)) why = `${pk.team} ${(pk.p * 100).toFixed(1)}%, under 60%`;
+  if (pk && pk.held) why = "Held: waiting on an injury status";
+  else if (pk && (pk.under || pk.p < PICK_P)) why = `${pk.team} ${(pk.p * 100).toFixed(1)}%, under 60%`;
   else if (pk && pk.price == null) why = "No moneyline yet";
   else if (pk) why = `${fmtPrice(pk.price)} is past -230`;
   return { on: false, value: "No call", sub: why };

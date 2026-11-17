@@ -30,9 +30,12 @@ function load(date) {
   return cache[date];
 }
 /** The pick as Leo reads it now, with the locked price applied. pk is PK.pick()/pickForGame() output. */
-function apply(date, gameId, pk) {
+function apply(date, gameId, pk, opt = {}) {
   if (!pk || date < LOCK_FROM) return pk;
   const L = load(date).games[String(gameId)];
+  // Hold (HO-0097, option B): no lock yet and the last read before tip rested on an open day-to-day status.
+  const H = (load(date).holds || {})[String(gameId)];
+  if (!opt.ignoreHold && !L && pk.ok && H && H.held && H.side === pk.side) return { ...pk, ok: false, held: true, why: `waiting on ${H.players.join(" and ")} (day-to-day)` };
   if (!L || L.side !== pk.side || pk.p < 0.6) return pk;
   return { ...pk, price: L.price, ok: true, why: "", locked: true };
 }
@@ -44,9 +47,18 @@ function lock(date, gameId, pk, at) {
   doc.games[String(gameId)] = { side: pk.side, team: pk.team, price: pk.price, p: +(+pk.p).toFixed(4), locked_at: at };
   return true;
 }
+/** Record whether this read holds the game (HO-0097, option B). The last read before tip is the one the grader sees. */
+function hold(date, gameId, h) {
+  if (date < LOCK_FROM) return false;
+  const doc = load(date); doc.holds = doc.holds || {};
+  const prev = JSON.stringify(doc.holds[String(gameId)] || null), next = h ? { held: true, side: h.side, players: h.players, at: h.at } : null;
+  if (prev === JSON.stringify(next)) return false;
+  if (next) doc.holds[String(gameId)] = next; else delete doc.holds[String(gameId)];
+  return true;
+}
 function save(date) {
   if (!(date in cache) || date < LOCK_FROM) return;
   fs.mkdirSync(DIR, { recursive: true });
   fs.writeFileSync(file(date), JSON.stringify(cache[date], null, 1) + "\n");
 }
-module.exports = { LOCK_FROM, load, apply, lock, save, units: PK.units };
+module.exports = { LOCK_FROM, load, apply, lock, hold, save, units: PK.units };

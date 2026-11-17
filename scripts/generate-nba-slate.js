@@ -225,9 +225,17 @@ function readHistory() {
         projected: PR ? (() => { const t = P.project(PR, g.home, g.away).total; return { total: Math.round(t), home: Math.round((t + margin) / 2), away: Math.round((t - margin) / 2) }; })() : null
       }
     };
-    { const pk = LOCK.apply(DATE, g.game_id, PK.pickForGame(game)); if (LOCK.lock(DATE, g.game_id, pk, now)) locksChanged = true;
-      game.leo.pick = pk ? { side: pk.side, team: pk.team, p: +pk.p.toFixed(4), price: pk.price, ok: pk.ok, why: pk.why, ...(pk.under ? { under: true } : {}), ...(pk.locked ? { locked: true } : {}) } : null; }
-    { const sw = SW.check(game, model); if (sw.flags.length) game.leo.depends = sw.flags; }
+    { let pk = LOCK.apply(DATE, g.game_id, PK.pickForGame(game), { ignoreHold: true });
+      const shape = x => x ? { side: x.side, team: x.team, p: +x.p.toFixed(4), price: x.price, ok: x.ok, why: x.why, ...(x.under ? { under: true } : {}), ...(x.locked ? { locked: true } : {}), ...(x.held ? { held: true } : {}) } : null;
+      game.leo.pick = shape(pk);
+      const sw = SW.check(game, model); if (sw.flags.length) game.leo.depends = sw.flags;
+      // Option B (Lynold, 2026-11-16, HO-0097): a pick that rests on an open day-to-day status is not made
+      // until the status is known. A pick already locked at an earlier read stays (DEC-20261116-30).
+      const drop = pk && pk.ok && !pk.locked ? sw.flags.find(f => f.before.ok && !(f.after.ok && f.after.side === pk.side)) : null;
+      if (LOCK.hold(DATE, g.game_id, drop && !started ? { side: pk.side, players: drop.players.map(p => p.name), at: now } : null)) locksChanged = true;
+      if (drop) { for (const f of game.leo.depends) if (f.before.ok) f.text = f.text.replace(/ and this is no pick\.$/, ". No Leo Pick until his status is known.");
+        pk = { ...pk, ok: false, held: true, why: `waiting on ${drop.players.map(p => p.name).join(" and ")} (day-to-day)` }; game.leo.pick = shape(pk); }
+      if (LOCK.lock(DATE, g.game_id, pk, now)) locksChanged = true; }
     game.url = URLS.gamePath(game);   // the game page address, for the home page card and every link (SEO-09)
     out.push(game);
     if (!started) hist.push({
