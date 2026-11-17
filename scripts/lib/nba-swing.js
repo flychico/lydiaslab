@@ -27,7 +27,7 @@ function normCdf(z) {
   return z > 0 ? 1 - p : p;
 }
 const open = p => p && p.weight > 0 && p.weight < 1;
-const pickOf = (g, pHome) => PK.pick({ p_home: pHome, home_ml: (g.market || {}).home_ml, away_ml: (g.market || {}).away_ml, home: g.home, away: g.away });
+const pickOf = (g, pHome) => PK.pick({ p_home: pHome, home_ml: (g.market || {}).home_ml, away_ml: (g.market || {}).away_ml, home: g.home, away: g.away, date: g.date });
 const key = pk => pk && pk.ok ? pk.side : "none";
 const pct = p => (Math.round(p * 100) === 60 && p < 0.6 ? (p * 100).toFixed(1) : Math.round(p * 100)) + "%";   // 59.7%, never a "60%" that is no pick
 const sideName = (g, side) => URLS.nick(g[side], g[side + "_name"]);

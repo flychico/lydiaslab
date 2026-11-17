@@ -113,7 +113,7 @@ function picksPost() {
   const day = weekday(DATE).toUpperCase();
   const header = `NBA ${day} 🏀`;
   // The price shown is the locked price the pick is graded at (DEC-20261116-30); the % is Leo's chance to win.
-  const lines = [kind === "picks" ? "Leo picks:" : "No Leo Pick tonight. Leo's strongest reads to win:",
+  const lines = [kind === "picks" ? "Leo picks:" : (PK.noPickDay && PK.noPickDay(DATE) ? "No Leo Picks on Mondays. Leo's strongest reads to win:" : "No Leo Pick tonight. Leo's strongest reads to win:"),
     ...items.flatMap(i => i.type === "pick" ? [`${i.team} ML ${fmtPrice(i.price)} (${pct(i.p)})`, ...depends(i)] : [`${i.team} (${pct(i.p)})`])];
   const facts = [];
   const tags = hashtags(items.map(i => i.code));

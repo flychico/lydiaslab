@@ -90,6 +90,7 @@ function callText(g) {
   const t = pk ? N(pk.team) : null;
   let why = "Neither team reaches 60% with Leo.";
   if (pk && pk.held) why = `Leo has the ${t} at ${pct(pk.p)}, but it rests on ${pk.why.replace(/^(waiting on|too close to call: rested on) /, "")}. Too close to call, so no Leo Pick on this game.`;
+  else if (pk && pk.monday) why = `Leo has the ${t} at ${pct(pk.p)}. Leo makes no picks on Mondays.`;
   else if (pk && (pk.under || pk.p < PK.PICK_P)) why = `Leo has the ${t} at ${(pk.p * 100).toFixed(1)}%, under the 60% bar.`;
   else if (pk && pk.price == null) why = "There is no moneyline yet.";
   else if (pk) why = `Leo has the ${t} at ${pct(pk.p)}, but the price is ${money(pk.price)}, past -230.`;

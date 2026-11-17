@@ -226,7 +226,7 @@ function readHistory() {
       }
     };
     { let pk = LOCK.apply(DATE, g.game_id, PK.pickForGame(game), { ignoreHold: true });
-      const shape = x => x ? { side: x.side, team: x.team, p: +x.p.toFixed(4), price: x.price, ok: x.ok, why: x.why, ...(x.under ? { under: true } : {}), ...(x.locked ? { locked: true } : {}), ...(x.held ? { held: true } : {}) } : null;
+      const shape = x => x ? { side: x.side, team: x.team, p: +x.p.toFixed(4), price: x.price, ok: x.ok, why: x.why, ...(x.under ? { under: true } : {}), ...(x.locked ? { locked: true } : {}), ...(x.held ? { held: true } : {}), ...(x.monday ? { monday: true } : {}) } : null;
       game.leo.pick = shape(pk);
       const sw = SW.check(game, model); if (sw.flags.length) game.leo.depends = sw.flags;
       // Option B (Lynold, 2026-11-16, HO-0097): a pick that rests on an open day-to-day status is not made.

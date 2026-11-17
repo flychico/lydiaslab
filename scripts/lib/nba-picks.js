@@ -27,6 +27,9 @@
 'use strict';
 
 const PICK_P = 0.60, PRICE_LIMIT = -230, TRACK_FROM = "2026-11-02", LEANS_UNTIL = "2026-11-10";
+/** No Leo Picks on Mondays (Lynold, 2026-11-16), from this date on; earlier Mondays keep their graded picks. */
+const NO_MONDAY_FROM = "2026-11-17";
+const noPickDay = date => !!date && String(date).slice(0, 10) >= NO_MONDAY_FROM && new Date(String(date).slice(0, 10) + "T12:00:00Z").getUTCDay() === 1;
 /** Leans were recorded for games through LEANS_UNTIL and not after. */
 const leansOn = date => !!date && String(date).slice(0, 10) <= LEANS_UNTIL;
 const num = v => v === "" || v == null || !Number.isFinite(+v) || +v === 0 ? null : +v;
@@ -53,13 +56,14 @@ function pick(x) {
   const price = num(side === "home" ? x.home_ml : x.away_ml), team = x[side];
   if (price == null) return { side, team, p, price: null, ok: false, why: "no moneyline yet" };
   if (price <= PRICE_LIMIT) return { side, team, p, price, ok: false, why: `priced ${price}, -230 or dearer` };
+  if (noPickDay(x.date)) return { side, team, p, price, ok: false, why: "no Leo Picks on Mondays", monday: true };
   return { side, team, p, price, ok: true, why: "" };
 }
 
 /** From a card game (g.leo, g.market). */
 function pickForGame(g) {
   const L = g.leo || {}, mk = g.market || {};
-  return pick({ p_home: L.p_home, home_ml: mk.home_ml, away_ml: mk.away_ml, home: g.home, away: g.away });
+  return pick({ p_home: L.p_home, home_ml: mk.home_ml, away_ml: mk.away_ml, home: g.home, away: g.away, date: g.date });
 }
 
 const fmtPrice = p => p == null ? "" : (p > 0 ? "+" : "") + p;
@@ -70,6 +74,7 @@ function pickText(g) {
   if (!pk) return null;
   const pct = Math.round(pk.p * 100) + "%";
   if (pk.under || pk.p < PICK_P) return { ok: false, badge: "", line: `No pick: Leo has ${pk.team} ${(pk.p * 100).toFixed(1)}%, just under the 60% bar.` };
+  if (pk.monday) return { ok: false, badge: "", line: `No pick: Leo has ${pk.team} ${pct}, but Leo makes no picks on Mondays.` };
   if (pk.held) return { ok: false, badge: "", line: `No pick: Leo has ${pk.team} ${pct}, but it depends on ${pk.why.replace(/^(waiting on|too close to call: rested on) /, "")}. Too close to call, so Leo skips it.` };
   if (pk.ok) return { ok: true, badge: `Pick ${pk.team} ${fmtPrice(pk.price)}`,
     line: `Leo Pick: ${pk.team} to win at ${fmtPrice(pk.price)} (Leo ${pct}). Tracked in units, not a bet.` };
@@ -86,6 +91,7 @@ function callBox(g) {
   if (pk && pk.ok) return { on: true, value: `${pk.team} ${fmtPrice(pk.price)}`, sub: "Leo Pick, to win" };
   let why = "Under 60%, close to DraftKings";
   if (pk && pk.held) why = "Skipped: too close to call";
+  else if (pk && pk.monday) why = "No Leo Picks on Mondays";
   else if (pk && (pk.under || pk.p < PICK_P)) why = `${pk.team} ${(pk.p * 100).toFixed(1)}%, under 60%`;
   else if (pk && pk.price == null) why = "No moneyline yet";
   else if (pk) why = `${fmtPrice(pk.price)} is past -230`;
@@ -138,7 +144,7 @@ function priceMove(g, nowMl) {
     text: `Price: ${fmtPrice(pk.price)} at Leo's read, ${fmtPrice(to)} now${toward === true ? " (moved toward Leo)" : toward === false ? " (moved against Leo)" : " (no real move)"}` };
 }
 
-const api = { PICK_P, PRICE_LIMIT, TRACK_FROM, LEANS_UNTIL, leansOn, payout, units, pick, pickForGame, fmtPrice, pickText, callBox, settle, espnMoneyline, priceMove, imp };
+const api = { PICK_P, PRICE_LIMIT, TRACK_FROM, LEANS_UNTIL, NO_MONDAY_FROM, noPickDay, leansOn, payout, units, pick, pickForGame, fmtPrice, pickText, callBox, settle, espnMoneyline, priceMove, imp };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else if (typeof window !== "undefined") window.NBA_PICKS = api;
 })();
