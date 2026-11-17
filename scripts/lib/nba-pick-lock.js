@@ -35,7 +35,7 @@ function apply(date, gameId, pk, opt = {}) {
   const L = load(date).games[String(gameId)];
   // Hold (HO-0097, option B): no lock yet and the last read before tip rested on an open day-to-day status.
   const H = (load(date).holds || {})[String(gameId)];
-  if (!opt.ignoreHold && !L && pk.ok && H && H.held && H.side === pk.side) return { ...pk, ok: false, held: true, why: `waiting on ${H.players.join(" and ")} (day-to-day)` };
+  if (!opt.ignoreHold && !L && pk.ok && H && H.held) return { ...pk, ok: false, held: true, why: `too close to call: rested on ${H.players.join(" and ")} (day-to-day)` };
   if (!L || L.side !== pk.side || pk.p < 0.6) return pk;
   return { ...pk, price: L.price, ok: true, why: "", locked: true };
 }
@@ -56,9 +56,11 @@ function hold(date, gameId, h) {
   if (next) doc.holds[String(gameId)] = next; else delete doc.holds[String(gameId)];
   return true;
 }
+/** The hold saved for a game this date, if any (sticky skip, Lynold 2026-11-16). */
+function heldFor(date, gameId) { const H = (load(date).holds || {})[String(gameId)]; return H && H.held ? H : null; }
 function save(date) {
   if (!(date in cache) || date < LOCK_FROM) return;
   fs.mkdirSync(DIR, { recursive: true });
   fs.writeFileSync(file(date), JSON.stringify(cache[date], null, 1) + "\n");
 }
-module.exports = { LOCK_FROM, load, apply, lock, hold, save, units: PK.units };
+module.exports = { LOCK_FROM, load, apply, lock, hold, heldFor, save, units: PK.units };

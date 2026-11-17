@@ -229,12 +229,16 @@ function readHistory() {
       const shape = x => x ? { side: x.side, team: x.team, p: +x.p.toFixed(4), price: x.price, ok: x.ok, why: x.why, ...(x.under ? { under: true } : {}), ...(x.locked ? { locked: true } : {}), ...(x.held ? { held: true } : {}) } : null;
       game.leo.pick = shape(pk);
       const sw = SW.check(game, model); if (sw.flags.length) game.leo.depends = sw.flags;
-      // Option B (Lynold, 2026-11-16, HO-0097): a pick that rests on an open day-to-day status is not made
-      // until the status is known. A pick already locked at an earlier read stays (DEC-20261116-30).
+      // Option B (Lynold, 2026-11-16, HO-0097): a pick that rests on an open day-to-day status is not made.
+      // A pick already locked at an earlier read stays (DEC-20261116-30).
+      // Sticky skip (Lynold, 2026-11-16): once a game is held, it stays no pick for that date, even if a later
+      // read learns the status. "If it really comes down to the wire I rather skip it." No late recheck read.
       const drop = pk && pk.ok && !pk.locked ? sw.flags.find(f => f.before.ok && !(f.after.ok && f.after.side === pk.side)) : null;
-      if (LOCK.hold(DATE, g.game_id, drop && !started ? { side: pk.side, players: drop.players.map(p => p.name), at: now } : null)) locksChanged = true;
-      if (drop) { for (const f of game.leo.depends) if (f.before.ok) f.text = f.text.replace(/ and this is no pick\.$/, ". No Leo Pick until his status is known.");
-        pk = { ...pk, ok: false, held: true, why: `waiting on ${drop.players.map(p => p.name).join(" and ")} (day-to-day)` }; game.leo.pick = shape(pk); }
+      const prior = pk && !pk.locked ? LOCK.heldFor(DATE, g.game_id) : null;
+      const skipBy = drop ? drop.players.map(p => p.name) : prior ? prior.players : null;
+      if (!started && (drop || !prior)) { if (LOCK.hold(DATE, g.game_id, drop ? { side: pk.side, players: skipBy, at: now } : null)) locksChanged = true; }
+      if (skipBy) { for (const f of (game.leo.depends || [])) if (f.before.ok) f.text = f.text.replace(/ and this is no pick\.$/, ". Too close to call: no Leo Pick on this game.").replace(/ No Leo Pick until his status is known\.$/, " Too close to call: no Leo Pick on this game.");
+        if (pk && pk.ok) { pk = { ...pk, ok: false, held: true, why: `too close to call: rested on ${skipBy.join(" and ")} (day-to-day)` }; game.leo.pick = shape(pk); } }
       if (LOCK.lock(DATE, g.game_id, pk, now)) locksChanged = true; }
     game.url = URLS.gamePath(game);   // the game page address, for the home page card and every link (SEO-09)
     out.push(game);
