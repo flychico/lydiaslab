@@ -21,13 +21,40 @@
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/scoreboard.css">
 <style>
-.dn-grid{display:grid;gap:12px;margin-top:16px}
-.dn-game{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow-sm)}
-.dn-game h3{margin:2px 0 6px;font-size:1.05rem}
-.dn-when{color:var(--text-dim);font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
-.dn-line,.dn-why,.dn-final{margin:4px 0;font-size:.92rem}.dn-why{color:var(--text-dim)}
-.dn-lean{display:inline-block;margin-left:4px;padding:1px 8px;border-radius:999px;background:var(--bg);border:1px solid var(--border);font-weight:800;font-size:.8rem}
-.dn-more{display:inline-block;margin-top:6px;font-weight:700;font-size:.86rem}
+.dn-grid{display:grid;gap:14px;margin-top:14px}
+.nc{background:var(--bg-card);border:1px solid rgba(26,37,53,.16);border-radius:20px;overflow:hidden;box-shadow:var(--shadow-sm)}
+.nc-stripe{display:flex;height:6px}.nc-stripe i{flex:1}
+.nc-body{padding:14px 16px 16px}
+.nc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.nc-time{display:block;font-size:.95rem}.nc-dim{color:var(--text-dim);font-size:.8rem}
+.nc-badge{font-size:.7rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:5px 10px;border-radius:999px;background:var(--bg);color:var(--text-dim);white-space:nowrap}
+.nc-badge.on{background:#E6EFE6;color:var(--good)}
+.nc-h{font-size:.82rem;margin:8px 0 2px;font-weight:700}.nc-h a{color:var(--text-dim);text-decoration:none}
+.nc-team{display:flex;align-items:center;gap:10px;padding:6px 0}
+.nc-team img{width:36px;height:36px;object-fit:contain;flex:none}
+.nc-name{flex:1;font-weight:600;font-size:1rem}
+.nc-pct{text-align:right;white-space:nowrap}.nc-pct b{display:block;font-size:1.05rem}.nc-pct small{color:var(--text-dim);font-size:.72rem}
+.nc-bar{height:8px;border-radius:999px;background:var(--navy,#1A2535);margin:10px 0 12px;overflow:hidden}.nc-bar i{display:block;height:100%;background:var(--gold,#C9A84C)}
+.nc-boxes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.nc-box{border:1px solid var(--border);border-radius:12px;padding:9px 4px;text-align:center;background:#fff}
+.nc-box.gold{background:#FBF5E4;border-color:#E7D8AC}
+.nc-box small{display:block;font-size:.62rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim)}
+.nc-box b{display:block;font-size:.95rem;margin:4px 0 2px}.nc-box span{font-size:.68rem;color:var(--text-dim)}
+.nc-pick{margin:12px 0 0;font-size:.9rem;color:var(--text-dim)}.nc-pick.on{background:#E6EFE6;color:var(--text);font-weight:700;border-radius:10px;padding:9px 12px}
+.nc-dep{margin:10px 0 0;border-left:3px solid var(--gold,#C9A84C);padding:2px 0 2px 10px;font-size:.9rem}
+.nc-cmp{margin:12px 0 0;font-size:.9rem}
+.nc-why{margin:12px 0 0;padding-top:11px;border-top:1px solid var(--border);color:var(--text-dim);font-size:.88rem;line-height:1.55}
+.nc-final{margin:12px 0 0;padding:9px 12px;border-radius:10px;background:var(--bg);font-size:.9rem}
+.nc-final .ok{color:var(--good);font-weight:800}.nc-final .no{color:var(--danger);font-weight:800}
+.nc-more{display:inline-block;margin-top:11px;font-weight:800;font-size:.88rem;text-decoration:none}
+.nc-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:14px}
+.nc-tile{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:12px 14px}
+.nc-tile small{display:block;font-size:.64rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim)}
+.nc-tile b{display:block;font-size:1.5rem;margin:2px 0}.nc-tile span{font-size:.78rem;color:var(--text-dim)}
+.nc-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-top:12px}
+.nc-panel h2{font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin:0 0 6px}
+.nc-prow{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--border)}.nc-prow:first-of-type{border-top:0}
+.nc-prow b{font-size:1rem;white-space:nowrap}.nc-prow span{text-align:right;font-size:.8rem;color:var(--text-dim)}
 .dn-list{list-style:none;padding:0;display:grid;gap:6px}.dn-list a{display:block;padding:9px 12px;border:1px solid var(--border);border-radius:10px}
 </style>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"CollectionPage","name":"NBA Predictions for November 1, 2026: Picks, Spreads and Win Chances","url":"https://ndhorizon.com/nba/predictions/2026-11-01/","description":"Leo's NBA predictions for Sunday, November 1, 2026: a win chance and spread for all 4 games beside the DraftKings line, graded after the final.","breadcrumb":{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Leo","item":"https://ndhorizon.com/"},{"@type":"ListItem","position":2,"name":"NBA","item":"https://ndhorizon.com/nba/scoreboard/"},{"@type":"ListItem","position":3,"name":"NBA predictions November 1, 2026","item":"https://ndhorizon.com/nba/predictions/2026-11-01/"}]}}</script>
@@ -39,42 +66,75 @@
     <p class="eyebrow">NBA · Leo&#39;s read for the night</p>
     <h1>NBA predictions for Sunday, November 1, 2026</h1>
   </section>
-  <section class="card"><p style="margin:0">Leo has a read on 4 NBA games on Sunday, November 1, 2026. Leo&#39;s strongest read is the Celtics over the Magic at 60%. The closest game is the Nets at the Pacers, 52% for the Nets. Graded: Leo had the winner in 3 of 4.</p><p class="small" style="margin:10px 0 0"><a href="/nba/predictions/2026-10-31/">&larr; October 31, 2026</a> &middot; <a href="/nba/predictions/">Every night</a> &middot; <a href="/nba/scoreboard/">Tonight's NBA card</a> &middot; <a href="/nba/results/">Leo's NBA record</a> &middot; <a href="/nba/predictions/2026-11-02/">November 2, 2026 &rarr;</a></p></section>
+<section class="nc-tiles"><div class="nc-tile"><small>Games</small><b>4</b><span>first tip 3:30 PM ET</span></div><div class="nc-tile"><small>Leo Picks so far</small><b>15-7</b><span>+1.35 units since Nov 2</span></div></section>
   <section class="nba-signup" aria-label="Free card by email" style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin:16px 0;box-shadow:var(--shadow-sm)"><h2 style="margin:0;font-size:1.12rem">Get Leo&rsquo;s card before every slate</h2><p style="margin:6px 0 12px;color:var(--text-dim);font-size:.92rem">Free by email: Leo&rsquo;s calls for every NFL and NBA game before kickoff or tip, graded the next morning.</p><form class="lydia-signup-form" data-list="free-preview" data-thanks="You are on the list. The next card arrives before the next slate." style="display:flex;gap:8px;flex-wrap:wrap"><input type="email" name="email" required placeholder="you@email.com" aria-label="Email address" style="flex:1 1 180px;min-width:0"><input type="hidden" name="bot-field"><button class="btn blue" type="submit">Send me the free card</button></form></section>
   <section class="dn-grid">
-<article class="dn-game">
-    <div class="dn-when">3:30 PM ET &middot; Kia Center</div>
-    <h3><a href="/nba/bos-vs-orl-prediction-odds-2026-11-01/">Boston Celtics at Orlando Magic prediction</a></h3>
-    <p class="dn-line">Leo win chance: <b>BOS 60%</b>, <b>ORL 40%</b>. Leo spread BOS by 3.5; DraftKings BOS by 7.5.</p>
-    <p class="dn-why">Both have BOS winning: Leo by 3.5, DraftKings by 7.5. They are 4 pts apart.</p>
-    <p class="dn-final"><b>Final: BOS 108, ORL 97.</b> Leo had the winner.</p>
-    <a class="dn-more" href="/nba/bos-vs-orl-prediction-odds-2026-11-01/">Full preview: why Leo has this number, injuries and box score &rarr;</a>
+<article class="nc">
+    <div class="nc-stripe"><i style="background:#008348"></i><i style="background:#0150b5"></i></div>
+    <div class="nc-body">
+      <div class="nc-top"><div><b class="nc-time">3:30 PM ET</b><span class="nc-dim">Kia Center</span></div><span class="nc-badge">No call</span></div>
+      <h3 class="nc-h"><a href="/nba/bos-vs-orl-prediction-odds-2026-11-01/">Boston Celtics at Orlando Magic</a></h3>
+      <div class="nc-team"><img src="https://a.espncdn.com/i/teamlogos/nba/500/bos.png" alt="" width="36" height="36" loading="lazy"><span class="nc-name">Boston Celtics</span><span class="nc-pct"><b>60%</b><small>Leo win chance</small></span></div><div class="nc-team"><img src="https://a.espncdn.com/i/teamlogos/nba/500/orl.png" alt="" width="36" height="36" loading="lazy"><span class="nc-name">Orlando Magic</span><span class="nc-pct"><b>40%</b><small>Leo win chance</small></span></div>
+      <div class="nc-bar"><i style="width:60%"></i></div>
+      <div class="nc-boxes"><div class="nc-box gold"><small>Leo spread</small><b>Celtics -3.5</b><span>Leo&#39;s favorite, by</span></div><div class="nc-box"><small>DraftKings</small><b>Celtics -7.5</b><span>market Magic 28%</span></div></div>
+      
+      
+      <p class="nc-cmp">Both have Celtics winning: Leo by 3.5, DraftKings by 7.5. They are 4 pts apart.</p>
+      <p class="nc-why">Why: Celtics the stronger team by 5.6, Magic home court +1.7, Celtics missing more players (+0.5 Magic).</p>
+      <div class="nc-final"><b>Final: Celtics 108, Magic 97.</b> <span class="ok">Leo had the winner.</span></div>
+      <a class="nc-more" href="/nba/bos-vs-orl-prediction-odds-2026-11-01/">Full preview: why Leo has this number &rarr;</a>
+    </div>
   </article>
-<article class="dn-game">
-    <div class="dn-when">5:00 PM ET &middot; Gainbridge Fieldhouse</div>
-    <h3><a href="/nba/bkn-vs-ind-prediction-odds-2026-11-01/">Brooklyn Nets at Indiana Pacers prediction</a></h3>
-    <p class="dn-line">Leo win chance: <b>BKN 52%</b>, <b>IND 48%</b>. Leo spread BKN by 0.5; DraftKings IND by 3.5.</p>
-    <p class="dn-why">Different winners: Leo has BKN by 0.5; DraftKings has IND by 3.5. They are 4 pts apart.</p>
-    <p class="dn-final"><b>Final: BKN 98, IND 90.</b> Leo had the winner.</p>
-    <a class="dn-more" href="/nba/bkn-vs-ind-prediction-odds-2026-11-01/">Full preview: why Leo has this number, injuries and box score &rarr;</a>
+<article class="nc">
+    <div class="nc-stripe"><i style="background:#000000"></i><i style="background:#0c2340"></i></div>
+    <div class="nc-body">
+      <div class="nc-top"><div><b class="nc-time">5:00 PM ET</b><span class="nc-dim">Gainbridge Fieldhouse</span></div><span class="nc-badge">No call</span></div>
+      <h3 class="nc-h"><a href="/nba/bkn-vs-ind-prediction-odds-2026-11-01/">Brooklyn Nets at Indiana Pacers</a></h3>
+      <div class="nc-team"><img src="https://a.espncdn.com/i/teamlogos/nba/500/bkn.png" alt="" width="36" height="36" loading="lazy"><span class="nc-name">Brooklyn Nets</span><span class="nc-pct"><b>52%</b><small>Leo win chance</small></span></div><div class="nc-team"><img src="https://a.espncdn.com/i/teamlogos/nba/500/ind.png" alt="" width="36" height="36" loading="lazy"><span class="nc-name">Indiana Pacers</span><span class="nc-pct"><b>48%</b><small>Leo win chance</small></span></div>
+      <div class="nc-bar"><i style="width:52%"></i></div>
+      <div class="nc-boxes"><div class="nc-box gold"><small>Leo spread</small><b>Nets -0.5</b><span>Leo&#39;s favorite, by</span></div><div class="nc-box"><small>DraftKings</small><b>Pacers -3.5</b><span>market Pacers 59%</span></div></div>
+      
+      
+      <p class="nc-cmp">Different winners: Leo has Nets by 0.5; DraftKings has Pacers by 3.5. They are 4 pts apart.</p>
+      <p class="nc-why">Why: Pacers missing more players (+5.0 Nets), Pacers the stronger team by 2.7, Pacers home court +1.7.</p>
+      <div class="nc-final"><b>Final: Nets 98, Pacers 90.</b> <span class="ok">Leo had the winner.</span></div>
+      <a class="nc-more" href="/nba/bkn-vs-ind-prediction-odds-2026-11-01/">Full preview: why Leo has this number &rarr;</a>
+    </div>
   </article>
-<article class="dn-game">
-    <div class="dn-when">8:30 PM ET &middot; Chase Center</div>
-    <h3><a href="/nba/lac-vs-gs-prediction-odds-2026-11-01/">LA Clippers at Golden State Warriors prediction</a></h3>
-    <p class="dn-line">Leo win chance: <b>LAC 48%</b>, <b>GS 52%</b>. Leo spread GS by 1; DraftKings GS by 1.5.</p>
-    <p class="dn-why">Both have GS winning: Leo by 1, DraftKings by 1.5. They are 0.5 pts apart.</p>
-    <p class="dn-final"><b>Final: LAC 112, GS 124.</b> Leo had the winner.</p>
-    <a class="dn-more" href="/nba/lac-vs-gs-prediction-odds-2026-11-01/">Full preview: why Leo has this number, injuries and box score &rarr;</a>
+<article class="nc">
+    <div class="nc-stripe"><i style="background:#12173f"></i><i style="background:#fdb927"></i></div>
+    <div class="nc-body">
+      <div class="nc-top"><div><b class="nc-time">8:30 PM ET</b><span class="nc-dim">Chase Center</span></div><span class="nc-badge">No call</span></div>
+      <h3 class="nc-h"><a href="/nba/lac-vs-gs-prediction-odds-2026-11-01/">LA Clippers at Golden State Warriors</a></h3>
+      <div class="nc-team"><img src="https://a.espncdn.com/i/teamlogos/nba/500/lac.png" alt="" width="36" height="36" loading="lazy"><span class="nc-name">LA Clippers</span><span class="nc-pct"><b>48%</b><small>Leo win chance</small></span></div><div class="nc-team"><img src="https://a.espncdn.com/i/teamlogos/nba/500/gs.png" alt="" width="36" height="36" loading="lazy"><span class="nc-name">Golden State Warriors</span><span class="nc-pct"><b>52%</b><small>Leo win chance</small></span></div>
+      <div class="nc-bar"><i style="width:48%"></i></div>
+      <div class="nc-boxes"><div class="nc-box gold"><small>Leo spread</small><b>Warriors -1</b><span>Leo&#39;s favorite, by</span></div><div class="nc-box"><small>DraftKings</small><b>Warriors -1.5</b><span>market Warriors 53%</span></div></div>
+      
+      
+      <p class="nc-cmp">Both have Warriors winning: Leo by 1, DraftKings by 1.5. They are 0.5 pts apart.</p>
+      <p class="nc-why">Why: Warriors missing more players (+3.9 Clippers), Warriors the stronger team by 3.0, Warriors home court +1.7.</p>
+      <div class="nc-final"><b>Final: Clippers 112, Warriors 124.</b> <span class="ok">Leo had the winner.</span></div>
+      <a class="nc-more" href="/nba/lac-vs-gs-prediction-odds-2026-11-01/">Full preview: why Leo has this number &rarr;</a>
+    </div>
   </article>
-<article class="dn-game">
-    <div class="dn-when">9:00 PM ET &middot; crypto.com Arena</div>
-    <h3><a href="/nba/tor-vs-lal-prediction-odds-2026-11-01/">Toronto Raptors at Los Angeles Lakers prediction</a></h3>
-    <p class="dn-line">Leo win chance: <b>TOR 52%</b>, <b>LAL 48%</b>. Leo spread TOR by 0.5; DraftKings LAL by 3.5.</p>
-    <p class="dn-why">Different winners: Leo has TOR by 0.5; DraftKings has LAL by 3.5. They are 4 pts apart.</p>
-    <p class="dn-final"><b>Final: TOR 125, LAL 131.</b> Leo had the other team.</p>
-    <a class="dn-more" href="/nba/tor-vs-lal-prediction-odds-2026-11-01/">Full preview: why Leo has this number, injuries and box score &rarr;</a>
+<article class="nc">
+    <div class="nc-stripe"><i style="background:#d91244"></i><i style="background:#552583"></i></div>
+    <div class="nc-body">
+      <div class="nc-top"><div><b class="nc-time">9:00 PM ET</b><span class="nc-dim">crypto.com Arena</span></div><span class="nc-badge">No call</span></div>
+      <h3 class="nc-h"><a href="/nba/tor-vs-lal-prediction-odds-2026-11-01/">Toronto Raptors at Los Angeles Lakers</a></h3>
+      <div class="nc-team"><img src="https://a.espncdn.com/i/teamlogos/nba/500/tor.png" alt="" width="36" height="36" loading="lazy"><span class="nc-name">Toronto Raptors</span><span class="nc-pct"><b>52%</b><small>Leo win chance</small></span></div><div class="nc-team"><img src="https://a.espncdn.com/i/teamlogos/nba/500/lal.png" alt="" width="36" height="36" loading="lazy"><span class="nc-name">Los Angeles Lakers</span><span class="nc-pct"><b>48%</b><small>Leo win chance</small></span></div>
+      <div class="nc-bar"><i style="width:52%"></i></div>
+      <div class="nc-boxes"><div class="nc-box gold"><small>Leo spread</small><b>Raptors -0.5</b><span>Leo&#39;s favorite, by</span></div><div class="nc-box"><small>DraftKings</small><b>Lakers -3.5</b><span>market Lakers 59%</span></div></div>
+      
+      
+      <p class="nc-cmp">Different winners: Leo has Raptors by 0.5; DraftKings has Lakers by 3.5. They are 4 pts apart.</p>
+      <p class="nc-why">Why: Lakers home court +1.7, Raptors the stronger team by 1.4, Lakers missing more players (+1.1 Raptors).</p>
+      <div class="nc-final"><b>Final: Raptors 125, Lakers 131.</b> <span class="no">Leo had the other team.</span></div>
+      <a class="nc-more" href="/nba/tor-vs-lal-prediction-odds-2026-11-01/">Full preview: why Leo has this number &rarr;</a>
+    </div>
   </article>
   </section>
+  <section class="card" style="margin-top:14px"><p style="margin:0">Leo has a read on 4 NBA games on Sunday, November 1, 2026. Leo&#39;s strongest read is the Celtics over the Magic at 60%. The closest game is the Nets at the Pacers, 52% for the Nets. Graded: Leo had the winner in 3 of 4.</p><p class="small" style="margin:10px 0 0"><a href="/nba/predictions/2026-10-31/">&larr; October 31, 2026</a> &middot; <a href="/nba/predictions/">Every night</a> &middot; <a href="/nba/scoreboard/">Tonight's NBA card</a> &middot; <a href="/nba/results/">Leo's NBA record</a> &middot; <a href="/nba/predictions/2026-11-02/">November 2, 2026 &rarr;</a></p></section>
   <p class="data-note">Leo's win chance and spread come from team results, rest and the injury report, frozen before tip. The DraftKings line is shown for comparison and is never an input. Analysis only, not betting advice. 21+. If gambling stops being fun, call 1-800-MY-RESET.</p>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>

@@ -138,4 +138,4 @@ function build(doc, { why, record, memberLine = false } = {}) {
   return { subject, html, text, leans: leanList };
 }
 
-module.exports = { build, MEMBER_LINE };
+module.exports = { build, MEMBER_LINE, COLOR };
