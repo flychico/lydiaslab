@@ -347,9 +347,12 @@ const SIGNUP_TERMS_LINE = 'By signing up you confirm you are 21 or over and agre
 //   </form>
 function wireAllSignupForms(root) {
   const scope = root || document;
-  const forms = scope.querySelectorAll("form.lydia-signup-form:not([data-signup-wired])");
+  // Wired forms are marked with a JS property, never an attribute: prerendered pages save the HTML
+  // after this runs, and a saved attribute made the next visit skip the form (HO-0096 item 4).
+  const forms = scope.querySelectorAll("form.lydia-signup-form");
   forms.forEach(function (form) {
-    form.setAttribute("data-signup-wired", "1");
+    if (form.__leoSignupWired) return;
+    form.__leoSignupWired = true;
     form.addEventListener("submit", async function (e) {
       e.preventDefault();
       const emailEl = form.querySelector('[name="email"]');
