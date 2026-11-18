@@ -1,5 +1,5 @@
 /**
- * Leo NBA model, v1 (leo-nba-v1). Spread and win chance only.
+ * Leo NBA model, v2 (leo-nba-v2; v1 until 2026-11-17). Spread and win chance only.
  *
  *   home margin = b0 + b1 * (rating home - rating away)
  *                    + b2 * (home on a back-to-back - away on a back-to-back)
@@ -10,6 +10,12 @@
  * Ratings: ridge regression of every home margin this season on team
  * strength plus home court, with each team pulled toward 60% of its rating
  * at the end of last season (worth 8 games of evidence).
+ * leo-nba-v2 (NBA-H39, Lynold's yes 2026-11-17): the margin each rating is
+ * fitted on has half of the game's three point shooting luck taken out.
+ * Luck = 3 x (threes made minus attempts x the league rate), home minus away.
+ * A team that hits or misses far more threes than usual for a few games does
+ * not keep it up. Walk-forward on 1,055 games: average miss 11.109 to 11.089,
+ * Brier 0.1977 to 0.1962, winners 69.6% to 70.4% (business/MODEL_LAB.md).
  *
  * Value missing: regulars (10+ minutes a game over their last 10 games, 3+
  * appearances) who will not play, weighted by how much they produce per
@@ -24,7 +30,9 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const MODEL_VERSION = "leo-nba-v1";
+const MODEL_VERSION = "leo-nba-v2";
+const THREE_LUCK = 0.5;   // share of three point luck taken out of the margin the ratings see (NBA-H39)
+let LG3 = 0.36;           // league three point rate, set from the season file by loadSeason()
 const PRIOR_REGRESS = 0.6;
 const PRIOR_GAMES = 8;
 const HCA_PRIOR = 2.5, HCA_PRIOR_GAMES = 20;
@@ -76,10 +84,23 @@ async function download(kind, season, { maxAgeHours = 3 } = {}) {
 /** Regular-season games and player lines for one season, sorted by date. */
 async function loadSeason(season, opts) {
   const tb = parseCsv(await download("team", season, opts),
-    ["game_id", "season_type", "game_date", "team_home_away", "team_abbreviation", "team_score", "opponent_team_abbreviation", "opponent_team_score"]);
+    ["game_id", "season_type", "game_date", "team_home_away", "team_abbreviation", "team_score", "opponent_team_abbreviation", "opponent_team_score",
+      "three_point_field_goals_made", "three_point_field_goals_attempted"]);
+  // Three point luck per game (NBA-H39): league rate from every regular season row in the file.
+  const threes = new Map(); let m3 = 0, a3 = 0;
+  for (const r of tb) {
+    if (r.season_type !== "2") continue;
+    const m = parseFloat(r.three_point_field_goals_made), a = parseFloat(r.three_point_field_goals_attempted);
+    if (!Number.isFinite(m) || !Number.isFinite(a)) continue;
+    threes.set(r.game_id + "|" + r.team_home_away, [m, a]); m3 += m; a3 += a;
+  }
+  if (a3 > 0) LG3 = m3 / a3;
+  const lg3 = LG3;
+  const luckOfRow = id => { const h = threes.get(id + "|home"), a = threes.get(id + "|away");
+    return h && a ? 3 * ((h[0] - h[1] * lg3) - (a[0] - a[1] * lg3)) : undefined; };
   const games = tb.filter(r => r.season_type === "2" && r.team_home_away === "home").map(r => ({
     game_id: r.game_id, date: r.game_date, home: r.team_abbreviation, away: r.opponent_team_abbreviation,
-    hs: +r.team_score, as: +r.opponent_team_score, margin: +r.team_score - +r.opponent_team_score
+    hs: +r.team_score, as: +r.opponent_team_score, margin: +r.team_score - +r.opponent_team_score, luck: luckOfRow(r.game_id)
   })).filter(g => Number.isFinite(g.margin)).sort((a, b) => a.date.localeCompare(b.date) || a.game_id.localeCompare(b.game_id));
   const n = v => { const x = parseFloat(v); return Number.isFinite(x) ? x : 0; };
   const pb = parseCsv(await download("player", season, opts),
@@ -109,14 +130,43 @@ function solve(A, b) {
   return M.map((r, i) => r[n] / r[i]);
 }
 
-/** margin = hca + r_home - r_away, ridge-pulled toward each team's prior. */
+/**
+ * Three point luck for a game: from the season file (g.luck), else from the box
+ * score saved at grading (data/nba/boxscores), for finals the release file does
+ * not have yet. 0 when neither has it.
+ */
+const BOX_LUCK = new Map(); let BOX_READ = false;
+function boxLuck(id) {
+  if (!BOX_READ) {
+    BOX_READ = true;
+    const dir = path.join(__dirname, "..", "..", "data", "nba", "boxscores");
+    try {
+      for (const f of fs.readdirSync(dir).filter(f => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))) {
+        for (const g of (JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")).games || [])) {
+          const t = { [g.home]: [0, 0], [g.away]: [0, 0] };
+          for (const p of g.players || []) {
+            const v = String(((p.stats || {})["threePointFieldGoalsMade-threePointFieldGoalsAttempted"]) || "").split("-").map(Number);
+            if (t[p.team] && v.length === 2 && v.every(Number.isFinite)) { t[p.team][0] += v[0]; t[p.team][1] += v[1]; }
+          }
+          if (t[g.home][1] && t[g.away][1]) BOX_LUCK.set(String(g.game_id), { h: t[g.home], a: t[g.away] });
+        }
+      }
+    } catch (e) { /* no box scores here: luck 0 for those games */ }
+  }
+  const b = BOX_LUCK.get(String(id));
+  return b ? 3 * ((b.h[0] - b.h[1] * LG3) - (b.a[0] - b.a[1] * LG3)) : 0;
+}
+const luckOf = g => Number.isFinite(g.luck) ? g.luck : boxLuck(g.game_id);
+
+/** margin = hca + r_home - r_away, ridge-pulled toward each team's prior; the margin has half its three point luck taken out (v2). */
 function ratings(games, teams, prior) {
   const idx = Object.fromEntries(teams.map((t, i) => [t, i])), n = teams.length, k = n + 1;
   const A = Array.from({ length: k }, () => new Array(k).fill(0)), b = new Array(k).fill(0);
   for (const g of games) {
     const h = idx[g.home], a = idx[g.away]; if (h == null || a == null) continue;
     const x = [[h, 1], [a, -1], [n, 1]];
-    for (const [i, xi] of x) { b[i] += xi * g.margin; for (const [j, xj] of x) A[i][j] += xi * xj; }
+    const m = g.margin - THREE_LUCK * luckOf(g);
+    for (const [i, xi] of x) { b[i] += xi * m; for (const [j, xj] of x) A[i][j] += xi * xj; }
   }
   teams.forEach((t, i) => { A[i][i] += PRIOR_GAMES; b[i] += PRIOR_GAMES * (prior[t] || 0); });
   A[n][n] += HCA_PRIOR_GAMES; b[n] += HCA_PRIOR_GAMES * HCA_PRIOR;
@@ -180,6 +230,6 @@ function noVig(homeMl, awayMl) {
 }
 
 module.exports = {
-  MODEL_VERSION, FEATURES, LEAN_EDGE, STATUS_WEIGHT, PRIOR_REGRESS, CACHE,
+  MODEL_VERSION, THREE_LUCK, FEATURES, LEAN_EDGE, STATUS_WEIGHT, PRIOR_REGRESS, CACHE,
   parseCsv, download, loadSeason, ratings, regulars, lostValue, predict, normCdf, restDays, noVig, implied, solve
 };
