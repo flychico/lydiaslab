@@ -80,8 +80,9 @@ function hashtags(codes) {
 }
 // Same shape as the NFL posts (Lynold, NFL chat 2026-11-16): header, plain record, lines with
 // winners on top, facts, then the link, "21+" and the hashtags. No "BANG", no "Leo saw it", no ✨.
-// Every post link carries the X campaign tag (SEO-24, HO-0093 part B), so a sign-up shows which post brought it.
-const tagged = (url, id) => `${url}?utm_source=x&utm_medium=social&utm_campaign=nba-${id}`;
+// Every post link is a short link that forwards with the X campaign tag (SEO-24, HO-0093 part B), so a sign-up shows which post brought it.
+const XL = require("./lib/x-links");   // short links: ndhorizon.com/x/nba-1117-day (Lynold, 2026-11-18)
+const tagged = (url, id) => XL.short("nba", DATE, id, url);
 function compose(header, open, lines, facts, tags, link, season, linkLine) {
   const parts = [header, open || null, "", ...lines, season ? `Season: ${season}` : null, facts.length ? "" : null, ...facts, "", linkLine || link, `21+ ${tags.join(" ")}`];
   return parts.filter(x => x !== null).join("\n").replace(/\n{3,}/g, "\n\n").trim();
