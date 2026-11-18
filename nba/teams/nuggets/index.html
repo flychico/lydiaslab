@@ -29,6 +29,11 @@
 .team-table .w{color:var(--good);font-weight:800}.team-table .l{color:var(--danger);font-weight:800}
 .team-table td.nw{white-space:nowrap}
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.an-table{width:100%;border-collapse:collapse;font-size:.88rem;margin:8px 0 6px}
+.an-table th,.an-table td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+.an-table th{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-dim)}
+.an-table .rk{font-size:.72rem;color:var(--text-dim);margin-left:4px}
+.an-duos{padding-left:18px;line-height:1.6;font-size:.9rem}
 .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}
 .stat-row .card{padding:12px 14px}.stat-row .v{font-size:1.4rem;font-weight:800}.stat-row .k{font-size:.78rem;color:var(--text-dim)}
 .div-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
@@ -64,6 +69,30 @@
     <div class="card"><div class="v">4-3</div><div class="k">Leo&rsquo;s reads on Nuggets games (right&#8209;wrong)</div></div>
     <div class="card"><div class="v">None yet</div><div class="k">Leo Picks on the Nuggets, in units</div></div>
   </div>
+  <h2>How the Nuggets play</h2>
+  <p class="dim small">From the box score of every Nuggets game, October 20 to November 17 (12 games). Rank is among the 30 teams; for opponents, 1st means the stingiest defense.</p>
+  <div class="stat-row an-tiles">
+    <div class="card"><div class="v">2-3 / 5-2</div><div class="k">Home / away record</div></div>
+    <div class="card"><div class="v">6-4</div><div class="k">Last 10 games &middot; streak L1</div></div>
+    <div class="card"><div class="v">113.7 / 112.9</div><div class="k">Points scored / allowed per 100 possessions</div></div>
+    <div class="card"><div class="v">100.2</div><div class="k">Pace: possessions a game</div></div>
+  </div><div class="table-wrap"><table class="an-table"><thead><tr><th></th><th>Nuggets</th><th>Opponents vs Nuggets</th></tr></thead><tbody>
+    <tr><td>Field goal %</td><td><b>48.6%</b> <span class="rk">2nd</span></td><td>46.2% <span class="rk">18th</span></td></tr>
+    <tr><td>Three point %</td><td><b>34.5%</b> <span class="rk">15th</span></td><td>36.5% <span class="rk">22nd</span></td></tr>
+    <tr><td>Threes made a game</td><td><b>10.7 <span class="dim small">of 30.9</span></b> <span class="rk">28th</span></td><td>14.3 <span class="dim small">of 39.0</span> <span class="rk">24th</span></td></tr>
+    <tr><td>Effective FG %</td><td><b>54.9%</b> <span class="rk">7th</span></td><td>54.2% <span class="rk">17th</span></td></tr>
+    <tr><td>Free throw %</td><td><b>79.4%</b> <span class="rk">11th</span></td><td></td></tr>
+    <tr><td>Free throws tried a game</td><td><b>25.8</b> </td><td>20.3 </td></tr>
+    <tr><td>Rebounds a game</td><td><b>41.7</b> <span class="rk">24th</span></td><td>44.3 </td></tr>
+    <tr><td>Assists a game</td><td><b>27.3</b> <span class="rk">12th</span></td><td></td></tr>
+    <tr><td>Turnovers a game</td><td><b>12.9</b> <span class="rk">4th</span></td><td>13.9 </td></tr>
+  </tbody></table></div>
+  <h2>With and without</h2>
+  <p>Biggest swing so far: the Nuggets are 5-4 (+1.0 a game) with Cameron Johnson and 2-1 (-0.3 a game) without him.</p>
+  <p class="dim small">The Nuggets&rsquo; record and average margin in games each regular played and in games he missed. Small samples: a few games are an early read, not proof.</p>
+  <div class="table-wrap"><table class="an-table"><thead><tr><th>Player</th><th>With him</th><th>Without him</th></tr></thead><tbody><tr><td><b>Nikola Jokic</b><br><span class="dim small">12 games, 37 min</span></td><td>7-5, +0.7</td><td><span class="dim">Played every game</span></td></tr><tr><td><b>Jamal Murray</b><br><span class="dim small">12 games, 36 min</span></td><td>7-5, +0.7</td><td><span class="dim">Played every game</span></td></tr><tr><td><b>Christian Braun</b><br><span class="dim small">12 games, 34 min</span></td><td>7-5, +0.7</td><td><span class="dim">Played every game</span></td></tr><tr><td><b>Aaron Gordon</b><br><span class="dim small">12 games, 29 min</span></td><td>7-5, +0.7</td><td><span class="dim">Played every game</span></td></tr><tr><td><b>Cameron Johnson</b><br><span class="dim small">9 games, 29 min</span></td><td>5-4, +1.0</td><td>2-1, -0.3</td></tr><tr><td><b>DeMar DeRozan</b><br><span class="dim small">11 games, 23 min</span></td><td>6-5, -1.0</td><td>1-0, +19.0</td></tr><tr><td><b>Trevon Brazile</b><br><span class="dim small">12 games, 20 min</span></td><td>7-5, +0.7</td><td><span class="dim">Played every game</span></td></tr><tr><td><b>Spencer Jones</b><br><span class="dim small">5 games, 18 min</span></td><td>3-2, +0.6</td><td>4-3, +0.7</td></tr></tbody></table></div>
+  <h3>Duos</h3>
+  <ul class="an-duos"><li><b>Nikola Jokic and Cameron Johnson</b>: both played 5-4, +1.0; Jokic without Johnson 2-1, -0.3.</li><li><b>Jamal Murray and Cameron Johnson</b>: both played 5-4, +1.0; Murray without Johnson 2-1, -0.3.</li><li><b>Christian Braun and Cameron Johnson</b>: both played 5-4, +1.0; Braun without Johnson 2-1, -0.3.</li><li><b>Aaron Gordon and Cameron Johnson</b>: both played 5-4, +1.0; Gordon without Johnson 2-1, -0.3.</li></ul>
   <h2>Every Nuggets game</h2>
   <ul class="key dim small">
     <li><b>Leo&rsquo;s chance</b> is Leo&rsquo;s win chance for the Nuggets, from its last read saved before tip.</li>

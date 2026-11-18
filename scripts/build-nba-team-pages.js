@@ -25,6 +25,7 @@ const path = require("path");
 const { GA_HEAD } = require("./lib/ga");
 const URLS = require("./lib/nba-urls");
 const PK = require("./lib/nba-picks");
+const TA = require("./lib/nba-team-analysis");   // shooting, with and without, duos (Lynold, 2026-11-17)
 
 const ROOT = path.resolve(__dirname, ".."), DIR = path.join(ROOT, "data", "nba");
 const ORIGIN = "https://ndhorizon.com";
@@ -138,6 +139,11 @@ ${GA_HEAD}
 .team-table .w{color:var(--good);font-weight:800}.team-table .l{color:var(--danger);font-weight:800}
 .team-table td.nw{white-space:nowrap}
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.an-table{width:100%;border-collapse:collapse;font-size:.88rem;margin:8px 0 6px}
+.an-table th,.an-table td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+.an-table th{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-dim)}
+.an-table .rk{font-size:.72rem;color:var(--text-dim);margin-left:4px}
+.an-duos{padding-left:18px;line-height:1.6;font-size:.9rem}
 .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}
 .stat-row .card{padding:12px 14px}.stat-row .v{font-size:1.4rem;font-weight:800}.stat-row .k{font-size:.78rem;color:var(--text-dim)}
 .div-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
@@ -179,7 +185,61 @@ function callCell(g) {
   return parts.length ? parts.join("<br>") : `<span class="dim">No call</span>`;
 }
 
-function teamPage(abbr, division, games, sched) {
+/** Team analysis sections: how they shoot, with and without each regular, duos. */
+function analysis(abbr, N, AN) {
+  const T = AN && AN.teams[abbr];
+  if (!T || !T.shooting) return "";
+  const S = T.shooting, O = T.opp, R = T.ranks || {}, st = T.stats;
+  const p1 = v => v == null ? "&ndash;" : (v * 100).toFixed(1) + "%";
+  const d1 = v => v == null ? "&ndash;" : (+v).toFixed(1);
+  const ord = n => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" }[n % 10] || "th"));
+  const rk = k => R[k] ? `<span class="rk">${ord(R[k])}</span>` : "";
+  const row = (lab, a, ka, b, kb) => `<tr><td>${lab}</td><td><b>${a}</b> ${rk(ka)}</td><td>${b == null ? "" : `${b} ${rk(kb)}`}</td></tr>`;
+  const shoot = `<div class="table-wrap"><table class="an-table"><thead><tr><th></th><th>${esc(N)}</th><th>Opponents vs ${esc(N)}</th></tr></thead><tbody>
+    ${row("Field goal %", p1(S.fg), "shooting.fg", p1(O.fg), "opp.fg")}
+    ${row("Three point %", p1(S.three), "shooting.three", p1(O.three), "opp.three")}
+    ${row("Threes made a game", `${d1(S.threes)} <span class="dim small">of ${d1(S.threeAtt)}</span>`, "shooting.threes", `${d1(O.threes)} <span class="dim small">of ${d1(O.threeAtt)}</span>`, "opp.threes")}
+    ${row("Effective FG %", p1(S.efg), "shooting.efg", p1(O.efg), "opp.efg")}
+    ${row("Free throw %", p1(S.ft), "shooting.ft", null)}
+    ${row("Free throws tried a game", d1(S.fta), null, d1(O.fta), null)}
+    ${row("Rebounds a game", d1(S.reb), "shooting.reb", d1(O.reb), null)}
+    ${row("Assists a game", d1(S.ast), "shooting.ast", null)}
+    ${row("Turnovers a game", d1(S.tov), "shooting.tov", d1(O.tov), null)}
+  </tbody></table></div>`;
+  const tiles = st ? `<div class="stat-row an-tiles">
+    <div class="card"><div class="v">${st.home ? `${st.home.w}-${st.home.l}` : "&ndash;"} / ${st.away ? `${st.away.w}-${st.away.l}` : "&ndash;"}</div><div class="k">Home / away record</div></div>
+    <div class="card"><div class="v">${st.last10 ? `${st.last10.w}-${st.last10.l}` : "&ndash;"}</div><div class="k">Last 10 games${st.streak ? ` &middot; streak ${esc(st.streak)}` : ""}</div></div>
+    <div class="card"><div class="v">${d1(st.off_rtg)} / ${d1(st.def_rtg)}</div><div class="k">Points scored / allowed per 100 possessions</div></div>
+    <div class="card"><div class="v">${d1(st.pace)}</div><div class="k">Pace: possessions a game</div></div>
+  </div>` : "";
+  const recTxt = r => r ? `${r.w}-${r.l}, ${r.margin >= 0 ? "+" : ""}${r.margin.toFixed(1)}` : `<span class="dim">no games</span>`;
+  const ww = T.withWithout.map(p => `<tr><td><b>${esc(p.name)}</b><br><span class="dim small">${p.gp} games, ${p.mpg.toFixed(0)} min</span></td><td>${recTxt(p.with)}</td><td>${p.without ? recTxt(p.without) : `<span class="dim">Played every game</span>`}</td></tr>`).join("");
+  const missed = T.withWithout.filter(p => p.without);
+  const lead = missed.length
+    ? (() => { const m = missed.slice().sort((a, b) => (a.without.margin - a.with.margin) - (b.without.margin - b.with.margin))[0];
+        const say = r => `${r.w}-${r.l} (${r.margin >= 0 ? "+" : ""}${r.margin.toFixed(1)} a game)`;
+        return `Biggest swing so far: the ${esc(N)} are ${say(m.with)} with ${esc(m.name)} and ${say(m.without)} without him.`; })()
+    : `Every regular has played every game in this stretch, so there is no without sample yet.`;
+  const duoLine = d => {
+    const parts = [`both played ${recTxt(d.both)}`];
+    if (d.onlyA) parts.push(`${esc(d.a.split(" ").slice(-1)[0])} without ${esc(d.b.split(" ").slice(-1)[0])} ${recTxt(d.onlyA)}`);
+    if (d.onlyB) parts.push(`${esc(d.b.split(" ").slice(-1)[0])} without ${esc(d.a.split(" ").slice(-1)[0])} ${recTxt(d.onlyB)}`);
+    if (d.neither) parts.push(`neither ${recTxt(d.neither)}`);
+    return `<li><b>${esc(d.a)} and ${esc(d.b)}</b>: ${parts.join("; ")}.</li>`;
+  };
+  const range = AN.from && AN.through ? `${longDate(AN.from)} to ${longDate(AN.through)}` : "this season";
+  return `<h2>How the ${esc(N)} play</h2>
+  <p class="dim small">From the box score of every ${esc(N)} game, ${esc(range)} (${T.gp} games). Rank is among the 30 teams; for opponents, 1st means the stingiest defense.</p>
+  ${tiles}${shoot}
+  <h2>With and without</h2>
+  <p>${lead}</p>
+  <p class="dim small">The ${esc(N)}&rsquo; record and average margin in games each regular played and in games he missed. Small samples: a few games are an early read, not proof.</p>
+  <div class="table-wrap"><table class="an-table"><thead><tr><th>Player</th><th>With him</th><th>Without him</th></tr></thead><tbody>${ww}</tbody></table></div>
+  <h3>Duos</h3>
+  <ul class="an-duos">${T.duos.map(duoLine).join("")}</ul>`;
+}
+
+function teamPage(abbr, division, games, sched, AN) {
   const s = summary(games, abbr), name = sched.names[abbr] || nick(abbr), N = nick(abbr), url = teamUrl(abbr);
   const title = `${N} Predictions: Leo's Win Chance and Spread for Every Game | Leo`;
   const desc = `${name} predictions: Leo's win chance and spread before every ${N} game beside the DraftKings line, who Leo favored, the final score and whether Leo's read was right.`;
@@ -216,6 +276,7 @@ function teamPage(abbr, division, games, sched) {
     <div class="card"><div class="v">${s.right}-${s.judged.length - s.right}</div><div class="k">Leo&rsquo;s reads on ${esc(N)} games (right&#8209;wrong)</div></div>
     <div class="card"><div class="v">${s.calls.length ? `${rec(s.cw, s.cl)}, ${units(s.cu)}` : "None yet"}</div><div class="k">Leo Picks on the ${esc(N)}, in units</div></div>
   </div>
+  ${analysis(abbr, N, AN)}
   <h2>Every ${esc(N)} game</h2>
   <ul class="key dim small">
     <li><b>Leo&rsquo;s chance</b> is Leo&rsquo;s win chance for the ${esc(N)}, from its last read saved before tip.</li>
@@ -263,8 +324,9 @@ function main() {
   const now = Date.now(), today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date(now));
   const all = loadGames(now), sched = loadSchedule(today);
   const records = {}; let n = 0;
+  const AN = TA.build();
   for (const [division, teams] of DIVISIONS) for (const abbr of teams) {
-    const { html, record } = teamPage(abbr, division, teamGames(all, abbr), sched);
+    const { html, record } = teamPage(abbr, division, teamGames(all, abbr), sched, AN);
     const dir = path.join(ROOT, "nba", "teams", teamSlug(abbr));
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, "index.html"), html);

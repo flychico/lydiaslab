@@ -15,6 +15,7 @@
 */
 "use strict";
 const fs = require("fs");
+const RC = require("./lib/nba-read-change");   // the read moved after the card email (Lynold, 2026-11-17)
 const path = require("path");
 const WHY = require("./lib/nba-why");
 const PKS = require("./lib/nba-picks");   // Leo Picks (DEC-20261102-30); shown from PKS.TRACK_FROM
@@ -97,6 +98,7 @@ function card(g, r) {
       <div class="nc-boxes">${box("Leo spread", LS == null ? "n/a" : nk(WHY.favLine(g, LS)), "Leo's favorite, by", true)}${box("DraftKings", mk.home_spread == null ? "no line" : nk(WHY.favLine(g, mk.home_spread)), mk.p_home != null ? `market ${nick(g.home_name)} ${pct(mk.p_home)}` : "")}${CB ? box("Call", nk(CB.value), nk(CB.sub)) : ""}</div>
       ${PT ? `<p class="nc-pick${isPick ? " on" : ""}">${esc(nk(PT.line))}</p>` : ""}
       ${!done && SW.line(g) ? `<p class="nc-dep">${esc(nk(SW.line(g)))}</p>` : ""}
+      ${(c => c ? `<p class="nc-moved">${esc(c.text)}</p>` : "")(RC.change(g, { nick: (a, n) => URLS.nick(a, n) }))}
       ${WHY.compare(g) ? `<p class="nc-cmp">${esc(nk(WHY.compare(g)))}</p>` : ""}
       ${W && W.summary ? `<p class="nc-why">${esc(nk(W.summary))}</p>` : ""}
       ${final}
@@ -158,6 +160,7 @@ ${GA_HEAD}
 .nc-box small{display:block;font-size:.62rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim)}
 .nc-box b{display:block;font-size:.95rem;margin:4px 0 2px}.nc-box span{font-size:.68rem;color:var(--text-dim)}
 .nc-pick{margin:12px 0 0;font-size:.9rem;color:var(--text-dim)}.nc-pick.on{background:#E6EFE6;color:var(--text);font-weight:700;border-radius:10px;padding:9px 12px}
+.nc-moved{margin:10px 0 0;padding:6px 10px;border-left:3px solid var(--gold,#C9A84C);font-size:.88rem;line-height:1.45}
 .nc-dep{margin:10px 0 0;border-left:3px solid var(--gold,#C9A84C);padding:2px 0 2px 10px;font-size:.9rem}
 .nc-cmp{margin:12px 0 0;font-size:.9rem}
 .nc-why{margin:12px 0 0;padding-top:11px;border-top:1px solid var(--border);color:var(--text-dim);font-size:.88rem;line-height:1.55}

@@ -95,7 +95,8 @@ async function main() {
   }
   fs.mkdirSync(path.dirname(LOG), { recursive: true });
   fs.writeFileSync(LOG, JSON.stringify({ date: DATE, sent_at: new Date().toISOString(), games: games.length, picks: brief.picks,
-    members: members.length, free: free.length, sent, failed, ...(errors.length ? { errors } : {}) }, null, 2) + "\n");
+    members: members.length, free: free.length, sent, failed, ...(errors.length ? { errors } : {}),
+    reads: require("./lib/nba-read-change").snapshot(games) }, null, 2) + "\n");
   console.log(`NBA card ${DATE}: sent ${sent} (${members.length} members, ${free.length} free), failed ${failed}.`);
 }
 main().catch(e => { console.error("NBA card email error:", e.message); process.exit(0); });

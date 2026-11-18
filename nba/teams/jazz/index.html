@@ -29,6 +29,11 @@
 .team-table .w{color:var(--good);font-weight:800}.team-table .l{color:var(--danger);font-weight:800}
 .team-table td.nw{white-space:nowrap}
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.an-table{width:100%;border-collapse:collapse;font-size:.88rem;margin:8px 0 6px}
+.an-table th,.an-table td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+.an-table th{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-dim)}
+.an-table .rk{font-size:.72rem;color:var(--text-dim);margin-left:4px}
+.an-duos{padding-left:18px;line-height:1.6;font-size:.9rem}
 .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}
 .stat-row .card{padding:12px 14px}.stat-row .v{font-size:1.4rem;font-weight:800}.stat-row .k{font-size:.78rem;color:var(--text-dim)}
 .div-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
@@ -64,6 +69,30 @@
     <div class="card"><div class="v">9-0</div><div class="k">Leo&rsquo;s reads on Jazz games (right&#8209;wrong)</div></div>
     <div class="card"><div class="v">None yet</div><div class="k">Leo Picks on the Jazz, in units</div></div>
   </div>
+  <h2>How the Jazz play</h2>
+  <p class="dim small">From the box score of every Jazz game, October 20 to November 17 (14 games). Rank is among the 30 teams; for opponents, 1st means the stingiest defense.</p>
+  <div class="stat-row an-tiles">
+    <div class="card"><div class="v">1-7 / 0-6</div><div class="k">Home / away record</div></div>
+    <div class="card"><div class="v">0-10</div><div class="k">Last 10 games &middot; streak L12</div></div>
+    <div class="card"><div class="v">104.6 / 113.4</div><div class="k">Points scored / allowed per 100 possessions</div></div>
+    <div class="card"><div class="v">103.2</div><div class="k">Pace: possessions a game</div></div>
+  </div><div class="table-wrap"><table class="an-table"><thead><tr><th></th><th>Jazz</th><th>Opponents vs Jazz</th></tr></thead><tbody>
+    <tr><td>Field goal %</td><td><b>43.7%</b> <span class="rk">28th</span></td><td>45.4% <span class="rk">10th</span></td></tr>
+    <tr><td>Three point %</td><td><b>33.7%</b> <span class="rk">22nd</span></td><td>35.1% <span class="rk">17th</span></td></tr>
+    <tr><td>Threes made a game</td><td><b>12.4 <span class="dim small">of 36.9</span></b> <span class="rk">21st</span></td><td>12.4 <span class="dim small">of 35.4</span> <span class="rk">7th</span></td></tr>
+    <tr><td>Effective FG %</td><td><b>50.8%</b> <span class="rk">29th</span></td><td>52.5% <span class="rk">10th</span></td></tr>
+    <tr><td>Free throw %</td><td><b>76.5%</b> <span class="rk">20th</span></td><td></td></tr>
+    <tr><td>Free throws tried a game</td><td><b>24.4</b> </td><td>31.4 </td></tr>
+    <tr><td>Rebounds a game</td><td><b>44.2</b> <span class="rk">15th</span></td><td>46.1 </td></tr>
+    <tr><td>Assists a game</td><td><b>24.1</b> <span class="rk">27th</span></td><td></td></tr>
+    <tr><td>Turnovers a game</td><td><b>15.9</b> <span class="rk">23rd</span></td><td>13.0 </td></tr>
+  </tbody></table></div>
+  <h2>With and without</h2>
+  <p>Biggest swing so far: the Jazz are 0-10 (-11.3 a game) with Mo Bamba and 1-3 (-10.0 a game) without him.</p>
+  <p class="dim small">The Jazz&rsquo; record and average margin in games each regular played and in games he missed. Small samples: a few games are an early read, not proof.</p>
+  <div class="table-wrap"><table class="an-table"><thead><tr><th>Player</th><th>With him</th><th>Without him</th></tr></thead><tbody><tr><td><b>Darryn Peterson</b><br><span class="dim small">14 games, 31 min</span></td><td>1-13, -10.9</td><td><span class="dim">Played every game</span></td></tr><tr><td><b>Ace Bailey</b><br><span class="dim small">14 games, 31 min</span></td><td>1-13, -10.9</td><td><span class="dim">Played every game</span></td></tr><tr><td><b>Keyonte George</b><br><span class="dim small">13 games, 33 min</span></td><td>1-12, -11.3</td><td>0-1, -6.0</td></tr><tr><td><b>Jaxson Hayes</b><br><span class="dim small">12 games, 24 min</span></td><td>1-11, -11.7</td><td>0-2, -6.5</td></tr><tr><td><b>Josh Okogie</b><br><span class="dim small">13 games, 19 min</span></td><td>0-13, -11.8</td><td>1-0, +1.0</td></tr><tr><td><b>Lauri Markkanen</b><br><span class="dim small">8 games, 31 min</span></td><td>1-7, -12.0</td><td>0-6, -9.5</td></tr><tr><td><b>Josh Green</b><br><span class="dim small">12 games, 19 min</span></td><td>0-12, -11.2</td><td>1-1, -9.5</td></tr><tr><td><b>Mo Bamba</b><br><span class="dim small">10 games, 20 min</span></td><td>0-10, -11.3</td><td>1-3, -10.0</td></tr></tbody></table></div>
+  <h3>Duos</h3>
+  <ul class="an-duos"><li><b>Darryn Peterson and Keyonte George</b>: both played 1-12, -11.3; Peterson without George 0-1, -6.0.</li><li><b>Ace Bailey and Keyonte George</b>: both played 1-12, -11.3; Bailey without George 0-1, -6.0.</li><li><b>Darryn Peterson and Jaxson Hayes</b>: both played 1-11, -11.7; Peterson without Hayes 0-2, -6.5.</li><li><b>Ace Bailey and Jaxson Hayes</b>: both played 1-11, -11.7; Bailey without Hayes 0-2, -6.5.</li></ul>
   <h2>Every Jazz game</h2>
   <ul class="key dim small">
     <li><b>Leo&rsquo;s chance</b> is Leo&rsquo;s win chance for the Jazz, from its last read saved before tip.</li>

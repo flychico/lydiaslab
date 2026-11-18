@@ -92,7 +92,7 @@ function opening(g, o = {}) {
   const helps = d && ((d.pts > 0) === (fs === "home"));
   out.push(m === 0
     ? `Leo sees the ${nk(g, "away")} at the ${nk(g, "home")} as close to even, ${pct(L.p_home)} for the ${nk(g, "home")}.`
-    : `Leo gives the ${fav} ${/^(8|11|18)/.test(pct(chance)) ? "an" : "a"} ${pct(chance)} chance ${where} and has them winning by ${m % 1 ? m.toFixed(1) : m} points.`);
+    : `Leo gives the ${fav} ${/^(8|11|18)/.test(pct(chance)) ? "an" : "a"} ${pct(chance)} chance ${where} and has them winning by ${m % 1 ? m.toFixed(1) : m} ${m === 1 ? "point" : "points"}.`);
   if (d) out.push(helps || m === 0
     ? `The biggest reason${d.key === "ratings" ? " is that" : " is"} ${dTxt}.`
     : `The biggest single factor, ${dTxt}, points the other way, and the rest of Leo's inputs outweigh it.`);

@@ -26,7 +26,8 @@ const am = v => v == null ? "&mdash;" : (v > 0 ? "+" : "") + v;
 const nick = name => String(name || "").split(" ").slice(-1)[0].replace("Blazers", "Trail Blazers");
 const logo = t => "https://a.espncdn.com/i/teamlogos/nba/500/" + String(t).toLowerCase() + ".png";
 const URLS = require("./lib/nba-urls");
-const COPY = require("./lib/nba-game-copy");   // unique opening and What happened (HO-0069 part B)
+const COPY = require("./lib/nba-game-copy");
+const RC = require("./lib/nba-read-change");   // the read moved after the card email (Lynold, 2026-11-17)   // unique opening and What happened (HO-0069 part B)
 const SCHED = (() => { try { return JSON.parse(fs.readFileSync(path.join(__dirname, "..", "data", "nba", "schedule.json"), "utf8")); } catch (e) { return null; } })();
 const HOW = "/nba/how-leo-works/";   // the explainers every page used to repeat   // one address helper for page, nightly page, email, picks data (SEO-09, DEC-20261107-30)
 const slug = g => URLS.gameSlug(g);
@@ -213,6 +214,7 @@ ul.inj,ul.last5{margin:6px 0 0;padding-left:18px;font-size:.86rem;line-height:1.
 .why{padding:12px 16px}.why ol{margin:6px 0 8px;padding-left:20px;line-height:1.6;font-size:.9rem}.why p{margin:6px 0}
 .final{padding:14px 16px}.final .score{font-size:1.25rem;font-weight:800;margin:0 0 6px}
 .lede{font-size:1rem;line-height:1.6;margin:10px 0 4px}
+.moved{margin:10px 0 0;padding:8px 12px;border-left:3px solid var(--gold,#C9A84C);font-size:.92rem;line-height:1.5}
 .lede2{font-size:.9rem;line-height:1.55;margin:6px 0 4px;color:var(--text-dim)}
 .final p{margin:0 0 8px;line-height:1.55}
 .final ul{margin:0;padding-left:18px;line-height:1.6;font-size:.9rem}
@@ -229,7 +231,7 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
   <p class="eyebrow"><a href="/nba/scoreboard/">NBA</a> &middot; ${esc(longDate(g.date))} &middot; ${esc(tip(g.tip_utc))}${g.venue ? " &middot; " + esc(g.venue) : ""}</p>
   <h1>${esc(g.away_name)} vs ${esc(g.home_name)}: Prediction and Odds</h1>
   ${lede.length ? `<p class="lede">${lede.slice(0, lede.indexOf(null)).map(esc).join(" ")}</p><p class="lede2">${lede.slice(lede.indexOf(null) + 1).map(esc).join(" ")}</p>` : ""}
-  <p class="dim"><a href="${HOW}#read">Read frozen before tip</a></p>
+  ${(c => c ? `<p class="moved">${esc(c.text)}</p>` : "")(RC.change(g, { nick: (a, n) => URLS.nick(a, n) }))}
   <p style="margin:6px 0 0;font-size:.92rem">Every game this season: <a href="/nba/teams/${URLS.slugify(URLS.nick(g.away))}/">${esc(URLS.nick(g.away, g.away_name))} team page</a> &middot; <a href="/nba/teams/${URLS.slugify(URLS.nick(g.home))}/">${esc(URLS.nick(g.home, g.home_name))} team page</a></p>
 
   ${finalBlock(g, res)}

@@ -29,6 +29,11 @@
 .team-table .w{color:var(--good);font-weight:800}.team-table .l{color:var(--danger);font-weight:800}
 .team-table td.nw{white-space:nowrap}
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.an-table{width:100%;border-collapse:collapse;font-size:.88rem;margin:8px 0 6px}
+.an-table th,.an-table td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+.an-table th{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-dim)}
+.an-table .rk{font-size:.72rem;color:var(--text-dim);margin-left:4px}
+.an-duos{padding-left:18px;line-height:1.6;font-size:.9rem}
 .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}
 .stat-row .card{padding:12px 14px}.stat-row .v{font-size:1.4rem;font-weight:800}.stat-row .k{font-size:.78rem;color:var(--text-dim)}
 .div-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
@@ -64,6 +69,30 @@
     <div class="card"><div class="v">7-1</div><div class="k">Leo&rsquo;s reads on Kings games (right&#8209;wrong)</div></div>
     <div class="card"><div class="v">None yet</div><div class="k">Leo Picks on the Kings, in units</div></div>
   </div>
+  <h2>How the Kings play</h2>
+  <p class="dim small">From the box score of every Kings game, October 20 to November 17 (13 games). Rank is among the 30 teams; for opponents, 1st means the stingiest defense.</p>
+  <div class="stat-row an-tiles">
+    <div class="card"><div class="v">0-8 / 1-4</div><div class="k">Home / away record</div></div>
+    <div class="card"><div class="v">1-9</div><div class="k">Last 10 games &middot; streak L6</div></div>
+    <div class="card"><div class="v">104.1 / 118.2</div><div class="k">Points scored / allowed per 100 possessions</div></div>
+    <div class="card"><div class="v">103.0</div><div class="k">Pace: possessions a game</div></div>
+  </div><div class="table-wrap"><table class="an-table"><thead><tr><th></th><th>Kings</th><th>Opponents vs Kings</th></tr></thead><tbody>
+    <tr><td>Field goal %</td><td><b>45.5%</b> <span class="rk">21st</span></td><td>49.4% <span class="rk">30th</span></td></tr>
+    <tr><td>Three point %</td><td><b>34.3%</b> <span class="rk">16th</span></td><td>36.9% <span class="rk">25th</span></td></tr>
+    <tr><td>Threes made a game</td><td><b>12.4 <span class="dim small">of 36.1</span></b> <span class="rk">22nd</span></td><td>13.7 <span class="dim small">of 37.1</span> <span class="rk">18th</span></td></tr>
+    <tr><td>Effective FG %</td><td><b>52.7%</b> <span class="rk">20th</span></td><td>57.4% <span class="rk">30th</span></td></tr>
+    <tr><td>Free throw %</td><td><b>76.7%</b> <span class="rk">19th</span></td><td></td></tr>
+    <tr><td>Free throws tried a game</td><td><b>22.5</b> </td><td>28.9 </td></tr>
+    <tr><td>Rebounds a game</td><td><b>39.7</b> <span class="rk">30th</span></td><td>43.3 </td></tr>
+    <tr><td>Assists a game</td><td><b>25.2</b> <span class="rk">21st</span></td><td></td></tr>
+    <tr><td>Turnovers a game</td><td><b>16.2</b> <span class="rk">27th</span></td><td>13.8 </td></tr>
+  </tbody></table></div>
+  <h2>With and without</h2>
+  <p>Biggest swing so far: the Kings are 1-11 (-12.8 a game) with Zach LaVine and 0-1 (-22.0 a game) without him.</p>
+  <p class="dim small">The Kings&rsquo; record and average margin in games each regular played and in games he missed. Small samples: a few games are an early read, not proof.</p>
+  <div class="table-wrap"><table class="an-table"><thead><tr><th>Player</th><th>With him</th><th>Without him</th></tr></thead><tbody><tr><td><b>Darius Acuff Jr.</b><br><span class="dim small">13 games, 37 min</span></td><td>1-12, -13.5</td><td><span class="dim">Played every game</span></td></tr><tr><td><b>Domantas Sabonis</b><br><span class="dim small">12 games, 34 min</span></td><td>1-11, -14.1</td><td>0-1, -6.0</td></tr><tr><td><b>Zach LaVine</b><br><span class="dim small">12 games, 33 min</span></td><td>1-11, -12.8</td><td>0-1, -22.0</td></tr><tr><td><b>De&#39;Andre Hunter</b><br><span class="dim small">11 games, 32 min</span></td><td>1-10, -12.5</td><td>0-2, -18.5</td></tr><tr><td><b>Precious Achiuwa</b><br><span class="dim small">11 games, 26 min</span></td><td>1-10, -12.7</td><td>0-2, -17.5</td></tr><tr><td><b>Leaky Black</b><br><span class="dim small">8 games, 22 min</span></td><td>1-7, -11.0</td><td>0-5, -17.4</td></tr><tr><td><b>Keegan Murray</b><br><span class="dim small">6 games, 27 min</span></td><td>0-6, -13.5</td><td>1-6, -13.4</td></tr></tbody></table></div>
+  <h3>Duos</h3>
+  <ul class="an-duos"><li><b>Darius Acuff Jr. and Domantas Sabonis</b>: both played 1-11, -14.1; Jr. without Sabonis 0-1, -6.0.</li><li><b>Darius Acuff Jr. and Zach LaVine</b>: both played 1-11, -12.8; Jr. without LaVine 0-1, -22.0.</li><li><b>Darius Acuff Jr. and De&#39;Andre Hunter</b>: both played 1-10, -12.5; Jr. without Hunter 0-2, -18.5.</li><li><b>Domantas Sabonis and Zach LaVine</b>: both played 1-10, -13.4; Sabonis without LaVine 0-1, -22.0; LaVine without Sabonis 0-1, -6.0.</li></ul>
   <h2>Every Kings game</h2>
   <ul class="key dim small">
     <li><b>Leo&rsquo;s chance</b> is Leo&rsquo;s win chance for the Kings, from its last read saved before tip.</li>
