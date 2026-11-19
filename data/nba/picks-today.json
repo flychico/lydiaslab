@@ -1,8 +1,8 @@
 {
  "date": "2026-11-19",
- "generated_at": "2026-11-19T18:21:06.251Z",
+ "generated_at": "2026-11-19T22:00:13.857Z",
  "model_version": "leo-nba-v2",
- "injuries_as_of": "2026-11-19T18:21:02Z",
+ "injuries_as_of": "2026-11-19T22:00:06Z",
  "data_through": "2026-11-18",
  "games_rated": 222,
  "lean_edge_pts": 4,
@@ -23,14 +23,14 @@
    "neutral": false,
    "venue": "FedExForum",
    "market": {
-    "provider": "Draft Kings",
-    "home_spread": -6.5,
-    "home_ml": -243,
-    "away_ml": 200,
+    "provider": "DraftKings",
+    "home_spread": -5.5,
+    "home_ml": -217,
+    "away_ml": 180,
     "total": 224.5,
-    "home_spread_odds": -112,
-    "away_spread_odds": -108,
-    "p_home": 0.6800373134328358
+    "home_spread_odds": -108,
+    "away_spread_odds": -112,
+    "p_home": 0.6571490374215877
    },
    "model_version": "leo-nba-v2",
    "context": {
@@ -154,7 +154,7 @@
        "ppg": 9.2,
        "rpg": 7.4,
        "apg": 0.9,
-       "status": ""
+       "status": "out"
       }
      ],
      "injuries": [
@@ -164,14 +164,19 @@
        "detail": "Illness"
       },
       {
-       "name": "GG Jackson",
+       "name": "Zach Edey",
        "status": "out",
-       "detail": "Foot Surgery"
+       "detail": "Ankle"
       },
       {
        "name": "Ty Jerome",
        "status": "out",
        "detail": "Hip"
+      },
+      {
+       "name": "GG Jackson",
+       "status": "out",
+       "detail": "Foot Surgery"
       },
       {
        "name": "Scotty Pippen Jr.",
@@ -269,7 +274,7 @@
        "ppg": 3.2,
        "rpg": 4.7,
        "apg": 6.5,
-       "status": "day-to-day"
+       "status": "out"
       },
       {
        "name": "De'Anthony Melton",
@@ -311,11 +316,11 @@
      "injuries": [
       {
        "name": "Draymond Green",
-       "status": "day-to-day",
+       "status": "out",
        "detail": "Rest"
       },
       {
-       "name": "Al Horford",
+       "name": "LJ Cryer",
        "status": "day-to-day",
        "detail": "Back"
       },
@@ -348,10 +353,10 @@
     }
    },
    "leo": {
-    "home_margin": 3.9,
-    "home_spread": -4,
-    "p_home": 0.611,
-    "p_away": 0.389,
+    "home_margin": 3.3,
+    "home_spread": -3.5,
+    "p_home": 0.594,
+    "p_away": 0.406,
     "rating": {
      "home": 0.8,
      "away": 0.2,
@@ -375,6 +380,15 @@
        "weight": 1,
        "status": "out",
        "detail": "Hip"
+      },
+      {
+       "name": "Zach Edey",
+       "id": "4600663",
+       "mpg": 18.6,
+       "value": 4,
+       "weight": 1,
+       "status": "out",
+       "detail": "Ankle"
       },
       {
        "name": "Isaiah Stewart",
@@ -428,15 +442,15 @@
        "id": "6589",
        "mpg": 25.4,
        "value": 1.8,
-       "weight": 0.4,
-       "status": "day-to-day",
+       "weight": 1,
+       "status": "out",
        "detail": "Rest"
       },
       {
-       "name": "Al Horford",
-       "id": "3213",
-       "mpg": 16.7,
-       "value": 1,
+       "name": "LJ Cryer",
+       "id": "4433149",
+       "mpg": 10.9,
+       "value": 1.6,
        "weight": 0.4,
        "status": "day-to-day",
        "detail": "Back"
@@ -444,31 +458,84 @@
      ]
     },
     "lost": {
-     "home": 15.4,
-     "away": 21.9
+     "home": 19.4,
+     "away": 23.2
     },
-    "edge_pts": -2.6,
+    "edge_pts": -2.2,
     "lean": null,
     "parts": {
      "home_court": 1.7,
      "ratings": 0.7,
      "back_to_back": 0,
      "rest": 0,
-     "missing_players": 1.5
+     "missing_players": 0.9
     },
     "projected": {
      "total": 230,
      "home": 117,
      "away": 113
     },
-    "pick": {
-     "side": "home",
-     "team": "MEM",
-     "p": 0.611,
-     "price": -243,
-     "ok": false,
-     "why": "priced -243, -230 or dearer"
-    }
+    "pick": null,
+    "depends": [
+     {
+      "if": "plays",
+      "scope": "player",
+      "team": "MEM",
+      "players": [
+       {
+        "name": "Isaiah Stewart",
+        "status": "day-to-day",
+        "detail": "Illness",
+        "value": 4.6,
+        "weight": 0.4
+       }
+      ],
+      "before": {
+       "ok": false,
+       "side": null,
+       "p": null,
+       "price": null
+      },
+      "after": {
+       "ok": true,
+       "side": "home",
+       "p": 0.6055,
+       "price": -217,
+       "p_team": 0.6055
+      },
+      "home_margin": 3.71,
+      "text": "Depends on Isaiah Stewart (day-to-day, illness). If he plays, Leo moves to 61% on the Grizzlies at -217 and this is a Leo Pick."
+     },
+     {
+      "if": "sits",
+      "scope": "player",
+      "team": "GS",
+      "players": [
+       {
+        "name": "LJ Cryer",
+        "status": "day-to-day",
+        "detail": "Back",
+        "value": 1.6,
+        "weight": 0.4
+       }
+      ],
+      "before": {
+       "ok": false,
+       "side": null,
+       "p": null,
+       "price": null
+      },
+      "after": {
+       "ok": true,
+       "side": "home",
+       "p": 0.6,
+       "price": -217,
+       "p_team": 0.6
+      },
+      "home_margin": 3.52,
+      "text": "Depends on LJ Cryer (day-to-day, back). If he sits, Leo moves to 60% on the Grizzlies at -217 and this is a Leo Pick."
+     }
+    ]
    },
    "url": "/nba/warriors-vs-grizzlies-prediction-odds-2026-11-19/"
   },
@@ -488,14 +555,14 @@
    "neutral": false,
    "venue": "Fiserv Forum",
    "market": {
-    "provider": "Draft Kings",
-    "home_spread": 10.5,
-    "home_ml": 360,
-    "away_ml": -467,
+    "provider": "DraftKings",
+    "home_spread": 11.5,
+    "home_ml": 378,
+    "away_ml": -494,
     "total": 230.5,
-    "home_spread_odds": -108,
-    "away_spread_odds": -112,
-    "p_home": 0.20882439599292868
+    "home_spread_odds": -116,
+    "away_spread_odds": -104,
+    "p_home": 0.2009934626368718
    },
    "model_version": "leo-nba-v2",
    "context": {
@@ -574,7 +641,7 @@
        "ppg": 12.3,
        "rpg": 5.3,
        "apg": 2.4,
-       "status": ""
+       "status": "out"
       },
       {
        "name": "Myles Turner",
@@ -583,7 +650,7 @@
        "ppg": 7.1,
        "rpg": 6,
        "apg": 2.7,
-       "status": ""
+       "status": "out"
       },
       {
        "name": "Ryan Rollins",
@@ -592,7 +659,7 @@
        "ppg": 10.5,
        "rpg": 5,
        "apg": 3.9,
-       "status": "day-to-day"
+       "status": ""
       },
       {
        "name": "Brayden Burries",
@@ -624,9 +691,14 @@
      ],
      "injuries": [
       {
-       "name": "Ryan Rollins",
-       "status": "day-to-day",
-       "detail": "Illness"
+       "name": "Kyle Kuzma",
+       "status": "out",
+       "detail": "Shoulder Bruise"
+      },
+      {
+       "name": "Myles Turner",
+       "status": "out",
+       "detail": "Shoulder Bruise"
       },
       {
        "name": "Ousmane Dieng",
@@ -798,10 +870,10 @@
     }
    },
    "leo": {
-    "home_margin": -9.5,
-    "home_spread": 9.5,
-    "p_home": 0.248,
-    "p_away": 0.752,
+    "home_margin": -10.4,
+    "home_spread": 10.5,
+    "p_home": 0.227,
+    "p_away": 0.773,
     "rating": {
      "home": -8.2,
      "away": 4,
@@ -818,13 +890,22 @@
     "missing": {
      "home": [
       {
-       "name": "Ryan Rollins",
-       "id": "4591725",
-       "mpg": 22.7,
-       "value": 2.6,
-       "weight": 0.4,
-       "status": "day-to-day",
-       "detail": "Illness"
+       "name": "Kyle Kuzma",
+       "id": "3134907",
+       "mpg": 26.8,
+       "value": 3.8,
+       "weight": 1,
+       "status": "out",
+       "detail": "Shoulder Bruise"
+      },
+      {
+       "name": "Myles Turner",
+       "id": "3133628",
+       "mpg": 26.3,
+       "value": 1.5,
+       "weight": 1,
+       "status": "out",
+       "detail": "Shoulder Bruise"
       }
      ],
      "away": [
@@ -885,17 +966,17 @@
      ]
     },
     "lost": {
-     "home": 1.1,
+     "home": 5.3,
      "away": 18.8
     },
-    "edge_pts": 1,
+    "edge_pts": 1.1,
     "lean": null,
     "parts": {
      "home_court": 1.7,
      "ratings": -13,
      "back_to_back": -2,
      "rest": -0.1,
-     "missing_players": 4
+     "missing_players": 3
     },
     "projected": {
      "total": 228,
@@ -905,10 +986,10 @@
     "pick": {
      "side": "away",
      "team": "POR",
-     "p": 0.752,
-     "price": -467,
+     "p": 0.773,
+     "price": -494,
      "ok": false,
-     "why": "priced -467, -230 or dearer"
+     "why": "priced -494, -230 or dearer"
     }
    },
    "url": "/nba/trail-blazers-vs-bucks-prediction-odds-2026-11-19/"
@@ -929,13 +1010,13 @@
    "neutral": false,
    "venue": "Target Center",
    "market": {
-    "provider": "Draft Kings",
+    "provider": "DraftKings",
     "home_spread": 1.5,
     "home_ml": -104,
     "away_ml": -113,
     "total": 216.5,
-    "home_spread_odds": -115,
-    "away_spread_odds": -105,
+    "home_spread_odds": -119,
+    "away_spread_odds": -102,
     "p_home": 0.4900451287496682
    },
    "model_version": "leo-nba-v2",
@@ -1064,11 +1145,6 @@
       }
      ],
      "injuries": [
-      {
-       "name": "Zyon Pullin",
-       "status": "day-to-day",
-       "detail": "Quadriceps Bruise"
-      },
       {
        "name": "Jonathan Kuminga",
        "status": "day-to-day",
@@ -1305,7 +1381,7 @@
    "neutral": false,
    "venue": "Frost Bank Center",
    "market": {
-    "provider": "Draft Kings",
+    "provider": "DraftKings",
     "home_spread": -15.5,
     "home_ml": -1040,
     "away_ml": 670,
@@ -1661,5 +1737,12 @@
    "url": "/nba/clippers-vs-spurs-prediction-odds-2026-11-19/"
   }
  ],
- "rechecks": []
+ "rechecks": [
+  {
+   "game_id": "401910019",
+   "tip_utc": "2026-11-20T01:00:00.000Z",
+   "recheck_utc": "2026-11-20T00:20:00.000Z",
+   "player": "Isaiah Stewart"
+  }
+ ]
 }
