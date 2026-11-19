@@ -173,6 +173,10 @@ jobs:
           AUDIT_EMAIL: ${{ secrets.AUDIT_EMAIL }}
         run: node scripts/send-x-posts.js nfl "${{ steps.slate_date.outputs.date }}" || true
 
+      - name: Prediction files for trackers
+        continue-on-error: true
+        run: node scripts/build-prediction-files.js nfl || true
+
       - name: Commit and push if changed
         if: ${{ steps.slate.outputs.games != '0' && steps.gate.outcome == 'success' }}
         run: |

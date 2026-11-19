@@ -221,6 +221,10 @@ jobs:
           AUDIT_EMAIL: ${{ secrets.AUDIT_EMAIL }}
         run: node scripts/send-x-posts.js nfl ${{ steps.dates.outputs.list }} || true
 
+      - name: Prediction files for trackers
+        continue-on-error: true
+        run: node scripts/build-prediction-files.js nfl || true
+
       - name: Commit and push if changed
         run: |
           set -euo pipefail

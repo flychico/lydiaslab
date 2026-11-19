@@ -43,6 +43,15 @@
     <p style="margin-bottom:0">The file holds Leo&rsquo;s output only. It carries no sportsbook line, price or market number, and no third party stats beyond the final score.</p>
   </div>
 
+  <h2 id="predictions">Free prediction files for trackers</h2>
+  <div class="card">
+    <p style="margin-top:0">Leo&rsquo;s numbers for the coming games, free, at fixed addresses that stay the same every week, for prediction trackers and anyone who grades models. Updated automatically by every Leo run.</p>
+    <div class="dl"><a class="btn secondary" href="/data/predictions/nfl.csv">NFL, this week (CSV)</a><a class="btn secondary" href="/data/predictions/nfl.json">JSON</a><a class="btn secondary" href="/data/predictions/nba.csv">NBA, today (CSV)</a><a class="btn secondary" href="/data/predictions/nba.json">JSON</a></div>
+    <p class="small">NFL: every game of the current week, from the first early read (Tuesday) on. NBA: today&rsquo;s games, from the first card of the day (about 12:47pm ET). Each week and each day is also kept at /data/predictions/nfl/&lt;season&gt;-week-&lt;N&gt;.csv and /data/predictions/nba/&lt;date&gt;.csv.</p>
+    <p class="small">Columns, always in this order: sport, season, week (NFL), game_date (Eastern), start_utc, game_id, away_team, home_team (full names), leo_win_prob_away, leo_win_prob_home (0 to 1), leo_margin_home (Leo&rsquo;s margin, positive means the home team by that many points), leo_total (Leo&rsquo;s projected total points), status, model_version.</p>
+    <p class="small" style="margin-bottom:0"><b>status</b> is <b>open</b> while Leo&rsquo;s read can still change before the start, and <b>frozen</b> once the game has started: that is Leo&rsquo;s final number, the one the site grades. NFL win chance and margin come from two separate models, so in a close game they can point to different winners. Leo&rsquo;s output only: no sportsbook number in any column.</p>
+  </div>
+
   <h2>Free samples</h2>
   <div class="feed-grid">
     <div class="card">
