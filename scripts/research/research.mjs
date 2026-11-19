@@ -72,17 +72,52 @@ const SKIP_DIRS = /(^|\/)(\.obsidian|My Portfolio|_build|PDFs)(\/|$)/;
 // Personal account details are stripped line by line.
 const REDACT = [/Individual Cash account/i, /account holds \*\*\$/i, /\$[\d,.]+\*{0,2} in (the|your|his) account/i, /in the account,?\*{0,2}\s+only/i, /\bnet liq/i, /buying power/i, /account (number|value)/i];
 
+// ---------------------------------------------------------------- public mode
+// Lynold, Nov 19, 2026: "make site public". When research/data/index.json exists the desk is public:
+// notes are written as plain JSON (no password), personal notes are never published, and every
+// note is cleaned of personal details on the way out. RESEARCH_PASSWORD is then ignored.
+let PUBLIC = fs.existsSync(path.join(OUT, 'index.json'));
+const PRIVATE_SECTIONS = ['Growth', 'Plan & Notes'];
+const PRIVATE_NAMES = /fib style|fib curriculum|fibonacci curriculum|operating brief|session summary|wealth\s*[—-]\s*home|reading list|trade plan|growth log|my trades/i;
+const isPrivate = (n) => PRIVATE_SECTIONS.includes(n.section) || PRIVATE_NAMES.test(n.name || '') || PRIVATE_NAMES.test(n.title || '');
+// Whole lines/paragraphs that never go public.
+const DROP = [/buffett/i, /\bjessica\b/i, /montoya/i, /@gmail\.com/i, /\$1,000,000|\$1\s?M\b|\$1 million|toward \$1|to \$1 million/i, /\byour trade\b|\bmy-trades\b|real trades?/i, /trufamed|surfside/i, /operating brief/i];
+function cleanText(t) {
+  if (!t) return t;
+  t = String(t);
+  t = t.replace(/\s*\((remade|remake|rerun|v2)\)/gi, '').replace(/\b(Remade|Remake|Rerun)\b:?\s*/g, '');
+  t = t.replace(/https:\/\/claude\.ai\/[^\s"'<)]*/g, '');
+  t = t.replace(/\b(at |by )?3:12( ?(PM|pm|p\.m\.))?( ET)?( New York time)?/g, 'intraday').replace(/afternoon (trigger )?check/gi, 'intraday read');
+  t = t.replace(/\bLynold Rivera\b/g, 'the desk').replace(/\bRivera\b/g, '');
+  t = t.replace(/(^|[>\n.!?]\s*)Lynold, ([a-z])/g, (_, a, c) => a + c.toUpperCase()).replace(/(^|[>\n]\s*)Lynold, /g, '$1');
+  t = t.replace(/\bLynold['’]s\b/g, 'the desk’s').replace(/\bLynold\b/g, 'the desk');
+  t = t.replace(/lynolds?-/gi, '').replace(/\blynold\b/gi, 'the desk');
+  return t;
+}
+function cleanHtml(h) {
+  if (!h) return h;
+  // Drop any block element whose text hits a DROP rule, then clean the rest.
+  h = h.replace(/<(p|li|tr|blockquote|h[1-6])\b[^>]*>[\s\S]*?<\/\1>/gi, (blk) => (DROP.some((r) => r.test(blk.replace(/<[^>]+>/g, ' '))) ? '' : blk));
+  return cleanText(h);
+}
+function cleanMd(body) {
+  return cleanText(body.split('\n\n').filter((para) => !DROP.some((r) => r.test(para))).join('\n\n'));
+}
+
 // ---------------------------------------------------------------- crypto
 function key(password, saltB64) {
+  if (PUBLIC) return null;
   return crypto.pbkdf2Sync(password, Buffer.from(saltB64, 'base64'), ITER, 32, 'sha256');
 }
 function encrypt(k, obj) {
+  if (PUBLIC) { const o = Object.assign({}, obj); if (o.html) o.html = cleanHtml(o.html); if (o.styled) o.styled = cleanHtml(o.styled); if (o.title) o.title = cleanText(o.title); delete o.page; return o; }
   const iv = crypto.randomBytes(12);
   const c = crypto.createCipheriv('aes-256-gcm', k, iv);
   const ct = Buffer.concat([c.update(JSON.stringify(obj), 'utf8'), c.final(), c.getAuthTag()]);
   return { iv: iv.toString('base64'), ct: ct.toString('base64') };
 }
 function decrypt(k, box) {
+  if (PUBLIC) return box;
   const buf = Buffer.from(box.ct, 'base64');
   const d = crypto.createDecipheriv('aes-256-gcm', k, Buffer.from(box.iv, 'base64'));
   d.setAuthTag(buf.subarray(buf.length - 16));
@@ -216,6 +251,7 @@ function parseNote(file, relFolder, raw) {
     for (const line of m[1].split('\n')) { const kv = line.match(/^([\w-]+):\s*(.*)$/); if (kv) fm[kv[1]] = kv[2].replace(/^["']|["']$/g, ''); }
   }
   body = body.split('\n').filter((l) => !REDACT.some((r) => r.test(l))).join('\n');
+  if (PUBLIC) body = cleanMd(body);
   body = dropEmptySections(body);
   if (/\.txt$/i.test(file)) body = '```\n' + body + '\n```';
   let title = name;
@@ -258,11 +294,13 @@ function indexEntry(n) {
 
 // ---------------------------------------------------------------- io
 function password() {
+  if (PUBLIC) return 'public';
   const p = process.env.RESEARCH_PASSWORD;
   if (!p) { console.error('Set RESEARCH_PASSWORD in the environment.'); process.exit(1); }
   return p;
 }
 function loadMeta() {
+  if (PUBLIC) return { salt: '', check: {} };
   const f = path.join(OUT, 'meta.json');
   return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : null;
 }
@@ -271,6 +309,7 @@ function sortIndex(items) {
   return items.sort((a, b) => (b.date || '').localeCompare(a.date || '') || a.title.localeCompare(b.title));
 }
 function readIndex(k) {
+  if (PUBLIC) return JSON.parse(fs.readFileSync(path.join(OUT, 'index.json'), 'utf8'));
   const f = path.join(OUT, 'index.enc.json');
   if (!fs.existsSync(f)) return { updated: '', groups: GROUPS, items: [] };
   return decrypt(k, JSON.parse(fs.readFileSync(f, 'utf8')));
@@ -279,6 +318,7 @@ function writeIndex(k, idx) {
   idx.updated = new Date().toISOString();
   idx.groups = GROUPS;
   idx.items = sortIndex(idx.items);
+  if (PUBLIC) { idx.items = idx.items.filter((x) => !isPrivate(x)).map((x) => Object.assign({}, x, { title: cleanText(x.title), summary: DROP.some((r) => r.test(x.summary || '')) ? '' : cleanText(x.summary), page: undefined })); writeJSON(path.join(OUT, 'index.json'), idx); return; }
   writeJSON(path.join(OUT, 'index.enc.json'), encrypt(k, idx));
 }
 
@@ -316,6 +356,7 @@ if (cmd === 'build') {
   const n = parseNote(file, opt('folder') || path.basename(path.dirname(file)), fs.readFileSync(file, 'utf8'));
   // The Today page was retired by Lynold on Nov 12, 2026 ("The today report needs to end. I just want the Daily Debrief").
   if (n.section === 'Today') { console.log('Skipped: the Today page is retired; the Daily Debrief is the nightly read. Nothing was published for it.'); process.exit(0); }
+  if (PUBLIC && isPrivate(n)) { console.log(`Skipped "${n.title}": personal notes are not published on the public desk.`); process.exit(0); }
   const prior = idx.items.find((x) => x.name === n.name);
   if (prior) n.id = prior.id;
   const known = idx.items.map((x) => ({ name: x.name, title: x.title, id: x.id })).concat([n]);
@@ -371,6 +412,25 @@ if (cmd === 'build') {
   idx.items = idx.items.filter((i) => i.id !== x.id);
   writeIndex(k, idx);
   console.log(`Removed "${x.title}" (${idx.items.length} notes left).`);
+} else if (cmd === 'publicize') {
+  // One-time switch to the public desk: decrypt every note with the current password, drop personal
+  // notes, clean the rest, write plain JSON, and remove the encrypted files.
+  if (PUBLIC) { console.log('Already public.'); process.exit(0); }
+  const meta = loadMeta();
+  const k = key(password(), meta.salt);
+  try { decrypt(k, meta.check); } catch { console.error('Wrong RESEARCH_PASSWORD.'); process.exit(1); }
+  const idx = readIndex(k);
+  const docs = idx.items.map((x) => [x, decrypt(k, JSON.parse(fs.readFileSync(path.join(DOCS, x.id + '.json'), 'utf8')))]);
+  PUBLIC = true;
+  let kept = 0, dropped = [];
+  for (const [x, doc] of docs) {
+    if (isPrivate(x)) { fs.rmSync(path.join(DOCS, x.id + '.json'), { force: true }); dropped.push(x.title); continue; }
+    writeJSON(path.join(DOCS, x.id + '.json'), encrypt(null, doc)); kept++;
+  }
+  fs.rmSync(path.join(OUT, 'index.enc.json'), { force: true });
+  fs.rmSync(path.join(OUT, 'meta.json'), { force: true });
+  writeIndex(null, idx);
+  console.log(`Public desk: ${kept} notes published in plain JSON; ${dropped.length} personal notes removed: ${dropped.join(' | ')}`);
 } else if (cmd === 'list') {
   const meta = loadMeta();
   const k = key(password(), meta.salt);

@@ -204,7 +204,11 @@ mark { background: rgba(201,168,76,.32); color: inherit; padding: 0 1px; border-
   const importRaw = (raw) => crypto.subtle.importKey('raw', b64(raw), 'AES-GCM', true, ['decrypt']);
   async function tryKey(key) { try { await dec(META.check, key); return true; } catch { return false; } }
 
+  let PUB = false;
   async function boot() {
+    // Public desk (Nov 19, 2026): plain notes, no password.
+    try { IDX = await getJSON(DATA + 'index.json'); PUB = true; } catch {}
+    if (PUB) { $('#lockBtn').hidden = true; $('#gate').hidden = true; $('#app').hidden = false; buildNav(); route(); return; }
     try { META = await getJSON(DATA + 'meta.json'); } catch { $('#gateErr').textContent = 'The research data could not be loaded. Try again in a minute.'; return; }
     const saved = store.get();
     if (saved) {
@@ -282,7 +286,7 @@ mark { background: rgba(201,168,76,.32); color: inherit; padding: 0 1px; border-
     document.title = s + ' · Market Desk';
   }
   async function getDoc(id) {
-    if (!cache.has(id)) cache.set(id, getJSON(DATA + 'docs/' + id + '.json').then((b) => dec(b)));
+    if (!cache.has(id)) cache.set(id, getJSON(DATA + 'docs/' + id + '.json').then((b) => (PUB ? b : dec(b))));
     return cache.get(id);
   }
   // Reference notes and screens are snapshots: flag them once they are a week old.
