@@ -106,7 +106,7 @@ function summary(m) {
     const C = g.calls;
     if (C) {
       // Lynold (Nov 15): "PASS" read as jargon; say what Leo called and which markets have no call.
-      const mk = [["moneyline", C.ml], ["spread", C.spread], ["total", C.total]].filter(([, x]) => x);
+      const mk = [["moneyline", C.ml], ["spread", C.spread], ["total", C.total]].filter(([, x]) => x && !x.info);   // totals are information only (DEC-20261119-01)
       const on = mk.filter(([, x]) => x.call).map(([k, x]) => `${k} ${nickLabel(m, x.label)}`);
       const off = mk.filter(([, x]) => !x.call).map(([k]) => k);
       if (on.length) parts.push(`Leo's calls: ${list(on)}${off.length ? `; no call on the ${list(off)}` : ""}.`);

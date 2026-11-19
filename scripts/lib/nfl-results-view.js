@@ -73,17 +73,15 @@ function records(tracker, review) {
   const g = tracker.games || [];
   const now =
     threeTile("Moneyline, since " + from, T.ml, "more than 60%, priced better than -230") +
-    threeTile("Spread, since " + from, T.spread, "1 point off the line, both models agree") +
-    threeTile("Total, since " + from, T.total, "1.5 to 7 points off the line");
+    threeTile("Spread, since " + from, T.spread, "1 point off the line, both models agree");
+  // Totals and prop leans are information only from Nov 19 and their records left the site (DEC-20261119-01, -02).
   const extra =
-    (P.decided ? tile("Prop calls, season", rec(P.w, P.l), (P.win_pct || 0).toFixed(0) + "% right &middot; quarterbacks " + rec(qb.w, qb.l) + ", running backs " + rec(rb.w, rb.l) + ", receivers " + rec(wr.w, wr.l)) : "") +
     (td && td.n ? tile("Touchdown chances, season", Math.round(td.predicted_pct) + "%", "Leo&rsquo;s average chance &middot; <b>" + Math.round(td.scored_pct) + "%</b> scored &middot; " + td.n.toLocaleString("en-US") + " players") : "");
   const older =
     oldTile("Moneyline picks, Nov 1", tallyFor(g.filter(x => x.model_version !== "leo-nflml-v1" && x.date >= "2026-11-01" && before(x))), "above 60%, no price limit yet") +
     oldTile("Winner picks, Sep 27 to Oct 11", tallyFor(g.filter(x => x.model_version !== "leo-nflml-v1" && x.date < "2026-10-17")), "above 60%") +
     oldTile("Week 2 winners, retired model", tallyFor(g.filter(x => x.model_version === "leo-nflml-v1")), "every game") +
-    oldTile("Spread sides, before " + from, tallyFor((tracker.spreads || []).filter(x => x.side && before(x))), "1 point off the line") +
-    oldTile("Total sides, before " + from, tallyFor((tracker.totals || []).filter(x => x.side && before(x))), "paused Oct 17 to Nov 4");
+    oldTile("Spread sides, before " + from, tallyFor((tracker.spreads || []).filter(x => x.side && before(x))), "1 point off the line");
   return { now, older, extra };
 }
 
@@ -109,8 +107,7 @@ function learning(review, tests) {
   return '<h2>What Leo is learning</h2>' +
     '<p class="small dim" style="margin:0">Every missed game gets one reason, worked out from the data when the game is graded. Across ' + total + ' missed games this season the most common is <b>' + (REASON[top[0]] || "") + '</b> (' + top[1] + ').' + trend +
     ' Only misses that are Leo&rsquo;s own error point to a model change, and changes are made one at a time, each backed by a backtest.</p>' +
-    '<div class="tbl-wrap"><table><thead><tr><th>Why the game was missed</th><th>Week ' + esc(cur) + '</th><th>' + (prev ? 'Week ' + esc(prev) : '') + '</th><th>Season</th></tr></thead><tbody>' + row("games", gameKeys) + '</tbody>' +
-    '<thead><tr><th>Why the biggest prop misses happened</th><th>Week ' + esc(cur) + '</th><th>' + (prev ? 'Week ' + esc(prev) : '') + '</th><th>Season</th></tr></thead><tbody>' + row("props", propKeys) + '</tbody></table></div>' + testsHtml;
+    '<div class="tbl-wrap"><table><thead><tr><th>Why the game was missed</th><th>Week ' + esc(cur) + '</th><th>' + (prev ? 'Week ' + esc(prev) : '') + '</th><th>Season</th></tr></thead><tbody>' + row("games", gameKeys) + '</tbody></table></div>' + testsHtml;
 }
 
 /* ---- one game, in words -------------------------------------------------- */
@@ -142,13 +139,14 @@ function callsFor(tracker, g, nick) {
     out.push({ o: 1, r: x.result, h: '<b>Spread</b> ' + esc(nick(x.side)) + ' ' + (h > 0 ? '+' + fmt1(h) : h < 0 ? fmt1(h) : 'even') + ' &middot; actual <b>' + by(x, x.actual) + '</b>' + verdict(x.result) });
   });
   (tracker.totals || []).filter(k).forEach(x => {
-    if (!x.side) return;
+    if (!x.side || true) return;
     out.push({ o: 2, r: x.result, h: '<b>Total</b> <span class="side-tag">' + esc(String(x.side).toUpperCase()) + '</span> ' + fmt1(x.line) + ' <span class="dim">&middot; Leo ' + fmt1(x.leo) + '</span> &middot; actual <b>' + fmt1(x.actual) + '</b>' + verdict(x.result) });
   });
   const G = { QB: 3, RB: 4, WR: 5 };
-  (tracker.props || []).filter(k).forEach(p => out.push({ o: G[p.group] ?? 9, r: p.result, h: '<b>' + esc(p.group) + '</b> ' + esc(p.player) + ' ' + (p.lean ? '<span class="side-tag">' + esc(String(p.lean).toUpperCase()) + '</span> ' : '') + esc(String(p.line)) +
-    ' <span class="dim">&middot; Leo ' + p.leo + '</span> &middot; actual <b>' + p.actual + '</b> ' + esc(p.unit || "") + off(p.err) + verdict(p.result) }));
-  return out.sort((a, b) => a.o - b.o).map(c => '<div class="call"><span class="' + cls(c.r) + '">' + mark(c.r) + '</span> ' + c.h + '</div>').join("");
+  // Player props are information only (DEC-20261119-02): projection, line and actual, no side and no verdict.
+  (tracker.props || []).filter(k).forEach(p => out.push({ o: G[p.group] ?? 9, r: null, info: true, h: '<b>' + esc(p.group) + '</b> ' + esc(p.player) + ' &middot; line ' + esc(String(p.line)) +
+    ' <span class="dim">&middot; Leo ' + p.leo + '</span> &middot; actual <b>' + p.actual + '</b> ' + esc(p.unit || "") + off(p.err) }));
+  return out.sort((a, b) => a.o - b.o).map(c => '<div class="call">' + (c.info ? '' : '<span class="' + cls(c.r) + '">' + mark(c.r) + '</span> ') + c.h + '</div>').join("");
 }
 
 /* ---- days and weeks ------------------------------------------------------ */
@@ -190,7 +188,7 @@ function gameRow(g, tracker, nick) {
   return '<article class="gr"><div class="gr-main"><div class="gr-score">' + t(g.away, g.score.away) + t(g.home, g.score.home) + '</div><div class="gr-calls">' + calls + '</div></div>' +
     (read ? '<p class="gr-read">' + read + (passes.length ? ' No call on the ' + passes.join(", ") + '.' : '') + '</p>' : '') +
     (g.miss ? '<p class="gr-why">' + reasonTag(g.miss.reason) + esc(g.miss.evidence) + '</p>' : '') +
-    (props.length ? '<details class="gm"><summary>Prop calls on this game (' + props.filter(x => x.result === "W").length + '-' + props.filter(x => x.result === "L").length + ')</summary><div class="calls-in">' +
+    (props.length ? '<details class="gm"><summary>Player projections on this game</summary><div class="calls-in">' +
       callsFor({ props }, g, nick) + '</div></details>' : '') +
     '<div class="gr-foot">' + tags.join("") + (g.url ? '<a href="' + esc(g.url) + '">Game page</a>' : '') + '</div></article>';
 }
@@ -206,12 +204,12 @@ function dayBlock(review, tracker, date, games, open, after, nick) {
   const n = s.w + s.l + s.p;
   const head = (n ? 'Calls ' + rec(s.w, s.l, s.p) + (three ? ', ' + u(s.units) : '') : 'No calls') + ' &middot; winner right in ' + right + ' of ' + judged + (three ? '' : ' &middot; before the three calls');
   const run = after[date];
-  const propHtml = props.length ? '<details class="gm"><summary>Biggest prop misses</summary><ul class="small">' + props.map(x => '<li><b>' + esc(x.player) + '</b>, ' + esc(x.team_name) + ': ' + esc(x.lean || "") + ' ' + esc(String(x.line)) + ' ' + esc(x.unit || "") +
+  const propHtml = false && props.length ? '<details class="gm"><summary>Biggest prop misses</summary><ul class="small">' + props.map(x => '<li><b>' + esc(x.player) + '</b>, ' + esc(x.team_name) + ': ' + esc(x.lean || "") + ' ' + esc(String(x.line)) + ' ' + esc(x.unit || "") +
       '. Leo ' + x.leo + ', actual <b>' + x.actual + '</b>, off by ' + x.miss + '. ' + reasonTag(x.reason) + esc(x.evidence) + '</li>').join("") + '</ul></details>' : "";
   return '<details class="day"' + (open ? ' open' : '') + '><summary>' + esc(longDate(date)) +
     '<span class="cnt">' + head + '</span></summary><div class="day-body">' + order.map(g => gameRow(g, tracker, nick)).join("") +
     '<p class="day-line">' + (three && run ? 'Calls since ' + shortDate(review.three.from) + ' after this day: <b>' + rec(run.w, run.l, run.p) + ', ' + u(run.units) + '</b>' : '') +
-    (dayProps.length ? (three && run ? ' &middot; ' : '') + 'Prop calls this day: ' + rec(pw, pl) : '') + '</p>' + propHtml + '</div></details>';
+    '</p>' + propHtml + '</div></details>';
 }
 
 function weekSummary(gs) {

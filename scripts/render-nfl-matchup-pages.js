@@ -25,6 +25,7 @@ const redirectStub=m=>`<!doctype html>
 `;
 const SEO=require("./lib/game-page-seo");
 const COPY=require("./lib/nfl-page-copy");
+const CALLS=require("./lib/nfl-calls");   // DEC-20261119-01: saved calls shown under today's rules
 const niceDate=d=>new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"});
 
 /* Leo's two most likely scorers in the game, from the frozen TD props.
@@ -263,7 +264,7 @@ function leoSection(m){
   <div class="leo-grid calls">
     ${callBox("Moneyline",C.ml,"ml",`Leo gives ${g.pick} ${pct(g.prob)}`)}
     ${callBox("Spread",C.spread,"spread",`Leo ${fav(m,g.proj_spread)}`)}
-    ${callBox("Total",C.total,"total",`Leo ${v(g.proj_total)}`)}
+    ${C.total&&C.total.info?"":callBox("Total",C.total,"total",`Leo ${v(g.proj_total)}`)}
   </div>`:"";
   const game=g?`${callsHtml}
   <div class="leo-grid">
@@ -432,7 +433,7 @@ function finalReport(m){
     ml?row("Winner", esc(ml.side)+" "+pct(ml.leo), "&mdash;", esc(ml.actual)+" won",
            ml.result===""?'<span class="vd p">NO PICK</span>':verdict(ml.result)):"",
     tp?row("Total points", v(tp.leo), v(tp.market), v(tp.actual),
-           tp.side?`${esc(String(tp.side).toUpperCase())} &middot; ${verdict(tp.result)}`:'<span class="mut">no side &middot; within 1.5 pts</span>'):"",
+           '<span class="mut">information only, not a call</span>'):"",
     sp?row("Margin", esc(fav(m,sp.leo)), esc(lineTxt(m,sp.market)), esc(fav(m,Number(sp.actual))),
            sp.side?`${esc(sideLine(m,sp.side,sp.market))} &middot; ${verdict(sp.result)}`:'<span class="mut">no side &middot; within 1 pt</span>'):""
   ].join("");
@@ -443,15 +444,13 @@ function finalReport(m){
   const props=Object.keys(MK).filter(k=>byMk[k]).map(k=>{
     const [label]=MK[k];
     return `<h3 class="sec3">${label}</h3>
-    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Line</th><th>Leo</th><th>Side</th><th>Actual</th><th>Off by</th><th>Main reason</th><th>Result</th></tr></thead><tbody>`+
+    <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Line</th><th>Leo</th><th>Actual</th><th>Off by</th><th>Main reason</th></tr></thead><tbody>`+
     byMk[k].sort((a,b)=>Math.abs(b.actual-b.projection)-Math.abs(a.actual-a.projection)).map(p=>`<tr>
       <td><b>${esc(p.player)}</b> <span class="mut">${esc(p.team)}</span></td>
       <td>${v(p.line)}</td><td>${v(p.projection)}</td>
-      <td>${p.lean?esc(String(p.lean).toUpperCase()):'<span class="mut">no side</span>'}</td>
       <td><b>${v(p.actual)}</b></td>
       <td>${p.projection==null||p.actual==null?"":r1(Math.abs(p.actual-p.projection))}</td>
-      <td class="why">${why(p)}</td>
-      <td>${p.line==null?"":(p.lean?verdict(p.result):noLean)}</td></tr>`).join("")+`</tbody></table></div>`;
+      <td class="why">${why(p)}</td></tr>`).join("")+`</tbody></table></div>`;
   }).join("");
 
   return `
@@ -463,7 +462,7 @@ function finalReport(m){
     <h3 class="sec3">How Leo&rsquo;s read held up</h3>
     <p class="sub">Leo before kickoff, the line, the result.</p>
     ${F.graded?games:'<p class="sub">Grading runs the morning after the game; the comparison appears once it has.</p>'}
-    ${props?`<p class="sub" style="margin-top:14px"><a href="/nfl/how-leo-works/#props">How props are graded</a></p>`+props:""}
+    ${props?`<p class="sub" style="margin-top:14px"><a href="/nfl/how-leo-works/#props">How player projections work</a></p>`+props:""}
   </section>`;
 }
 
@@ -730,6 +729,7 @@ ${SEO.relatedLinks({sport:"NFL",root:ROOT,slug:m.slug||String(m.url).split("/").
   const src=path.join(ROOT,"data/nfl/matchups",`${target}.json`);
   if(!fs.existsSync(src)){ console.log(`No matchup data for ${target}. Run generate-nfl-matchups.js first.`); return; }
   const data=JSON.parse(fs.readFileSync(src,"utf8"));
+  for(const m of data) if(m.leo&&m.leo.game&&m.leo.game.calls) m.leo.game.calls=CALLS.current(m.leo.game.calls,m.leo.game);
   let wrote=0;
   for(const m of data){
     const dir=path.join(ROOT,"nfl",m.slug);

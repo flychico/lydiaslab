@@ -2,6 +2,15 @@
 const assert = require("assert");
 const C = require("../lib/nfl-calls");
 const base = { away: "BAL", home: "BUF", pick: "BUF", model_prob: 0.63, price: -162, exp_margin: 5.7, spread_line: 3, proj_total: 55.7, total_line: 54.5 };
+// DEC-20261119-01: totals are information only, never a call, and not a graded market.
+assert.deepStrictEqual(C.MARKETS, ["ml", "spread"]);
+{ const t = C.calls({ ...base, proj_total: 50 }).total; assert.strictEqual(t.call, null); assert.strictEqual(t.info, true); assert.strictEqual(t.gap, -4.5); }
+assert.strictEqual(C.grade("total", { ...base, proj_total: 50 }, { home_score: 20, away_score: 17 }), "");
+assert.strictEqual(C.held([{ ...base, captured_at: "2026-11-15T13:54:00Z", proj_total: 42.9, total_line: 40.5 }]).total.call, null);
+{ const cur = C.current({ ml: { call: "BUF" }, spread: { call: null }, total: { call: "Over", label: "Over 40.5" }, count: 2 }, { proj_total: 44, total_line: 40.5 });
+  assert.strictEqual(cur.total.info, true); assert.strictEqual(cur.count, 1); assert.strictEqual(cur.total.proj, 44); }
+// The rules below are the old total rules, kept tested in case totals return.
+C.RULES.TOTAL_CALLS = true;
 let c = C.calls(base);
 assert.strictEqual(c.ml.call, "BUF");
 assert.strictEqual(c.spread.label, "BUF -3");          // home favoured by 3, Leo by 5.7

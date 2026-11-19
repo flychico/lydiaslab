@@ -80,15 +80,15 @@ const am = v => v == null || v === "" ? "" : (+v > 0 ? "+" : "") + v;
 // DEC-20261102-01: from the Nov 5 slate every game carries three calls
 // (moneyline, spread, total), each a call or PASS, from scripts/lib/nfl-calls.js.
 const CALLS = require("./lib/nfl-calls");
-const callsOf = (m, g) => g && m.date >= CALLS.RULES.FROM ? (g.calls || CALLS.calls({ ...g, away: m.away, home: m.home, model_prob: g.prob })) : null;
+const callsOf = (m, g) => g && m.date >= CALLS.RULES.FROM ? CALLS.current(g.calls || CALLS.calls({ ...g, away: m.away, home: m.home, model_prob: g.prob }), g) : null;
 
 // The whole slate at a glance: one row per game, one column per market.
 function callsTable(list) {
   const th = t => `<td style="font-family:${E.SANS};font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:${E.T.dim};padding:4px 4px 6px">${t}</td>`;
   const td = (c, first) => `<td style="font-family:${E.SANS};font-size:${first ? 13 : 14}px;padding:7px 4px;border-top:1px solid ${E.X.line};${c && c.call ? `font-weight:800;color:${E.T.good}` : `color:${E.T.dim}`}">${c === true ? "" : c && c.call ? esc(c.label) : "PASS"}</td>`;
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${th("Game")}${th("Moneyline")}${th("Spread")}${th("Total")}</tr>` +
-    list.filter(r => r.C).map(({ m, C }) => `<tr><td style="font-family:${E.SANS};font-size:13px;padding:7px 4px;border-top:1px solid ${E.X.line};color:${E.T.text}"><b>${esc(m.away)} @ ${esc(m.home)}</b><br><span style="color:${E.T.dim};font-size:11px">${esc(clock(m.kickoff))}</span></td>${td(C.ml)}${td(C.spread)}${td(C.total)}</tr>`).join("") +
-    `</table><div style="font-family:${E.SANS};font-size:11px;color:${E.T.dim};margin-top:8px">PASS means no call. Moneyline needs more than 60% and a price better than -230. Spread needs Leo 1 point off the line. Total needs Leo 1.5 to 7 points off the line.</div>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${th("Game")}${th("Moneyline")}${th("Spread")}</tr>` +
+    list.filter(r => r.C).map(({ m, C }) => `<tr><td style="font-family:${E.SANS};font-size:13px;padding:7px 4px;border-top:1px solid ${E.X.line};color:${E.T.text}"><b>${esc(m.away)} @ ${esc(m.home)}</b><br><span style="color:${E.T.dim};font-size:11px">${esc(clock(m.kickoff))}</span></td>${td(C.ml)}${td(C.spread)}</tr>`).join("") +
+    `</table><div style="font-family:${E.SANS};font-size:11px;color:${E.T.dim};margin-top:8px">PASS means no call. Moneyline needs more than 60% and a price better than -230. Spread needs Leo 1 point off the line. Leo&rsquo;s total is shown for information, not called.</div>`;
 }
 
 function cardHtml(games, rows, props, nice, week, subject) {
@@ -102,7 +102,7 @@ function cardHtml(games, rows, props, nice, week, subject) {
     E.header("NFL"),
     E.hero({ eyebrow: `Leo NFL &middot; Week ${esc(week)} &middot; ${esc(nice)}`,
       title: `Week ${esc(week)} card: ${games.length} game${games.length === 1 ? "" : "s"}`,
-      subtitle: newRules ? "Three calls per game: moneyline, spread and total. Each is a call or a PASS, and every call is graded after the game." : "Leo&rsquo;s pick where he gives a team more than a 60% chance, his spread and total beside the market, and the players most likely to score. Every number is frozen before kickoff and graded on the site.",
+      subtitle: newRules ? "Calls per game: moneyline and spread. Each is a call or a PASS, and every call is graded after the game. Leo&rsquo;s total is shown for information." : "Leo&rsquo;s pick where he gives a team more than a 60% chance, his spread and total beside the market, and the players most likely to score. Every number is frozen before kickoff and graded on the site.",
       chips: ["&#127944; Full slate", "&#129657; Injury report built in", "&#128274; Frozen before kickoff", "&#128202; Graded every game"] }),
     E.tiles([
       { label: "Games", value: games.length, sub: esc(nice.split(",")[0]) },
@@ -136,7 +136,8 @@ function cardHtml(games, rows, props, nice, week, subject) {
         boxes: C ? [
           { label: "Moneyline", value: C.ml.call ? esc(C.ml.label) : "PASS", sub: esc(C.ml.call ? `${Math.round(g.prob * 100)}% to win` : C.ml.pass), tone: C.ml.call ? "good" : "muted" },
           { label: "Spread", value: C.spread.call ? esc(C.spread.label) : "PASS", sub: esc(C.spread.call ? `Leo ${fav(m, g.exp_margin)}` : C.spread.pass), tone: C.spread.call ? "good" : "muted" },
-          { label: "Total", value: C.total.call ? esc(C.total.label) : "PASS", sub: esc(C.total.call ? `Leo ${g.proj_total}` : C.total.pass), tone: C.total.call ? "good" : "muted" }
+          C.total.info ? { label: "Leo total", value: esc(g.proj_total ?? "n/a"), sub: esc(g.total_line != null ? `line ${g.total_line}, information` : "information"), tone: "steel" }
+            : { label: "Total", value: C.total.call ? esc(C.total.label) : "PASS", sub: esc(C.total.call ? `Leo ${g.proj_total}` : C.total.pass), tone: C.total.call ? "good" : "muted" }
         ] : [
           { label: "Spread", value: esc(spreadTxt(m, g ? g.spread_line : m.spread_line)), sub: g ? `Leo ${esc(fav(m, g.exp_margin))}` : "" , tone: "steel" },
           { label: "Total", value: esc(g && g.total_line != null ? g.total_line : (m.total_line ?? "n/a")), sub: g && g.proj_total != null ? `Leo ${esc(g.proj_total)}` : "", tone: "steel" },

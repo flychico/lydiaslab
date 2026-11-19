@@ -193,14 +193,15 @@ function build() {
     const units = (res, price) => res === "W" ? Math.round(100 * (price > 0 ? price / 100 : 100 / -price)) / 100 : res === "L" ? -1 : 0;
     if (pick && pick.result) calls.push({ market: "ml", text: three && pick.price != null ? `${nick(pick.pick)} ${pick.price > 0 ? "+" : ""}${pick.price}, Leo ${Math.round(pick.leo_prob * 100)}%` : `${nick(pick.pick)} to win, ${Math.round(pick.leo_prob * 100)}%`, result: pick.result, ...(three && pick.price != null ? { units: units(pick.result, pick.price) } : {}) });
     if (sp.side && sp.result) calls.push({ market: "spread", text: `${spreadCallText(g, sp)}, Leo had ${marginWords(g, sp.leo)}`, result: sp.result, ...(three ? { units: units(sp.result, -110) } : {}) });
-    if (tot && tot.side && tot.result) calls.push({ market: "total", text: `${String(tot.side).charAt(0).toUpperCase() + String(tot.side).slice(1).toLowerCase()} ${r1(tot.line)}, Leo projected ${r1(tot.leo)}`, result: tot.result, ...(three ? { units: units(tot.result, -110) } : {}) });
+    // Totals are information only and their record left the site (DEC-20261119-01); old graded rows stay in the ledger, private.
+    if (CALLS.RULES.TOTAL_CALLS && tot && tot.side && tot.result) calls.push({ market: "total", text: `${String(tot.side).charAt(0).toUpperCase() + String(tot.side).slice(1).toLowerCase()} ${r1(tot.line)}, Leo projected ${r1(tot.leo)}`, result: tot.result, ...(three ? { units: units(tot.result, -110) } : {}) });
     // Leo's read in calls, not two models' raw numbers (the win chance and the
     // margin are separate models and can disagree): one verdict per market.
     let read = null;
     if (three && read1) {
       const c = CALLS.calls(read1);
       const v = (x, name) => x.call ? { market: name, call: x.label.replace(/^([A-Z]{2,3})\b/, a => nick(a)) } : { market: name, pass: x.short || x.pass || "no line" };
-      read = [v(c.ml, "Moneyline"), v(c.spread, "Spread"), v(c.total, "Total")];
+      read = [v(c.ml, "Moneyline"), v(c.spread, "Spread")].concat(CALLS.RULES.TOTAL_CALLS ? [v(c.total, "Total")] : []);
     }
 
     const lostSpreadish = calls.some(c => c.result === "L" && c.market !== "total");
@@ -286,7 +287,7 @@ function build() {
     // The three calls since RULES.FROM, per market: record and units.
     three: (() => {
       const o = { from: CALLS.RULES.FROM };
-      for (const mk of ["ml", "spread", "total"]) {
+      for (const mk of CALLS.MARKETS) {
         const cs = games.filter(x => x.three).flatMap(x => x.calls.filter(c => c.market === mk));
         o[mk] = { w: cs.filter(c => c.result === "W").length, l: cs.filter(c => c.result === "L").length, p: cs.filter(c => c.result === "P").length,
           units: Math.round(100 * cs.reduce((a, c) => a + (c.units || 0), 0)) / 100 };

@@ -74,12 +74,13 @@ function recordTiles(rv) {
     const n = t.w + t.l + t.p;
     return { label, value: rec(t.w, t.l, t.p), sub: `${u(t.units)} &middot; ${n < 50 ? `early read, ${n} of 50 calls` : `${n} calls`}` };
   };
-  const items = [one("Moneyline", T3.ml), one("Spread", T3.spread), one("Total", T3.total)];
-  const all = ["ml", "spread", "total"].reduce((a, k) => a + T3[k].units, 0);
+  const NAME = { ml: "Moneyline", spread: "Spread", total: "Total" };
+  const items = CALLS.MARKETS.filter(k => T3[k]).map(k => one(NAME[k], T3[k]));   // totals are information only (DEC-20261119-01)
+  const all = CALLS.MARKETS.filter(k => T3[k]).reduce((a, k) => a + T3[k].units, 0);
   return {
-    html: E.panel(`Leo&rsquo;s three calls since ${esc(shortDate(T3.from))}, through ${esc(shortDate(rv.through))}`, E.tiles(items) +
-      `<div style="${F};font-size:12px;color:${T.dim};margin-top:2px">All three together: <b style="color:${T.text}">${u(all)}</b>. Moneyline graded at the price when Leo made the call, spread and total at -110. Under 50 calls a record says little either way.</div>`),
-    text: `Leo's three calls since ${shortDate(T3.from)} (through ${shortDate(rv.through)}): ` + items.map(i => `${i.label} ${i.value}, ${strip(i.sub)}`).join("; ") + `. All three together ${u(all)}.`
+    html: E.panel(`Leo&rsquo;s calls since ${esc(shortDate(T3.from))}, through ${esc(shortDate(rv.through))}`, E.tiles(items) +
+      `<div style="${F};font-size:12px;color:${T.dim};margin-top:2px">Together: <b style="color:${T.text}">${u(all)}</b>. Moneyline graded at the price when Leo made the call, spread at -110. Under 50 calls a record says little either way.</div>`),
+    text: `Leo's calls since ${shortDate(T3.from)} (through ${shortDate(rv.through)}): ` + items.map(i => `${i.label} ${i.value}, ${strip(i.sub)}`).join("; ") + `. Together ${u(all)}.`
   };
 }
 
@@ -88,7 +89,7 @@ function recordTiles(rv) {
 function callsOf(m) {
   const g = m.leo && m.leo.game;
   if (!g) return null;
-  return g.calls || CALLS.calls({ ...g, away: m.away, home: m.home, model_prob: g.prob });
+  return CALLS.current(g.calls || CALLS.calls({ ...g, away: m.away, home: m.home, model_prob: g.prob }), g);
 }
 
 // "Why Leo has X at N%": the moneyline model's own split (nfl-page-copy.js
@@ -133,7 +134,7 @@ function numbers(m, C, P) {
   const sGap = g.spread_line != null && g.proj_spread != null ? r1(Math.abs(g.proj_spread - g.spread_line)) : null;
   rows.push(["Spread", esc(by(m, g.proj_spread)), esc(lineTxt(m, g.spread_line)), sGap != null ? `${sGap} pt${sGap === 1 ? "" : "s"}` : "", verdict(C.spread, C.spread && C.spread.pass)]);
   const tGap = g.total_line != null && g.proj_total != null ? r1(Math.abs(g.proj_total - g.total_line)) : null;
-  rows.push(["Total", esc(g.proj_total ?? "n/a"), esc(g.total_line ?? "n/a"), tGap != null ? `${tGap} pt${tGap === 1 ? "" : "s"}` : "", verdict(C.total, C.total && C.total.pass)]);
+  rows.push(["Total", esc(g.proj_total ?? "n/a"), esc(g.total_line ?? "n/a"), tGap != null ? `${tGap} pt${tGap === 1 ? "" : "s"}` : "", C.total && C.total.info ? `<span style="color:${T.dim}">Information only, not a call</span>` : verdict(C.total, C.total && C.total.pass)]);
   return {
     html: grid(rows.map(r => [`<b>${r[0]}</b>`, r[1], r[2], r[3]]).concat([]), ["", "Leo", "Line", "Gap"]) +
       `<div style="${F};font-size:12px;color:${T.dim};margin-top:6px;line-height:1.6">${rows.map(r => `<b style="color:${T.text}">${r[0]}:</b> ${r[4]}`).join("<br>")}</div>`,
@@ -194,7 +195,8 @@ function memberGame(m, P) {
     boxes: [
       { label: "Moneyline", value: C.ml.call ? esc(C.ml.label) : "No call", sub: esc(C.ml.call ? `${pct(g.prob)} to win` : C.ml.short || ""), tone: C.ml.call ? "good" : "muted" },
       { label: "Spread", value: C.spread.call ? esc(C.spread.label) : "No call", sub: esc(C.spread.call ? `gap ${C.spread.gap}` : C.spread.short || C.spread.pass || ""), tone: C.spread.call ? "good" : "muted" },
-      { label: "Total", value: C.total.call ? esc(C.total.label) : "No call", sub: esc(C.total.call ? `Leo ${g.proj_total}` : C.total.short || C.total.pass || ""), tone: C.total.call ? "good" : "muted" }
+      C.total.info ? { label: "Leo total", value: esc(g.proj_total ?? "n/a"), sub: esc(g.total_line != null ? `line ${g.total_line}, information` : "information"), tone: "muted" }
+        : { label: "Total", value: C.total.call ? esc(C.total.label) : "No call", sub: esc(C.total.call ? `Leo ${g.proj_total}` : C.total.short || C.total.pass || ""), tone: C.total.call ? "good" : "muted" }
     ],
     notes: [
       h4(`Why Leo has the ${esc(nick(g.pick))} at ${pct(g.prob)}`) + `<ul style="margin:0;padding-left:18px;color:${T.text}">${why.map(l => `<li style="margin:0 0 4px">${esc(l)}</li>`).join("")}</ul>`,
@@ -204,7 +206,7 @@ function memberGame(m, P) {
     cta: "Full game page"
   });
   const text = [`${TEAMS.full(m.away)} at ${TEAMS.full(m.home)}, ${clock(m.kickoff)}`,
-    `  Calls: moneyline ${C.ml.call ? nickify(m, C.ml.label) : "no call"}, spread ${C.spread.call ? nickify(m, C.spread.label) : "no call"}, total ${C.total.call ? C.total.label : "no call"}`,
+    `  Calls: moneyline ${C.ml.call ? nickify(m, C.ml.label) : "no call"}, spread ${C.spread.call ? nickify(m, C.spread.label) : "no call"}, total ${C.total.info ? `Leo ${g.proj_total ?? "n/a"}, information` : C.total.call ? C.total.label : "no call"}`,
     `  Why Leo has the ${nick(g.pick)} at ${pct(g.prob)}:`, ...why.map(l => `    ${l}`),
     ...N.text.map(l => `  ${l}`), ...I.text.map(l => `  ${l}`), when ? `  ${when}` : "", `  ${E.SITE}${m.url}`].filter(Boolean).join("\n");
   return { html, text };
@@ -242,7 +244,7 @@ function brief(games, opts = {}) {
     sample ? E.panel("A sample for you", `<div style="${F};font-size:15px;color:${T.text};line-height:1.5">${esc(sample)} <a href="${MEMBERSHIP}" style="color:${T.navy};font-weight:800">See membership &rarr;</a></div>`) : "",
     E.hero({ eyebrow: `Leo NFL members &middot; Week ${esc(week)} &middot; ${esc(nice)}`,
       title: `Member brief: ${games.length} game${games.length === 1 ? "" : "s"}`,
-      subtitle: "Leo&rsquo;s three calls for every game, the reasoning behind each in plain words, and the numbers Leo read. Every call is graded after the game, wins and losses alike." }),
+      subtitle: "Leo&rsquo;s calls for every game, the reasoning behind each in plain words, and the numbers Leo read. Every call is graded after the game, wins and losses alike." }),
     E.tiles([
       { label: "Games", value: games.length, sub: esc(nice.split(",")[0]) },
       { label: "First kickoff", value: esc(clock(games[0].kickoff).replace(" ET", "")), sub: "Eastern time" },

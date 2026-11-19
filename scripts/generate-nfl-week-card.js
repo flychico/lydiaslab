@@ -94,7 +94,7 @@ const nickify = (m, t) => String(t == null ? "" : t).replace(new RegExp(`\\b(${m
 function callsOf(m) {
   const g = m.leo && m.leo.game;
   if (!g || m.date < CALLS.RULES.FROM) return null;
-  return g.calls || CALLS.calls({ ...g, away: m.away, home: m.home, model_prob: g.prob });
+  return CALLS.current(g.calls || CALLS.calls({ ...g, away: m.away, home: m.home, model_prob: g.prob }), g);
 }
 const MK = { ml: "Moneyline", spread: "Spread", total: "Total" };
 function gameCard(m) {
@@ -108,6 +108,8 @@ function gameCard(m) {
   const box = mk => {
     const c = C && C[mk];
     if (!c) return `<div class="wc-box"><span class="wc-k">${MK[mk]}</span><b>n/a</b></div>`;
+    // Totals are information only (DEC-20261119-01): Leo's number, never a call.
+    if (c.info) return `<div class="wc-box"><span class="wc-k">Leo&rsquo;s total</span><b>${c.proj != null ? esc(String(c.proj)) : "n/a"}</b><span class="wc-s">${c.line != null ? "line " + esc(String(c.line)) + ", " : ""}information</span></div>`;
     const r = c.call ? res(mk) : null;
     return `<div class="wc-box${c.call ? " on" : ""}${r === "W" ? " win" : r === "L" ? " loss" : ""}"><span class="wc-k">${MK[mk]}</span><b>${c.call ? esc(nickify(m, c.label)) : "No call"}</b><span class="wc-s">${c.call ? tag(r) : esc(nickify(m, c.short || c.pass || ""))}</span></div>`;
   };
@@ -139,20 +141,20 @@ function gameCard(m) {
 // "This week's calls": counts this week, results so far, and the season
 // record since Nov 2 from data/nfl/results-review.json with its early read label.
 function callsSummary(games) {
-  const n = { ml: 0, spread: 0, total: 0 }, so = { w: 0, l: 0, p: 0 };
+  const n = Object.fromEntries(CALLS.MARKETS.map(k => [k, 0])), so = { w: 0, l: 0, p: 0 };
   for (const m of games) {
     const C = callsOf(m); if (!C) continue;
     for (const k of Object.keys(n)) if (C[k] && C[k].call) n[k]++;
     const R = reviewGame(m);
     if (R && R.three) for (const c of R.calls || []) c.result === "W" ? so.w++ : c.result === "L" ? so.l++ : c.result === "P" && so.p++;
   }
-  if (!(n.ml + n.spread + n.total) && !games.some(m => callsOf(m))) return "";
+  if (!Object.values(n).reduce((a, b) => a + b, 0) && !games.some(m => callsOf(m))) return "";
   reviewGame({});
   const T = REVIEW && REVIEW.three;
   const rec = t => `${t.w}-${t.l}${t.p ? `-${t.p}` : ""}`;
   const u = v => (v > 0 ? "+" : v < 0 ? "-" : "") + Math.abs(v).toFixed(2) + "u";
-  const season = T ? ["ml", "spread", "total"].map(k => { const t = T[k], c = t.w + t.l + t.p; return `<div class="wc-tile"><span class="wc-k">${MK[k]}</span><b>${n[k]}</b><span>${n[k] === 1 ? "call" : "calls"}</span><span class="dim">${rec(t)}, ${u(t.units)}</span></div>`; }).join("") : "";
-  const counted = T ? ["ml", "spread", "total"].map(k => T[k].w + T[k].l + T[k].p) : [];
+  const season = T ? CALLS.MARKETS.map(k => { const t = T[k], c = t.w + t.l + t.p; return `<div class="wc-tile"><span class="wc-k">${MK[k]}</span><b>${n[k]}</b><span>${n[k] === 1 ? "call" : "calls"}</span><span class="dim">${rec(t)}, ${u(t.units)}</span></div>`; }).join("") : "";
+  const counted = T ? CALLS.MARKETS.map(k => T[k].w + T[k].l + T[k].p) : [];
   const early = counted.some(c => c < 50) ? ` Early read: ${counted.every(c => c < 50) ? "each" : "some"} under 50 graded calls.` : "";
   const done = so.w + so.l + so.p;
   return `<section class="card wc-sum">
@@ -335,7 +337,8 @@ function build(targetDate, opts = {}) {
   // record and labels, changing what was published at the time.
   const exists = fs.existsSync(path.join(dir, "index.html"));
   const pending = wk.games.some(m => !(m.final_report && m.final_report.home_score != null));
-  if (exists && (Number(wk.week) < Number(wk.latestWeek) - 1 || (Number(wk.week) < Number(wk.latestWeek) && !pending))) {
+  // opts.force: a rule change that must reach finished weeks too (DEC-20261119-01: the total record left the site).
+  if (!opts.force && exists && (Number(wk.week) < Number(wk.latestWeek) - 1 || (Number(wk.week) < Number(wk.latestWeek) && !pending))) {
     console.log(`  week card: Week ${wk.week} is a past week, left as published`);
     return slug;
   }
@@ -355,6 +358,6 @@ function build(targetDate, opts = {}) {
 }
 
 if (require.main === module) {
-  build(process.argv[2] || new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" }));
+  build(process.argv[2] || new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" }), { force: process.argv.includes("--force") });
 }
 module.exports = { build };

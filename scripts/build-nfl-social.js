@@ -121,7 +121,7 @@ function picksPost(date, existing) {
   for (const g of games) {
     const reads = READS.get(g.game_id);
     const H = reads && reads.length ? CALLS.held(reads) : CALLS.calls(g);
-    for (const mk of ["ml", "spread", "total"]) {
+    for (const mk of CALLS.MARKETS) {   // totals are information only (DEC-20261119-01)
       const l = callLine(mk, H[mk], g);
       if (l) { lines.push(l); if (mk !== "total") teams.push(H[mk].call); }
     }
@@ -171,7 +171,7 @@ function seasonRec(date) {
   const w = readJson(path.join(DIR, "waves", `${date}.json`));
   const s = w && w.season; if (!s) return "";
   let W = 0, L = 0, P = 0;
-  for (const k of Object.keys(s)) { W += +s[k].w || 0; L += +s[k].l || 0; P += +s[k].p || 0; }
+  for (const k of Object.keys(s)) { if (!CALLS.MARKETS.includes(k === "moneyline" ? "ml" : k)) continue; W += +s[k].w || 0; L += +s[k].l || 0; P += +s[k].p || 0; }
   return W + L ? `${W}-${L}${P ? "-" + P : ""}` : "";
 }
 const dayName = date => new Date(date + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" }).toUpperCase();

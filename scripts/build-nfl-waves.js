@@ -32,7 +32,8 @@ const ROOT = path.join(__dirname, "..");
 const DIR = path.join(ROOT, "data/nfl");
 const OUT = path.join(DIR, "waves");
 const etDate = d => d.toLocaleDateString("en-CA", { timeZone: "America/New_York" });
-const MARKET = { ml: "moneyline", spread: "spread", total: "total" };
+// Graded public markets only (totals are information only from Nov 19, DEC-20261119-01).
+const MARKET = Object.fromEntries(Object.entries({ ml: "moneyline", spread: "spread", total: "total" }).filter(([k]) => require("./lib/nfl-calls").MARKETS.includes(k)));
 
 // "1pm", "4:25pm", "9:30am", Eastern.
 function kickET(kickoffUtc) {

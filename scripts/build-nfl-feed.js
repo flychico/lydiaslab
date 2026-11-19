@@ -76,9 +76,6 @@ const COLS = [
   ["spread_side", "string", "team name", "Spread call: the team Leo took against the spread. Empty when no call."],
   ["spread_result", "string", "W, L or P", "Result of the spread call. Empty when there was no call."],
   ["spread_units", "number", "units", "Units won or lost on the spread call, graded at standard -110."],
-  ["total_side", "string", "Over or Under", "Total call: Over or Under. Empty when no call."],
-  ["total_result", "string", "W, L or P", "Result of the total call. Empty when there was no call."],
-  ["total_units", "number", "units", "Units won or lost on the total call, graded at standard -110."],
   ["leo_right_winner", "boolean", "", "True when the team Leo gave the higher win chance won. Empty for an exact 50% read or a tie."],
   ["miss_reason", "string", "", "When Leo missed (a lost call, the wrong winner, or the margin off by 14 or more), the reason as shown on ndhorizon.com/nfl/results/: Injury input, The market knew, Overtime, Blowout, Variance or Leo's error. Empty when there was no miss."],
   ["model_version", "string", "", "Version of Leo's win chance model that made the read."]
@@ -132,7 +129,7 @@ function rows() {
       ml_side: (() => { const c = call("ml"); if (!c) return ""; const s = (S.get(`${gid}|moneyline`) || {}).leo_side || R.pick; return TEAMS.full(s); })(),
       ml_result: res("ml"), ml_units: units("ml"),
       spread_side: side("spread", "spread"), spread_result: res("spread"), spread_units: units("spread"),
-      total_side: side("total", "total"), total_result: res("total"), total_units: units("total"),
+      // total_side, total_result, total_units removed: totals are information only (DEC-20261119-01)
       leo_right_winner: right, miss_reason: g.miss ? strip(VIEW.REASON[g.miss.reason] || g.miss.reason) : "",
       model_version: R.model_version
     };

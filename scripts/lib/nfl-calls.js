@@ -9,8 +9,13 @@
  *              favours. PASS when the margin model and the win-chance model
  *              pick different winners (they are separate models; when they
  *              disagree neither is trusted).
- *   Total      Leo's total 1.5+ points off the line: Over or Under. PASS past
- *              7 points (the model is wrong, not the market).
+ *   Total      INFORMATION ONLY from 2026-11-19 (DEC-20261119-01, Lynold):
+ *              no backtest edge (sides about 50% at every gap), so Leo's
+ *              projected total is shown but never called or graded, and the
+ *              total record left the site (discontinued calls leave with their
+ *              record). Before: 1.5 to 7 points off the line, Over or Under.
+ *              Set TOTAL_CALLS true again only after a new totals model
+ *              passes a walk-forward backtest and Lynold says yes.
  *
  * Inputs are the frozen pre-kickoff read (prediction-history.csv or a
  * picks-<date>.json row): away, home, pick, model_prob, price, exp_margin
@@ -32,8 +37,11 @@ const RULES = {
   ML_PRICE_LIMIT: -230,    // -230 and more expensive: PASS
   SPREAD_FLOOR: 1.0,
   TOTAL_FLOOR: 1.5,
-  TOTAL_CAP: 7.0
+  TOTAL_CAP: 7.0,
+  TOTAL_CALLS: false       // DEC-20261119-01: totals are information only
 };
+// The graded public markets. Every page, email, post and record loops over this.
+const MARKETS = RULES.TOTAL_CALLS ? ["ml", "spread", "total"] : ["ml", "spread"];
 
 const num = v => { const x = typeof v === "number" ? v : parseFloat(v); return Number.isFinite(x) ? x : null; };
 const r1 = x => Math.round(x * 10) / 10;
@@ -70,7 +78,9 @@ function calls(g) {
   }
 
   // ---- total ----------------------------------------------------------------
-  if (proj == null || tLine == null) out.total = { call: null, pass: "No line yet" };
+  if (!RULES.TOTAL_CALLS) out.total = { call: null, info: true, proj, line: tLine, gap: proj != null && tLine != null ? r1(proj - tLine) : null,
+    pass: "Leo's total is shown for information, not called", short: "information only" };
+  else if (proj == null || tLine == null) out.total = { call: null, pass: "No line yet" };
   else {
     const gap = proj - tLine;
     if (Math.abs(gap) < RULES.TOTAL_FLOOR) out.total = { call: null, gap: r1(gap), pass: `Leo within ${RULES.TOTAL_FLOOR} points of the line`, short: "too close to the line" };
@@ -113,7 +123,21 @@ function held(reads) {
   return out;
 }
 
-const api = { RULES, calls, grade, held };
+/**
+ * Calls saved before a rule change (data/nfl/matchups, picks files) are brought
+ * up to today's rules before they are shown: with totals information only, a
+ * saved total call becomes information. g is the game row for the numbers.
+ */
+function current(c, g) {
+  if (!c || RULES.TOTAL_CALLS) return c;
+  const t = c.total || {};
+  const proj = t.proj != null ? t.proj : g ? num(g.proj_total) : null, line = t.line != null && !isNaN(+t.line) ? +t.line : g ? num(g.total_line) : null;
+  return { ...c, total: { call: null, info: true, proj, line, gap: proj != null && line != null ? r1(proj - line) : null,
+    pass: "Leo's total is shown for information, not called", short: "information only" },
+    count: [c.ml, c.spread].filter(x => x && x.call).length };
+}
+
+const api = { RULES, MARKETS, calls, current, grade, held };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else if (typeof window !== "undefined") window.NFL_CALLS = api;
 })();
