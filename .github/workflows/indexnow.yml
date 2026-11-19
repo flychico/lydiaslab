@@ -1,0 +1,25 @@
+name: IndexNow (send pages to search engines)
+# SEO-27 (OD-07, Nov 19). The NFL and NBA publish and grade runs send the pages
+# they change on their own (scripts/indexnow-ping.js). This manual run sends the
+# whole sitemap, for the first send and after a big change.
+on:
+  workflow_dispatch:
+    inputs:
+      all:
+        description: "Send every address in sitemap.xml"
+        type: boolean
+        default: true
+permissions:
+  contents: read
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Send pages to IndexNow
+        run: node scripts/indexnow-ping.js ${{ github.event.inputs.all == 'true' && '--all' || '' }}

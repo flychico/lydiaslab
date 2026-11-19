@@ -187,3 +187,7 @@ jobs:
           git commit -m "NFL publish picks ${{ steps.slate_date.outputs.date }}"
           git pull --rebase
           git push
+
+      - name: Tell search engines about new pages (IndexNow)
+        continue-on-error: true
+        run: node scripts/indexnow-ping.js --since=${{ github.sha }} || true

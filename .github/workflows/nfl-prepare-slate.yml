@@ -220,3 +220,7 @@ jobs:
           git commit -m "NFL early reads"
           git pull --rebase
           git push || echo "::warning::early reads not pushed"
+
+      - name: Tell search engines about new pages (IndexNow)
+        continue-on-error: true
+        run: node scripts/indexnow-ping.js --since=${{ github.sha }} || true
