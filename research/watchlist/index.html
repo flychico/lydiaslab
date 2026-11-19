@@ -1,0 +1,136 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Watchlist | Market Desk</title><link rel="canonical" href="https://ndhorizon.com/research/watchlist/"><meta name="description" content="Nov 9, 2026: &quot;my watchlist should not be stagnant. If you see we don't have enough plays, feel free to add and remove tickers that fit our themes.&quot; He also said Claude can ask him to chart a ticker as themes grow"><meta name="robots" content="index, follow"><meta property="og:title" content="Watchlist"><meta property="og:description" content="Nov 9, 2026: &quot;my watchlist should not be stagnant. If you see we don't have enough plays, feel free to add and remove tickers that fit our themes.&quot; He also said Claude can ask him to chart a ticker as themes grow"><meta property="og:url" content="https://ndhorizon.com/research/watchlist/"><meta property="og:type" content="article"><script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Watchlist","datePublished":"2026-11-15","mainEntityOfPage":"https://ndhorizon.com/research/watchlist/","publisher":{"@type":"Organization","name":"Market Desk","url":"https://ndhorizon.com/research/"}}</script><link rel="stylesheet" href="/css/style.css"><style>
+/* Market Desk: research reader. Notes under /research/data are plain JSON,
+   built by scripts/research/research.mjs. */
+:root { --serif: "EB Garamond", Georgia, "Times New Roman", serif; --gutter: max(18px, env(safe-area-inset-left, 0px)); }
+body { background: var(--bg); }
+[hidden] { display: none !important; }
+.md-top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: rgba(253,251,247,.94); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
+.md-top-in { max-width: 1180px; margin: 0 auto; height: 58px; display: flex; align-items: center; gap: 14px; padding-left: var(--gutter); padding-right: max(18px, env(safe-area-inset-right, 0px)); }
+.md-brand { font-weight: 850; color: var(--text); letter-spacing: -.02em; font-size: 1.1rem; white-space: nowrap; }
+.md-brand b { color: var(--accent); font-weight: 850; }
+.md-brand:hover { text-decoration: none; }
+.md-search { flex: 1; max-width: 420px; margin-left: auto; position: relative; }
+.md-search input { width: 100%; height: 38px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-card); padding: 0 12px 0 34px; font: inherit; font-size: .93rem; color: var(--text); }
+.md-search input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.md-search svg { position: absolute; left: 11px; top: 11px; width: 16px; height: 16px; color: var(--text-dim); }
+
+
+/* layout */
+.md-wrap { max-width: 1180px; margin: 0 auto; padding: 28px max(18px, env(safe-area-inset-right, 0px)) 80px var(--gutter); display: grid; grid-template-columns: 230px minmax(0,1fr); gap: 36px; }
+.side { position: sticky; top: 82px; align-self: start; max-height: calc(100vh - 100px); overflow-y: auto; display: flex; flex-direction: column; gap: 18px; font-size: .92rem; }
+.side h4 { font-size: .7rem; font-weight: 850; text-transform: uppercase; letter-spacing: .1em; color: var(--gold-deep); margin-bottom: 6px; }
+.side a { display: flex; justify-content: space-between; gap: 8px; padding: 5px 9px; border-radius: 8px; color: var(--text-dim); font-weight: 600; }
+.side a span { font-weight: 500; font-size: .8rem; color: var(--text-dim); opacity: .8; }
+.side a:hover { background: var(--bg-elev); text-decoration: none; color: var(--text); }
+.side a.on { background: rgba(26,37,53,.08); color: var(--accent2); }
+.mobile-nav { display: none; margin-bottom: 18px; }
+@media (max-width: 860px) { .md-wrap { grid-template-columns: minmax(0,1fr); gap: 0; padding-top: 18px; } .side { display: none; } .mobile-nav { display: block; } .md-brand { font-size: 1rem; } }
+.mobile-nav select { width: 100%; height: 42px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-card); font: inherit; padding: 0 10px; color: var(--text); }
+
+.content { min-width: 0; margin: 0; padding: 0; max-width: none; }
+.eyebrow { color: var(--gold-deep); }
+.page-h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(2rem, 5vw, 2.8rem); letter-spacing: -.01em; line-height: 1.08; margin: 0 0 8px; text-wrap: balance; }
+.lead { color: var(--text-dim); font-size: 1.03rem; max-width: 64ch; }
+
+/* home */
+.hero-card { display: block; background: var(--bg-card); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 8px; padding: 22px 24px; margin: 22px 0 8px; box-shadow: var(--shadow-sm); color: var(--text); }
+.hero-card:hover { text-decoration: none; border-color: rgba(26,37,53,.3); border-left-color: var(--accent); }
+.hero-card .t { font-family: var(--serif); font-size: clamp(1.4rem, 3.6vw, 1.85rem); line-height: 1.2; margin: 4px 0 8px; text-wrap: balance; font-weight: 600; }
+.hero-card p { color: var(--text-dim); max-width: 70ch; }
+.hero-card .go { display: inline-block; margin-top: 12px; font-weight: 800; color: var(--accent2); }
+.kicker { font-size: .7rem; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-deep); }
+h2.sec { font-family: var(--serif); font-weight: 600; font-size: 1.55rem; margin: 34px 0 10px; letter-spacing: -.005em; }
+.list { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.row { display: grid; grid-template-columns: 96px minmax(0,1fr); gap: 4px 16px; padding: 13px 18px; border-bottom: 1px solid var(--border); color: var(--text); }
+.row:last-child { border-bottom: 0; }
+.row:hover { background: #fff; text-decoration: none; }
+.row .d { font-size: .8rem; color: var(--text-dim); font-variant-numeric: tabular-nums; padding-top: 3px; }
+.row .tt { font-weight: 700; }
+.row .sm { grid-column: 2; color: var(--text-dim); font-size: .88rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.row .tag { font-size: .68rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--gold-deep); margin-right: 8px; }
+@media (max-width: 520px) { .row { grid-template-columns: minmax(0,1fr); } .row .sm { grid-column: 1; } }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.tile { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; color: var(--text); display: flex; flex-direction: column; gap: 3px; }
+.tile:hover { text-decoration: none; border-color: rgba(26,37,53,.3); }
+.tile .n { font-weight: 800; }
+.tile .c { font-size: .82rem; color: var(--text-dim); }
+.grp-label { font-size: .7rem; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; color: var(--text-dim); margin: 18px 0 8px; }
+
+/* doc */
+.crumb { font-size: .86rem; color: var(--text-dim); margin-bottom: 10px; }
+.crumb a { font-weight: 600; }
+.doc-meta { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; color: var(--text-dim); font-size: .9rem; margin-bottom: 22px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.doc-meta a { font-weight: 700; }
+.styled-wrap { margin: 6px -16px 0; }
+iframe.styled { display: block; width: 100%; border: 0; min-height: 60vh; background: transparent; }
+@media (min-width: 820px) { .styled-wrap { margin: 6px 0 0; max-width: 760px; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; } }
+details.plain { margin-top: 28px; border-top: 1px solid var(--border); padding-top: 14px; }
+details.plain > summary { cursor: pointer; font-weight: 700; color: var(--text-dim); }
+.doc { max-width: 760px; font-size: 1.02rem; line-height: 1.68; }
+.doc > * + * { margin-top: 14px; }
+.doc h2, .doc h3, .doc h4 { font-family: var(--serif); font-weight: 600; color: var(--accent2); letter-spacing: -.005em; line-height: 1.25; }
+.doc h2 { font-size: 1.65rem; margin-top: 34px; }
+.doc h3 { font-size: 1.4rem; margin-top: 30px; padding-top: 14px; border-top: 1px solid var(--border); }
+.doc h4, .doc h5, .doc h6 { font-size: 1.15rem; margin-top: 22px; }
+.doc ul, .doc ol { padding-left: 22px; }
+.doc li + li { margin-top: 5px; }
+.doc li > ul, .doc li > ol { margin-top: 5px; }
+.doc li.task { list-style: none; margin-left: -20px; display: flex; gap: 9px; align-items: baseline; }
+.doc .box { flex: none; width: 13px; height: 13px; border: 1.5px solid var(--text-dim); border-radius: 3px; display: inline-block; transform: translateY(1px); }
+.doc .box.on { background: var(--good); border-color: var(--good); }
+.doc strong { color: var(--text); font-weight: 750; }
+.doc blockquote { border-left: 4px solid var(--accent); background: var(--bg-card); padding: 12px 16px; border-radius: 0 8px 8px 0; color: var(--text); }
+.doc hr { border: 0; border-top: 1px solid var(--border); margin: 26px 0; }
+.doc code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .86em; background: var(--bg-elev); padding: 1px 5px; border-radius: 4px; }
+.doc pre.code { background: var(--navy-deep); color: #EDE6D9; border-radius: 10px; padding: 16px; overflow-x: auto; font-size: .82rem; line-height: 1.5; }
+.doc pre.code code { background: none; padding: 0; color: inherit; }
+.doc a.wl { border-bottom: 1px dashed rgba(26,37,53,.35); }
+.doc a.wl:hover { text-decoration: none; border-bottom-style: solid; }
+.doc .wl-miss { font-weight: 600; }
+.tw { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-card); }
+.doc table { border-collapse: collapse; width: 100%; font-size: .86rem; line-height: 1.45; }
+.doc th { text-align: left; font-size: .7rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); background: var(--bg-elev); padding: 9px 11px; white-space: nowrap; }
+.doc td { padding: 8px 11px; border-top: 1px solid var(--border); vertical-align: top; }
+.doc td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pager { background: none; box-shadow: none; display: flex; justify-content: space-between; gap: 12px; margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.pager a { display: flex; flex-direction: column; max-width: 48%; font-weight: 700; }
+.pager a span { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); font-weight: 800; }
+.pager a.next { text-align: right; margin-left: auto; }
+.empty { color: var(--text-dim); padding: 24px 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
+.chip { display: inline-block; padding: 6px 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg-card); color: var(--text); font-weight: 750; font-size: .85rem; letter-spacing: .02em; }
+.chip:hover { border-color: var(--accent); }
+figure.chart { margin: 18px 0 22px; padding: 10px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; }
+figure.chart svg { display: block; width: 100%; height: auto; min-width: 600px; }
+figure.chart .c-ink { fill: var(--text); } figure.chart .c-dim { fill: var(--text-dim); } figure.chart .c-grid { stroke: var(--border); }
+figure.chart .c-up { fill: var(--good); stroke: var(--good); } figure.chart .c-dn { fill: var(--danger); stroke: var(--danger); }
+figure.chart .l-white { stroke: var(--text); } figure.chart .t-white { fill: var(--text); }
+.tk-sec { margin-top: 26px; }
+.stale { border-left: 4px solid var(--accent); background: var(--bg-card); border-radius: 6px; padding: 12px 16px; margin: 0 0 22px; font-size: .95rem; line-height: 1.5; }
+.stale a { font-weight: 700; }
+.busy { color: var(--text-dim); padding: 30px 0; }
+mark { background: rgba(201,168,76,.32); color: inherit; padding: 0 1px; border-radius: 2px; }
+.foot { margin-top: 50px; font-size: .78rem; color: var(--text-dim); }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+.static-list h2 { font-family: var(--serif); margin: 22px 0 6px; }
+.static-list ul { margin: 0 0 8px 18px; }
+.static-list li span { color: var(--text-dim); font-size: .85rem; }
+ .static-wrap{max-width:820px;margin:0 auto;padding:24px 18px 40px}</style></head><body><header class="md-top"><div class="md-top-in"><a class="md-brand" href="/research/">Market <b>Desk</b></a></div></header><main class="static-wrap"><p class="crumb"><a href="/research/">Market Desk</a> / Watchlist &amp; Levels</p><h1 class="page-h1">Watchlist</h1><div class="doc-meta"><span>November 15, 2026</span><span>7 min read</span><a href="/research/#/doc/watchlist">Open in the reader</a></div><article class="doc"><p>Nov 9, 2026: &quot;my watchlist should not be stagnant. If you see we don't have enough plays, feel free to add and remove tickers that fit our themes.&quot; He also said Claude can ask him to chart a ticker as themes grow and change, so we can see how it develops.</p>
+<p>This doc is the master list. The frontmatter <code>tickers:</code> line is the current list (it also drives the ticker buttons on Market Desk). His Webull list &quot;2026 Grow&quot; is kept in sync with it.</p>
+<h3 id="current-list-34">Current list (34)</h3>
+<ul><li><strong>Core 7:</strong> SPY, AAPL, TSLA, XOM, NOW, DELL, PLTR</li><li><strong>Travel:</strong> HLT, ABNB, RCL, DAL, BA, CCL</li><li><strong>AI &amp; semis:</strong> NVDA, INTC, AMD, SMCI, SMH, DRAM, BE, ORCL</li><li><strong>Mega-cap &amp; others:</strong> AMZN, GOOGL, SPCX, KO, V, OXY, RTX</li><li><strong>Retail trading &amp; commerce:</strong> HOOD, SHOP</li><li><strong>Gauges:</strong> QQQ, IWM, XLE, TLT</li></ul>
+<h3 id="rules-for-changing-it">Rules for changing it</h3>
+<ol><li><strong>When.</strong><ul><li>Changes are made only in the Friday Weekly Coaching or the Sunday Week Ahead.</li><li>At most 3 adds and 3 removes a week.</li><li>Mon–Thu reports may flag a candidate in one line (&quot;on deck for the watchlist&quot;) but don't change the list.</li><li>the desk’s own adds and removes go in whenever he asks and don't count against the quota.</li></ul></li><li><strong>Add a name only if all of these hold:</strong><ul><li>it fits a theme in claude/themes.md (or a new theme with real evidence: earnings, news, money flow);</li><li>it has a clear setup on the chart (trend plus a Fib level, a breakout, a breakdown);</li><li>its options pass the liquidity rule (OI ≥ 500, ~50 contracts a day, spread ≤ 10% of mid);</li><li>it has a contract near the money with delta ≥ 0.20 for ≤ $800, or will once it pulls back. Prefer names that fill a gap: too few plays, all plays on one side (all calls or all puts), or a theme with no tradable name.</li></ul></li><li><strong>Remove a name only if:</strong><ul><li>it has produced no play and no top-name ladder for 4+ weeks; or</li><li>its options have gone thin; or</li><li>its theme has faded.</li></ul></li><li><strong>Never remove without the desk saying so:</strong><ul><li>the core 7 and the gauges;</li><li>any name with an OPEN or WATCHING play on the scorecard;</li><li>any name with his own levels in fib-style.md;</li><li>any name in his current ideas (claude/themes.md);</li><li>any name he added himself (HOOD, SHOP, INTC).</li></ul></li><li><strong>Each change:</strong><ul><li>Update the Webull list &quot;2026 Grow&quot; with add_watchlist_instruments / remove_watchlist_instruments. Those are watchlist edits only, never orders.</li><li>Update this doc: the <code>tickers:</code> line, the current list, and a log line.</li><li>In the report, add a short &quot;Watchlist changes&quot; section: what was added or removed, the theme, and one line of why.</li><li>If the Webull edit fails, say so in the final message and keep this doc as the master list.</li></ul></li></ol>
+<h3 id="chart-requests-ask-to-draw-his-ladder">Chart requests (ask the desk to draw his ladder)</h3>
+<ul><li><strong>When to ask:</strong><ul><li>a name is added and becomes a top idea;</li><li>a theme's leader has none of his levels;</li><li>one of his drawings looks outdated (a new major swing has formed).</li></ul></li><li><strong>How:</strong> through the single Sunday ask, &quot;Your chart and call this week&quot; (see growth-log.md). It names the ticker and the move to swing, e.g. &quot;the Oct low → Nov high run&quot;.<ul><li>He sends the thinkorswim Drawing Properties screen (begin/middle/end values and dates), like his Nov 9 XOM, V and BE screens, plus his call.</li><li>One name a week (two at most), and at most 2 open requests at a time.</li></ul></li><li><strong>When he sends one:</strong><ul><li>Add it to fib-style.md under &quot;His levels&quot; with the date drawn.</li><li>Grade it forward only, from that date.</li></ul></li><li><strong>Open requests:</strong><ul><li>SPY extension on the Mar 30 low $626.11 → Oct 6 record high $781.62 run, plus his call (asked in the Nov 15 Week Ahead).</li></ul></li><li><strong>Filled:</strong><ul><li>AMZN extension anchors (asked Nov 9; sent Nov 14, now in fib-style.md).</li></ul></li></ul>
+<h3 id="added-nov-15-2026-late-adds-hood-shop">Added Nov 15, 2026, late (the desk’s adds: HOOD, SHOP)</h3>
+<p>Nov 15: &quot;Let's add HOOD, SHOP.&quot; Numbers are the Nov 13 close; contracts are Dec 18. Re-check before any play.</p>
+<ul><li><strong>HOOD</strong> (Robinhood; retail trading and crypto activity): $77.86. Down about 38% from the September high near $125 with lower highs every month since; now back into its spring 2026 base ($66–77). Downtrend. Puts are liquid: $75 P $470 mid (bid/ask $4.60/$4.75, OI 9,755, vol 1,599), $80 P $720 mid (bid/ask $7.05/$7.35, OI 13,948). The $80 call fails the spread rule tonight (bid/ask $5.00/$5.75, 14%). IV about 64%.</li><li><strong>SHOP</strong> (Shopify; online commerce): $147.09. Off its $180.88 October high but still in the uptrend that started from about $94 in May; the summer base is $144–155. Options are borderline: $150 C $760 mid (bid/ask $7.15/$8.05, 12% spread, OI 3,474, vol 614); the $145 put's spread is 26%. Watch only until spreads tighten under 10%.</li><li>Neither has a Fib drawing of the desk’s yet.</li></ul>
+<h3 id="added-nov-15-2026-swap-intc-in-for-mu">Added Nov 15, 2026 (the desk’s swap: INTC in for MU)</h3>
+<p>Nov 15: &quot;I don't think realistically I will be trading MU's option contracts. Can we replace MU with INTC?&quot; Numbers are the Nov 13 close; contracts are Dec 18. Re-check before any play.</p>
+<ul><li><strong>INTC</strong> (AI &amp; semis): $59.66. Ran from about $33 (Nov 2025) to a $142.35 high (Jun 30, 2026), then fell; it gapped from $92.07 to $65.76 on Oct 30 and made a $51.51 low on Nov 5. Downtrend: under its 50-day (about $92) and 200-day (about $88, from weekly closes; recompute from daily bars). It sits just under the 78.6% retracement of the Mar 30 low $40.63 → Jun 30 high run ($62.40), with the 78.6% of the full Nov 2025 → Jun 2026 run at about $56.31 below. Options are liquid and cheap enough on both sides: $60 C $477.50 mid (bid/ask $4.70/$4.85, OI 24,301, vol 1,089, delta 0.52), $60 P $487.50 mid (bid/ask $4.80/$4.95, OI 20,861, vol 1,351), IV about 65%. No earnings inside Dec 18 expected (verify). No Fib drawing of the desk’s yet.</li><li><strong>MU removed</strong> at the desk’s request (on Nov 8 its only Dec contract under $800 was the $950 call with a 0.12 delta). The memory story stays covered by DRAM.</li></ul>
+<h3 id="added-nov-11-2026-approved-adding-them-ahead-of-the-friday-review">Added Nov 11, 2026 (the desk approved adding them ahead of the Friday review)</h3>
+<p>Screened from 10 names. Numbers are the Nov 11 close; contracts are Dec 18. Re-check before any play.</p>
+<ul><li><strong>OXY</strong> (oil shock): on the tested edge. Price $57.24 and its 50-day $59.82 are above the 200-day $56.29, RSI 39.6. $57.50 C ~$214 (bid/ask $2.06/$2.21, OI 3,369, vol 1,255), IV 31% vs moves 32% → FAIR. Reported Nov 9.</li><li><strong>CCL</strong> (travel, cruise): a cheaper, liquid cruise name than RCL. $30.68, just under the Nov 5 high $31.41, up 15% in a month. $30 C ~$210 (bid/ask $2.04/$2.16, OI 11,512, vol 1,082), IV 43% vs moves 46% → FAIR. Next report expected around Dec 19, after the Dec 18 expiry (verify).</li><li><strong>RTX</strong> (defense): back above its 50- and 200-day at $201.29 after the Oct 8 low $179.02; record high $226.41. $200 C ~$765 (bid/ask $7.30/$8.00, 9% spread, at the limit; OI 1,520, vol 64), IV 26% vs moves 24% → FAIR. Reported Oct 20.</li><li><strong>ORCL</strong> (AI infrastructure capex, put side): downtrend under both averages, $128.38 after an 8.8% bounce; 52-week low $109.21. Fills the put gap (the scorecard is almost all calls). $120 P ~$720 (bid/ask $7.10/$7.30, OI 20,452, vol 2,644), IV 70% vs moves 62% → FAIR, but earnings Dec 14 fall inside the Dec 18 expiry. Setup: a failed rally into the 50-day (~$137).</li><li><strong>Passed over:</strong> UAL (the $120 C spread is 14%, the $115 C costs $878), CRWD (at-the-money call ~$2,000, OI 471), AVGO (put ~$2,000), WMT (earnings around Nov 19 inside the expiry), BAC and UBER (no clear setup).</li></ul>
+<h3 id="log-newest-first">Log (newest first)</h3>
+<ul><li>2026-11-15 | the desk’s adds (in chat): HOOD and SHOP, in a new &quot;Retail trading &amp; commerce&quot; group. Webull &quot;2026 Grow&quot; synced (both added). List now 34. His own adds, outside the weekly quota.</li><li>2026-11-15 | the desk’s swap (in chat, after the Week Ahead): removed MU (he won't realistically trade its options), added INTC. Webull &quot;2026 Grow&quot; synced (MU removed, INTC added). List stays at 32. This change is the desk’s own, outside the weekly add/remove quota.</li><li>2026-11-15 | Week Ahead review: no adds or removes (no name met the remove rules; RCL, ABNB, DELL, SMH, RTX and XLE near-the-money Dec contracts are thin tonight, but each is protected or still on a theme). AMZN chart request marked filled (sent Nov 14); new open request: SPY extension plus his call. Webull &quot;2026 Grow&quot; unchanged.</li><li>2026-11-13 | Weekly Coaching review: removed LMT (Dec $625 C OI 163, 6 traded, spread $4.10/$9.30; RTX carries defense), OSCR (no theme; Dec $31 C OI 40, spread $1.88/$2.95) and ET (no theme; Dec $19 C 5 traded, ~20% spread), all for thin options. No adds (the Nov 11 adds used the week's quota). List now 32. Webull &quot;2026 Grow&quot; synced (LMT, OSCR, ET removed).</li><li>2026-11-11 | Added OXY, CCL, RTX, ORCL (the desk’s OK, ahead of the Friday review; these count as this week's 3-add limit plus one). Synced Webull &quot;2026 Grow&quot;: it was missing TLT, now added; Webull and this list now match at 35.</li><li>2026-11-09 | List made dynamic at the desk’s request. No changes yet; first review in the Friday Nov 13 Weekly Coaching.</li></ul></article></main><p style="font:13px/1.5 Arial,sans-serif;color:#3d3830;padding:16px">Educational research, not personal investment advice.</p></body></html>

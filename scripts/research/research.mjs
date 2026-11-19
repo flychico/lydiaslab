@@ -13,6 +13,7 @@
                                     pre-market reports). Folder decides the section;
                                     defaults to the note's parent folder name.
     style --id <id> --styled <page.html> | remove --id <id> | move --title <t> --section <s>
+    static                          Rebuild every note's plain HTML page at /research/<id>/.
     list                            Print what is published.
 
   Only Node built-ins are used.
@@ -289,6 +290,71 @@ function writeIndex(idx) {
   writeJSON(path.join(OUT, 'index.json'), idx);
 }
 
+// ---------------------------------------------------------------- static pages
+// Nov 19, 2026 (Lynold: "Build a plain HTML page for every note, and remove the stay-away tag and add
+// the research pages to the sitemap"): every note also gets a plain HTML page at /research/<id>/ that
+// search engines and AI tools can read without JavaScript, and /research/ lists every note as plain links.
+// The site's sitemap is rebuilt by scripts/generate-sitemap.js, which picks these pages up on its own.
+const SITE = 'https://ndhorizon.com';
+const RES = path.join(ROOT, 'research');
+const escA = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const fmtDate = (d) => { if (!d) return ''; const [y, m, day] = d.split('-').map(Number); return new Date(Date.UTC(y, m - 1, day)).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' }); };
+function readerCss() {
+  const f = path.join(RES, 'index.html');
+  if (!fs.existsSync(f)) return '';
+  const m = fs.readFileSync(f, 'utf8').match(/<style>([\s\S]*?)<\/style>/);
+  return m ? m[1] : '';
+}
+const fixLinks = (h) => String(h || '').replace(/href="#\/doc\/([^"#]+)"/g, 'href="/research/$1/"');
+function staticPage(doc, entry) {
+  const url = `${SITE}/research/${entry.id}/`;
+  const desc = escA((entry.summary || doc.title || '').slice(0, 300));
+  const title = escA(doc.title || entry.title);
+  const headTags = `<link rel="canonical" href="${url}"><meta name="description" content="${desc}"><meta name="robots" content="index, follow">`
+    + `<meta property="og:title" content="${title}"><meta property="og:description" content="${desc}"><meta property="og:url" content="${url}"><meta property="og:type" content="article">`
+    + `<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'Article', headline: doc.title || entry.title, datePublished: entry.date || undefined, mainEntityOfPage: url, publisher: { '@type': 'Organization', name: 'Market Desk', url: SITE + '/research/' } }).replace(/</g, '\\u003c')}</script>`;
+  const bar = `<div style="font:14px/1.4 Arial,sans-serif;padding:10px 16px;border-bottom:1px solid #e3dacb;background:#fff"><a href="/research/" style="color:#1a2535;font-weight:700;text-decoration:none">Market Desk</a> · <a href="/research/#/doc/${entry.id}" style="color:#7a5e12">Open in the reader</a></div>`;
+  const foot = `<p style="font:13px/1.5 Arial,sans-serif;color:#3d3830;padding:16px">Educational research, not personal investment advice.</p>`;
+  if (doc.styled && /<html[\s>]/i.test(doc.styled)) {
+    let h = fixLinks(doc.styled).replace(/<meta[^>]+name=["']robots["'][^>]*>/gi, '');
+    h = h.replace(/<title>[\s\S]*?<\/title>/i, `<title>${title} | Market Desk</title>`);
+    h = /<\/head>/i.test(h) ? h.replace(/<\/head>/i, headTags + '</head>') : headTags + h;
+    h = /<body[^>]*>/i.test(h) ? h.replace(/<body([^>]*)>/i, `<body$1>${bar}`) : bar + h;
+    return h.replace(/<\/body>/i, foot + '</body>');
+  }
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${title} | Market Desk</title>${headTags}`
+    + `<link rel="stylesheet" href="/css/style.css"><style>${readerCss()} .static-wrap{max-width:820px;margin:0 auto;padding:24px 18px 40px}</style></head><body>`
+    + `<header class="md-top"><div class="md-top-in"><a class="md-brand" href="/research/">Market <b>Desk</b></a></div></header>`
+    + `<main class="static-wrap"><p class="crumb"><a href="/research/">Market Desk</a> / ${escA(entry.section)}</p><h1 class="page-h1">${title}</h1>`
+    + `<div class="doc-meta">${entry.date ? `<span>${fmtDate(entry.date)}</span>` : ''}<span>${Math.max(1, Math.round((entry.words || 200) / 230))} min read</span><a href="/research/#/doc/${entry.id}">Open in the reader</a></div>`
+    + `<article class="doc">${fixLinks(doc.html)}</article></main>${foot}</body></html>`;
+}
+function writeStatic(id) {
+  const idx = readIndex();
+  const entry = idx.items.find((x) => x.id === id);
+  const f = path.join(DOCS, id + '.json');
+  if (!entry || !fs.existsSync(f)) return;
+  const dir = path.join(RES, id);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'index.html'), staticPage(JSON.parse(fs.readFileSync(f, 'utf8')), entry));
+}
+function removeStatic(id) { if (id && id !== 'data') fs.rmSync(path.join(RES, id), { recursive: true, force: true }); }
+function writeHubList() {
+  // Plain links to every note inside /research/, between markers; the reader replaces them once it loads.
+  const f = path.join(RES, 'index.html');
+  if (!fs.existsSync(f)) return;
+  const idx = readIndex();
+  const groups = {};
+  for (const x of idx.items) (groups[x.section] = groups[x.section] || []).push(x);
+  const order = GROUPS.flatMap(([, secs]) => secs).filter((s) => groups[s]);
+  const list = order.map((s) => `<h2>${escA(s)}</h2><ul>${groups[s].map((x) => `<li><a href="/research/${x.id}/">${escA(x.title)}</a>${x.date ? ` <span>${fmtDate(x.date)}</span>` : ''}</li>`).join('')}</ul>`).join('');
+  const block = `<!--STATIC-LIST--><div class="static-list"><h1 class="page-h1">Market Desk</h1><p class="lead">Daily market reports, key price levels, a Federal Reserve archive and a research library. Free to read. For information only, not investment advice.</p>${list}</div><!--/STATIC-LIST-->`;
+  let h = fs.readFileSync(f, 'utf8');
+  if (h.includes('<!--STATIC-LIST-->')) h = h.replace(/<!--STATIC-LIST-->[\s\S]*?<!--\/STATIC-LIST-->/, block);
+  else h = h.replace('<div id="view"></div>', `<div id="view">${block}</div>`);
+  fs.writeFileSync(f, h);
+}
+
 const args = process.argv.slice(2);
 const cmd = args[0];
 const opt = (n) => { const i = args.indexOf('--' + n); return i > -1 ? args[i + 1] : undefined; };
@@ -303,6 +369,8 @@ if (cmd === 'build') {
   fs.rmSync(DOCS, { recursive: true, force: true });
   for (const n of notes) writeJSON(path.join(DOCS, n.id + '.json'), publish(render(n, links)));
   writeIndex({ items: notes.map(indexEntry) });
+  for (const n of notes) writeStatic(n.id);
+  writeHubList();
   console.log(`Published ${notes.length} notes to research/data/.`);
 } else if (cmd === 'add') {
   const file = opt('file');
@@ -322,6 +390,7 @@ if (cmd === 'build') {
   writeJSON(path.join(DOCS, n.id + '.json'), publish(out));
   idx.items = idx.items.filter((x) => x.id !== n.id).concat([Object.assign(indexEntry(n), styled ? { styled: true } : {})]);
   writeIndex(idx);
+  writeStatic(n.id); writeHubList();
   console.log(`${prior ? 'Replaced' : 'Added'} "${n.title}" in ${n.section} (${idx.items.length} notes total).`);
 } else if (cmd === 'move') {
   // Re-file a published note under another section (e.g. --section Archive) without touching the vault.
@@ -335,6 +404,7 @@ if (cmd === 'build') {
   doc.section = section; x.section = section;
   writeJSON(f, publish(doc));
   writeIndex(idx);
+  writeStatic(x.id); writeHubList();
   console.log(`Moved "${x.title}" to ${section}.`);
 } else if (cmd === 'style') {
   // Attach a report's designed page to a note that is already published: style --id <id or exact title> --styled <page.html>
@@ -349,6 +419,7 @@ if (cmd === 'build') {
   x.styled = true;
   writeJSON(f, publish(doc));
   writeIndex(idx);
+  writeStatic(x.id);
   console.log(`Attached the designed page to "${x.title}".`);
 } else if (cmd === 'remove') {
   // Take a published note off the site: remove --id <id or exact title>
@@ -360,11 +431,18 @@ if (cmd === 'build') {
   fs.rmSync(path.join(DOCS, x.id + '.json'), { force: true });
   idx.items = idx.items.filter((i) => i.id !== x.id);
   writeIndex(idx);
+  removeStatic(x.id); writeHubList();
   console.log(`Removed "${x.title}" (${idx.items.length} notes left).`);
+} else if (cmd === 'static') {
+  // Rebuild every note's plain HTML page and the list on /research/.
+  const idx = readIndex();
+  for (const x of idx.items) writeStatic(x.id);
+  writeHubList();
+  console.log(`Wrote ${idx.items.length} plain pages under research/.`);
 } else if (cmd === 'list') {
   const idx = readIndex();
   for (const x of idx.items) console.log(`${x.date || '          '}  ${x.section.padEnd(20)} ${x.title}`);
   console.log(`${idx.items.length} notes, updated ${idx.updated}`);
 } else {
-  console.log('Usage: node scripts/research/research.mjs build --src <vault> | add --file <note.md> [--folder <name>] [--styled <page.html>] | style --id <id> --styled <page.html> | remove --id <id> | move --title <title> --section <name> | list');
+  console.log('Usage: node scripts/research/research.mjs build --src <vault> | add --file <note.md> [--folder <name>] [--styled <page.html>] | style --id <id> --styled <page.html> | remove --id <id> | move --title <title> --section <name> | static | list');
 }
