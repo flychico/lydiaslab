@@ -172,7 +172,7 @@ ${extraCss}
 ${header(label, dateLine(doc.date))}
 <div class="main"><div class="eyebrow">${esc(stripEmoji(post.header))}</div>
 ${hero}<div class="rule"></div>${body}${factHtml}</div>
-<div class="foot"><span>${isPicks ? "EVERY CALL GRADED, MISSES INCLUDED" : "EVERY MISS STAYS ON THE RECORD"} · 21+</span><b>ndhorizon.com</b></div>
+<div class="foot"><span></span><b>ndhorizon.com</b></div>
 </div></body></html>`;
 
 (async () => {

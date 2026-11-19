@@ -104,10 +104,12 @@ function callLine(mk, c, g) {
 }
 function slateHeader(date, week) {
   const day = new Date(date + "T12:00:00Z").getUTCDay();
-  if (day === 1) return "MONDAY NIGHT FOOTBALL 🏈";
-  if (day === 4) return "THURSDAY NIGHT FOOTBALL 🏈";
-  return `NFL WEEK ${week} 🏈`;
+  if (day === 1) return "Monday night 🏈";
+  if (day === 4) return "Thursday night 🏈";
+  return `Week ${week} 🏈`;
 }
+// Lynold, 2026-11-18: no "21+", no "Every call graded, misses included", more human, less bot.
+const bare = link => String(link).replace(/^https?:\/\//, "");
 function picksPost(date, existing) {
   const picks = readJson(path.join(DIR, `picks-${date}.json`));
   if (!Array.isArray(picks) || !picks.length) return null;
@@ -130,11 +132,11 @@ function picksPost(date, existing) {
   const link = utm(one && games[0].game_id ? pageUrl(date, games[0]) : `${SITE}/nfl/week/${date.slice(0, 4)}-week-${week}/`, "picks", date);
   const header = slateHeader(date, week);
   const tags = hashtags([...teams, ...games.flatMap(g => [g.home, g.away])]);
-  // Lynold, Nov 16: "what would Leo do?" then "Leo picks:".
-  const body = [header, "What would Leo do?", "", "Leo picks:"];
-  body.push(...(lines.length ? lines : ["No call from Leo on this slate."]));
-  if (td.length) body.push("", "TOUCHDOWN CHANCES", ...td);
-  body.push("", link, `21+ ${tags.join(" ")}`);
+  // Lynold, Nov 16: "what would Leo do?"; Nov 18: plain, no 21+.
+  const body = [`${header} What would Leo do?`, ""];
+  body.push(...(lines.length ? lines : ["No picks from Leo on this one."]));
+  if (td.length) body.push("", "Most likely to score:", ...td);
+  body.push("", bare(link), tags.join(" "));
   return { id: "picks", kind: "picks", created_at: new Date(NOW()).toISOString(), header, lines, record: null,
     facts: td, hashtags: tags, text: body.join("\n"), link };
 }
@@ -163,6 +165,15 @@ function opener(t) {
   const r = `${t.rec}${t.pct != null ? ` (${t.pct}%)` : ""}`;
   return r;   // plain record and percent (Lynold, Nov 16: no "BANG" style openers)
 }
+const dayTitle = date => new Date(date + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
+// The three calls since Nov 2, from the waves file's season block (written by build-nfl-waves.js).
+function seasonRec(date) {
+  const w = readJson(path.join(DIR, "waves", `${date}.json`));
+  const s = w && w.season; if (!s) return "";
+  let W = 0, L = 0, P = 0;
+  for (const k of Object.keys(s)) { W += +s[k].w || 0; L += +s[k].l || 0; P += +s[k].p || 0; }
+  return W + L ? `${W}-${L}${P ? "-" + P : ""}` : "";
+}
 const dayName = date => new Date(date + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" }).toUpperCase();
 
 function resultsPost(id, date, games, label, facts) {
@@ -173,15 +184,14 @@ function resultsPost(id, date, games, label, facts) {
   const rank = { W: 0, P: 1, L: 2 };
   const lines = calls.map((c, i) => ({ c, i })).sort((a, b) => rank[a.c.result] - rank[b.c.result] || a.i - b.i).map(x => resultLine(x.c.g, x.c));
   const short = String(label || "").replace(/, the last of the day$/i, "");
-  const header = id === "day" ? `NFL ${dayName(date)} RESULTS 🏈` : `NFL ${dayName(date)}: ${short.toUpperCase()} 🏈`;
+  const header = id === "day" ? `NFL ${dayTitle(date)} 🏈` : `NFL so far 🏈`;
   const winners = calls.filter(c => c.result === "W").map(c => c.g.winner).filter(Boolean);
   const tags = hashtags([...winners, ...games.flatMap(g => [g.winner, g.loser])]);
   const link = utm(`${SITE}/nfl/results/`, id, date);
-  const record = `${t.rec}${t.pct != null ? ` (${t.pct}%)` : ""}`;
-  const body = [header, opener(t), "", ...lines];
-  if (facts.length) body.push("", ...facts);
-  body.push("", `Every call graded, misses included: ${link}`, `21+ ${tags.join(" ")}`);
-  return { id, kind: "results", created_at: new Date(NOW()).toISOString(), header, lines, record, facts,
+  // One plain line (Lynold, 2026-11-18, "Bare minimum"): "9-4 today, 17-14 since Nov 2".
+  const record = `${t.rec} ${id === "day" ? "on the day" : "so far today"}${seasonRec(date) ? `, ${seasonRec(date)} since Nov 2` : ""}`;
+  const body = [header, "", ...lines, "", record, bare(link), tags.join(" ")];
+  return { id, kind: "results", created_at: new Date(NOW()).toISOString(), header, lines, record, facts: [],
     hashtags: tags, text: body.join("\n"), link };
 }
 

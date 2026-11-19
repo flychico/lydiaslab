@@ -83,9 +83,18 @@ function hashtags(codes) {
 // Every post link is a short link that forwards with the X campaign tag (SEO-24, HO-0093 part B), so a sign-up shows which post brought it.
 const XL = require("./lib/x-links");   // short links: ndhorizon.com/x/nba-1117-day (Lynold, 2026-11-18)
 const tagged = (url, id) => XL.short("nba", DATE, id, url);
-function compose(header, open, lines, facts, tags, link, season, linkLine) {
-  const parts = [header, open || null, "", ...lines, season ? `Season: ${season}` : null, facts.length ? "" : null, ...facts, "", linkLine || link, `21+ ${tags.join(" ")}`];
+// Lynold, 2026-11-18: no "21+", no "Every call graded, misses included", no labels like "miss: variance".
+// Header, the lines, one plain record line, the short link (shown without https://), the hashtags.
+function compose(header, _open, lines, recordLine, tags, link) {
+  const parts = [header, "", ...lines, "", recordLine || null, String(link).replace(/^https?:\/\//, ""), tags.join(" ")];
   return parts.filter(x => x !== null).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+// One plain line (Lynold, 2026-11-18, "Bare minimum"): "0-2 tonight, 15-10 on the season".
+function plainRecord(mode, counted, hit, n, season) {
+  if (mode === "winners") return n === 1 ? (hit ? "Leo had the winner" : "Leo missed the winner") : `Leo had ${hit} of ${n} winners tonight`;
+  const r = recordOf(counted);
+  const s = String(season || "").split(",")[0].trim();
+  return `${r.w}-${r.l}${r.p ? `-${r.p}` : ""} tonight${mode === "picks" && s ? `, ${s} on the season` : ""}`;
 }
 function recordOf(items) {
   const w = items.filter(i => i.result === "win").length, l = items.filter(i => i.result === "loss").length, p = items.filter(i => i.result === "push").length;
@@ -111,16 +120,16 @@ function picksPost() {
       .sort((a, b) => b.p - a.p).slice(0, 3)
       .forEach(({ g, side, p }) => items.push({ game_id: String(g.game_id), type: "read", side, p, team: nick(g, side), code: code(g, side) }));
   }
-  const day = weekday(DATE).toUpperCase();
-  const header = `NBA ${day} 🏀`;
+  const header = `${weekday(DATE)} night 🏀 What would Leo do?`;
   // The price shown is the locked price the pick is graded at (DEC-20261116-30); the % is Leo's chance to win.
-  const lines = [kind === "picks" ? "Leo picks:" : (PK.noPickDay && PK.noPickDay(DATE) ? "No Leo Picks on Mondays. Leo's strongest reads to win:" : "No Leo Pick tonight. Leo's strongest reads to win:"),
-    ...items.flatMap(i => i.type === "pick" ? [`${i.team} ML ${fmtPrice(i.price)} (${pct(i.p)})`, ...depends(i)] : [`${i.team} (${pct(i.p)})`])];
+  // Lynold, 2026-11-18: "start being more human like. not so much of a bot." Picks only, no chance or notes.
+  const lines = [...(kind === "picks" ? [] : [PK.noPickDay && PK.noPickDay(DATE) ? "No picks on Mondays. Leo likes:" : "No picks tonight. Leo likes:"]),
+    ...items.map(i => i.type === "pick" ? `${i.team} ML ${fmtPrice(i.price)}` : i.team)];
   const facts = [];
   const tags = hashtags(items.map(i => i.code));
   const link = tagged(`https://ndhorizon.com/nba/predictions/${DATE}/`, "picks");
   return { id: "picks", kind: "picks", created_at: NOW.toISOString(), header, lines, record: "", facts, hashtags: tags,
-    text: compose(header, "What would Leo do?", lines, facts, tags, link), link, items };
+    text: compose(header, null, lines, null, tags, link), link, items };
 }
 
 /* ---------- results posts ---------- */
@@ -155,7 +164,7 @@ function resultsPost(id, gids, last) {
   if (!items.length) return null;
   const ORDER = { win: 0, push: 1, loss: 2 };   // winners on top, losers on bottom (Lynold); tip order within each
   items.sort((a, b) => ORDER[a.result] - ORDER[b.result]);
-  const lines = items.map(i => i.type === "pick" ? `${i.team} ML ${fmtPrice(i.price)} ${MARK[i.result]} ${fmtU(i.units)}`
+  const lines = items.map(i => i.type === "pick" ? `${i.team} ML ${fmtPrice(i.price)} ${MARK[i.result]}`
     : (i.type === "read" ? `${i.team} to win` : `${i.team} over ${i.opp}`) + ` ${MARK[i.result]}`);
   // record counts calls (Leo Picks); on a night with none, the reads named in the picks post.
   // Leo's winner in each game is shown, never counted as a record (Lynold: people care about the calls).
@@ -176,8 +185,7 @@ function resultsPost(id, gids, last) {
     const best = gids.map(g => [g, topScorer(g)]).filter(x => x[1]).sort((a, b) => +b[1].match(/ (\d+) pts/)[1] - +a[1].match(/ (\d+) pts/)[1])[0];
     if (best && !facts.includes(best[1])) facts.push(`${best[1]}, the top score tonight`);
   }
-  const day = weekday(DATE).toUpperCase();
-  const header = id === "day" || last ? `NBA ${day} RESULTS 🏀` : `NBA RESULTS SO FAR 🏀`;
+  const header = id === "day" || last ? `NBA ${weekday(DATE)} 🏀` : `NBA so far 🏀`;
   const tags = hashtags(items.filter(i => i.result !== "loss").concat(items).map(i => i.code));
   const link = tagged("https://ndhorizon.com/nba/results/", id);
   // Leo Picks season to date, from the day they were first counted (DEC-20261102-30), so units can be traced.
@@ -187,8 +195,8 @@ function resultsPost(id, gids, last) {
       .map(r => ({ result: r.pick_result, units: +r.pick_units }));
     season = recordOf(all).short;
   }
-  return { id, kind: "results", created_at: NOW.toISOString(), header, lines, record: counted.length ? rec.text : "", season, facts: facts.slice(0, 3), hashtags: tags,
-    text: compose(header, open, lines, facts.slice(0, 3), tags, link, season, `Every call graded, misses included: ${link}`), link };
+  return { id, kind: "results", created_at: NOW.toISOString(), header, lines, record: plainRecord(mode, counted, hit, items.length, season), season: "", facts: [], hashtags: tags,
+    text: compose(header, null, lines, plainRecord(mode, counted, hit, items.length, season), tags, link), link };
 }
 
 /* ---------- write ---------- */
