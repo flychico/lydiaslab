@@ -103,12 +103,23 @@ jobs:
       - name: Social posts
         run: node scripts/build-nba-social.js "${{ steps.g.outputs.date }}" || echo "::warning::NBA social posts not written"
 
+      # Lynold's X post graphics (Leo Manager, 2026-11-18): each new post in
+      # data/nba/social/ drawn by scripts/render-post-card.js and emailed to him from
+      # cards@ndhorizon.com; once per post, picks again only if the picks changed.
+      # Logged in data/email-log/x-posts-nba-<date>.json. Never blocks the run.
+      - name: Email X post graphics to Lynold
+        continue-on-error: true
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          AUDIT_EMAIL: ${{ secrets.AUDIT_EMAIL }}
+        run: node scripts/send-x-posts.js nba "${{ steps.g.outputs.date }}" || true
+
       - name: Commit and push if changed
         run: |
           set -euo pipefail
           git config user.name "lydia-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/nba data/feed/nba nba sitemap.xml $(ls -d x 2>/dev/null)
+          git add data/nba data/feed/nba nba sitemap.xml data/email-log $(ls -d x 2>/dev/null)
           if git diff --cached --quiet; then echo "No change."; exit 0; fi
           git commit -m "NBA grade results ${{ steps.g.outputs.date }}${{ github.event.inputs.wave == 'true' && ' (wave)' || '' }}"
           # Retry: on busy days other workflows push between our checkout and our push (Nov 15 12:41pm card lost).

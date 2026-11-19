@@ -1,0 +1,118 @@
+#!/usr/bin/env node
+/**
+ * Emails Lynold each new X post as a graphic plus ready-to-paste text, from the
+ * site itself (Leo Manager, 2026-11-18). Replaces the six Claude post tasks.
+ *
+ * Why: on Nov 18 the updated NBA picks post (3 picks) went out from Lynold's
+ * own Gmail to himself and Gmail filed it under Sent only, so he never saw it.
+ * He chose "Site sends them": the publish and grade runs that write the post
+ * now draw it (scripts/render-post-card.js) and send it from
+ * Leo <cards@ndhorizon.com> through Resend, like the card emails.
+ *
+ *   node scripts/send-x-posts.js <nba|nfl> <date> [<date> ...] [--dry]
+ *
+ * Reads data/<sport>/social/<date>.json (written by scripts/build-<sport>-social.js,
+ * the sport chat's words; nothing here changes a word). For each post:
+ *   - results posts (waves and the day post): sent once.
+ *   - the picks post: sent once; sent again as "(updated)" when its pick lines
+ *     change before the first start (the builders freeze it after that).
+ * Log: data/email-log/x-posts-<sport>-<date>.json {sent: {id: {at, hash}}}.
+ * Recipient: the AUDIT_EMAIL secret (Lynold). Never fails the run.
+ */
+"use strict";
+const fs = require("fs");
+const path = require("path");
+const crypto = require("crypto");
+const cp = require("child_process");
+const { sendOne } = require("./lib/nba-send");
+
+const ROOT = path.join(__dirname, "..");
+const args = process.argv.slice(2);
+const DRY = args.includes("--dry");
+const [sportArg, ...rest] = args.filter(a => !a.startsWith("--"));
+const sport = String(sportArg || "").toLowerCase();
+const dates = rest.join(" ").split(/[\s,]+/).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d));
+if (!["nba", "nfl"].includes(sport) || !dates.length) { console.log("usage: send-x-posts.js <nba|nfl> <date> [...]"); process.exit(0); }
+
+const KEY = process.env.RESEND_API_KEY, TO = process.env.AUDIT_EMAIL;
+const FROM = "Leo <cards@ndhorizon.com>";
+const PW_DIR = "/tmp/leo-pw";
+
+const hashOf = p => crypto.createHash("sha1").update(JSON.stringify(p.lines || p.text || "")).digest("hex").slice(0, 12);
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+// Links shown as clean anchors so Gmail never rewrites the visible address (Lynold copies it into X).
+const linkify = s => esc(s).replace(/https:\/\/ndhorizon\.com\/[^\s<]*/g, u => `<a href="${u}" style="color:#1A4E8A">${u}</a>`);
+
+let pwReady = false;
+function ensurePlaywright() {
+  if (pwReady) return true;
+  try {
+    if (!fs.existsSync(path.join(PW_DIR, "node_modules", "playwright"))) {
+      cp.execSync(`npm i --silent --no-audit --no-fund --prefix ${PW_DIR} playwright@1.63.0`, { stdio: "inherit" });
+    }
+    cp.execSync(`npx --prefix ${PW_DIR} playwright install --with-deps chromium`, { stdio: "inherit", cwd: PW_DIR });
+    pwReady = true;
+  } catch (e) { console.log("::warning::playwright install failed: " + e.message); }
+  return pwReady;
+}
+
+function render(file, id, out) {
+  const env = { ...process.env, NODE_PATH: [path.join(PW_DIR, "node_modules"), process.env.NODE_PATH || ""].filter(Boolean).join(":") };
+  const r = cp.execFileSync("node", [path.join(__dirname, "render-post-card.js"), file, id, out], { env, encoding: "utf8" });
+  const j = JSON.parse(r.slice(r.indexOf("{")));
+  return j;
+}
+
+function bodies(post, note) {
+  const text = (note ? note + "\n\n" : "") + post.text + "\n\nSave the image and post it with the text above.";
+  const html = `<!doctype html><html><head><meta name="color-scheme" content="light only"></head>
+<body style="margin:0;background:#FFFFFF" bgcolor="#FFFFFF"><table width="100%" cellpadding="0" cellspacing="0" bgcolor="#FFFFFF"><tr><td style="padding:16px">
+<table cellpadding="0" cellspacing="0" style="max-width:640px;width:100%;font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#1F2329">
+${note ? `<tr><td style="padding:0 0 12px;font-weight:bold;color:#7A5E12">${esc(note)}</td></tr>` : ""}
+<tr><td style="border:1px solid #D9CFBD;padding:14px;white-space:pre-wrap;font-family:Arial,sans-serif">${linkify(post.text)}</td></tr>
+<tr><td style="padding:12px 0 0;color:#3D3830">Save the image and post it with the text above.</td></tr>
+</table></td></tr></table></body></html>`;
+  return { text, html };
+}
+
+(async () => {
+  for (const date of dates) {
+    const file = path.join(ROOT, "data", sport, "social", `${date}.json`);
+    if (!fs.existsSync(file)) { console.log(`${sport} ${date}: no social file`); continue; }
+    const doc = JSON.parse(fs.readFileSync(file, "utf8"));
+    const logFile = path.join(ROOT, "data", "email-log", `x-posts-${sport}-${date}.json`);
+    let log = { sport, date, sent: {} };
+    try { log = JSON.parse(fs.readFileSync(logFile, "utf8")); log.sent = log.sent || {}; } catch (e) {}
+
+    for (const post of doc.posts || []) {
+      if (!post.text) continue;
+      const h = hashOf(post), prev = log.sent[post.id];
+      let note = "";
+      if (prev) {
+        if (post.kind !== "picks" || prev.hash === h) continue;
+        note = "This replaces the earlier picks email: a later read changed Leo's picks.";
+      }
+      const subject = `Leo ${sport.toUpperCase()} post ${date} ${post.id}${note ? " (updated)" : ""}`;
+      if (DRY) { console.log(`[dry] would send: ${subject}`); continue; }
+      if (!KEY || !TO) { console.log("::warning::RESEND_API_KEY or AUDIT_EMAIL missing; post not sent"); return; }
+      if (!ensurePlaywright()) return;
+      const out = `/tmp/${sport}-${date}-${post.id}.jpg`;
+      let card;
+      try { card = render(file, post.id, out); } catch (e) { console.log(`::warning::render failed for ${subject}: ${e.message}`); continue; }
+      if (card.overflow) console.log(`::warning::${subject}: graphic overflows, sent anyway`);
+      const { text, html } = bodies(post, note);
+      const res = await sendOne({
+        from: FROM, to: [TO], subject, text, html,
+        attachments: [{ filename: `${sport}-${date}-${post.id}.jpg`, content: fs.readFileSync(out).toString("base64") }],
+      }, { key: KEY });
+      if (res.ok) {
+        log.sent[post.id] = { at: new Date().toISOString(), hash: h, updated: !!note };
+        console.log(`sent: ${subject}`);
+      } else {
+        (log.errors = log.errors || []).push({ at: new Date().toISOString(), id: post.id, status: res.status, name: res.name, message: res.message });
+        console.log(`::warning::not sent: ${subject}: ${res.status} ${res.name} ${res.message}`);
+      }
+    }
+    if (!DRY) { fs.mkdirSync(path.dirname(logFile), { recursive: true }); fs.writeFileSync(logFile, JSON.stringify(log, null, 1) + "\n"); }
+  }
+})().catch(e => { console.log("::warning::send-x-posts: " + e.message); });

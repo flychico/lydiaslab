@@ -162,6 +162,17 @@ jobs:
           EMAIL_REPLY_TO: ${{ secrets.EMAIL_REPLY_TO }}
         run: node scripts/send-nfl-card-emails.js "${{ steps.slate_date.outputs.date }}"
 
+      # Lynold's X post graphics (Leo Manager, 2026-11-18): each new post in
+      # data/nfl/social/ drawn by scripts/render-post-card.js and emailed to him from
+      # cards@ndhorizon.com; once per post, picks again only if the picks changed.
+      # Logged in data/email-log/x-posts-nfl-<date>.json. Never blocks the run.
+      - name: Email X post graphics to Lynold
+        continue-on-error: true
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          AUDIT_EMAIL: ${{ secrets.AUDIT_EMAIL }}
+        run: node scripts/send-x-posts.js nfl "${{ steps.slate_date.outputs.date }}" || true
+
       - name: Commit and push if changed
         if: ${{ steps.slate.outputs.games != '0' && steps.gate.outcome == 'success' }}
         run: |
