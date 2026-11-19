@@ -7,9 +7,8 @@
 <title>Market Desk</title>
 <link rel="stylesheet" href="/css/style.css">
 <style>
-/* Market Desk: private research reader. Everything under /research/data is
-   AES-GCM ciphertext; this page derives the key from the password in the
-   browser and decrypts locally. Built by scripts/research/research.mjs. */
+/* Market Desk: research reader. Notes under /research/data are plain JSON,
+   built by scripts/research/research.mjs. */
 :root { --serif: "EB Garamond", Georgia, "Times New Roman", serif; --gutter: max(18px, env(safe-area-inset-left, 0px)); }
 body { background: var(--bg); }
 [hidden] { display: none !important; }
@@ -22,24 +21,7 @@ body { background: var(--bg); }
 .md-search input { width: 100%; height: 38px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-card); padding: 0 12px 0 34px; font: inherit; font-size: .93rem; color: var(--text); }
 .md-search input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .md-search svg { position: absolute; left: 11px; top: 11px; width: 16px; height: 16px; color: var(--text-dim); }
-.md-lock { border: 1px solid var(--border); background: var(--bg-card); color: var(--accent2); font: inherit; font-weight: 700; font-size: .86rem; padding: 7px 12px; border-radius: 10px; cursor: pointer; white-space: nowrap; }
-.md-lock:hover { background: var(--bg-elev); }
-.md-lock:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* gate */
-.gate { min-height: 100vh; display: grid; place-items: center; padding: 40px var(--gutter); }
-.gate-card { width: 100%; max-width: 420px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-md); padding: 34px 30px 28px; display: flex; flex-direction: column; gap: 14px; }
-.gate-card h1 { font-family: var(--serif); font-weight: 600; font-size: 2.3rem; letter-spacing: -.01em; margin: 0; }
-.gate-card p { color: var(--text-dim); font-size: .95rem; }
-.gate-card label { font-size: .78rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); }
-.gate-card input[type=password] { height: 46px; border-radius: 10px; border: 1px solid var(--border); padding: 0 14px; font: inherit; font-size: 1.05rem; background: #fff; color: var(--text); }
-.gate-card input[type=password]:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-.remember { display: flex; gap: 8px; align-items: center; font-size: .9rem; color: var(--text-dim); text-transform: none !important; letter-spacing: 0 !important; font-weight: 500 !important; }
-.btn { height: 46px; border: 0; border-radius: 10px; background: var(--accent2); color: #fff; font: inherit; font-weight: 800; font-size: 1rem; cursor: pointer; }
-.btn:hover { filter: brightness(1.08); }
-.btn[disabled] { opacity: .6; cursor: progress; }
-.gate-err { color: var(--danger); font-weight: 600; font-size: .92rem; min-height: 1.3em; }
-.gate-foot { font-size: .78rem; color: var(--text-dim); border-top: 1px solid var(--border); padding-top: 12px; }
 
 /* layout */
 .md-wrap { max-width: 1180px; margin: 0 auto; padding: 28px max(18px, env(safe-area-inset-right, 0px)) 80px var(--gutter); display: grid; grid-template-columns: 230px minmax(0,1fr); gap: 36px; }
@@ -142,21 +124,7 @@ mark { background: rgba(201,168,76,.32); color: inherit; padding: 0 1px; border-
 </head>
 <body>
 
-<section class="gate" id="gate">
-  <form class="gate-card" id="gateForm" autocomplete="off">
-    <span class="kicker">Private · Leo</span>
-    <h1>Market Desk</h1>
-    <p>Market reports, levels, the Fed archive and the research library. Enter the password to unlock.</p>
-    <label for="pw">Password</label>
-    <input type="password" id="pw" name="pw" autocomplete="current-password" required>
-    <label class="remember" for="remember"><input type="checkbox" id="remember"> Keep me unlocked on this device</label>
-    <button class="btn" id="unlockBtn" type="submit">Unlock</button>
-    <div class="gate-err" id="gateErr" role="alert"></div>
-    <div class="gate-foot">Everything here is encrypted. It's decrypted only in your browser, after you enter the password.</div>
-  </form>
-</section>
-
-<div id="app" hidden>
+<div id="app">
   <header class="md-top">
     <div class="md-top-in">
       <a class="md-brand" href="#/">Market <b>Desk</b></a>
@@ -164,7 +132,6 @@ mark { background: rgba(201,168,76,.32); color: inherit; padding: 0 1px; border-
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="8.5" cy="8.5" r="6"/><path d="M13 13l5 5"/></svg>
         <input type="search" id="q" placeholder="Search reports and notes" aria-label="Search">
       </div>
-      <button class="md-lock" id="lockBtn" type="button">Lock</button>
     </div>
   </header>
   <div class="md-wrap">
@@ -181,59 +148,12 @@ mark { background: rgba(201,168,76,.32); color: inherit; padding: 0 1px; border-
 (() => {
   const DATA = '/research/data/';
   const $ = (s) => document.querySelector(s);
-  let KEY = null, META = null, IDX = null;
+  let IDX = null;
   const cache = new Map();
-  const te = new TextEncoder(), td = new TextDecoder();
-  const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
-  const toB64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
   const escH = (s) => String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const store = {
-    get() { try { return sessionStorage.getItem('mdk') || localStorage.getItem('mdk'); } catch { return null; } },
-    set(v, remember) { try { sessionStorage.setItem('mdk', v); if (remember) localStorage.setItem('mdk', v); } catch {} },
-    clear() { try { sessionStorage.removeItem('mdk'); localStorage.removeItem('mdk'); } catch {} },
-  };
   const getJSON = async (url) => { const r = await fetch(url, { cache: 'no-cache' }); if (!r.ok) throw new Error(url + ' ' + r.status); return r.json(); };
-  async function dec(box, key = KEY) {
-    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(box.iv) }, key, b64(box.ct));
-    return JSON.parse(td.decode(pt));
-  }
-  async function derive(pw) {
-    const base = await crypto.subtle.importKey('raw', te.encode(pw), 'PBKDF2', false, ['deriveKey']);
-    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: b64(META.salt), iterations: META.iterations, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
-  }
-  const importRaw = (raw) => crypto.subtle.importKey('raw', b64(raw), 'AES-GCM', true, ['decrypt']);
-  async function tryKey(key) { try { await dec(META.check, key); return true; } catch { return false; } }
-
-  let PUB = false;
   async function boot() {
-    // Public desk (Nov 19, 2026): plain notes, no password.
-    try { IDX = await getJSON(DATA + 'index.json'); PUB = true; } catch {}
-    if (PUB) { $('#lockBtn').hidden = true; $('#gate').hidden = true; $('#app').hidden = false; buildNav(); route(); return; }
-    try { META = await getJSON(DATA + 'meta.json'); } catch { $('#gateErr').textContent = 'The research data could not be loaded. Try again in a minute.'; return; }
-    const saved = store.get();
-    if (saved) {
-      try { const k = await importRaw(saved); if (await tryKey(k)) { KEY = k; return open(); } } catch {}
-      store.clear();
-    }
-    $('#pw').focus();
-  }
-  $('#gateForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = $('#unlockBtn'); btn.disabled = true; btn.textContent = 'Unlocking…'; $('#gateErr').textContent = '';
-    try {
-      if (!META) META = await getJSON(DATA + 'meta.json');
-      const k = await derive($('#pw').value);
-      if (!(await tryKey(k))) { $('#gateErr').textContent = 'That password is not right. Try again.'; return; }
-      KEY = k; store.set(toB64(await crypto.subtle.exportKey('raw', k)), $('#remember').checked);
-      $('#pw').value = ''; open();
-    } catch (err) { $('#gateErr').textContent = 'Could not unlock: ' + err.message; }
-    finally { btn.disabled = false; btn.textContent = 'Unlock'; }
-  });
-  $('#lockBtn').addEventListener('click', () => { store.clear(); location.hash = ''; location.reload(); });
-
-  async function open() {
-    IDX = await dec(await getJSON(DATA + 'index.enc.json'));
-    $('#gate').hidden = true; $('#app').hidden = false;
+    try { IDX = await getJSON(DATA + 'index.json'); } catch { $('#view').innerHTML = '<p>The research could not be loaded. Try again in a minute.</p>'; return; }
     buildNav(); route();
   }
   const sectionSlug = (s) => s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-');
@@ -286,7 +206,7 @@ mark { background: rgba(201,168,76,.32); color: inherit; padding: 0 1px; border-
     document.title = s + ' · Market Desk';
   }
   async function getDoc(id) {
-    if (!cache.has(id)) cache.set(id, getJSON(DATA + 'docs/' + id + '.json').then((b) => (PUB ? b : dec(b))));
+    if (!cache.has(id)) cache.set(id, getJSON(DATA + 'docs/' + id + '.json'));
     return cache.get(id);
   }
   // Reference notes and screens are snapshots: flag them once they are a week old.

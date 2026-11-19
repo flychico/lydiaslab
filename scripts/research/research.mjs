@@ -1,28 +1,22 @@
 #!/usr/bin/env node
 /*
-  Market Desk: Lynold's private market research, published encrypted.
+  Market Desk: market research published at ndhorizon.com/research/.
 
-  Why encrypted: this repository is public, so anything committed here can be
-  read by anyone. Every research note is turned into HTML, then encrypted with
-  AES-256-GCM using a key derived from the research password (PBKDF2-SHA256,
-  600,000 iterations, per-site salt). Only ciphertext is committed. The page at
-  /research/ asks for the password and decrypts in the browser.
-
-  The password is never stored in this repo. Pass it in the environment:
-    RESEARCH_PASSWORD=... node scripts/research/research.mjs <command>
+  Every note is turned into HTML and written as plain JSON under research/data/.
+  Personal notes are never published, and every note is cleaned of personal
+  details on the way out (see "publishing rules" below).
 
   Commands
-    build --src <vault folder>      Rebuild everything from an Obsidian vault folder
-                                    (keeps the salt so saved logins keep working).
-    add --file <note.md> [--folder "Daily Reports"]
+    build --src <vault folder>      Rebuild everything from an Obsidian vault folder.
+    add --file <note.md> [--folder "Daily Reports"] [--styled <page.html>]
                                     Add or replace ONE note (used by the nightly and
                                     pre-market reports). Folder decides the section;
                                     defaults to the note's parent folder name.
-    list                            Decrypt the index and print what is published.
+    style --id <id> --styled <page.html> | remove --id <id> | move --title <t> --section <s>
+    list                            Print what is published.
 
   Only Node built-ins are used.
 */
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,7 +27,6 @@ const ROOT = process.env.RESEARCH_ROOT
   : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const OUT = path.join(ROOT, 'research', 'data');
 const DOCS = path.join(OUT, 'docs');
-const ITER = 600000;
 
 // ---------------------------------------------------------------- sections
 // Vault folder (relative path) -> section shown on the site.
@@ -72,11 +65,9 @@ const SKIP_DIRS = /(^|\/)(\.obsidian|My Portfolio|_build|PDFs)(\/|$)/;
 // Personal account details are stripped line by line.
 const REDACT = [/Individual Cash account/i, /account holds \*\*\$/i, /\$[\d,.]+\*{0,2} in (the|your|his) account/i, /in the account,?\*{0,2}\s+only/i, /\bnet liq/i, /buying power/i, /account (number|value)/i];
 
-// ---------------------------------------------------------------- public mode
-// Lynold, Nov 19, 2026: "make site public". When research/data/index.json exists the desk is public:
-// notes are written as plain JSON (no password), personal notes are never published, and every
-// note is cleaned of personal details on the way out. RESEARCH_PASSWORD is then ignored.
-let PUBLIC = fs.existsSync(path.join(OUT, 'index.json'));
+// ---------------------------------------------------------------- publishing rules
+// Nov 19, 2026: the desk is public. Personal notes are never published, and every note is
+// cleaned of personal details on the way out.
 const PRIVATE_SECTIONS = ['Growth', 'Plan & Notes'];
 const PRIVATE_NAMES = /fib style|fib curriculum|fibonacci curriculum|operating brief|session summary|wealth\s*[—-]\s*home|reading list|trade plan|growth log|my trades/i;
 const isPrivate = (n) => PRIVATE_SECTIONS.includes(n.section) || PRIVATE_NAMES.test(n.name || '') || PRIVATE_NAMES.test(n.title || '');
@@ -104,24 +95,14 @@ function cleanMd(body) {
   return cleanText(body.split('\n\n').filter((para) => !DROP.some((r) => r.test(para))).join('\n\n'));
 }
 
-// ---------------------------------------------------------------- crypto
-function key(password, saltB64) {
-  if (PUBLIC) return null;
-  return crypto.pbkdf2Sync(password, Buffer.from(saltB64, 'base64'), ITER, 32, 'sha256');
-}
-function encrypt(k, obj) {
-  if (PUBLIC) { const o = Object.assign({}, obj); if (o.html) o.html = cleanHtml(o.html); if (o.styled) o.styled = cleanHtml(o.styled); if (o.title) o.title = cleanText(o.title); delete o.page; return o; }
-  const iv = crypto.randomBytes(12);
-  const c = crypto.createCipheriv('aes-256-gcm', k, iv);
-  const ct = Buffer.concat([c.update(JSON.stringify(obj), 'utf8'), c.final(), c.getAuthTag()]);
-  return { iv: iv.toString('base64'), ct: ct.toString('base64') };
-}
-function decrypt(k, box) {
-  if (PUBLIC) return box;
-  const buf = Buffer.from(box.ct, 'base64');
-  const d = crypto.createDecipheriv('aes-256-gcm', k, Buffer.from(box.iv, 'base64'));
-  d.setAuthTag(buf.subarray(buf.length - 16));
-  return JSON.parse(Buffer.concat([d.update(buf.subarray(0, buf.length - 16)), d.final()]).toString('utf8'));
+// ---------------------------------------------------------------- output
+function publish(obj) {
+  const o = Object.assign({}, obj);
+  if (o.html) o.html = cleanHtml(o.html);
+  if (o.styled) o.styled = cleanHtml(o.styled);
+  if (o.title) o.title = cleanText(o.title);
+  delete o.page;
+  return o;
 }
 
 // ---------------------------------------------------------------- markdown
@@ -251,7 +232,7 @@ function parseNote(file, relFolder, raw) {
     for (const line of m[1].split('\n')) { const kv = line.match(/^([\w-]+):\s*(.*)$/); if (kv) fm[kv[1]] = kv[2].replace(/^["']|["']$/g, ''); }
   }
   body = body.split('\n').filter((l) => !REDACT.some((r) => r.test(l))).join('\n');
-  if (PUBLIC) body = cleanMd(body);
+  body = cleanMd(body);
   body = dropEmptySections(body);
   if (/\.txt$/i.test(file)) body = '```\n' + body + '\n```';
   let title = name;
@@ -293,33 +274,19 @@ function indexEntry(n) {
 }
 
 // ---------------------------------------------------------------- io
-function password() {
-  if (PUBLIC) return 'public';
-  const p = process.env.RESEARCH_PASSWORD;
-  if (!p) { console.error('Set RESEARCH_PASSWORD in the environment.'); process.exit(1); }
-  return p;
-}
-function loadMeta() {
-  if (PUBLIC) return { salt: '', check: {} };
-  const f = path.join(OUT, 'meta.json');
-  return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : null;
-}
 function writeJSON(f, obj) { fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, JSON.stringify(obj)); }
 function sortIndex(items) {
   return items.sort((a, b) => (b.date || '').localeCompare(a.date || '') || a.title.localeCompare(b.title));
 }
-function readIndex(k) {
-  if (PUBLIC) return JSON.parse(fs.readFileSync(path.join(OUT, 'index.json'), 'utf8'));
-  const f = path.join(OUT, 'index.enc.json');
-  if (!fs.existsSync(f)) return { updated: '', groups: GROUPS, items: [] };
-  return decrypt(k, JSON.parse(fs.readFileSync(f, 'utf8')));
+function readIndex() {
+  const f = path.join(OUT, 'index.json');
+  return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : { updated: '', groups: GROUPS, items: [] };
 }
-function writeIndex(k, idx) {
+function writeIndex(idx) {
   idx.updated = new Date().toISOString();
   idx.groups = GROUPS;
-  idx.items = sortIndex(idx.items);
-  if (PUBLIC) { idx.items = idx.items.filter((x) => !isPrivate(x)).map((x) => Object.assign({}, x, { title: cleanText(x.title), summary: DROP.some((r) => r.test(x.summary || '')) ? '' : cleanText(x.summary), page: undefined })); writeJSON(path.join(OUT, 'index.json'), idx); return; }
-  writeJSON(path.join(OUT, 'index.enc.json'), encrypt(k, idx));
+  idx.items = sortIndex(idx.items.filter((x) => !isPrivate(x)).map((x) => Object.assign({}, x, { title: cleanText(x.title), summary: DROP.some((r) => r.test(x.summary || '')) ? '' : cleanText(x.summary), page: undefined })));
+  writeJSON(path.join(OUT, 'index.json'), idx);
 }
 
 const args = process.argv.slice(2);
@@ -329,34 +296,22 @@ const opt = (n) => { const i = args.indexOf('--' + n); return i > -1 ? args[i + 
 if (cmd === 'build') {
   const src = opt('src');
   if (!src || !fs.existsSync(src)) { console.error('build needs --src <vault folder>'); process.exit(1); }
-  const pw = password();
-  let meta = loadMeta();
-  if (!meta) meta = { v: 1, kdf: 'PBKDF2-SHA256', iterations: ITER, salt: crypto.randomBytes(16).toString('base64') };
-  const k = key(pw, meta.salt);
-  const notes = walk(src).map((f) => parseNote(f.abs, f.folder, fs.readFileSync(f.abs, 'utf8')));
+  const notes = walk(src).map((f) => parseNote(f.abs, f.folder, fs.readFileSync(f.abs, 'utf8'))).filter((n) => !isPrivate(n));
   const seen = new Set();
   for (const n of notes) { while (seen.has(n.id)) n.id += '-2'; seen.add(n.id); }
   const links = linker(notes);
   fs.rmSync(DOCS, { recursive: true, force: true });
-  for (const n of notes) writeJSON(path.join(DOCS, n.id + '.json'), encrypt(k, render(n, links)));
-  // Check value lets the page tell a wrong password from a broken file.
-  meta.check = encrypt(k, { ok: true });
-  writeJSON(path.join(OUT, 'meta.json'), meta);
-  writeIndex(k, { items: notes.map(indexEntry) });
-  console.log(`Published ${notes.length} notes (encrypted) to research/data/.`);
+  for (const n of notes) writeJSON(path.join(DOCS, n.id + '.json'), publish(render(n, links)));
+  writeIndex({ items: notes.map(indexEntry) });
+  console.log(`Published ${notes.length} notes to research/data/.`);
 } else if (cmd === 'add') {
   const file = opt('file');
   if (!file || !fs.existsSync(file)) { console.error('add needs --file <note>'); process.exit(1); }
-  const pw = password();
-  const meta = loadMeta();
-  if (!meta) { console.error('No research/data/meta.json yet: run build first.'); process.exit(1); }
-  const k = key(pw, meta.salt);
-  try { decrypt(k, meta.check); } catch { console.error('Wrong RESEARCH_PASSWORD (it does not match the published data).'); process.exit(1); }
-  const idx = readIndex(k);
+  const idx = readIndex();
   const n = parseNote(file, opt('folder') || path.basename(path.dirname(file)), fs.readFileSync(file, 'utf8'));
   // The Today page was retired by Lynold on Nov 12, 2026 ("The today report needs to end. I just want the Daily Debrief").
   if (n.section === 'Today') { console.log('Skipped: the Today page is retired; the Daily Debrief is the nightly read. Nothing was published for it.'); process.exit(0); }
-  if (PUBLIC && isPrivate(n)) { console.log(`Skipped "${n.title}": personal notes are not published on the public desk.`); process.exit(0); }
+  if (isPrivate(n)) { console.log(`Skipped "${n.title}": personal notes are not published on the public desk.`); process.exit(0); }
   const prior = idx.items.find((x) => x.name === n.name);
   if (prior) n.id = prior.id;
   const known = idx.items.map((x) => ({ name: x.name, title: x.title, id: x.id })).concat([n]);
@@ -364,79 +319,52 @@ if (cmd === 'build') {
   // --styled <page.html>: the report's own designed page; Market Desk shows it in place of the plain rendering.
   const styled = opt('styled');
   if (styled) { if (!fs.existsSync(styled)) { console.error('add: --styled file not found: ' + styled); process.exit(1); } out.styled = fs.readFileSync(styled, 'utf8').replace(/<script[\s\S]*?<\/script>/gi, ''); }
-  writeJSON(path.join(DOCS, n.id + '.json'), encrypt(k, out));
+  writeJSON(path.join(DOCS, n.id + '.json'), publish(out));
   idx.items = idx.items.filter((x) => x.id !== n.id).concat([Object.assign(indexEntry(n), styled ? { styled: true } : {})]);
-  writeIndex(k, idx);
+  writeIndex(idx);
   console.log(`${prior ? 'Replaced' : 'Added'} "${n.title}" in ${n.section} (${idx.items.length} notes total).`);
 } else if (cmd === 'move') {
   // Re-file a published note under another section (e.g. --section Archive) without touching the vault.
   const want = opt('title'), section = opt('section');
   if (!want || !section) { console.error('move needs --title "<exact title>" --section <name>'); process.exit(1); }
-  const meta = loadMeta();
-  const k = key(password(), meta.salt);
-  const idx = readIndex(k);
+  const idx = readIndex();
   const x = idx.items.find((i) => i.title === want || i.id === want);
   if (!x) { console.error(`No note titled "${want}".`); process.exit(1); }
   const f = path.join(DOCS, x.id + '.json');
-  const doc = decrypt(k, JSON.parse(fs.readFileSync(f, 'utf8')));
+  const doc = JSON.parse(fs.readFileSync(f, 'utf8'));
   doc.section = section; x.section = section;
-  writeJSON(f, encrypt(k, doc));
-  writeIndex(k, idx);
+  writeJSON(f, publish(doc));
+  writeIndex(idx);
   console.log(`Moved "${x.title}" to ${section}.`);
 } else if (cmd === 'style') {
   // Attach a report's designed page to a note that is already published: style --id <id or exact title> --styled <page.html>
   const want = opt('id') || opt('title'), styled = opt('styled');
   if (!want || !styled || !fs.existsSync(styled)) { console.error('style needs --id <id or exact title> --styled <page.html>'); process.exit(1); }
-  const meta = loadMeta();
-  const k = key(password(), meta.salt);
-  const idx = readIndex(k);
+  const idx = readIndex();
   const x = idx.items.find((i) => i.id === want || i.title === want);
   if (!x) { console.error(`No note "${want}".`); process.exit(1); }
   const f = path.join(DOCS, x.id + '.json');
-  const doc = decrypt(k, JSON.parse(fs.readFileSync(f, 'utf8')));
+  const doc = JSON.parse(fs.readFileSync(f, 'utf8'));
   doc.styled = fs.readFileSync(styled, 'utf8').replace(/<script[\s\S]*?<\/script>/gi, '');
   x.styled = true;
-  writeJSON(f, encrypt(k, doc));
-  writeIndex(k, idx);
+  writeJSON(f, publish(doc));
+  writeIndex(idx);
   console.log(`Attached the designed page to "${x.title}".`);
 } else if (cmd === 'remove') {
   // Take a published note off the site: remove --id <id or exact title>
   const want = opt('id') || opt('title');
   if (!want) { console.error('remove needs --id <id or exact title>'); process.exit(1); }
-  const meta = loadMeta();
-  const k = key(password(), meta.salt);
-  const idx = readIndex(k);
+  const idx = readIndex();
   const x = idx.items.find((i) => i.id === want || i.title === want);
   if (!x) { console.error(`No note "${want}".`); process.exit(1); }
   fs.rmSync(path.join(DOCS, x.id + '.json'), { force: true });
   idx.items = idx.items.filter((i) => i.id !== x.id);
-  writeIndex(k, idx);
+  writeIndex(idx);
   console.log(`Removed "${x.title}" (${idx.items.length} notes left).`);
-} else if (cmd === 'publicize') {
-  // One-time switch to the public desk: decrypt every note with the current password, drop personal
-  // notes, clean the rest, write plain JSON, and remove the encrypted files.
-  if (PUBLIC) { console.log('Already public.'); process.exit(0); }
-  const meta = loadMeta();
-  const k = key(password(), meta.salt);
-  try { decrypt(k, meta.check); } catch { console.error('Wrong RESEARCH_PASSWORD.'); process.exit(1); }
-  const idx = readIndex(k);
-  const docs = idx.items.map((x) => [x, decrypt(k, JSON.parse(fs.readFileSync(path.join(DOCS, x.id + '.json'), 'utf8')))]);
-  PUBLIC = true;
-  let kept = 0, dropped = [];
-  for (const [x, doc] of docs) {
-    if (isPrivate(x)) { fs.rmSync(path.join(DOCS, x.id + '.json'), { force: true }); dropped.push(x.title); continue; }
-    writeJSON(path.join(DOCS, x.id + '.json'), encrypt(null, doc)); kept++;
-  }
-  fs.rmSync(path.join(OUT, 'index.enc.json'), { force: true });
-  fs.rmSync(path.join(OUT, 'meta.json'), { force: true });
-  writeIndex(null, idx);
-  console.log(`Public desk: ${kept} notes published in plain JSON; ${dropped.length} personal notes removed: ${dropped.join(' | ')}`);
 } else if (cmd === 'list') {
-  const meta = loadMeta();
-  const k = key(password(), meta.salt);
-  const idx = readIndex(k);
+  const idx = readIndex();
   for (const x of idx.items) console.log(`${x.date || '          '}  ${x.section.padEnd(20)} ${x.title}`);
   console.log(`${idx.items.length} notes, updated ${idx.updated}`);
 } else {
-  console.log('Usage: RESEARCH_PASSWORD=... node scripts/research/research.mjs build --src <vault> | add --file <note.md> [--folder <name>] [--styled <page.html>] | style --id <id> --styled <page.html> | remove --id <id> | move --title <title> --section <name> | list');
+  console.log('Usage: node scripts/research/research.mjs build --src <vault> | add --file <note.md> [--folder <name>] [--styled <page.html>] | style --id <id> --styled <page.html> | remove --id <id> | move --title <title> --section <name> | list');
 }
