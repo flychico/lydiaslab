@@ -122,6 +122,12 @@ const lines = (post.lines || []).filter(l => !/:\s*$/.test(l) && !/^what would l
 const facts = post.facts || [];
 const n = lines.length;
 const isPicks = post.kind === "picks";
+// "What would Leo do?" appears once: in the eyebrow on a no-pick night, as the script line on a pick night.
+const eyebrowRaw = stripEmoji(post.header).replace(/\s+/g, " ").trim();
+// A night with no pick says so (Nov 19: "LEO PICKS" over three passes read as three picks).
+const noPick = isPicks && (post.nopick || (post.lines || []).some(l => /^No (Leo )?picks? /i.test(l)));
+const npTitle = /Mondays/i.test((post.lines || []).join(" ")) ? "No picks Monday" : "No picks tonight";
+const eyebrowTxt = isPicks && !noPick ? eyebrowRaw.replace(/\s*What would Leo do\?\s*$/i, "") : eyebrowRaw;
 
 // One line: text, its result mark (✅ ❌ ➖) and anything after the mark (units).
 function split(line) {
@@ -136,11 +142,15 @@ if (isPicks) {
     const m = /^(.*?)\s*\(([\d.]+%)\)\s*$/.exec(l);
     return `<div class="pk"><span>${esc(m ? m[1] : l)}</span>${m ? `<b>${esc(m[2])}</b>` : ""}</div>`;
   }).join("");
-  hero = `<div class="hero"><h1>Leo picks</h1><div class="script">What would Leo do?</div></div>`;
+  hero = noPick
+    ? `<div class="hero"><h1>${npTitle}</h1>${post.note ? `<div class="note">${esc(post.note)}</div>` : ""}</div>`
+    : `<div class="hero"><h1>Leo picks</h1><div class="script">What would Leo do?</div></div>`;
   body = `<div class="pks" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${rows}</div>`;
   extraCss = `.pks{display:grid;gap:${n <= 4 ? 16 : 10}px;margin-top:${n <= 4 ? 34 : 22}px}
 .pk{display:flex;justify-content:space-between;align-items:center;gap:16px;border:2px solid rgba(233,185,73,.75);border-radius:12px;background:rgba(26,41,68,.8);padding:${n <= 4 ? "20px 26px" : n <= 10 ? "11px 18px" : "8px 14px"};font-family:Anton;font-size:${big}px;text-transform:uppercase;letter-spacing:.01em;white-space:nowrap}
 .pk span{overflow:hidden;text-overflow:ellipsis}.pk b{font-weight:400;color:#F4C542}
+.hero .note{font-weight:700;font-size:34px;letter-spacing:.02em;color:#E9B949;margin-top:18px}
+${noPick ? ".hero h1{font-size:112px}" : ""}
 ${n > 10 ? ".hero h1{font-size:118px}.hero .script{font-size:52px;margin-top:14px}" : ""}`;
 } else {
   const recM = /^(\d+-\d+(?:-\d+)?)\s*(\([^)]*\))?\s*(.*)$/.exec(String(post.record || ""));
@@ -163,14 +173,14 @@ const factHtml = facts.length ? `<div class="facts">${facts.map(f => `<div>${esc
 const label = isPicks ? `${sport} PICKS` : `${sport} RESULTS`;
 const html = `<!doctype html><html><head><meta charset="utf-8"><style>${fontCss()}${baseCss}${v5Css}
 .main{flex:1;display:flex;flex-direction:column;justify-content:${n <= 3 ? "center" : "flex-start"};padding-bottom:14px}
-.eyebrow{font-size:${stripEmoji(post.header).length > 26 ? 24 : 30}px}
+.eyebrow{font-size:${eyebrowTxt.length > 26 ? 24 : 30}px}
 .facts{margin-top:18px;border-top:2px solid rgba(233,185,73,.4);padding-top:12px}
 .facts div{font-weight:700;font-size:${facts.length > 2 || n > 10 ? 23 : 27}px;letter-spacing:.03em;color:#E8EDF4;padding:4px 0 4px 24px;position:relative;text-transform:uppercase}
 .facts div:before{content:"";position:absolute;left:0;top:50%;width:11px;height:11px;margin-top:-5px;border-radius:50%;background:#F4C542}
 ${extraCss}
 </style></head><body>${backdrop(seed)}<div class="frame"></div><div class="wrap">
 ${header(label, dateLine(doc.date))}
-<div class="main"><div class="eyebrow">${esc(stripEmoji(post.header))}</div>
+<div class="main"><div class="eyebrow">${esc(eyebrowTxt)}</div>
 ${hero}<div class="rule"></div>${body}${factHtml}</div>
 <div class="foot"><span></span><b>ndhorizon.com</b></div>
 </div></body></html>`;

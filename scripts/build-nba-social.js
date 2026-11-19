@@ -118,7 +118,7 @@ function picksPost() {
     kind = "reads";
     open.map(g => ({ g, side: g.leo.p_home >= g.leo.p_away ? "home" : "away", p: Math.max(g.leo.p_home, g.leo.p_away) }))
       .sort((a, b) => b.p - a.p).slice(0, 3)
-      .forEach(({ g, side, p }) => items.push({ game_id: String(g.game_id), type: "read", side, p, team: nick(g, side), code: code(g, side) }));
+      .forEach(({ g, side, p }) => items.push({ game_id: String(g.game_id), type: "read", side, p, team: nick(g, side), code: code(g, side), why: (g.leo.pick && g.leo.pick.why) || "" }));
   }
   const header = `${weekday(DATE)} night 🏀 What would Leo do?`;
   // The price shown is the locked price the pick is graded at (DEC-20261116-30); the % is Leo's chance to win.
@@ -128,7 +128,17 @@ function picksPost() {
   const facts = [];
   const tags = hashtags(items.map(i => i.code));
   const link = tagged(`https://ndhorizon.com/nba/predictions/${DATE}/`, "picks");
-  return { id: "picks", kind: "picks", created_at: NOW.toISOString(), header, lines, record: "", facts, hashtags: tags,
+  // For the graphic on a no-pick night (Lynold, Nov 19: the card printed "LEO PICKS" over three passes).
+  // One plain reason, only when it is true of every team listed.
+  let note = "";
+  if (kind === "reads") {
+    const w = items.map(i => i.why || "");
+    note = PK.noPickDay && PK.noPickDay(DATE) ? "Leo makes no picks on Mondays"
+      : w.every(x => /^priced /.test(x)) ? "Leo likes them, but the price is too high"
+      : w.every(x => x && !/^priced /.test(x) && !/Mondays/.test(x)) ? "None of them reached Leo's 60% bar"
+      : "Too close or too pricey to call";
+  }
+  return { id: "picks", kind: "picks", created_at: NOW.toISOString(), header, lines, record: "", facts, hashtags: tags, nopick: kind === "reads", note,
     text: compose(header, null, lines, null, tags, link), link, items };
 }
 
