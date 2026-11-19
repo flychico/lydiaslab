@@ -232,8 +232,8 @@ function slateLine(games) {
   return `${games.length} game${games.length === 1 ? "" : "s"}${days.length > 1 ? `, ${dayLabel(days[0])} to ${dayLabel(days[days.length - 1])}` : `, ${dayLabel(days[0])}`}. First kickoff ${dayLabel(f.date)} at ${clock(f.kickoff)}.`;
 }
 function page({ week, season, games, prev, early }, rec, canonical) {
-  const title = `NFL Week ${week} Predictions ${season}: Picks, Win Chances and Touchdown Scorers | Leo`;
-  const desc = `Leo's NFL Week ${week} ${season} card: a win chance and projected total for all ${games.length} games, plus the two most likely touchdown scorers in each, frozen before kickoff and graded after.`;
+  const title = `NFL Week ${week} Predictions ${season}: Win Chances, Spreads and Graded Calls | Leo`;
+  const desc = `Leo's full Week ${week} NFL card: win chances, spreads, totals and the likeliest touchdown scorers for all ${games.length} games, plus the graded record. Every number frozen before kickoff.`;
   return `<!DOCTYPE html>
 <html lang="en">
 <head>

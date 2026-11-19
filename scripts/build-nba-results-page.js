@@ -228,6 +228,19 @@ details.learn>summary{cursor:pointer;font-weight:800;}
 @media(min-width:760px){.gr-main{grid-template-columns:300px 280px;gap:24px;} .gr-read,.gr-why{max-width:620px;} .gr-foot{max-width:604px;} .filters .field{max-width:320px;}}
 @media(max-width:420px){.gr-main{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:10px;} .gr-t{font-size:.92rem;} .gr-call{font-size:.84rem;}}`;
 
+// Schema (SEO list item 3, Nov 18): the hub lists every night page that exists.
+function resultsLd(doc) {
+  const LD = require("./lib/ld");
+  const days = [...(doc.days || [])].map(d => d.date).filter(Boolean).sort().reverse()
+    .filter(d => fs.existsSync(path.join(ROOT, "nba", "predictions", d, "index.html")));
+  const long = d => new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
+  return LD.resultsList({
+    url: "/nba/results/", name: "Leo NBA results",
+    description: "Every Leo NBA pick, graded night by night with its price and units.",
+    items: days.map(d => ({ name: `NBA predictions and results, ${long(d)}`, url: `/nba/predictions/${d}/` })),
+  });
+}
+
 function writePage(doc) {
   const view = VIEW.make(nick), app = view.render(doc, { signup: require("./lib/nba-signup-box").box("results") });
   const prev = fs.existsSync(PAGE) ? fs.readFileSync(PAGE, "utf8") : "", navM = prev.match(/<nav id="nav">[\s\S]*?<\/nav>/);
@@ -246,17 +259,18 @@ function writePage(doc) {
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Leo NBA Results: Every Game Graded, Day by Day | Leo</title>
-<meta name="description" content="Leo's NBA results day by day: final scores, every Leo Pick graded with its price and units, and the reason behind every miss.">
+<title>Leo NBA Results: Every Pick Graded, Day by Day | Leo</title>
+<meta name="description" content="The complete public record of every Leo NBA pick, graded day by day with its price and units. Wins and losses stay on the site with the reason behind every miss.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Leo">
-<meta property="og:title" content="Leo NBA Results: Every Game Graded, Day by Day | Leo">
+<meta property="og:title" content="Leo NBA Results: Every Pick Graded, Day by Day | Leo">
 <meta property="og:url" content="https://ndhorizon.com/nba/results/">
 <meta property="og:image" content="https://ndhorizon.com/img/leo-card.png">
 <link rel="canonical" href="https://ndhorizon.com/nba/results/">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127936;</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/scoreboard.css">
+${resultsLd(doc)}
 <style>${CSS}
 </style>
 </head>

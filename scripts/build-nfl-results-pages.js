@@ -47,10 +47,17 @@ function build() {
   page = fill(page, "weekList", V.weekList(review, season, null));
   page = fill(page, "body", V.main(review, tracker, season, { signup: V.signupBox() }));
   page = page.replace(/<!-- prerendered [^>]*-->\n?/, "");
+  // Schema (SEO list item 3, Nov 18): the hub lists every week page.
+  const LD = require("./lib/ld");
+  page = LD.put(page, LD.resultsList({
+    url: "/nfl/results/", name: `Leo NFL results ${season}`,
+    description: "Every Leo NFL moneyline, spread and total call, graded week by week.",
+    items: [...review.weeks].reverse().map(w => ({ name: `NFL Week ${w} ${season} results`, url: `/nfl/results/${V.weekSlug(season, w)}/` })),
+  }));
   fs.writeFileSync(file, page);
 
   // One page per week, static (no data fetch).
-  const head = page.slice(0, page.indexOf("<body"));
+  const head = LD.strip(page.slice(0, page.indexOf("<body")));
   const nav = (page.match(/<body>[\s\S]*?<\/nav>/) || ["<body>"])[0];
   let wrote = 0;
   for (const w of review.weeks) {
