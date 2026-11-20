@@ -25,6 +25,7 @@ const path = require("path");
 const crypto = require("crypto");
 const cp = require("child_process");
 const { sendOne } = require("./lib/nba-send");
+const { players } = require("./lib/post-players");   // ChatGPT card brief (business/CHATGPT_VISUALS.md)
 
 const ROOT = path.join(__dirname, "..");
 const args = process.argv.slice(2);
@@ -63,14 +64,17 @@ function render(file, id, out) {
   return j;
 }
 
-function bodies(post, note) {
-  const text = (note ? note + "\n\n" : "") + post.text + "\n\nSave the image and post it with the text above.";
+function bodies(post, note, who) {
+  // "Players to use" for the ChatGPT card: Leo's pick of a healthy star per team (Lynold, Nov 19).
+  const pl = who ? `Players to use: ${who}` : "";
+  const text = (note ? note + "\n\n" : "") + post.text + "\n\nSave the image and post it with the text above." + (pl ? "\n\nFor the ChatGPT card: " + pl : "");
   const html = `<!doctype html><html><head><meta name="color-scheme" content="light only"></head>
 <body style="margin:0;background:#FFFFFF" bgcolor="#FFFFFF"><table width="100%" cellpadding="0" cellspacing="0" bgcolor="#FFFFFF"><tr><td style="padding:16px">
 <table cellpadding="0" cellspacing="0" style="max-width:640px;width:100%;font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#1F2329">
 ${note ? `<tr><td style="padding:0 0 12px;font-weight:bold;color:#7A5E12">${esc(note)}</td></tr>` : ""}
 <tr><td style="border:1px solid #D9CFBD;padding:14px;white-space:pre-wrap;font-family:Arial,sans-serif">${linkify(post.text)}</td></tr>
 <tr><td style="padding:12px 0 0;color:#3D3830">Save the image and post it with the text above.</td></tr>
+${pl ? `<tr><td style="padding:12px 0 0;color:#3D3830"><b>For the ChatGPT card:</b> ${esc(pl)}</td></tr>` : ""}
 </table></td></tr></table></body></html>`;
   return { text, html };
 }
@@ -100,7 +104,7 @@ ${note ? `<tr><td style="padding:0 0 12px;font-weight:bold;color:#7A5E12">${esc(
       let card;
       try { card = render(file, post.id, out); } catch (e) { console.log(`::warning::render failed for ${subject}: ${e.message}`); continue; }
       if (card.overflow) console.log(`::warning::${subject}: graphic overflows, sent anyway`);
-      const { text, html } = bodies(post, note);
+      const { text, html } = bodies(post, note, players(sport, date, post));
       const res = await sendOne({
         from: FROM, to: [TO], subject, text, html,
         attachments: [{ filename: `${sport}-${date}-${post.id}.jpg`, content: fs.readFileSync(out).toString("base64") }],
