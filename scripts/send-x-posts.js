@@ -25,7 +25,8 @@ const path = require("path");
 const crypto = require("crypto");
 const cp = require("child_process");
 const { sendOne } = require("./lib/nba-send");
-const { players } = require("./lib/post-players");   // ChatGPT card brief (business/CHATGPT_VISUALS.md)
+const { players } = require("./lib/post-players");
+const AI = require("./lib/ai-card");   // OpenAI drawn cards (data/ai-cards.json mode, OPENAI_API_KEY)   // ChatGPT card brief (business/CHATGPT_VISUALS.md)
 
 const ROOT = path.join(__dirname, "..");
 const args = process.argv.slice(2);
@@ -64,10 +65,10 @@ function render(file, id, out) {
   return j;
 }
 
-function bodies(post, note, who) {
+function bodies(post, note, who, aiNote) {
   // "Players to use" for the ChatGPT card: Leo's pick of a healthy star per team (Lynold, Nov 19).
   const pl = who ? `Players to use: ${who}` : "";
-  const text = (note ? note + "\n\n" : "") + post.text + "\n\nSave the image and post it with the text above." + (pl ? "\n\nFor the ChatGPT card: " + pl : "");
+  const text = (note ? note + "\n\n" : "") + post.text + "\n\nSave the image and post it with the text above." + (pl ? "\n\nFor the ChatGPT card: " + pl : "") + (aiNote ? "\n\n" + aiNote : "");
   const html = `<!doctype html><html><head><meta name="color-scheme" content="light only"></head>
 <body style="margin:0;background:#FFFFFF" bgcolor="#FFFFFF"><table width="100%" cellpadding="0" cellspacing="0" bgcolor="#FFFFFF"><tr><td style="padding:16px">
 <table cellpadding="0" cellspacing="0" style="max-width:640px;width:100%;font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#1F2329">
@@ -75,6 +76,7 @@ ${note ? `<tr><td style="padding:0 0 12px;font-weight:bold;color:#7A5E12">${esc(
 <tr><td style="border:1px solid #D9CFBD;padding:14px;white-space:pre-wrap;font-family:Arial,sans-serif">${linkify(post.text)}</td></tr>
 <tr><td style="padding:12px 0 0;color:#3D3830">Save the image and post it with the text above.</td></tr>
 ${pl ? `<tr><td style="padding:12px 0 0;color:#3D3830"><b>For the ChatGPT card:</b> ${esc(pl)}</td></tr>` : ""}
+${aiNote ? `<tr><td style="padding:12px 0 0;color:#7A5E12">${esc(aiNote)}</td></tr>` : ""}
 </table></td></tr></table></body></html>`;
   return { text, html };
 }
@@ -104,13 +106,25 @@ ${pl ? `<tr><td style="padding:12px 0 0;color:#3D3830"><b>For the ChatGPT card:<
       let card;
       try { card = render(file, post.id, out); } catch (e) { console.log(`::warning::render failed for ${subject}: ${e.message}`); continue; }
       if (card.overflow) console.log(`::warning::${subject}: graphic overflows, sent anyway`);
-      const { text, html } = bodies(post, note, players(sport, date, post));
+      const who = players(sport, date, post);
+      // AI card (OpenAI image model). preview: both images, AI first; on: AI alone; any failure keeps Leo's own graphic.
+      const aiMode = AI.mode();
+      let ai = { ok: false, reason: "off" };
+      if (aiMode !== "off") ai = await AI.aiCard({ sport, date, post, players: who });
+      if (aiMode !== "off") console.log(`ai card ${post.id}: ${ai.ok ? "made (" + ai.model + ", try " + ai.attempt + ")" : "not used: " + ai.reason}`);
+      const aiNote = aiMode === "preview"
+        ? (ai.ok ? "Preview: the first image is the new AI card, the second is Leo's own graphic. Post whichever you like." : (ai.reason && ai.reason !== "no OPENAI_API_KEY" ? `AI card not made this time (${ai.reason}); Leo's own graphic attached.` : ""))
+        : "";
+      const { text, html } = bodies(post, note, who, aiNote);
       const res = await sendOne({
         from: FROM, to: [TO], subject, text, html,
-        attachments: [{ filename: `${sport}-${date}-${post.id}.jpg`, content: fs.readFileSync(out).toString("base64") }],
+        attachments: [
+          ...(ai.ok ? [{ filename: `${sport}-${date}-${post.id}-ai.png`, content: ai.png.toString("base64") }] : []),
+          ...(ai.ok && aiMode === "on" ? [] : [{ filename: `${sport}-${date}-${post.id}.jpg`, content: fs.readFileSync(out).toString("base64") }]),
+        ],
       }, { key: KEY });
       if (res.ok) {
-        log.sent[post.id] = { at: new Date().toISOString(), hash: h, updated: !!note };
+        log.sent[post.id] = { at: new Date().toISOString(), hash: h, updated: !!note, ai: ai.ok ? "made" : aiMode === "off" ? "off" : ai.reason };
         console.log(`sent: ${subject}`);
       } else {
         (log.errors = log.errors || []).push({ at: new Date().toISOString(), id: post.id, status: res.status, name: res.name, message: res.message });
