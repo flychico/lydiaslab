@@ -140,10 +140,10 @@ function posts(date, p, rec) {
   const bare = link.replace(/^https?:\/\//, "");
   const sports = [...new Set(p.legs.map(l => l.sport))];
   const tags = sports.map(s => s === "nba" ? "#NBAPicks" : s === "nfl" ? "#NFLPicks" : "").filter(Boolean);
-  const header = `${weekday(date)} Leo Parlay 🎰`;
+  const header = `${weekday(date).toUpperCase()} LEO PARLAY 🎰 What would Leo do?`;
   const pickLines = p.legs.map(l => `${EMO[l.sport]} ${l.team} ML ${fmtPrice(l.price)}`);
   const pick = { id: "picks", kind: "picks", parlay: true, note: `${p.price} if all ${p.legs.length} hit`, created_at: new Date(NOW).toISOString(), header, lines: pickLines, record: p.price, facts: [], hashtags: tags,
-    text: [header, "", ...pickLines, "", `${p.price} if all ${p.legs.length} hit`, "", bare, tags.join(" ")].join("\n"), link };
+    text: [`${weekday(date).toUpperCase()} LEO PARLAY 🎰`, "What would Leo do?", "", ...pickLines.map(l => `• ${l}`), "", `${p.price} if all ${p.legs.length} hit`, "", bare, tags.join(" ")].join("\n"), link };   // cheat sheet look (Lynold, Nov 20)
   const i = doc.posts.findIndex(x => x.id === "picks");
   if (p.status === "open") { if (i >= 0) doc.posts[i] = pick; else doc.posts.unshift(pick); }
   else if (i < 0) doc.posts.unshift(pick);

@@ -120,7 +120,11 @@ function picksPost() {
       .sort((a, b) => b.p - a.p).slice(0, 3)
       .forEach(({ g, side, p }) => items.push({ game_id: String(g.game_id), type: "read", side, p, team: nick(g, side), code: code(g, side), why: (g.leo.pick && g.leo.pick.why) || "" }));
   }
-  const header = `${weekday(DATE)} night 🏀 What would Leo do?`;
+  // Cheat sheet look (Lynold, Nov 20, from an X post he liked): "NBA FRIDAY CHEAT SHEET 🏀", then
+  // "What would Leo do?", then one bullet per pick with its price. A no-pick night drops "CHEAT SHEET".
+  const DAY = weekday(DATE).toUpperCase();
+  const title = items.length && items[0].type === "pick" ? `NBA ${DAY} CHEAT SHEET 🏀` : `NBA ${DAY} 🏀`;
+  const header = `${title} What would Leo do?`;
   // The price shown is the locked price the pick is graded at (DEC-20261116-30); the % is Leo's chance to win.
   // Lynold, 2026-11-18: "start being more human like. not so much of a bot." Picks only, no chance or notes.
   const lines = [...(kind === "picks" ? [] : [PK.noPickDay && PK.noPickDay(DATE) ? "No picks on Mondays. Leo likes:" : "No picks tonight. Leo likes:"]),
@@ -139,7 +143,7 @@ function picksPost() {
       : "Too close or too pricey to call";
   }
   return { id: "picks", kind: "picks", created_at: NOW.toISOString(), header, lines, record: "", facts, hashtags: tags, nopick: kind === "reads", note,
-    text: compose(header, null, lines, null, tags, link), link, items };
+    text: [title, "What would Leo do?", "", ...lines.map(l => kind === "picks" ? `• ${l}` : l), "", String(link).replace(/^https?:\/\//, ""), tags.join(" ")].join("\n"), link, items };
 }
 
 /* ---------- results posts ---------- */

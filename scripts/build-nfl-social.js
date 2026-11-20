@@ -98,7 +98,7 @@ const pct = p => Math.round(p * 100);
 // ---------- picks post ----------
 function callLine(mk, c, g) {
   if (!c || !c.call) return null;
-  if (mk === "ml") return `${nick(c.call)} ML`;
+  if (mk === "ml") return `${nick(c.call)} ML${Number.isFinite(+c.price) && c.price !== "" && c.price != null ? " " + (+c.price > 0 ? "+" : "") + Math.round(+c.price) : ""}`;   // price shown (HO-0092; Lynold, Nov 20 "Keep prices")
   if (mk === "spread") return `${nick(c.call)} ${String(c.label).split(" ").slice(1).join(" ")}`;
   return `${nick(g.away)}/${nick(g.home)} ${c.label}`;
 }
@@ -107,6 +107,12 @@ function slateHeader(date, week) {
   if (day === 1) return "Monday night 🏈";
   if (day === 4) return "Thursday night 🏈";
   return `Week ${week} 🏈`;
+}
+function cheatTitle(date, week) {
+  const day = new Date(date + "T12:00:00Z").getUTCDay();
+  if (day === 1) return "MONDAY NIGHT";
+  if (day === 4) return "THURSDAY NIGHT";
+  return `NFL WEEK ${week}`;
 }
 // Lynold, 2026-11-18: no "21+", no "Every call graded, misses included", more human, less bot.
 const bare = link => String(link).replace(/^https?:\/\//, "");
@@ -133,11 +139,13 @@ function picksPost(date, existing) {
   const header = slateHeader(date, week);
   const tags = hashtags([...teams, ...games.flatMap(g => [g.home, g.away])]);
   // Lynold, Nov 16: "what would Leo do?"; Nov 18: plain, no 21+.
-  const body = [`${header} What would Leo do?`, ""];
-  body.push(...(lines.length ? lines : ["No picks from Leo on this one."]));
-  if (td.length) body.push("", "Most likely to score:", ...td);
+  // Cheat sheet look (Lynold, Nov 20): "NFL WEEK 12 CHEAT SHEET 🏈", "What would Leo do?", one bullet per call.
+  const title = lines.length ? `${cheatTitle(date, week)} CHEAT SHEET 🏈` : `${cheatTitle(date, week)} 🏈`;
+  const body = [title, "What would Leo do?", ""];
+  body.push(...(lines.length ? lines.map(l => `• ${l}`) : ["No picks from Leo on this one."]));
+  if (td.length) body.push("", "Most likely to score:", ...td.map(l => `• ${l}`));
   body.push("", bare(link), tags.join(" "));
-  return { id: "picks", kind: "picks", created_at: new Date(NOW()).toISOString(), header, lines, record: null,
+  return { id: "picks", kind: "picks", created_at: new Date(NOW()).toISOString(), header: `${title} What would Leo do?`, lines, record: null,
     facts: td, hashtags: tags, text: body.join("\n"), link };
 }
 function pageUrl(date, g) {
