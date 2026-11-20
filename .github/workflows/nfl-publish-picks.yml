@@ -173,6 +173,15 @@ jobs:
           AUDIT_EMAIL: ${{ secrets.AUDIT_EMAIL }}
         run: node scripts/send-x-posts.js nfl "${{ steps.slate_date.outputs.date }}" || true
 
+      - name: Leo Parlay (build, grade, email the post)
+        continue-on-error: true
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          AUDIT_EMAIL: ${{ secrets.AUDIT_EMAIL }}
+        run: |
+          node scripts/build-leo-parlay.js || true
+          node scripts/send-x-posts.js parlay "$(TZ=America/New_York date -d yesterday +%F)" "$(TZ=America/New_York date +%F)" || true
+
       - name: Prediction files for trackers
         continue-on-error: true
         run: node scripts/build-prediction-files.js nfl || true

@@ -33,7 +33,7 @@ const DRY = args.includes("--dry");
 const [sportArg, ...rest] = args.filter(a => !a.startsWith("--"));
 const sport = String(sportArg || "").toLowerCase();
 const dates = rest.join(" ").split(/[\s,]+/).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d));
-if (!["nba", "nfl"].includes(sport) || !dates.length) { console.log("usage: send-x-posts.js <nba|nfl> <date> [...]"); process.exit(0); }
+if (!["nba", "nfl", "parlay"].includes(sport) || !dates.length) { console.log("usage: send-x-posts.js <nba|nfl|parlay> <date> [...]"); process.exit(0); }
 
 const KEY = process.env.RESEND_API_KEY, TO = process.env.AUDIT_EMAIL;
 const FROM = "Leo <cards@ndhorizon.com>";

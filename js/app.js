@@ -190,7 +190,8 @@ function renderNav(active) {
   links.push(["/#more", "More", [
     ["/gym/", "Free workout planner"],
     ["/articles/", "MLB game analysis"],
-    ["/data-feed/", "Data feed"]
+    ["/data-feed/", "Data feed"],
+    ["/parlay/", "Leo Parlay"]   // DEC-20261119-10
   ]]);
 
   // A page may report an old or more specific path than the tab it belongs to.

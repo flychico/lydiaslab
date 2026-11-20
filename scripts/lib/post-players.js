@@ -9,7 +9,7 @@
  *        on the injury report Leo read for that game (data/nba/picks-<date>.json).
  *   NFL: the starting quarterback in Leo's read (data/nfl/picks-<date>.json).
  * Teams come from the post lines: picks lines, and on results posts the winning
- * lines (✅). No-pick posts get no line. Display help only; changes no number.
+ * lines (✅). No-pick posts name a player for each team Leo likes. Display help only; changes no number.
  */
 const fs = require("fs");
 const path = require("path");
@@ -19,12 +19,14 @@ const read = f => { try { return JSON.parse(fs.readFileSync(path.join(ROOT, f), 
 const lastWord = n => /Trail Blazers$/.test(n || "") ? "Trail Blazers" : String(n || "").split(" ").pop();
 
 function teamsInPost(post, nickOf) {
-  if (!post || post.nopick || (post.lines || []).some(l => /^No (Leo )?picks? /i.test(l))) return [];
-  const lines = (post.lines || []).filter(l => post.kind === "picks" || /✅/.test(l));
+  if (!post) return [];
+  // No-pick nights name a healthy player for each team Leo likes too (Lynold, Nov 19: Zach Edey was shown while out).
+  const lines = (post.lines || []).filter(l => !/^No (Leo )?picks? /i.test(l)).filter(l => post.kind === "picks" || /✅/.test(l))
+    .map(l => l.replace(/^[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]\uFE0F?\s*/u, ""));
   const out = [];
   for (const l of lines) {
     // longest nickname that starts the line ("Trail Blazers ML -150", "49ers -3", "Steelers ML -218 ✅")
-    const hit = Object.keys(nickOf).sort((a, b) => b.length - a.length).find(n => l.startsWith(n + " "));
+    const hit = Object.keys(nickOf).sort((a, b) => b.length - a.length).find(n => l === n || l.startsWith(n + " "));
     if (hit && !out.includes(hit)) out.push(hit);
   }
   return out;
@@ -54,7 +56,13 @@ function nfl(date, post) {
 }
 
 function players(sport, date, post) {
-  try { return sport === "nba" ? nba(date, post) : sport === "nfl" ? nfl(date, post) : ""; } catch (e) { return ""; }
+  try {
+    if (sport === "parlay") {   // Leo Parlay: each leg by its sport emoji
+      const pick = re => ({ ...post, lines: (post.lines || []).filter(l => re.test(l)) });
+      return [nba(date, pick(/^🏀/u)), nfl(date, pick(/^🏈/u))].filter(Boolean).join(", ");
+    }
+    return sport === "nba" ? nba(date, post) : sport === "nfl" ? nfl(date, post) : "";
+  } catch (e) { return ""; }
 }
 
 module.exports = { players };

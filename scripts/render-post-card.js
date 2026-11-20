@@ -144,6 +144,7 @@ if (isPicks) {
   }).join("");
   hero = noPick
     ? `<div class="hero"><h1>${npTitle}</h1>${post.note ? `<div class="note">${esc(post.note)}</div>` : ""}</div>`
+    : post.parlay ? `<div class="hero"><h1>Leo parlay</h1><div class="script">What would Leo do?</div>${post.note ? `<div class="note">${esc(post.note)}</div>` : ""}</div>`
     : `<div class="hero"><h1>Leo picks</h1><div class="script">What would Leo do?</div></div>`;
   body = `<div class="pks" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${rows}</div>`;
   extraCss = `.pks{display:grid;gap:${n <= 4 ? 16 : 10}px;margin-top:${n <= 4 ? 34 : 22}px}
