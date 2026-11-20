@@ -219,7 +219,6 @@ jobs:
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           AUDIT_EMAIL: ${{ secrets.AUDIT_EMAIL }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: node scripts/send-x-posts.js nfl ${{ steps.dates.outputs.list }} || true
 
       - name: Prediction files for trackers
