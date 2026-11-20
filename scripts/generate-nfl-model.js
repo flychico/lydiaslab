@@ -238,12 +238,14 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
   // named Jalen Hurts for 2026-11-01 after he went on season-ending IR, so it
   // is now only the fallback; then the team's QB with the most attempts.
   const STARTERS = require("./lib/nfl-starters");
+  const MV = require("./lib/nfl-margin-v2");
   const { kickoffUtc } = require("./lib/prediction-history");
-  let depthQb = [], qbSidelined = new Set();
+  let depthQb = [], qbSidelined = new Set(), INJ_ROWS = [];
   try {
     depthQb = STARTERS.qbRowsOnly(get(`${REL}/depth_charts/depth_charts_${SEASON}.csv`));
     const slateWk = Math.max(0, ...games.filter(g=>g.gameday===target).map(g=>n(g.week)||0));
-    qbSidelined = new Set(get(`${REL}/injuries/injuries_${SEASON}.csv`)
+    INJ_ROWS = get(`${REL}/injuries/injuries_${SEASON}.csv`);
+    qbSidelined = new Set(INJ_ROWS
       .filter(r => (n(r.week)||0)===slateWk && r.position==="QB" && /^(Out|Doubtful)$/i.test(r.report_status||""))
       .map(r => r.gsis_id));
     console.log(`  depth chart: ${depthQb.length} QB rows; ${qbSidelined.size} QBs Out or Doubtful`);
@@ -267,9 +269,23 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
     }
     return "";
   };
+  // ---- Leo's margin: leo-nflmargin-v2 (DEC-20261120-02, Lynold "Replace it now") ----
+  // Schedule-adjusted ratings, the win chance inputs and injuries beyond the QB,
+  // fitted by scripts/train-nfl-margin.js. v1 (point margin per game) is kept
+  // as v1_exp_margin for reference only. If the model file or a feed is missing
+  // the margin falls back to v1 and the game says so (margin_model).
+  let MARGIN = null, SNAP_IX = null, SOS = null;
+  try {
+    MARGIN = JSON.parse(fs.readFileSync(path.join(ROOT, "data/nfl/margin-v2-model.json"), "utf8"));
+    const teamsAll = [...new Set(games.filter(g => g.season === String(SEASON)).flatMap(g => [g.home_team, g.away_team]))].filter(Boolean).sort();
+    SOS = MV.sosRatings(played(SEASON).filter(g => g.gameday < target), teamsAll, MV.finalRatings(games, PRIOR));
+    try { SNAP_IX = MV.snapIndex([...get(`${REL}/snap_counts/snap_counts_${PRIOR}.csv`), ...get(`${REL}/snap_counts/snap_counts_${SEASON}.csv`)]); }
+    catch (e) { console.log(`  snap counts unavailable (${e.message}); injuries beyond the QB count as 0`); }
+    console.log(`  margin model ${MARGIN.model_version}: home edge ${SOS.hca.toFixed(2)}, ${INJ_ROWS.length} injury report rows`);
+  } catch (e) { MARGIN = null; console.log(`  margin v2 unavailable (${e.message}); using v1`); }
   const picks = slate.map(g=>{
-    const expMargin = (rating[g.home_team]??0) - (rating[g.away_team]??0) + HFA;
-    const v1Home = normCdf(expMargin/SD);
+    const v1Margin = (rating[g.home_team]??0) - (rating[g.away_team]??0) + HFA;
+    const v1Home = normCdf(v1Margin/SD);
     const inp = mlInputs(n(g.week)||1);
     const homeQb = starterQb(g.home_qb_name, g.home_team, inp.pre, g);
     const awayQb = starterQb(g.away_qb_name, g.away_team, inp.pre, g);
@@ -277,6 +293,16 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
     const feats = ML.featureRow({ homeTeam:g.home_team, awayTeam:g.away_team, homeQb, awayQb,
       qbRatings:inp.qb, teamRatings:inp.team, h2h:h2h3 });
     const rawHome = ML.predict(ML_MODEL, feats);
+    let expMargin = v1Margin, marginModel = "v1", injHome = { total: 0, players: [] }, injAway = { total: 0, players: [] }, shadowProb = null;
+    if (MARGIN && SOS) {
+      const wkN = n(g.week) || 1;
+      if (SNAP_IX && INJ_ROWS.length) { injHome = MV.injuryTotal(SNAP_IX, INJ_ROWS, SEASON, g.home_team, wkN); injAway = MV.injuryTotal(SNAP_IX, INJ_ROWS, SEASON, g.away_team, wkN); }
+      const mf = { sos_d: (SOS.r[g.home_team] || 0) - (SOS.r[g.away_team] || 0), home: g.location === "Neutral" ? 0 : 1,
+        qb_diff: feats.qb_diff, off_diff: feats.off_diff, def_diff: feats.def_diff, injr_all_d: injHome.total - injAway.total };
+      expMargin = MV.predict(MARGIN, mf); marginModel = MARGIN.model_version;
+      // Private shadow (Lynold, Nov 20: "Track it privately"): the win chance with the same injury term. Not shown or graded publicly.
+      try { shadowProb = ML.predict(MARGIN.shadow_win_chance, { ...feats, injr_all_d: mf.injr_all_d }); } catch (e) { shadowProb = null; }
+    }
     const call = ML.classifyPick(rawHome, g.home_team, g.away_team);
     const [mktAway,mktHome] = devig(g.away_moneyline,g.home_moneyline);
 
@@ -394,6 +420,9 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
       // expects to win. Reported, never picked.
       value_side:valueSide, value_side_differs: valueSide!=null && valueSide!==side,
       exp_margin:r1(expMargin), raw_model_prob:r3(rawHome), model_flagged:suspect,
+      margin_model: marginModel, v1_exp_margin: r1(v1Margin),
+      home_out_beyond_qb: injHome.players, away_out_beyond_qb: injAway.players,
+      shadow_ml_injury_home_prob: shadowProb == null ? null : r3(shadowProb),
       model_weight:r3(w), raw_disagreement:rawDisagree!=null?r3(rawDisagree):null,
       spread_line:n(g.spread_line), total_line:n(g.total_line),
       // head-to-head component comparison (context, not an input to model_prob)

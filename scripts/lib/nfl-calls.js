@@ -5,10 +5,11 @@
  *
  *   Moneyline  a team Leo gives MORE than 60%, priced better than -230.
  *              -230 or more expensive is a PASS (Lynold: too much at stake).
- *   Spread     Leo's margin 1.0+ point off the line, on the side his margin
- *              favours. PASS when the margin model and the win-chance model
- *              pick different winners (they are separate models; when they
- *              disagree neither is trusted).
+ *   Spread     From the Nov 22 slate (DEC-20261120-02): Leo's margin
+ *              (leo-nflmargin-v2) 1.5+ points off the line, and only on the
+ *              team Leo's win chance favours; otherwise PASS. Before Nov 22:
+ *              1.0+ point off the line on the side the v1 margin favours,
+ *              PASS when the margin and the win chance picked different winners.
  *   Total      INFORMATION ONLY from 2026-11-19 (DEC-20261119-01, Lynold):
  *              no backtest edge (sides about 50% at every gap), so Leo's
  *              projected total is shown but never called or graded, and the
@@ -36,6 +37,10 @@ const RULES = {
   ML_MIN_PROB: 0.60,       // strictly above
   ML_PRICE_LIMIT: -230,    // -230 and more expensive: PASS
   SPREAD_FLOOR: 1.0,
+  // From the Nov 22 slate (DEC-20261120-02, leo-nflmargin-v2): 1.5+ points off the line,
+  // and the call must be on the team Leo's win chance favours (the backtested rule).
+  SPREAD_V2_FROM: "2026-11-22",
+  SPREAD_V2_FLOOR: 1.5,
   TOTAL_FLOOR: 1.5,
   TOTAL_CAP: 7.0,
   TOTAL_CALLS: false       // DEC-20261119-01: totals are information only
@@ -72,7 +77,13 @@ function calls(g) {
     const gap = margin - sLine;
     const side = gap > 0 ? home : away;
     const marginWinner = margin > 0 ? home : margin < 0 ? away : null;
-    if (Math.abs(gap) < RULES.SPREAD_FLOOR) out.spread = { call: null, gap: r1(gap), pass: `Leo within ${RULES.SPREAD_FLOOR} point of the line`, short: "too close to the line" };
+    const v2 = String(g.date || "") >= RULES.SPREAD_V2_FROM;
+    if (v2) {
+      if (Math.abs(gap) < RULES.SPREAD_V2_FLOOR) out.spread = { call: null, gap: r1(gap), pass: `Leo within ${RULES.SPREAD_V2_FLOOR} points of the line`, short: "too close to the line" };
+      else if (g.pick && side !== g.pick) out.spread = { call: null, gap: r1(gap), pass: `Leo's margin points to ${side}, his win chance to ${g.pick}`, short: "models disagree" };
+      else out.spread = { call: side, gap: r1(gap), line: teamLine(side, home, sLine), label: `${side} ${teamLine(side, home, sLine)}` };
+    }
+    else if (Math.abs(gap) < RULES.SPREAD_FLOOR) out.spread = { call: null, gap: r1(gap), pass: `Leo within ${RULES.SPREAD_FLOOR} point of the line`, short: "too close to the line" };
     else if (g.pick && marginWinner && marginWinner !== g.pick) out.spread = { call: null, gap: r1(gap), pass: `Leo's models disagree on the winner`, short: "models disagree" };
     else out.spread = { call: side, gap: r1(gap), line: teamLine(side, home, sLine), label: `${side} ${teamLine(side, home, sLine)}` };
   }
