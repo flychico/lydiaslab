@@ -64,17 +64,22 @@ function render(file, id, out) {
   return j;
 }
 
-function bodies(post, note, who) {
-  // "Players to use" for the ChatGPT card: Leo's pick of a healthy star per team (Lynold, Nov 19).
-  const pl = who ? `Players to use: ${who}` : "";
-  const text = (note ? note + "\n\n" : "") + post.text + "\n\nSave the image and post it with the text above." + (pl ? "\n\nFor the ChatGPT card: " + pl : "");
+function bodies(post, note, gpt) {
+  // One block to copy into the "Leo cards" ChatGPT project (Lynold, Nov 20: "if i copy the text from
+  // the email and send it to chat, chat would know what graphic to make"). Same words as latest.txt.
+  const text = (note ? note + "\n\n" : "") + "POST TEXT FOR X:\n\n" + post.text +
+    "\n\nCOPY THIS INTO CHATGPT (Leo cards project) FOR THE GRAPHIC:\n\n" + gpt +
+    "\n\nLeo's own graphic is attached as a backup.";
+  const box = "border:1px solid #D9CFBD;padding:14px;white-space:pre-wrap;font-family:Arial,sans-serif";
   const html = `<!doctype html><html><head><meta name="color-scheme" content="light only"></head>
 <body style="margin:0;background:#FFFFFF" bgcolor="#FFFFFF"><table width="100%" cellpadding="0" cellspacing="0" bgcolor="#FFFFFF"><tr><td style="padding:16px">
 <table cellpadding="0" cellspacing="0" style="max-width:640px;width:100%;font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#1F2329">
 ${note ? `<tr><td style="padding:0 0 12px;font-weight:bold;color:#7A5E12">${esc(note)}</td></tr>` : ""}
-<tr><td style="border:1px solid #D9CFBD;padding:14px;white-space:pre-wrap;font-family:Arial,sans-serif">${linkify(post.text)}</td></tr>
-<tr><td style="padding:12px 0 0;color:#3D3830">Save the image and post it with the text above.</td></tr>
-${pl ? `<tr><td style="padding:12px 0 0;color:#3D3830"><b>For the ChatGPT card:</b> ${esc(pl)}</td></tr>` : ""}
+<tr><td style="padding:0 0 6px;font-weight:bold;color:#1A2535">Post text for X</td></tr>
+<tr><td style="${box}">${linkify(post.text)}</td></tr>
+<tr><td style="padding:18px 0 6px;font-weight:bold;color:#1A2535">Copy this into ChatGPT for the graphic</td></tr>
+<tr><td style="${box};background:#F7F4EE" bgcolor="#F7F4EE">${esc(gpt)}</td></tr>
+<tr><td style="padding:12px 0 0;color:#3D3830">Leo's own graphic is attached as a backup.</td></tr>
 </table></td></tr></table></body></html>`;
   return { text, html };
 }
@@ -85,27 +90,37 @@ ${pl ? `<tr><td style="padding:12px 0 0;color:#3D3830"><b>For the ChatGPT card:<
 // thats going to charge me per image when i have chatgpt pro?"; chose to test a
 // ChatGPT scheduled task. ndhorizon.com/data/<sport>/social/latest.txt holds the
 // newest post of the newest date, as the daily message of business/CHATGPT_VISUALS.md.
+function cardType(post) {
+  const noPick = post.kind === "picks" && (post.nopick || (post.lines || []).some(l => /^No (Leo )?picks? /i.test(l)));
+  return { noPick, type: post.parlay ? (post.kind === "picks" ? "Leo Parlay" : "Leo Parlay results") : post.kind !== "picks" ? "results" : noPick ? "no picks" : "picks" };
+}
+// The daily message of business/CHATGPT_VISUALS.md PART 2, ready to paste.
+function chatMessage(sport, date, post) {
+  const { noPick, type } = cardType(post);
+  const who = players(sport, date, post);
+  return [
+    "Make today's Leo card. Card type: " + type + ".",
+    who ? "Players to use: " + who : null,
+    noPick && post.note ? "Reason line: " + post.note : null,
+    "Post:",
+    post.text,
+  ].filter(x => x != null).join("\n");
+}
 function writeLatest(sport, date, doc) {
   const posts = (doc.posts || []).filter(p => p.text);
   if (!posts.length) return;
   const f = path.join(ROOT, "data", sport, "social", "latest.txt");
   try { const old = fs.readFileSync(f, "utf8"); const m = /^Date: (\d{4}-\d{2}-\d{2})/m.exec(old); if (m && m[1] > date) return; } catch (e) {}
   const post = posts[posts.length - 1];
-  const noPick = post.kind === "picks" && (post.nopick || (post.lines || []).some(l => /^No (Leo )?picks? /i.test(l)));
-  const type = post.kind !== "picks" ? "results" : noPick ? "no picks" : "picks";
-  const who = players(sport, date, post);
   const out = [
     `Date: ${date}`,
     `Post: ${sport.toUpperCase()} ${post.id}`,
     `Updated: ${new Date().toISOString().replace(/\.\d+Z$/, "Z")}`,
     "",
-    "Make today's Leo card. Card type: " + type + ".",
-    who ? "Players to use: " + who : null,
-    noPick && post.note ? "Reason line: " + post.note : null,
-    "Post:",
-    post.text,
+    chatMessage(sport, date, post),
     "",
-  ].filter(x => x != null).join("\n") + "\n";
+  ].join("\n");
+  fs.mkdirSync(path.dirname(f), { recursive: true });
   fs.writeFileSync(f, out);
 }
 
@@ -162,7 +177,7 @@ function postBy(sport, date, post) {
       let card;
       try { card = render(file, post.id, out); } catch (e) { console.log(`::warning::render failed for ${subject}: ${e.message}`); continue; }
       if (card.overflow) console.log(`::warning::${subject}: graphic overflows, sent anyway`);
-      const { text, html } = bodies(post, note, players(sport, date, post));
+      const { text, html } = bodies(post, note, chatMessage(sport, date, post));
       const res = await sendOne({
         from: FROM, to: [TO], subject, text, html,
         attachments: [{ filename: `${sport}-${date}-${post.id}.jpg`, content: fs.readFileSync(out).toString("base64") }],
