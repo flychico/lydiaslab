@@ -9,7 +9,10 @@ const path = require("path");
 
 const ORIGIN = "https://ndhorizon.com";
 const SKIP = new Set([".git", ".github", "node_modules", "data", "scripts", "css", "js",
-  "cloudflare-worker", "img", "images", "assets", "fonts"]);
+  "cloudflare-worker", "img", "images", "assets", "fonts",
+  // Market Desk (/research/) stays out of the sitemap while nothing on the site links it, so Google
+  // spends its visits on game pages (Lynold, Nov 19, DEC-20261119-12). Add it back when it is linked.
+  "research"]);
 
 // Pages that stay on the site but are left out of the sitemap, so Google
 // spends its visits on pages people search for now. 2026-11-14 (Lynold, "Trim

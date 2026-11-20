@@ -109,6 +109,33 @@ function writeLatest(sport, date, doc) {
   fs.writeFileSync(f, out);
 }
 
+
+// When to post, in the subject line (Lynold, Nov 19: "tell me when to post them"; X posting stays manual).
+// Picks posts: before the first game starts. Results posts: whenever he can.
+function firstStart(sport, date) {
+  const r = f => { try { return JSON.parse(fs.readFileSync(path.join(ROOT, f), "utf8")); } catch (e) { return null; } };
+  const t = [];
+  if (sport === "nba" || sport === "parlay") { const c = r(`data/nba/picks-${date}.json`); for (const g of (c && c.games) || []) if (g.tip_utc) t.push(Date.parse(g.tip_utc)); }
+  if (sport === "nfl" || sport === "parlay") {
+    const l = r(`data/nfl/picks-${date}.json`);
+    for (const g of Array.isArray(l) ? l : []) if (g.date && /^\d{1,2}:\d{2}$/.test(g.kickoff || "")) {
+      const [h, m] = g.kickoff.split(":").map(Number);
+      const guess = Date.UTC(+g.date.slice(0, 4), +g.date.slice(5, 7) - 1, +g.date.slice(8, 10), h, m);
+      const et = new Date(guess).toLocaleString("en-US", { timeZone: "America/New_York", hour12: false, hour: "2-digit" });
+      t.push(guess + ((h - (+et % 24) + 24) % 24) * 36e5);
+    }
+  }
+  if (sport === "parlay") { const p = r(`data/parlay/${date}.json`); if (p && p.legs) return Math.min(...p.legs.map(l => Date.parse(l.start_utc)).filter(Boolean)); }
+  return t.length ? Math.min(...t) : null;
+}
+function postBy(sport, date, post) {
+  if (post.kind !== "picks") return "post when you can";
+  const t = firstStart(sport, date);
+  if (!t || isNaN(t)) return "post before the first game";
+  const when = new Date(t).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" });
+  return t > Date.now() ? `post before ${when} ET` : "games already started";
+}
+
 (async () => {
   for (const date of dates) {
     const file = path.join(ROOT, "data", sport, "social", `${date}.json`);
@@ -127,7 +154,7 @@ function writeLatest(sport, date, doc) {
         if (post.kind !== "picks" || prev.hash === h) continue;
         note = "This replaces the earlier picks email: a later read changed Leo's picks.";
       }
-      const subject = `Leo ${sport.toUpperCase()} post ${date} ${post.id}${note ? " (updated)" : ""}`;
+      const subject = `Leo ${sport.toUpperCase()} post ${date} ${post.id}${note ? " (updated)" : ""} · ${postBy(sport, date, post)}`;
       if (DRY) { console.log(`[dry] would send: ${subject}`); continue; }
       if (!KEY || !TO) { console.log("::warning::RESEND_API_KEY or AUDIT_EMAIL missing; post not sent"); return; }
       if (!ensurePlaywright()) return;
