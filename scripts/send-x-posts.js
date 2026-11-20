@@ -79,11 +79,42 @@ ${pl ? `<tr><td style="padding:12px 0 0;color:#3D3830"><b>For the ChatGPT card:<
   return { text, html };
 }
 
+
+// The ChatGPT scheduled task reads one fixed page per sport and draws the card
+// in Lynold's ChatGPT (Pro covers it). Lynold, Nov 19: "why would i do something
+// thats going to charge me per image when i have chatgpt pro?"; chose to test a
+// ChatGPT scheduled task. ndhorizon.com/data/<sport>/social/latest.txt holds the
+// newest post of the newest date, as the daily message of business/CHATGPT_VISUALS.md.
+function writeLatest(sport, date, doc) {
+  const posts = (doc.posts || []).filter(p => p.text);
+  if (!posts.length) return;
+  const f = path.join(ROOT, "data", sport, "social", "latest.txt");
+  try { const old = fs.readFileSync(f, "utf8"); const m = /^Date: (\d{4}-\d{2}-\d{2})/m.exec(old); if (m && m[1] > date) return; } catch (e) {}
+  const post = posts[posts.length - 1];
+  const noPick = post.kind === "picks" && (post.nopick || (post.lines || []).some(l => /^No (Leo )?picks? /i.test(l)));
+  const type = post.kind !== "picks" ? "results" : noPick ? "no picks" : "picks";
+  const who = players(sport, date, post);
+  const out = [
+    `Date: ${date}`,
+    `Post: ${sport.toUpperCase()} ${post.id}`,
+    `Updated: ${new Date().toISOString().replace(/\.\d+Z$/, "Z")}`,
+    "",
+    "Make today's Leo card. Card type: " + type + ".",
+    who ? "Players to use: " + who : null,
+    noPick && post.note ? "Reason line: " + post.note : null,
+    "Post:",
+    post.text,
+    "",
+  ].filter(x => x != null).join("\n") + "\n";
+  fs.writeFileSync(f, out);
+}
+
 (async () => {
   for (const date of dates) {
     const file = path.join(ROOT, "data", sport, "social", `${date}.json`);
     if (!fs.existsSync(file)) { console.log(`${sport} ${date}: no social file`); continue; }
     const doc = JSON.parse(fs.readFileSync(file, "utf8"));
+    try { writeLatest(sport, date, doc); } catch (e) { console.log("::warning::latest card page: " + e.message); }
     const logFile = path.join(ROOT, "data", "email-log", `x-posts-${sport}-${date}.json`);
     let log = { sport, date, sent: {} };
     try { log = JSON.parse(fs.readFileSync(logFile, "utf8")); log.sent = log.sent || {}; } catch (e) {}
