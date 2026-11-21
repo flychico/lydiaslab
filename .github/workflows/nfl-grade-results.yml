@@ -248,7 +248,7 @@ jobs:
           # Sunday NBA and NFL runs push in the same minutes; retry instead of
           # losing the grade (the NBA side lost a card this way on Nov 15).
           for i in 1 2 3 4 5; do
-            if git pull --rebase -X theirs && git push; then exit 0; fi
+            if git pull --rebase --autostash -X theirs && git push; then exit 0; fi
             git rebase --abort 2>/dev/null || true
             sleep $((i * 6))
           done
