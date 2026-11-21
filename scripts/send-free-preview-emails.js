@@ -88,7 +88,7 @@ function buildEmail({ brief, picks }) {
     <p><strong>${games.length}</strong> games on today's slate. The model labeled <strong>${official.length}</strong> official pick${official.length === 1 ? "" : "s"} today${official.length === 0 ? " — discipline is the product, not volume" : ""}.</p>
     ${gameLines ? `<ul style="padding-left:18px">${gameLines}</ul>` : ""}
     <p><a href="https://ndhorizon.com/previews/${DATE}.html" style="color:#4d9fdc;font-weight:bold">Read every model read, price, and reasoning free →</a></p>
-    <p style="font-size:13px;color:#888">Want the picks delivered with full analysis and market-movement notes? <a href="https://ndhorizon.com/membership/" style="color:#4d9fdc">Founding membership is $30/mo</a> — rate locked for as long as you stay.</p>
+    <p style="font-size:13px;color:#888">Want the picks delivered with full analysis and market-movement notes? <a href="https://ndhorizon.com/membership/" style="color:#4d9fdc">Leo membership: $10 a week or $50 a month</a>, cancel anytime.</p>
     <p style="font-size:12px;color:#aaa;margin-top:24px;border-top:1px solid #eee;padding-top:10px">
       Leo — analysis and education only, not betting advice. 1-800-MY-RESET.<br>
       To unsubscribe, reply with "unsubscribe".

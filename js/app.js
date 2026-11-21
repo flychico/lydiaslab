@@ -237,7 +237,7 @@ function renderNav(active) {
         }
         return '<a class="navlink' + (isActive(l[0]) ? ' active' : '') + '" href="' + l[0] + '">' + l[1] + '</a>';
       }).join("")
-    + '<a class="navlink navlink-cta' + (current === "/membership/" ? ' active' : '') + '" href="/membership/">Join $30/mo</a>'
+    + '<a class="navlink navlink-cta' + (current === "/membership/" ? ' active' : '') + '" href="/membership/">Join from $10</a>'
     + '</div>'      // .nav-links
     + '</div>';     // .nav-inner
 
