@@ -294,22 +294,63 @@ function biggestAbsence(m) {
   return `The biggest absence is ${posName} ${B.x.player}, ${st} for the ${city(B.team)} after ${vol} in ${B.u.games} games; that moves the projections for the ${city(B.team)} players, not the win chance.`;
 }
 // The biggest driver of Leo's number in one sentence (also used on the week card).
+// The biggest reason for Leo's number, in plain words (Lynold, Nov 21: the week page repeated "The offenses
+// are the biggest reason for Leo's number" on 6 games and "worth about 10 points of win chance" meant nothing
+// to a reader). The sentence names the biggest input (drivers() shares Leo's edge above 50% out among the
+// inputs) and Leo's chance, without points. Several wordings per kind so a week page reads like writing.
+// Wordings are handed out in turn within one build (each game keeps the one it got), so the games on a
+// week page, built in one run, do not repeat a wording until a kind has more games than wordings.
+const WORDING = new Map(), TURN = {};
+function pickOf(list, key, kind) {
+  const id = kind + "|" + key;
+  if (!WORDING.has(id)) { TURN[kind] = (TURN[kind] || 0); WORDING.set(id, TURN[kind]++); }
+  return list[WORDING.get(id) % list.length];
+}
 function biggestDriver(m) {
-  const g = m.leo && m.leo.game, out = [];
+  const g = m.leo && m.leo.game;
   const D = g && g.pick ? driversAny(m) : null;
-  if (D) {
-    const k = ["qb_diff", "off_diff", "def_diff", "home"].sort((a, b) => Math.abs(D.pts[b] || 0) - Math.abs(D.pts[a] || 0))[0];
-    const p = D.pts[k], n = Math.round(Math.abs(p)), team = p > 0 ? m.home : m.away, other = team === m.home ? m.away : m.home;
-    if (n >= 1) {
-      const worth = `worth about ${n} point${n === 1 ? "" : "s"} of win chance to the ${city(team)}`;
-      const hq = D.row.home_qb_name || m.home_qb_name, aq = D.row.away_qb_name || m.away_qb_name;
-      if (k === "qb_diff" && hq && aq) out.push(`The quarterbacks are the biggest reason for Leo's number: ${team === m.home ? hq : aq} rates ahead of ${team === m.home ? aq : hq}, ${worth}.`);
-      else if (k === "off_diff") out.push(`The offenses are the biggest reason for Leo's number: the ${city(team)} rate ahead of the ${city(other)} with the ball, ${worth}.`);
-      else if (k === "def_diff") out.push(`The defenses are the biggest reason for Leo's number: the ${city(team)} rate ahead of the ${city(other)} without the ball, ${worth}.`);
-      else if (k === "home") out.push(`Home field is the biggest part of Leo's number for the ${city(m.home)} against the ${city(m.away)}, about ${n} point${n === 1 ? "" : "s"} of win chance, because the teams otherwise rate close.`);
-    }
+  if (!D) return "";
+  const k = ["qb_diff", "off_diff", "def_diff", "home"].sort((a, b) => Math.abs(D.pts[b] || 0) - Math.abs(D.pts[a] || 0))[0];
+  const p = D.pts[k], n = Math.round(Math.abs(p));
+  if (n < 1) return "";
+  const team = p > 0 ? m.home : m.away, other = team === m.home ? m.away : m.home;
+  const fav = g.pick, P = Math.round(g.prob * 100), E = P - 50;
+  const T = city(team), O = city(other), F = city(fav);
+  const hq = D.row.home_qb_name || m.home_qb_name, aq = D.row.away_qb_name || m.away_qb_name;
+  const myQb = team === m.home ? hq : aq, theirQb = team === m.home ? aq : hq;
+  const key = m.game_id || m.matchup || (m.away + m.home + m.date);
+  if (k === "qb_diff" && !(hq && aq)) return "";
+  // The input favours the underdog: say it keeps the game closer.
+  if (team !== fav) {
+    const what = k === "qb_diff" ? `${myQb} rates ahead of ${theirQb}` : k === "off_diff" ? `the ${T} have the better offense` : k === "def_diff" ? `the ${T} have the better defense` : `the ${T} are at home`;
+    return `Leo has the ${F} at ${P}%, but ${what}, which keeps it closer.`;
   }
-  return out[0] || "";
+  // Lynold, Nov 21: no points in the sentence, just the reason (he chose "Simpler wording").
+  const S = {
+    qb_diff: [
+      `${myQb} over ${theirQb} is the biggest reason Leo has the ${T} at ${P}%.`,
+      `Leo's ${P}% on the ${T} starts at quarterback: ${myQb} rates well ahead of ${theirQb}.`,
+      `The quarterbacks decide this one for Leo. ${myQb} against ${theirQb} is why the ${T} sit at ${P}%.`,
+      `Most of Leo's lean comes from under center, with ${myQb} rated well above ${theirQb}. The ${T} are at ${P}%.`,
+      `Leo likes the ${T} at ${P}%, mainly because ${myQb} is the better quarterback than ${theirQb}.`],
+    off_diff: [
+      `The ${T} offense is the biggest reason Leo has them at ${P}%.`,
+      `With the ball, the ${T} rate clearly ahead of the ${O}. That is why Leo has them at ${P}%.`,
+      `Leo's ${P}% on the ${T} starts with their offense.`,
+      `Scoring is the gap here: the ${T} offense rates well ahead of the ${O}, so Leo has them at ${P}%.`,
+      `Leo likes the ${T} at ${P}%, mainly because they move the ball better than the ${O}.`],
+    def_diff: [
+      `The ${T} defense is the biggest reason Leo has them at ${P}%.`,
+      `Without the ball, the ${T} rate clearly ahead of the ${O}. That is why Leo has them at ${P}%.`,
+      `Leo's ${P}% on the ${T} starts with their defense.`,
+      `Stopping the other side is the gap here: the ${T} defense rates well ahead, so Leo has them at ${P}%.`,
+      `Leo likes the ${T} at ${P}%, mainly because their defense is the better unit.`],
+    home: [
+      `The teams rate close, so home field is the biggest reason Leo has the ${T} at ${P}%.`,
+      `Take away home field and this is close to even. Playing at home puts the ${T} at ${P}%.`,
+      `Leo's ${P}% on the ${T} leans on home field; otherwise these teams rate about the same.`]
+  };
+  return pickOf(S[k], key, k);
 }
 function opening(m) {
   const out = [], d = biggestDriver(m);
