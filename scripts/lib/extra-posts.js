@@ -27,7 +27,7 @@ function isDog(g) {
   const s = side(g), mine = s === "home" ? g.mlHome : g.mlAway, other = s === "home" ? g.mlAway : g.mlHome;
   return Number.isFinite(+mine) && Number.isFinite(+other) && mine !== "" && other !== "" && +mine > 0 && +other < 0;
 }
-const compose = (title, sub, lines, link, tags) => [title, sub, "", ...lines.map(l => `• ${l}`), "", bare(link), tags.join(" ")].filter(x => x != null).join("\n");
+const compose = (title, sub, lines, link, tags) => tail([title, sub, "", ...lines.map(l => `• ${l}`)], link, tags);
 
 function readsPost({ sport, emoji, dayTitle, games, link, tags, now }) {
   if (!games.length) return null;
@@ -67,21 +67,29 @@ function spotlightPosts({ emoji, games, n = 3, tags, linkFor, now }) {
     const line = `${f.team} to win (${pct(f.p)})`;
     return { id, kind: "reads", hero: "Leo's read", created_at: now, tip_utc: g.tip, game_id: g.id,
       header: title, lines: [line], record: "", facts: [g.why], hashtags: tags([g.awayCode, g.homeCode]),
-      text: [title, `Leo has the ${f.team} at ${pct(f.p)}.`, g.why, "", bare(link), tags([g.awayCode, g.homeCode]).join(" ")].join("\n"), link };
+      text: tail([title, `Leo has the ${f.team} at ${pct(f.p)}.`, g.why], link, tags([g.awayCode, g.homeCode])), link };
   });
 }
 
-/** results: [{winner, loser, code, right}] in start order. */
+/** results: [{leo, opp, code, right, my, their, beatMarket}] in start order. Leo's team is written first with the
+ * final score, so a miss reads plainly ("❌ Pistons 102, Raptors 105"), not as if Leo's team won (Lynold, Nov 21). */
 function readsResultsPost({ emoji, dayTitle, results, link, tags, now }) {
   if (!results.length) return null;
   const right = results.filter(r => r.right).length;
   const sorted = [...results.filter(r => r.right), ...results.filter(r => !r.right)];
-  const lines = sorted.map(r => `${r.leo} over ${r.opp} ${r.right ? "✅" : "❌"}`);
+  const line = r => Number.isFinite(r.my) && Number.isFinite(r.their) ? `${r.right ? "✅" : "❌"} ${r.leo} ${r.my}, ${r.opp} ${r.their}` : `${r.right ? "✅" : "❌"} ${r.leo} over ${r.opp}`;
+  const lines = sorted.map(line);
+  const upsets = sorted.filter(r => r.right && r.beatMarket).map(r => r.leo);
   const title = `${dayTitle}: LEO'S READS ${emoji}`;
   const rec = `Leo had ${right} of ${results.length} winners`;
-  const codes = sorted.filter(r => r.right).map(r => r.code);
-  return { id: "rday", kind: "results", created_at: now, header: title, lines, record: `${right} of ${results.length}`, facts: [], hashtags: tags(codes),
-    text: [title, "", ...lines, "", rec, bare(link), tags(codes).join(" ")].join("\n"), link };
+  const call = upsets.length ? `Called the ${upsets.join(" and ")} as underdogs` : null;
+  const tg = tags(upsets.length ? results.filter(r => upsets.includes(r.leo)).map(r => r.code) : []);
+  return { id: "rday", kind: "results", created_at: now, header: title, lines, record: `${right} of ${results.length}`, facts: call ? [call] : [], hashtags: tg,
+    text: tail([title, "", ...lines, "", rec, call], link, tg), link };
+}
+/** Hashtags, then the link alone on the last line, so nothing can run into the link when it is pasted into X. */
+function tail(head, link, tags) {
+  return [...head.filter(x => x != null), "", tags.join(" "), "", bare(link)].join("\n").replace(/\n{3,}/g, "\n\n");
 }
 
 // ---------- hype voice (Lynold, Nov 20, DEC-20261120-05: "example of what i want our voice to sound like") ----------
@@ -96,12 +104,12 @@ const WITH_LEO = "🔥 if you're with Leo";
 /** The night's strongest pick as its own post. Label only: graded at 1 unit like every pick. */
 function nukePost({ title, line, link, tags, now, tip }) {
   return { id: "nuke", kind: "picks", hero: "Leo's nuke", created_at: now, tip_utc: tip || null, header: title, lines: [line], record: "", facts: [], hashtags: tags,
-    text: [title, "", line, "", WITH_LEO, bare(link), tags.join(" ")].join("\n"), link };
+    text: tail([title, "", line, "", WITH_LEO], link, tags), link };
 }
 /** Bleacher Report style stat line: headline, one stat per line, the result, the game page. */
 function statPost({ headline, stats, result, link, tags, now, player, team }) {
   return { id: "stat", kind: "stat", hero: headline.replace(/\s*\S+$/u, ""), created_at: now, header: headline, lines: stats, record: "", facts: result ? [result] : [],
-    hashtags: tags, player, team, text: [headline, "", ...stats, "", result || null, bare(link), tags.join(" ")].filter(x => x != null).join("\n"), link };
+    hashtags: tags, player, team, text: tail([headline, "", ...stats, "", result || null], link, tags), link };
 }
 
-module.exports = { readsPost, upsetPost, spotlightPosts, readsResultsPost, isDog, fav, opener, nukePost, statPost, WITH_LEO };
+module.exports = { tail, readsPost, upsetPost, spotlightPosts, readsResultsPost, isDog, fav, opener, nukePost, statPost, WITH_LEO };

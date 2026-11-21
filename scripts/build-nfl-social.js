@@ -366,7 +366,9 @@ function qbFactsPost(date) {
 function readsResults(date, rvGames) {
   const results = rvGames.filter(g => g.leo && g.leo.pick && g.leo_right_winner != null).map(g => {
     const opp = g.leo.pick === g.home ? g.away : g.home;
-    return { leo: nick(g.leo.pick), opp: nick(opp), code: g.leo.pick, right: !!g.leo_right_winner };
+    const sc = g.score && typeof g.score === "object" ? g.score : {};
+    const my = g.leo.pick === g.home ? +sc.home : +sc.away, their = g.leo.pick === g.home ? +sc.away : +sc.home;
+    return { leo: nick(g.leo.pick), opp: nick(opp), code: g.leo.pick, right: !!g.leo_right_winner, my, their };
   });
   return EX.readsResultsPost({ emoji: "🏈", dayTitle: `NFL ${dayTitle(date).toUpperCase()}`, results, link: utm(`${SITE}/nfl/results/`, "rday", date), tags: hashtags, now: new Date(NOW()).toISOString() });
 }

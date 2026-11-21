@@ -34,7 +34,8 @@ function stable(sport, id, dest) {
   if (sport === "leo") return `${SITE}/parlay/`;
   if (STABLE[id]) return STABLE[id](sport);
   if (id === "day" || id === "rday" || /^wave-/.test(id)) return `${SITE}/${sport}/results/`;
-  return /^https:\/\/ndhorizon\.com\//.test(dest) && !/\/x\//.test(dest) ? dest.replace(/\?.*$/, "") : `${SITE}/${sport}/previews/`;
+  const d = /^\//.test(String(dest || "")) ? SITE + dest : String(dest || "");   // game pages can come as /nba/... paths
+  return /^https:\/\/ndhorizon\.com\//.test(d) && !/\/x\//.test(d) ? d.replace(/\?.*$/, "") : `${SITE}/${sport}/previews/`;
 }
 function short(sport, date, id, dest) {
   return stable(sport, id, dest);

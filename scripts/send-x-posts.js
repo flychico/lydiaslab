@@ -42,7 +42,8 @@ const PW_DIR = "/tmp/leo-pw";
 const hashOf = p => crypto.createHash("sha1").update(JSON.stringify(p.lines || p.text || "")).digest("hex").slice(0, 12);
 const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 // Links shown as clean anchors so Gmail never rewrites the visible address (Lynold copies it into X).
-const linkify = s => esc(s).replace(/https:\/\/ndhorizon\.com\/[^\s<]*/g, u => `<a href="${u}" style="color:#1A4E8A">${u}</a>`);
+// Bare ndhorizon.com links become real anchors too, so Gmail never stretches a link into the next line's hashtag (Nov 21).
+const linkify = s => esc(s).replace(/(https:\/\/)?ndhorizon\.com\/[^\s<#]*/g, u => `<a href="${u.startsWith("http") ? u : "https://" + u}" style="color:#1A4E8A">${u}</a>`);
 
 let pwReady = false;
 function ensurePlaywright() {

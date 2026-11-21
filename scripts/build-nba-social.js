@@ -76,7 +76,7 @@ const has = id => doc.posts.some(p => p.id === id);
 
 function hashtags(codes) {
   const out = [TAGS.picks_tag || "#NBAPicks"];
-  for (const c of codes) { const t = (TAGS.teams[c] || {}).primary; if (t && !out.includes(t) && out.length < 4) out.push(t); }
+  for (const c of codes) { const t = (TAGS.teams[c] || {}).primary; if (t && !out.includes(t) && out.length < 2) out.push(t); }   // the sport tag and one team (Nov 21: four looked like spam)
   return out;
 }
 // Same shape as the NFL posts (Lynold, NFL chat 2026-11-16): header, plain record, lines with
@@ -87,8 +87,7 @@ const tagged = (url, id) => XL.short("nba", DATE, id, url);
 // Lynold, 2026-11-18: no "21+", no "Every call graded, misses included", no labels like "miss: variance".
 // Header, the lines, one plain record line, the short link (shown without https://), the hashtags.
 function compose(header, _open, lines, recordLine, tags, link) {
-  const parts = [header, "", ...lines, "", recordLine || null, String(link).replace(/^https?:\/\//, ""), tags.join(" ")];
-  return parts.filter(x => x !== null).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  return EXV.tail([header, "", ...lines, "", recordLine || null], link, tags).trim();   // link last (Nov 21)
 }
 // One plain line (Lynold, 2026-11-18, "Bare minimum"): "0-2 tonight, 15-10 on the season".
 function plainRecord(mode, counted, hit, n, season) {
@@ -149,7 +148,7 @@ function picksPost() {
   }
   return { id: "picks", kind: "picks", created_at: NOW.toISOString(), header, lines, record: "", facts, hashtags: tags, nopick: kind === "reads", note,
     hero: nPicks === 1 ? "Leo's nuke" : undefined,
-    text: [title, "", ...lines.map(l => kind === "picks" && nPicks > 1 ? `• ${l}` : l), "", kind === "picks" ? EXV.WITH_LEO : null, String(link).replace(/^https?:\/\//, ""), tags.join(" ")].filter(x => x != null).join("\n"), link, items };
+    text: EXV.tail([title, "", ...lines.map(l => kind === "picks" && nPicks > 1 ? `• ${l}` : l), "", kind === "picks" ? EXV.WITH_LEO : null], link, tags), link, items };
 }
 
 /* ---------- results posts ---------- */
@@ -215,7 +214,7 @@ function resultsPost(id, gids, last) {
       .map(r => ({ result: r.pick_result, units: +r.pick_units }));
     season = recordOf(all).short;
   }
-  return { id, kind: "results", created_at: NOW.toISOString(), header, lines, record: plainRecord(mode, counted, hit, items.length, season), season: "", facts: [], hashtags: tags,
+  return { id, kind: "results", mode, created_at: NOW.toISOString(), header, lines, record: plainRecord(mode, counted, hit, items.length, season), season: "", facts: [], hashtags: tags,
     text: compose(header, null, lines, plainRecord(mode, counted, hit, items.length, season), tags, link), link };
 }
 
@@ -242,7 +241,9 @@ function extraPosts() {
 function readsResults() {
   const results = games.map(g => { const r = ledger.get(String(g.game_id)); if (!r || r.leo_winner_correct === "") return null;
     const s = +r.leo_p_home >= 0.5 ? "home" : "away";
-    return { leo: nick(g, s), opp: nick(g, s === "home" ? "away" : "home"), code: g[s], right: r.leo_winner_correct === "1" }; }).filter(Boolean);
+    const o = s === "home" ? "away" : "home";
+    return { leo: nick(g, s), opp: nick(g, o), code: g[s], right: r.leo_winner_correct === "1", my: +r[s + "_score"], their: +r[o + "_score"],
+      beatMarket: r.leo_winner_correct === "1" && r.mkt_winner_correct === "0" }; }).filter(Boolean);
   return EX.readsResultsPost({ emoji: "🏀", dayTitle: `NBA ${weekday(DATE).toUpperCase()}`, results, link: tagged("https://ndhorizon.com/nba/results/", "rday"), tags: hashtags, now: NOW.toISOString() });
 }
 
@@ -295,15 +296,17 @@ if (ONLY !== "results" && (!has("nuke") || (firstTip && NOW < firstTip))) {
 if (ONLY !== "results" && !has("reads")) {
   for (const p of extraPosts()) if (!has(p.id)) { doc.posts.push(p); changed.push(p.id); }
 }
+// Waves (Nov 21): post only a wave that settles a Leo Pick and is not the last of the night; the last
+// one is the day post, and the reads are all in the one reads results post at the end (no repeats).
 for (const w of ONLY === "picks" ? [] : waves) {
-  if (has(w.id)) continue;
-  const p = resultsPost(w.id, w.games.map(g => String(g.game_id)), !w.still_playing);
-  if (p) { doc.posts.push(p); changed.push(w.id); }
+  if (has(w.id) || !w.still_playing) continue;
+  const p = resultsPost(w.id, w.games.map(g => String(g.game_id)), false);
+  if (p && p.mode === "picks") { doc.posts.push(p); changed.push(w.id); }
 }
 const allGraded = games.length && games.every(g => ledger.has(String(g.game_id)));
 if (ONLY !== "picks" && !has("day") && allGraded) {
   const p = resultsPost("day", games.map(g => String(g.game_id)), true);
-  if (p) { doc.posts.push(p); changed.push("day"); }
+  if (p && p.mode === "picks") { doc.posts.push(p); changed.push("day"); }   // no-pick nights: the reads results post covers every game
 }
 if (ONLY !== "picks" && !has("stat") && allGraded) {
   const p = statOfNight();
@@ -311,8 +314,7 @@ if (ONLY !== "picks" && !has("stat") && allGraded) {
 }
 if (ONLY !== "picks" && !has("rday") && allGraded) {
   const day = doc.posts.find(p => p.id === "day");
-  const covered = day && (day.lines || []).length >= games.length && (day.lines || []).every(l => / over /.test(l));
-  const p = covered ? null : readsResults();
+  const p = readsResults();   // always the one reads post at the end; the day post now carries picks only
   if (p) { doc.posts.push(p); changed.push("rday"); }
 }
 if (!changed.length) { console.log(`NBA social ${DATE}: nothing new.`); process.exit(0); }
