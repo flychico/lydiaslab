@@ -325,6 +325,44 @@ function extraPosts(date) {
     EX.upsetPost({ emoji: "🏈", dayTitle: title, games: open, link: utm(weekPage, "upset", date), tags: hashtags, now }),
     ...EX.spotlightPosts({ emoji: "🏈", games: open, tags: hashtags, now, linkFor: (g, id) => utm(g.url, id, date) })].filter(Boolean);
 }
+// QB matchup facts (Lynold, Nov 20: "Bo Nix has never lost to the Raiders, Purdy struggles against the
+// Vikings"; DEC-20261120-08). Content only, never a pick: each starter's record as the starting QB against
+// this opponent, from nflverse games.csv, the notable ones only (2+ starts and lopsided, or 5+ starts).
+const REN = { OAK: "LV", SD: "LAC", STL: "LA", LAR: "LA" };
+function qbFactsPost(date) {
+  const picks = readJson(path.join(DIR, `picks-${date}.json`));
+  if (!Array.isArray(picks) || !picks.length) return null;
+  let rows;
+  try { rows = parseCsv(curl("https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv")); } catch (e) { return null; }
+  const t = x => REN[x] || x;
+  const facts = [];
+  for (const g of picks) {
+    if (!kickUtc(date, g.kickoff) || Date.parse(kickUtc(date, g.kickoff)) <= NOW()) continue;
+    for (const [qb, team, opp] of [[g.away_qb, g.away, g.home], [g.home_qb, g.home, g.away]]) {
+      if (!qb) continue;
+      let w = 0, l = 0;
+      for (const r of rows) {
+        if (r.home_score === "" || !["REG", "WC", "DIV", "CON", "SB"].includes(r.game_type)) continue;
+        const side = r.home_qb_name === qb ? "home" : r.away_qb_name === qb ? "away" : null; if (!side) continue;
+        if (t(r[(side === "home" ? "away" : "home") + "_team"]) !== opp) continue;
+        const my = +r[side + "_score"], th = +r[(side === "home" ? "away" : "home") + "_score"];
+        if (my > th) w++; else if (my < th) l++;
+      }
+      const n = w + l, rate = n ? w / n : 0.5;
+      if (n >= 2 && (rate >= 0.75 || rate <= 0.25) || n >= 5) facts.push({ qb, team, opp, w, l, score: n * Math.abs(rate - 0.5) + (rate <= 0.25 ? 0.3 : 0) });   // losing records draw more reaction
+    }
+  }
+  if (!facts.length) return null;
+  facts.sort((a, b) => b.score - a.score);
+  const top = facts.slice(0, 6);
+  const lines = top.map(f => `${f.qb} ${f.w}-${f.l} vs ${nick(f.opp)}`);
+  const week = picks[0].week, title = `WEEK ${week} QB MATCHUPS 🤯`;
+  const tags = hashtags(top.map(f => f.team));
+  const link = utm(`${SITE}/nfl/previews/`, "picks", date);
+  return { id: "qbfacts", kind: "reads", hero: "QB matchups", note: "Starting QBs vs this opponent", created_at: new Date(NOW()).toISOString(),
+    tip_utc: picks.map(g => kickUtc(date, g.kickoff)).filter(Boolean).sort()[0], header: title, lines, record: "", facts: [], hashtags: tags,
+    text: [title, "", ...top.map(f => `• ${f.qb} is ${f.w}-${f.l} vs the ${nick(f.opp)}`), "", bare(link), tags.join(" ")].join("\n"), link };
+}
 function readsResults(date, rvGames) {
   const results = rvGames.filter(g => g.leo && g.leo.pick && g.leo_right_winner != null).map(g => {
     const opp = g.leo.pick === g.home ? g.away : g.home;
@@ -368,6 +406,7 @@ function build(date) {
   if (pk && JSON.stringify(pk) !== before) { set(pk); changed = true; }
 
   if (!has("reads")) for (const p of extraPosts(date)) if (!has(p.id)) { set(p); changed = true; }
+  if (!has("qbfacts") && has("reads")) { const q = qbFactsPost(date); if (q) { set(q); changed = true; } }
   // Strongest moneyline call as its own nuke post when there are 2+ calls (label only, graded at 1 unit).
   const pkNow = has("picks");
   if (pkNow && (pkNow.n_calls || 0) >= 2 && (pkNow.ml_calls || []).length) {
@@ -404,7 +443,7 @@ function build(date) {
   if (has("day") && !has("stat")) { const p = statOfDay(date, week, rvGames); if (p) { set(p); changed = true; } }
   doc.posts = doc.posts.filter(Boolean);
   if (!changed) { console.log(`NFL social ${date}: nothing new (${doc.posts.length} post(s)).`); return doc; }
-  const order = id => id === "picks" ? 0 : id === "nuke" ? 0.05 : id === "stat" ? 10001 : id === "reads" ? 0.1 : id === "upset" ? 0.2 : /^g\d$/.test(id) ? 0.3 + +id.slice(1) / 10 : id === "day" ? 9999 : id === "rday" ? 10000 : 1 + (parseInt(String(id).split("-")[1], 10) || 0);
+  const order = id => id === "picks" ? 0 : id === "nuke" ? 0.05 : id === "stat" ? 10001 : id === "reads" ? 0.1 : id === "upset" ? 0.2 : id === "qbfacts" ? 0.25 : /^g\d$/.test(id) ? 0.3 + +id.slice(1) / 10 : id === "day" ? 9999 : id === "rday" ? 10000 : 1 + (parseInt(String(id).split("-")[1], 10) || 0);
   doc.posts.sort((a, b) => order(a.id) - order(b.id));
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(file, JSON.stringify(doc, null, 1) + "\n");

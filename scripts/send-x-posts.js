@@ -94,6 +94,7 @@ function cardType(post) {
   const noPick = post.kind === "picks" && (post.nopick || (post.lines || []).some(l => /^No (Leo )?picks? /i.test(l)));
   if (post.kind === "stat") return { noPick: false, type: "stat line" };
   if (post.id === "nuke" || post.hero === "Leo's nuke") return { noPick: false, type: "nuke" };
+  if (post.id === "qbfacts") return { noPick: false, type: "QB matchup facts" };
   if (post.kind === "reads") return { noPick: false, type: post.id === "upset" ? "upset watch" : /^g\d$/.test(post.id) ? "game spotlight" : "Leo's reads" };
   if (post.id === "rday") return { noPick: false, type: "results (Leo's reads)" };
   return { noPick, type: post.parlay ? (post.kind === "picks" ? "Leo Parlay" : "Leo Parlay results") : post.kind !== "picks" ? "results" : noPick ? "no picks" : "picks" };
@@ -104,7 +105,8 @@ function chatMessage(sport, date, post) {
   const who = players(sport, date, post);
   return [
     "Make today's Leo card. Card type: " + type + ".",
-    post.kind === "reads" ? `Use the picks card look with the headline "${String(post.hero || "Leo's reads").toUpperCase()}" and the line "${post.note || "Win chances, not picks"}". These are Leo's win chances, NOT picks: never write PICKS or LEO PICKS on it, show each line on its own bar with the percent in gold.` : null,
+    post.id === "qbfacts" ? 'Use the picks card look with the headline "QB MATCHUPS", each quarterback\'s record on its own bar, small photoreal headshots of the quarterbacks named. These are facts, not picks.' : null,
+    post.kind === "reads" && post.id !== "qbfacts" ? `Use the picks card look with the headline "${String(post.hero || "Leo's reads").toUpperCase()}" and the line "${post.note || "Win chances, not picks"}". These are Leo's win chances, NOT picks: never write PICKS or LEO PICKS on it, show each line on its own bar with the percent in gold.` : null,
     post.kind === "stat" ? `Bleacher Report style highlight card: a photorealistic action shot of ${post.player || "the player"} (${post.team || ""}) in his current uniform, the headline "${post.header.replace(/\s*\S+$/u, "")}", each stat on its own line, and the result line. Not a pick.` : null,
     type === "nuke" ? 'Use the picks card look with the headline "NUKE" and a radioactive symbol, one big hero player for the team, the pick and price in gold. Do not show any bet amount or payout.' : null,
     post.id === "rday" ? 'Use the results card look with the headline "LEO\'S READS" and the line "' + post.record + ' winners"; these are win chances graded, not picks.' : null,
