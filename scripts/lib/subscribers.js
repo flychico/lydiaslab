@@ -81,7 +81,7 @@ async function buttondownActive(key) {
 // counts as monthly. A cancelled member keeps the emails until the period they paid for runs out, as the
 // Refunds page promises. PayPal's cancel notice does not say when the last payment was, so the period is
 // counted from the cancel (at most one extra period, never one short).
-const WEEKLY_PLANS = new Set(["PLAN_WEEKLY_ID"]);
+const WEEKLY_PLANS = new Set(["P-18G97695SN277030TNMA4N6Y"]);   // Leo Member Weekly. Monthly: P-80K39906HM965882KNMA4OWA
 function inPaidPeriod(m) {
   if (m.status !== "cancelled") return false;
   const at = Date.parse(m.updated_at || "");
