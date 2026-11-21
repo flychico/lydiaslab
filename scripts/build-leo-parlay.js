@@ -143,8 +143,8 @@ function posts(date, p, rec) {
   const tags = sports.map(s => s === "nba" ? "#NBAPicks" : s === "nfl" ? "#NFLPicks" : "").filter(Boolean);
   const header = `${weekday(date).toUpperCase()} LEO PARLAY 🎰 What would Leo do?`;
   const pickLines = p.legs.map(l => `${EMO[l.sport]} ${l.team} ML ${fmtPrice(l.price)}`);
-  const pick = { id: "picks", kind: "picks", parlay: true, note: `${p.price} if all ${p.legs.length} hit`, created_at: new Date(NOW).toISOString(), header, lines: pickLines, record: p.price, facts: [], hashtags: tags,
-    text: EX.tail([`${weekday(date).toUpperCase()} LEO PARLAY 🎰`, "", ...pickLines.map(l => `• ${l}`), "", `${p.price} if all ${p.legs.length} hit`, "", EX.WITH_LEO], link, tags), link };   // hype voice, link last, fits 280 (Nov 21)
+  const pick = { id: "picks", kind: "picks", parlay: true, note: (p.legs.length === 2 ? `${p.price} if both hit` : `${p.price} if all ${p.legs.length} hit`), created_at: new Date(NOW).toISOString(), header, lines: pickLines, record: p.price, facts: [], hashtags: tags,
+    text: EX.tail([`${weekday(date).toUpperCase()} LEO PARLAY 🎰`, "", ...pickLines.map(l => `• ${l}`), "", (p.legs.length === 2 ? `${p.price} if both hit` : `${p.price} if all ${p.legs.length} hit`), "", EX.WITH_LEO], link, tags), link };   // hype voice, link last, fits 280 (Nov 21)
   const i = doc.posts.findIndex(x => x.id === "picks");
   if (p.status === "open") { if (i >= 0) doc.posts[i] = pick; else doc.posts.unshift(pick); }
   else if (i < 0) doc.posts.unshift(pick);
