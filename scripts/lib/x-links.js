@@ -20,7 +20,26 @@ const code = id => id === "picks" || id === "day" ? id : String(id).replace(/^wa
 const slugFor = (sport, date, id) => `${sport}-${date.slice(5, 7)}${date.slice(8, 10)}-${code(id)}`;
 const esc = s => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 
+// Lynold, Nov 20: "you make me tweet links that dont fucking work ... why not just have all picks of the
+// day be the same link ?" (ndhorizon.com/x/leo-1120-parlay was a 404: a forwarding page that a run never
+// saved). From DEC-20261120-06 every post links a real page that always exists; no forwarding pages.
+//   picks, nuke, reads, upset   -> /nba/previews/ or /nfl/previews/ (today's picks)
+//   results (waves, day, rday)  -> /nba/results/ or /nfl/results/
+//   Leo Parlay                  -> /parlay/
+//   spotlights and stat lines   -> that game's page (dest), which the same run has already written
+const STABLE = {
+  picks: s => `${SITE}/${s}/previews/`, nuke: s => `${SITE}/${s}/previews/`, reads: s => `${SITE}/${s}/previews/`, upset: s => `${SITE}/${s}/previews/`,
+};
+function stable(sport, id, dest) {
+  if (sport === "leo") return `${SITE}/parlay/`;
+  if (STABLE[id]) return STABLE[id](sport);
+  if (id === "day" || id === "rday" || /^wave-/.test(id)) return `${SITE}/${sport}/results/`;
+  return /^https:\/\/ndhorizon\.com\//.test(dest) && !/\/x\//.test(dest) ? dest.replace(/\?.*$/, "") : `${SITE}/${sport}/previews/`;
+}
 function short(sport, date, id, dest) {
+  return stable(sport, id, dest);
+}
+function shortOld(sport, date, id, dest) {
   const slug = slugFor(sport, date, id);
   const target = `${dest}${dest.includes("?") ? "&" : "?"}utm_source=x&utm_medium=social&utm_campaign=${sport}-${id}`;
   const dir = path.join(ROOT, "x", slug);
