@@ -284,7 +284,10 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
     console.log(`  margin model ${MARGIN.model_version}: home edge ${SOS.hca.toFixed(2)}, ${INJ_ROWS.length} injury report rows`);
   } catch (e) { MARGIN = null; console.log(`  margin v2 unavailable (${e.message}); using v1`); }
   const picks = slate.map(g=>{
-    const v1Margin = (rating[g.home_team]??0) - (rating[g.away_team]??0) + HFA;
+    // Neutral site (London, Mexico City, ...): no home field (fix 2026-11-20, DEC-20261120-07; nine 2026 games
+    // were neutral and Leo had given the listed home team home field in all of them).
+    const NEUTRAL = g.location === "Neutral";
+    const v1Margin = (rating[g.home_team]??0) - (rating[g.away_team]??0) + (NEUTRAL ? 0 : HFA);
     const v1Home = normCdf(v1Margin/SD);
     const inp = mlInputs(n(g.week)||1);
     const homeQb = starterQb(g.home_qb_name, g.home_team, inp.pre, g);
@@ -292,16 +295,16 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
     const h2h3 = ML.h2hRecord(games, g.away_team, g.home_team, g.gameday, 3);
     const feats = ML.featureRow({ homeTeam:g.home_team, awayTeam:g.away_team, homeQb, awayQb,
       qbRatings:inp.qb, teamRatings:inp.team, h2h:h2h3 });
-    const rawHome = ML.predict(ML_MODEL, feats);
+    const rawHome = NEUTRAL ? ML.predict({ ...ML_MODEL, intercept: 0 }, feats) : ML.predict(ML_MODEL, feats);   // the intercept is home field
     let expMargin = v1Margin, marginModel = "v1", injHome = { total: 0, players: [] }, injAway = { total: 0, players: [] }, shadowProb = null;
     if (MARGIN && SOS) {
       const wkN = n(g.week) || 1;
       if (SNAP_IX && INJ_ROWS.length) { injHome = MV.injuryTotal(SNAP_IX, INJ_ROWS, SEASON, g.home_team, wkN); injAway = MV.injuryTotal(SNAP_IX, INJ_ROWS, SEASON, g.away_team, wkN); }
       const mf = { sos_d: (SOS.r[g.home_team] || 0) - (SOS.r[g.away_team] || 0), home: g.location === "Neutral" ? 0 : 1,
         qb_diff: feats.qb_diff, off_diff: feats.off_diff, def_diff: feats.def_diff, injr_all_d: injHome.total - injAway.total };
-      expMargin = MV.predict(MARGIN, mf); marginModel = MARGIN.model_version;
+      expMargin = MV.predict(MARGIN, mf) - (NEUTRAL ? MARGIN.intercept : 0); marginModel = MARGIN.model_version;   // the intercept carries home field
       // Private shadow (Lynold, Nov 20: "Track it privately"): the win chance with the same injury term. Not shown or graded publicly.
-      try { shadowProb = ML.predict(MARGIN.shadow_win_chance, { ...feats, injr_all_d: mf.injr_all_d }); } catch (e) { shadowProb = null; }
+      try { shadowProb = ML.predict(NEUTRAL ? { ...MARGIN.shadow_win_chance, intercept: 0 } : MARGIN.shadow_win_chance, { ...feats, injr_all_d: mf.injr_all_d }); } catch (e) { shadowProb = null; }
     }
     const call = ML.classifyPick(rawHome, g.home_team, g.away_team);
     const [mktAway,mktHome] = devig(g.away_moneyline,g.home_moneyline);
