@@ -21,7 +21,7 @@ const lastWord = n => /Trail Blazers$/.test(n || "") ? "Trail Blazers" : String(
 function teamsInPost(post, nickOf) {
   if (!post) return [];
   // No-pick nights name a healthy player for each team Leo likes too (Lynold, Nov 19: Zach Edey was shown while out).
-  const lines = (post.lines || []).filter(l => !/^No (Leo )?picks? /i.test(l)).filter(l => post.kind === "picks" || /✅/.test(l))
+  const lines = (post.lines || []).filter(l => !/^No (Leo )?picks? /i.test(l)).filter(l => post.kind === "picks" || post.kind === "reads" || /✅/.test(l))
     .map(l => l.replace(/^[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]\uFE0F?\s*/u, ""));
   const out = [];
   for (const l of lines) {

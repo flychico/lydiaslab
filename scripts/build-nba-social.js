@@ -213,6 +213,33 @@ function resultsPost(id, gids, last) {
     text: compose(header, null, lines, plainRecord(mode, counted, hit, items.length, season), tags, link), link };
 }
 
+/* ---------- extra posts: reads, upset watch, spotlights, reads results (DEC-20261120-04) ---------- */
+const EX = require("./lib/extra-posts");
+const COPY = require("./lib/nba-game-copy");
+function norm(g) {
+  const m = g.market || {}, L = g.leo || {}, r = L.rating || {};
+  let why = "";
+  try { const o = (COPY.opening(g, {}) || []).filter(Boolean); why = [o[1], /^The injury/.test(o[2] || "") ? o[2] : null].filter(Boolean).join(" "); } catch (e) { why = ""; }
+  return { id: String(g.game_id), away: nick(g, "away"), home: nick(g, "home"), awayCode: g.away, homeCode: g.home, tip: g.tip_utc,
+    p_home: L.p_home, mlHome: m.home_ml, mlAway: m.away_ml, url: g.url || `https://ndhorizon.com/nba/predictions/${DATE}/`, why,
+    strength: (+r.home || 0) + (+r.away || 0) };
+}
+function extraPosts() {
+  const open = games.filter(g => new Date(g.tip_utc) > NOW && g.leo.p_home != null).map(norm);
+  if (!open.length) return [];
+  const dayTitle = `NBA ${weekday(DATE).toUpperCase()}`, now = NOW.toISOString();
+  const night = tagged(`https://ndhorizon.com/nba/predictions/${DATE}/`, "reads");
+  return [EX.readsPost({ sport: "nba", emoji: "🏀", dayTitle, games: open, link: night, tags: hashtags, now }),
+    EX.upsetPost({ emoji: "🏀", dayTitle, games: open, link: tagged(`https://ndhorizon.com/nba/predictions/${DATE}/`, "upset"), tags: hashtags, now }),
+    ...EX.spotlightPosts({ emoji: "🏀", games: open, tags: hashtags, now, linkFor: (g, id) => tagged(g.url, id) })].filter(Boolean);
+}
+function readsResults() {
+  const results = games.map(g => { const r = ledger.get(String(g.game_id)); if (!r || r.leo_winner_correct === "") return null;
+    const s = +r.leo_p_home >= 0.5 ? "home" : "away";
+    return { leo: nick(g, s), opp: nick(g, s === "home" ? "away" : "home"), code: g[s], right: r.leo_winner_correct === "1" }; }).filter(Boolean);
+  return EX.readsResultsPost({ emoji: "🏀", dayTitle: `NBA ${weekday(DATE).toUpperCase()}`, results, link: tagged("https://ndhorizon.com/nba/results/", "rday"), tags: hashtags, now: NOW.toISOString() });
+}
+
 /* ---------- write ---------- */
 const changed = [];
 const ONLY = arg("only");   // replays: "picks" or "results"
@@ -220,6 +247,9 @@ const firstTip = games.length ? new Date(games[0].tip_utc) : null;
 if (ONLY !== "results" && (!has("picks") || (firstTip && NOW < firstTip))) {
   const p = picksPost();
   if (p) { doc.posts = doc.posts.filter(x => x.id !== "picks"); doc.posts.unshift(p); changed.push("picks"); }
+}
+if (ONLY !== "results" && !has("reads")) {
+  for (const p of extraPosts()) if (!has(p.id)) { doc.posts.push(p); changed.push(p.id); }
 }
 for (const w of ONLY === "picks" ? [] : waves) {
   if (has(w.id)) continue;
@@ -230,6 +260,12 @@ const allGraded = games.length && games.every(g => ledger.has(String(g.game_id))
 if (ONLY !== "picks" && !has("day") && allGraded) {
   const p = resultsPost("day", games.map(g => String(g.game_id)), true);
   if (p) { doc.posts.push(p); changed.push("day"); }
+}
+if (ONLY !== "picks" && !has("rday") && allGraded) {
+  const day = doc.posts.find(p => p.id === "day");
+  const covered = day && (day.lines || []).length >= games.length && (day.lines || []).every(l => / over /.test(l));
+  const p = covered ? null : readsResults();
+  if (p) { doc.posts.push(p); changed.push("rday"); }
 }
 if (!changed.length) { console.log(`NBA social ${DATE}: nothing new.`); process.exit(0); }
 fs.mkdirSync(SDIR, { recursive: true });

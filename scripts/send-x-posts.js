@@ -92,6 +92,8 @@ ${note ? `<tr><td style="padding:0 0 12px;font-weight:bold;color:#7A5E12">${esc(
 // newest post of the newest date, as the daily message of business/CHATGPT_VISUALS.md.
 function cardType(post) {
   const noPick = post.kind === "picks" && (post.nopick || (post.lines || []).some(l => /^No (Leo )?picks? /i.test(l)));
+  if (post.kind === "reads") return { noPick: false, type: post.id === "upset" ? "upset watch" : /^g\d$/.test(post.id) ? "game spotlight" : "Leo's reads" };
+  if (post.id === "rday") return { noPick: false, type: "results (Leo's reads)" };
   return { noPick, type: post.parlay ? (post.kind === "picks" ? "Leo Parlay" : "Leo Parlay results") : post.kind !== "picks" ? "results" : noPick ? "no picks" : "picks" };
 }
 // The daily message of business/CHATGPT_VISUALS.md PART 2, ready to paste.
@@ -100,6 +102,8 @@ function chatMessage(sport, date, post) {
   const who = players(sport, date, post);
   return [
     "Make today's Leo card. Card type: " + type + ".",
+    post.kind === "reads" ? `Use the picks card look with the headline "${String(post.hero || "Leo's reads").toUpperCase()}" and the line "${post.note || "Win chances, not picks"}". These are Leo's win chances, NOT picks: never write PICKS or LEO PICKS on it, show each line on its own bar with the percent in gold.` : null,
+    post.id === "rday" ? 'Use the results card look with the headline "LEO\'S READS" and the line "' + post.record + ' winners"; these are win chances graded, not picks.' : null,
     who ? "Players to use: " + who : null,
     noPick && post.note ? "Reason line: " + post.note : null,
     "Post:",
@@ -144,6 +148,10 @@ function firstStart(sport, date) {
   return t.length ? Math.min(...t) : null;
 }
 function postBy(sport, date, post) {
+  if (post.kind === "reads" && post.tip_utc) {   // reads, upset watch, spotlights: before that game (or the first game) starts
+    const t = Date.parse(post.tip_utc), when = new Date(t).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" });
+    return t > Date.now() ? `post before ${when} ET` : "games already started";
+  }
   if (post.kind !== "picks") return "post when you can";
   const t = firstStart(sport, date);
   if (!t || isNaN(t)) return "post before the first game";

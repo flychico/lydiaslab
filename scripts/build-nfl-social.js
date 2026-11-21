@@ -289,6 +289,45 @@ function facts(date, week, games) {
   return out;
 }
 
+// ---------- extra posts: reads, upset watch, spotlights, reads results (DEC-20261120-04) ----------
+const EX = require("./lib/extra-posts");
+function kickUtc(date, hhmm) {   // "13:00" Eastern on date -> ISO
+  if (!/^\d{1,2}:\d{2}$/.test(hhmm || "")) return null;
+  const [h, m] = hhmm.split(":").map(Number);
+  const guess = Date.UTC(+date.slice(0, 4), +date.slice(5, 7) - 1, +date.slice(8, 10), h, m);
+  const et = +new Date(guess).toLocaleString("en-US", { timeZone: "America/New_York", hour12: false, hour: "2-digit" }) % 24;
+  return new Date(guess + ((h - et + 24) % 24) * 36e5).toISOString();
+}
+function extraPosts(date) {
+  const picks = readJson(path.join(DIR, `picks-${date}.json`));
+  if (!Array.isArray(picks) || !picks.length) return [];
+  const mj = readJson(path.join(DIR, "matchups", `${date}.json`));
+  const mlist = Array.isArray(mj) ? mj : (mj && mj.games) || [];
+  let PC = null; try { PC = require("./lib/nfl-page-copy"); } catch (e) { PC = null; }
+  const open = picks.map(g => {
+    const tip = kickUtc(date, g.kickoff); if (!tip || Date.parse(tip) <= NOW()) return null;
+    const p = +g.model_prob; if (!Number.isFinite(p) || !g.pick) return null;
+    const m = mlist.find(y => y.game_id === g.game_id);
+    let why = ""; try { why = PC && m ? PC.biggestDriver(m) : ""; } catch (e) { why = ""; }
+    return { id: g.game_id, away: nick(g.away), home: nick(g.home), awayCode: g.away, homeCode: g.home, tip,
+      p_home: g.pick === g.home ? p : 1 - p, mlHome: g.home_ml, mlAway: g.away_ml, url: pageUrl(date, g), why,
+      strength: (+g.home_rating || 0) + (+g.away_rating || 0) };
+  }).filter(Boolean);
+  if (!open.length) return [];
+  const week = picks[0].week, title = cheatTitle(date, week), now = new Date(NOW()).toISOString();
+  const weekPage = `${SITE}/nfl/week/${date.slice(0, 4)}-week-${week}/`;
+  return [EX.readsPost({ sport: "nfl", emoji: "🏈", dayTitle: title, games: open, link: utm(weekPage, "reads", date), tags: hashtags, now }),
+    EX.upsetPost({ emoji: "🏈", dayTitle: title, games: open, link: utm(weekPage, "upset", date), tags: hashtags, now }),
+    ...EX.spotlightPosts({ emoji: "🏈", games: open, tags: hashtags, now, linkFor: (g, id) => utm(g.url, id, date) })].filter(Boolean);
+}
+function readsResults(date, rvGames) {
+  const results = rvGames.filter(g => g.leo && g.leo.pick && g.leo_right_winner != null).map(g => {
+    const opp = g.leo.pick === g.home ? g.away : g.home;
+    return { leo: nick(g.leo.pick), opp: nick(opp), code: g.leo.pick, right: !!g.leo_right_winner };
+  });
+  return EX.readsResultsPost({ emoji: "🏈", dayTitle: `NFL ${dayTitle(date).toUpperCase()}`, results, link: utm(`${SITE}/nfl/results/`, "rday", date), tags: hashtags, now: new Date(NOW()).toISOString() });
+}
+
 // ---------- main ----------
 function build(date) {
   const file = path.join(OUT, `${date}.json`);
@@ -300,6 +339,8 @@ function build(date) {
   const before = JSON.stringify(has("picks") || null);
   const pk = picksPost(date, has("picks"));
   if (pk && JSON.stringify(pk) !== before) { set(pk); changed = true; }
+
+  if (!has("reads")) for (const p of extraPosts(date)) if (!has(p.id)) { set(p); changed = true; }
 
   const rv = readJson(path.join(DIR, "results-review.json"));
   const KICK = new Map((readJson(path.join(DIR, `picks-${date}.json`)) || []).map(g => [`${g.away}|${g.home}`, String(g.kickoff || "")]));
@@ -323,9 +364,10 @@ function build(date) {
     const all = [...READS.values()].every(rs => graded.has(`${rs[0].away}|${rs[0].home}`));
     if (all) { set(resultsPost("day", date, rvGames, "", facts(date, week, rvGames))); changed = true; }
   }
+  if (has("day") && !has("rday") && rvGames.length > 1) { const p = readsResults(date, rvGames); if (p) { set(p); changed = true; } }
   doc.posts = doc.posts.filter(Boolean);
   if (!changed) { console.log(`NFL social ${date}: nothing new (${doc.posts.length} post(s)).`); return doc; }
-  const order = id => id === "picks" ? 0 : id === "day" ? 9999 : 1 + (parseInt(String(id).split("-")[1], 10) || 0);
+  const order = id => id === "picks" ? 0 : id === "reads" ? 0.1 : id === "upset" ? 0.2 : /^g\d$/.test(id) ? 0.3 + +id.slice(1) / 10 : id === "day" ? 9999 : id === "rday" ? 10000 : 1 + (parseInt(String(id).split("-")[1], 10) || 0);
   doc.posts.sort((a, b) => order(a.id) - order(b.id));
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(file, JSON.stringify(doc, null, 1) + "\n");
