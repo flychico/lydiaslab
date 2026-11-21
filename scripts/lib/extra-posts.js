@@ -33,22 +33,24 @@ function readsPost({ sport, emoji, dayTitle, games, link, tags, now }) {
   if (!games.length) return null;
   const rows = games.map(g => ({ g, f: fav(g) })).sort((a, b) => b.f.p - a.f.p);
   const lines = rows.map(({ f }) => `${f.team} over ${f.opp} (${pct(f.p)})`);
-  const title = `${dayTitle}: LEO'S READS ${emoji}`;
+  const title = sport === "nfl" ? `WHO LEO HAS THIS WEEK ${emoji}` : `WHO LEO HAS TONIGHT ${emoji}`;   // hype voice, fits 280 (Nov 21)
+  const short = rows.map(({ f }) => `${f.team} ${pct(f.p)}`);
   return { id: "reads", kind: "reads", hero: "Leo's reads", created_at: now, tip_utc: games.map(g => g.tip).sort()[0],
     header: title, lines, record: "", facts: [], hashtags: tags(rows.slice(0, 3).map(r => r.f.code)),
-    text: compose(title, sport === "nfl" ? "Who Leo has winning every game" : "Who Leo has winning every game tonight", lines, link, tags(rows.slice(0, 3).map(r => r.f.code))), link };
+    text: compose(title, null, short, link, tags(rows.slice(0, 1).map(r => r.f.code))), link };
 }
 
 function upsetPost({ emoji, dayTitle, games, link, tags, now }) {
   const dogs = games.filter(isDog), flips = games.filter(g => !isDog(g) && fav(g).p < 0.53);
   if (!dogs.length && !flips.length) return null;
   const lines = [...dogs, ...flips].map(g => { const f = fav(g); return `${f.team} ${f.at} ${f.opp} (${pct(f.p)})`; });
+  const short = [...dogs, ...flips].map(g => { const f = fav(g); return `${f.team} ${f.at} ${f.opp}, ${pct(f.p)}`; });
   const sub = dogs.length && flips.length ? "Leo likes the underdog, or calls it a coin flip"
     : dogs.length ? (dogs.length === 1 ? "Leo has the underdog winning" : "Leo has the underdogs winning") : "Too close to call";
-  const title = `${dayTitle}: UPSET WATCH ${emoji}`;
+  const title = `UPSET WATCH 🚨`;
   const codes = [...dogs, ...flips].map(g => fav(g).code);
   return { id: "upset", kind: "reads", hero: "Upset watch", note: sub, created_at: now, tip_utc: [...dogs, ...flips].map(g => g.tip).sort()[0],
-    header: title, lines, record: "", facts: [], hashtags: tags(codes), text: compose(title, sub, lines, link, tags(codes)), link };
+    header: title, lines, record: "", facts: [], hashtags: tags(codes), text: compose(title, sub, short, link, tags(codes.slice(0, 1))), link };
 }
 
 /** Up to n spotlight posts: the strongest matchup, then the closest games, skipping upset-watch games. */
@@ -63,11 +65,11 @@ function spotlightPosts({ emoji, games, n = 3, tags, linkFor, now }) {
   for (const g of pool.slice().sort((a, b) => fav(a).p - fav(b).p)) { if (chosen.length >= want) break; if (!chosen.includes(g)) chosen.push(g); }
   return chosen.map((g, i) => {
     const f = fav(g), id = `g${i + 1}`, link = linkFor(g, id);
-    const title = `${g.away} at ${g.home} ${emoji}`;
+    const title = `${g.away.toUpperCase()} AT ${g.home.toUpperCase()} 🍿`;
     const line = `${f.team} to win (${pct(f.p)})`;
     return { id, kind: "reads", hero: "Leo's read", created_at: now, tip_utc: g.tip, game_id: g.id,
       header: title, lines: [line], record: "", facts: [g.why], hashtags: tags([g.awayCode, g.homeCode]),
-      text: tail([title, `Leo has the ${f.team} at ${pct(f.p)}.`, g.why], link, tags([g.awayCode, g.homeCode])), link };
+      text: tail([title, "", `Leo has the ${f.team}, ${pct(f.p)}`, g.short || null], link, tags([f.code])), link };
   });
 }
 
@@ -77,11 +79,11 @@ function readsResultsPost({ emoji, dayTitle, results, link, tags, now }) {
   if (!results.length) return null;
   const right = results.filter(r => r.right).length;
   const sorted = [...results.filter(r => r.right), ...results.filter(r => !r.right)];
-  const line = r => Number.isFinite(r.my) && Number.isFinite(r.their) ? `${r.right ? "✅" : "❌"} ${r.leo} ${r.my}, ${r.opp} ${r.their}` : `${r.right ? "✅" : "❌"} ${r.leo} over ${r.opp}`;
+  const line = r => Number.isFinite(r.my) && Number.isFinite(r.their) ? `${r.right ? "✅" : "❌"} ${r.leo} ${r.my}-${r.their}` : `${r.right ? "✅" : "❌"} ${r.leo}`;
   const lines = sorted.map(line);
   const upsets = sorted.filter(r => r.right && r.beatMarket).map(r => r.leo);
-  const title = `${dayTitle}: LEO'S READS ${emoji}`;
-  const rec = `Leo had ${right} of ${results.length} winners`;
+  const title = right === results.length ? `LEO WENT ${right} FOR ${right}. TOO EASY. ${emoji}` : `LEO WENT ${right} FOR ${results.length} ${emoji}`;   // hype voice (Nov 21)
+  const rec = null;
   const call = upsets.length ? `Called the ${upsets.join(" and ")} as underdogs` : null;
   const tg = tags(upsets.length ? results.filter(r => upsets.includes(r.leo)).map(r => r.code) : []);
   return { id: "rday", kind: "results", created_at: now, header: title, lines, record: `${right} of ${results.length}`, facts: call ? [call] : [], hashtags: tg,
@@ -89,7 +91,23 @@ function readsResultsPost({ emoji, dayTitle, results, link, tags, now }) {
 }
 /** Hashtags, then the link alone on the last line, so nothing can run into the link when it is pasted into X. */
 function tail(head, link, tags) {
-  return [...head.filter(x => x != null), "", tags.join(" "), "", bare(link)].join("\n").replace(/\n{3,}/g, "\n\n");
+  // X free accounts allow 280 characters (a link counts 23, an emoji 2). Lynold, Nov 21: the posts must fit
+  // without Premium. Trim bullet lines from the end, then hashtags, until it fits.
+  let h = head.filter(x => x != null), tg = tags.slice();
+  const build = () => [...h, "", tg.join(" "), "", bare(link)].join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  while (xlen(build()) > 280) {
+    const i = h.map((x, k) => [x, k]).filter(([x]) => /^(• |✅ |❌ )/.test(x)).pop();
+    if (i && h.filter(x => /^(• |✅ |❌ )/.test(x)).length > 2) h.splice(i[1], 1);
+    else if (tg.length > 1) tg.pop();
+    else break;
+  }
+  return build();
+}
+/** X's count: links 23, emoji and other wide symbols 2, the rest 1. */
+function xlen(t) {
+  const s = String(t).replace(/(https?:\/\/)?[a-z0-9.-]+\.(com|org|net|io)(\/[^\s]*)?/gi, "x".repeat(23));
+  let n = 0; for (const ch of s) { const c = ch.codePointAt(0); n += c > 0x2000 && !(c >= 0x2010 && c <= 0x201F) ? 2 : 1; }
+  return n;
 }
 
 // ---------- hype voice (Lynold, Nov 20, DEC-20261120-05: "example of what i want our voice to sound like") ----------
@@ -112,4 +130,4 @@ function statPost({ headline, stats, result, link, tags, now, player, team }) {
     hashtags: tags, player, team, text: tail([headline, "", ...stats, "", result || null], link, tags), link };
 }
 
-module.exports = { tail, readsPost, upsetPost, spotlightPosts, readsResultsPost, isDog, fav, opener, nukePost, statPost, WITH_LEO };
+module.exports = { xlen, tail, readsPost, upsetPost, spotlightPosts, readsResultsPost, isDog, fav, opener, nukePost, statPost, WITH_LEO };

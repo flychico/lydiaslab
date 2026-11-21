@@ -225,7 +225,12 @@ function norm(g) {
   const m = g.market || {}, L = g.leo || {}, r = L.rating || {};
   let why = "";
   try { const o = (COPY.opening(g, {}) || []).filter(Boolean); why = [o[1], /^The injury/.test(o[2] || "") ? o[2] : null].filter(Boolean).join(" "); } catch (e) { why = ""; }
-  return { id: String(g.game_id), away: nick(g, "away"), home: nick(g, "home"), awayCode: g.away, homeCode: g.home, tip: g.tip_utc,
+  // One short reason for the spotlight post (fits 280): the opponent's missing star, else the rating gap.
+  const pSide = L.p_home >= 0.5 ? "home" : "away", oSide = pSide === "home" ? "away" : "home";
+  const star = ((L.missing || {})[oSide] || []).filter(x => (x.weight || 0) >= 0.75 && (x.value || 0) >= 6).sort((a, b) => b.value - a.value)[0];
+  const gap = Math.abs((+r.home || 0) - (+r.away || 0));
+  const short = star ? `No ${star.name} for the ${nick(g, oSide)}` : gap >= 1 ? `${nick(g, pSide)} rate ${gap.toFixed(1)} points better this season` : "";
+  return { short, id: String(g.game_id), away: nick(g, "away"), home: nick(g, "home"), awayCode: g.away, homeCode: g.home, tip: g.tip_utc,
     p_home: L.p_home, mlHome: m.home_ml, mlAway: m.away_ml, url: g.url || `https://ndhorizon.com/nba/predictions/${DATE}/`, why,
     strength: (+r.home || 0) + (+r.away || 0) };
 }

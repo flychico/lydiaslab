@@ -74,7 +74,7 @@ function hashtags(teams) {
   for (const t of teams) {
     const h = TAGS.teams[t] && TAGS.teams[t].primary;
     if (h && !out.includes(h)) out.push(h);
-    if (out.length >= 4) break;
+    if (out.length >= 2) break;   // sport tag and one team (Nov 21)
   }
   return out;
 }
@@ -149,9 +149,8 @@ function picksPost(date, existing) {
   body.push(...(lines.length === 1 ? lines : lines.length ? lines.map(l => `• ${l}`) : ["No picks from Leo on this one."]));
   if (lines.length) body.push("", EX.WITH_LEO);
   if (td.length) body.push("", "Most likely to score:", ...td.map(l => `• ${l}`));
-  body.push("", bare(link), tags.join(" "));
   return { id: "picks", kind: "picks", created_at: new Date(NOW()).toISOString(), header: title, lines, record: null, hero: lines.length === 1 ? "Leo's nuke" : undefined,
-    facts: td, hashtags: tags, text: body.join("\n"), link, ml_calls: mlCalls, n_calls: lines.length };
+    facts: td, hashtags: tags, text: EX.tail(body, link, tags), link, ml_calls: mlCalls, n_calls: lines.length };   // link last, fits 280
 }
 function pageUrl(date, g) {
   const m = readJson(path.join(DIR, "matchups", `${date}.json`));
@@ -203,9 +202,8 @@ function resultsPost(id, date, games, label, facts) {
   const link = utm(`${SITE}/nfl/results/`, id, date);
   // One plain line (Lynold, 2026-11-18, "Bare minimum"): "9-4 today, 17-14 since Nov 2".
   const record = `${t.rec} ${id === "day" ? "on the day" : "so far today"}${seasonRec(date) ? `, ${seasonRec(date)} since Nov 2` : ""}`;
-  const body = [header, "", ...lines, "", record, bare(link), tags.join(" ")];
   return { id, kind: "results", created_at: new Date(NOW()).toISOString(), header, lines, record, facts: [],
-    hashtags: tags, text: body.join("\n"), link };
+    hashtags: tags, text: EX.tail([header, "", ...lines, "", record], link, tags), link };   // link last, fits 280
 }
 
 // ---------- player facts ----------
@@ -314,7 +312,7 @@ function extraPosts(date) {
     const p = +g.model_prob; if (!Number.isFinite(p) || !g.pick) return null;
     const m = mlist.find(y => y.game_id === g.game_id);
     let why = ""; try { why = PC && m ? PC.biggestDriver(m) : ""; } catch (e) { why = ""; }
-    return { id: g.game_id, away: nick(g.away), home: nick(g.home), awayCode: g.away, homeCode: g.home, tip,
+    return { short: g.away_qb && g.home_qb ? `${g.away_qb} vs ${g.home_qb}` : "", id: g.game_id, away: nick(g.away), home: nick(g.home), awayCode: g.away, homeCode: g.home, tip,
       p_home: g.pick === g.home ? p : 1 - p, mlHome: g.home_ml, mlAway: g.away_ml, url: pageUrl(date, g), why,
       strength: (+g.home_rating || 0) + (+g.away_rating || 0) };
   }).filter(Boolean);
@@ -356,12 +354,13 @@ function qbFactsPost(date) {
   facts.sort((a, b) => b.score - a.score);
   const top = facts.slice(0, 6);
   const lines = top.map(f => `${f.qb} ${f.w}-${f.l} vs ${nick(f.opp)}`);
-  const week = picks[0].week, title = `WEEK ${week} QB MATCHUPS 🤯`;
-  const tags = hashtags(top.map(f => f.team));
+  const week = picks[0].week, title = `QB MATCHUPS THIS WEEK 🤯`;
+  const tags = hashtags(top.slice(0, 1).map(f => f.team));
+  const last = q => String(q).split(" ").filter(w => !/^(jr\.?|sr\.?|ii|iii|iv)$/i.test(w)).pop();
   const link = utm(`${SITE}/nfl/previews/`, "picks", date);
   return { id: "qbfacts", kind: "reads", hero: "QB matchups", note: "Starting QBs vs this opponent", created_at: new Date(NOW()).toISOString(),
     tip_utc: picks.map(g => kickUtc(date, g.kickoff)).filter(Boolean).sort()[0], header: title, lines, record: "", facts: [], hashtags: tags,
-    text: [title, "", ...top.map(f => `• ${f.qb} is ${f.w}-${f.l} vs the ${nick(f.opp)}`), "", bare(link), tags.join(" ")].join("\n"), link };
+    text: EX.tail([title, "", ...top.map(f => `• ${last(f.qb)} ${f.w}-${f.l} vs ${nick(f.opp)}`)], link, tags), link };
 }
 function readsResults(date, rvGames) {
   const results = rvGames.filter(g => g.leo && g.leo.pick && g.leo_right_winner != null).map(g => {

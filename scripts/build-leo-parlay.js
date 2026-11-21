@@ -21,6 +21,7 @@
  * the public page /parlay/ (record and every parlay). Never fails a run.
  */
 "use strict";
+const EX = require("./lib/extra-posts");   // tail(): link last, fits 280
 const fs = require("fs");
 const path = require("path");
 
@@ -143,7 +144,7 @@ function posts(date, p, rec) {
   const header = `${weekday(date).toUpperCase()} LEO PARLAY 🎰 What would Leo do?`;
   const pickLines = p.legs.map(l => `${EMO[l.sport]} ${l.team} ML ${fmtPrice(l.price)}`);
   const pick = { id: "picks", kind: "picks", parlay: true, note: `${p.price} if all ${p.legs.length} hit`, created_at: new Date(NOW).toISOString(), header, lines: pickLines, record: p.price, facts: [], hashtags: tags,
-    text: [`${weekday(date).toUpperCase()} LEO PARLAY 🎰`, "What would Leo do?", "", ...pickLines.map(l => `• ${l}`), "", `${p.price} if all ${p.legs.length} hit`, "", bare, tags.join(" ")].join("\n"), link };   // cheat sheet look (Lynold, Nov 20)
+    text: EX.tail([`${weekday(date).toUpperCase()} LEO PARLAY 🎰`, "", ...pickLines.map(l => `• ${l}`), "", `${p.price} if all ${p.legs.length} hit`, "", EX.WITH_LEO], link, tags), link };   // hype voice, link last, fits 280 (Nov 21)
   const i = doc.posts.findIndex(x => x.id === "picks");
   if (p.status === "open") { if (i >= 0) doc.posts[i] = pick; else doc.posts.unshift(pick); }
   else if (i < 0) doc.posts.unshift(pick);
@@ -151,10 +152,10 @@ function posts(date, p, rec) {
     const mark = r => (r === "W" ? " ✅" : r === "L" ? " ❌" : " ➖");
     const ord = r => (r === "W" ? 0 : r === "L" ? 2 : 1);   // winners on top, losers at the bottom
     const lines = p.legs.slice().sort((a, b) => ord(a.result) - ord(b.result)).map(l => `${EMO[l.sport]} ${l.team} ML ${fmtPrice(l.price)}${mark(l.result)}`);
-    const head = p.result === "W" ? `Leo Parlay hit ${p.graded_price || p.price} 🎰` : p.result === "L" ? `${weekday(date)} Leo Parlay 🎰` : `${weekday(date)} Leo Parlay 🎰`;
+    const head = p.result === "W" ? `THE LEO PARLAY HIT ${p.graded_price || p.price} 🎰` : p.result === "L" ? `NOT TONIGHT. 🎰` : `LEO PARLAY 🎰`;   // hype voice (Nov 21)
     const recTxt = recLine(rec);
     doc.posts.push({ id: "day", kind: "results", parlay: true, created_at: new Date(NOW).toISOString(), header: head, lines, record: recTxt, facts: [], hashtags: tags,
-      text: [head, "", ...lines, "", recTxt, "", bare, tags.join(" ")].join("\n"), link });
+      text: EX.tail([head, "", ...lines, "", recTxt], link, tags), link });
   }
   write(f, doc);
 }
