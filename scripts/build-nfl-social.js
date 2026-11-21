@@ -120,16 +120,18 @@ function picksPost(date, existing) {
   const picks = readJson(path.join(DIR, `picks-${date}.json`));
   if (!Array.isArray(picks) || !picks.length) return null;
   const games = picks.slice().sort((a, b) => String(a.kickoff).localeCompare(String(b.kickoff)) || a.matchup.localeCompare(b.matchup));
-  const first = Math.min(...games.map(g => Date.parse(g.kickoff)).filter(Number.isFinite));
+  // kickoff is "13:00" Eastern on the game date; Date.parse on it was NaN, so the post never froze (fixed Nov 20).
+  const first = Math.min(...games.map(g => Date.parse(kickUtc(date, g.kickoff) || g.kickoff)).filter(Number.isFinite));
   if (existing && NOW() >= first) return existing;            // frozen at the first kickoff
   const READS = preKickoffReads(path.join(DIR, "prediction-history.csv"), date);
-  const lines = [], teams = [];
+  const lines = [], teams = [], mlCalls = [];
   for (const g of games) {
     const reads = READS.get(g.game_id);
     const H = reads && reads.length ? CALLS.held(reads) : CALLS.calls(g);
     for (const mk of CALLS.MARKETS) {   // totals are information only (DEC-20261119-01)
       const l = callLine(mk, H[mk], g);
-      if (l) { lines.push(l); if (mk !== "total") teams.push(H[mk].call); }
+      if (l) { lines.push(l); if (mk !== "total") teams.push(H[mk].call);
+        if (mk === "ml") mlCalls.push({ line: l, team: H.ml.call, p: H.ml.call === g.pick ? +g.model_prob : 1 - +g.model_prob, tip: kickUtc(date, g.kickoff) }); }
     }
   }
   const td = tdReads(date).slice(0, 3).map(r => `${r.player} ${pct(r.chance)}% to score`);
@@ -140,13 +142,16 @@ function picksPost(date, existing) {
   const tags = hashtags([...teams, ...games.flatMap(g => [g.home, g.away])]);
   // Lynold, Nov 16: "what would Leo do?"; Nov 18: plain, no 21+.
   // Cheat sheet look (Lynold, Nov 20): "NFL WEEK 12 CHEAT SHEET 🏈", "What would Leo do?", one bullet per call.
-  const title = lines.length ? `${cheatTitle(date, week)} CHEAT SHEET 🏈` : `${cheatTitle(date, week)} 🏈`;
-  const body = [title, "What would Leo do?", ""];
-  body.push(...(lines.length ? lines.map(l => `• ${l}`) : ["No picks from Leo on this one."]));
+  // Hype voice (Lynold, Nov 20, DEC-20261120-05): one call is the NUKE, two or more the cheat sheet,
+  // "🔥 if you're with Leo" under the calls; the strongest moneyline call also gets its own nuke post.
+  const title = lines.length === 1 ? `${cheatTitle(date, week)} NUKE ☢️` : lines.length ? `${cheatTitle(date, week)} CHEAT SHEET 🏈` : `${cheatTitle(date, week)} 🏈`;
+  const body = [title, ""];
+  body.push(...(lines.length === 1 ? lines : lines.length ? lines.map(l => `• ${l}`) : ["No picks from Leo on this one."]));
+  if (lines.length) body.push("", EX.WITH_LEO);
   if (td.length) body.push("", "Most likely to score:", ...td.map(l => `• ${l}`));
   body.push("", bare(link), tags.join(" "));
-  return { id: "picks", kind: "picks", created_at: new Date(NOW()).toISOString(), header: `${title} What would Leo do?`, lines, record: null,
-    facts: td, hashtags: tags, text: body.join("\n"), link };
+  return { id: "picks", kind: "picks", created_at: new Date(NOW()).toISOString(), header: title, lines, record: null, hero: lines.length === 1 ? "Leo's nuke" : undefined,
+    facts: td, hashtags: tags, text: body.join("\n"), link, ml_calls: mlCalls, n_calls: lines.length };
 }
 function pageUrl(date, g) {
   const m = readJson(path.join(DIR, "matchups", `${date}.json`));
@@ -192,7 +197,7 @@ function resultsPost(id, date, games, label, facts) {
   const rank = { W: 0, P: 1, L: 2 };
   const lines = calls.map((c, i) => ({ c, i })).sort((a, b) => rank[a.c.result] - rank[b.c.result] || a.i - b.i).map(x => resultLine(x.c.g, x.c));
   const short = String(label || "").replace(/, the last of the day$/i, "");
-  const header = id === "day" ? `NFL ${dayTitle(date)} 🏈` : `NFL so far 🏈`;
+  const header = EX.opener(t.w != null ? t.w : calls.filter(c => c.result === "W").length, t.l != null ? t.l : calls.filter(c => c.result === "L").length, "DAY");   // hype voice (DEC-20261120-05)
   const winners = calls.filter(c => c.result === "W").map(c => c.g.winner).filter(Boolean);
   const tags = hashtags([...winners, ...games.flatMap(g => [g.winner, g.loser])]);
   const link = utm(`${SITE}/nfl/results/`, id, date);
@@ -328,6 +333,28 @@ function readsResults(date, rvGames) {
   return EX.readsResultsPost({ emoji: "🏈", dayTitle: `NFL ${dayTitle(date).toUpperCase()}`, results, link: utm(`${SITE}/nfl/results/`, "rday", date), tags: hashtags, now: new Date(NOW()).toISOString() });
 }
 
+// Bleacher Report style stat post (DEC-20261120-05): the day's best line, from the same player stats as the facts.
+function statOfDay(date, week, rvGames) {
+  const P = playerStats(date, week); if (!P || !rvGames.length) return null;
+  const teams = new Set(rvGames.flatMap(g => [g.away, g.home]));
+  const all = [...P.values()].filter(p => teams.has(p.team));
+  const score = p => (p.pass_tds || 0) * 9 + (p.tds || 0) * 10 + (p.pass_yds || 0) / 40;
+  const best = all.sort((a, b) => score(b) - score(a))[0];
+  if (!best || ((best.pass_tds || 0) < 4 && (best.tds || 0) < 3)) return null;   // only a day worth posting about
+  const NAME = String(best.name).toUpperCase();
+  const passing = (best.pass_tds || 0) >= 4;
+  const headline = passing ? `${NAME} ${best.pass_tds} TD DAY 🤯` : `${NAME} ${best.tds} TOUCHDOWNS 🤯`;
+  const stats = passing ? [best.cmp != null && best.att != null ? `${best.cmp}-${best.att}` : null, best.pass_yds ? `${best.pass_yds} YDS` : null, `${best.pass_tds} TD`, best.tds ? `${best.tds} RUSH/REC TD` : null].filter(Boolean)
+    : [`${best.tds} TD`, best.pass_tds ? `${best.pass_tds} TD PASSES` : null].filter(Boolean);
+  const g = rvGames.find(x => x.away === best.team || x.home === best.team);
+  const won = g && g.winner === best.team, opp = g ? (g.away === best.team ? g.home : g.away) : null;
+  const sc = g && g.score ? (typeof g.score === "object" ? [+g.score.away, +g.score.home] : null) : null;
+  const mine = sc ? (g.away === best.team ? sc[0] : sc[1]) : null, theirs = sc ? (g.away === best.team ? sc[1] : sc[0]) : null;
+  const result = g && Number.isFinite(mine) && Number.isFinite(theirs) ? `${nick(best.team)} ${won ? "beat" : "fell to"} the ${nick(opp)}, ${Math.max(mine, theirs)} to ${Math.min(mine, theirs)}` : "";
+  const link = utm(g && g.url ? (String(g.url).startsWith("http") ? g.url : SITE + g.url) : `${SITE}/nfl/results/`, "stat", date);
+  return EX.statPost({ headline, stats, result, link, tags: hashtags([best.team]), now: new Date(NOW()).toISOString(), player: best.name, team: nick(best.team) });
+}
+
 // ---------- main ----------
 function build(date) {
   const file = path.join(OUT, `${date}.json`);
@@ -341,6 +368,15 @@ function build(date) {
   if (pk && JSON.stringify(pk) !== before) { set(pk); changed = true; }
 
   if (!has("reads")) for (const p of extraPosts(date)) if (!has(p.id)) { set(p); changed = true; }
+  // Strongest moneyline call as its own nuke post when there are 2+ calls (label only, graded at 1 unit).
+  const pkNow = has("picks");
+  if (pkNow && (pkNow.n_calls || 0) >= 2 && (pkNow.ml_calls || []).length) {
+    const top = pkNow.ml_calls.slice().sort((a, b) => b.p - a.p)[0];
+    const np = EX.nukePost({ title: `${cheatTitle(date, (readJson(path.join(DIR, `picks-${date}.json`)) || [{}])[0].week)} NUKE ☢️`, line: top.line,
+      link: utm(`${SITE}/nfl/week/${date.slice(0, 4)}-week-${(readJson(path.join(DIR, `picks-${date}.json`)) || [{}])[0].week}/`, "nuke", date), tags: hashtags([top.team]), now: new Date(NOW()).toISOString(), tip: top.tip });
+    const old = has("nuke");
+    if (NOW() < Date.parse(top.tip || 0) && (!old || JSON.stringify(old.lines) !== JSON.stringify(np.lines))) { set(np); changed = true; }
+  }
 
   const rv = readJson(path.join(DIR, "results-review.json"));
   const KICK = new Map((readJson(path.join(DIR, `picks-${date}.json`)) || []).map(g => [`${g.away}|${g.home}`, String(g.kickoff || "")]));
@@ -365,9 +401,10 @@ function build(date) {
     if (all) { set(resultsPost("day", date, rvGames, "", facts(date, week, rvGames))); changed = true; }
   }
   if (has("day") && !has("rday") && rvGames.length > 1) { const p = readsResults(date, rvGames); if (p) { set(p); changed = true; } }
+  if (has("day") && !has("stat")) { const p = statOfDay(date, week, rvGames); if (p) { set(p); changed = true; } }
   doc.posts = doc.posts.filter(Boolean);
   if (!changed) { console.log(`NFL social ${date}: nothing new (${doc.posts.length} post(s)).`); return doc; }
-  const order = id => id === "picks" ? 0 : id === "reads" ? 0.1 : id === "upset" ? 0.2 : /^g\d$/.test(id) ? 0.3 + +id.slice(1) / 10 : id === "day" ? 9999 : id === "rday" ? 10000 : 1 + (parseInt(String(id).split("-")[1], 10) || 0);
+  const order = id => id === "picks" ? 0 : id === "nuke" ? 0.05 : id === "stat" ? 10001 : id === "reads" ? 0.1 : id === "upset" ? 0.2 : /^g\d$/.test(id) ? 0.3 + +id.slice(1) / 10 : id === "day" ? 9999 : id === "rday" ? 10000 : 1 + (parseInt(String(id).split("-")[1], 10) || 0);
   doc.posts.sort((a, b) => order(a.id) - order(b.id));
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(file, JSON.stringify(doc, null, 1) + "\n");

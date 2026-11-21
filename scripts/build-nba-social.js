@@ -54,6 +54,7 @@ const MARK = { win: "✅", loss: "❌", push: "➖" };
 const fmtPrice = x => (+x > 0 ? "+" : "") + Math.round(+x);
 const fmtU = u => (u >= 0 ? "+" : "") + (+u).toFixed(2) + "u";
 const PK = require("./lib/nba-picks");
+const EXV = require("./lib/extra-posts");   // hype voice helpers (DEC-20261120-05)
 const SW = require("./lib/nba-swing");
 // "Depends on <player>" under a Leo Pick whose read rests on an open day-to-day status (HO-0097).
 const depends = i => { const g = games.find(x => String(x.game_id) === i.game_id); const t = g ? SW.line(g) : ""; return t ? [t] : []; };
@@ -94,6 +95,7 @@ function plainRecord(mode, counted, hit, n, season) {
   if (mode === "winners") return n === 1 ? (hit ? "Leo had the winner" : "Leo missed the winner") : `Leo had ${hit} of ${n} winners tonight`;
   const r = recordOf(counted);
   const s = String(season || "").split(",")[0].trim();
+  if (mode === "picks" && s && counted.length === 1) return `${s} on the season`;   // one pick: the mark says it (Nov 20 voice)
   return `${r.w}-${r.l}${r.p ? `-${r.p}` : ""} tonight${mode === "picks" && s ? `, ${s} on the season` : ""}`;
 }
 function recordOf(items) {
@@ -122,9 +124,12 @@ function picksPost() {
   }
   // Cheat sheet look (Lynold, Nov 20, from an X post he liked): "NBA FRIDAY CHEAT SHEET 🏀", then
   // "What would Leo do?", then one bullet per pick with its price. A no-pick night drops "CHEAT SHEET".
+  // Hype voice (Lynold, Nov 20, DEC-20261120-05): one pick is the night's NUKE; two or more are the
+  // cheat sheet (the strongest also gets its own nuke post); "🔥 if you're with Leo" under the picks.
   const DAY = weekday(DATE).toUpperCase();
-  const title = items.length && items[0].type === "pick" ? `NBA ${DAY} CHEAT SHEET 🏀` : `NBA ${DAY} 🏀`;
-  const header = `${title} What would Leo do?`;
+  const nPicks = items.filter(i => i.type === "pick").length;
+  const title = nPicks === 1 ? `NBA ${DAY} NUKE ☢️` : nPicks ? `NBA ${DAY} CHEAT SHEET 🏀` : `NBA ${DAY} 🏀`;
+  const header = title;
   // The price shown is the locked price the pick is graded at (DEC-20261116-30); the % is Leo's chance to win.
   // Lynold, 2026-11-18: "start being more human like. not so much of a bot." Picks only, no chance or notes.
   const lines = [...(kind === "picks" ? [] : [PK.noPickDay && PK.noPickDay(DATE) ? "No picks on Mondays. Leo likes:" : "No picks tonight. Leo likes:"]),
@@ -143,7 +148,8 @@ function picksPost() {
       : "Too close or too pricey to call";
   }
   return { id: "picks", kind: "picks", created_at: NOW.toISOString(), header, lines, record: "", facts, hashtags: tags, nopick: kind === "reads", note,
-    text: [title, "What would Leo do?", "", ...lines.map(l => kind === "picks" ? `• ${l}` : l), "", String(link).replace(/^https?:\/\//, ""), tags.join(" ")].join("\n"), link, items };
+    hero: nPicks === 1 ? "Leo's nuke" : undefined,
+    text: [title, "", ...lines.map(l => kind === "picks" && nPicks > 1 ? `• ${l}` : l), "", kind === "picks" ? EXV.WITH_LEO : null, String(link).replace(/^https?:\/\//, ""), tags.join(" ")].filter(x => x != null).join("\n"), link, items };
 }
 
 /* ---------- results posts ---------- */
@@ -199,7 +205,7 @@ function resultsPost(id, gids, last) {
     const best = gids.map(g => [g, topScorer(g)]).filter(x => x[1]).sort((a, b) => +b[1].match(/ (\d+) pts/)[1] - +a[1].match(/ (\d+) pts/)[1])[0];
     if (best && !facts.includes(best[1])) facts.push(`${best[1]}, the top score tonight`);
   }
-  const header = id === "day" || last ? `NBA ${weekday(DATE)} 🏀` : `NBA so far 🏀`;
+  const header = mode === "picks" ? EXV.opener(rec.w, rec.l) : id === "day" || last ? `NBA ${weekday(DATE)} 🏀` : `NBA so far 🏀`;
   const tags = hashtags(items.filter(i => i.result !== "loss").concat(items).map(i => i.code));
   const link = tagged("https://ndhorizon.com/nba/results/", id);
   // Leo Picks season to date, from the day they were first counted (DEC-20261102-30), so units can be traced.
@@ -240,6 +246,32 @@ function readsResults() {
   return EX.readsResultsPost({ emoji: "🏀", dayTitle: `NBA ${weekday(DATE).toUpperCase()}`, results, link: tagged("https://ndhorizon.com/nba/results/", "rday"), tags: hashtags, now: NOW.toISOString() });
 }
 
+// Bleacher Report style stat post (DEC-20261120-05): the night's best line from the box scores.
+function statOfNight() {
+  let best = null;
+  for (const [gid, b] of box) {
+    const g = byGame.get(gid); if (!g) continue;
+    for (const p of b.players || []) {
+      if (p.dnp || !p.stats) continue;
+      const S = p.stats, pts = +S.points || 0, reb = +S.rebounds || 0, ast = +S.assists || 0, stl = +S.steals || 0, blk = +S.blocks || 0;
+      const td = [pts, reb, ast, stl, blk].filter(x => x >= 10).length;
+      const score = pts + (td >= 3 ? 25 : 0) + Math.max(0, reb - 12) + Math.max(0, ast - 10);
+      if (!best || score > best.score) best = { score, p, g, b, pts, reb, ast, stl, blk, td };
+    }
+  }
+  if (!best || (best.pts < 35 && best.td < 3)) return null;   // only a night worth posting about
+  const { p, g, b, pts, reb, ast, stl, blk, td } = best, S = p.stats;
+  const side = p.team === g.home ? "home" : "away", opp = side === "home" ? "away" : "home";
+  const my = +b[side + "_score"], their = +b[opp + "_score"];
+  const NAME = String(p.name).toUpperCase();
+  const headline = td >= 3 ? `${NAME} TRIPLE DOUBLE 🤯` : `${NAME} ${pts}-POINT NIGHT 🤯`;
+  const fg = S["fieldGoalsMade-fieldGoalsAttempted"], tp = S["threePointFieldGoalsMade-threePointFieldGoalsAttempted"], ft = S["freeThrowsMade-freeThrowsAttempted"];
+  const stats = [td >= 3 ? `${pts} PTS` : null, fg ? `${fg} FG` : null, tp && tp !== "0-0" ? `${tp} 3PT` : null, ft && ft !== "0-0" ? `${ft} FT` : null,
+    `${reb} REB`, `${ast} AST`, stl >= 3 ? `${stl} STL` : null, blk >= 3 ? `${blk} BLK` : null].filter(Boolean);
+  const result = Number.isFinite(my) && Number.isFinite(their) ? (my > their ? `${nick(g, side)} beat the ${nick(g, opp)}, ${my} to ${their}` : `${nick(g, side)} fell to the ${nick(g, opp)}, ${their} to ${my}`) : "";
+  return EXV.statPost({ headline, stats, result, link: tagged(g.url || `https://ndhorizon.com/nba/predictions/${DATE}/`, "stat"), tags: hashtags([g[side]]), now: NOW.toISOString(), player: p.name, team: nick(g, side) });
+}
+
 /* ---------- write ---------- */
 const changed = [];
 const ONLY = arg("only");   // replays: "picks" or "results"
@@ -247,6 +279,18 @@ const firstTip = games.length ? new Date(games[0].tip_utc) : null;
 if (ONLY !== "results" && (!has("picks") || (firstTip && NOW < firstTip))) {
   const p = picksPost();
   if (p) { doc.posts = doc.posts.filter(x => x.id !== "picks"); doc.posts.unshift(p); changed.push("picks"); }
+}
+// The night's strongest pick gets its own nuke post when there are 2+ picks; follows the picks post until the first tip.
+if (ONLY !== "results" && (!has("nuke") || (firstTip && NOW < firstTip))) {
+  const pk = doc.posts.find(p => p.id === "picks");
+  const picksOnly = pk ? (pk.items || []).filter(i => i.type === "pick") : [];
+  if (picksOnly.length >= 2) {
+    const top = picksOnly.slice().sort((a, b) => b.p - a.p)[0];
+    const np = EXV.nukePost({ title: `NBA ${weekday(DATE).toUpperCase()} NUKE ☢️`, line: `${top.team} ML ${fmtPrice(top.price)}`, link: tagged(`https://ndhorizon.com/nba/predictions/${DATE}/`, "nuke"),
+      tags: hashtags([top.code]), now: NOW.toISOString(), tip: (byGame.get(top.game_id) || {}).tip_utc });
+    const old = doc.posts.find(p => p.id === "nuke");
+    if (!old || JSON.stringify(old.lines) !== JSON.stringify(np.lines)) { doc.posts = doc.posts.filter(p => p.id !== "nuke"); doc.posts.splice(1, 0, np); changed.push("nuke"); }
+  } else if (has("nuke") && firstTip && NOW < firstTip) { doc.posts = doc.posts.filter(p => p.id !== "nuke"); changed.push("nuke removed"); }
 }
 if (ONLY !== "results" && !has("reads")) {
   for (const p of extraPosts()) if (!has(p.id)) { doc.posts.push(p); changed.push(p.id); }
@@ -260,6 +304,10 @@ const allGraded = games.length && games.every(g => ledger.has(String(g.game_id))
 if (ONLY !== "picks" && !has("day") && allGraded) {
   const p = resultsPost("day", games.map(g => String(g.game_id)), true);
   if (p) { doc.posts.push(p); changed.push("day"); }
+}
+if (ONLY !== "picks" && !has("stat") && allGraded) {
+  const p = statOfNight();
+  if (p) { doc.posts.push(p); changed.push("stat"); }
 }
 if (ONLY !== "picks" && !has("rday") && allGraded) {
   const day = doc.posts.find(p => p.id === "day");

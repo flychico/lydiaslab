@@ -84,4 +84,24 @@ function readsResultsPost({ emoji, dayTitle, results, link, tags, now }) {
     text: [title, "", ...lines, "", rec, bare(link), tags(codes).join(" ")].join("\n"), link };
 }
 
-module.exports = { readsPost, upsetPost, spotlightPosts, readsResultsPost, isDog, fav };
+// ---------- hype voice (Lynold, Nov 20, DEC-20261120-05: "example of what i want our voice to sound like") ----------
+// Results opener on picks: a perfect night "TOO EASY.", more wins "WINNING NIGHT.", even "SPLIT.", more losses "NOT TONIGHT."
+function opener(w, l, unit = "NIGHT") {
+  if (w > 0 && l === 0) return "TOO EASY.";
+  if (w > l) return `WINNING ${unit}.`;
+  if (w === l) return "SPLIT.";
+  return "NOT TONIGHT.";
+}
+const WITH_LEO = "🔥 if you're with Leo";
+/** The night's strongest pick as its own post. Label only: graded at 1 unit like every pick. */
+function nukePost({ title, line, link, tags, now, tip }) {
+  return { id: "nuke", kind: "picks", hero: "Leo's nuke", created_at: now, tip_utc: tip || null, header: title, lines: [line], record: "", facts: [], hashtags: tags,
+    text: [title, "", line, "", WITH_LEO, bare(link), tags.join(" ")].join("\n"), link };
+}
+/** Bleacher Report style stat line: headline, one stat per line, the result, the game page. */
+function statPost({ headline, stats, result, link, tags, now, player, team }) {
+  return { id: "stat", kind: "stat", hero: headline.replace(/\s*\S+$/u, ""), created_at: now, header: headline, lines: stats, record: "", facts: result ? [result] : [],
+    hashtags: tags, player, team, text: [headline, "", ...stats, "", result || null, bare(link), tags.join(" ")].filter(x => x != null).join("\n"), link };
+}
+
+module.exports = { readsPost, upsetPost, spotlightPosts, readsResultsPost, isDog, fav, opener, nukePost, statPost, WITH_LEO };
