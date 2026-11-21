@@ -329,8 +329,8 @@ ${dayRows}
 </div>
 <div class="lead-box" style="border-color:var(--accent2);margin-top:16px">
   <h3 style="margin:0 0 4px">Want this delivered before first pitch?</h3>
-  <p class="dim small" style="margin:0">$30/month. Same transparency, cleaner delivery.</p>
-  <p style="margin-top:10px"><a class="btn blue" href="/membership/">Join Leo — $30/mo →</a></p>
+  <p class="dim small" style="margin:0">$10 a week or $50 a month. Same transparency, cleaner delivery.</p>
+  <p style="margin-top:10px"><a class="btn blue" href="/membership/">Join Leo from $10 →</a></p>
 </div>
 </main>
 <footer id="footer"></footer>

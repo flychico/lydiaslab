@@ -11,7 +11,7 @@
  *                             PayPal subscription ID
  *   signups/members.csv       PayPal's own record per subscription (status)
  *   signups/unsubscribed.csv  addresses that unsubscribed; never mailed
- * Members are the subscriptions PayPal reports as active; the address used is
+ * Members are the subscriptions PayPal reports as active (or cancelled, until the paid week or month ends); the address used is
  * the one the member typed (member.csv) when there is one, else PayPal's.
  *
  * During the move off Buttondown, BUTTONDOWN_API_KEY (if still set) adds its
@@ -77,6 +77,19 @@ async function buttondownActive(key) {
   return (bdCache = out);
 }
 
+// Plans (Lynold, Nov 21, DEC-20261121-04): Leo Weekly $10 every 7 days, Leo Monthly $50. The old $30 plan
+// counts as monthly. A cancelled member keeps the emails until the period they paid for runs out, as the
+// Refunds page promises. PayPal's cancel notice does not say when the last payment was, so the period is
+// counted from the cancel (at most one extra period, never one short).
+const WEEKLY_PLANS = new Set(["PLAN_WEEKLY_ID"]);
+function inPaidPeriod(m) {
+  if (m.status !== "cancelled") return false;
+  const at = Date.parse(m.updated_at || "");
+  if (!Number.isFinite(at)) return false;
+  const days = WEEKLY_PLANS.has(m.plan_id) ? 7 : 31;
+  return Date.now() - at < days * 864e5;
+}
+
 const tokens = new Map();   // email -> unsub_token, filled when a list is read
 let lists = null;           // { free: [...], member: [...] }
 
@@ -89,7 +102,7 @@ async function loadPrivate(token) {
   const memberSet = new Set();
   const typedBySub = new Map(member.filter(r => r.subscription_id).map(r => [r.subscription_id, r]));
   for (const m of members) {
-    if (m.status !== "active") continue;
+    if (m.status !== "active" && !inPaidPeriod(m)) continue;
     const typed = typedBySub.get(m.subscription_id);
     const email = norm(typed ? typed.email : m.email);
     if (!isEmail(email) || off.has(email)) continue;
