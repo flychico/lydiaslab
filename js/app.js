@@ -397,7 +397,10 @@ function wireAllSignupForms(root) {
         }
         let emailed = false;
         try { const body = await res.json(); emailed = !!(body && body.emailed); } catch (_) { /* older service: no note */ }
+        try { localStorage.setItem("leo_signed_up", String(Date.now())); } catch (_) {}   // the sign-up pop up never shows again
+        const done = form.closest(".leo-pop");
         form.outerHTML = '<div class="small" style="color:#2f9e44;font-weight:600">' + thanks + (emailed ? ' A confirmation email is on its way.' : '') + '</div>';
+        if (done) setTimeout(function () { closeSignupPopup(); }, 3500);
       } catch (err) {
         showSignupError(form, errorEl, "We could not save your sign up. Check your connection and try again.");
       } finally {
@@ -435,6 +438,91 @@ function renderFooter() {
     + "21+. Please bet responsibly. If gambling stops being fun, call 1-800-MY-RESET (1-800-697-3738)."
     + '<div style="margin-top:8px"><a href="/privacy/">Privacy</a> &middot; <a href="/terms/">Terms</a> &middot; <a href="/refunds/">Refunds</a> &middot; <a href="mailto:support@ndhorizon.com">Contact</a></div>';
   wireAllSignupForms(el);
+  scheduleSignupPopup();
+}
+
+// ---------- Sign-up pop up (Lynold, 2026-11-21) ----------
+// A small free card offer that a visitor closes with the X, Escape, a tap outside it, or by signing up.
+// It waits until the reader has looked at the page (14 seconds or 40% of the way down), shows once,
+// then stays away 7 days after a close and for good after a sign-up. On phones it is a sheet at the
+// bottom that leaves the page visible (Google treats full-screen pop ups on arrival as intrusive).
+// Not on membership, legal, gym or Market Desk pages, nor for automated browsers (the prerender).
+const SIGNUP_POPUP = { KEY_CLOSED: "leo_pop_closed", KEY_DONE: "leo_signed_up", WAIT_MS: 14000, SCROLL: 0.4, AWAY_DAYS: 7 };
+function signupPopupAllowed() {
+  try {
+    if (navigator.webdriver) return false;
+    if (/^\/(membership|terms|privacy|refunds|gym|research|x)(\/|$)/.test(location.pathname)) return false;
+    if (localStorage.getItem(SIGNUP_POPUP.KEY_DONE)) return false;
+    const closed = +localStorage.getItem(SIGNUP_POPUP.KEY_CLOSED) || 0;
+    if (closed && Date.now() - closed < SIGNUP_POPUP.AWAY_DAYS * 864e5) return false;
+    return true;
+  } catch (_) { return false; }   // no storage: never nag
+}
+function scheduleSignupPopup() {
+  if (window.__leoPopScheduled || !signupPopupAllowed()) return;
+  window.__leoPopScheduled = true;
+  let fired = false;
+  const fire = function () {
+    if (fired) return; fired = true;
+    window.removeEventListener("scroll", onScroll);
+    clearTimeout(timer);
+    showSignupPopup();
+  };
+  const onScroll = function () {
+    const h = document.documentElement.scrollHeight - window.innerHeight;
+    if (h > 0 && window.scrollY / h >= SIGNUP_POPUP.SCROLL) fire();
+  };
+  const timer = setTimeout(fire, SIGNUP_POPUP.WAIT_MS);
+  window.addEventListener("scroll", onScroll, { passive: true });
+}
+function showSignupPopup() {
+  if (document.querySelector(".leo-pop") || !signupPopupAllowed()) return;
+  if (!document.getElementById("leo-pop-css")) {
+    document.head.insertAdjacentHTML("beforeend", '<style id="leo-pop-css">'
+      + '.leo-pop-back{position:fixed;inset:0;background:rgba(20,29,41,.45);z-index:9998;opacity:0;transition:opacity .2s}'
+      + '.leo-pop{position:fixed;z-index:9999;left:50%;top:50%;transform:translate(-50%,-46%);width:min(420px,calc(100vw - 32px));'
+      + 'background:var(--bg-card,#FDFBF7);color:var(--text,#2A2620);border:1px solid var(--border,#DED4C2);border-radius:var(--radius,14px);'
+      + 'box-shadow:var(--shadow-md,0 18px 48px rgba(42,38,32,.11));padding:24px 22px 18px;opacity:0;transition:opacity .2s,transform .2s}'
+      + '.leo-pop.in,.leo-pop-back.in{opacity:1}.leo-pop.in{transform:translate(-50%,-50%)}'
+      + '.leo-pop h2{margin:0 26px 6px 0;font-size:1.25rem;line-height:1.25}'
+      + '.leo-pop p{margin:0 0 12px;color:var(--text-dim,#675D4F);font-size:.92rem;line-height:1.45}'
+      + '.leo-pop form{display:flex;flex-direction:column;gap:8px}.leo-pop input{width:100%;box-sizing:border-box}'
+      + '.leo-pop-x{position:absolute;top:8px;right:8px;width:34px;height:34px;border:0;background:transparent;color:var(--text-dim,#675D4F);'
+      + 'font-size:22px;line-height:34px;cursor:pointer;border-radius:50%}.leo-pop-x:hover{background:var(--bg-elev,#EDE6D9)}'
+      + '.leo-pop-more{margin:10px 0 0;font-size:.85rem;text-align:center}'
+      + '@media (max-width:600px){.leo-pop-back{background:rgba(20,29,41,.25)}'
+      + '.leo-pop{left:0;right:0;top:auto;bottom:0;width:auto;transform:translateY(100%);border-radius:var(--radius,14px) var(--radius,14px) 0 0;'
+      + 'padding:20px 16px calc(14px + env(safe-area-inset-bottom))}.leo-pop.in{transform:translateY(0)}}'
+      + '</style>');
+  }
+  document.body.insertAdjacentHTML("beforeend",
+    '<div class="leo-pop-back" data-leo-pop-close></div>'
+    + '<div class="leo-pop" role="dialog" aria-modal="true" aria-labelledby="leo-pop-h">'
+    + '<button type="button" class="leo-pop-x" aria-label="Close" data-leo-pop-close>&times;</button>'
+    + '<h2 id="leo-pop-h">Get Leo&rsquo;s picks free before every game</h2>'
+    + '<p>Every NFL and NBA call by email before kickoff or tip, graded the next morning, misses included. Unsubscribe anytime.</p>'
+    + '<form class="lydia-signup-form" data-list="free-preview" data-thanks="You are on the list. The next card arrives before the next slate.">'
+    + '<input type="text" name="name" autocomplete="given-name" maxlength="80" placeholder="First name (optional)">'
+    + '<input type="email" name="email" required autocomplete="email" placeholder="you@email.com">'
+    + '<input type="hidden" name="bot-field">'
+    + '<button class="btn blue" type="submit">Send me the free card</button>'
+    + '</form>'
+    + '<p class="leo-pop-more">Want the full reasoning behind every call? <a href="/membership/">Try a week for $10</a></p>'
+    + '</div>');
+  const pop = document.querySelector(".leo-pop"), back = document.querySelector(".leo-pop-back");
+  wireAllSignupForms(pop);
+  document.querySelectorAll("[data-leo-pop-close]").forEach(function (b) { b.addEventListener("click", function () { closeSignupPopup(true); }); });
+  document.addEventListener("keydown", signupPopupEsc);
+  requestAnimationFrame(function () { pop.classList.add("in"); back.classList.add("in"); });
+  if (window.matchMedia && window.matchMedia("(min-width: 601px)").matches) {
+    const em = pop.querySelector('input[name="email"]'); if (em) setTimeout(function () { em.focus(); }, 220);
+  }
+}
+function signupPopupEsc(e) { if (e.key === "Escape") closeSignupPopup(true); }
+function closeSignupPopup(byReader) {
+  if (byReader) { try { localStorage.setItem(SIGNUP_POPUP.KEY_CLOSED, String(Date.now())); } catch (_) {} }
+  document.removeEventListener("keydown", signupPopupEsc);
+  document.querySelectorAll(".leo-pop, .leo-pop-back").forEach(function (el) { el.classList.remove("in"); setTimeout(function () { el.remove(); }, 220); });
 }
 
 function escapeHtml(s) {
