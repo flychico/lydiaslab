@@ -18,6 +18,16 @@
  * scorers, and the final score once it is in.
  */
 const fs = require("fs"), path = require("path");
+// Thanksgiving 2026 (SEO-26 part A, OD-06, Lynold Nov 19 and Nov 22): until the first Thanksgiving kickoff the free
+// card box on every Week 12 page says the free list gets the full member brief on Thursday. Pages re-rendered after
+// the kickoff go back to the usual copy by themselves.
+const TG_UNTIL = Date.parse("2026-11-26T18:00:00Z");   // Bears at Lions, 1:00pm ET
+const isThanksgivingWeek = (season, week) => +season === 2026 && +week === 12 && Date.now() < TG_UNTIL;
+const TG_BOX = {
+  head: "Free on Thanksgiving: the full member brief",
+  line: "Join the free list and on Thursday you get the brief Leo members receive: every call on the Thanksgiving games, the reasoning and the inputs behind it. After that, the free card before every slate.",
+  thanks: "You are on the list. Thursday&rsquo;s brief arrives before the first kickoff."
+};
 const ROOT = path.join(__dirname, "..");
 const TEAMS = require("./lib/nfl-teams");
 const { GA_HEAD } = require("./lib/ga");
@@ -296,8 +306,11 @@ details.wk-more{margin-top:24px}details.wk-more summary{cursor:pointer;font-weig
   </section>
 
   <div class="nfl-signup">
-    <div><b>Get Leo&rsquo;s card before every slate</b><p>Free by email: Leo&rsquo;s calls for every NFL and NBA game before kickoff or tip, graded the next morning.</p></div>
-    <form class="lydia-signup-form" data-list="free-preview" data-thanks="You are on the list. The next card arrives before the next slate.">
+    ${isThanksgivingWeek(season, week)
+      ? `<div><b>${TG_BOX.head}</b><p>${TG_BOX.line}</p></div>
+    <form class="lydia-signup-form" data-list="free-preview" data-thanks="${TG_BOX.thanks}">`
+      : `<div><b>Get Leo&rsquo;s card before every slate</b><p>Free by email: Leo&rsquo;s calls for every NFL and NBA game before kickoff or tip, graded the next morning.</p></div>
+    <form class="lydia-signup-form" data-list="free-preview" data-thanks="You are on the list. The next card arrives before the next slate.">`}
       <input type="email" name="email" required placeholder="you@email.com" aria-label="Email address">
       <input type="hidden" name="bot-field">
       <button class="btn blue" type="submit">Send me the free card</button>
