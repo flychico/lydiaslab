@@ -38,10 +38,31 @@ function topScorers(m){
     .sort((a,b)=>b.prob-a.prob).slice(0,2);
 }
 
+// Thanksgiving 2026 (SEO-26 part A, OD-06, Lynold Nov 19 and Nov 22): until the first Thanksgiving kickoff the free
+// card box on every Week 12 page says the free list gets the full member brief on Thursday. Pages re-rendered after
+// the kickoff go back to the usual copy by themselves.
+const TG_UNTIL = Date.parse("2026-11-26T18:00:00Z");   // Bears at Lions, 1:00pm ET
+const isThanksgivingWeek = (season, week) => +season === 2026 && +week === 12 && Date.now() < TG_UNTIL;
+const TG_BOX = {
+  head: "Free on Thanksgiving: the full member brief",
+  line: "Join the free list and on Thursday you get the brief Leo members receive: every call on the Thanksgiving games, the reasoning and the inputs behind it. After that, the free card before every slate.",
+  thanks: "You are on the list. Thursday&rsquo;s brief arrives before the first kickoff."
+};
+
 /* Free email signup, in the page body. Posts to the same signup Worker and
    list as the footer form (free-preview); scripts/send-nfl-card-emails.js
    sends that list the NFL card on game days. */
 function signupBox(m){
+  if (isThanksgivingWeek(m.season || 2026, m.week)) return `
+  <div class="nfl-signup">
+    <div><b>${TG_BOX.head}</b>
+    <p>${TG_BOX.line}</p></div>
+    <form class="lydia-signup-form" data-list="free-preview" data-thanks="${TG_BOX.thanks}">
+      <input type="email" name="email" required placeholder="you@email.com" aria-label="Email address">
+      <input type="hidden" name="bot-field">
+      <button class="btn blue" type="submit">Send me the free card</button>
+    </form>
+  </div>`;
   return `
   <div class="nfl-signup">
     <div><b>Free NFL card by email</b>
@@ -666,6 +687,7 @@ ${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternT
   </section>
   <h1 class="mh-title">${esc(TEAMS.full(m.away))} at ${esc(TEAMS.full(m.home))}</h1>
   <p style="text-align:center;margin:0"><a class="wk-link" href="${weekUrl(m)}">Week ${v(m.week,"")} card &rarr;</a></p>
+  ${isThanksgivingWeek(m.season || 2026, m.week) ? signupBox(m) : ""}
   ${COPY.summary(m)}
 
   ${COPY.whatHappened(m)}
@@ -676,7 +698,7 @@ ${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternT
 
   ${COPY.why(m)}
 
-  ${signupBox(m)}
+  ${isThanksgivingWeek(m.season || 2026, m.week) ? "" : signupBox(m)}
 
   ${injurySection(m)}
 
