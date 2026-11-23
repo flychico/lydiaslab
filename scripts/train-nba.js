@@ -45,6 +45,8 @@ function lines(season) {
 async function features() {
   const rows = [], finals = {}, endValues = {};
   let lastFinal = {}, lastLg3 = null, lastValues = null;
+  // NBA-H32 settings: [tag, weight after 5+ straight missed team games, weight after 10+].
+  const H32 = [["_h32a", 0.75, 0.5], ["_h32b", 0.5, 0.25]];
   for (const s of SEASONS) {
     const { games, players, lg3 } = await M.loadSeason(s, { maxAgeHours: 24 * 30, priorLg3: lastLg3 });
     const teams = [...new Set(games.flatMap(g => [g.home, g.away]))].sort();
@@ -52,7 +54,7 @@ async function features() {
     const L = lines(s);
     const playedIn = new Map();   // game_id|team -> Set of athlete ids who logged minutes
     for (const p of players) if (p.played) { const k = p.game_id + "|" + p.team; if (!playedIn.has(k)) playedIn.set(k, new Set()); playedIn.get(k).add(p.id); }
-    const lastGame = {};          // team -> {date, game_id}
+    const lastGame = {}, teamHist = {};          // team -> {date, game_id}; team -> game ids played so far
     const dates = [...new Set(games.map(g => g.date))];
     for (const d of dates) {
       const prev = games.filter(g => g.date < d);
@@ -72,7 +74,16 @@ async function features() {
           f[side + "_lost_prev"] = prevSat ? M.lostValue(regs, team, x => prevSat.has(x.id) ? 0 : 1).lost : 0;
           f[side + "_lostf"] = M.lostValue(regsF, team, x => sat.has(x.id) ? 0 : 1).lost;
           f[side + "_lostf_prev"] = prevSat ? M.lostValue(regsF, team, x => prevSat.has(x.id) ? 0 : 1).lost : 0;
+          // NBA-H32 (long-absence discount): a regular out 5+ straight team games is partly in the ratings already.
+          const hist = teamHist[team] || [];
+          const streak = x => { let k = 0; for (let i = hist.length - 1; i >= 0 && k < 20; i--) { if ((playedIn.get(hist[i] + "|" + team) || new Set()).has(x.id)) break; k++; } return k; };
+          for (const [tag, w5, w10] of H32) {
+            const w = x => { const k = streak(x); return k >= 10 ? w10 : k >= 5 ? w5 : 1; };
+            f[side + "_lost" + tag] = M.lostValue(regs, team, x => sat.has(x.id) ? 0 : w(x)).lost;
+            f[side + "_lost_prev" + tag] = prevSat ? M.lostValue(regs, team, x => prevSat.has(x.id) ? 0 : w(x)).lost : 0;
+          }
         }
+        for (const [tag] of H32) { f["lost" + tag + "_d"] = f["home_lost" + tag] - f["away_lost" + tag]; f["lost_prev" + tag + "_d"] = f["home_lost_prev" + tag] - f["away_lost_prev" + tag]; }
         f.b2b_d = f.home_b2b - f.away_b2b; f.rest_d = f.home_rest - f.away_rest;
         f.lost_d = f.home_lost - f.away_lost; f.lost_prev_d = f.home_lost_prev - f.away_lost_prev;
         f.lostf_d = f.home_lostf - f.away_lostf; f.lostf_prev_d = f.home_lostf_prev - f.away_lostf_prev;
@@ -80,7 +91,8 @@ async function features() {
         if (l && l.spread != null) { f.mkt_margin = -l.spread; f.home_ml = l.home_ml; f.away_ml = l.away_ml; }
         rows.push(f);
       }
-      for (const g of today) { lastGame[g.home] = { date: d, game_id: g.game_id }; lastGame[g.away] = { date: d, game_id: g.game_id }; }
+      for (const g of today) { lastGame[g.home] = { date: d, game_id: g.game_id }; lastGame[g.away] = { date: d, game_id: g.game_id };
+        for (const t of [g.home, g.away]) (teamHist[t] = teamHist[t] || []).push(g.game_id); }
     }
     lastFinal = M.ratings(games, teams, prior).r;
     finals[s] = lastFinal; lastLg3 = lg3; lastValues = M.seasonEndValues(players); endValues[s] = lastValues;
@@ -256,6 +268,14 @@ function pickRules(g) {
       exact_in: evaluate(rows, EXACT, "exact, in-sample SD"), exact_oos: evaluate(rows, EXACT, "exact, walk-forward SD", { oos: true }),
       livef_oos: evaluate(rows, LIVE_F, "live-like + prior-season fallback", { oos: true }), exactf_oos: evaluate(rows, EXACT_F, "exact + prior-season fallback", { oos: true })
     };
+    for (const [tag, lab] of [["_h32a", "H32 0.75 after 5+, 0.5 after 10+"], ["_h32b", "H32 0.5 after 5+, 0.25 after 10+"]]) {
+      A["live" + tag] = evaluate(rows, ["rating_diff", "b2b_d", "rest_d", "lost_prev" + tag + "_d"], "live-like " + lab, { oos: true });
+      A["exact" + tag] = evaluate(rows, ["rating_diff", "b2b_d", "rest_d", "lost" + tag + "_d"], "exact " + lab, { oos: true });
+    }
+    const bySeason = r => [2026, 2027].map(t => { const g = r._tested.filter(x => x.season === t);
+      return `${t}: miss ${(g.reduce((s, x) => s + Math.abs(x.margin - x.pred), 0) / g.length).toFixed(3)} brier ${(g.reduce((s, x) => s + (x.p_home - (x.margin > 0 ? 1 : 0)) ** 2, 0) / g.length).toFixed(4)}`; }).join("  ");
+    console.log("\nH32 by test season:");
+    for (const k of ["live_oos", "live_h32a", "live_h32b", "exact_oos", "exact_h32a", "exact_h32b"]) console.log(`  ${A[k].label.padEnd(50)} ${bySeason(A[k])}`);
     console.log("\nAUDIT (walk-forward, test seasons 2025-26 and 2026-27)");
     for (const [k, r] of Object.entries(A)) console.log(`  ${r.label.padEnd(40)} ${line(r)}`);
     console.log("\nCalibration, favoured side (stated vs won):");

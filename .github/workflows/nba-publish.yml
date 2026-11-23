@@ -28,6 +28,10 @@ on:
         description: "YYYY-MM-DD slate. Blank = today in America/New_York."
         required: false
         type: string
+      only_if_tip_before:
+        description: "HH:MM ET. Run only when today has an NBA tip before this time (the 2:47pm early-tip read). Blank = always run."
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -37,7 +41,34 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The conditional early-tip read (Lynold, 2026-11-23; NBA-H28): the Leo runner starts this workflow at 2:47pm ET
+  # with only_if_tip_before=17:00, and the card is rebuilt only on days with a tip before 5pm ET.
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      go: ${{ steps.c.outputs.go }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: data/nba/schedule.json
+      - id: c
+        env:
+          BEFORE: ${{ github.event.inputs.only_if_tip_before }}
+          DATE_IN: ${{ github.event.inputs.date }}
+        run: |
+          if [ -z "$BEFORE" ]; then echo "go=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          node -e '
+            const s = require("./data/nba/schedule.json"), before = process.env.BEFORE;
+            const d = process.env.DATE_IN || new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+            const day = (s.days || []).find(x => x.date === d) || { games: [] };
+            const et = t => new Date(t).toLocaleTimeString("en-GB", { timeZone: "America/New_York", hour: "2-digit", minute: "2-digit", hour12: false });
+            const early = day.games.filter(g => et(g.tip_utc) < before);
+            console.log(`${d}: ${day.games.length} games, ${early.length} tip before ${before} ET`);
+            require("fs").appendFileSync(process.env.GITHUB_OUTPUT, `go=${early.length ? "true" : "false"}\n`);'
+
   publish:
+    needs: check
+    if: needs.check.outputs.go == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

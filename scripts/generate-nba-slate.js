@@ -123,6 +123,8 @@ function readHistory() {
 
 (async () => {
   const model = JSON.parse(fs.readFileSync(path.join(DIR, "model.json"), "utf8"));
+  const GATE = require("./lib/nba-pick-gate");
+  let PRIOR = null; try { PRIOR = JSON.parse(fs.readFileSync(path.join(DIR, "prior-players.json"), "utf8")).values; } catch (e) { console.log("::warning::no prior-players.json; Pick Safety Gate off"); }
   const season = model.season;
   const slate = await scoreboard(DATE);
   console.log(`NBA ${DATE}: ${slate.length} games on the scoreboard`);
@@ -225,8 +227,8 @@ function readHistory() {
         projected: PR ? (() => { const t = P.project(PR, g.home, g.away).total; return { total: Math.round(t), home: Math.round((t + margin) / 2), away: Math.round((t - margin) / 2) }; })() : null
       }
     };
-    { let pk = LOCK.apply(DATE, g.game_id, PK.pickForGame(game), { ignoreHold: true });
-      const shape = x => x ? { side: x.side, team: x.team, p: +x.p.toFixed(4), price: x.price, ok: x.ok, why: x.why, ...(x.under ? { under: true } : {}), ...(x.locked ? { locked: true } : {}), ...(x.held ? { held: true } : {}), ...(x.monday ? { monday: true } : {}) } : null;
+    { let pk = LOCK.apply(DATE, g.game_id, PK.pickForGame(game), { ignoreHold: true, ignoreGate: true });
+      const shape = x => x ? { side: x.side, team: x.team, p: +x.p.toFixed(4), price: x.price, ok: x.ok, why: x.why, ...(x.under ? { under: true } : {}), ...(x.locked ? { locked: true } : {}), ...(x.held ? { held: true } : {}), ...(x.monday ? { monday: true } : {}), ...(x.gate ? { gate: true } : {}) } : null;
       game.leo.pick = shape(pk);
       const sw = SW.check(game, model); if (sw.flags.length) game.leo.depends = sw.flags;
       // Option B (Lynold, 2026-11-16, HO-0097): a pick that rests on an open day-to-day status is not made.
@@ -239,6 +241,14 @@ function readHistory() {
       if (!started && (drop || !prior)) { if (LOCK.hold(DATE, g.game_id, drop ? { side: pk.side, players: skipBy, at: now } : null)) locksChanged = true; }
       if (skipBy) { for (const f of (game.leo.depends || [])) if (f.before.ok) f.text = f.text.replace(/ and this is no pick\.$/, ". Too close to call: no Leo Pick on this game.").replace(/ No Leo Pick until his status is known\.$/, " Too close to call: no Leo Pick on this game.");
         if (pk && pk.ok) { pk = { ...pk, ok: false, held: true, why: `too close to call: rested on ${skipBy.join(" and ")} (day-to-day)` }; game.leo.pick = shape(pk); } }
+      // Pick Safety Gate (Lynold, 2026-11-23, lib/nba-pick-gate.js): skip the pick when a top two player of the
+      // favoured team by last season's value is out with under 3 games this season. Saved per read in the lock file.
+      if (!started) try {
+        const side = pk && pk.ok ? pk.side : null;
+        const hit = side ? GATE.check({ team: g[side], injuries: inj.list, seasonPlayers, prior: PRIOR }) : null;
+        if (LOCK.gate(DATE, g.game_id, hit ? { side, players: hit.players, why: GATE.reason(hit), at: now } : null)) locksChanged = true;
+        if (hit) { pk = { ...pk, ok: false, gate: true, why: GATE.reason(hit) }; game.leo.pick = { ...shape(pk), gate: true }; game.leo.gate = hit.players; }
+      } catch (e) { console.log(`::warning::Pick Safety Gate error on ${g.game_id}: ${e.message}`); }
       if (LOCK.lock(DATE, g.game_id, pk, now)) locksChanged = true; }
     game.url = URLS.gamePath(game);   // the game page address, for the home page card and every link (SEO-09)
     out.push(game);

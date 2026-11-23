@@ -75,6 +75,7 @@ function pickText(g) {
   const pct = Math.round(pk.p * 100) + "%";
   if (pk.under || pk.p < PICK_P) return { ok: false, badge: "", line: `No pick: Leo has ${pk.team} ${(pk.p * 100).toFixed(1)}%, just under the 60% bar.` };
   if (pk.monday) return { ok: false, badge: "", line: `No pick: Leo has ${pk.team} ${pct}, but Leo makes no picks on Mondays.` };
+  if (pk.gate) return { ok: false, badge: "", line: `No pick: Leo has ${pk.team} ${pct}, but ${String(pk.why || "").replace(/^pick safety gate: /, "")}, which Leo's number may not count. Leo skips it.` };
   if (pk.held) return { ok: false, badge: "", line: `No pick: Leo has ${pk.team} ${pct}, but it depends on ${pk.why.replace(/^(waiting on|too close to call: rested on) /, "")}. Too close to call, so Leo skips it.` };
   if (pk.ok) return { ok: true, badge: `Pick ${pk.team} ${fmtPrice(pk.price)}`,
     line: `Leo Pick: ${pk.team} to win at ${fmtPrice(pk.price)} (Leo ${pct}). Tracked in units, not a bet.` };
@@ -90,7 +91,8 @@ function callBox(g) {
   const sg = v => (v > 0 ? "+" : "") + v;
   if (pk && pk.ok) return { on: true, value: `${pk.team} ${fmtPrice(pk.price)}`, sub: "Leo Pick, to win" };
   let why = "Under 60%, close to DraftKings";
-  if (pk && pk.held) why = "Skipped: too close to call";
+  if (pk && pk.gate) why = "Skipped: key player out";
+  else if (pk && pk.held) why = "Skipped: too close to call";
   else if (pk && pk.monday) why = "No Leo Picks on Mondays";
   else if (pk && (pk.under || pk.p < PICK_P)) why = `${pk.team} ${(pk.p * 100).toFixed(1)}%, under 60%`;
   else if (pk && pk.price == null) why = "No moneyline yet";

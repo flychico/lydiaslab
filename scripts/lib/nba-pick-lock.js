@@ -36,6 +36,10 @@ function apply(date, gameId, pk, opt = {}) {
   // Hold (HO-0097, option B): no lock yet and the last read before tip rested on an open day-to-day status.
   const H = (load(date).holds || {})[String(gameId)];
   if (!opt.ignoreHold && !L && pk.ok && H && H.held) return { ...pk, ok: false, held: true, why: `too close to call: rested on ${H.players.join(" and ")} (day-to-day)` };
+  // Pick Safety Gate (Lynold, 2026-11-23): the last read before tip found a top two player of the favoured team out
+  // with under 3 games this season. Applies to locked picks too; the read that clears it brings the pick back.
+  const G = (load(date).gates || {})[String(gameId)];
+  if (!opt.ignoreGate && pk.ok && G && G.side === pk.side) return { ...pk, ok: false, gate: true, why: G.why };
   if (!L || L.side !== pk.side || pk.p < 0.6) return pk;
   return { ...pk, price: L.price, ok: true, why: "", locked: true };
 }
@@ -56,6 +60,15 @@ function hold(date, gameId, h) {
   if (next) doc.holds[String(gameId)] = next; else delete doc.holds[String(gameId)];
   return true;
 }
+/** Record the Pick Safety Gate for a game at this read (null clears it). Returns true if the file changed. */
+function gate(date, gameId, g) {
+  if (date < LOCK_FROM) return false;
+  const doc = load(date); doc.gates = doc.gates || {};
+  const prev = JSON.stringify(doc.gates[String(gameId)] || null), next = g ? { side: g.side, players: g.players, why: g.why, at: g.at } : null;
+  if (prev === JSON.stringify(next)) return false;
+  if (next) doc.gates[String(gameId)] = next; else delete doc.gates[String(gameId)];
+  return true;
+}
 /** The hold saved for a game this date, if any (sticky skip, Lynold 2026-11-16). */
 function heldFor(date, gameId) { const H = (load(date).holds || {})[String(gameId)]; return H && H.held ? H : null; }
 function save(date) {
@@ -63,4 +76,4 @@ function save(date) {
   fs.mkdirSync(DIR, { recursive: true });
   fs.writeFileSync(file(date), JSON.stringify(cache[date], null, 1) + "\n");
 }
-module.exports = { LOCK_FROM, load, apply, lock, hold, heldFor, save, units: PK.units };
+module.exports = { LOCK_FROM, load, apply, lock, hold, heldFor, gate, save, units: PK.units };
