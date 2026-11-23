@@ -268,7 +268,8 @@ function main() {
     // means the home team is favoured by that many.
     if (p.proj_spread != null && !done("spread")) {
       const sRow = H && H.spread.row ? H.spread.row : p;
-      const line = n(sRow.spread_line);
+      // Tuesday rule (from 2026-11-25): a locked call is graded at Tuesday's line.
+      const line = H && H.spread.lineValue != null ? H.spread.lineValue : n(sRow.spread_line);
       // both numbers are stated from the home side: Leo takes the home team
       // when he expects them to beat the line, the away team when he doesn't
       const gap = line == null ? null : sRow.proj_spread - line;
@@ -281,7 +282,7 @@ function main() {
       }
       const leoErr = Math.abs(sRow.proj_spread - margin);
       const mktErr = line == null ? null : Math.abs(line - margin);
-      rows.push({ ...base, market: "spread", status: H && H.spread.held ? "held_earlier_read" : p.spread_status,
+      rows.push({ ...base, market: "spread", status: H && H.spread.lineValue != null ? "tuesday_lock" : H && H.spread.held ? "held_earlier_read" : p.spread_status,
         leo_side: side, leo_value: sRow.proj_spread, market_value: line,
         edge: r3(p.spread_edge), actual_value: margin, result: res,
         market_result: "", beat_market: mktErr == null ? "" : (leoErr < mktErr ? "Y" : "N"),

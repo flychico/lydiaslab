@@ -42,4 +42,16 @@ h = C.held([r1, { ...r2, proj_total: 38 }]);
 assert.strictEqual(h.total.call, "Under"); assert.strictEqual(h.total.row.total_line, 41.5); assert.strictEqual(h.total.held, false);
 // never a call: none
 assert.strictEqual(C.held([{ ...r1, total_line: 42.5 }]).total.call, null);
+// Tuesday spread lock (from 2026-11-25): the locked side and line win over the read's own numbers
+const t0 = { date: "2026-11-29", away: "A", home: "H", pick: "H", model_prob: 0.65, price: -150, exp_margin: 0, spread_line: 7,
+  spread_lock_status: "locked", spread_lock_side: "H", spread_lock_line: 2.5 };
+assert.strictEqual(C.calls(t0).spread.call, "H"); assert.strictEqual(C.calls(t0).spread.label, "H -2.5");
+assert.strictEqual(C.grade("spread", t0, { home_score: 24, away_score: 21 }), "W");   // graded at 2.5, not 7
+assert.strictEqual(C.calls({ ...t0, spread_lock_status: "removed", spread_lock_reason: "QB" }).spread.call, null);
+assert.strictEqual(C.calls({ ...t0, spread_lock_status: "" }).spread.call, null);      // no lock: no game-day call
+// held(): a removal on the last read is not overridden by an earlier locked read
+assert.strictEqual(C.held([{ ...t0, captured_at: "1" }, { ...t0, captured_at: "2", spread_lock_status: "removed" }]).spread.call, null);
+assert.strictEqual(C.held([{ ...t0, captured_at: "1" }]).spread.lineValue, 2.5);
+// before the lock date nothing changes
+assert.strictEqual(C.calls({ ...t0, date: "2026-11-23", exp_margin: 10 }).spread.label, "H -7");
 console.log("nfl-calls: all checks pass");

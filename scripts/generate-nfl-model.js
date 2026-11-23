@@ -532,6 +532,12 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
     }
     if (kept) console.log(`  started games: ${kept} kept as read before kickoff`);
   }
+  // Tuesday spread calls (DEC-20261120-09, from the 2026-11-25 games): lock each game's spread call at the
+  // first read on or after its week's Tuesday, remove it only for a big injury change (lib/nfl-spread-lock.js).
+  try {
+    const SL = require("./lib/nfl-spread-lock").apply(dir, picks);
+    if (SL.weeks.length) console.log(`  spread locks: weeks ${SL.weeks.join(", ")}, ${SL.locked} locked calls${SL.changed.length ? " (updated)" : ""}`);
+  } catch (e) { console.log("::warning::spread lock step failed: " + e.message); }
   for(const [name,data] of [["team-stats",teamStats],["picks",picks],["injuries",injuries],["results",results]]){
     fs.writeFileSync(path.join(dir,`${name}-${target}.json`), JSON.stringify(data,null,2));
     // Only promote to the rolling -today file when there is something to show.

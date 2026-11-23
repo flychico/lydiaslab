@@ -225,7 +225,7 @@ function callsTable(games) {
   const td = c => `<td style="${F};font-size:13px;padding:7px 4px;border-top:1px solid ${E.X.line};${c && c.call ? `font-weight:800;color:${T.good}` : `color:${T.dim}`}">${c && c.call ? esc(c.label) : "no call"}</td>`;
   return E.tbl(`<tr>${th("Game")}${th("Moneyline")}${th("Spread")}${th("Total")}</tr>` +
     games.map(m => { const C = callsOf(m); return C ? `<tr><td style="${F};font-size:13px;padding:7px 4px;border-top:1px solid ${E.X.line};color:${T.text}"><b>${esc(m.away)} @ ${esc(m.home)}</b><br><span style="color:${T.dim};font-size:11px">${esc(clock(m.kickoff))}</span></td>${td(C.ml)}${td(C.spread)}${td(C.total)}</tr>` : ""; }).join("")) +
-    `<div style="${F};font-size:11px;color:${T.dim};margin-top:8px">Moneyline needs more than 60% and a price better than -230. Spread needs Leo 1.5 points off the line, on the team his win chance favours. Leo's total is information only.</div>`;
+    `<div style="${F};font-size:11px;color:${T.dim};margin-top:8px">Moneyline needs more than 60% and a price better than -230. Spread needs Leo 1.5 points off the line, on the team his win chance favours, and from Week 12 it is made from Tuesday's read at Tuesday's line. Leo's total is information only.</div>`;
 }
 
 /**

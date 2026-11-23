@@ -120,10 +120,11 @@ function gameCalls() {
   catch (e) { console.log(`  games.csv unavailable (${e.message.split("\n")[0]}); game CLV skipped`); return []; }
   const byId = new Map(feed.map(g => [g.game_id, g]));
   const hist = readCsv(D("prediction-history.csv"));
-  const first = new Map();
+  const first = new Map(), last = new Map();
   for (const r of hist.sort((a, b) => a.captured_at.localeCompare(b.captured_at))) {
     if (Date.parse(r.captured_at) >= Date.parse(r.kickoff_utc)) continue;
     if (!first.has(r.game_id)) first.set(r.game_id, r);
+    last.set(r.game_id, r);
   }
   const out = [];
   for (const [id, r] of first) {
@@ -147,6 +148,22 @@ function gameCalls() {
         clv_pts: closeProb == null || mprob0 == null ? null : r2(100 * (closeProb - mprob0)),
         minutes_before_kick_first: Math.round((Date.parse(r.kickoff_utc) - Date.parse(r.captured_at)) / 6e4),
         actual: winner, result: res, units: res === "W" ? r2(profit(price0)) : res === "L" ? -1 : 0, paused });
+    }
+    // Tuesday rule (from 2026-11-25): the spread call and its line come from the lock the last read before
+    // kickoff carries; closing line value is Tuesday's line against the close.
+    const CL = require("./lib/nfl-calls");
+    if (r.date >= CL.RULES.SPREAD_LOCK_FROM) {
+      const lr = last.get(id) || r, c = CL.calls(lr).spread, lc = num(g.spread_line);
+      if (c.call && c.lineValue != null) {
+        const homeSide = c.call === r.home, marg = hs - as, l0 = c.lineValue;
+        const res = marg === l0 ? "P" : ((marg > l0) === homeSide ? "W" : "L");
+        out.push({ date: r.date, kind: "spread", market: "SPREAD", group: "SP", player: "", team: c.call, matchup: r.matchup,
+          side: c.call, first_at: lr.spread_lock_at || r.captured_at, first_line: l0, first_price: -110, projection: num(lr.exp_margin),
+          close_at: "close", close_line: lc, close_price: -110, clv_pts: lc == null ? null : r2(homeSide ? lc - l0 : l0 - lc),
+          minutes_before_kick_first: Math.round((Date.parse(r.kickoff_utc) - Date.parse(lr.spread_lock_at || r.captured_at)) / 6e4),
+          actual: marg, result: res, units: res === "W" ? r2(profit(-110)) : res === "L" ? -1 : 0, tuesday: true });
+      }
+      continue;
     }
     // Spread side at the first read: Leo's home margin against the home line.
     const m = num(r.exp_margin), l0 = num(r.spread_line), lc = num(g.spread_line);

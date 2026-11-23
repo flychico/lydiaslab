@@ -41,6 +41,10 @@ const RULES = {
   // and the call must be on the team Leo's win chance favours (the backtested rule).
   SPREAD_V2_FROM: "2026-11-22",
   SPREAD_V2_FLOOR: 1.5,
+  // From the 2026-11-25 games (Week 12; DEC-20261120-09, live on Lynold's "Go live this Tuesday", Nov 22):
+  // the spread call is made once, from the first read on or after the week's Tuesday, and graded at that
+  // read's line. Rows carry it as spread_lock_* fields (scripts/lib/nfl-spread-lock.js).
+  SPREAD_LOCK_FROM: "2026-11-25",
   TOTAL_FLOOR: 1.5,
   TOTAL_CAP: 7.0,
   TOTAL_CALLS: false       // DEC-20261119-01: totals are information only
@@ -72,7 +76,19 @@ function calls(g) {
   else out.ml = { call: g.pick, team: g.pick, prob, price, label: `${g.pick} ${am(price)}` };
 
   // ---- spread ---------------------------------------------------------------
-  if (margin == null || sLine == null) out.spread = { call: null, pass: "No line yet" };
+  const lockOn = String(g.date || "") >= RULES.SPREAD_LOCK_FROM;
+  const lst = g.spread_lock_status || (g.spread_lock && g.spread_lock.status) || "";
+  if (lockOn) {
+    const lLine = num(g.spread_lock_line), lSide = g.spread_lock_side || null;
+    const gapNow = margin != null && lLine != null ? r1(margin - lLine) : null;
+    if (lst === "locked" && lSide && lLine != null)
+      out.spread = { call: lSide, gap: gapNow, line: teamLine(lSide, home, lLine), lineValue: lLine, locked: true, lockedAt: g.spread_lock_at || null,
+        label: `${lSide} ${teamLine(lSide, home, lLine)}` };
+    else if (lst === "removed") out.spread = { call: null, gap: gapNow, pass: `Tuesday's spread call removed before kickoff: ${g.spread_lock_reason || "injury change"}`, short: "removed before kickoff" };
+    else if (lst === "none") out.spread = { call: null, gap: gapNow, pass: `No spread call from Tuesday's read: ${g.spread_lock_reason || "no edge"}`, short: g.spread_lock_reason || "no Tuesday call" };
+    else out.spread = { call: null, gap: margin != null && sLine != null ? r1(margin - sLine) : null, pass: "The spread call is made from Tuesday's read", short: "call comes Tuesday" };
+  }
+  else if (margin == null || sLine == null) out.spread = { call: null, pass: "No line yet" };
   else {
     const gap = margin - sLine;
     const side = gap > 0 ? home : away;
@@ -107,7 +123,7 @@ function grade(c, g, final) {
   const hs = num(final.home_score), as = num(final.away_score);
   if (hs == null || as == null) return "";
   if (c === "ml") { const x = calls(g).ml; if (!x.call) return ""; return hs === as ? "P" : ((hs > as ? g.home : g.away) === x.call ? "W" : "L"); }
-  if (c === "spread") { const x = calls(g).spread; if (!x.call) return ""; const m = hs - as, l = num(g.spread_line); return m === l ? "P" : ((x.call === g.home) === (m > l) ? "W" : "L"); }
+  if (c === "spread") { const x = calls(g).spread; if (!x.call) return ""; const m = hs - as, l = x.lineValue != null ? x.lineValue : num(g.spread_line); return m === l ? "P" : ((x.call === g.home) === (m > l) ? "W" : "L"); }
   if (c === "total") { const x = calls(g).total; if (!x.call) return ""; const t = hs + as, l = num(g.total_line); return t === l ? "P" : ((t > l) === (x.call === "Over") ? "W" : "L"); }
   return "";
 }
@@ -128,6 +144,13 @@ function held(reads) {
   const out = {};
   for (const mk of ["ml", "spread", "total"]) {
     let hit = null;
+    const last = rows[rows.length - 1];
+    if (mk === "spread" && last && String(last.date || "") >= RULES.SPREAD_LOCK_FROM) {
+      // Tuesday rule: the last read before kickoff carries the lock (or its removal); no earlier read is held.
+      const c = calls(last).spread;
+      out[mk] = c.call ? { call: c.call, label: c.label, row: last, held: false, lineValue: c.lineValue } : { call: null, row: null };
+      continue;
+    }
     for (let i = rows.length - 1; i >= 0; i--) { const c = calls(rows[i])[mk]; if (c.call) { hit = { call: c.call, label: c.label, row: rows[i], held: i !== rows.length - 1 }; break; } }
     out[mk] = hit || { call: null, row: null };
   }

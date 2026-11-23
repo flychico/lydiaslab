@@ -47,13 +47,16 @@ const COLS = [
   "away_qb","away_off","away_def","away_epa_db","away_def_epa",
   "home_qb","home_off","home_def","home_epa_db","home_def_epa",
   "h2h_net_home","h2h_qb_edge_home","h2h_turnover_edge_home",
-  "away_exp_points","home_exp_points","roof_adj","wind_adj","over_prob","cover_prob"
+  "away_exp_points","home_exp_points","roof_adj","wind_adj","over_prob","cover_prob",
+  // The Tuesday spread lock (scripts/lib/nfl-spread-lock.js, from the 2026-11-25 games). Added 2026-11-22 at the
+  // end so older rows keep their layout; record() widens the header once.
+  "spread_lock_status","spread_lock_side","spread_lock_line","spread_lock_reason","spread_lock_at"
 ];
 
 // The values whose change constitutes a new prediction. Anything derived from
 // these (edge, value_side) is along for the ride.
 const VALUES = ["pick","model_prob","raw_model_prob","proj_total","proj_spread","market_prob","price",
-                "away_rating","home_rating"];
+                "away_rating","home_rating","spread_lock_status"];
 
 /*
   gameday + a "HH:MM" Eastern gametime -> a real UTC instant.
@@ -82,6 +85,19 @@ function kickoffUtc(dateStr, hhmm) {
   return new Date(guess).toISOString();
 }
 
+// Older files were written before the spread lock columns existed: put the full header on line 1 once.
+// Old rows simply end early, and every reader maps cells by header name, so their values read as empty.
+function widenHeader(file) {
+  if (!fs.existsSync(file)) return;
+  const text = fs.readFileSync(file, "utf8");
+  const nl = text.indexOf("\n");
+  const head = (nl < 0 ? text : text.slice(0, nl)).replace(/\r$/, "");
+  if (head === COLS.join(",")) return;
+  const have = splitCsv(head);
+  if (!COLS.slice(0, have.length).every((c, i) => c === have[i])) return;   // unknown layout: leave it alone
+  fs.writeFileSync(file, COLS.join(",") + (nl < 0 ? "\n" : text.slice(nl)));
+}
+
 function record(dir, picks) {
   if (!Array.isArray(picks) || !picks.length) return { appended: 0, unchanged: 0 };
   const capturedAt = new Date().toISOString();
@@ -107,8 +123,11 @@ function record(dir, picks) {
     h2h_turnover_edge_home: h2.turnover_edge_home ?? "",
     away_exp_points: g.away_exp_points ?? "", home_exp_points: g.home_exp_points ?? "",
     roof_adj: g.roof_adj ?? "", wind_adj: g.wind_adj ?? "",
-    over_prob: g.over_prob ?? "", cover_prob: g.cover_prob ?? ""
+    over_prob: g.over_prob ?? "", cover_prob: g.cover_prob ?? "",
+    spread_lock_status: g.spread_lock_status ?? "", spread_lock_side: g.spread_lock_side ?? "",
+    spread_lock_line: g.spread_lock_line ?? "", spread_lock_reason: g.spread_lock_reason ?? "", spread_lock_at: g.spread_lock_at ?? ""
   };});
+  widenHeader(path.join(dir, "prediction-history.csv"));
   return appendObservations(path.join(dir, "prediction-history.csv"), COLS, rows,
                             ["date","game_id"], VALUES);
 }
@@ -150,7 +169,9 @@ function frozenPredictions(file, date) {
     proj_total: num(r.proj_total), total_line: num(r.total_line), total_side: r.total_side || null,
     proj_spread: num(r.proj_spread), spread_line: num(r.spread_line), spread_side: r.spread_side || null,
     exp_margin: num(r.exp_margin),
-    status: "frozen", total_status: "frozen", spread_status: "frozen"
+    status: "frozen", total_status: "frozen", spread_status: "frozen",
+    spread_lock_status: r.spread_lock_status || "", spread_lock_side: r.spread_lock_side || "",
+    spread_lock_line: num(r.spread_lock_line), spread_lock_reason: r.spread_lock_reason || "", spread_lock_at: r.spread_lock_at || ""
   }));
   out._skippedAfterKickoff = afterKick;
   return out;
@@ -178,7 +199,9 @@ function preKickoffReads(file, date) {
     const row = { date: r.date, game_id: r.game_id, matchup: r.matchup, away: r.away, home: r.home,
       captured_at: r.captured_at, kickoff_utc: r.kickoff_utc, pick: r.pick,
       model_prob: num(r.model_prob), price: num(r.price), proj_total: num(r.proj_total), total_line: num(r.total_line),
-      proj_spread: num(r.proj_spread), spread_line: num(r.spread_line), exp_margin: num(r.exp_margin) };
+      proj_spread: num(r.proj_spread), spread_line: num(r.spread_line), exp_margin: num(r.exp_margin),
+      spread_lock_status: r.spread_lock_status || "", spread_lock_side: r.spread_lock_side || "",
+      spread_lock_line: num(r.spread_lock_line), spread_lock_reason: r.spread_lock_reason || "" };
     if (!out.has(r.game_id)) out.set(r.game_id, []);
     out.get(r.game_id).push(row);
   }
