@@ -188,10 +188,13 @@ function seasonRec(date) {
 }
 const dayName = date => new Date(date + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" }).toUpperCase();
 
-function resultsPost(id, date, games, label, facts) {
+function resultsPost(id, date, games, label, facts, dayGames) {
   const calls = games.flatMap(g => (g.calls || []).filter(c => c.result).map(c => ({ ...c, g })));
   if (!calls.length) return null;
-  const t = tally(calls);
+  // A wave post lists its own games, but the opener and the record are the whole day so far (Nov 22: wave-3 read
+  // "TOO EASY. 1-0 so far today" while the day was 3-3).
+  const dayCalls = (dayGames || games).flatMap(g => (g.calls || []).filter(c => c.result));
+  const t = tally(dayCalls);
   // Winners on top, then pushes, then losers (Lynold, Nov 16); kickoff order within each.
   const rank = { W: 0, P: 1, L: 2 };
   const lines = calls.map((c, i) => ({ c, i })).sort((a, b) => rank[a.c.result] - rank[b.c.result] || a.i - b.i).map(x => resultLine(x.c.g, x.c));
@@ -426,13 +429,15 @@ function build(date) {
   const week = rvGames.length ? rvGames[0].week : null;
   const waves = readJson(path.join(DIR, "waves", `${date}.json`));
   const W = (waves && waves.waves) || [];
+  const soFar = [];
   for (const w of W) {
+    for (const x of w.games) { const g = byFull.get(`${x.away}|${x.home}`); if (g && !soFar.includes(g)) soFar.push(g); }
     if (has(w.id)) continue;
     // A single wave that already holds the whole day is the day post; skip it.
     if (W.length === 1 && w.still_playing === 0) continue;
     const gs = w.games.map(x => byFull.get(`${x.away}|${x.home}`)).filter(Boolean);
     if (!gs.length) continue;
-    set(resultsPost(w.id, date, gs, w.label, facts(date, week, gs))); changed = true;
+    set(resultsPost(w.id, date, gs, w.label, facts(date, week, gs), soFar.slice())); changed = true;
   }
   if (!has("day") && rvGames.length) {
     const READS = preKickoffReads(path.join(DIR, "prediction-history.csv"), date);
