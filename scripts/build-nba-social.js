@@ -110,7 +110,7 @@ function picksPost() {
   const open = games.filter(g => new Date(g.tip_utc) > NOW);
   if (!open.length) return null;
   const items = [];
-  for (const g of open) {
+  for (const g of games) {   // every pick of the night, started or not (locked picks stay), so a later refresh never drops one
     const pk = g.leo.pick;
     if (pk && pk.ok !== false) items.push({ game_id: String(g.game_id), type: "pick", side: pk.side, p: pk.p, price: pk.price, team: nick(g, pk.side), code: code(g, pk.side) });
   }
@@ -281,7 +281,11 @@ function statOfNight() {
 /* ---------- write ---------- */
 const changed = [];
 const ONLY = arg("only");   // replays: "picks" or "results"
-const firstTip = games.length ? new Date(games[0].tip_utc) : null;
+// The picks post follows the card until the LAST game tips, not the first (Nov 22: on Nov 21 the Knicks pick was
+// dropped and the Timberwolves added after the 1pm tip, and no updated post went out). Picks on games already
+// started cannot change (the price lock keeps them), so only later games can move it; send-x-posts.js emails
+// the change as "(updated)".
+const firstTip = games.length ? new Date(Math.max(...games.map(g => Date.parse(g.tip_utc)).filter(Number.isFinite))) : null;
 if (ONLY !== "results" && (!has("picks") || (firstTip && NOW < firstTip))) {
   const p = picksPost();
   if (p) { doc.posts = doc.posts.filter(x => x.id !== "picks"); doc.posts.unshift(p); changed.push("picks"); }

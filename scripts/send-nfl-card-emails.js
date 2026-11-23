@@ -147,7 +147,7 @@ function cardHtml(games, rows, props, nice, week, subject) {
         cta: "Full preview: injuries, props and why"
       });
     }),
-    M.upsell().html,
+    M.upsell(lastWin()).html,
     E.footer({
       links: [[`${E.SITE}/nfl/scoreboard/`, "Live scores"], [`${E.SITE}/nfl/results/`, "Leo&rsquo;s record"]],
       note: "Leo&rsquo;s top touchdown pick in a game scored 47% of the time in 2023 to 2025. These are chances, not promises."
@@ -173,8 +173,21 @@ function build(games) {
   const html = cardHtml(games, rows, props, nice, week, subject);
   const text = [`Leo's NFL card, Week ${week}, ${nice}`, "",
     ...rows.map(({ m, g, top, winner }) => `${TEAMS.full(m.away)} at ${TEAMS.full(m.home)} (${clock(m.kickoff)})\n  Leo: ${winner}\n  Leo total: ${g && g.proj_total != null ? g.proj_total : "n/a"}\n  Most likely TD: ${top.map(x => `${x.player} ${pct(x.prob)}`).join(", ") || "n/a"}\n  ${SITE}${m.url}`),
-    "", M.upsell().text, "", `Full card: ${SITE}/nfl/week/`, "Analysis only, not betting advice. 21+. 1-800-MY-RESET.", 'Reply "unsubscribe" to stop these.'].join("\n");
+    "", M.upsell(lastWin()).text, "", `Full card: ${SITE}/nfl/week/`, "Analysis only, not betting advice. 21+. 1-800-MY-RESET.", 'Reply "unsubscribe" to stop these.'].join("\n");
   return { subject, html, text };
+}
+
+// After a winning NFL day, one line on it above the membership ask (Lynold, Nov 22, from the outside review).
+function lastWin() {
+  try {
+    const rv = JSON.parse(fs.readFileSync(path.join(ROOT, "data/nfl/results-review.json"), "utf8"));
+    const dates = [...new Set(rv.games.filter(g => g.date < DATE && (g.calls || []).some(c => c.result)).map(g => g.date))].sort();
+    const d = dates[dates.length - 1]; if (!d) return "";
+    const cs = rv.games.filter(g => g.date === d).flatMap(g => (g.calls || []).filter(c => c.result));
+    const w = cs.filter(c => c.result === "W").length, l = cs.filter(c => c.result === "L").length;
+    const day = new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
+    return w > l ? `${day} Leo went ${w}-${l} on its calls, every one graded in public at ndhorizon.com/nfl/results/.` : "";
+  } catch (e) { return ""; }
 }
 
 async function main() {

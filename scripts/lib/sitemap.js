@@ -60,7 +60,41 @@ function render(pages) {
     + pages.map(p => `  <url><loc>${ORIGIN}${p}</loc></url>`).join("\n") + `\n</urlset>\n`;
 }
 
+// NFL and NBA game pages older than 7 days get <meta name="robots" content="noindex, follow"> and so leave the
+// sitemap (Lynold, 2026-11-22, chose the outside review's advice: Google had 585 pages "Discovered, currently not
+// indexed", most of them dated game pages nobody searches after the game). Upcoming and recent games stay indexable;
+// old pages stay on the site and keep passing links. Runs before every sitemap write, so a page re-rendered later
+// gets the tag back on the next run.
+const STALE_DAYS = 7;
+const GAME_DIR = /-prediction-odds-(\d{4}-\d{2}-\d{2})(-game-\d)?$/;
+const ROBOTS_STALE = '<meta name="robots" content="noindex, follow">';
+function etToday() { return new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10); }
+function markStaleGames(root, today = etToday()) {
+  const cutoff = new Date(Date.parse(today + "T00:00:00Z") - STALE_DAYS * 864e5).toISOString().slice(0, 10);
+  let n = 0;
+  for (const sport of ["nfl", "nba"]) {
+    const dir = path.join(root, sport);
+    if (!fs.existsSync(dir)) continue;
+    for (const name of fs.readdirSync(dir)) {
+      const m = GAME_DIR.exec(name);
+      if (!m || m[1] >= cutoff) continue;
+      const f = path.join(dir, name, "index.html");
+      if (!fs.existsSync(f)) continue;
+      const html = fs.readFileSync(f, "utf8");
+      const head = html.slice(0, 6000);
+      if (/<meta[^>]+http-equiv=["']refresh["']/i.test(head) || /<meta[^>]+name=["']robots["'][^>]*noindex/i.test(head)) continue;
+      let out;
+      if (/<meta[^>]+name=["']robots["'][^>]*>/i.test(head)) out = html.replace(/<meta[^>]+name=["']robots["'][^>]*>/i, ROBOTS_STALE);
+      else if (/<head[^>]*>/i.test(html)) out = html.replace(/<head[^>]*>/i, h => h + "\n" + ROBOTS_STALE);
+      else continue;
+      fs.writeFileSync(f, out, "utf8"); n++;
+    }
+  }
+  return n;
+}
+
 function writeSitemap(root) {
+  markStaleGames(root);
   const pages = listPages(root);
   fs.writeFileSync(path.join(root, "sitemap.xml"), render(pages), "utf8");
   return pages.length;
@@ -78,4 +112,4 @@ function checkSitemap(root) {
   };
 }
 
-module.exports = { listPages, writeSitemap, checkSitemap, leftOut, ORIGIN };
+module.exports = { markStaleGames, listPages, writeSitemap, checkSitemap, leftOut, ORIGIN };

@@ -50,7 +50,14 @@ async function main() {
   const games = (doc.games || []).filter(g => g.leo);
   if (!games.length) { console.log(`NBA card email: no games on ${DATE}.`); return; }
   const record = (() => { try { return JSON.parse(fs.readFileSync(path.join(ROOT, "data/nba/results.json"), "utf8")).season.picks || null; } catch (e) { return null; } })();
-  const email = E.build(doc, { why: WHY, record, memberLine: true });
+  // After a winning night, one line on it above the membership ask (Lynold, Nov 22, from the outside review).
+  const winLine = (() => { try {
+    const days = JSON.parse(fs.readFileSync(path.join(ROOT, "data/nba/results-days.json"), "utf8")).days || [];
+    const last = days.find(d => d.date < DATE);
+    const c = last && last.calls;
+    return c && c.w > c.l ? `Last night Leo went ${c.w}-${c.l} on its picks, every one graded in public at ndhorizon.com/nba/results/.` : "";
+  } catch (e) { return ""; } })();
+  const email = E.build(doc, { why: WHY, record, memberLine: true, winLine });
   const brief = M.brief(doc, { record });
   const MEMBER = process.argv.includes("--member");
   if (HTML) { const e = MEMBER ? brief : email; fs.writeFileSync(HTML, e.html); console.log(`NBA ${MEMBER ? "member brief" : "card email"} preview written to ${HTML}. ${e.subject}`); return; }
