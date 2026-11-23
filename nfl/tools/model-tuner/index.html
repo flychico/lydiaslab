@@ -217,7 +217,13 @@ async function load(){
   const live = [...bestML.values()].map(h=>{
     const ml=R(h.game_id,h.date,"moneyline"); if(!ml) return null;
     const mv=num(ml.market_value);
-    return { src:"Live", wk:h.week, date:h.date, gm:h.matchup, hm:h.home, aw:h.away, x:x(h),
+    // Neutral site (London, Mexico City): no home field. The saved home_prob tells it apart: it reproduces only
+    // without the intercept (DEC-20261120-07, DEC-20261122-04).
+    const xi = x(h), hp = num(h.home_prob);
+    if (h.neutral === "1" || (MODEL && window.LeoML && hp != null
+        && Math.abs(window.LeoML.predictWeighted(MODEL, xi, {}) - hp) > 0.0006
+        && Math.abs(window.LeoML.predictWeighted(MODEL, { ...xi, neutral: 1 }, {}) - hp) <= 0.0006)) xi.neutral = 1;
+    return { src:"Live", wk:h.week, date:h.date, gm:h.matchup, hm:h.home, aw:h.away, x:xi,
              hw: ml.actual_value===h.home?1:0, win:ml.actual_value, mh: mv==null?null:(ml.leo_side===h.home?mv:1-mv) };
   }).filter(Boolean);
   const rep = ((replay&&replay.games)||[]).map(r=>({ src:"Replay", wk:String(r.week), date:r.date, gm:r.matchup,
