@@ -121,8 +121,10 @@ function picksPost(date, existing) {
   if (!Array.isArray(picks) || !picks.length) return null;
   const games = picks.slice().sort((a, b) => String(a.kickoff).localeCompare(String(b.kickoff)) || a.matchup.localeCompare(b.matchup));
   // kickoff is "13:00" Eastern on the game date; Date.parse on it was NaN, so the post never froze (fixed Nov 20).
-  const first = Math.min(...games.map(g => Date.parse(kickUtc(date, g.kickoff) || g.kickoff)).filter(Number.isFinite));
-  if (existing && NOW() >= first) return existing;            // frozen at the first kickoff
+  // Follows the calls until the last kickoff of the slate (Nov 22, as NBA): calls on games already started are held
+  // (DEC-20261115-53), so only later games can change it, and send-x-posts.js emails the change as "(updated)".
+  const first = Math.max(...games.map(g => Date.parse(kickUtc(date, g.kickoff) || g.kickoff)).filter(Number.isFinite));
+  if (existing && NOW() >= first) return existing;            // frozen at the last kickoff
   const READS = preKickoffReads(path.join(DIR, "prediction-history.csv"), date);
   const lines = [], teams = [], mlCalls = [];
   for (const g of games) {
