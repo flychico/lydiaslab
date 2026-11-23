@@ -182,6 +182,10 @@ function postBy(sport, date, post) {
     // wave, stat and extra read posts are no longer emailed. A picks post whose pick lines change before the first
     // start is sent again on its own as "(updated)".
     if (sport === "parlay") { console.log("parlay posts are not emailed (one email per slate, Nov 22)"); continue; }
+    // One owner email a day (Lynold, 2026-11-22, "Single Daily Owner Email Spec"): the per-post emails are off.
+    // The posts still go to the social files, the site and x/latest for ChatGPT, and the morning Leo Daily Brief
+    // carries the post menu from data/daily-recap-latest.json. X_POST_EMAILS=on brings these emails back.
+    if (process.env.X_POST_EMAILS !== "on") { console.log(`${sport} ${date}: post emails off, the Leo Daily Brief carries the posts`); continue; }
     const byId = new Map((doc.posts || []).filter(p => p.text).map(p => [p.id, p]));
     const groups = [];
     const picks = byId.get("picks");

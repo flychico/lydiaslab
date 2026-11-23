@@ -199,8 +199,10 @@ jobs:
       # Owner audit (DEC-20261017-08): every game of a graded date, Leo's
       # frozen read against the result, emailed to the AUDIT_EMAIL secret.
       # Once per date, only when every game is final and graded.
+      # Off since 2026-11-22: one owner email a day, the Leo Daily Brief (Lynold's spec). Run the
+      # script by hand for a full audit: node scripts/send-nfl-audit-email.js <date>.
       - name: Email the owner audit
-        if: ${{ github.event.inputs.wave != 'true' }}
+        if: ${{ false }}
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
@@ -234,6 +236,11 @@ jobs:
         continue-on-error: true
         run: node scripts/build-prediction-files.js nfl || true
 
+
+      # The daily recap behind Lynold's one morning email (Leo Manager, 2026-11-22). Public data only.
+      - name: Daily recap for the Leo Daily Brief
+        continue-on-error: true
+        run: node scripts/build-daily-recap.js || true
       - name: Commit and push if changed
         run: |
           set -euo pipefail

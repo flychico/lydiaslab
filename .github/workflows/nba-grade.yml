@@ -123,6 +123,11 @@ jobs:
           node scripts/build-leo-parlay.js || true
           node scripts/send-x-posts.js parlay "$(TZ=America/New_York date -d yesterday +%F)" "$(TZ=America/New_York date +%F)" || true
 
+      # The daily recap behind Lynold's one morning email (Leo Manager, 2026-11-22). Public data only.
+      - name: Daily recap for the Leo Daily Brief
+        continue-on-error: true
+        run: node scripts/build-daily-recap.js || true
+
       - name: Prediction files for trackers
         continue-on-error: true
         run: node scripts/build-prediction-files.js nba || true
@@ -132,7 +137,7 @@ jobs:
           set -euo pipefail
           git config user.name "lydia-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/nba data/predictions nba/results nfl/results/index.html $(ls -d data/parlay parlay 2>/dev/null) data/feed/nba nba sitemap.xml data/email-log $(ls -d x 2>/dev/null)
+          git add data/nba data/predictions nba/results nfl/results/index.html $(ls -d data/parlay parlay 2>/dev/null) data/feed/nba nba sitemap.xml data/email-log data/daily-recap-latest.json data/daily-recap $(ls -d x 2>/dev/null)
           if git diff --cached --quiet; then echo "No change."; exit 0; fi
           git commit -m "NBA grade results ${{ steps.g.outputs.date }}${{ github.event.inputs.wave == 'true' && ' (wave)' || '' }}"
           # Retry: on busy days other workflows push between our checkout and our push (Nov 15 12:41pm card lost).

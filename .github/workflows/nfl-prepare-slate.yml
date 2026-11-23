@@ -166,13 +166,11 @@ jobs:
       # Once per date, only from the capture within 3 hours of the first
       # kickoff (or within 9 hours on a night-only day: the midday gather), never after kickoff.
       # Headless Chrome ships on ubuntu-latest. Never fails the gather.
+      # Off since 2026-11-22: one owner email a day, the Leo Daily Brief (Lynold's spec). The PDF still builds
+      # on demand with node scripts/send-nfl-owner-brief.js <date>.
       - name: Email the owner brief (PDF)
-        if: steps.slate.outputs.games != '0'
-        env:
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
-          AUDIT_EMAIL: ${{ secrets.AUDIT_EMAIL }}
-        run: node scripts/send-nfl-owner-brief.js "${{ steps.slate_date.outputs.date }}" || true
+        if: ${{ false }}
+        run: echo off
 
       - name: Prediction files for trackers
         continue-on-error: true
