@@ -38,6 +38,16 @@ const PRIOR_GAMES = 8;
 const HCA_PRIOR = 2.5, HCA_PRIOR_GAMES = 20;
 const REG_MPG = 10, REG_GAMES = 3, LAST_N = 10, REPLACEMENT_GPM = 0.20;
 const FEATURES = ["rating_diff", "b2b_d", "rest_d", "lost_d"];
+// The 30 NBA teams (ESPN abbreviations). The season files also carry exhibition teams (the All-Star game's
+// STARS, STRIPES and WORLD, 2026); those games are kept out of the ratings, the training rows and the priors.
+const NBA_TEAMS = ["ATL","BKN","BOS","CHA","CHI","CLE","DAL","DEN","DET","GS","HOU","IND","LAC","LAL","MEM","MIA","MIL","MIN","NO","NY","OKC","ORL","PHI","PHX","POR","SA","SAC","TOR","UTAH","WSH"];
+const isNbaTeam = t => NBA_TEAMS.includes(t);
+// Players with fewer than REG_GAMES appearances this season (hurt in game one or two) count at this share of
+// their value from last season, so a listed absence is not counted as nothing (Lynold, 2026-11-22).
+const PRIOR_VALUE_SHARE = 0.7;
+// League three point rate for a game's luck: only games before that date, seeded with a prior worth this many
+// attempts, so a walk-forward test never uses the rest of the season (Lynold, 2026-11-22).
+const LG3_PRIOR_ATTEMPTS = 2000;
 const LEAN_EDGE = 4;   // points between Leo and the line before Leo records a lean
 // How much a listed player counts as missing. Out is out. ESPN folds
 // questionable and probable into "Day-To-Day", so it counts as a coin flip
@@ -86,28 +96,33 @@ async function loadSeason(season, opts) {
   const tb = parseCsv(await download("team", season, opts),
     ["game_id", "season_type", "game_date", "team_home_away", "team_abbreviation", "team_score", "opponent_team_abbreviation", "opponent_team_score",
       "three_point_field_goals_made", "three_point_field_goals_attempted"]);
-  // Three point luck per game (NBA-H39): league rate from every regular season row in the file.
-  const threes = new Map(); let m3 = 0, a3 = 0;
+  // Three point luck per game (NBA-H39). The league rate for each game comes only from games before its date
+  // (seeded with last season's rate, opts.priorLg3, else 0.36), so a backtest never sees later games.
+  // LG3 (used for box score luck live) is the rate over every game in the file, all of them already played.
+  const threes = new Map(), byDate = new Map(); let m3 = 0, a3 = 0;
   for (const r of tb) {
-    if (r.season_type !== "2") continue;
+    if (r.season_type !== "2" || !isNbaTeam(r.team_abbreviation) || !isNbaTeam(r.opponent_team_abbreviation)) continue;
     const m = parseFloat(r.three_point_field_goals_made), a = parseFloat(r.three_point_field_goals_attempted);
     if (!Number.isFinite(m) || !Number.isFinite(a)) continue;
     threes.set(r.game_id + "|" + r.team_home_away, [m, a]); m3 += m; a3 += a;
+    const d = byDate.get(r.game_date) || [0, 0]; d[0] += m; d[1] += a; byDate.set(r.game_date, d);
   }
   if (a3 > 0) LG3 = m3 / a3;
-  const lg3 = LG3;
-  const luckOfRow = id => { const h = threes.get(id + "|home"), a = threes.get(id + "|away");
+  const p0 = (opts && opts.priorLg3) || 0.36, rateOn = new Map();
+  { let cm = p0 * LG3_PRIOR_ATTEMPTS, ca = LG3_PRIOR_ATTEMPTS;
+    for (const d of [...byDate.keys()].sort()) { rateOn.set(d, cm / ca); const x = byDate.get(d); cm += x[0]; ca += x[1]; } }
+  const luckOfRow = (id, date) => { const h = threes.get(id + "|home"), a = threes.get(id + "|away"), lg3 = rateOn.get(date) || LG3;
     return h && a ? 3 * ((h[0] - h[1] * lg3) - (a[0] - a[1] * lg3)) : undefined; };
-  const games = tb.filter(r => r.season_type === "2" && r.team_home_away === "home").map(r => ({
+  const games = tb.filter(r => r.season_type === "2" && r.team_home_away === "home" && isNbaTeam(r.team_abbreviation) && isNbaTeam(r.opponent_team_abbreviation)).map(r => ({
     game_id: r.game_id, date: r.game_date, home: r.team_abbreviation, away: r.opponent_team_abbreviation,
-    hs: +r.team_score, as: +r.opponent_team_score, margin: +r.team_score - +r.opponent_team_score, luck: luckOfRow(r.game_id)
+    hs: +r.team_score, as: +r.opponent_team_score, margin: +r.team_score - +r.opponent_team_score, luck: luckOfRow(r.game_id, r.game_date)
   })).filter(g => Number.isFinite(g.margin)).sort((a, b) => a.date.localeCompare(b.date) || a.game_id.localeCompare(b.game_id));
   const n = v => { const x = parseFloat(v); return Number.isFinite(x) ? x : 0; };
   const pb = parseCsv(await download("player", season, opts),
     ["game_id", "season_type", "game_date", "athlete_id", "athlete_display_name", "team_abbreviation", "minutes", "points",
       "field_goals_made", "field_goals_attempted", "free_throws_made", "free_throws_attempted", "offensive_rebounds",
       "defensive_rebounds", "rebounds", "steals", "assists", "blocks", "fouls", "turnovers"]);
-  const players = pb.filter(r => r.season_type === "2").map(r => {
+  const players = pb.filter(r => r.season_type === "2" && isNbaTeam(r.team_abbreviation)).map(r => {
     const minutes = n(r.minutes);
     // Hollinger game score: one number for what a player put into a game.
     const gmsc = n(r.points) + 0.4 * n(r.field_goals_made) - 0.7 * n(r.field_goals_attempted)
@@ -116,7 +131,7 @@ async function loadSeason(season, opts) {
     return { game_id: r.game_id, date: r.game_date, id: r.athlete_id, name: r.athlete_display_name, team: r.team_abbreviation, minutes, gmsc, played: minutes > 0 ? 1 : 0,
       pts: n(r.points), reb: n(r.rebounds), ast: n(r.assists) };
   }).sort((a, b) => a.date.localeCompare(b.date));
-  return { season, games, players };
+  return { season, games, players, lg3: LG3 };
 }
 
 // ---------- ratings ----------
@@ -176,8 +191,14 @@ function ratings(games, teams, prior) {
 }
 
 // ---------- availability ----------
-/** Regulars per team as of a date: last 10 lines per player this season. */
-function regulars(players, beforeDate) {
+/**
+ * Regulars per team as of a date: last 10 lines per player this season.
+ * priorValues (optional, { athlete_id: value at the end of last season }): a player who has logged minutes for a
+ * team this season fewer than REG_GAMES times, with 10+ minutes a game when he played (hurt in his first game or
+ * two), counts with
+ * PRIOR_VALUE_SHARE of last season's value instead of being left out (prior: true).
+ */
+function regulars(players, beforeDate, priorValues) {
   const byPlayer = new Map();
   for (const p of players) { if (p.date >= beforeDate) break; if (!byPlayer.has(p.id)) byPlayer.set(p.id, []); byPlayer.get(p.id).push(p); }
   const out = [];
@@ -188,8 +209,17 @@ function regulars(players, beforeDate) {
       const mins = g.reduce((s, r) => s + r.minutes, 0), mpg = mins / g.length, n = g.reduce((s, r) => s + r.played, 0);
       const gpm = mins > 0 ? g.reduce((s, r) => s + r.gmsc, 0) / Math.max(1, mins) : 0;
       if (mpg >= REG_MPG && n >= REG_GAMES) out.push({ id, name: g[g.length - 1].name, team, mpg, gpm, value: Math.max(0, mpg * (gpm - REPLACEMENT_GPM)) });
+      else if (priorValues && n >= 1 && n < REG_GAMES && mins / n >= REG_MPG && priorValues[id] > 0)
+        out.push({ id, name: g[g.length - 1].name, team, mpg, gpm, value: PRIOR_VALUE_SHARE * priorValues[id], prior: true });
     }
   }
+  return out;
+}
+
+/** Each player's value at the end of a season (last 10 lines, regulars only), for the next season's fallback. */
+function seasonEndValues(players) {
+  const out = {};
+  for (const r of regulars(players, "9999-12-31")) out[r.id] = Math.max(out[r.id] || 0, +r.value.toFixed(2));
   return out;
 }
 
@@ -230,6 +260,6 @@ function noVig(homeMl, awayMl) {
 }
 
 module.exports = {
-  MODEL_VERSION, THREE_LUCK, FEATURES, LEAN_EDGE, STATUS_WEIGHT, PRIOR_REGRESS, CACHE,
-  parseCsv, download, loadSeason, ratings, regulars, lostValue, predict, normCdf, restDays, noVig, implied, solve
+  MODEL_VERSION, THREE_LUCK, FEATURES, LEAN_EDGE, STATUS_WEIGHT, PRIOR_REGRESS, CACHE, NBA_TEAMS, isNbaTeam, PRIOR_VALUE_SHARE,
+  seasonEndValues, parseCsv, download, loadSeason, ratings, regulars, lostValue, predict, normCdf, restDays, noVig, implied, solve
 };

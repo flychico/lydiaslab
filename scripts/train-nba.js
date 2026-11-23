@@ -1,10 +1,16 @@
 #!/usr/bin/env node
 /**
- * Train and backtest Leo NBA v1 (scripts/lib/nba-model.js).
+ * Train and backtest Leo NBA (scripts/lib/nba-model.js).
  *
  *   node scripts/train-nba.js            backtest only, prints the table
+ *   node scripts/train-nba.js --audit    also prints calibration by bucket and the Leo Pick rule table
  *   node scripts/train-nba.js --write    also writes data/nba/model.json and
  *                                        data/nba/backtest.json
+ *
+ * Audit fixes (Lynold, 2026-11-22): only the 30 NBA teams (no All-Star exhibition teams); the league three point
+ * rate behind each game's luck uses only earlier games; resid_sd written to model.json is the spread of the
+ * walk-forward (out of sample) residuals, not the in-sample fit's; players with fewer than 3 games this season
+ * fall back to a share of last season's value (lostf_* rows, PRIOR_VALUE_SHARE in nba-model.js).
  *
  * Walk-forward: each test season is predicted with coefficients fitted only
  * on earlier seasons, and every game only sees games before its date. The
@@ -37,10 +43,10 @@ function lines(season) {
 }
 
 async function features() {
-  const rows = [], finals = {};
-  let lastFinal = {};
+  const rows = [], finals = {}, endValues = {};
+  let lastFinal = {}, lastLg3 = null, lastValues = null;
   for (const s of SEASONS) {
-    const { games, players } = await M.loadSeason(s, { maxAgeHours: 24 * 30 });
+    const { games, players, lg3 } = await M.loadSeason(s, { maxAgeHours: 24 * 30, priorLg3: lastLg3 });
     const teams = [...new Set(games.flatMap(g => [g.home, g.away]))].sort();
     const prior = Object.fromEntries(teams.map(t => [t, M.PRIOR_REGRESS * (lastFinal[t] || 0)]));
     const L = lines(s);
@@ -52,6 +58,7 @@ async function features() {
       const prev = games.filter(g => g.date < d);
       const { r } = M.ratings(prev, teams, prior);
       const regs = M.regulars(players, d);
+      const regsF = lastValues ? M.regulars(players, d, lastValues) : regs;
       const today = games.filter(g => g.date === d);
       for (const g of today) {
         const f = { season: s, game_id: g.game_id, date: d, home: g.home, away: g.away, margin: g.margin, rating_diff: r[g.home] - r[g.away] };
@@ -63,9 +70,12 @@ async function features() {
           f[side + "_lost"] = M.lostValue(regs, team, x => sat.has(x.id) ? 0 : 1).lost;
           const prevSat = lg ? (playedIn.get(lg.game_id + "|" + team) || new Set()) : null;
           f[side + "_lost_prev"] = prevSat ? M.lostValue(regs, team, x => prevSat.has(x.id) ? 0 : 1).lost : 0;
+          f[side + "_lostf"] = M.lostValue(regsF, team, x => sat.has(x.id) ? 0 : 1).lost;
+          f[side + "_lostf_prev"] = prevSat ? M.lostValue(regsF, team, x => prevSat.has(x.id) ? 0 : 1).lost : 0;
         }
         f.b2b_d = f.home_b2b - f.away_b2b; f.rest_d = f.home_rest - f.away_rest;
         f.lost_d = f.home_lost - f.away_lost; f.lost_prev_d = f.home_lost_prev - f.away_lost_prev;
+        f.lostf_d = f.home_lostf - f.away_lostf; f.lostf_prev_d = f.home_lostf_prev - f.away_lostf_prev;
         const l = L[g.game_id];
         if (l && l.spread != null) { f.mkt_margin = -l.spread; f.home_ml = l.home_ml; f.away_ml = l.away_ml; }
         rows.push(f);
@@ -73,10 +83,10 @@ async function features() {
       for (const g of today) { lastGame[g.home] = { date: d, game_id: g.game_id }; lastGame[g.away] = { date: d, game_id: g.game_id }; }
     }
     lastFinal = M.ratings(games, teams, prior).r;
-    finals[s] = lastFinal;
+    finals[s] = lastFinal; lastLg3 = lg3; lastValues = M.seasonEndValues(players); endValues[s] = lastValues;
     console.log(`  ${s}: ${games.length} games`);
   }
-  return { rows, finals };
+  return { rows, finals, endValues };
 }
 
 function ols(rows, X) {
@@ -91,12 +101,26 @@ function ols(rows, X) {
 }
 
 const payout = ml => ml < 0 ? 100 / -ml : ml / 100;
-function evaluate(rows, X, label) {
+// Walk-forward residual SD: each earlier season predicted by a fit on the seasons before it (2025 from 2024,
+// 2026 from 2024-25, ...), so the spread of misses is what a fit shows on games it never saw.
+function oosSd(rows, X, upTo) {
+  const res = [];
+  for (let t = TRAIN_FROM + 1; t < upTo; t++) {
+    const fit = ols(rows.filter(r => r.season >= TRAIN_FROM && r.season < t), X);
+    for (const r of rows.filter(r => r.season === t)) res.push(r.margin - fit.pred(r));
+  }
+  if (!res.length) return null;
+  const mean = res.reduce((s, v) => s + v, 0) / res.length;
+  return Math.sqrt(res.reduce((s, v) => s + (v - mean) ** 2, 0) / res.length);
+}
+
+function evaluate(rows, X, label, opts = {}) {
   const tested = [];
   for (const test of [2026, 2027]) {
     const fit = ols(rows.filter(r => r.season >= TRAIN_FROM && r.season < test), X);
+    const sd = opts.oos ? (oosSd(rows, X, test) || fit.resid_sd) : fit.resid_sd;
     for (const r of rows.filter(r => r.season === test)) {
-      const m = fit.pred(r); tested.push({ ...r, pred: m, p_home: M.normCdf(m / fit.resid_sd), sd: fit.resid_sd });
+      const m = fit.pred(r); tested.push({ ...r, pred: m, p_home: M.normCdf(m / sd), sd, sd_in: fit.resid_sd });
     }
   }
   const g = tested.filter(r => r.mkt_margin != null && r.home_ml && r.away_ml);
@@ -111,8 +135,9 @@ function evaluate(rows, X, label) {
     brier_market: +avg(g.map(r => (r.mkt_p - y(r)) ** 2)).toFixed(4),
     winner_leo: +avg(g.map(r => +((r.p_home > .5) === !!y(r)))).toFixed(3),
     winner_market: +avg(g.map(r => +((r.mkt_p > .5) === !!y(r)))).toFixed(3),
-    spread: [], moneyline: []
+    spread: [], moneyline: [], sd_used: +avg([...new Set(g.map(r => r.sd))]).toFixed(3)
   };
+  out._tested = g;
   for (const t of [0, 2, 3, 4, 5, 6]) {
     let w = 0, l = 0, p = 0;
     for (const r of g) {
@@ -156,9 +181,54 @@ function evaluate(rows, X, label) {
   return out;
 }
 
+// Calibration of Leo's win chance on the favoured side, by stated bucket.
+function calibration(g) {
+  const out = [];
+  for (const [lo, hi] of [[0.5, 0.6], [0.6, 0.7], [0.7, 1.01]]) {
+    const b = g.map(r => ({ p: Math.max(r.p_home, 1 - r.p_home), w: (r.p_home >= 0.5) === (r.margin > 0) ? 1 : 0 })).filter(x => x.p >= lo && x.p < hi);
+    out.push({ bucket: `${Math.round(lo * 100)}-${hi > 1 ? "100" : Math.round(hi * 100)}%`, games: b.length,
+      stated: b.length ? +(b.reduce((s, x) => s + x.p, 0) / b.length).toFixed(3) : null,
+      won: b.length ? +(b.reduce((s, x) => s + x.w, 0) / b.length).toFixed(3) : null });
+  }
+  return out;
+}
+
+// Leo Pick rules on the walk-forward rows, through the live rule book (scripts/lib/nba-picks.js) for the base
+// rule; variants add a price cap and an edge over the no-vig chance. Lines are the saved DraftKings line, one per
+// game, so closing line value cannot be measured here (see the live check in business/MODEL_LAB.md).
+function pickRules(g) {
+  const PK = require("./lib/nba-picks");
+  const be = ml => ml < 0 ? -ml / (-ml + 100) : 100 / (ml + 100);
+  const rules = [["today: 60%+, better than -230", () => true]];
+  for (const cap of [-230, -165, -150]) for (const e of [0, 0.04, 0.05, 0.06]) {
+    if (cap === -230 && e === 0) continue;
+    rules.push([`60%+, better than ${cap}${e ? `, edge ${Math.round(e * 100)}+ pts` : ""}`, (x) => x.price > cap && x.edge >= e]);
+  }
+  const out = [];
+  for (const [label, ok] of rules) {
+    const pk = [];
+    for (const r of g) {
+      const base = PK.pick({ p_home: r.p_home, home_ml: r.home_ml, away_ml: r.away_ml, home: r.home, away: r.away });
+      if (!base || !base.ok) continue;
+      const mp = base.side === "home" ? r.mkt_p : 1 - r.mkt_p, x = { price: base.price, edge: base.p - mp };
+      if (!ok(x)) continue;
+      const won = base.side === "home" ? r.margin > 0 : r.margin < 0;
+      pk.push({ u: PK.units(won ? "win" : "loss", base.price), won, be: be(base.price), season: r.season });
+    }
+    const n = pk.length, W = pk.filter(x => x.won).length, U = pk.reduce((s, x) => s + x.u, 0);
+    const sd = Math.sqrt(pk.reduce((s, x) => s + (x.u - U / Math.max(1, n)) ** 2, 0));
+    const byS = t => +pk.filter(x => x.season === t).reduce((s, x) => s + x.u, 0).toFixed(2);
+    out.push({ rule: label, picks: n, won: W, lost: n - W, win_pct: n ? +(W / n).toFixed(3) : null,
+      breakeven: n ? +(pk.reduce((s, x) => s + x.be, 0) / n).toFixed(3) : null, units: +U.toFixed(2), noise: +sd.toFixed(1),
+      roi: n ? +(U / n).toFixed(3) : null, season_2026: byS(2026), season_2027: byS(2027) });
+  }
+  return out;
+}
+
 (async () => {
   console.log("Building features (walk-forward, no future data)...");
-  const { rows, finals } = await features();
+  const { rows, finals, endValues } = await features();
+  const AUDIT = process.argv.includes("--audit") || process.argv.includes("--write");
   const variants = [
     ["Team ratings only", ["rating_diff"]],
     ["+ rest and back-to-backs", ["rating_diff", "b2b_d", "rest_d"]],
@@ -176,24 +246,52 @@ function evaluate(rows, X, label) {
       for (const b of r.lean_buckets) console.log(`  gap ${b.gap.padEnd(5)} ${b.won}-${b.lost}-${b.push}  stated ${b.stated_cover}  actual ${b.actual_cover}  ci95 ${JSON.stringify(b.ci95)}  roi ${b.roi_at_110}  injury-heavy ${b.injury_heavy_share}  ${JSON.stringify(b.by_season)}`);
     }
   }
+  let audit = null;
+  if (AUDIT) {
+    const LIVE = ["rating_diff", "b2b_d", "rest_d", "lost_prev_d"], EXACT = M.FEATURES;
+    const LIVE_F = ["rating_diff", "b2b_d", "rest_d", "lostf_prev_d"], EXACT_F = ["rating_diff", "b2b_d", "rest_d", "lostf_d"];
+    const line = r => `miss ${r.miss_leo}  brier ${r.brier_leo}  winners ${r.winner_leo}  sd ${r.sd_used}`;
+    const A = {
+      live_in: evaluate(rows, LIVE, "live-like, in-sample SD"), live_oos: evaluate(rows, LIVE, "live-like, walk-forward SD", { oos: true }),
+      exact_in: evaluate(rows, EXACT, "exact, in-sample SD"), exact_oos: evaluate(rows, EXACT, "exact, walk-forward SD", { oos: true }),
+      livef_oos: evaluate(rows, LIVE_F, "live-like + prior-season fallback", { oos: true }), exactf_oos: evaluate(rows, EXACT_F, "exact + prior-season fallback", { oos: true })
+    };
+    console.log("\nAUDIT (walk-forward, test seasons 2025-26 and 2026-27)");
+    for (const [k, r] of Object.entries(A)) console.log(`  ${r.label.padEnd(40)} ${line(r)}`);
+    console.log("\nCalibration, favoured side (stated vs won):");
+    for (const k of ["live_in", "live_oos", "exact_in", "exact_oos"]) console.log(`  ${A[k].label.padEnd(30)} ` + calibration(A[k]._tested).map(b => `${b.bucket}: ${b.games} games, said ${b.stated}, won ${b.won}`).join(" | "));
+    const rules = pickRules(A.live_oos._tested);
+    console.log("\nLeo Pick rules (live-like, walk-forward SD):");
+    for (const x of rules) console.log(`  ${x.rule.padEnd(40)} ${String(x.picks).padStart(4)} ${`${x.won}-${x.lost}`.padStart(8)} won ${x.win_pct} needed ${x.breakeven} units ${x.units} (+-${x.noise}) roi ${x.roi} by season ${x.season_2026} / ${x.season_2027}`);
+    audit = { variants: Object.fromEntries(Object.entries(A).map(([k, r]) => [k, { label: r.label, games: r.games, miss: r.miss_leo, brier: r.brier_leo, winners: r.winner_leo, sd: r.sd_used }])),
+      calibration: Object.fromEntries(["live_in", "live_oos", "exact_in", "exact_oos"].map(k => [k, calibration(A[k]._tested)])), pick_rules: rules };
+  }
+  for (const r of results) delete r._tested;
   if (!process.argv.includes("--write")) return;
-  // Production fit: every completed season from TRAIN_FROM.
+  // Production fit: every completed season from TRAIN_FROM. resid_sd is the walk-forward SD (audit fix 2).
   const current = Math.max(...SEASONS);
-  const fit = ols(rows.filter(r => r.season >= TRAIN_FROM && r.season < current), M.FEATURES);
+  const useFallback = process.argv.includes("--fallback");
+  const X = useFallback ? ["rating_diff", "b2b_d", "rest_d", "lostf_d"] : M.FEATURES;
+  const train = rows.filter(r => r.season >= TRAIN_FROM && r.season < current).map(r => useFallback ? { ...r } : r);
+  const fit = ols(train, X);
+  if (useFallback) { fit.coef.lost_d = fit.coef.lostf_d; delete fit.coef.lostf_d; }
+  const sdOos = oosSd(rows, X, current);
   const prev = finals[current - 1];
   const model = {
     model_version: M.MODEL_VERSION, season: current, trained_on: `${TRAIN_FROM}-${current - 1} regular seasons`,
     trained_at: new Date().toISOString().slice(0, 10),
-    coef: Object.fromEntries(Object.entries(fit.coef).map(([k, v]) => [k, +v.toFixed(4)])), resid_sd: +fit.resid_sd.toFixed(3),
+    coef: Object.fromEntries(Object.entries(fit.coef).map(([k, v]) => [k, +v.toFixed(4)])), resid_sd: +(sdOos || fit.resid_sd).toFixed(3),
+    resid_sd_in_sample: +fit.resid_sd.toFixed(3), resid_sd_source: sdOos ? "walk-forward residuals" : "in-sample fit",
     lean_edge_pts: M.LEAN_EDGE, status_weight: M.STATUS_WEIGHT,
-    prior_ratings: Object.fromEntries(Object.entries(prev).map(([t, v]) => [t, +(M.PRIOR_REGRESS * v).toFixed(3)]))
+    prior_ratings: Object.fromEntries(Object.entries(prev).filter(([t]) => M.isNbaTeam(t)).map(([t, v]) => [t, +(M.PRIOR_REGRESS * v).toFixed(3)])),
+    ...(useFallback ? { prior_player_values: endValues[current - 1], prior_value_share: M.PRIOR_VALUE_SHARE } : {})
   };
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(path.join(OUT, "model.json"), JSON.stringify(model, null, 1) + "\n");
   fs.writeFileSync(path.join(OUT, "backtest.json"), JSON.stringify({
     generated: new Date().toISOString().slice(0, 10),
     note: "Walk-forward. Test seasons 2025-26 and 2026-27 to date against DraftKings lines (ESPN). Spread ROI assumes -110. Older seasons had no lines in the source.",
-    variants: results
+    variants: results, audit
   }, null, 1) + "\n");
   console.log("Wrote data/nba/model.json and data/nba/backtest.json");
 })().catch(e => { console.error(e); process.exit(1); });
