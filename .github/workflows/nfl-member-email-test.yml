@@ -23,6 +23,11 @@ on:
 permissions:
   contents: read
 
+
+# One run at a time (Lynold, 2026-11-23: no colliding runs). Queued runs wait; none are cancelled.
+concurrency:
+  group: nfl-member-email-test
+  cancel-in-progress: false
 jobs:
   test:
     runs-on: ubuntu-latest

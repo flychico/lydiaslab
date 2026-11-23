@@ -341,10 +341,11 @@ function review(rv, date) {
 // Free card call to action (Lynold, 2026-11-22, from the outside review): one clear ask, the $10 week, and after a
 // winning day one line on it.
 function upsell(winLine = "") {
-  const line = "Want the full reasoning before every slate, and every miss explained the next morning? Try Leo for $10 a week: the member brief, the morning review and the weekly note. Cancel anytime.";
+  // Two lines (Lynold, 2026-11-23): the reasoning and the miss reviews are for members.
+  const line = "Members get the reasoning behind every call and every miss explained the next morning.";
   return {
-    html: E.panel("Leo members", `<div style="${F};font-size:14px;color:${T.text};line-height:1.5">${winLine ? `<b>${esc(winLine)}</b><br>` : ""}${esc(line)} <a href="${MEMBERSHIP}" style="color:${T.navy};font-weight:800;text-decoration:none">Try a week for $10 &rarr;</a></div>`),
-    text: `${winLine ? winLine + "\n" : ""}${line} Try a week for $10: ${MEMBERSHIP}`
+    html: E.panel("Leo members", `<div style="${F};font-size:14px;color:${T.text};line-height:1.5">${winLine ? `<b>${esc(winLine)}</b><br>` : ""}${esc(line)}<br><a href="${MEMBERSHIP}" style="color:${T.navy};font-weight:800;text-decoration:none">Try a week for $10 &rarr;</a></div>`),
+    text: `${winLine ? winLine + "\n" : ""}${line}\nTry a week for $10: ${MEMBERSHIP}`
   };
 }
 

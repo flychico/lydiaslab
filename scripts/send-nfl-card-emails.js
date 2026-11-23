@@ -114,6 +114,7 @@ function cardHtml(games, rows, props, nice, week, subject) {
       `<b>${esc(TEAMS.full(g.pick))}</b> ${Math.round(g.prob * 100)}%${g.price != null && g.price !== "" ? ` <span style="color:${E.T.dim}">${esc(am(g.price))}</span>` : ""}`,
       `${esc(m.away)} at ${esc(m.home)} &middot; ${esc(clock(m.kickoff))}`]),
       "No team clears 60% on this slate, so Leo makes no pick. Every game below still has his read.")),
+    (() => { const w = watchNote(rows); return w ? E.panel("One to watch", `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:${E.T.text}">${esc(w)}</div>`) : ""; })(),
     ...withCalls.map(({ m, g, top, C }) => {
       const [ac, hc] = E.pairColors(E.NFL_COLORS, m.away, m.home);
       const P = PICKS[m.matchup] || {};
@@ -156,6 +157,19 @@ function cardHtml(games, rows, props, nice, week, subject) {
   return E.shell({ title: subject, preheader: picks.length ? `Leo picks: ${picks.map(({ g }) => `${g.pick} ${Math.round(g.prob * 100)}%`).join(", ")}` : `${games.length} games, Leo's read on each`, body });
 }
 
+// One watch note for the slate (Lynold, 2026-11-23, free card vs member split): the strongest game where Leo's
+// winner is the moneyline underdog, else the closest game.
+function watchNote(rows) {
+  const xs = rows.filter(r => r.g && r.g.prob != null && r.g.pick).map(r => {
+    const side = r.g.pick === r.m.home ? "home" : "away", ml = +r.m[side + "_moneyline"];
+    return { r, side, p: r.g.prob, dog: Number.isFinite(ml) && ml > 0 };
+  });
+  const d = xs.filter(x => x.dog).sort((a, b) => b.p - a.p)[0];
+  if (d) return `Leo has the ${TEAMS.nick(d.r.g.pick)} at ${Math.round(d.p * 100)}% against the ${TEAMS.nick(d.side === "home" ? d.r.m.away : d.r.m.home)}, and the moneyline has them as the underdog.`;
+  const c = xs.sort((a, b) => a.p - b.p)[0];
+  return c ? `The closest game is the ${TEAMS.nick(c.r.m.away)} at the ${TEAMS.nick(c.r.m.home)}, with Leo at ${Math.round(c.p * 100)}% on the ${TEAMS.nick(c.r.g.pick)}.` : "";
+}
+
 function build(games) {
   const props = null;   // the free card only; members get the brief
   const nice = new Date(`${DATE}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" });
@@ -173,6 +187,7 @@ function build(games) {
   const html = cardHtml(games, rows, props, nice, week, subject);
   const text = [`Leo's NFL card, Week ${week}, ${nice}`, "",
     ...rows.map(({ m, g, top, winner }) => `${TEAMS.full(m.away)} at ${TEAMS.full(m.home)} (${clock(m.kickoff)})\n  Leo: ${winner}\n  Leo total: ${g && g.proj_total != null ? g.proj_total : "n/a"}\n  Most likely TD: ${top.map(x => `${x.player} ${pct(x.prob)}`).join(", ") || "n/a"}\n  ${SITE}${m.url}`),
+    ...(watchNote(rows) ? ["", "One to watch: " + watchNote(rows)] : []),
     "", M.upsell(lastWin()).text, "", `Full card: ${SITE}/nfl/week/`, "Analysis only, not betting advice. 21+. 1-800-MY-RESET.", 'Reply "unsubscribe" to stop these.'].join("\n");
   return { subject, html, text };
 }

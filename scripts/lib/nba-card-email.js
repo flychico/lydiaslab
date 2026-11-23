@@ -73,14 +73,29 @@ function card(g, date, why) {
     ${tbl(`<tr>${box("Leo spread", LS == null ? "&mdash;" : esc(NW.favLine(g, LS)), "Leo's favorite, by", true)}${box("DraftKings", mk.home_spread == null ? "&mdash;" : esc(NW.favLine(g, mk.home_spread)), mk.p_home != null ? `market ${esc(g.home)} ${pct(mk.p_home)}` : "&nbsp;")}${box("Call", esc(PKS.callBox(g).value), esc(PKS.callBox(g).sub))}</tr>`)}
     ${PT ? `<div style="font-family:${SANS};font-size:14px;line-height:1.5;color:${T.text};${PT.ok ? `background:${T.leanBg};font-weight:700;` : `color:${T.dim};`}border-radius:10px;padding:${PT.ok ? "9px 12px" : "0"};margin-top:12px">${esc(PT.line)}</div>` : ""}
     ${SW.line(g) ? `<div style="font-family:${SANS};font-size:14px;line-height:1.5;color:${T.text};border-left:3px solid ${T.gold};padding:2px 0 2px 10px;margin-top:10px">${esc(SW.line(g))}</div>` : ""}
-    ${leanLine}
-    ${W && W.summary ? `<div style="font-family:${SANS};font-size:14px;line-height:1.55;color:${T.dim};border-top:1px solid ${T.border};margin-top:12px;padding-top:11px">${esc(W.summary)}</div>` : ""}
+    ${L.lean ? leanLine : ""}
     <div style="font-family:${SANS};font-size:14px;font-weight:800;margin-top:11px"><a href="${pageUrl(g, date)}" style="color:${T.navy};text-decoration:none">Full preview: why Leo has this number &rarr;</a></div>
   </td></tr>`, `background:${T.card};border:1px solid rgba(26,37,53,.16);border-radius:20px;margin:0 0 14px`);
 }
 
+// One watch note for the slate: the strongest game where Leo's winner is the DraftKings underdog, else the closest.
+function watchNote(games) {
+  const dog = games.map(g => {
+    const L = g.leo, mk = g.market || {}, side = L.p_home >= 0.5 ? "home" : "away", p = side === "home" ? L.p_home : L.p_away;
+    const ml = side === "home" ? mk.home_ml : mk.away_ml;
+    return { g, side, p, dog: Number.isFinite(+ml) && +ml > 0 };
+  });
+  const N = (g, side) => require("./nba-urls").nick(g[side], g[side + "_name"]);
+  const d = dog.filter(x => x.dog).sort((a, b) => b.p - a.p)[0];
+  if (d) return `Watch: Leo has the ${N(d.g, d.side)} at ${Math.round(d.p * 100)}% against the ${N(d.g, d.side === "home" ? "away" : "home")}, and DraftKings has them as the underdog.`;
+  const c = dog.sort((a, b) => a.p - b.p)[0];
+  return c ? `Watch: the closest game is ${N(c.g, "away")} at ${N(c.g, "home")}, with Leo at ${Math.round(c.p * 100)}% on the ${N(c.g, c.side)}.` : "";
+}
+
 // Free card call to action (Lynold, 2026-11-22, from the outside review): one clear ask, the $10 week.
-const MEMBER_LINE = "Want the full reasoning before every slate, and every miss explained the next morning? Try Leo for $10 a week: the member brief, the morning review and the weekly note. Cancel anytime.";
+// Free card vs member split (Lynold, 2026-11-23): the free card is win chances, the calls, one watch note and this
+// two-line ask; the reasoning per game and the next-morning miss reviews are for members.
+const MEMBER_LINE = "Members get the reasoning behind every call and every miss explained the next morning.";
 const MEMBER_CTA = "Try a week for $10";
 
 function build(doc, { why, record, memberLine = false, winLine = "" } = {}) {
@@ -96,6 +111,7 @@ function build(doc, { why, record, memberLine = false, winLine = "" } = {}) {
   const first = games.map(g => g.tip_utc).sort()[0];
   const big = games.length ? Math.max(...games.map(gap)) : null;
   const subject = `Leo NBA card, ${nice}: ${games.length} game${games.length === 1 ? "" : "s"}, ${picks.length} pick${picks.length === 1 ? "" : "s"}${pickList.length ? ` (${pickList.join(", ")})` : ""}`;
+  const WATCH = memberLine ? watchNote(games) : "";
   const pickRows = picks.length
     ? tbl(picks.map(g => `<tr><td style="padding:6px 0;font-family:${SANS};font-size:16px;font-weight:800;color:${T.text};white-space:nowrap">${esc(PKS.pickText(g).badge.replace(/^Pick /, ""))}</td>
         <td align="right" style="padding:6px 0;font-family:${SANS};font-size:13px;color:${T.dim}">${esc(g.away)} at ${esc(g.home)} &middot; ${esc(tip(g.tip_utc))}<br>Leo ${Math.round(g.leo.pick ? g.leo.pick.p * 100 : Math.max(g.leo.p_home, g.leo.p_away) * 100)}% to win</td></tr>`).join(`<tr><td colspan="2" style="border-top:1px solid ${T.border};font-size:0;line-height:0;height:1px">&nbsp;</td></tr>`))
@@ -120,9 +136,10 @@ function build(doc, { why, record, memberLine = false, winLine = "" } = {}) {
         sub: record && record.n ? `${record.units > 0 ? "+" : ""}${(+record.units).toFixed(2)} units since ${new Date(record.from + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}` : "first picks graded tomorrow" }
     ]),
     E.panel("Tonight&rsquo;s Leo Picks (moneyline)", pickRows + (picks.length ? `<div style="font-family:${SANS};font-size:13px;color:${T.dim};padding-top:8px">Graded at this price. It locks when Leo first makes the pick.</div>` : "")),
+    (WATCH ? E.panel("One to watch", `<div style="font-family:${SANS};font-size:15px;line-height:1.5;color:${T.text}">${esc(WATCH.replace(/^Watch: /, ""))}</div>`) : ""),
     games.map(g => card(g, date, why)).join(""),
     // Free list only (HO-0061 item 3): one line pointing to the member emails.
-    memberLine ? tbl(`<tr><td style="padding:14px 16px;font-family:${SANS};font-size:15px;line-height:1.55;color:${T.text}">${winLine ? `<b>${winLine}</b><br>` : ""}${MEMBER_LINE} <a href="${SITE}/membership/" style="color:${T.navy};font-weight:800;text-decoration:none">${MEMBER_CTA} &rarr;</a></td></tr>`, `background:${T.heroBg};border:1px solid ${T.border};border-radius:16px;margin:0 0 16px`) : "",
+    memberLine ? tbl(`<tr><td style="padding:14px 16px;font-family:${SANS};font-size:15px;line-height:1.55;color:${T.text}">${winLine ? `<b>${winLine}</b><br>` : ""}${MEMBER_LINE}<br><a href="${SITE}/membership/" style="color:${T.navy};font-weight:800;text-decoration:none">${MEMBER_CTA} &rarr;</a></td></tr>`, `background:${T.heroBg};border:1px solid ${T.border};border-radius:16px;margin:0 0 16px`) : "",
     E.footer({
       links: [[`${SITE}/nba/scoreboard/`, "Live scores and every card"], [`${SITE}/nba/results/`, "Leo&rsquo;s record"]],
       note: "Every number is frozen before tip and graded on the site, wins and losses alike. Under 50 graded picks is an early read."
@@ -132,10 +149,11 @@ function build(doc, { why, record, memberLine = false, winLine = "" } = {}) {
   const text = [`Leo NBA card, ${nice}`, "",
     picks.length ? `Leo Picks (moneyline): ${pickList.join(", ")}. Graded at this price. It locks when Leo first makes the pick.` : "No Leo Picks tonight.",
     ...(record && record.n ? [`Leo Picks so far: ${record.won}-${record.lost}, ${record.units > 0 ? "+" : ""}${(+record.units).toFixed(2)} units since ${record.from}`] : []),
+    ...(WATCH ? ["", WATCH] : []),
     "",
     ...games.map(g => { const L = g.leo, mk = g.market || {}, W = why ? why.why(g) : null;
-      return `${tip(g.tip_utc)}  ${g.away} at ${g.home}  ${[PKS.pickText(g) && PKS.pickText(g).ok ? PKS.pickText(g).badge.toUpperCase() : "", L.lean ? `LEAN ${L.lean.team} ${sgn(L.lean.line)}` : ""].filter(Boolean).join("  ") || "No call"}\n  Leo win chance: ${g.away} ${Math.round(L.p_away * 100)}%, ${g.home} ${Math.round(L.p_home * 100)}%\n  ${NW.compare(g)}\n${W && W.summary ? "  " + W.summary + "\n" : ""}  ${pageUrl(g, date)}\n`; }),
-    ...(memberLine ? ["", ...(winLine ? [winLine] : []), `${MEMBER_LINE} ${MEMBER_CTA}: ${SITE}/membership/`] : []),
+      return `${tip(g.tip_utc)}  ${g.away} at ${g.home}  ${[PKS.pickText(g) && PKS.pickText(g).ok ? PKS.pickText(g).badge.toUpperCase() : "", L.lean ? `LEAN ${L.lean.team} ${sgn(L.lean.line)}` : ""].filter(Boolean).join("  ") || "No call"}\n  Leo win chance: ${g.away} ${Math.round(L.p_away * 100)}%, ${g.home} ${Math.round(L.p_home * 100)}%\n  ${pageUrl(g, date)}\n`; }),
+    ...(memberLine ? ["", ...(winLine ? [winLine] : []), MEMBER_LINE, `${MEMBER_CTA}: ${SITE}/membership/`] : []),
     "", `Every card: ${SITE}/nba/scoreboard/`, "Leo Picks are a public test, not bets. Analysis only, not betting advice. 21+. 1-800-MY-RESET.",
     ...((process.env.EMAIL_POSTAL_ADDRESS || "").trim() ? [(process.env.EMAIL_POSTAL_ADDRESS || "").trim()] : []), 'Reply "unsubscribe" to stop these.'].join("\n").replace(/&mdash;/g, "-").replace(/&rsquo;/g, "'");
   return { subject, html, text, leans: leanList };

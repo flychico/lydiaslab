@@ -142,7 +142,6 @@ function renderNav(active) {
     : [
         [prefix + "tools/model-tuner/", "Model Tuner"],
         [prefix + "member-brief/", "Daily Member Brief"],
-        [prefix + "tools/player-props/", "Player Props"],
         [prefix + "tools/injury-tracker/", "Injury Tracker"]
       ];
   const links = sport === "NBA" ? [
@@ -177,7 +176,7 @@ function renderNav(active) {
       [prefix + "week/", "Week card"],
       [prefix + "games/", "Every game"]
     ]],
-    [prefix + "tools/player-props/", "Props"],
+    // Props left the NFL menu (Lynold, 2026-11-23: ungraded since DEC-20261119-02); the page stays under /nfl/tools/.
     [prefix + "teams/", "Teams"],
     [prefix + "tools/", "Lab", LAB],
     [prefix + "stats/", "Stats"],
@@ -187,6 +186,7 @@ function renderNav(active) {
   // "More" holds what Leo offers outside the three sports, the same on every
   // sport's menu: the free workout planner (/gym/, launched 2026-11-11,
   // HO-0053), the MLB game analysis archive and the data feed (launch plan day 9). Market Desk joins when it opens (HO-0050).
+  // The tab's own link goes to the home page's "Other tools from New Dawn Horizon" strip (#more).
   links.push(["/#more", "More", [
     ["/gym/", "Free workout planner"],
     ["/articles/", "MLB game analysis"],

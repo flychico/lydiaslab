@@ -23,6 +23,11 @@ on:
 permissions:
   contents: write
 
+
+# One run at a time (Lynold, 2026-11-23: no colliding runs). Queued runs wait; none are cancelled.
+concurrency:
+  group: nfl-owner-brief
+  cancel-in-progress: false
 jobs:
   brief:
     runs-on: ubuntu-latest
