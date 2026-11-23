@@ -414,7 +414,7 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
       // The exact inputs behind model_prob, frozen in ml-inputs-history.csv
       // so the Model Tuner replays this game with the live model code.
       ml_inputs: { qb_diff:feats.qb_diff, off_diff:feats.off_diff, def_diff:feats.def_diff,
-                   h2h_edge:feats.h2h_edge, h2h_repeat:feats.h2h_repeat, home_prob:rawHome },
+                   h2h_edge:feats.h2h_edge, h2h_repeat:feats.h2h_repeat, home_prob:rawHome, ...(NEUTRAL ? { neutral: 1 } : {}) },   // neutral: no home field (DEC-20261120-07)
       home_qb_rating: feats.home_qb_rating, away_qb_rating: feats.away_qb_rating,
       h2h_3yr: { home_wins:h2h3.home_wins, away_wins:h2h3.away_wins, ties:h2h3.ties, games:h2h3.games },
       pick:side, model_prob:prob!=null?r3(prob):null, market_prob:mkt!=null?r3(mkt):null,

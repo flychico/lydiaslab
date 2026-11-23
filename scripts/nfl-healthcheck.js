@@ -401,7 +401,10 @@ for (const f of ["css/style.css","css/scoreboard.css"]) {
     for (const g of JSON.parse(fs.readFileSync(pf, "utf8")).filter(g => g.ml_inputs)) {
       const home = ML.predictWeighted(model, g.ml_inputs, {});
       const pub = g.pick === g.home ? g.model_prob : 1 - g.model_prob;
-      if (Math.abs(home - pub) > 0.0006) problems.push(`${g.matchup}: tuner ${home.toFixed(3)} vs published ${pub.toFixed(3)}`);
+      // Neutral sites carry no home field (DEC-20261120-07). Reads saved before the neutral flag was stored
+      // (Nov 20 to 22) reproduce only without the intercept: accept that, it is the same live code.
+      const neutralOk = !g.ml_inputs.neutral && Math.abs(ML.predictWeighted(model, { ...g.ml_inputs, neutral: 1 }, {}) - pub) <= 0.0006;
+      if (Math.abs(home - pub) > 0.0006 && !neutralOk) problems.push(`${g.matchup}: tuner ${home.toFixed(3)} vs published ${pub.toFixed(3)}`);
     }
   }
   problems.length ? fail("TUNER-SYNC", problems[0] + (problems.length > 1 ? ` (+${problems.length-1} more)` : ""))

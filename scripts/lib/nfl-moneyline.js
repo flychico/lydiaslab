@@ -428,7 +428,8 @@ function predictWeighted(model, row, mult = {}) {
   const x = vectorize(row, model.features, model.scaler);
   const m = { qb_diff: mult.qb ?? 1, off_diff: mult.off ?? 1, def_diff: mult.def ?? 1,
               h2h_edge: mult.h2h ?? 1, h2h_repeat: mult.h2h ?? 1 };
-  let eta = model.intercept * (mult.hfa ?? 1);
+  // A neutral site has no home field: the intercept is home field (DEC-20261120-07; row.neutral set by generate-nfl-model.js).
+  let eta = (row && row.neutral ? 0 : model.intercept) * (mult.hfa ?? 1);
   for (let j = 0; j < model.beta.length; j++) eta += model.beta[j] * x[j] * (m[model.features[j]] ?? 1);
   return sigmoid(eta);
 }
