@@ -75,6 +75,7 @@
 <script src="/scripts/lib/nba-why.js?v=20261111c"></script>
 <script src="/scripts/lib/nba-picks.js?v=20261124"></script>
 <script src="/scripts/lib/nba-urls.js?v=20261107"></script>
+<script src="/scripts/lib/nba-signup-box.js?v=20261124"></script>
 <script>
 const fav=(g,v)=>v==null?"—":(window.NBA_WHY&&NBA_WHY.favLine)?NBA_WHY.favLine(g,v):(v===0?"Pick'em":(v<0?g.home:g.away)+" -"+Math.abs(v));
 renderNav(location.pathname); renderFooter();
@@ -135,6 +136,9 @@ let MODEL=null;
       '</div>'+(ST&&ST.result?'<div class="why"><b>Leo Pick '+esc(ST.team)+' '+esc(NBA_PICKS.fmtPrice(ST.price))+': '+(ST.result==="win"?"won":"lost")+', '+u(ST.units)+'u.</b></div>':PT?'<div class="why">'+esc(PT.line)+'</div>':"")+(W&&W.compare?'<div class="why">'+esc(W.compare)+'</div>':"")+(W&&W.summary?'<div class="why">'+esc(W.summary)+'</div>':"")+
       '<a class="more" href="'+pageUrl(g)+'">Full preview: why Leo has this number &rarr;</a></div></article>';
   }).join("");
+  // Free card box right after the first game (OD-08, Lynold 2026-11-24): the page every picks post links.
+  const first=el.querySelector(".pick-card");
+  if(first&&window.NBA_SIGNUP){ first.insertAdjacentHTML("afterend",NBA_SIGNUP.box("night","grid-column:1/-1;")); if(typeof wireAllSignupForms==="function") wireAllSignupForms(el); }
 })();
 
 </script>

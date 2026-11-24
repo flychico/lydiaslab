@@ -179,7 +179,9 @@ function page(rec) {
 <p class="lead">On any day with two or more Leo moneyline picks across the NFL and NBA, Leo combines them into one parlay. The legs are Leo&rsquo;s own picks at the prices they were graded at, locked when the first game starts. Graded at 1 unit, kept apart from Leo&rsquo;s moneyline and spread record.</p>
 <div class="tiles"><div class="card"><div class="small dim">Record since Nov 20</div><div class="big">${rec.w}-${rec.l}${rec.p ? "-" + rec.p : ""}</div></div><div class="card"><div class="small dim">Units</div><div class="big">${rec.units >= 0 ? "+" : ""}${rec.units.toFixed(2)}u</div></div><div class="card"><div class="small dim">Parlays</div><div class="big">${rec.parlays.length}</div><div class="small dim">${rec.n < 50 ? "early read" : ""}</div></div></div>
 <p class="small dim">A leg whose pick is gone before its game (Leo dropped it) or that pushes drops out, and the price is worked out from the rest. A parlay multiplies the bookmaker&rsquo;s margin, so it swings harder than single picks. Analysis only, not betting advice. <a href="/nfl/results/">NFL record</a> &middot; <a href="/nba/results/">NBA record</a></p>
-${rows || '<p class="dim">The first Leo Parlay goes up on the first day with two or more Leo moneyline picks.</p>'}
+${(() => { const SU = require("./lib/nba-signup-box"), i = rows.indexOf("</article>");
+  // Free card box after the newest parlay (OD-08, Lynold 2026-11-24): the page every parlay post links.
+  return i >= 0 ? rows.slice(0, i + 10) + "\n" + SU.box("night") + rows.slice(i + 10) : '<p class="dim">The first Leo Parlay goes up on the first day with two or more Leo moneyline picks.</p>\n' + SU.box("night"); })()}
 </main><div id="footer"></div><script src="/js/app.js"></script><script>if(window.renderNav)renderNav("/parlay/");if(window.renderFooter)renderFooter();</script></body></html>
 `;
   fs.mkdirSync(path.join(ROOT, "parlay"), { recursive: true });

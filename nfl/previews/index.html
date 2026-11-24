@@ -73,6 +73,7 @@
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script src="/scripts/lib/nfl-calls.js"></script>
 <script src="/scripts/lib/nfl-urls.js"></script>
+<script src="/scripts/lib/nba-signup-box.js?v=20261124"></script>
 <script>
 renderNav("/articles/"); renderFooter();
 
@@ -143,6 +144,10 @@ const by=(m,h,a)=>m==null?"—":Math.abs(m)<0.05?"pick'em":(m>0?h:a)+" by "+Math
       '</div>')+qb+
       '<a class="more" href="'+(window.NFL_URLS?NFL_URLS.gameUrl(x.away,x.home,x.date):'/nfl/'+x.away.toLowerCase()+'-vs-'+x.home.toLowerCase()+'-prediction-odds-'+x.date+'/')+'">Full preview: why Leo has this number &rarr;</a></div></article>';
   }).join("");
+  // Free card box right after the first game (OD-08, Lynold 2026-11-24): the page every picks post links.
+  // Thanksgiving copy until the first Thanksgiving kickoff (OD-06), then the usual copy.
+  const first=el.querySelector(".pick-card");
+  if(first&&window.NBA_SIGNUP){ first.insertAdjacentHTML("afterend",NBA_SIGNUP.box(NBA_SIGNUP.nflKind(),"grid-column:1/-1;")); if(typeof wireAllSignupForms==="function") wireAllSignupForms(el); }
 })();
 </script>
 </body>
