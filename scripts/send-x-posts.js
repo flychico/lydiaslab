@@ -12,9 +12,10 @@
  *   node scripts/send-x-posts.js <nba|nfl> <date> [<date> ...] [--dry]
  *
  * Reads data/<sport>/social/<date>.json (written by scripts/build-<sport>-social.js,
- * the sport chat's words; nothing here changes a word). Since Nov 22: one email per slate
- * with the picks post and the best read, one recap email after the games (see the loop),
- * and the picks post again as "(updated)" when its pick lines change before the first start.
+ * the sport chat's words; nothing here changes a word). For each post:
+ *   - results posts (waves and the day post): sent once.
+ *   - the picks post: sent once; sent again as "(updated)" when its pick lines
+ *     change before the first start (the builders freeze it after that).
  * Log: data/email-log/x-posts-<sport>-<date>.json {sent: {id: {at, hash}}}.
  * Recipient: the AUDIT_EMAIL secret (Lynold). Never fails the run.
  */
@@ -175,58 +176,34 @@ function postBy(sport, date, post) {
     let log = { sport, date, sent: {} };
     try { log = JSON.parse(fs.readFileSync(logFile, "utf8")); log.sent = log.sent || {}; } catch (e) {}
 
-    // One email per slate with 2 or 3 posts (Lynold, 2026-11-22, chose the outside review's "One email, 2 to 3
-    // posts"): before the games, the picks post (cheat sheet, nuke or no picks) and the one best read (upset watch,
-    // else the first spotlight); after the games, one recap (the picks results "day" post, else Leo's reads results).
-    // The builders still write every post to the social file and the site; only these are emailed. The parlay,
-    // wave, stat and extra read posts are no longer emailed. A picks post whose pick lines change before the first
-    // start is sent again on its own as "(updated)".
-    if (sport === "parlay") { console.log("parlay posts are not emailed (one email per slate, Nov 22)"); continue; }
-    // One owner email a day (Lynold, 2026-11-22, "Single Daily Owner Email Spec"): the per-post emails are off.
-    // The posts still go to the social files, the site and x/latest for ChatGPT, and the morning Leo Daily Brief
-    // carries the post menu from data/daily-recap-latest.json. X_POST_EMAILS=on brings these emails back.
-    if (process.env.X_POST_EMAILS !== "on") { console.log(`${sport} ${date}: post emails off, the Leo Daily Brief carries the posts`); continue; }
-    const byId = new Map((doc.posts || []).filter(p => p.text).map(p => [p.id, p]));
-    const groups = [];
-    const picks = byId.get("picks");
-    if (picks) {
-      const prev = log.sent.picks;
-      if (!prev) groups.push({ key: "slate", label: "posts", ids: ["picks", byId.has("upset") ? "upset" : byId.has("g1") ? "g1" : null].filter(Boolean) });
-      else if (prev.hash !== hashOf(picks)) groups.push({ key: "slate-updated", label: "picks (updated)", ids: ["picks"],
-        note: "This replaces the earlier picks: a later read changed Leo's picks. Post this one instead." });
-    }
-    const recapId = byId.has("day") ? "day" : byId.has("rday") ? "rday" : null;
-    if (recapId && !log.sent.day && !log.sent.rday) groups.push({ key: "recap", label: "results", ids: [recapId] });
-
-    for (const g of groups) {
-      const posts = g.ids.map(id => byId.get(id));
-      const when = postBy(sport, date, posts[0]);
-      const subject = `Leo ${sport.toUpperCase()} ${g.label} ${date} · ${when}`;
-      if (DRY) { console.log(`[dry] would send: ${subject} (${g.ids.join(", ")})`); continue; }
-      if (!KEY || !TO) { console.log("::warning::RESEND_API_KEY or AUDIT_EMAIL missing; posts not sent"); return; }
-      if (!ensurePlaywright()) return;
-      const parts = [], attachments = [];
-      for (const post of posts) {
-        const out = `/tmp/${sport}-${date}-${post.id}.jpg`;
-        try { const card = render(file, post.id, out); if (card.overflow) console.log(`::warning::${post.id}: graphic overflows, sent anyway`);
-          attachments.push({ filename: `${sport}-${date}-${post.id}.jpg`, content: fs.readFileSync(out).toString("base64") }); }
-        catch (e) { console.log(`::warning::render failed for ${post.id}: ${e.message}`); }
-        parts.push(bodies(post, "", chatMessage(sport, date, post)));
+    // Every post its own email again (Lynold, 2026-11-23: "All post emails back", after no posts reached him on
+    // Nov 23; replaces the one email per slate and the posts-off switch of Nov 22). The Leo Daily Brief still has its menu.
+    for (const post of doc.posts || []) {
+      if (!post.text) continue;
+      const h = hashOf(post), prev = log.sent[post.id];
+      let note = "";
+      if (prev) {
+        if (post.kind !== "picks" || prev.hash === h) continue;
+        note = "This replaces the earlier picks email: a later read changed Leo's picks.";
       }
-      const order = posts.length > 1 ? posts.map((p, i) => `${i + 1}. ${cardType(p).type}`).join("   ") : "";
-      const intro = [g.note, order ? "Post in this order: " + order : ""].filter(Boolean).join("\n");
-      const text = (intro ? intro + "\n\n" : "") + parts.map((x, i) => `===== POST ${i + 1} =====\n\n` + x.text).join("\n\n");
-      const html = parts.map((x, i) => {
-        const inner = x.html.slice(x.html.indexOf("<table cellpadding"), x.html.lastIndexOf("</td></tr></table></body>"));
-        return `<tr><td style="padding:18px 16px 4px;font-family:Arial,sans-serif;font-size:13px;letter-spacing:.06em;color:#7A5E12;font-weight:bold">POST ${i + 1} OF ${parts.length}: ${esc(cardType(posts[i]).type.toUpperCase())}</td></tr><tr><td style="padding:0 16px 10px">${inner}</td></tr>`;
-      }).join('<tr><td style="padding:0 16px"><hr style="border:0;border-top:1px solid #D9CFBD"></td></tr>');
-      const page = `<!doctype html><html><head><meta name="color-scheme" content="light only"></head><body style="margin:0;background:#FFFFFF" bgcolor="#FFFFFF"><table width="100%" cellpadding="0" cellspacing="0" bgcolor="#FFFFFF">${intro ? `<tr><td style="padding:16px 16px 0;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;color:#1A2535;white-space:pre-wrap">${esc(intro)}</td></tr>` : ""}${html}</table></body></html>`;
-      const res = await sendOne({ from: FROM, to: [TO], subject, text, html: page, attachments }, { key: KEY });
+      const subject = `Leo ${sport.toUpperCase()} post ${date} ${post.id}${note ? " (updated)" : ""} · ${postBy(sport, date, post)}`;
+      if (DRY) { console.log(`[dry] would send: ${subject}`); continue; }
+      if (!KEY || !TO) { console.log("::warning::RESEND_API_KEY or AUDIT_EMAIL missing; post not sent"); return; }
+      if (!ensurePlaywright()) return;
+      const out = `/tmp/${sport}-${date}-${post.id}.jpg`;
+      let card;
+      try { card = render(file, post.id, out); } catch (e) { console.log(`::warning::render failed for ${subject}: ${e.message}`); continue; }
+      if (card.overflow) console.log(`::warning::${subject}: graphic overflows, sent anyway`);
+      const { text, html } = bodies(post, note, chatMessage(sport, date, post));
+      const res = await sendOne({
+        from: FROM, to: [TO], subject, text, html,
+        attachments: [{ filename: `${sport}-${date}-${post.id}.jpg`, content: fs.readFileSync(out).toString("base64") }],
+      }, { key: KEY });
       if (res.ok) {
-        for (const post of posts) log.sent[post.id] = { at: new Date().toISOString(), hash: hashOf(post), updated: g.key === "slate-updated" };
-        console.log(`sent: ${subject} (${g.ids.join(", ")})`);
+        log.sent[post.id] = { at: new Date().toISOString(), hash: h, updated: !!note };
+        console.log(`sent: ${subject}`);
       } else {
-        (log.errors = log.errors || []).push({ at: new Date().toISOString(), id: g.ids.join("+"), status: res.status, name: res.name, message: res.message });
+        (log.errors = log.errors || []).push({ at: new Date().toISOString(), id: post.id, status: res.status, name: res.name, message: res.message });
         console.log(`::warning::not sent: ${subject}: ${res.status} ${res.name} ${res.message}`);
       }
     }
