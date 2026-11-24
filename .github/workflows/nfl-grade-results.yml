@@ -120,6 +120,7 @@ jobs:
       # with no result on its own page.
       - name: Rebuild matchup data and pages for the graded dates
         run: |
+          node scripts/build-nfl-games-lite.js || true   # head to head and rest on the pages
           for d in ${{ steps.dates.outputs.list }}; do
             node scripts/generate-nfl-matchups.js "$d" || true
             node scripts/render-nfl-matchup-pages.js "$d" || true

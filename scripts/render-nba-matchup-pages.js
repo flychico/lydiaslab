@@ -45,7 +45,8 @@ function results() {
 // Leo's read in plain words (DEC-20261031-10). Same text as the nightly card.
 const WHY = require("./lib/nba-why");
 const PKS = require("./lib/nba-picks");   // Leo Pick rule (DEC-20261102-30)
-const SW = require("./lib/nba-swing");   // "Depends on <player>" line (HO-0097)
+const SW = require("./lib/nba-swing");
+const EX = require("./lib/nba-page-extras");   // stat table, head to head, rest, FAQ (Lynold, 2026-11-24)   // "Depends on <player>" line (HO-0097)
 // Player lines for finished games: ESPN's game summary saved at grading
 // (data/nba/boxscores/<date>.json, full line), else the season player log
 // (data/nba/player-log.json: minutes, points, rebounds, assists).
@@ -169,6 +170,7 @@ function page(g, res) {
   const PT = PKS.pickText(g);
   const leanTxt = (PT ? (PT.ok ? `<div class="lean">${esc(NM(PT.line))}</div>` : `<p class="gapread">${esc(NM(PT.line))}</p>`) : "")
     + (!g.completed && SW.line(g) ? `<p class="gapread"><b>${esc(SW.line(g))}</b></p>` : "");   // HO-0097
+  const FAQ = EX.faqItems(g, res);
   const lede = COPY.opening(g, { sched: SCHED, lostCoef: MODEL.coef && MODEL.coef.lost_d });
   return `<!DOCTYPE html>
 <html lang="en">
@@ -218,12 +220,13 @@ ul.inj,ul.last5{margin:6px 0 0;padding-left:18px;font-size:.86rem;line-height:1.
 .lede2{font-size:.9rem;line-height:1.55;margin:6px 0 4px;color:var(--text-dim)}
 .final p{margin:0 0 8px;line-height:1.55}
 .final ul{margin:0;padding-left:18px;line-height:1.6;font-size:.9rem}
+.cmp td{text-align:center;width:28%;white-space:nowrap}.cmp th{text-align:center}.cmp tbody th{font-size:.78rem;text-transform:none;letter-spacing:0;color:var(--text)}.cmp tbody th span{display:block;font-weight:400;font-size:.68rem;color:var(--text-dim)}.cmp td.lead{font-weight:800}
 .nfl-signup{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;align-items:center;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin:26px 0 6px;box-shadow:var(--shadow-sm)}
 .nfl-signup p{margin:4px 0 0;color:var(--text-dim);font-size:.86rem}
 .nfl-signup form{display:flex;gap:8px}.nfl-signup input[type=email]{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--border);border-radius:10px}
 @media(max-width:700px){.two,.nfl-signup{grid-template-columns:1fr}.boxes{grid-template-columns:1fr 1fr}.box:last-child{grid-column:1/-1}}
 </style>
-${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,title,description:desc,startIso:g.tip_utc?new Date(g.tip_utc).toISOString().replace(".000Z","Z"):null,homeName:g.home_name,awayName:g.away_name,venue:g.venue,completed:!!(g.completed||res)})}
+${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,title,description:desc,startIso:g.tip_utc?new Date(g.tip_utc).toISOString().replace(".000Z","Z"):null,homeName:g.home_name,awayName:g.away_name,venue:g.venue,completed:!!(g.completed||res),faq:FAQ})}
 </head>
 <body>
 <nav id="nav"></nav>
@@ -256,12 +259,18 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
   <p class="dim">As of Leo&rsquo;s read. <a href="${HOW}#injuries">How Leo counts injuries</a></p>
   <div class="two"><div><b>${esc(g.away_name)}</b>${injuries(g, "away")}</div><div><b>${esc(g.home_name)}</b>${injuries(g, "home")}</div></div>
 
+  ${EX.statTable(g)}
+
   <h2>Form</h2>
   <div class="two"><div><b>${esc(g.away_name)}</b>${formBlock(g, "away")}</div><div><b>${esc(g.home_name)}</b>${formBlock(g, "home")}</div></div>
 
   <h2>Key players this season</h2>
   <p class="dim">Last 5: the prior five games. <a href="/nba/players/">Player Scoring</a></p>
   <div class="two"><div><b>${esc(g.away_name)}</b>${playersBlock(g, "away")}</div><div><b>${esc(g.home_name)}</b>${playersBlock(g, "home")}</div></div>
+
+  ${EX.h2hRest(g)}
+
+  ${require("./lib/game-page-seo").faqHtml(FAQ)}
 
   <div class="nfl-signup">
     <div><b>Get Leo&rsquo;s card by email</b><p>Free, before every game day.</p></div>

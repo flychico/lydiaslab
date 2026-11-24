@@ -68,8 +68,20 @@ function jsonLd(o) {
     ],
   };
   const graph = { "@context": "https://schema.org", "@graph": [article, event, crumbs] };
+  // FAQ on the page (Lynold, 2026-11-24). The same questions and answers as the visible FAQ block (faqHtml).
+  if (o.faq && o.faq.length) graph["@graph"].push({ "@type": "FAQPage", "@id": `${url}#faq`,
+    mainEntity: o.faq.map(x => ({ "@type": "Question", name: x.q, acceptedAnswer: { "@type": "Answer", text: x.a } })) });
   // "<" escaped so no value can close the script tag.
   return `<script type="application/ld+json">${JSON.stringify(graph).replace(/</g, "\\u003c")}</script>`;
+}
+
+/** The visible FAQ block. Plain text in, escaped here; matches the FAQPage markup from jsonLd({ faq }). */
+function faqHtml(items, heading = "Questions about this game") {
+  if (!items || !items.length) return "";
+  const e = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  return `<h2 class="sec faq-h">${e(heading)}</h2>
+  <div class="faq">${items.map(x => `<details><summary>${e(x.q)}</summary><p>${e(x.a)}</p></details>`).join("")}</div>
+  <style>.faq details{border:1px solid var(--border);border-radius:12px;background:var(--bg-card);margin:0 0 8px;padding:0 14px}.faq summary{cursor:pointer;font-weight:700;padding:12px 0;font-size:.95rem}.faq details p{margin:0 0 12px;line-height:1.55;font-size:.92rem}</style>`;
 }
 
 // Game folders look like <away>-vs-<home>-prediction-odds-<date>. A team is an
@@ -166,4 +178,4 @@ function niceShort(date) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
-module.exports = { jsonLd, relatedLinks, easternToIso, listGames, teamLabel, nickSlug, GAME_DIR };
+module.exports = { jsonLd, faqHtml, relatedLinks, easternToIso, listGames, teamLabel, nickSlug, GAME_DIR };

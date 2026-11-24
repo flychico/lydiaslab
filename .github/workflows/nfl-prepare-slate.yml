@@ -156,6 +156,7 @@ jobs:
       - name: Matchup data and pages
         if: steps.slate.outputs.games != '0'
         run: |
+          node scripts/build-nfl-games-lite.js || true   # head to head and rest on the pages
           node scripts/generate-nfl-matchups.js "${{ steps.slate_date.outputs.date }}"
           node scripts/render-nfl-matchup-pages.js "${{ steps.slate_date.outputs.date }}"
           node scripts/build-game-archives.js nfl
@@ -209,6 +210,7 @@ jobs:
           set -uo pipefail
           git pull --rebase -q || true
           built=0
+          node scripts/build-nfl-games-lite.js || true   # head to head and rest on the pages
           for d in 1 2 3 4 5 6; do
             D=$(TZ="America/New_York" date -d "+$d day" +%F)
             N=$(node scripts/nfl-slate-size.js "$D" || echo unknown)

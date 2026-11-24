@@ -25,7 +25,8 @@ const redirectStub=m=>`<!doctype html>
 `;
 const SEO=require("./lib/game-page-seo");
 const COPY=require("./lib/nfl-page-copy");
-const CALLS=require("./lib/nfl-calls");   // DEC-20261119-01: saved calls shown under today's rules
+const CALLS=require("./lib/nfl-calls");
+const EX=require("./lib/nfl-page-extras");   // head to head, rest, FAQ (Lynold, 2026-11-24)   // DEC-20261119-01: saved calls shown under today's rules
 const niceDate=d=>new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"});
 
 /* Leo's two most likely scorers in the game, from the frozen TD props.
@@ -664,7 +665,7 @@ table.bx tr:last-child td{border-bottom:0}
 .final-score{display:flex;align-items:center;gap:8px;font-size:1.25rem;font-weight:700;flex-wrap:wrap;margin:4px 0 8px}
 .final-score img{width:34px;height:34px;object-fit:contain}
 </style>
-${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternToIso(m.date,m.kickoff),homeName:TEAMS.full(m.home),awayName:TEAMS.full(m.away),venue:m.stadium,completed:!!(m.final_report&&m.final_report.home_score!=null)})}
+${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternToIso(m.date,m.kickoff),homeName:TEAMS.full(m.home),awayName:TEAMS.full(m.away),venue:m.stadium,completed:!!(m.final_report&&m.final_report.home_score!=null),faq:EX.faqItems(m,topScorers)})}
 </head>
 <body>
 <nav id="nav"></nav>
@@ -733,9 +734,13 @@ ${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternT
   <p class="sub">The same players, last season.</p>
   <div class="grid2">${sideBlock(A,"last_season",String(Number(m.date.slice(0,4))-1),pri&&pri.away)}${sideBlock(H,"last_season",String(Number(m.date.slice(0,4))-1),pri&&pri.home)}</div>
 
+  ${EX.h2hRest(m)}
+
   ${tdSection(m)}
 
   ${finalReport(m)}
+
+  ${SEO.faqHtml(EX.faqItems(m,topScorers))}
 
   <p class="data-note">Stats: nflverse. <a href="/nfl/how-leo-works/">How Leo works</a></p>
 ${SEO.relatedLinks({sport:"NFL",root:ROOT,slug:m.slug||String(m.url).split("/").filter(Boolean).pop(),away:m.away,home:m.home,awayName:TEAMS.full(m.away),homeName:TEAMS.full(m.home),teamUrl:abbr=>"/nfl/teams/"+require("./build-nfl-team-pages").teamSlug(abbr)+"/",featured:[weekUrl(m),"Week "+v(m.week,"")+" NFL predictions","Every Week "+v(m.week,"")+" game"],hubs:[["/nfl/games/","Every NFL game"],["/nfl/teams/","NFL team predictions"],["/nfl/results/","Leo\u2019s NFL record"],["/nfl/tools/injury-tracker/","Injury tracker"],["/membership/#free","Free NFL card by email"]]})}
