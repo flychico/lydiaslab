@@ -28,6 +28,10 @@ on:
         description: "YYYY-MM-DD slate. Blank = today in America/New_York."
         required: false
         type: string
+      early:
+        description: "true = early read for the day AFTER the date (Lynold, 2026-11-24): tomorrow's game pages with win chances, no picks, no emails or posts, never graded."
+        required: false
+        type: string
       only_if_tip_before:
         description: "HH:MM ET. Run only when today has an NBA tip before this time (the 2:47pm early-tip read). Blank = always run."
         required: false
@@ -87,11 +91,12 @@ jobs:
         run: |
           D="${{ github.event.inputs.date }}"
           [ -z "$D" ] && D=$(TZ="America/New_York" date +%F)
+          if [ "${{ github.event.inputs.early }}" = "true" ]; then D=$(date -d "$D + 1 day" +%F); fi
           echo "date=$D" >> "$GITHUB_OUTPUT"
 
       - name: Build the card
         id: build
-        run: node scripts/generate-nba-slate.js "${{ steps.d.outputs.date }}"
+        run: node scripts/generate-nba-slate.js "${{ steps.d.outputs.date }}" ${{ github.event.inputs.early == 'true' && '--early' || '' }}
 
       # Full season for the scoreboard's date picker (display only). Never blocks the run.
       - name: Season schedule
@@ -117,9 +122,11 @@ jobs:
       # X post words for the picks of the day (HO-0087 part B): data/nba/social/<date>.json,
       # refreshed until the first tip, then frozen. Display only; never blocks the run.
       - name: Social posts
+        if: github.event.inputs.early != 'true'
         run: node scripts/build-nba-social.js "${{ steps.d.outputs.date }}" || echo "::warning::NBA social posts not written"
 
       - name: Health check
+        if: github.event.inputs.early != 'true'
         run: node scripts/nba-healthcheck.js "${{ steps.d.outputs.date }}"
 
       # Members get the member brief (scripts/lib/nba-member-email.js, HO-0061);
@@ -128,6 +135,7 @@ jobs:
       # run within 3 hours of the first tip (data/email-log/nba-card-<date>.json),
       # never after tip, and a no-op when the email secrets are missing.
       - name: Email the NBA member brief and free card
+        if: github.event.inputs.early != 'true'
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY }}
@@ -142,6 +150,7 @@ jobs:
       # cards@ndhorizon.com; once per post, picks again only if the picks changed.
       # Logged in data/email-log/x-posts-nba-<date>.json. Never blocks the run.
       - name: Email X post graphics to Lynold
+        if: github.event.inputs.early != 'true'
         continue-on-error: true
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
@@ -149,6 +158,7 @@ jobs:
         run: node scripts/send-x-posts.js nba "${{ steps.d.outputs.date }}" || true
 
       - name: Leo Parlay (build, grade, email the post)
+        if: github.event.inputs.early != 'true'
         continue-on-error: true
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
@@ -158,6 +168,7 @@ jobs:
           node scripts/send-x-posts.js parlay "$(TZ=America/New_York date -d yesterday +%F)" "$(TZ=America/New_York date +%F)" || true
 
       - name: Prediction files for trackers
+        if: github.event.inputs.early != 'true'
         continue-on-error: true
         run: node scripts/build-prediction-files.js nba || true
 

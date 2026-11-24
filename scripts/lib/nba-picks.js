@@ -72,6 +72,7 @@ const fmtPrice = p => p == null ? "" : (p > 0 ? "+" : "") + p;
 function pickText(g) {
   const pk = (g.leo && g.leo.pick !== undefined) ? g.leo.pick : pickForGame(g);
   if (!pk) return null;
+  if (pk.early) return { ok: false, badge: "", line: "Early read: Leo's numbers can still move with the injury report. Leo Picks are made on game day." };
   const pct = Math.round(pk.p * 100) + "%";
   if (pk.under || pk.p < PICK_P) return { ok: false, badge: "", line: `No pick: Leo has ${pk.team} ${(pk.p * 100).toFixed(1)}%, just under the 60% bar.` };
   if (pk.monday) return { ok: false, badge: "", line: `No pick: Leo has ${pk.team} ${pct}, but Leo makes no picks on Mondays.` };
@@ -91,6 +92,7 @@ function callBox(g) {
   const sg = v => (v > 0 ? "+" : "") + v;
   if (pk && pk.ok) return { on: true, value: `${pk.team} ${fmtPrice(pk.price)}`, sub: "Leo Pick, to win" };
   let why = "Under 60%, close to DraftKings";
+  if (pk && pk.early) return { on: false, value: "Early read", sub: "Leo Picks come on game day" };
   if (pk && pk.gate) why = "Skipped: key player out";
   else if (pk && pk.held) why = "Skipped: too close to call";
   else if (pk && pk.monday) why = "No Leo Picks on Mondays";

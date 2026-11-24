@@ -228,7 +228,7 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
 <body>
 <nav id="nav"></nav>
 <main class="mx">
-  <p class="eyebrow"><a href="/nba/scoreboard/">NBA</a> &middot; ${esc(longDate(g.date))} &middot; ${esc(tip(g.tip_utc))}${g.venue ? " &middot; " + esc(g.venue) : ""}</p>
+  <p class="eyebrow"><a href="/nba/scoreboard/">NBA</a> &middot; ${esc(longDate(g.date))} &middot; ${esc(tip(g.tip_utc))}${g.venue ? " &middot; " + esc(g.venue) : ""}${g.early ? " &middot; <b>Early read</b>" : ""}</p>
   <h1>${esc(g.away_name)} vs ${esc(g.home_name)}: Prediction and Odds</h1>
   ${lede.length ? `<p class="lede">${lede.slice(0, lede.indexOf(null)).map(esc).join(" ")}</p><p class="lede2">${lede.slice(lede.indexOf(null) + 1).map(esc).join(" ")}</p>` : ""}
   ${(c => c ? `<p class="moved">${esc(c.text)}</p>` : "")(RC.change(g, { nick: (a, n) => URLS.nick(a, n) }))}

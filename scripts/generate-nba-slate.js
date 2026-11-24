@@ -38,6 +38,10 @@ const ESPN = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba";
 
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
 const DATE = (process.argv.slice(2).find(a => /^\d{4}-\d{2}-\d{2}$/.test(a))) || today();
+// Early read (Lynold, 2026-11-24): the evening before, publish tomorrow's games so the pages can be indexed before
+// game day. Win chances and spreads only: no Leo Pick, no price lock, no hold or gate, no prediction history (so it
+// is never graded), and picks-today, injuries-today and slates.json are left alone. A game-day card replaces it.
+const EARLY = process.argv.includes("--early");
 const shift = (d, n) => new Date(Date.parse(d + "T12:00:00Z") + n * 864e5).toISOString().slice(0, 10);
 const num = v => { const x = parseFloat(String(v).replace(/^\+/, "")); return Number.isFinite(x) ? x : null; };
 const r1 = v => v == null ? null : Math.round(v * 10) / 10;
@@ -184,6 +188,7 @@ function readHistory() {
   const teamInjuries = team => inj.list.filter(x => x.team === team).map(x => ({ name: x.name, status: x.status, detail: x.detail }));
 
   const prevFile = path.join(DIR, `picks-${DATE}.json`);
+  if (EARLY && fs.existsSync(prevFile) && !JSON.parse(fs.readFileSync(prevFile, "utf8")).early) { console.log(`NBA ${DATE}: game-day card already exists; early read skipped`); return; }
   const previous = fs.existsSync(prevFile) ? Object.fromEntries(JSON.parse(fs.readFileSync(prevFile, "utf8")).games.map(g => [g.game_id, g])) : {};
   const now = new Date().toISOString();
   const out = [], hist = [];
@@ -227,7 +232,8 @@ function readHistory() {
         projected: PR ? (() => { const t = P.project(PR, g.home, g.away).total; return { total: Math.round(t), home: Math.round((t + margin) / 2), away: Math.round((t - margin) / 2) }; })() : null
       }
     };
-    { let pk = LOCK.apply(DATE, g.game_id, PK.pickForGame(game), { ignoreHold: true, ignoreGate: true });
+    if (EARLY) { game.early = true; game.leo.pick = { early: true }; }
+    else { let pk = LOCK.apply(DATE, g.game_id, PK.pickForGame(game), { ignoreHold: true, ignoreGate: true });
       const shape = x => x ? { side: x.side, team: x.team, p: +x.p.toFixed(4), price: x.price, ok: x.ok, why: x.why, ...(x.under ? { under: true } : {}), ...(x.locked ? { locked: true } : {}), ...(x.held ? { held: true } : {}), ...(x.monday ? { monday: true } : {}), ...(x.gate ? { gate: true } : {}) } : null;
       game.leo.pick = shape(pk);
       const sw = SW.check(game, model); if (sw.flags.length) game.leo.depends = sw.flags;
@@ -252,7 +258,7 @@ function readHistory() {
       if (LOCK.lock(DATE, g.game_id, pk, now)) locksChanged = true; }
     game.url = URLS.gamePath(game);   // the game page address, for the home page card and every link (SEO-09)
     out.push(game);
-    if (!started) hist.push({
+    if (!started && !EARLY) hist.push({
       captured_at: now, date: DATE, game_id: g.game_id, kickoff_utc: g.tip_utc, away: g.away, home: g.home,
       leo_home_margin: margin.toFixed(2), leo_p_home: p_home.toFixed(4),
       mkt_home_spread: mk ? mk.home_spread : "", home_ml: mk ? mk.home_ml ?? "" : "", away_ml: mk ? mk.away_ml ?? "" : "",
@@ -265,7 +271,7 @@ function readHistory() {
   }
 
   const doc = {
-    date: DATE, generated_at: now, model_version: model.model_version, injuries_as_of: inj.timestamp,
+    date: DATE, ...(EARLY ? { early: true } : {}), generated_at: now, model_version: model.model_version, injuries_as_of: inj.timestamp,
     data_through: prev.length ? prev[prev.length - 1].date : null, games_rated: prev.length, lean_edge_pts: model.lean_edge_pts,
     games: out.sort((a, b) => a.tip_utc.localeCompare(b.tip_utc)),
     // Flagged games want one more injury read 30 to 45 minutes before tip (HO-0097 ask 4). The dispatch is the Manager's.
@@ -273,6 +279,7 @@ function readHistory() {
   };
   if (locksChanged) LOCK.save(DATE);
   fs.writeFileSync(prevFile, JSON.stringify(doc, null, 1) + "\n");
+  if (EARLY) { console.log(`NBA ${DATE}: early read written (${out.length} games, not graded)`); return; }
   if (DATE === today()) fs.writeFileSync(path.join(DIR, "picks-today.json"), JSON.stringify(doc, null, 1) + "\n");
   fs.writeFileSync(path.join(DIR, "injuries-today.json"), JSON.stringify({ as_of: inj.timestamp, players: inj.list }, null, 1) + "\n");
   if (hist.length) {
