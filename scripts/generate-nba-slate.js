@@ -138,8 +138,10 @@ function readHistory() {
   // Results so far: the release file, topped up with ESPN finals it lacks.
   const { games, players } = await M.loadSeason(season);
   const known = new Set(games.map(g => g.game_id));
+  const upcoming = [];   // early reads 2+ days out: games scheduled before DATE that are not played yet (rest only)
   for (let k = 1; k <= 4; k++) {
     for (const g of await scoreboard(shift(DATE, -k)).catch(() => [])) {
+      if (EARLY && !g.completed) upcoming.push({ date: g.date || shift(DATE, -k), home: g.home, away: g.away });
       if (g.completed && !known.has(g.game_id) && g.hs != null) { games.push({ game_id: g.game_id, date: g.date, home: g.home, away: g.away, hs: g.hs, as: g.as, margin: g.hs - g.as }); known.add(g.game_id); }
     }
   }
@@ -148,6 +150,9 @@ function readHistory() {
   const { r, hca } = M.ratings(prev, teams, model.prior_ratings);
   const lastDate = {};
   for (const g of prev) { lastDate[g.home] = g.date; lastDate[g.away] = g.date; }
+  // An early read for a later day counts the games each team plays before it as already played (Lynold,
+  // 2026-11-24: early pages 3 days ahead), so rest and back to backs are right. Ratings use finals only.
+  for (const g of upcoming) for (const t of [g.home, g.away]) if (g.date < DATE && (!lastDate[t] || g.date > lastDate[t])) lastDate[t] = g.date;
   const regs = M.regulars(players, DATE);
   // NBA-H08: projected score, display only. A failure here never blocks the card.
   let PR = null;

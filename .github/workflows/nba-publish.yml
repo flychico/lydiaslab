@@ -29,7 +29,7 @@ on:
         required: false
         type: string
       early:
-        description: "true = early read for the day AFTER the date (Lynold, 2026-11-24): tomorrow's game pages with win chances, no picks, no emails or posts, never graded."
+        description: "true = early read for the 3 days AFTER the date (Lynold, 2026-11-24): the next 3 days of game pages with win chances, no picks, no emails or posts, never graded."
         required: false
         type: string
       only_if_tip_before:
@@ -91,12 +91,25 @@ jobs:
         run: |
           D="${{ github.event.inputs.date }}"
           [ -z "$D" ] && D=$(TZ="America/New_York" date +%F)
-          if [ "${{ github.event.inputs.early }}" = "true" ]; then D=$(date -d "$D + 1 day" +%F); fi
+          LIST="$D"
+          # Early read: the next 3 days of games (Lynold, 2026-11-24: "Build 3 days ahead"), so the pages can
+          # be indexed before game day. A day with no games writes nothing; a day that already has a game-day
+          # card is skipped by generate-nba-slate.js.
+          if [ "${{ github.event.inputs.early }}" = "true" ]; then
+            LIST="$(date -d "$D + 1 day" +%F) $(date -d "$D + 2 day" +%F) $(date -d "$D + 3 day" +%F)"
+            D=$(date -d "$D + 1 day" +%F)
+          fi
           echo "date=$D" >> "$GITHUB_OUTPUT"
+          echo "dates=$LIST" >> "$GITHUB_OUTPUT"
 
       - name: Build the card
         id: build
-        run: node scripts/generate-nba-slate.js "${{ steps.d.outputs.date }}" ${{ github.event.inputs.early == 'true' && '--early' || '' }}
+        run: |
+          if [ "${{ github.event.inputs.early }}" = "true" ]; then
+            for d in ${{ steps.d.outputs.dates }}; do node scripts/generate-nba-slate.js "$d" --early; done
+          else
+            node scripts/generate-nba-slate.js "${{ steps.d.outputs.date }}"
+          fi
 
       # Full season for the scoreboard's date picker (display only). Never blocks the run.
       - name: Season schedule
@@ -113,7 +126,7 @@ jobs:
 
       - name: Matchup pages
         run: |
-          node scripts/render-nba-matchup-pages.js "${{ steps.d.outputs.date }}"
+          node scripts/render-nba-matchup-pages.js ${{ steps.d.outputs.dates }}
           node scripts/build-nba-daily-pages.js "$(TZ=America/New_York date +%F)" "$(TZ=America/New_York date -d '-1 day' +%F)" || node scripts/build-nba-daily-pages.js
           node scripts/build-game-archives.js nba
           node scripts/build-nba-team-pages.js || true   # team pages (SEO-07); never fails the run
