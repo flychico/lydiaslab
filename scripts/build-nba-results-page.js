@@ -267,7 +267,7 @@ function writePage(doc) {
 <meta property="og:url" content="https://ndhorizon.com/nba/results/">
 <meta property="og:image" content="https://ndhorizon.com/img/leo-card.png">
 <link rel="canonical" href="https://ndhorizon.com/nba/results/">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127936;</text></svg>">
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/scoreboard.css">
 ${resultsLd(doc)}
