@@ -137,6 +137,28 @@ function record(dir, picks) {
   strictly before that game's kickoff. Returns [] when nothing qualifies,
   which is the correct answer for a slate that has not been predicted yet.
 */
+/*
+  Published read (Lynold, 2026-11-24: "Grade on what we sent out to the public.
+  Cannot be switching picks after we send them."). From PUBLIC_FROM, an NFL game is
+  graded on the last read saved at or before the first time that date's card went
+  out: the card email (data/email-log/nfl-card-<date>.json sent_at) or the first X
+  post email (data/email-log/x-posts-nfl-<date>.json, entries not marked skipped),
+  whichever came first. A game with no read by then (added later) keeps the last
+  read before kickoff. Calls follow the same cut: a call in the published read
+  stays (nfl-calls.js held()), a call that first appears after it is not graded.
+*/
+const PUBLIC_FROM = "2026-11-25";
+function publishedAt(date) {
+  if (!date || String(date) < PUBLIC_FROM) return null;
+  const dir = path.join(__dirname, "..", "..", "data", "email-log");
+  const times = [];
+  try { const c = JSON.parse(fs.readFileSync(path.join(dir, `nfl-card-${date}.json`), "utf8")); if (c.sent_at && (c.sent > 0 || c.sent == null)) times.push(Date.parse(c.sent_at)); } catch (e) {}
+  try { const x = JSON.parse(fs.readFileSync(path.join(dir, `x-posts-nfl-${date}.json`), "utf8"));
+    for (const v of Object.values(x.sent || {})) if (v && v.at && !v.skipped) times.push(Date.parse(v.at)); } catch (e) {}
+  const t = times.filter(Number.isFinite);
+  return t.length ? Math.min(...t) : null;
+}
+
 function frozenPredictions(file, date) {
   if (!fs.existsSync(file)) return [];
   const lines = fs.readFileSync(file, "utf8").split(/\r?\n/).filter(Boolean);
@@ -144,7 +166,7 @@ function frozenPredictions(file, date) {
   const header = splitCsv(lines[0]);
   const idx = {}; header.forEach((h, i) => idx[h] = i);
 
-  const best = new Map();
+  const best = new Map(), beforePub = new Map(), PUB = publishedAt(date);
   let afterKick = 0;
   for (let i = 1; i < lines.length; i++) {
     const c = splitCsv(lines[i]);
@@ -155,7 +177,9 @@ function frozenPredictions(file, date) {
     if (!(cap < kick)) { afterKick++; continue; }   // revised after the whistle
     const prev = best.get(row.game_id);
     if (!prev || cap > prev._cap) { row._cap = cap; best.set(row.game_id, row); }
+    if (PUB != null && cap <= PUB) { const bp = beforePub.get(row.game_id); if (!bp || cap > bp._cap) beforePub.set(row.game_id, { ...row, _cap: cap }); }
   }
+  for (const [id, r] of beforePub) best.set(id, r);   // the published read wins
 
   const num = v => { const x = parseFloat(v); return Number.isFinite(x) ? x : null; };
   const out = [...best.values()].map(r => ({
@@ -184,7 +208,7 @@ function frozenPredictions(file, date) {
   (DEC-20261115-53).
 */
 function preKickoffReads(file, date) {
-  const out = new Map();
+  const out = new Map(), pubSeen = new Set();
   if (!fs.existsSync(file)) return out;
   const lines = fs.readFileSync(file, "utf8").split(/\r?\n/).filter(Boolean);
   if (lines.length < 2) return out;
@@ -196,6 +220,9 @@ function preKickoffReads(file, date) {
     if (date && r.date !== date) continue;
     const cap = Date.parse(r.captured_at), kick = Date.parse(r.kickoff_utc);
     if (!Number.isFinite(kick) || !Number.isFinite(cap) || !(cap < kick)) continue;
+    const pub = publishedAt(r.date);
+    if (pub != null && cap > pub && pubSeen.has(r.game_id)) continue;   // reads after the card went out do not change calls
+    if (pub != null && cap <= pub) pubSeen.add(r.game_id);
     const row = { date: r.date, game_id: r.game_id, matchup: r.matchup, away: r.away, home: r.home,
       captured_at: r.captured_at, kickoff_utc: r.kickoff_utc, pick: r.pick,
       model_prob: num(r.model_prob), price: num(r.price), proj_total: num(r.proj_total), total_line: num(r.total_line),
@@ -280,4 +307,4 @@ function frozenProps(file, date) {
   return out;
 }
 
-module.exports = { record, frozenPredictions, preKickoffReads, recordProps, frozenProps, kickoffUtc, COLS, PROP_COLS };
+module.exports = { publishedAt, PUBLIC_FROM, record, frozenPredictions, preKickoffReads, recordProps, frozenProps, kickoffUtc, COLS, PROP_COLS };
