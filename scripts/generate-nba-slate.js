@@ -50,6 +50,7 @@ const half = v => Math.round(v * 2) / 2;
 const PK = require("./lib/nba-picks");   // Leo Pick rule: 60%+ and priced better than -230 (DEC-20261102-30)
 const URLS = require("./lib/nba-urls");
 const SW = require("./lib/nba-swing");   // day-to-day swing check (HO-0097, NBA-H36): flags only, never picks
+const PUBLIC = require("./lib/nba-public-read");   // the published read is the graded one (Lynold, 2026-11-24)
 const LOCK = require("./lib/nba-pick-lock");   // one price per Leo Pick, locked at the first read that makes it (DEC-20261116-30)   // game page addresses (SEO-09, DEC-20261107-30)
 
 /* New history columns are added once at the end of the header; old rows keep every value and get blanks. */
@@ -197,7 +198,7 @@ function readHistory() {
   const previous = fs.existsSync(prevFile) ? Object.fromEntries(JSON.parse(fs.readFileSync(prevFile, "utf8")).games.map(g => [g.game_id, g])) : {};
   const now = new Date().toISOString();
   const out = [], hist = [];
-  let locksChanged = false;
+  let locksChanged = false, publicChanged = false;
   for (const g of slate) {
     const started = g.state !== "pre" || g.tip_utc <= now;
     // Once a game tips, the card keeps the last read made before tip.
@@ -237,7 +238,14 @@ function readHistory() {
         projected: PR ? (() => { const t = P.project(PR, g.home, g.away).total; return { total: Math.round(t), home: Math.round((t + margin) / 2), away: Math.round((t - margin) / 2) }; })() : null
       }
     };
+    const PUB = EARLY ? null : PUBLIC.get(DATE, g.game_id);
     if (EARLY) { game.early = true; game.leo.pick = { early: true }; }
+    else if (PUB) {
+      // Published read (Lynold, 2026-11-24, lib/nba-public-read.js): the card keeps the winner, chance and pick
+      // that went out in the posts and emails. This read is kept as information only.
+      game.latest = { captured_at: now, p_home: game.leo.p_home, home_margin: game.leo.home_margin, home_spread: game.leo.home_spread, missing: game.leo.missing };
+      game.leo = PUB.leo; game.public_at = PUB.captured_at;
+    }
     else { let pk = LOCK.apply(DATE, g.game_id, PK.pickForGame(game), { ignoreHold: true, ignoreGate: true });
       const shape = x => x ? { side: x.side, team: x.team, p: +x.p.toFixed(4), price: x.price, ok: x.ok, why: x.why, ...(x.under ? { under: true } : {}), ...(x.locked ? { locked: true } : {}), ...(x.held ? { held: true } : {}), ...(x.monday ? { monday: true } : {}), ...(x.gate ? { gate: true } : {}) } : null;
       game.leo.pick = shape(pk);
@@ -260,7 +268,8 @@ function readHistory() {
         if (LOCK.gate(DATE, g.game_id, hit ? { side, players: hit.players, why: GATE.reason(hit), at: now } : null)) locksChanged = true;
         if (hit) { pk = { ...pk, ok: false, gate: true, why: GATE.reason(hit) }; game.leo.pick = { ...shape(pk), gate: true }; game.leo.gate = hit.players; }
       } catch (e) { console.log(`::warning::Pick Safety Gate error on ${g.game_id}: ${e.message}`); }
-      if (LOCK.lock(DATE, g.game_id, pk, now)) locksChanged = true; }
+      if (LOCK.lock(DATE, g.game_id, pk, now)) locksChanged = true;
+      if (!started && PUBLIC.put(DATE, g.game_id, now, game.leo)) { publicChanged = true; game.public_at = now; } }
     game.url = URLS.gamePath(game);   // the game page address, for the home page card and every link (SEO-09)
     out.push(game);
     if (!started && !EARLY) hist.push({
@@ -283,6 +292,7 @@ function readHistory() {
     rechecks: out.filter(g => g.leo && g.leo.depends && g.state === "pre").map(g => ({ game_id: g.game_id, tip_utc: g.tip_utc, recheck_utc: new Date(Date.parse(g.tip_utc) - 40 * 60e3).toISOString(), player: g.leo.depends[0].players.map(p => p.name).join(", ") }))
   };
   if (locksChanged) LOCK.save(DATE);
+  if (publicChanged) PUBLIC.save(DATE);
   fs.writeFileSync(prevFile, JSON.stringify(doc, null, 1) + "\n");
   if (EARLY) { console.log(`NBA ${DATE}: early read written (${out.length} games, not graded)`); return; }
   if (DATE === today()) fs.writeFileSync(path.join(DIR, "picks-today.json"), JSON.stringify(doc, null, 1) + "\n");

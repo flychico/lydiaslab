@@ -5,7 +5,9 @@
  *   node scripts/grade-nba-results.js [--date=YYYY-MM-DD]   default: yesterday, New York
  *        --summary-only   rebuild data/nba/results.json from the ledger and stop
  *
- * The read of record for a game is the LAST row in prediction-history.csv
+ * The read of record for a game is the read Leo published (the first game-day
+ * card, data/nba/public-reads/<date>.json, from 2026-11-24; Lynold: "Grade on
+ * what we sent out to the public"), else the LAST row in prediction-history.csv
  * captured before tip. Each final is written once to results-ledger.csv;
  * a game that is not final yet is left for the next run. After its own date
  * it re-grades any frozen game from the last 14 days that is still missing
@@ -48,7 +50,8 @@ const COLS = ["date", "game_id", "away", "home", "away_score", "home_score", "ma
   "home_ml", "away_ml", "pick_side", "pick_team", "pick_p", "pick_price", "pick_result", "pick_units",
   "lean_price", "lean_units", "price_source", "pick_close_price", "pick_close_source"];
 const PK = require("./lib/nba-picks");
-const LOCK = require("./lib/nba-pick-lock");   // from 2026-11-16 a Leo Pick is graded at its locked price (DEC-20261116-30)
+const LOCK = require("./lib/nba-pick-lock");
+const PUBLIC = require("./lib/nba-public-read");   // from 2026-11-16 a Leo Pick is graded at its locked price (DEC-20261116-30)
 /* Leo Pick and lean units from the read of record (DEC-20261102-30). p is that
    prediction-history row (or null when it cannot be found). Prices are the
    DraftKings numbers stored before tip; nothing is looked up after the game. */
@@ -56,7 +59,10 @@ function moneyFields(p, margin, leanSide, leanResult) {
   const o = { home_ml: p ? p.home_ml ?? "" : "", away_ml: p ? p.away_ml ?? "" : "", pick_side: "", pick_team: "", pick_p: "", pick_price: "", pick_result: "", pick_units: "",
     lean_price: "", lean_units: "", price_source: "" };
   if (p) {
-    const pk = LOCK.apply(p.date, p.game_id, PK.pick({ p_home: p.leo_p_home, home_ml: p.home_ml, away_ml: p.away_ml, home: p.home, away: p.away, date: p.date }));
+    // A Leo Pick that went out in the published read is graded at its price, whatever later reads said (Lynold, 2026-11-24).
+    const pub = PUBLIC.get(p.date, p.game_id);
+    const pk = pub ? (pub.leo.pick && pub.leo.pick.ok ? { ...pub.leo.pick, team: pub.leo.pick.team } : null)
+      : LOCK.apply(p.date, p.game_id, PK.pick({ p_home: p.leo_p_home, home_ml: p.home_ml, away_ml: p.away_ml, home: p.home, away: p.away, date: p.date }));
     if (pk && pk.ok) {
       const res = pk.side === "home" ? (margin > 0 ? "win" : "loss") : (margin < 0 ? "win" : "loss");
       Object.assign(o, { pick_side: pk.side, pick_team: pk.team, pick_p: pk.p.toFixed(3), pick_price: pk.price, pick_result: res, pick_units: PK.units(res, pk.price).toFixed(3) });
@@ -233,6 +239,12 @@ function upgradeLedger() {
       const l = lastLine.get(r.game_id); if (!l || r.captured_at > l.captured_at) lastLine.set(r.game_id, r);
     }
     const prev = frozen.get(r.game_id); if (!prev || r.captured_at > prev.captured_at) frozen.set(r.game_id, r);
+  }
+  // The published read wins (Lynold, 2026-11-24: "Grade on what we sent out to the public"; lib/nba-public-read.js).
+  for (const r of readCsv(HISTORY)) {
+    if (r.date !== DATE) continue;
+    const pub = PUBLIC.get(DATE, r.game_id);
+    if (pub && r.captured_at === pub.captured_at) frozen.set(r.game_id, r);
   }
   if (!frozen.size) { console.log(`NBA grade ${DATE}: no frozen reads.`); }
   else {

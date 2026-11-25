@@ -35,6 +35,17 @@ const longDate = d => new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { w
 const tip = iso => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) + " ET";
 const statusTxt = s => s === "day-to-day" ? "Day to day" : s ? s[0].toUpperCase() + s.slice(1) : "";
 
+/** Published read rule (Lynold, 2026-11-24): the card keeps the read that went out; a later read is shown, not graded. */
+function latestNote(g) {
+  const L = g.latest; if (!L || !g.leo || L.p_home == null || g.leo.p_home == null) return "";
+  const nm = ab => URLS.nick(ab, ab === g.home ? g.home_name : g.away_name);
+  const side = p => p >= 0.5 ? g.home : g.away, pct = p => Math.round(Math.max(p, 1 - p) * 100);
+  const flip = side(L.p_home) !== side(g.leo.p_home);
+  if (!flip && Math.abs(L.p_home - g.leo.p_home) < 0.03) return "";
+  const t = iso => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) + " ET";
+  return `<p class="moved">Leo&rsquo;s later read (${esc(t(L.captured_at))}) has the ${esc(nm(side(L.p_home)))} at ${pct(L.p_home)}%. Leo is graded on the read it published${g.public_at ? ` (${esc(t(g.public_at))})` : ""}: the ${esc(nm(side(g.leo.p_home)))} at ${pct(g.leo.p_home)}%.</p>`;
+}
+
 function results() {
   const f = path.join(DIR, "results.json");
   const out = {};
@@ -234,7 +245,8 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
   <p class="eyebrow"><a href="/nba/scoreboard/">NBA</a> &middot; ${esc(longDate(g.date))} &middot; ${esc(tip(g.tip_utc))}${g.venue ? " &middot; " + esc(g.venue) : ""}${g.early ? " &middot; <b>Early read</b>" : ""}</p>
   <h1>${esc(g.away_name)} vs ${esc(g.home_name)}: Prediction and Odds</h1>
   ${lede.length ? `<p class="lede">${lede.slice(0, lede.indexOf(null)).map(esc).join(" ")}</p><p class="lede2">${lede.slice(lede.indexOf(null) + 1).map(esc).join(" ")}</p>` : ""}
-  ${(c => c ? `<p class="moved">${esc(c.text)}</p>` : "")(RC.change(g, { nick: (a, n) => URLS.nick(a, n) }))}
+  ${(c => c && !g.public_at ? `<p class="moved">${esc(c.text)}</p>` : "")(RC.change(g, { nick: (a, n) => URLS.nick(a, n) }))}
+  ${latestNote(g)}
   <p style="margin:6px 0 0;font-size:.92rem">Every game this season: <a href="/nba/teams/${URLS.slugify(URLS.nick(g.away))}/">${esc(URLS.nick(g.away, g.away_name))} team page</a> &middot; <a href="/nba/teams/${URLS.slugify(URLS.nick(g.home))}/">${esc(URLS.nick(g.home, g.home_name))} team page</a></p>
 
   ${finalBlock(g, res)}
