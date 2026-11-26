@@ -154,7 +154,9 @@ function picksPost() {
     text: EXV.tail(kind === "picks"
       ? [title, "", nPicks === 1 ? "Leo's one pick tonight." : `${EXV.Word(nPicks)} picks tonight. Leo likes ${nPicks === 2 ? "both" : "all " + EXV.word(nPicks)} to win.`, "",
          ...items.map(i => `🏀 ${i.full} ML ${fmtPrice(i.price)}`), "", EXV.WITH_LEO]
-      : [title, "", lines[0], "", ...items.map(i => `🏀 ${i.full}`)], link, tags), link, items };
+      : [title, "", lines[0], "", ...items.map(i => `🏀 ${i.full}`)], link, tags), link, items,
+    // Game pages of the picks: their Leo's analysis panel is attached to the post email (Lynold, 2026-11-26).
+    pages: kind === "picks" ? items.map(i => (card.games.find(g => String(g.game_id) === i.game_id) || {}).url).filter(Boolean) : [] };
 }
 
 /* ---------- results posts ---------- */
@@ -302,7 +304,7 @@ if (ONLY !== "results" && (!has("nuke") || (firstTip && NOW < firstTip))) {
   const picksOnly = pk ? (pk.items || []).filter(i => i.type === "pick") : [];
   if (picksOnly.length >= 2) {
     const top = picksOnly.slice().sort((a, b) => b.p - a.p)[0];
-    const np = EXV.nukePost({ title: `NBA ${weekday(DATE).toUpperCase()} NUKE ☢️`, line: `${top.team} ML ${fmtPrice(top.price)}`, textLine: `${top.full || top.team} ML ${fmtPrice(top.price)}`, emoji: "🏀", link: tagged(`https://ndhorizon.com/nba/predictions/${DATE}/`, "nuke"),
+    const np = EXV.nukePost({ title: `NBA ${weekday(DATE).toUpperCase()} NUKE ☢️`, line: `${top.team} ML ${fmtPrice(top.price)}`, textLine: `${top.full || top.team} ML ${fmtPrice(top.price)}`, emoji: "🏀", pages: [(card.games.find(g => String(g.game_id) === String(top.game_id)) || {}).url].filter(Boolean), link: tagged(`https://ndhorizon.com/nba/predictions/${DATE}/`, "nuke"),
       tags: hashtags([top.code]), now: NOW.toISOString(), tip: (byGame.get(top.game_id) || {}).tip_utc });
     const old = doc.posts.find(p => p.id === "nuke");
     if (!old || JSON.stringify(old.lines) !== JSON.stringify(np.lines)) { doc.posts = doc.posts.filter(p => p.id !== "nuke"); doc.posts.splice(1, 0, np); changed.push("nuke"); }

@@ -143,8 +143,8 @@ function opener(w, l, unit = "NIGHT") {
 }
 const WITH_LEO = "🔥 if you're with Leo";
 /** The night's strongest pick as its own post. Label only: graded at 1 unit like every pick. */
-function nukePost({ title, line, link, tags, now, tip, emoji = "", textLine }) {
-  return { id: "nuke", kind: "picks", hero: "Leo's nuke", created_at: now, tip_utc: tip || null, header: title, lines: [line], record: "", facts: [], hashtags: tags,
+function nukePost({ title, line, link, tags, now, tip, emoji = "", textLine, pages = [] }) {
+  return { id: "nuke", pages, kind: "picks", hero: "Leo's nuke", created_at: now, tip_utc: tip || null, header: title, lines: [line], record: "", facts: [], hashtags: tags,
     text: tail([title, "", "Leo's strongest call on the card.", "", `${emoji ? emoji + " " : ""}${textLine || line}`, "", WITH_LEO], link, tags), link };
 }
 /** Bleacher Report style stat line: headline, one stat per line, the result, the game page. */

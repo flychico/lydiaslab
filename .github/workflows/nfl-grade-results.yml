@@ -111,6 +111,8 @@ jobs:
             echo "--- prop grading $D ---"
             node scripts/grade-nfl-props.js --date="$D"
           done
+          # Anytime touchdown picks, private test from Thanksgiving 2026 (Lynold, 2026-11-26): fill in results.
+          node scripts/build-nfl-td-picks.js ${{ steps.dates.outputs.list }} || true
 
       # Roll both ledgers into the feed /nfl/results/ reads. Cheap, local,
       # and reads the WHOLE ledger -- the tracker is cumulative, not per-slate.

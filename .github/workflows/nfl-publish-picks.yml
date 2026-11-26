@@ -111,6 +111,8 @@ jobs:
           node scripts/generate-sitemap.js
           # Leo's frozen touchdown chances for the scoreboard's live tracker.
           node scripts/build-nfl-td-reads.js "${{ steps.slate_date.outputs.date }}" || true
+          # Anytime touchdown picks, private test from Thanksgiving 2026 (Lynold, 2026-11-26). Not on the site.
+          node scripts/build-nfl-td-picks.js "${{ steps.slate_date.outputs.date }}" || true
           # X post text for the slate (HO-0087): refreshed until the first kickoff, then frozen.
           node scripts/build-nfl-social.js "${{ steps.slate_date.outputs.date }}" || true
 

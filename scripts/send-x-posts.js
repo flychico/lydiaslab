@@ -58,6 +58,17 @@ function ensurePlaywright() {
   return pwReady;
 }
 
+// Leo's analysis panel from each called game's page, for picks posts (Lynold, 2026-11-26: "when it comes to the
+// money line / spreads picks, i want us to use this section for our visuals"). Never blocks the email.
+function panels(post, tag) {
+  if (!(post.pages || []).length) return [];
+  try {
+    const env = { ...process.env, NODE_PATH: [path.join(PW_DIR, "node_modules"), process.env.NODE_PATH || ""].filter(Boolean).join(":") };
+    const r = cp.execFileSync("node", [path.join(__dirname, "render-analysis-panel.js"), `/tmp/panels-${tag}`, ...post.pages], { env, encoding: "utf8", timeout: 120000 });
+    return JSON.parse(r.trim().split("\n").pop() || "[]");
+  } catch (e) { console.log(`::warning::analysis panel not rendered for ${tag}: ${e.message}`); return []; }
+}
+
 function render(file, id, out) {
   const env = { ...process.env, NODE_PATH: [path.join(PW_DIR, "node_modules"), process.env.NODE_PATH || ""].filter(Boolean).join(":") };
   const r = cp.execFileSync("node", [path.join(__dirname, "render-post-card.js"), file, id, out], { env, encoding: "utf8" });
@@ -66,13 +77,14 @@ function render(file, id, out) {
 }
 
 const EXP = require("./lib/extra-posts");
-function bodies(post, note, gpt) {
+function bodies(post, note, gpt, panels = 0) {
   // One block to copy into the "Leo cards" ChatGPT project (Lynold, Nov 20: "if i copy the text from
   // the email and send it to chat, chat would know what graphic to make"). Same words as latest.txt.
   // No link in the post (Nov 26): it goes in the first reply, pasted as a reply to the post.
   const reply = EXP.replyText(post);
   const text = (note ? note + "\n\n" : "") + "POST TEXT FOR X:\n\n" + post.text + (reply ? "\n\nFIRST REPLY (post it as a reply to your post):\n\n" + reply : "") +
     "\n\nCOPY THIS INTO CHATGPT (Leo cards project) FOR THE GRAPHIC:\n\n" + gpt +
+    (panels ? `\n\nLEO'S ANALYSIS PANEL: ${panels === 1 ? "the panel for this pick is attached" : `the ${panels} panels for these picks are attached`}. Post ${panels === 1 ? "it" : "them"} with the picks, next to the ChatGPT graphic.` : "") +
     "\n\nLeo's own graphic is attached as a backup.";
   const box = "border:1px solid #D9CFBD;padding:14px;white-space:pre-wrap;font-family:Arial,sans-serif";
   const html = `<!doctype html><html><head><meta name="color-scheme" content="light only"></head>
@@ -85,6 +97,8 @@ ${reply ? `<tr><td style="padding:18px 0 6px;font-weight:bold;color:#1A2535">Fir
 <tr><td style="${box}">${linkify(reply)}</td></tr>` : ""}
 <tr><td style="padding:18px 0 6px;font-weight:bold;color:#1A2535">Copy this into ChatGPT for the graphic</td></tr>
 <tr><td style="${box};background:#F7F4EE" bgcolor="#F7F4EE">${esc(gpt)}</td></tr>
+${panels ? `<tr><td style="padding:18px 0 6px;font-weight:bold;color:#1A2535">Leo's analysis panel</td></tr>
+<tr><td style="color:#3D3830">${panels === 1 ? "The panel for this pick is attached" : `The ${panels} panels for these picks are attached`} (the navy "Leo's analysis" box from the game page). Post ${panels === 1 ? "it" : "them"} with the picks, next to the ChatGPT graphic.</td></tr>` : ""}
 <tr><td style="padding:12px 0 0;color:#3D3830">Leo's own graphic is attached as a backup.</td></tr>
 </table></td></tr></table></body></html>`;
   return { text, html };
@@ -199,10 +213,13 @@ function postBy(sport, date, post) {
       let card;
       try { card = render(file, post.id, out); } catch (e) { console.log(`::warning::render failed for ${subject}: ${e.message}`); continue; }
       if (card.overflow) console.log(`::warning::${subject}: graphic overflows, sent anyway`);
-      const { text, html } = bodies(post, note, chatMessage(sport, date, post));
+      const P = post.kind === "picks" ? panels(post, `${sport}-${date}-${post.id}`) : [];
+      const { text, html } = bodies(post, note, chatMessage(sport, date, post), P.length);
       const res = await sendOne({
         from: FROM, to: [TO], subject, text, html,
-        attachments: [{ filename: `${sport}-${date}-${post.id}.jpg`, content: fs.readFileSync(out).toString("base64") }],
+        attachments: [
+          ...P.map(x => ({ filename: path.basename(x.file), content: fs.readFileSync(x.file).toString("base64") })),
+          { filename: `${sport}-${date}-${post.id}.jpg`, content: fs.readFileSync(out).toString("base64") }],
       }, { key: KEY });
       if (res.ok) {
         log.sent[post.id] = { at: new Date().toISOString(), hash: h, updated: !!note };

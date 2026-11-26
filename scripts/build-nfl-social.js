@@ -154,7 +154,7 @@ function tdPost(date) {
   const link = utm(`${SITE}/nfl/previews/`, "td", date);
   return { id: "td", kind: "reads", hero: "Most likely to score", note: "Anytime touchdown chances, not picks", created_at: new Date(NOW()).toISOString(),
     tip_utc: first, header: title, lines, record: "", facts: [], hashtags: [], reply_lead: "Leo's touchdown chances for every player:",
-    text: EX.tail([title, "", "Leo's most likely to find the end zone.", "", ...lines.map(l => `🏈 ${l}`)], link, []), link };
+    text: EX.tail([title, "", "Leo's top anytime touchdown chances today.", "", ...lines.map(l => `🏈 ${l}`)], link, []), link };
 }
 // Lynold, 2026-11-18: no "21+", no "Every call graded, misses included", more human, less bot.
 const bare = link => String(link).replace(/^https?:\/\//, "");
@@ -181,7 +181,7 @@ function picksPost(date, existing) {
     for (const mk of CALLS.MARKETS) {   // totals are information only (DEC-20261119-01)
       const l = callLine(mk, H[mk], g);
       if (l) { lines.push(l); fullLines.push(callLine(mk, H[mk], g, true)); callGames.add(g.game_id); if (mk !== "total") teams.push(H[mk].call);
-        if (mk === "ml") mlCalls.push({ line: l, full: callLine(mk, H[mk], g, true), team: H.ml.call, p: H.ml.call === g.pick ? +g.model_prob : 1 - +g.model_prob, tip: kickUtc(date, g.kickoff) }); }
+        if (mk === "ml") mlCalls.push({ line: l, full: callLine(mk, H[mk], g, true), page: require("./lib/nfl-urls").gameUrl(g.away, g.home, date), team: H.ml.call, p: H.ml.call === g.pick ? +g.model_prob : 1 - +g.model_prob, tip: kickUtc(date, g.kickoff) }); }
     }
   }
   if (!gameDay) return existing || null;
@@ -203,7 +203,9 @@ function picksPost(date, existing) {
   if (lines.length) body.push(picksHook(date, games, lines.length, new Set(teams).size, callGames.size, mlCalls.length), "", ...fullLines.map(l => `🏈 ${l}`), "", EX.WITH_LEO);
   else body.push("No picks from Leo on this one.");
   return { id: "picks", kind: "picks", created_at: new Date(NOW()).toISOString(), header: title, lines, record: null, hero: lines.length === 1 ? "Leo's nuke" : undefined,
-    facts: [], hashtags: tags, teams: [...new Set(teams)], text: EX.tail(body, link, tags), link, ml_calls: mlCalls, n_calls: lines.length };
+    facts: [], hashtags: tags, teams: [...new Set(teams)], text: EX.tail(body, link, tags), link, ml_calls: mlCalls, n_calls: lines.length,
+    // Game pages of the called games: their Leo's analysis panel is attached to the post email (Lynold, 2026-11-26).
+    pages: games.filter(g => callGames.has(g.game_id)).map(g => require("./lib/nfl-urls").gameUrl(g.away, g.home, date)) };
 }
 function pageUrl(date, g) {
   const m = readJson(path.join(DIR, "matchups", `${date}.json`));
@@ -473,7 +475,7 @@ function build(date) {
   const oneTeam = pkNow && (pkNow.teams ? pkNow.teams.length : new Set((pkNow.lines || []).map(l => String(l).split(" ")[0])).size) <= 1;
   if (pkNow && !oneTeam && (pkNow.n_calls || 0) >= 2 && (pkNow.ml_calls || []).length) {
     const top = pkNow.ml_calls.slice().sort((a, b) => b.p - a.p)[0];
-    const np = EX.nukePost({ title: `${cheatTitle(date, (readJson(path.join(DIR, `picks-${date}.json`)) || [{}])[0].week)} NUKE ☢️`, line: top.line, textLine: top.full, emoji: "🏈",
+    const np = EX.nukePost({ title: `${cheatTitle(date, (readJson(path.join(DIR, `picks-${date}.json`)) || [{}])[0].week)} NUKE ☢️`, line: top.line, textLine: top.full, emoji: "🏈", pages: top.page ? [top.page] : [],
       link: utm(`${SITE}/nfl/week/${date.slice(0, 4)}-week-${(readJson(path.join(DIR, `picks-${date}.json`)) || [{}])[0].week}/`, "nuke", date), tags: hashtags([top.team]), now: new Date(NOW()).toISOString(), tip: top.tip });
     const old = has("nuke");
     if (NOW() < Date.parse(top.tip || 0) && (!old || JSON.stringify(old.lines) !== JSON.stringify(np.lines))) { set(np); changed = true; }
