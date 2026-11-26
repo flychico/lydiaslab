@@ -1370,7 +1370,7 @@ function renderMatchupPage(context) {
     datePublished: generatedAt,
     dateModified: new Date().toISOString(),
     author: { "@type": "Person", "@id": AUTHOR_ID, name: "Lynold Rivera", url: AUTHOR_URL },
-    publisher: { "@type": "Organization", "@id": `${SITE}/#organization`, name: "Leo", url: `${SITE}/` },
+    publisher: { "@type": "Organization", "@id": `${SITE}/#organization`, name: "New Dawn Horizon", alternateName: "ND Horizon", url: `${SITE}/` },
     mainEntityOfPage: canonical,
     isAccessibleForFree: true,
     about: { "@id": `${canonical}#event` }

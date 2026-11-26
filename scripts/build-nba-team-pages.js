@@ -295,7 +295,7 @@ function teamPage(abbr, division, games, sched, AN) {
   const jsonld = { "@context": "https://schema.org", "@graph": [
     { "@type": "CollectionPage", "@id": `${ORIGIN}${url}#page`, name: title.replace(/ \| Leo$/, ""), description: desc, url: ORIGIN + url,
       about: { "@type": "SportsTeam", name, sport: "Basketball", memberOf: { "@type": "SportsOrganization", name: "National Basketball Association" } },
-      publisher: { "@type": "Organization", "@id": `${ORIGIN}/#organization`, name: "Leo", url: `${ORIGIN}/` } },
+      publisher: { "@type": "Organization", "@id": `${ORIGIN}/#organization`, name: "New Dawn Horizon", alternateName: "ND Horizon", url: `${ORIGIN}/` } },
     { "@type": "BreadcrumbList", itemListElement: [
       { "@type": "ListItem", position: 1, name: "Leo", item: `${ORIGIN}/` },
       { "@type": "ListItem", position: 2, name: "NBA teams", item: `${ORIGIN}/nba/teams/` },

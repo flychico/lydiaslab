@@ -25,7 +25,10 @@ const SKIP = new Set([".git", ".github", "node_modules", "data", "scripts", "css
 // HO-0037) and, in season, when their game is from an earlier year. The pages
 // themselves are unchanged and still linked from the MLB team pages.
 const MLB_GAME = /^\/mlb\/[a-z0-9-]+-prediction-odds-(\d{4})-\d{2}-\d{2}(-game-\d)?\/$/;
+// MLB team pages too while the offseason flag exists (Lynold, 2026-11-25: "MLB team pages out until March").
+const MLB_TEAMS = /^\/mlb\/teams\/([a-z0-9-]+\/)?$/;
 function leftOut(root, page) {
+  if (MLB_TEAMS.test(page) && fs.existsSync(path.join(root, "data", "mlb-offseason.json"))) return true;
   const m = MLB_GAME.exec(page);
   if (!m) return false;
   if (fs.existsSync(path.join(root, "data", "mlb-offseason.json"))) return true;
@@ -58,9 +61,52 @@ function listPages(root) {
   return out.filter(p => !leftOut(root, p)).sort((a, b) => (a === "/" ? -1 : b === "/" ? 1 : a.localeCompare(b)));
 }
 
-function render(pages) {
+function render(pages, mods = {}) {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
-    + pages.map(p => `  <url><loc>${ORIGIN}${p}</loc></url>`).join("\n") + `\n</urlset>\n`;
+    + pages.map(p => `  <url><loc>${ORIGIN}${p}</loc>${mods[p] ? `<lastmod>${mods[p]}</lastmod>` : ""}</url>`).join("\n") + `\n</urlset>\n`;
+}
+
+/*
+  <lastmod> = the date the page last really changed (Lynold, 2026-11-25, from the SEO spec: "never a hardcoded
+  build timestamp on unchanged pages"). No state file: a page this run changed or added (git status: modified or
+  new, against the last commit) gets today; every other page keeps the date already in sitemap.xml. A page with no
+  date yet gets the date of its last commit when git history has it, else today.
+*/
+const pageFile = p => p.endsWith("/") ? p.slice(1) + "index.html" : p.slice(1);
+function changedFiles(root) {
+  try {
+    const out = require("child_process").execFileSync("git", ["status", "--porcelain", "--untracked-files=all", "--", "."], { cwd: root, maxBuffer: 64 << 20 }).toString();
+    return new Set(out.split("\n").filter(Boolean).map(l => l.slice(3).replace(/^"|"$/g, "").split(" -> ").pop()));
+  } catch (e) { return null; }
+}
+function lastCommitDates(root, files) {
+  const out = {};
+  if (!files.length) return out;
+  try {
+    const log = require("child_process").execFileSync("git", ["log", "--format=@%cI", "--name-only", "--", ...files], { cwd: root, maxBuffer: 256 << 20 }).toString();
+    let d = null;
+    for (const line of log.split("\n")) {
+      if (line.startsWith("@")) d = new Date(Date.parse(line.slice(1)) - 5 * 3600e3).toISOString().slice(0, 10);   // New York date
+      else if (line && d && !out[line]) out[line] = d;
+    }
+  } catch (e) {}
+  return out;
+}
+function lastmods(root, pages) {
+  const today = new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);   // New York date (EST)
+  const prev = {};
+  const file = path.join(root, "sitemap.xml");
+  if (fs.existsSync(file)) for (const m of fs.readFileSync(file, "utf8").matchAll(/<loc>([^<]+)<\/loc>(?:<lastmod>([^<]+)<\/lastmod>)?/g))
+    if (m[2]) prev[m[1].slice(ORIGIN.length)] = m[2];
+  const changed = changedFiles(root);
+  const need = pages.filter(p => !prev[p] && !(changed && changed.has(pageFile(p))));
+  const hist = lastCommitDates(root, need.map(pageFile));
+  const mods = {};
+  for (const p of pages) {
+    if (changed && changed.has(pageFile(p))) mods[p] = today;
+    else mods[p] = prev[p] || hist[pageFile(p)] || today;
+  }
+  return mods;
 }
 
 // NFL and NBA game pages older than 7 days get <meta name="robots" content="noindex, follow"> and so leave the
@@ -96,10 +142,49 @@ function markStaleGames(root, today = etToday()) {
   return n;
 }
 
+/*
+  Dated hub pages follow the same 7 day rule (Lynold, 2026-11-25, from the SEO spec): an NFL week page
+  /nfl/week/<season>-week-N/ once its last game is more than 7 days ago (dates from data/nfl/games-lite.json),
+  and an NBA night page /nba/predictions/<date>/ once its date is. The weekly results pages stay indexed.
+*/
+function addNoindex(f) {
+  if (!fs.existsSync(f)) return false;
+  const html = fs.readFileSync(f, "utf8"), head = html.slice(0, 6000);
+  if (/<meta[^>]+http-equiv=["']refresh["']/i.test(head) || /<meta[^>]+name=["']robots["'][^>]*noindex/i.test(head)) return false;
+  let out;
+  if (/<meta[^>]+name=["']robots["'][^>]*>/i.test(head)) out = html.replace(/<meta[^>]+name=["']robots["'][^>]*>/i, ROBOTS_STALE);
+  else if (/<head[^>]*>/i.test(html)) out = html.replace(/<head[^>]*>/i, h => h + "\n" + ROBOTS_STALE);
+  else return false;
+  fs.writeFileSync(f, out, "utf8");
+  return true;
+}
+function markStaleHubs(root, today = etToday()) {
+  const cutoff = new Date(Date.parse(today + "T00:00:00Z") - STALE_DAYS * 864e5).toISOString().slice(0, 10);
+  let n = 0;
+  let last = {};
+  try {
+    for (const g of JSON.parse(fs.readFileSync(path.join(root, "data", "nfl", "games-lite.json"), "utf8")).games)
+      if (g.type === "REG") { const k = `${g.season}-week-${g.week}`; if (!last[k] || g.date > last[k]) last[k] = g.date; }
+  } catch (e) { last = {}; }
+  const wdir = path.join(root, "nfl", "week");
+  if (fs.existsSync(wdir)) for (const name of fs.readdirSync(wdir)) {
+    const m = /^(\d{4})-week-(\d+)$/.exec(name);
+    if (!m || !last[name] || last[name] >= cutoff) continue;
+    if (addNoindex(path.join(wdir, name, "index.html"))) n++;
+  }
+  const ndir = path.join(root, "nba", "predictions");
+  if (fs.existsSync(ndir)) for (const name of fs.readdirSync(ndir)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(name) || name >= cutoff) continue;
+    if (addNoindex(path.join(ndir, name, "index.html"))) n++;
+  }
+  return n;
+}
+
 function writeSitemap(root) {
   markStaleGames(root);
+  markStaleHubs(root);
   const pages = listPages(root);
-  fs.writeFileSync(path.join(root, "sitemap.xml"), render(pages), "utf8");
+  fs.writeFileSync(path.join(root, "sitemap.xml"), render(pages, lastmods(root, pages)), "utf8");
   return pages.length;
 }
 
@@ -115,4 +200,4 @@ function checkSitemap(root) {
   };
 }
 
-module.exports = { markStaleGames, listPages, writeSitemap, checkSitemap, leftOut, ORIGIN };
+module.exports = { markStaleGames, markStaleHubs, listPages, writeSitemap, checkSitemap, leftOut, ORIGIN };

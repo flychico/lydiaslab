@@ -13,7 +13,7 @@ function resultsList({ url, name, description, items }) {
     "@type": "CollectionPage",
     name, description, url: SITE + url,
     isPartOf: { "@type": "WebSite", name: "Leo", url: SITE + "/" },
-    publisher: { "@type": "Organization", name: "Leo", url: SITE + "/" },
+    publisher: { "@type": "Organization", "@id": SITE + "/#organization", name: "New Dawn Horizon", alternateName: "ND Horizon", url: SITE + "/" },
     mainEntity: {
       "@type": "ItemList",
       numberOfItems: items.length,

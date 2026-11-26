@@ -14,7 +14,7 @@ const path = require("path");
 
 const ORIGIN = "https://ndhorizon.com";
 const AUTHOR = { "@type": "Person", "@id": `${ORIGIN}/writers/lynold/#person`, name: "Lynold Rivera", url: `${ORIGIN}/writers/lynold/` };
-const PUBLISHER = { "@type": "Organization", "@id": `${ORIGIN}/#organization`, name: "Leo", url: `${ORIGIN}/` };
+const PUBLISHER = { "@type": "Organization", "@id": `${ORIGIN}/#organization`, name: "New Dawn Horizon", alternateName: "ND Horizon", url: `${ORIGIN}/` };
 
 const escHtml = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
