@@ -148,6 +148,13 @@ jobs:
       - name: Player scoring log
         run: node scripts/build-nba-player-log.js || echo "::warning::NBA player log not refreshed"
 
+      # NBA player prop lines for a private test (Lynold, 2026-11-26). Today's games,
+      # top 8 players per team, points / rebounds / assists / PRA main lines, a row
+      # only when a line or price moved. Not shown on the site; Leo does not use it.
+      - name: Prop lines (private test)
+        continue-on-error: true
+        run: node scripts/capture-nba-prop-lines.js || true
+
       - name: Matchup pages
         run: |
           node scripts/render-nba-matchup-pages.js ${{ steps.d.outputs.dates }}
