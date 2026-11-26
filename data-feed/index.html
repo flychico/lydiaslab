@@ -52,6 +52,14 @@
     <p class="small" style="margin-bottom:0"><b>status</b> is <b>open</b> while Leo&rsquo;s read can still change before the start, and <b>frozen</b> once the game has started: that is Leo&rsquo;s final number, the one the site grades. NFL win chance and margin come from two separate models, so in a close game they can point to different winners. Leo&rsquo;s output only: no sportsbook number in any column.</p>
   </div>
 
+  <h2 id="ratings">Free team rating files for rating aggregators</h2>
+  <div class="card">
+    <p style="margin-top:0">Leo&rsquo;s current team ratings, every NFL and NBA team, ranked, at fixed addresses that stay the same all season. Updated by every Leo run.</p>
+    <div class="dl"><a class="btn secondary" href="/data/ratings/nfl.csv">NFL ratings (CSV)</a><a class="btn secondary" href="/data/ratings/nfl.json">JSON</a><a class="btn secondary" href="/data/ratings/nba.csv">NBA ratings (CSV)</a><a class="btn secondary" href="/data/ratings/nba.json">JSON</a></div>
+    <p class="small">NFL columns: rank, team, abbr, leo_overall, quarterback, offense, defense (each 0 to 100, 50 is average), games, as_of, model_version. These are the ratings Leo&rsquo;s win chance is built on, as shown on every game page.</p>
+    <p class="small" style="margin-bottom:0">NBA columns: rank, team, abbr, leo_rating (points better than an average team on a neutral floor), as_of, model_version. Each day is also kept at /data/ratings/&lt;sport&gt;/&lt;date&gt;.csv. Leo&rsquo;s output only: no sportsbook number.</p>
+  </div>
+
   <h2>Free samples</h2>
   <div class="feed-grid">
     <div class="card">

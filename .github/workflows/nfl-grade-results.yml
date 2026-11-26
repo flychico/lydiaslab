@@ -236,7 +236,9 @@ jobs:
 
       - name: Prediction files for trackers
         continue-on-error: true
-        run: node scripts/build-prediction-files.js nfl || true
+        run: |
+          node scripts/build-prediction-files.js nfl || true
+          node scripts/build-rating-files.js nfl || true   # team ratings for aggregators (Lynold, 2026-11-25)
 
 
       # The daily recap behind Lynold's one morning email (Leo Manager, 2026-11-22). Public data only.

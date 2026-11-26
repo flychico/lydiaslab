@@ -176,7 +176,9 @@ jobs:
 
       - name: Prediction files for trackers
         continue-on-error: true
-        run: node scripts/build-prediction-files.js nfl || true
+        run: |
+          node scripts/build-prediction-files.js nfl || true
+          node scripts/build-rating-files.js nfl || true   # team ratings for aggregators (Lynold, 2026-11-25)
 
       - name: Commit and push if changed
         if: steps.slate.outputs.games != '0'
@@ -226,6 +228,7 @@ jobs:
           node scripts/build-matchup-pages.js nfl || true   # permanent matchup pages (Lynold, 2026-11-25)
           node scripts/generate-sitemap.js || true
           node scripts/build-prediction-files.js nfl || true
+          node scripts/build-rating-files.js nfl || true
           git config user.name "lydia-bot"
           git config user.email "actions@users.noreply.github.com"
           git add -A

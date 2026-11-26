@@ -208,14 +208,17 @@ jobs:
       - name: Prediction files for trackers
         if: needs.check.outputs.early != 'true'
         continue-on-error: true
-        run: node scripts/build-prediction-files.js nba || true
+        run: |
+          node scripts/build-prediction-files.js nba || true
+          node scripts/build-rating-files.js nba || true   # team ratings for aggregators (Lynold, 2026-11-25)
+          node scripts/build-prediction-files.js nfl || true   # keeps the NFL file's open/frozen status current between NFL runs
 
       - name: Commit and push if changed
         run: |
           set -euo pipefail
           git config user.name "lydia-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/nba data/predictions nba/results nfl/results/index.html $(ls -d data/parlay parlay 2>/dev/null) nba sitemap.xml data/email-log $(ls -d x 2>/dev/null)
+          git add data/nba data/predictions data/ratings nba/results nfl/results/index.html $(ls -d data/parlay parlay 2>/dev/null) nba sitemap.xml data/email-log $(ls -d x 2>/dev/null)
           if git diff --cached --quiet; then echo "No change."; exit 0; fi
           git commit -m "NBA card ${{ steps.d.outputs.date }}"
           # Retry: on busy days other workflows push between our checkout and our push (Nov 15 12:41pm card lost).
