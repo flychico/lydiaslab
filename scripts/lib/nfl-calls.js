@@ -125,6 +125,14 @@ function calls(g) {
     else if (Math.abs(gap) > RULES.TOTAL_CAP) out.total = { call: null, gap: r1(gap), pass: `Leo ${r1(Math.abs(gap))} off the line, too far to trust`, short: "too far off to trust" };
     else { const side = gap > 0 ? "Over" : "Under"; out.total = { call: side, gap: r1(gap), line: tLine, label: `${side} ${tLine}` }; }
   }
+  // A call Lynold added by hand before kickoff (data/nfl/manual-calls.json, DEC-20261126-10), attached to the
+  // row as manual_spread by attachManual(). Only where the rule made no spread call; graded at its own line.
+  const ms = g.manual_spread;
+  if (ms && ms.side && !(out.spread && out.spread.call)) {
+    const own = num(ms.line), homeLine = ms.side === home ? -own : own;
+    out.spread = { call: ms.side, manual: true, gap: out.spread && out.spread.gap, lineValue: homeLine, line: teamLine(ms.side, home, homeLine),
+      label: `${ms.side} ${teamLine(ms.side, home, homeLine)}`, rule_pass: out.spread ? (out.spread.short || out.spread.pass || "") : "" };
+  }
   out.count = [out.ml, out.spread, out.total].filter(c => c.call).length;
   return out;
 }
@@ -182,7 +190,16 @@ function current(c, g) {
     count: [c.ml, c.spread].filter(x => x && x.call).length };
 }
 
-const api = { RULES, MARKETS, calls, current, grade, held };
+/** Attach hand-added calls (the parsed data/nfl/manual-calls.json) to Leo's rows: valid only if saved before kickoff. */
+function attachManual(rows, doc) {
+  const list = (doc && doc.calls) || [];
+  for (const r of rows || []) for (const c of list) {
+    if (c.game_id !== r.game_id || c.market !== "spread" || !(Date.parse(c.added_at) < Date.parse(c.kickoff_utc))) continue;
+    r.manual_spread = { side: c.side, line: c.line, added_by: c.added_by || "" };
+  }
+  return rows;
+}
+const api = { RULES, MARKETS, calls, current, grade, held, attachManual };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else if (typeof window !== "undefined") window.NFL_CALLS = api;
 })();

@@ -96,6 +96,7 @@ const by=(m,h,a)=>m==null?"—":Math.abs(m)<0.05?"pick'em":(m>0?h:a)+" by "+Math
 (async function(){
   const el=document.getElementById("picks"), st=document.getElementById("status"), kp=document.getElementById("kpis");
   const p=await loadFirst("picks");
+  if(p&&window.NFL_CALLS&&NFL_CALLS.attachManual) NFL_CALLS.attachManual(p, await tryJson("/data/nfl/manual-calls.json"));   // calls added by hand by Lynold (DEC-20261126-10)
   if(!p){ st.innerHTML='<div class="score-empty">No NFL reads are published right now.</div>'; return; }
   st.style.display="none";
   const homeP=x=>x.model_prob==null?null:(x.pick===x.home?x.model_prob:1-x.model_prob);
@@ -111,14 +112,14 @@ const by=(m,h,a)=>m==null?"—":Math.abs(m)<0.05?"pick'em":(m>0?h:a)+" by "+Math
   kp.innerHTML= CALLS ?
     '<article class="kpi"><div class="label">Games</div><div class="value">'+p.length+'</div><div class="sub">Week '+esc(p[0].week)+' &middot; '+when+'</div></article>'+
     '<article class="kpi"><div class="label">Moneyline calls</div><div class="value">'+nCall("ml")+'</div><div class="sub">above 60%, better than -230</div></article>'+
-    '<article class="kpi"><div class="label">Spread calls</div><div class="value">'+nCall("spread")+'</div><div class="sub">1+ point off the line</div></article>'+
+    '<article class="kpi"><div class="label">Spread calls</div><div class="value">'+nCall("spread")+'</div><div class="sub">'+(p[0].date>=NFL_CALLS.RULES.SPREAD_AGREE_FROM?"Leo within 1 point of the line":"1.5+ points off the line")+'</div></article>'+
     '<article class="kpi"><div class="label">Totals</div><div class="value">Info</div><div class="sub">Leo&rsquo;s total is shown, not called</div></article>' :
     '<article class="kpi"><div class="label">Games</div><div class="value">'+p.length+'</div><div class="sub">Week '+esc(p[0].week)+' &middot; '+when+'</div></article>'+
     '<article class="kpi"><div class="label">Leo picks</div><div class="value">'+picks+'</div><div class="sub">one team above 60%</div></article>'+
     '<article class="kpi"><div class="label">Too close</div><div class="value">'+(p.length-picks)+'</div><div class="sub">60% or less</div></article>'+
     '<article class="kpi"><div class="label">Spread sides</div><div class="value">'+sides+'</div><div class="sub">1+ point off the line</div></article>';
   const order=x=>CALLS?C(x).count*10+Math.abs((homeP(x)||.5)-.5):(x.ml_call==="leo_pick"?1:0)*10+Math.abs((homeP(x)||.5)-.5);
-  const callBox=(cls,label,c,sub)=>'<div class="market-box '+cls+'"'+(c.call?'':' style="opacity:.72"')+'><span class="market-label">'+label+'</span><span class="market-value">'+(c.call?esc(c.label):"PASS")+'</span><span class="market-sub">'+esc(c.call?sub:(c.short||c.pass||""))+'</span></div>';
+  const callBox=(cls,label,c,sub)=>'<div class="market-box '+cls+'"'+(c.call?'':' style="opacity:.72"')+'><span class="market-label">'+label+'</span><span class="market-value">'+(c.call?esc(c.label):"PASS")+'</span><span class="market-sub">'+esc(c.call?(c.manual?"added by hand by Lynold":sub):(c.short||c.pass||""))+'</span></div>';
   el.innerHTML=p.slice().sort((a,b)=>order(b)-order(a)).map(x=>{
     const hp=homeP(x), ap=hp==null?null:1-hp, K=C(x), isPick=K?!!K.ml.call:x.ml_call==="leo_pick";
     const row=(t,prob,lean)=>'<div class="side'+(lean?" lean":"")+'">'+

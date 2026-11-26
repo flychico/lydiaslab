@@ -276,7 +276,7 @@ function callsGrid(g, leo, isFinal, as, hs){
     const tag=r==="W"?'<b style="color:var(--good)">RIGHT</b>':r==="L"?'<b style="color:var(--danger)">WRONG</b>':r==="P"?"<b>PUSH</b>":"";
     return '<div class="market-box '+cls+'"'+(c.call?'':' style="opacity:.72"')+' title="'+escapeHtml(c.call?sub:(c.pass||""))+'"><span class="market-label">'+label+'</span>'+
       '<span class="market-value">'+(c.call?escapeHtml(c.label):"No call")+'</span>'+
-      '<span class="market-sub">'+(tag||escapeHtml(c.call?sub:(c.short||c.pass||"")))+'</span></div>';
+      '<span class="market-sub">'+(tag||escapeHtml(c.call?(c.manual?"added by hand by Lynold":sub):(c.short||c.pass||"")))+(tag&&c.manual?' <span style="font-weight:400">· added by hand</span>':'')+'</span></div>';
   };
   return '<div class="market-grid">'+
     box("rating","Moneyline",C.ml,"ml",Math.round(leo.model_prob*100)+"% to win")+
@@ -315,11 +315,13 @@ async function loadScoreboard(opts={}){
     // Leo's own numbers and team records. Absent for most dates; the card
     // falls back to market-only rather than breaking.
     LEO={}; REC={};
-    const [pk,ts,td]=await Promise.all([
+    const [pk,ts,td,man]=await Promise.all([
       fetch("/data/nfl/picks-"+date+".json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null),
       fetch("/data/nfl/team-stats-today.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null),
-      fetch("/data/nfl/td-reads-"+date+".json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
+      fetch("/data/nfl/td-reads-"+date+".json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null),
+      fetch("/data/nfl/manual-calls.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
     ]);
+    if(Array.isArray(pk)&&window.NFL_CALLS&&NFL_CALLS.attachManual) NFL_CALLS.attachManual(pk,man);   // calls added by hand by Lynold (DEC-20261126-10)
     if(Array.isArray(pk)) pk.forEach(g=>{LEO[g.matchup]=g;});
     if(Array.isArray(ts)) ts.forEach(t=>{REC[t.team]=t;});
     TDREADS=td&&td.games?td:null; for(const k in TDS) delete TDS[k]; for(const k in TD_DONE) delete TD_DONE[k]; LIVE={};
