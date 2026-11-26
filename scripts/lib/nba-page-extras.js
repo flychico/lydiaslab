@@ -60,7 +60,7 @@ function statTable(g) {
   const txt = (a, h, label) => `<tr><td>${a}</td><th>${label}</th><td>${h}</td></tr>`;
   const rk = (ab, key, hb) => { const r = rank(ab, key, hb); return r ? ord(r) : "&mdash;"; };
   const through = STATS.data_through ? short(STATS.data_through) : "";
-  return `<h2>Team stats compared</h2>
+  return `<h2 id="stats">${NA} vs ${NH} team stats</h2>
   <p class="dim">${NA} left, ${NH} right. This season through ${esc(through)}; the better number is in bold. Ratings are points per 100 possessions.</p>
   <div class="card tbl"><table class="cmp">
     <thead><tr><th>${NA}</th><th></th><th>${NH}</th></tr></thead><tbody>
@@ -151,9 +151,10 @@ function h2hRest(g) {
     const nx = R.next ? `Next: ${R.next.home === ab ? "vs" : "at"} ${esc(URLS.nick(R.next.home === ab ? R.next.away : R.next.home))}, ${esc(short(R.next.date))}${R.b2bNext ? " (back to back)" : ""}.` : "";
     return `<p>${restTxt}</p><p class="dim">Last game: ${home ? "vs" : "at"} ${esc(opp)}, ${esc(short(p.date))}${esc(res)}. ${R.week} ${R.week === 1 ? "game" : "games"} in the last 7 days. ${nx}</p>`;
   };
-  return `<h2>Head to head</h2>
+  return `<h2 id="h2h">${esc(URLS.nick(g.away, g.away_name))} vs ${esc(URLS.nick(g.home, g.home_name))} head to head</h2>
+  <p class="dim" style="margin:0 0 8px"><a href="${require("../build-matchup-pages").matchupUrl("nba", URLS.nick(g.away, g.away_name), URLS.nick(g.home, g.home_name))}">Every ${esc(URLS.nick(g.away, g.away_name))} vs ${esc(URLS.nick(g.home, g.home_name))} game Leo has read &rarr;</a></p>
   <div class="two"><div><b>This season</b>${sum(M.now, "this season")}</div><div><b>Last season</b>${M.lastSeason ? sum(M.last, "last season") : `<p class="dim">Not loaded.</p>`}</div></div>
-  <h2>Rest and schedule</h2>
+  <h2 id="rest">${esc(URLS.nick(g.away, g.away_name))} and ${esc(URLS.nick(g.home, g.home_name))} rest and schedule</h2>
   <p class="dim">Days off before this game. Leo counts rest and back to backs in its number (see What moves Leo&rsquo;s number).</p>
   <div class="two"><div><b>${esc(g.away_name)}</b>${side(g.away)}</div><div><b>${esc(g.home_name)}</b>${side(g.home)}</div></div>`;
 }
@@ -196,4 +197,24 @@ function faqItems(g, res) {
   return out;
 }
 
-module.exports = { statTable, h2hRest, faqItems, restOf, meetings };
+
+/* One shareable line (competitor review, Lynold 2026-11-25): a back to back,
+   a run of wins or losses, or a one-sided series. Display only. */
+function statToKnow(g) {
+  const nm = ab => URLS.nick(ab, ab === g.home ? g.home_name : g.away_name);
+  const ra = restOf(g.away, g.date), rh = restOf(g.home, g.date);
+  if (ra.rest === 0 && rh.rest > 0) return `The ${nm(g.away)} play the second night of a back to back; the ${nm(g.home)} had ${rh.rest} ${rh.rest === 1 ? "day" : "days"} off.`;
+  if (rh.rest === 0 && ra.rest > 0) return `The ${nm(g.home)} play the second night of a back to back; the ${nm(g.away)} had ${ra.rest} ${ra.rest === 1 ? "day" : "days"} off.`;
+  for (const side of ["away", "home"]) {
+    const f = g.context && g.context[side] && g.context[side].form, l5 = f && f.last5 || [];
+    if (l5.length === 5 && l5.every(x => x.won)) return `The ${nm(g[side])} have won their last 5 games.`;
+    if (l5.length === 5 && l5.every(x => !x.won)) return `The ${nm(g[side])} have lost their last 5 games.`;
+  }
+  const M = meetings(g), all = [...M.now].sort((a, b) => b.date.localeCompare(a.date)).concat([...M.last].sort((a, b) => b.date.localeCompare(a.date)));
+  const w = x => x.hs > x.as ? x.home : x.away;
+  if (all.length >= 3) { const f = w(all[0]); let k = 0; while (k < all.length && w(all[k]) === f) k++;
+    if (k >= 3) return `The ${nm(f)} have won the last ${k} meetings with the ${nm(f === g.home ? g.away : g.home)}.`; }
+  return "";
+}
+
+module.exports = { statTable, h2hRest, faqItems, restOf, meetings, statToKnow };

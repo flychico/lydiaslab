@@ -190,7 +190,7 @@ function ratingsSection(m){
   const pc=x=>x==null?"—":(x*100).toFixed(1)+"%";
   const sg=x=>x==null?"—":(x>0?"+":"")+x;
   return `
-  <h2 class="sec">Leo ratings, head to head</h2>
+  <h2 class="sec" id="ratings">${esc(TEAMS.nick(m.away))} vs ${esc(TEAMS.nick(m.home))} ratings</h2>
   <p class="sub">Team ratings, 0 to 100, 50 is average. The Leo QB number beside each passer further down is that player's own rating, so the two can differ. <a href="/nfl/how-leo-works/">How Leo works</a></p>
 
   <div class="rcard">
@@ -288,7 +288,7 @@ function leoSection(m){
     ${callBox("Spread",C.spread,"spread",`Leo ${fav(m,g.proj_spread)}`)}
     ${C.total&&C.total.info?"":callBox("Total",C.total,"total",`Leo ${v(g.proj_total)}`)}
   </div>`:"";
-  const game=g?`${callsHtml}
+  const game=g?`
   <div class="leo-grid">
     <div class="box"><span class="lbl">${pickPaused(m.date)||g.calls?"Leo win chance":g.call==="leo_pick"?"Leo pick":"Too close to call"}</span><span class="val">${esc(g.pick)} ${pct(g.prob)}</span><span class="lbl2">${pickPaused(m.date)?"chance to win; picks were paused this week":g.calls?"chance to win":g.call==="leo_pick"?"Leo gives this team more than 60%"+(g.price!=null&&g.price!==""?"; price "+esc((+g.price>0?"+":"")+g.price)+" at the read":""):"under 60%, so no pick; win chance only"}</span></div>
     <div class="box"><span class="lbl">Leo total</span><span class="val">${v(g.proj_total)}</span><span class="lbl2">points, both teams</span></div>
@@ -306,7 +306,7 @@ function leoSection(m){
       <td><b>${v(p.projection)}</b></td></tr>`).join("")+`</tbody></table></div>`;
   }).join("");
   return `
-  <h2 class="sec">Leo&rsquo;s read</h2>
+  <h2 class="sec" id="read">${esc(TEAMS.nick(m.away))} vs ${esc(TEAMS.nick(m.home))} prediction: Leo&rsquo;s numbers</h2>
   <p class="sub">${L.early?`Early read on ${esc(TEAMS.nick(m.away))} at ${esc(TEAMS.nick(m.home))}${when?", "+esc(when):""}. It updates until kickoff.`:`Leo&rsquo;s last read on ${esc(TEAMS.nick(m.away))} at ${esc(TEAMS.nick(m.home))}${when?", "+esc(when):""}.`} <a href="/nfl/how-leo-works/">How Leo works</a></p>
   ${game}${props}`;
 }
@@ -399,7 +399,7 @@ function injurySection(m){
   if(!I) return "";
   const when=I.captured_at?new Date(I.captured_at).toLocaleString("en-US",{timeZone:"America/New_York",weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})+" ET":"";
   return `
-  <h2 class="sec">Injury report</h2>
+  <h2 class="sec" id="injuries">${esc(TEAMS.nick(m.away))} vs ${esc(TEAMS.nick(m.home))} injury report</h2>
   <p class="sub">${esc(TEAMS.nick(m.away))} and ${esc(TEAMS.nick(m.home))}, Week ${esc(I.week)}${when?", "+esc(when):""}. <a href="/how-to-read-an-nfl-injury-report/">Reading the report</a></p>
   <div class="tdgrid">${injCard(I.away)}${injCard(I.home)}</div>`;
 }
@@ -407,7 +407,7 @@ function injurySection(m){
 function tdSection(m){
   const T=m.td_props;
   if(!T) return `
-  <h2 class="sec">Touchdown leaders</h2>
+  <h2 class="sec" id="touchdowns">${esc(TEAMS.nick(m.away))} vs ${esc(TEAMS.nick(m.home))} touchdown leaders</h2>
   <p class="sub">Top three scrimmage touchdown scorers on each side this season, rushing and receiving.</p>
   <div class="tdgrid">${scorers(m.sides.away,m.date.slice(0,4))}${scorers(m.sides.home,m.date.slice(0,4))}</div>`;
   const a=T[m.away]||[], h=T[m.home]||[];
@@ -415,7 +415,7 @@ function tdSection(m){
   const top=topScorers(m);
   const topLine=top.length?`<div class="top2">Most likely to score: ${top.map(x=>`<b>${esc(x.player)}</b> (${esc(x.team)}, ${Math.round(x.prob*100)}%)`).join(" and ")}.</div>`:"";
   return `
-  <h2 class="sec">Touchdown props</h2>
+  <h2 class="sec" id="touchdowns">${esc(TEAMS.nick(m.away))} vs ${esc(TEAMS.nick(m.home))} touchdown scorers</h2>
   <p class="sub">Top three on each side. <a href="/nfl/how-leo-works/">How Leo works</a></p>
   ${topLine}
   <div class="tdgrid">${tdCard(m,m.away,a)}${tdCard(m,m.home,h)}</div>`;
@@ -477,7 +477,7 @@ function finalReport(m){
 
   return `
   <section class="final">
-    <h2 class="sec">Final result</h2>
+    <h2 class="sec" id="final">${esc(TEAMS.nick(m.away))} vs ${esc(TEAMS.nick(m.home))} final score</h2>
     <p class="final-score"><img src="/img/nfl/${encodeURIComponent(m.away)}.png" alt=""> ${esc(m.away)} <b>${F.away_score}</b>
       &ndash; <b>${F.home_score}</b> ${esc(m.home)} <img src="/img/nfl/${encodeURIComponent(m.home)}.png" alt="">${F.overtime?' <span class="mut">(OT)</span>':""}</p>
     ${boxScore(F)}
@@ -501,6 +501,40 @@ function venueKind(m){
   return roof&&turf?`${roof}, ${turf}`:roof||(turf?turf[0].toUpperCase()+turf.slice(1):"");
 }
 
+/*
+  Answer first (competitor review, Lynold 2026-11-25): Leo's calls right under
+  the matchup, as Covers and VSiN lead with the pick, with the record since
+  Nov 2 beside it and one "stat to know" line.
+*/
+const REVIEW=(()=>{try{return JSON.parse(fs.readFileSync(path.join(ROOT,"data/nfl/results-review.json"),"utf8"));}catch(e){return null;}})();
+function pickBox(m){
+  const g=m.leo&&m.leo.game; if(!g) return "";
+  const C=g.calls, F=m.final_report, A=TEAMS.nick(m.away), H=TEAMS.nick(m.home);
+  const res=(key,c)=>{
+    if(!c||!c.call||!F||F.away_score==null) return "";
+    const hs=F.home_score, as=F.away_score; let r="";
+    if(key==="ml") r=hs===as?"P":((hs>as?m.home:m.away)===c.call?"W":"L");
+    if(key==="spread"){const l=+g.spread_line,mg=hs-as;r=mg===l?"P":((c.call===m.home)===(mg>l)?"W":"L");}
+    return r==="W"?' <span class="ok">RIGHT</span>':r==="L"?' <span class="no">WRONG</span>':r==="P"?" PUSH":"";
+  };
+  const box=(label,c,key,ctx)=>!c?"":`<div class="box${c.call?" call":" pass"}"><span class="lbl">${label}</span><span class="val">${c.call?esc(c.label):"No call"}${res(key,c)}</span><span class="lbl2">${esc(c.call?ctx:c.pass)}</span></div>`;
+  const t=REVIEW&&REVIEW.three, rec=(x,lab)=>x&&(x.w+x.l)?`${lab} ${x.w}-${x.l}${x.p?"-"+x.p:""} (${x.units>0?"+":""}${(+x.units).toFixed(2)}u)`:"";
+  const recLine=t?[rec(t.ml,"moneyline"),rec(t.spread,"spread")].filter(Boolean).join(", "):"";
+  const n=t?(t.ml.w+t.ml.l+t.spread.w+t.spread.l):0;
+  const stat=EX.statToKnow(m);
+  return `
+  <section class="pickbox" id="pick">
+    <h2 class="sec" style="margin-top:18px">${esc(A)} vs ${esc(H)} pick</h2>
+    <p class="sub">Leo gives the <b>${esc(TEAMS.nick(g.pick))}</b> a <b>${pct(g.prob)}</b> chance to win${g.proj_spread!=null?`, by about ${Math.abs(+g.proj_spread).toFixed(1)} points`:""}.${m.leo.early?" Early read; it updates until kickoff.":""}</p>
+    ${C?`<div class="leo-grid calls">
+      ${box("Moneyline",C.ml,"ml",`Leo gives ${TEAMS.nick(g.pick)} ${pct(g.prob)}`)}
+      ${box("Spread",C.spread,"spread",`Leo ${fav(m,g.proj_spread)}`)}
+    </div>`:""}
+    ${recLine?`<p class="sub" style="margin:0">Leo&rsquo;s NFL calls since Nov 2: ${esc(recLine)}${n<50?`, an early read (${n} of 50)`:""}. Every call is graded in public. <a href="/nfl/results/">The record</a></p>`:""}
+    ${stat?`<p class="stk"><b>Stat to know:</b> ${esc(stat)}</p>`:""}
+  </section>`;
+}
+
 function page(m){
   const A=m.sides.away, H=m.sides.home;
   const cur=(m.ratings&&m.ratings.this_season)||null;
@@ -508,7 +542,8 @@ function page(m){
   // Nicknames in the title: people search "Bears vs Packers prediction".
   // SEO-14: "Touchdown Scorers" is its own search; the description leads
   // with Leo's actual numbers so the search snippet says something.
-  const title=`${TEAMS.nick(m.away)} vs ${TEAMS.nick(m.home)} Prediction, Odds and Touchdown Scorers, Week ${v(m.week,"")} ${m.date.slice(0,4)} | Leo by ND Horizon`;  // brand (Lynold, 2026-11-25)
+  const OCC=SEO.occasion("NFL",m.date,m.kickoff);   // "Thanksgiving", "Monday Night Football" (competitor review, 2026-11-25)
+  const title=`${TEAMS.nick(m.away)} vs ${TEAMS.nick(m.home)} Prediction, Odds and Touchdown Scorers${OCC?": "+OCC+",":","} Week ${v(m.week,"")} ${m.date.slice(0,4)} | Leo by ND Horizon`;  // brand (Lynold, 2026-11-25)
   const G0=m.leo&&m.leo.game;
   const desc=G0&&G0.pick&&G0.prob!=null
     ?`Leo gives the ${TEAMS.nick(G0.pick)} a ${Math.round(G0.prob*100)}% chance against the ${TEAMS.nick(G0.pick===m.home?m.away:m.home)} (${niceDate(m.date)}). Projected total${G0.proj_total!=null?" "+G0.proj_total:""}, ${G0.calls?"moneyline and spread calls":"expected margin"}, most likely touchdown scorers and the injury report, graded after the game.`
@@ -672,13 +707,15 @@ table.bx tr:last-child td{border-bottom:0}
 .nfl-signup form{display:flex;gap:8px}.nfl-signup input[type=email]{flex:1;min-width:0}
 .top2{background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;padding:12px 15px;margin:0 0 14px;font-size:.92rem}
 .top2 b{font-weight:800}
+.pickbox .ok{color:var(--good);font-weight:800}.pickbox .no{color:var(--danger);font-weight:800}
+.stk{background:var(--bg-elev);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:10px;padding:10px 13px;margin:12px 0 0;font-size:.92rem;line-height:1.5}
 .wk-link{display:inline-block;margin:10px 0 0;font-weight:700}
 @media (max-width:640px){.nfl-signup{grid-template-columns:1fr}}
 .final{margin-top:34px;padding-top:6px;border-top:3px double var(--border)}
 .final-score{display:flex;align-items:center;gap:8px;font-size:1.25rem;font-weight:700;flex-wrap:wrap;margin:4px 0 8px}
 .final-score img{width:34px;height:34px;object-fit:contain}
 </style>
-${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternToIso(m.date,m.kickoff),homeName:TEAMS.full(m.home),awayName:TEAMS.full(m.away),venue:m.stadium,completed:!!(m.final_report&&m.final_report.home_score!=null),faq:EX.faqItems(m,topScorers)})}
+${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternToIso(m.date,m.kickoff),homeName:TEAMS.full(m.home),awayName:TEAMS.full(m.away),venue:m.stadium,completed:!!(m.final_report&&m.final_report.home_score!=null),modified:m.leo&&m.leo.captured_at||undefined,faq:EX.faqItems(m,topScorers)})}
 </head>
 <body>
 <nav id="nav"></nav>
@@ -699,8 +736,11 @@ ${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternT
     <div class="box"><span class="lbl">Spread</span><span class="val">${esc(spread)}</span></div>
     <div class="box"><span class="lbl">Total</span><span class="val">${v(m.total_line)}</span></div>
   </section>
-  <h1 class="mh-title">${esc(TEAMS.full(m.away))} at ${esc(TEAMS.full(m.home))}</h1>
+  <h1 class="mh-title">${esc(TEAMS.full(m.away))} at ${esc(TEAMS.full(m.home))}${OCC?`<span style="display:block;font-size:.62em;color:var(--text-dim);font-weight:600;margin-top:2px">${esc(OCC)} prediction</span>`:""}</h1>
+  ${SEO.byline(m.leo&&m.leo.captured_at)}
   <p style="text-align:center;margin:0"><a class="wk-link" href="${weekUrl(m)}">Week ${v(m.week,"")} card &rarr;</a></p>
+  ${pickBox(m)}
+  ${SEO.jumpBar([m.leo&&m.leo.game?["pick","Pick"]:null,m.leo?["read","Leo's numbers"]:null,m.injuries?["injuries","Injuries"]:null,m.weather?["weather","Weather"]:null,m.ratings?["ratings","Ratings"]:null,["stats","Stats"],["h2h","Head to head"],["touchdowns","Touchdowns"],["faq","FAQ"]])}
   ${isThanksgivingWeek(m.season || 2026, m.week) ? signupBox(m) : ""}
   ${COPY.summary(m)}
 
@@ -716,9 +756,11 @@ ${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternT
 
   ${injurySection(m)}
 
+  ${EX.weatherHtml(m)}
+
   ${ratingsSection(m)}
 
-  <h2 class="sec">Team comparison</h2>
+  <h2 class="sec" id="stats">${esc(TEAMS.nick(m.away))} vs ${esc(TEAMS.nick(m.home))} stats</h2>
   <p class="sub">${esc(TEAMS.nick(m.away))} left, ${esc(TEAMS.nick(m.home))} right.</p>
   <table class="vs">
     ${vsHead(m, "This season")}
@@ -739,11 +781,11 @@ ${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternT
     ${cmp("Rush yards allowed/g", ad.last_season.rush_ypg, hd.last_season.rush_ypg)}
   </table>
 
-  <h2 class="sec">This season</h2>
+  <h2 class="sec" id="leaders">${esc(TEAMS.nick(m.away))} and ${esc(TEAMS.nick(m.home))} leaders this season</h2>
   <p class="sub">Leaders by usage, before this game.</p>
   <div class="grid2">${sideBlock(A,"this_season",m.date.slice(0,4),cur&&cur.away)}${sideBlock(H,"this_season",m.date.slice(0,4),cur&&cur.home)}</div>
 
-  <h2 class="sec">Last season</h2>
+  <h2 class="sec">${esc(TEAMS.nick(m.away))} and ${esc(TEAMS.nick(m.home))} leaders last season</h2>
   <p class="sub">Last season's leaders for each team, regular season and playoffs.</p>
   <div class="grid2">${sideBlock(A,"last_season",String(Number(m.date.slice(0,4))-1),pri&&pri.away)}${sideBlock(H,"last_season",String(Number(m.date.slice(0,4))-1),pri&&pri.home)}</div>
 
@@ -764,17 +806,19 @@ ${SEO.relatedLinks({sport:"NFL",root:ROOT,slug:m.slug||String(m.url).split("/").
 </html>`;
 }
 
-(function main(){
+(async function main(){
   const target=process.argv[2]||new Date(Date.now()+864e5).toISOString().slice(0,10);
   const src=path.join(ROOT,"data/nfl/matchups",`${target}.json`);
   if(!fs.existsSync(src)){ console.log(`No matchup data for ${target}. Run generate-nfl-matchups.js first.`); return; }
   const data=JSON.parse(fs.readFileSync(src,"utf8"));
   for(const m of data) if(m.leo&&m.leo.game&&m.leo.game.calls) m.leo.game.calls=CALLS.current(m.leo.game.calls,m.leo.game);
+  // Kickoff weather for open air games (competitor review, 2026-11-25). A failed fetch leaves the box out.
+  await Promise.all(data.map(async m=>{ m.weather=await EX.kickoffWeather(m); }));
   let wrote=0;
   for(const m of data){
     const dir=path.join(ROOT,"nfl",m.slug);
     fs.mkdirSync(dir,{recursive:true});
-    fs.writeFileSync(path.join(dir,"index.html"), page(m));
+    fs.writeFileSync(path.join(dir,"index.html"), SEO.withReadTime(page(m)));
     wrote++;
     // SEO-09 (DEC-20261107-50): a game first published at its abbreviation
     // address (WAS @ NYG, Nov 12) keeps that address as a redirect to the

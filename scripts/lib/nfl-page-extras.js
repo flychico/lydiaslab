@@ -68,10 +68,11 @@ function h2hRest(m) {
     return `<p><b>${r == null ? "" : `${r} days since the last game.`}</b>${esc(tag)}</p><p class="mut">Last game: ${home ? "vs" : "at"} ${esc(opp)}, Week ${p.week}${esc(res)}. ${nx}</p>`;
   };
   return `
-  <h2 class="sec">Head to head</h2>
+  <h2 class="sec" id="h2h">${esc(A)} vs ${esc(H)} head to head</h2>
   <p class="sub">${list.length ? `${esc(A)} and ${esc(H)} since 2016, playoffs included: <b>${esc(lead)}</b>${R.t ? `, ${R.t} tied` : ""}, ${list.length} ${list.length === 1 ? "game" : "games"}.${m.div_game === "True" || m.div_game === "1" ? " Division rivals, so they meet twice a season." : ""}` : `No meetings since 2016.`}</p>
+  <p class="sub" style="margin:6px 0 0"><a href="${require("../build-matchup-pages").matchupUrl("nfl", A, H)}">Every ${esc(A)} vs ${esc(H)} game Leo has read &rarr;</a></p>
   ${last5.length ? `<p class="sub" style="margin-top:8px">${list.length > 5 ? "The last 5 meetings:" : list.length === 1 ? "The meeting:" : "Every meeting:"}</p><ul class="h2h">${last5.map(meetLine).join("")}</ul>` : ""}
-  <h2 class="sec">Rest and schedule</h2>
+  <h2 class="sec" id="rest">${esc(A)} and ${esc(H)} rest and schedule</h2>
   <p class="sub">Days between games. A short week is five days or fewer; ten or more is extra rest.</p>
   <div class="grid2"><div class="restbox"><b>${esc(TEAMS.full(m.away))}</b>${side("away")}</div><div class="restbox"><b>${esc(TEAMS.full(m.home))}</b>${side("home")}</div></div>
   <style>.h2h{margin:6px 0 0;padding-left:18px;line-height:1.7;font-size:.92rem}.h2h .mut{margin-right:4px}.restbox{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:12px 14px}.restbox p{margin:6px 0 0;font-size:.9rem;line-height:1.5}</style>`;
@@ -115,4 +116,90 @@ function faqItems(m, topScorers) {
   return out;
 }
 
-module.exports = { h2hRest, faqItems, meetings, restOf };
+
+/*
+  Competitor review (Lynold, 2026-11-25): one shareable "stat to know" line and
+  a kickoff weather box for outdoor games, as Covers runs. Display only.
+*/
+function statToKnow(m) {
+  const A = TEAMS.nick(m.away), H = TEAMS.nick(m.home);
+  const list = meetings(m);
+  // 1. A run in the series: the same winner in the last 3+ meetings.
+  if (list.length >= 3) {
+    const w = g => g.as === g.hs ? null : fr(g.as > g.hs ? g.away : g.home);
+    const first = w(list[0]); let k = 0;
+    while (first && k < list.length && w(list[k]) === first) k++;
+    if (k >= 3) return `The ${TEAMS.nick(first)} have won the last ${k} meetings with the ${TEAMS.nick(first === m.home ? m.away : m.home)}${k === list.length ? `, every game since 2016` : ""}.`;
+  }
+  // 2. Rest: one side off the bye or on a short week and the other not.
+  const ra = restOf(m, "away").rest, rh = restOf(m, "home").rest;
+  if (ra != null && rh != null) {
+    if (ra >= 13 && rh < 13) return `The ${A} come off their bye; the ${H} played ${rh} days ago.`;
+    if (rh >= 13 && ra < 13) return `The ${H} come off their bye; the ${A} played ${ra} days ago.`;
+    if (ra <= 5 && rh >= 7) return `The ${A} are on a short week: ${ra} days since their last game, against ${rh} for the ${H}.`;
+    if (rh <= 5 && ra >= 7) return `The ${H} are on a short week: ${rh} days since their last game, against ${ra} for the ${A}.`;
+  }
+  // 3. The biggest gap in Leo's team ratings, if it is a real one.
+  const R = m.ratings && m.ratings.this_season;
+  if (R && R.away && R.home) {
+    const parts = [["qb_rating", "quarterback play"], ["off_rating", "offense"], ["def_rating", "defense"]]
+      .map(([k, label]) => ({ label, a: R.away[k], h: R.home[k] })).filter(x => x.a != null && x.h != null)
+      .sort((x, y) => Math.abs(y.a - y.h) - Math.abs(x.a - x.h));
+    const b = parts[0];
+    if (b && Math.abs(b.a - b.h) >= 8) {
+      const hi = b.a > b.h ? A : H, lo = b.a > b.h ? H : A;
+      return `Leo rates the ${hi} ${b.label} ${Math.round(Math.max(b.a, b.h))} out of 100, the ${lo} ${Math.round(Math.min(b.a, b.h))}.`;
+    }
+  }
+  return "";
+}
+
+// Open air stadiums only; a dome or a roof that may close gets no forecast.
+const OPEN_AIR = {
+  "Acrisure Stadium": [40.4468, -80.0158], "Bank of America Stadium": [35.2258, -80.8528], "Empower Field at Mile High": [39.7439, -105.0201],
+  "Estadio Banorte": [19.3029, -99.1505], "EverBank Stadium": [30.3239, -81.6373], "GEHA Field at Arrowhead Stadium": [39.0489, -94.4839],
+  "Gillette Stadium": [42.0909, -71.2643], "Hard Rock Stadium": [25.958, -80.2389], "Highmark Stadium": [42.7738, -78.787],
+  "Huntington Bank Field": [41.5061, -81.6995], "Lambeau Field": [44.5013, -88.0622], "Levi's Stadium": [37.403, -121.9698],
+  "Lincoln Financial Field": [39.9008, -75.1675], "Lumen Field": [47.5952, -122.3316], "M&T Bank Stadium": [39.278, -76.6227],
+  "MetLife Stadium": [40.8135, -74.0745], "Nissan Stadium": [36.1665, -86.7713], "Northwest Stadium": [38.9078, -76.8645],
+  "Paycor Stadium": [39.0955, -84.516], "Raymond James Stadium": [27.9759, -82.5033], "Soldier Field": [41.8623, -87.6167],
+  "Tottenham Hotspur Stadium": [51.6043, -0.0664], "Wembley Stadium": [51.556, -0.2796]
+};
+const WCODE = c => c == null ? "" : c === 0 ? "Clear" : c <= 3 ? "Partly cloudy" : c <= 48 ? "Fog" : c <= 57 ? "Drizzle" : c <= 67 ? "Rain" : c <= 77 ? "Snow" : c <= 82 ? "Showers" : c <= 86 ? "Snow showers" : "Thunderstorms";
+
+/** Forecast at kickoff from Open-Meteo (free, no key), for open air games up to 10 days out. Never throws. */
+async function kickoffWeather(m) {
+  try {
+    const at = OPEN_AIR[m.stadium];
+    if (!at || String(m.roof || "").toLowerCase() !== "outdoors" || m.final_report) return null;
+    const [h] = String(m.kickoff || "").split(":").map(Number);
+    if (!Number.isFinite(h)) return null;
+    const days = (Date.parse(m.date + "T12:00:00Z") - Date.now()) / 864e5;
+    if (days < -1 || days > 10) return null;
+    const u = `https://api.open-meteo.com/v1/forecast?latitude=${at[0]}&longitude=${at[1]}&hourly=temperature_2m,precipitation_probability,wind_speed_10m,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FNew_York&start_date=${m.date}&end_date=${m.date}`;
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);
+    const r = await fetch(u, { signal: ctl.signal }).finally(() => clearTimeout(t));
+    if (!r.ok) return null;
+    const j = await r.json(), H = j.hourly || {};
+    const i = (H.time || []).findIndex(x => Number(String(x).slice(11, 13)) === h);
+    if (i < 0) return null;
+    return { temp: Math.round(H.temperature_2m[i]), wind: Math.round(H.wind_speed_10m[i]), rain: H.precipitation_probability ? H.precipitation_probability[i] : null,
+      sky: WCODE(H.weather_code && H.weather_code[i]), at: new Date().toISOString() };
+  } catch (e) { return null; }
+}
+
+function weatherHtml(m) {
+  const w = m.weather; if (!w) return "";
+  const A = TEAMS.nick(m.away), H = TEAMS.nick(m.home);
+  const note = w.wind >= 15 ? " Wind of 15 mph or more tends to cut into passing and kicking." : w.temp <= 32 ? " Freezing at kickoff." : "";
+  return `
+  <h2 class="sec" id="weather">${esc(A)} vs ${esc(H)} weather</h2>
+  <p class="sub">Forecast for kickoff at ${esc(m.stadium)}, open air. Source: Open-Meteo, ${esc(new Date(w.at).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }))} ET. Leo's number does not use the weather.</p>
+  <div class="mkt" style="margin:8px 0 0"><div class="box"><span class="lbl">Temperature</span><span class="val">${w.temp}&deg;F</span></div>
+  <div class="box"><span class="lbl">Wind</span><span class="val">${w.wind} mph</span></div>
+  ${w.rain != null ? `<div class="box"><span class="lbl">Chance of rain</span><span class="val">${w.rain}%</span></div>` : ""}
+  ${w.sky ? `<div class="box"><span class="lbl">Sky</span><span class="val" style="font-size:1rem">${esc(w.sky)}</span></div>` : ""}</div>
+  ${note ? `<p class="sub" style="margin-top:8px">${esc(note.trim())}</p>` : ""}`;
+}
+
+module.exports = { h2hRest, faqItems, meetings, restOf, statToKnow, kickoffWeather, weatherHtml, OPEN_AIR };

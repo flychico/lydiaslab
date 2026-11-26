@@ -160,6 +160,7 @@ jobs:
           node scripts/generate-nfl-matchups.js "${{ steps.slate_date.outputs.date }}"
           node scripts/render-nfl-matchup-pages.js "${{ steps.slate_date.outputs.date }}"
           node scripts/build-game-archives.js nfl
+          node scripts/build-matchup-pages.js nfl || true   # permanent matchup pages (Lynold, 2026-11-25)
           node scripts/generate-sitemap.js
 
       # The owner's PDF brief (DEC-20261031-09): Leo's read of the slate with
@@ -222,6 +223,7 @@ jobs:
           done
           if [ "$built" = "0" ]; then echo "No early reads built."; exit 0; fi
           node scripts/build-game-archives.js nfl || true
+          node scripts/build-matchup-pages.js nfl || true   # permanent matchup pages (Lynold, 2026-11-25)
           node scripts/generate-sitemap.js || true
           node scripts/build-prediction-files.js nfl || true
           git config user.name "lydia-bot"

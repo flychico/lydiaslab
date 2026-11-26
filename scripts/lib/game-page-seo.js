@@ -52,9 +52,9 @@ function jsonLd(o) {
   if (o.completed) event.eventStatus = "https://schema.org/EventCompleted";
   const article = {
     "@type": "Article", "@id": `${url}#article`,
-    headline: String(o.title || "").replace(/\s*\|\s*Leo$/, ""),
+    headline: String(o.title || "").replace(/\s*\|\s*Leo.*$/, ""),
     description: o.description, url, mainEntityOfPage: url,
-    author: AUTHOR, publisher: PUBLISHER, isAccessibleForFree: true,
+    author: o.author || PUBLISHER, publisher: PUBLISHER,   // the page is the model's work (byline "By Leo"), 2026-11-25 isAccessibleForFree: true,
     about: { "@id": `${url}#event` },
   };
   if (o.published) article.datePublished = o.published;
@@ -75,11 +75,52 @@ function jsonLd(o) {
   return `<script type="application/ld+json">${JSON.stringify(graph).replace(/</g, "\\u003c")}</script>`;
 }
 
+/*
+  Competitor review (Lynold, 2026-11-25: VSiN, Covers, VegasInsider): a byline
+  with the update time and reading time, a jump bar of section links, and the
+  occasion (Thanksgiving, Monday Night Football, Christmas) for titles.
+*/
+const etStamp = iso => {
+  const d = new Date(iso); if (!Number.isFinite(d.getTime())) return "";
+  return d.toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + " ET";
+};
+/** Byline with a reading-time placeholder; withReadTime(html) fills it from the page's own words. */
+function byline(updatedIso, how = "/nfl/how-leo-works/") {
+  const when = updatedIso ? etStamp(updatedIso) : "";
+  return `<p class="byline" style="text-align:center;color:var(--text-dim);font-size:.84rem;margin:4px 0 0">By <a href="${how}">Leo</a>, the New Dawn Horizon sports model${when ? ` &middot; Updated ${escHtml(when)}` : ""} &middot; __READMIN__ min read</p>`;
+}
+function withReadTime(html) {
+  const body = (html.split("<main")[1] || html).replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, " ").replace(/<[^>]+>/g, " ");
+  const words = body.split(/\s+/).filter(w => /[A-Za-z0-9]/.test(w)).length;
+  return html.replace("__READMIN__", String(Math.max(2, Math.round(words / 230))));
+}
+/** A row of links to the page's sections: [[id, label], ...]. */
+function jumpBar(items) {
+  const list = (items || []).filter(Boolean);
+  if (!list.length) return "";
+  return `<div class="jump" role="navigation" aria-label="Jump to section" style="display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0 8px;margin:14px 0 4px;scrollbar-width:none">${list.map(([id, label]) => `<a href="#${id}" style="flex:none;white-space:nowrap;font-size:.82rem;font-weight:700;padding:6px 12px;border:1px solid var(--border);border-radius:999px;background:var(--bg-card);color:var(--text);text-decoration:none">${escHtml(label)}</a>`).join("")}</div>
+<style>[id]{scroll-margin-top:72px}.jump::-webkit-scrollbar{display:none}</style>`;
+}
+/** "Thanksgiving", "Monday Night Football", "Christmas Day" or "" for date (YYYY-MM-DD) and kickoff "HH:MM" Eastern. */
+function occasion(sport, date, hhmm) {
+  const d = new Date(date + "T12:00:00Z"), y = d.getUTCFullYear(), mo = d.getUTCMonth(), day = d.getUTCDate(), wd = d.getUTCDay();
+  const firstThu = (4 - new Date(Date.UTC(y, 10, 1)).getUTCDay() + 7) % 7 + 1, tg = firstThu + 21;
+  if (mo === 10 && day === tg) return "Thanksgiving";
+  if (mo === 11 && day === 25) return "Christmas Day";
+  if (sport === "NFL") {
+    if (mo === 10 && day === tg + 1) return "Black Friday";
+    if (wd === 1) return "Monday Night Football";
+    if (wd === 4) return "Thursday Night Football";
+    if (wd === 0 && Number(String(hhmm || "").split(":")[0]) >= 20) return "Sunday Night Football";
+  }
+  return "";
+}
+
 /** The visible FAQ block. Plain text in, escaped here; matches the FAQPage markup from jsonLd({ faq }). */
 function faqHtml(items, heading = "Questions about this game") {
   if (!items || !items.length) return "";
   const e = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  return `<h2 class="sec faq-h">${e(heading)}</h2>
+  return `<h2 class="sec faq-h" id="faq">${e(heading)}</h2>
   <div class="faq">${items.map(x => `<details><summary>${e(x.q)}</summary><p>${e(x.a)}</p></details>`).join("")}</div>
   <style>.faq details{border:1px solid var(--border);border-radius:12px;background:var(--bg-card);margin:0 0 8px;padding:0 14px}.faq summary{cursor:pointer;font-weight:700;padding:12px 0;font-size:.95rem}.faq details p{margin:0 0 12px;line-height:1.55;font-size:.92rem}</style>`;
 }
@@ -181,4 +222,4 @@ function niceShort(date) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
-module.exports = { jsonLd, faqHtml, relatedLinks, easternToIso, listGames, teamLabel, nickSlug, GAME_DIR };
+module.exports = { byline, withReadTime, jumpBar, occasion, etStamp, jsonLd, faqHtml, relatedLinks, easternToIso, listGames, teamLabel, nickSlug, GAME_DIR };

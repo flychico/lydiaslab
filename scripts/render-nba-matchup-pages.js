@@ -57,7 +57,9 @@ function results() {
 const WHY = require("./lib/nba-why");
 const PKS = require("./lib/nba-picks");   // Leo Pick rule (DEC-20261102-30)
 const SW = require("./lib/nba-swing");
-const EX = require("./lib/nba-page-extras");   // stat table, head to head, rest, FAQ (Lynold, 2026-11-24)   // "Depends on <player>" line (HO-0097)
+const EX = require("./lib/nba-page-extras");
+const SEO = require("./lib/game-page-seo");
+const SEASON_PICKS = (() => { try { return JSON.parse(fs.readFileSync(path.join(DIR, "results-days.json"), "utf8")).season.picks; } catch (e) { return null; } })();   // stat table, head to head, rest, FAQ (Lynold, 2026-11-24)   // "Depends on <player>" line (HO-0097)
 // Player lines for finished games: ESPN's game summary saved at grading
 // (data/nba/boxscores/<date>.json, full line), else the season player log
 // (data/nba/player-log.json: minutes, points, rebounds, assists).
@@ -96,7 +98,7 @@ function boxBlock(g, res) {
     <tr class="tot"><td>Team</td><td></td><td><b>${tot}</b></td><td colspan="${full ? 6 : 2}"></td></tr>
     </tbody></table></div>`;
   };
-  return `<h2>Box score</h2><p class="dim">${eb ? "ESPN box score." : "From ESPN box score files."} <a href="${HOW}#players">Tags show who Leo counted.</a></p>${side("away")}${side("home")}`;
+  return `<h2 id="box">${esc(URLS.nick(g.away, g.away_name))} vs ${esc(URLS.nick(g.home, g.home_name))} box score</h2><p class="dim">${eb ? "ESPN box score." : "From ESPN box score files."} <a href="${HOW}#players">Tags show who Leo counted.</a></p>${side("away")}${side("home")}`;
 }
 
 const MODEL = (() => { try { return JSON.parse(fs.readFileSync(path.join(DIR, "model.json"), "utf8")); } catch (e) { return {}; } })();
@@ -104,7 +106,7 @@ function whyBlock(g) {
   const w = WHY.why(g, { lostCoef: MODEL.coef && MODEL.coef.lost_d, leanPts: MODEL.lean_edge_pts });
   if (!w.leo) return "";
   const nm = COPY.names(g);
-  return `<h2>Why Leo has ${esc(nm(w.leo))}</h2>
+  return `<h2 id="why">Why Leo has ${esc(nm(w.leo))}</h2>
   <div class="card why">
   ${w.drivers.length ? `<ol>${w.drivers.map(d => `<li>${esc(nm(d.text))}.</li>`).join("")}</ol>` : ""}
   ${w.swing.length ? `<p class="dim"><b>What could still move it.</b> ${w.swing.map(x => esc(nm(x))).join(" ")}</p>` : ""}
@@ -160,7 +162,7 @@ function missOf(g) {
 function finalBlock(g, res) {
   if (!res) return "";
   const H = URLS.nick(g.home, g.home_name), A = URLS.nick(g.away, g.away_name), margin = res.home_score - res.away_score;
-  return `<h2>What happened</h2><div class="card final">
+  return `<h2 id="final">${esc(A)} vs ${esc(H)} final score</h2><div class="card final">
     <p class="score">${esc(g.away_name)} ${res.away_score}, ${esc(g.home_name)} ${res.home_score}</p>
     <p>${COPY.whatHappened(g, res, missOf(g)).map(esc).join(" ")}</p>
     <ul>
@@ -171,7 +173,8 @@ function finalBlock(g, res) {
 
 function page(g, res) {
   const L = g.leo, mk = g.market || {}, H = g.home, A = g.away;
-  const title = `${nick(g.away_name)} vs ${nick(g.home_name)} Prediction, Spread and Odds, ${new Date(g.date + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })} | Leo`;
+  const OCC = SEO.occasion("NBA", g.date);   // "Christmas Day" (competitor review, 2026-11-25)
+  const title = `${nick(g.away_name)} vs ${nick(g.home_name)} Prediction, Spread and Odds${OCC ? ": " + OCC + "," : ","} ${new Date(g.date + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })} | Leo by ND Horizon`;
   const desc = `Leo gives the ${g.home_name} a ${pct(L.p_home)} chance against the ${g.away_name}. Leo's spread ${H} ${WHY.leoLine(g) === 0 ? "PK" : sgn(WHY.leoLine(g))}, injury report, form and key players.`;
   const url = `https://ndhorizon.com/nba/${slug(g)}/`;
   // Same winner or not, by how much, and Leo's side (shared with the card and email).
@@ -227,6 +230,7 @@ ul.inj,ul.last5{margin:6px 0 0;padding-left:18px;font-size:.86rem;line-height:1.
 .why{padding:12px 16px}.why ol{margin:6px 0 8px;padding-left:20px;line-height:1.6;font-size:.9rem}.why p{margin:6px 0}
 .final{padding:14px 16px}.final .score{font-size:1.25rem;font-weight:800;margin:0 0 6px}
 .lede{font-size:1rem;line-height:1.6;margin:10px 0 4px}
+.stk{background:var(--bg-elev);border:1px solid var(--border);border-left:3px solid var(--gold,#C9A84C);border-radius:10px;padding:10px 13px;margin:12px 0 0;font-size:.92rem;line-height:1.5}
 .moved{margin:10px 0 0;padding:8px 12px;border-left:3px solid var(--gold,#C9A84C);font-size:.92rem;line-height:1.5}
 .lede2{font-size:.9rem;line-height:1.55;margin:6px 0 4px;color:var(--text-dim)}
 .final p{margin:0 0 8px;line-height:1.55}
@@ -237,19 +241,19 @@ ul.inj,ul.last5{margin:6px 0 0;padding-left:18px;font-size:.86rem;line-height:1.
 .nfl-signup form{display:flex;gap:8px}.nfl-signup input[type=email]{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--border);border-radius:10px}
 @media(max-width:700px){.two,.nfl-signup{grid-template-columns:1fr}.boxes{grid-template-columns:1fr 1fr}.box:last-child{grid-column:1/-1}}
 </style>
-${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,title,description:desc,startIso:g.tip_utc?new Date(g.tip_utc).toISOString().replace(".000Z","Z"):null,homeName:g.home_name,awayName:g.away_name,venue:g.venue,completed:!!(g.completed||res),faq:FAQ})}
+${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,title,description:desc,startIso:g.tip_utc?new Date(g.tip_utc).toISOString().replace(".000Z","Z"):null,homeName:g.home_name,awayName:g.away_name,venue:g.venue,completed:!!(g.completed||res),modified:g.public_at||GEN||undefined,faq:FAQ})}
 </head>
 <body>
 <nav id="nav"></nav>
 <main class="mx">
   <p class="eyebrow"><a href="/nba/scoreboard/">NBA</a> &middot; ${esc(longDate(g.date))} &middot; ${esc(tip(g.tip_utc))}${g.venue ? " &middot; " + esc(g.venue) : ""}${g.early ? " &middot; <b>Early read</b>" : ""}</p>
-  <h1>${esc(g.away_name)} vs ${esc(g.home_name)}: Prediction and Odds</h1>
-  ${lede.length ? `<p class="lede">${lede.slice(0, lede.indexOf(null)).map(esc).join(" ")}</p><p class="lede2">${lede.slice(lede.indexOf(null) + 1).map(esc).join(" ")}</p>` : ""}
+  <h1>${esc(g.away_name)} vs ${esc(g.home_name)}: ${OCC ? esc(OCC) + " " : ""}Prediction and Odds</h1>
+  ${SEO.byline(g.public_at || GEN, HOW)}
   ${(c => c && !g.public_at ? `<p class="moved">${esc(c.text)}</p>` : "")(RC.change(g, { nick: (a, n) => URLS.nick(a, n) }))}
   ${latestNote(g)}
-  <p style="margin:6px 0 0;font-size:.92rem">Every game this season: <a href="/nba/teams/${URLS.slugify(URLS.nick(g.away))}/">${esc(URLS.nick(g.away, g.away_name))} team page</a> &middot; <a href="/nba/teams/${URLS.slugify(URLS.nick(g.home))}/">${esc(URLS.nick(g.home, g.home_name))} team page</a></p>
 
   ${finalBlock(g, res)}
+  <h2 id="pick">${esc(NA)} vs ${esc(NH)} pick</h2>
   <div class="hdr">
     <div class="tm"><img src="${logo(A)}" alt="" onerror="this.style.visibility='hidden'"><b>${esc(g.away_name)}</b><span class="p">${pct(L.p_away)}</span><span class="dim">Leo win chance</span></div>
     <div class="mid">at</div>
@@ -263,20 +267,25 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
   ${gapTxt ? `<p class="gapread">${gapTxt}</p>` : ""}
   ${WHY.projScore(g) ? `<p class="gapread">Projected score: ${esc(NA)} ${WHY.projScore(g).away}, ${esc(NH)} ${WHY.projScore(g).home}, total ${WHY.projScore(g).total} (<a href="${HOW}#total">information only</a>).</p>` : ""}
   ${leanTxt}
+  ${(() => { const P = SEASON_PICKS, k = P ? P.w + P.l : 0; return P && k ? `<p class="gapread dim">Leo Picks since Nov 2: ${P.w}-${P.l}${P.p ? "-" + P.p : ""} (${P.units > 0 ? "+" : ""}${(+P.units).toFixed(2)}u)${k < 50 ? `, an early read (${k} of 50)` : ""}. Every pick is graded in public. <a href="/nba/results/">The record</a></p>` : ""; })()}
+  ${(st => st ? `<p class="stk"><b>Stat to know:</b> ${esc(st)}</p>` : "")(EX.statToKnow(g))}
+  ${lede.length ? `<p class="lede">${lede.slice(0, lede.indexOf(null)).map(esc).join(" ")}</p><p class="lede2">${lede.slice(lede.indexOf(null) + 1).map(esc).join(" ")}</p>` : ""}
+  <p style="margin:6px 0 0;font-size:.92rem">Every game this season: <a href="/nba/teams/${URLS.slugify(URLS.nick(g.away))}/">${esc(URLS.nick(g.away, g.away_name))} team page</a> &middot; <a href="/nba/teams/${URLS.slugify(URLS.nick(g.home))}/">${esc(URLS.nick(g.home, g.home_name))} team page</a></p>
+  ${SEO.jumpBar([["pick", "Pick"], res ? ["box", "Box score"] : null, ["why", "Why"], ["injuries", "Injuries"], ["stats", "Stats"], ["form", "Form"], ["players", "Players"], ["h2h", "Head to head"], ["faq", "FAQ"]])}
   ${boxBlock(g, res)}
   ${whyBlock(g)}
   ${partsTable(g)}
 
-  <h2>Injury report</h2>
+  <h2 id="injuries">${esc(NA)} vs ${esc(NH)} injury report</h2>
   <p class="dim">As of Leo&rsquo;s read. <a href="${HOW}#injuries">How Leo counts injuries</a></p>
   <div class="two"><div><b>${esc(g.away_name)}</b>${injuries(g, "away")}</div><div><b>${esc(g.home_name)}</b>${injuries(g, "home")}</div></div>
 
   ${EX.statTable(g)}
 
-  <h2>Form</h2>
+  <h2 id="form">${esc(NA)} and ${esc(NH)} form</h2>
   <div class="two"><div><b>${esc(g.away_name)}</b>${formBlock(g, "away")}</div><div><b>${esc(g.home_name)}</b>${formBlock(g, "home")}</div></div>
 
-  <h2>Key players this season</h2>
+  <h2 id="players">${esc(NA)} and ${esc(NH)} key players this season</h2>
   <p class="dim">Last 5: the prior five games. <a href="/nba/players/">Player Scoring</a></p>
   <div class="two"><div><b>${esc(g.away_name)}</b>${playersBlock(g, "away")}</div><div><b>${esc(g.home_name)}</b>${playersBlock(g, "home")}</div></div>
 
@@ -302,15 +311,17 @@ ${require("./lib/game-page-seo").relatedLinks({sport:"NBA",root:ROOT,slug:slug(g
 }
 
 const RES = results();
+let GEN = null;   // the card file's generated_at, for the byline when a game has no public read time
 let n = 0;
 for (const date of DATES) {
   const f = path.join(DIR, `picks-${date}.json`);
   if (!fs.existsSync(f)) { console.log(`No NBA card for ${date}.`); continue; }
-  for (const g of JSON.parse(fs.readFileSync(f, "utf8")).games) {
+  const CARD = JSON.parse(fs.readFileSync(f, "utf8")); GEN = CARD.generated_at || null;
+  for (const g of CARD.games) {
     if (!g.leo) continue;
     const dir = path.join(ROOT, "nba", slug(g));
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, "index.html"), page(g, RES[g.game_id]));
+    fs.writeFileSync(path.join(dir, "index.html"), SEO.withReadTime(page(g, RES[g.game_id])));
     n++;
   }
 }
