@@ -53,7 +53,7 @@ on:
         required: false
         type: string
       early:
-        description: "Also build early reads and game pages for the next 6 days"
+        description: "Also build early reads and game pages for the next 8 days"
         required: false
         type: boolean
         default: false
@@ -204,14 +204,14 @@ jobs:
       # from Tuesday. Writes picks-<date>.json and the pages only: no -today
       # files, no prediction history, no prop lines, no emails. Game-day
       # gathers replace them with the frozen read. Never fails the gather.
-      - name: Early reads and game pages for the next 6 days
+      - name: Early reads and game pages for the next 8 days
         if: github.event.schedule == '53 12 * * *' || github.event.inputs.early == 'true'
         run: |
           set -uo pipefail
           git pull --rebase -q || true
           built=0
           node scripts/build-nfl-games-lite.js || true   # head to head and rest on the pages
-          for d in 1 2 3 4 5 6; do
+          for d in 1 2 3 4 5 6 7 8; do   # 8 days ahead (Lynold, 2026-11-25: "Yes, 8 days ahead"); was 6
             D=$(TZ="America/New_York" date -d "+$d day" +%F)
             N=$(node scripts/nfl-slate-size.js "$D" || echo unknown)
             if [ "$N" = "0" ] || [ "$N" = "unknown" ]; then continue; fi
