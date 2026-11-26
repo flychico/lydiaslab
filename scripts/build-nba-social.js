@@ -113,14 +113,14 @@ function picksPost() {
   const items = [];
   for (const g of games) {   // every pick of the night, started or not (locked picks stay), so a later refresh never drops one
     const pk = g.leo.pick;
-    if (pk && pk.ok !== false) items.push({ game_id: String(g.game_id), type: "pick", side: pk.side, p: pk.p, price: pk.price, team: nick(g, pk.side), code: code(g, pk.side) });
+    if (pk && pk.ok !== false) items.push({ game_id: String(g.game_id), type: "pick", side: pk.side, p: pk.p, price: pk.price, team: nick(g, pk.side), full: g[pk.side + "_name"] || nick(g, pk.side), code: code(g, pk.side) });
   }
   let kind = "picks";
   if (!items.length) {
     kind = "reads";
     open.map(g => ({ g, side: g.leo.p_home >= g.leo.p_away ? "home" : "away", p: Math.max(g.leo.p_home, g.leo.p_away) }))
       .sort((a, b) => b.p - a.p).slice(0, 3)
-      .forEach(({ g, side, p }) => items.push({ game_id: String(g.game_id), type: "read", side, p, team: nick(g, side), code: code(g, side), why: (g.leo.pick && g.leo.pick.why) || "" }));
+      .forEach(({ g, side, p }) => items.push({ game_id: String(g.game_id), type: "read", side, p, team: nick(g, side), full: g[side + "_name"] || nick(g, side), code: code(g, side), why: (g.leo.pick && g.leo.pick.why) || "" }));
   }
   // Cheat sheet look (Lynold, Nov 20, from an X post he liked): "NBA FRIDAY CHEAT SHEET 🏀", then
   // "What would Leo do?", then one bullet per pick with its price. A no-pick night drops "CHEAT SHEET".
@@ -149,7 +149,12 @@ function picksPost() {
   }
   return { id: "picks", kind: "picks", created_at: NOW.toISOString(), header, lines, record: "", facts, hashtags: tags, nopick: kind === "reads", note,
     hero: nPicks === 1 ? "Leo's nuke" : undefined,
-    text: EXV.tail([title, "", ...lines.map(l => kind === "picks" && nPicks > 1 ? `• ${l}` : l), "", kind === "picks" ? EXV.WITH_LEO : null], link, tags), link, items };
+    // Lynold, 2026-11-26 (chose "Yes, all of it" after a Clarky's Sports Tips post): a hook line, full team names
+    // with emoji bullets, no hashtags or link in the post (the link goes in the first reply). lines stay short for the graphic.
+    text: EXV.tail(kind === "picks"
+      ? [title, "", nPicks === 1 ? "Leo's one pick tonight." : `${EXV.Word(nPicks)} picks tonight. Leo likes ${nPicks === 2 ? "both" : "all " + EXV.word(nPicks)} to win.`, "",
+         ...items.map(i => `🏀 ${i.full} ML ${fmtPrice(i.price)}`), "", EXV.WITH_LEO]
+      : [title, "", lines[0], "", ...items.map(i => `🏀 ${i.full}`)], link, tags), link, items };
 }
 
 /* ---------- results posts ---------- */
@@ -231,7 +236,7 @@ function norm(g) {
   const star = ((L.missing || {})[oSide] || []).filter(x => (x.weight || 0) >= 0.75 && (x.value || 0) >= 6).sort((a, b) => b.value - a.value)[0];
   const gap = Math.abs((+r.home || 0) - (+r.away || 0));
   const short = star ? `No ${star.name} for the ${nick(g, oSide)}` : gap >= 1 ? `${nick(g, pSide)} rate ${gap.toFixed(1)} points better this season` : "";
-  return { short, id: String(g.game_id), away: nick(g, "away"), home: nick(g, "home"), awayCode: g.away, homeCode: g.home, tip: g.tip_utc,
+  return { short, id: String(g.game_id), away: nick(g, "away"), home: nick(g, "home"), awayFull: g.away_name, homeFull: g.home_name, awayCode: g.away, homeCode: g.home, tip: g.tip_utc,
     p_home: L.p_home, mlHome: m.home_ml, mlAway: m.away_ml, url: g.url || `https://ndhorizon.com/nba/predictions/${DATE}/`, why,
     strength: (+r.home || 0) + (+r.away || 0) };
 }
@@ -297,7 +302,7 @@ if (ONLY !== "results" && (!has("nuke") || (firstTip && NOW < firstTip))) {
   const picksOnly = pk ? (pk.items || []).filter(i => i.type === "pick") : [];
   if (picksOnly.length >= 2) {
     const top = picksOnly.slice().sort((a, b) => b.p - a.p)[0];
-    const np = EXV.nukePost({ title: `NBA ${weekday(DATE).toUpperCase()} NUKE ☢️`, line: `${top.team} ML ${fmtPrice(top.price)}`, link: tagged(`https://ndhorizon.com/nba/predictions/${DATE}/`, "nuke"),
+    const np = EXV.nukePost({ title: `NBA ${weekday(DATE).toUpperCase()} NUKE ☢️`, line: `${top.team} ML ${fmtPrice(top.price)}`, textLine: `${top.full || top.team} ML ${fmtPrice(top.price)}`, emoji: "🏀", link: tagged(`https://ndhorizon.com/nba/predictions/${DATE}/`, "nuke"),
       tags: hashtags([top.code]), now: NOW.toISOString(), tip: (byGame.get(top.game_id) || {}).tip_utc });
     const old = doc.posts.find(p => p.id === "nuke");
     if (!old || JSON.stringify(old.lines) !== JSON.stringify(np.lines)) { doc.posts = doc.posts.filter(p => p.id !== "nuke"); doc.posts.splice(1, 0, np); changed.push("nuke"); }

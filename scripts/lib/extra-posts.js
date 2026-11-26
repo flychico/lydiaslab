@@ -29,15 +29,21 @@ function isDog(g) {
 }
 const compose = (title, sub, lines, link, tags) => tail([title, sub, "", ...lines.map(l => `• ${l}`)], link, tags);
 
-function readsPost({ sport, emoji, dayTitle, games, link, tags, now }) {
+function readsPost({ sport, emoji, titleEmoji, dayTitle, games, link, tags, now }) {
   if (!games.length) return null;
   const rows = games.map(g => ({ g, f: fav(g) })).sort((a, b) => b.f.p - a.f.p);
   const lines = rows.map(({ f }) => `${f.team} over ${f.opp} (${pct(f.p)})`);
-  const title = sport === "nfl" ? `${dayTitle ? dayTitle + ": " : ""}WHO LEO HAS ${emoji}` : `WHO LEO HAS TONIGHT ${emoji}`;   // the slate's name, not "this week" (Nov 26)
-  const short = rows.map(({ f }) => `${f.team} ${pct(f.p)}`);
+  const title = sport === "nfl" ? `${dayTitle ? dayTitle + ": " : ""}WHO LEO HAS ${titleEmoji || emoji}` : `WHO LEO HAS TONIGHT ${titleEmoji || emoji}`;   // the slate's name, not "this week" (Nov 26)
+  const full = g => side(g) === "home" ? (g.homeFull || g.home) : (g.awayFull || g.away);
+  const short = rows.map(({ g, f }) => `${emoji} ${full(g)} ${pct(f.p)}`);   // full names, emoji bullets (Nov 26)
+  const dogs = rows.filter(({ g }) => isDog(g)).length, priced = rows.filter(({ g }) => g.mlHome !== "" && g.mlHome != null).length;
+  const hook = rows.length === 1 ? "Leo's win chance, not a pick."
+    : dogs ? `Leo has ${dogs === 1 ? "one underdog" : word(dogs) + " underdogs"} winning.`
+    : priced === rows.length ? `Leo sides with ${rows.length === 2 ? "both" : "all " + word(rows.length)} favorites.`
+    : "Win chances, not picks.";
   return { id: "reads", kind: "reads", hero: "Leo's reads", created_at: now, tip_utc: games.map(g => g.tip).sort()[0],
     header: title, lines, record: "", facts: [], hashtags: tags(rows.slice(0, 3).map(r => r.f.code)),
-    text: compose(title, null, short, link, tags(rows.map(r => r.f.code))), link };   // all teams: one team's tag only on a one-team post (Nov 26)
+    text: tail([title, "", hook, "", ...short], link, []), link };   // all teams: one team's tag only on a one-team post (Nov 26)
 }
 
 function upsetPost({ emoji, dayTitle, games, link, tags, now }) {
@@ -89,20 +95,37 @@ function readsResultsPost({ emoji, dayTitle, results, link, tags, now }) {
   return { id: "rday", kind: "results", created_at: now, header: title, lines, record: `${right} of ${results.length}`, facts: call ? [call] : [], hashtags: tg,
     text: tail([title, "", ...lines, "", rec, call], link, tg), link };
 }
-/** Hashtags, then the link alone on the last line, so nothing can run into the link when it is pasted into X. */
+/**
+ * The post body only. Lynold, 2026-11-26 (a Clarky's Sports Tips Thanksgiving post with 227 likes: title, one hook
+ * line, three bullets, one ask, no hashtags, no link): posts carry no hashtags and no link. X shows posts with an
+ * outside link to fewer people, so the link goes in the first reply (replyText below), which the post email gives
+ * as its own box. head, link and tags are kept in the signature so every caller stays the same.
+ * X free accounts allow 280 characters (emoji 2). Trim bullet lines from the end until it fits.
+ */
+const BULLET = /^(• |✅ |❌ |🏈 |🏀 |🎰 |⚾ )/u;
 function tail(head, link, tags) {
-  // X free accounts allow 280 characters (a link counts 23, an emoji 2). Lynold, Nov 21: the posts must fit
-  // without Premium. Trim bullet lines from the end, then hashtags, until it fits.
-  let h = head.filter(x => x != null), tg = tags.slice();
-  const build = () => [...h, "", tg.join(" "), "", bare(link)].join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  let h = head.filter(x => x != null);
+  const build = () => h.join("\n").replace(/\n{3,}/g, "\n\n").trim();
   while (xlen(build()) > 280) {
-    const i = h.map((x, k) => [x, k]).filter(([x]) => /^(• |✅ |❌ )/.test(x)).pop();
-    if (i && h.filter(x => /^(• |✅ |❌ )/.test(x)).length > 2) h.splice(i[1], 1);
-    else if (tg.length > 1) tg.pop();
-    else break;
+    const i = h.map((x, k) => [x, k]).filter(([x]) => BULLET.test(x)).pop();
+    if (i && h.filter(x => BULLET.test(x)).length > 2) h.splice(i[1], 1); else break;
   }
   return build();
 }
+/** The first reply under a post: one plain line and the link (Lynold chose "Yes, all of it", Nov 26). */
+function replyText(post) {
+  if (!post || !post.link) return "";
+  const id = String(post.id || ""), k = post.kind;
+  const lead = post.reply_lead || (post.parlay ? "The Leo Parlay and its record:"
+    : k === "picks" ? "Leo's full read on every game:"
+    : k === "results" ? "Every result and why Leo missed:"
+    : k === "stat" || /^g\d$/.test(id) ? "Leo's full game page:"
+    : "Leo's read on every game:");
+  return `${lead}\n${bare(post.link)}`;
+}
+const WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+const word = n => WORDS[n] || String(n);
+const Word = n => { const w = word(n); return w.charAt(0).toUpperCase() + w.slice(1); };
 /** X's count: links 23, emoji and other wide symbols 2, the rest 1. */
 function xlen(t) {
   const s = String(t).replace(/(https?:\/\/)?[a-z0-9.-]+\.(com|org|net|io)(\/[^\s]*)?/gi, "x".repeat(23));
@@ -120,9 +143,9 @@ function opener(w, l, unit = "NIGHT") {
 }
 const WITH_LEO = "🔥 if you're with Leo";
 /** The night's strongest pick as its own post. Label only: graded at 1 unit like every pick. */
-function nukePost({ title, line, link, tags, now, tip }) {
+function nukePost({ title, line, link, tags, now, tip, emoji = "", textLine }) {
   return { id: "nuke", kind: "picks", hero: "Leo's nuke", created_at: now, tip_utc: tip || null, header: title, lines: [line], record: "", facts: [], hashtags: tags,
-    text: tail([title, "", line, "", WITH_LEO], link, tags), link };
+    text: tail([title, "", "Leo's strongest call on the card.", "", `${emoji ? emoji + " " : ""}${textLine || line}`, "", WITH_LEO], link, tags), link };
 }
 /** Bleacher Report style stat line: headline, one stat per line, the result, the game page. */
 function statPost({ headline, stats, result, link, tags, now, player, team }) {
@@ -130,4 +153,4 @@ function statPost({ headline, stats, result, link, tags, now, player, team }) {
     hashtags: tags, player, team, text: tail([headline, "", ...stats, "", result || null], link, tags), link };
 }
 
-module.exports = { xlen, tail, readsPost, upsetPost, spotlightPosts, readsResultsPost, isDog, fav, opener, nukePost, statPost, WITH_LEO };
+module.exports = { xlen, tail, replyText, word, Word, BULLET, readsPost, upsetPost, spotlightPosts, readsResultsPost, isDog, fav, opener, nukePost, statPost, WITH_LEO };

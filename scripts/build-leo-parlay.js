@@ -130,6 +130,18 @@ function record() {
 }
 
 const EMO = { nba: "🏀", nfl: "🏈", mlb: "⚾" };
+// Full team name for the post text (Nov 26); nickname if the code is unknown.
+let NBA_NAMES = null;
+function fullName(l) {
+  if (l.sport === "nfl") { try { return require("./lib/nfl-teams").full(l.code) || l.team; } catch (e) { return l.team; } }
+  if (l.sport === "nba") {
+    if (!NBA_NAMES) { NBA_NAMES = {};
+      try { const d = path.join(ROOT, "data/nba"); for (const f of fs.readdirSync(d).filter(x => /^picks-\d{4}-\d{2}-\d{2}\.json$/.test(x)).sort().slice(-5)) {
+        const c = JSON.parse(fs.readFileSync(path.join(d, f), "utf8")); for (const g of c.games || []) { if (g.home_name) NBA_NAMES[g.home] = g.home_name; if (g.away_name) NBA_NAMES[g.away] = g.away_name; } } } catch (e) {} }
+    return NBA_NAMES[l.code] || l.team;
+  }
+  return l.team;
+}
 const weekday = d => new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
 const recLine = r => `Leo Parlays ${r.w}-${r.l}${r.p ? "-" + r.p : ""}, ${r.units >= 0 ? "+" : ""}${r.units.toFixed(2)}u since Nov 20`;
 
@@ -144,7 +156,7 @@ function posts(date, p, rec) {
   const header = `${weekday(date).toUpperCase()} LEO PARLAY 🎰 What would Leo do?`;
   const pickLines = p.legs.map(l => `${EMO[l.sport]} ${l.team} ML ${fmtPrice(l.price)}`);
   const pick = { id: "picks", kind: "picks", parlay: true, note: (p.legs.length === 2 ? `${p.price} if both hit` : `${p.price} if all ${p.legs.length} hit`), created_at: new Date(NOW).toISOString(), header, lines: pickLines, record: p.price, facts: [], hashtags: tags,
-    text: EX.tail([`${weekday(date).toUpperCase()} LEO PARLAY 🎰`, "", ...pickLines.map(l => `• ${l}`), "", (p.legs.length === 2 ? `${p.price} if both hit` : `${p.price} if all ${p.legs.length} hit`), "", EX.WITH_LEO], link, tags), link };   // hype voice, link last, fits 280 (Nov 21)
+    text: EX.tail([`${weekday(date).toUpperCase()} LEO PARLAY 🎰`, "", (p.legs.length === 2 ? `${p.price} if both hit.` : `${p.price} if all ${p.legs.length} hit.`), "", ...p.legs.map(l => `${EMO[l.sport]} ${fullName(l)} ML ${fmtPrice(l.price)}`), "", EX.WITH_LEO], link, tags), link };   // Nov 26: hook line, full names, no hashtags or link   // hype voice, link last, fits 280 (Nov 21)
   const i = doc.posts.findIndex(x => x.id === "picks");
   if (p.status === "open") { if (i >= 0) doc.posts[i] = pick; else doc.posts.unshift(pick); }
   else if (i < 0) doc.posts.unshift(pick);

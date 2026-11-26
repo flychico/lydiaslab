@@ -65,10 +65,13 @@ function render(file, id, out) {
   return j;
 }
 
+const EXP = require("./lib/extra-posts");
 function bodies(post, note, gpt) {
   // One block to copy into the "Leo cards" ChatGPT project (Lynold, Nov 20: "if i copy the text from
   // the email and send it to chat, chat would know what graphic to make"). Same words as latest.txt.
-  const text = (note ? note + "\n\n" : "") + "POST TEXT FOR X:\n\n" + post.text +
+  // No link in the post (Nov 26): it goes in the first reply, pasted as a reply to the post.
+  const reply = EXP.replyText(post);
+  const text = (note ? note + "\n\n" : "") + "POST TEXT FOR X:\n\n" + post.text + (reply ? "\n\nFIRST REPLY (post it as a reply to your post):\n\n" + reply : "") +
     "\n\nCOPY THIS INTO CHATGPT (Leo cards project) FOR THE GRAPHIC:\n\n" + gpt +
     "\n\nLeo's own graphic is attached as a backup.";
   const box = "border:1px solid #D9CFBD;padding:14px;white-space:pre-wrap;font-family:Arial,sans-serif";
@@ -78,6 +81,8 @@ function bodies(post, note, gpt) {
 ${note ? `<tr><td style="padding:0 0 12px;font-weight:bold;color:#7A5E12">${esc(note)}</td></tr>` : ""}
 <tr><td style="padding:0 0 6px;font-weight:bold;color:#1A2535">Post text for X</td></tr>
 <tr><td style="${box}">${linkify(post.text)}</td></tr>
+${reply ? `<tr><td style="padding:18px 0 6px;font-weight:bold;color:#1A2535">First reply (post it as a reply to your post)</td></tr>
+<tr><td style="${box}">${linkify(reply)}</td></tr>` : ""}
 <tr><td style="padding:18px 0 6px;font-weight:bold;color:#1A2535">Copy this into ChatGPT for the graphic</td></tr>
 <tr><td style="${box};background:#F7F4EE" bgcolor="#F7F4EE">${esc(gpt)}</td></tr>
 <tr><td style="padding:12px 0 0;color:#3D3830">Leo's own graphic is attached as a backup.</td></tr>

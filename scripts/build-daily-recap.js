@@ -87,9 +87,9 @@ const nba = posts("nba"), nfl = posts("nfl");
 const find = (list, ids) => { for (const id of ids) { const p = list.find(x => x.id === id); if (p) return p; } return null; };
 const lastWave = list => list.filter(p => /^wave-\d+$/.test(p.id)).slice(-1)[0] || null;
 const A = (nflGames.length && (find(nfl, ["day"]) || lastWave(nfl))) || find(nba, ["day"]) || find(nfl, ["rday"]) || find(nba, ["rday"]);
-if (A) out.posts.push({ option: "A", kind: "Results", sport: nfl.includes(A) ? "NFL" : "NBA", id: A.id, text: A.text, chars: xlen(A.text) });
+if (A) out.posts.push({ option: "A", kind: "Results", sport: nfl.includes(A) ? "NFL" : "NBA", id: A.id, text: A.text, reply: EX && EX.replyText ? EX.replyText(A) : "", chars: xlen(A.text) });
 const B = find(nba, ["stat"]) || find(nfl, ["stat"]) || (A && A.id !== "rday" ? (find(nba, ["rday"]) || find(nfl, ["rday"])) : null) || find(nfl, ["qbfacts", "reads"]);
-if (B) out.posts.push({ option: "B", kind: "Slate / Model", sport: nfl.includes(B) ? "NFL" : "NBA", id: B.id, text: B.text, chars: xlen(B.text) });
+if (B) out.posts.push({ option: "B", kind: "Slate / Model", sport: nfl.includes(B) ? "NFL" : "NBA", id: B.id, text: B.text, reply: EX && EX.replyText ? EX.replyText(B) : "", chars: xlen(B.text) });
 
 // ---------- public feeds ----------
 for (const sp of ["nfl", "nba"]) {
