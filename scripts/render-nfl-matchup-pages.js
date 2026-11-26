@@ -276,7 +276,7 @@ function leoSection(m){
     if(c.call&&F&&F.away_score!=null){
       const hs=F.home_score, as=F.away_score;
       if(key==="ml") r=hs===as?"P":((hs>as?m.home:m.away)===c.call?"W":"L");
-      if(key==="spread"){const l=+g.spread_line,mg=hs-as;r=mg===l?"P":((c.call===m.home)===(mg>l)?"W":"L");}
+      if(key==="spread"){const l=c.home_line!=null?+c.home_line:+g.spread_line,mg=hs-as;r=mg===l?"P":((c.call===m.home)===(mg>l)?"W":"L");}
       if(key==="total"){const l=+g.total_line,t=hs+as;r=t===l?"P":((t>l)===(c.call==="Over")?"W":"L");}
     }
     const tag=r==="W"?' <span class="ok">RIGHT</span>':r==="L"?' <span class="no">WRONG</span>':r==="P"?" PUSH":"";
@@ -285,7 +285,7 @@ function leoSection(m){
   const callsHtml=C?`
   <div class="leo-grid calls">
     ${callBox("Moneyline",C.ml,"ml",`Leo gives ${g.pick} ${pct(g.prob)}`)}
-    ${callBox("Spread",C.spread,"spread",`Leo ${fav(m,g.proj_spread)}`)}
+    ${callBox("Spread",C.spread,"spread",C.spread&&C.spread.manual?`Added by hand by Lynold. Leo ${fav(m,g.proj_spread)}`:`Leo ${fav(m,g.proj_spread)}`)}
     ${C.total&&C.total.info?"":callBox("Total",C.total,"total",`Leo ${v(g.proj_total)}`)}
   </div>`:"";
   const game=g?`
@@ -515,7 +515,7 @@ function pickBox(m){
     if(!c||!c.call||!done) return "";
     const hs=F.home_score, as=F.away_score;
     if(key==="ml") return hs===as?"P":((hs>as?m.home:m.away)===c.call?"W":"L");
-    const l=+g.spread_line,mg=hs-as; return mg===l?"P":((c.call===m.home)===(mg>l)?"W":"L");
+    const l=c.home_line!=null?+c.home_line:+g.spread_line,mg=hs-as; return mg===l?"P":((c.call===m.home)===(mg>l)?"W":"L");
   };
   const anyCall=C&&((C.ml&&C.ml.call)||(C.spread&&C.spread.call));
   const margin=g.proj_spread!=null?n1(Math.abs(+g.proj_spread)):null;
@@ -531,9 +531,10 @@ function pickBox(m){
     headline=`No call: Leo has the ${P} at ${pct(g.prob)}`;
     sub=`Not far enough from the line for a call.${m.leo.early?" Early read; it updates until kickoff.":""}`;
   }
-  const chip=(label,c,key)=>!c?null:{label,value:c.call?nickLabel(m,c.label):"No call",note:c.call?"":String(c.short||c.pass||""),on:!!c.call,result:res(key,c)};
+  const chip=(label,c,key)=>!c?null:{label,value:c.call?nickLabel(m,c.label):"No call",note:c.call?(c.manual?"added by hand by Lynold":""):String(c.short||c.pass||""),on:!!c.call,result:res(key,c)};
   const chips=[{label:"Leo win chance",value:`${P} ${pct(g.prob)}`,note:margin?`by about ${margin} points`:"",on:false},chip("Moneyline",C&&C.ml,"ml"),chip("Spread",C&&C.spread,"spread")].filter(Boolean);
-  const stk=EX.statToKnow(m), bullets=[...reasonLines(m), lineVsLeo(m), /^Leo rates/.test(stk)?"":stk];   // the rating line would repeat the first reason
+  const stk=EX.statToKnow(m), bullets=[...reasonLines(m), lineVsLeo(m), /^Leo rates/.test(stk)?"":stk];
+  if(C&&C.spread&&C.spread.manual) bullets.push(`The ${nickLabel(m,C.spread.label)} call was added by hand by Lynold before kickoff. Leo's own rule made no spread call here (${C.spread.leo_pass||"too close to the line"}). It is graded with Leo's spread calls.`);   // the rating line would repeat the first reason
   const t=REVIEW&&REVIEW.three, rec=(x,lab)=>x&&(x.w+x.l)?`${lab} ${x.w}-${x.l}${x.p?"-"+x.p:""} (${x.units>0?"+":""}${(+x.units).toFixed(2)}u)`:"";
   const recLine=t?[rec(t.ml,"moneyline"),rec(t.spread,"spread")].filter(Boolean).join(", "):"";
   const n=t?(t.ml.w+t.ml.l+t.spread.w+t.spread.l):0;
@@ -854,16 +855,31 @@ ${SEO.relatedLinks({sport:"NFL",root:ROOT,slug:m.slug||String(m.url).split("/").
 </html>`;
 }
 
+/* Calls Lynold added by hand before kickoff (data/nfl/manual-calls.json, DEC-20261126-10): shown in the
+   spread box with "added by hand by Lynold", graded at their own line. Only where Leo's rule made no call. */
+function applyManual(m){
+  const C=m.leo&&m.leo.game&&m.leo.game.calls; if(!C) return;
+  let M=[]; try{M=JSON.parse(fs.readFileSync(path.join(ROOT,"data/nfl/manual-calls.json"),"utf8")).calls||[];}catch(e){}
+  for(const c of M){
+    if(c.game_id!==m.game_id||c.market!=="spread"||!(Date.parse(c.added_at)<Date.parse(c.kickoff_utc))) continue;
+    if(C.spread&&C.spread.call) continue;
+    const ln=+c.line;
+    C.spread={call:c.side,label:`${c.side} ${ln>0?"+"+ln:ln}`,manual:true,home_line:c.side===m.home?-ln:ln,leo_pass:C.spread&&(C.spread.short||C.spread.pass)||""};
+  }
+}
+
 (async function main(){
   const target=process.argv[2]||new Date(Date.now()+864e5).toISOString().slice(0,10);
   const src=path.join(ROOT,"data/nfl/matchups",`${target}.json`);
   if(!fs.existsSync(src)){ console.log(`No matchup data for ${target}. Run generate-nfl-matchups.js first.`); return; }
   const data=JSON.parse(fs.readFileSync(src,"utf8"));
   for(const m of data) if(m.leo&&m.leo.game&&m.leo.game.calls) m.leo.game.calls=CALLS.current(m.leo.game.calls,m.leo.game);
+  for(const m of data) applyManual(m);
   // Kickoff weather for open air games (competitor review, 2026-11-25). A failed fetch leaves the box out.
   await Promise.all(data.map(async m=>{ m.weather=await EX.kickoffWeather(m); }));
   let wrote=0;
   for(const m of data){
+    if(process.env.ONLY_GAME&&m.game_id!==process.env.ONLY_GAME) continue;   // re-render one page by hand
     const dir=path.join(ROOT,"nfl",m.slug);
     fs.mkdirSync(dir,{recursive:true});
     fs.writeFileSync(path.join(dir,"index.html"), SEO.withReadTime(page(m)));
