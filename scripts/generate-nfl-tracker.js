@@ -207,13 +207,13 @@ function main() {
   const lines = { spread: [], total: [] };
   for (const r of gameRows) {
     // held_earlier_read: a call kept from an earlier read before kickoff (DEC-20261115-53).
-    if (!lines[r.market] || !["frozen", "held_earlier_read", "tuesday_lock"].includes(r.status)) continue;
+    if (!lines[r.market] || !["frozen", "held_earlier_read", "tuesday_lock", "manual_lynold"].includes(r.status)) continue;   // manual_lynold: added by hand by Lynold before kickoff (DEC-20261126-10)
     const leo = n(r.leo_value), mkt = n(r.market_value), act = n(r.actual_value);
     if (leo == null || act == null) continue;
     lines[r.market].push({
       date: r.date, week: r.week, matchup: r.matchup, away: r.away, home: r.home,
       market: r.market, model_version: r.model_version || "",
-      side: r.leo_side || "", leo, line: mkt, actual: act,
+      side: r.leo_side || "", leo, line: mkt, actual: act, ...(r.status === "manual_lynold" ? { manual: true } : {}),
       result: r.leo_side ? (r.result || "") : "",
       err: n(r.abs_error), lerr: mkt == null ? null : r2(Math.abs(mkt - act)),
       beat: r.beat_market || "",

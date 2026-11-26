@@ -41,6 +41,13 @@ const { frozenPredictions, preKickoffReads } = require("./lib/prediction-history
 const FEED = "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv";
 const DIR  = path.join(__dirname, "..", "data", "nfl");
 const LEDGER = path.join(DIR, "nfl-results-log.csv");
+// Calls Lynold added by hand before kickoff (DEC-20261126-10). A call added at or after kickoff is ignored.
+function manualCall(gameId, market) {
+  try {
+    const M = JSON.parse(fs.readFileSync(path.join(DIR, "manual-calls.json"), "utf8"));
+    return (M.calls || []).find(c => c.game_id === gameId && c.market === market && Date.parse(c.added_at) < Date.parse(c.kickoff_utc)) || null;
+  } catch (e) { return null; }
+}
 
 const argDate = (process.argv.find(a => a.startsWith("--date=")) || "").split("=")[1];
 const FORCE = process.argv.includes("--force");
@@ -269,12 +276,19 @@ function main() {
     if (p.proj_spread != null && !done("spread")) {
       const sRow = H && H.spread.row ? H.spread.row : p;
       // Tuesday rule (from 2026-11-25): a locked call is graded at Tuesday's line.
-      const line = H && H.spread.lineValue != null ? H.spread.lineValue : n(sRow.spread_line);
+      let line = H && H.spread.lineValue != null ? H.spread.lineValue : n(sRow.spread_line);
       // both numbers are stated from the home side: Leo takes the home team
       // when he expects them to beat the line, the away team when he doesn't
       const gap = line == null ? null : sRow.proj_spread - line;
       let side = gap == null || Math.abs(gap) < SPREAD_FLOOR ? "" : (gap > 0 ? p.home : p.away);
       if (H) side = H.spread.call || "";  // DEC-20261102-01, DEC-20261115-53
+      // A call Lynold added by hand before kickoff (data/nfl/manual-calls.json, DEC-20261126-10): graded
+      // at its own line and -110, counted in the spread record, marked manual_lynold. Only when Leo's rule
+      // made no spread call on the game.
+      const man = !side ? manualCall(p.game_id, "spread") : null;
+      let manLine = null;
+      if (man) { side = man.side; manLine = man.side === p.home ? -man.line : man.line; }
+      if (manLine != null) line = manLine;
       let res = "";
       if (side) {
         res = "P";
@@ -282,7 +296,7 @@ function main() {
       }
       const leoErr = Math.abs(sRow.proj_spread - margin);
       const mktErr = line == null ? null : Math.abs(line - margin);
-      rows.push({ ...base, market: "spread", status: H && H.spread.lineValue != null ? "tuesday_lock" : H && H.spread.held ? "held_earlier_read" : p.spread_status,
+      rows.push({ ...base, market: "spread", status: man ? "manual_lynold" : H && H.spread.lineValue != null ? "tuesday_lock" : H && H.spread.held ? "held_earlier_read" : p.spread_status,
         leo_side: side, leo_value: sRow.proj_spread, market_value: line,
         edge: r3(p.spread_edge), actual_value: margin, result: res,
         market_result: "", beat_market: mktErr == null ? "" : (leoErr < mktErr ? "Y" : "N"),

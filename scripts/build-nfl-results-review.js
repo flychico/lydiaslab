@@ -192,7 +192,7 @@ function build() {
     const three = g.date >= CALLS.RULES.FROM;
     const units = (res, price) => res === "W" ? Math.round(100 * (price > 0 ? price / 100 : 100 / -price)) / 100 : res === "L" ? -1 : 0;
     if (pick && pick.result) calls.push({ market: "ml", text: three && pick.price != null ? `${nick(pick.pick)} ${pick.price > 0 ? "+" : ""}${pick.price}, Leo ${Math.round(pick.leo_prob * 100)}%` : `${nick(pick.pick)} to win, ${Math.round(pick.leo_prob * 100)}%`, result: pick.result, ...(three && pick.price != null ? { units: units(pick.result, pick.price) } : {}) });
-    if (sp.side && sp.result) calls.push({ market: "spread", text: `${spreadCallText(g, sp)}, Leo had ${marginWords(g, sp.leo)}`, result: sp.result, ...(three ? { units: units(sp.result, -110) } : {}) });
+    if (sp.side && sp.result) calls.push({ market: "spread", text: `${spreadCallText(g, sp)}, Leo had ${marginWords(g, sp.leo)}${sp.manual ? " (added by hand by Lynold)" : ""}`, result: sp.result, ...(sp.manual ? { manual: true } : {}), ...(three ? { units: units(sp.result, -110) } : {}) });
     // Totals are information only and their record left the site (DEC-20261119-01); old graded rows stay in the ledger, private.
     if (CALLS.RULES.TOTAL_CALLS && tot && tot.side && tot.result) calls.push({ market: "total", text: `${String(tot.side).charAt(0).toUpperCase() + String(tot.side).slice(1).toLowerCase()} ${r1(tot.line)}, Leo projected ${r1(tot.leo)}`, result: tot.result, ...(three ? { units: units(tot.result, -110) } : {}) });
     // Leo's read in calls, not two models' raw numbers (the win chance and the
