@@ -70,7 +70,7 @@ function h2hRest(m) {
   return `
   <h2 class="sec">Head to head</h2>
   <p class="sub">${list.length ? `${esc(A)} and ${esc(H)} since 2016, playoffs included: <b>${esc(lead)}</b>${R.t ? `, ${R.t} tied` : ""}, ${list.length} ${list.length === 1 ? "game" : "games"}.${m.div_game === "True" || m.div_game === "1" ? " Division rivals, so they meet twice a season." : ""}` : `No meetings since 2016.`}</p>
-  ${last5.length ? `<ul class="h2h">${last5.map(meetLine).join("")}</ul>` : ""}
+  ${last5.length ? `<p class="sub" style="margin-top:8px">${list.length > 5 ? "The last 5 meetings:" : list.length === 1 ? "The meeting:" : "Every meeting:"}</p><ul class="h2h">${last5.map(meetLine).join("")}</ul>` : ""}
   <h2 class="sec">Rest and schedule</h2>
   <p class="sub">Days between games. A short week is five days or fewer; ten or more is extra rest.</p>
   <div class="grid2"><div class="restbox"><b>${esc(TEAMS.full(m.away))}</b>${side("away")}</div><div class="restbox"><b>${esc(TEAMS.full(m.home))}</b>${side("home")}</div></div>

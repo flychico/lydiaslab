@@ -144,11 +144,14 @@ function relatedLinks(o) {
     const keys = new Set([String(abbr).toLowerCase()]);
     const nick = typeof o.teamSlug === "function" ? o.teamSlug(abbr) : nickSlug(name);
     if (nick) keys.add(String(nick).toLowerCase());
-    const mine = games.filter(g => keys.has(g.away) || keys.has(g.home)).slice(0, per);
+    // o.next (NFL, Lynold 2026-11-25): the team's next games after this one, never
+    // past ones, which leave the index after 7 days (DEC-20261122-05).
+    const mine = games.filter(g => (keys.has(g.away) || keys.has(g.home)) && (!o.next || g.date > o.date))
+      .sort((a, b) => o.next ? a.date.localeCompare(b.date) : 0).slice(0, per);
     // o.teamUrl(abbr) -> the team's page (NFL team pages, 2026-11-02), linked first.
     const teamHref = typeof o.teamUrl === "function" ? o.teamUrl(abbr) : null;
     if (!mine.length && !teamHref) return "";
-    return `<div><h3 style="margin:0 0 6px;font-size:1rem">More ${escHtml(name)} games</h3><ul style="margin:0;padding-left:18px;line-height:1.7">`
+    return `<div><h3 style="margin:0 0 6px;font-size:1rem">${o.next ? "Next" : "More"} ${escHtml(name)} games</h3><ul style="margin:0;padding-left:18px;line-height:1.7">`
       + (teamHref ? `<li><a href="${teamHref}">All ${escHtml(name)} predictions this season</a></li>` : "")
       + mine.map(g => `<li><a href="/${o.sport.toLowerCase()}/${g.slug}/">${escHtml(linkText(dir, g))}, ${escHtml(niceShort(g.date))}</a></li>`).join("")
       + `</ul></div>`;

@@ -66,7 +66,7 @@ const ApiKey = {
 // ---------- Sport Selector ----------
 const Sport = {
   KEY: "leo_selected_sport",
-  SPORTS: ["MLB", "NFL", "NBA"],
+  SPORTS: ["NFL", "NBA", "MLB"],   // MLB last in the offseason (Lynold, 2026-11-25)
   // The URL wins when it names a sport. Without this, landing straight on an
   // /nfl/ page (search result, shared link, bookmark) read the stored value --
   // which defaults to MLB -- and rendered MLB nav, MLB links and an MLB-active

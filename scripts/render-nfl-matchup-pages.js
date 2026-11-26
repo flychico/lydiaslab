@@ -191,7 +191,7 @@ function ratingsSection(m){
   const sg=x=>x==null?"—":(x>0?"+":"")+x;
   return `
   <h2 class="sec">Leo ratings, head to head</h2>
-  <p class="sub">0 to 100, 50 is average. <a href="/nfl/how-leo-works/">How Leo works</a></p>
+  <p class="sub">Team ratings, 0 to 100, 50 is average. The Leo QB number beside each passer further down is that player's own rating, so the two can differ. <a href="/nfl/how-leo-works/">How Leo works</a></p>
 
   <div class="rcard">
     <div class="rhead">
@@ -487,6 +487,19 @@ function finalReport(m){
     ${props?`<p class="sub" style="margin-top:14px"><a href="/nfl/how-leo-works/#props">How player projections work</a></p>`+props:""}
   </section>`;
 }
+// Hero wording (Lynold, 2026-11-25, Gemini's page review): "Wednesday, Nov 25 · 8:00 PM ET"
+// instead of "Wednesday 20:00", and "Indoor, turf" instead of nflverse's raw "dome · matrixturf".
+function heroWhen(m){
+  const [h,mi]=String(m.kickoff||"").split(":").map(Number);
+  const day=new Date(m.date+"T12:00:00Z").toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric",timeZone:"UTC"});
+  return Number.isFinite(h)?`${day} \u00b7 ${((h+11)%12)+1}:${String(mi||0).padStart(2,"0")} ${h>=12?"PM":"AM"} ET`:day;
+}
+function venueKind(m){
+  const r=String(m.roof||"").toLowerCase(), s=String(m.surface||"").toLowerCase();
+  const roof=r==="dome"||r==="closed"?"Indoor":r==="outdoors"?"Outdoor":r==="open"?"Roof open":"";
+  const turf=!s?"":s==="grass"?"grass":"turf";
+  return roof&&turf?`${roof}, ${turf}`:roof||(turf?turf[0].toUpperCase()+turf.slice(1):"");
+}
 
 function page(m){
   const A=m.sides.away, H=m.sides.home;
@@ -495,10 +508,10 @@ function page(m){
   // Nicknames in the title: people search "Bears vs Packers prediction".
   // SEO-14: "Touchdown Scorers" is its own search; the description leads
   // with Leo's actual numbers so the search snippet says something.
-  const title=`${TEAMS.nick(m.away)} vs ${TEAMS.nick(m.home)} Prediction, Odds and Touchdown Scorers, Week ${v(m.week,"")} ${m.date.slice(0,4)} | Leo`;
+  const title=`${TEAMS.nick(m.away)} vs ${TEAMS.nick(m.home)} Prediction, Odds and Touchdown Scorers, Week ${v(m.week,"")} ${m.date.slice(0,4)} | Leo by ND Horizon`;  // brand (Lynold, 2026-11-25)
   const G0=m.leo&&m.leo.game;
   const desc=G0&&G0.pick&&G0.prob!=null
-    ?`Leo gives the ${TEAMS.nick(G0.pick)} a ${Math.round(G0.prob*100)}% chance against the ${TEAMS.nick(G0.pick===m.home?m.away:m.home)} (${niceDate(m.date)}). Projected total${G0.proj_total!=null?" "+G0.proj_total:""}, ${G0.calls?"moneyline, spread and total calls":"expected margin"}, most likely touchdown scorers and the injury report, graded after the game.`
+    ?`Leo gives the ${TEAMS.nick(G0.pick)} a ${Math.round(G0.prob*100)}% chance against the ${TEAMS.nick(G0.pick===m.home?m.away:m.home)} (${niceDate(m.date)}). Projected total${G0.proj_total!=null?" "+G0.proj_total:""}, ${G0.calls?"moneyline and spread calls":"expected margin"}, most likely touchdown scorers and the injury report, graded after the game.`
     :`Leo's prediction for the ${TEAMS.full(m.away)} at the ${TEAMS.full(m.home)}, ${niceDate(m.date)}: win probability, projected total, most likely touchdown scorers, injury report and player props, graded after the game.`;
   const spread = m.spread_line==null?"—":(m.spread_line>0?`${m.home} -${m.spread_line}`:(m.spread_line<0?`${m.away} -${Math.abs(m.spread_line)}`:"PK"));
   const cmp=(label,a,h,fmt=x=>v(x))=>{
@@ -671,13 +684,13 @@ ${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternT
 <nav id="nav"></nav>
 <main class="scoreboard-shell">
   <section class="score-hero">
-    <p class="eyebrow">Week ${v(m.week)} &middot; ${esc(m.weekday||"")} ${esc(m.kickoff||"")}</p>
+    <p class="eyebrow">Week ${v(m.week)} &middot; ${esc(heroWhen(m))}</p>
     <div class="mh">
-      <span class="t"><img src="/img/nfl/${encodeURIComponent(m.away)}.png" alt="${esc(m.away)}"><b>${esc(m.away)}</b></span>
+      <span class="t"><img src="/img/nfl/${encodeURIComponent(m.away)}.png" alt=""><b>${esc(m.away)}</b></span>
       <span class="at">at</span>
-      <span class="t"><img src="/img/nfl/${encodeURIComponent(m.home)}.png" alt="${esc(m.home)}"><b>${esc(m.home)}</b></span>
+      <span class="t"><img src="/img/nfl/${encodeURIComponent(m.home)}.png" alt=""><b>${esc(m.home)}</b></span>
     </div>
-    <p class="subtitle">${esc(m.stadium||"Venue TBD")}${m.roof&&m.roof!=="NA"?" &middot; "+esc(m.roof):""}${m.surface?" &middot; "+esc(m.surface):""}${m.div_game?" &middot; Division game":""}</p>
+    <p class="subtitle">${esc(m.stadium||"Venue TBD")}${venueKind(m)?" &middot; "+esc(venueKind(m)):""}${m.div_game?" &middot; Division game":""}</p>
   </section>
 
   <section class="mkt">
@@ -731,7 +744,7 @@ ${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternT
   <div class="grid2">${sideBlock(A,"this_season",m.date.slice(0,4),cur&&cur.away)}${sideBlock(H,"this_season",m.date.slice(0,4),cur&&cur.home)}</div>
 
   <h2 class="sec">Last season</h2>
-  <p class="sub">The same players, last season.</p>
+  <p class="sub">Last season's leaders for each team, regular season and playoffs.</p>
   <div class="grid2">${sideBlock(A,"last_season",String(Number(m.date.slice(0,4))-1),pri&&pri.away)}${sideBlock(H,"last_season",String(Number(m.date.slice(0,4))-1),pri&&pri.home)}</div>
 
   ${EX.h2hRest(m)}
@@ -743,7 +756,7 @@ ${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternT
   ${SEO.faqHtml(EX.faqItems(m,topScorers))}
 
   <p class="data-note">Stats: nflverse. <a href="/nfl/how-leo-works/">How Leo works</a></p>
-${SEO.relatedLinks({sport:"NFL",root:ROOT,slug:m.slug||String(m.url).split("/").filter(Boolean).pop(),away:m.away,home:m.home,awayName:TEAMS.full(m.away),homeName:TEAMS.full(m.home),teamUrl:abbr=>"/nfl/teams/"+require("./build-nfl-team-pages").teamSlug(abbr)+"/",featured:[weekUrl(m),"Week "+v(m.week,"")+" NFL predictions","Every Week "+v(m.week,"")+" game"],hubs:[["/nfl/games/","Every NFL game"],["/nfl/teams/","NFL team predictions"],["/nfl/results/","Leo\u2019s NFL record"],["/nfl/tools/injury-tracker/","Injury tracker"],["/membership/#free","Free NFL card by email"]]})}
+${SEO.relatedLinks({sport:"NFL",root:ROOT,slug:m.slug||String(m.url).split("/").filter(Boolean).pop(),away:m.away,home:m.home,awayName:TEAMS.full(m.away),homeName:TEAMS.full(m.home),teamUrl:abbr=>"/nfl/teams/"+require("./build-nfl-team-pages").teamSlug(abbr)+"/",next:true,date:m.date,featured:[weekUrl(m),"Week "+v(m.week,"")+" NFL predictions","Every Week "+v(m.week,"")+" game"],hubs:[["/nfl/games/","Every NFL game"],["/nfl/teams/","NFL team predictions"],["/nfl/results/","Leo\u2019s NFL record"],["/nfl/tools/injury-tracker/","Injury tracker"],["/membership/#free","Free NFL card by email"]]})}
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
 <script>renderNav("/nfl/scoreboard/"); renderFooter();</script>

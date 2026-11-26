@@ -183,7 +183,7 @@ function why(m) {
     if (p == null) return;
     const team = p > 0 ? m.home : m.away, n = Math.abs(p);
     const k = Math.round(n);
-    items.push(`<li><b>${esc(label)}:</b> ${esc(words)}${n < 1 ? " Barely moves Leo's number." : ` Moves Leo about ${k} point${k === 1 ? "" : "s"} toward the ${esc(TEAMS.nick(team))}.`}</li>`);
+    items.push(`<li><b>${esc(label)}:</b> ${esc(words)}${n < 1 ? " Barely moves Leo's number." : ` Adds about ${k}% to the ${esc(TEAMS.nick(team))}' win chance.`}</li>`);
   };
   if (D) {
     const hq = D.row.home_qb_name || m.home_qb_name, aq = D.row.away_qb_name || m.away_qb_name;
