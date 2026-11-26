@@ -202,4 +202,14 @@ function weatherHtml(m) {
   ${note ? `<p class="sub" style="margin-top:8px">${esc(note.trim())}</p>` : ""}`;
 }
 
-module.exports = { h2hRest, faqItems, meetings, restOf, statToKnow, kickoffWeather, weatherHtml, OPEN_AIR };
+/** Points scored and allowed per game this season before the date, from games-lite (the analysis panel, 2026-11-25). */
+function scoring(team, date) {
+  const season = +String(date).slice(0, 4) - (+String(date).slice(5, 7) <= 2 ? 1 : 0);
+  const gs = GAMES.filter(g => g.season === season && g.type === "REG" && final(g) && g.date < date && (fr(g.home) === team || fr(g.away) === team));
+  if (!gs.length) return null;
+  let f = 0, a = 0;
+  for (const g of gs) { const home = fr(g.home) === team; f += home ? g.hs : g.as; a += home ? g.as : g.hs; }
+  return { games: gs.length, pf: Math.round(f / gs.length * 10) / 10, pa: Math.round(a / gs.length * 10) / 10 };
+}
+
+module.exports = { scoring, h2hRest, faqItems, meetings, restOf, statToKnow, kickoffWeather, weatherHtml, OPEN_AIR };

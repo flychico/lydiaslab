@@ -90,8 +90,30 @@ function finalSentence(m) {
   return out.join(" ");
 }
 
-function summary(m) {
+// Under the analysis panel (Lynold, 2026-11-25: the summary repeated the panel): only what the panel
+// does not say. Recent form, the last meeting, the biggest absence, the total, touchdown chances, quarterbacks.
+function shortSummary(m) {
+  const g = m.leo && m.leo.game, out = [];
+  const fa = form(m.away, m.date), fh = form(m.home, m.date);
+  if (fa) out.push(fa); if (fh) out.push(fh);
+  const lm = lastMeeting(m); if (lm) out.push(lm);
+  const ab = biggestAbsence(m); if (ab) out.push(ab);
+  const rest = [];
+  if (g && g.proj_total != null) rest.push(`Leo projects ${g.proj_total} total points${m.total_line != null ? ` against a posted total of ${m.total_line}` : ""}; the total is shown for information, not called.`);
+  const td = topTd(m, 2);
+  if (td.length) rest.push(`The players Leo thinks are most likely to score a touchdown: ${list(td.map(p => `${p.player} (${pct(p.prob)})`))}.`);
+  if (m.away_qb_name && m.home_qb_name) rest.push(`Starting quarterbacks: ${m.away_qb_name} for the ${city(m.away)} and ${m.home_qb_name} for the ${city(m.home)}.`);
+  for (const side of ["away", "home"]) { const q = qbChangeLine(m, side); if (q) rest.push(q); }
+  if (!out.length && !rest.length) return "";
+  return `<section class="card summary">${out.length ? `
+  <p style="margin:0 0 10px">${esc(out.join(" "))}</p>` : ""}${rest.length ? `
+  <p style="margin:0">${esc(rest.join(" "))}</p>` : ""}
+</section>`;
+}
+
+function summary(m, o = {}) {
   const g = m.leo && m.leo.game;
+  if (o.short) return shortSummary(m);
   const parts = [];
   if (g && g.pick && g.prob != null) {
     const opp = g.pick === m.home ? m.away : m.home;
@@ -352,6 +374,17 @@ function biggestDriver(m) {
   };
   return pickOf(S[k], key, k);
 }
+/** The biggest input behind Leo's number: { k: "qb_diff"|"off_diff"|"def_diff"|"home", team } or null (the analysis panel, 2026-11-25). */
+function driverKind(m) {
+  const g = m.leo && m.leo.game;
+  const D = g && g.pick ? driversAny(m) : null;
+  if (!D) return null;
+  const k = ["qb_diff", "off_diff", "def_diff", "home"].sort((a, b) => Math.abs(D.pts[b] || 0) - Math.abs(D.pts[a] || 0))[0];
+  const p = D.pts[k];
+  if (Math.round(Math.abs(p)) < 1) return null;
+  return { k, team: p > 0 ? m.home : m.away };
+}
+
 function opening(m) {
   const out = [], d = biggestDriver(m);
   if (d) out.push(d);
@@ -385,4 +418,4 @@ function whatHappened(m) {
 </section>`;
 }
 
-module.exports = { summary, why, finalSentence, drivers, opening, whatHappened, biggestDriver };
+module.exports = { driverKind, summary, why, finalSentence, drivers, opening, whatHappened, biggestDriver };

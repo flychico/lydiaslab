@@ -518,7 +518,7 @@ function pickBox(m){
     const l=+g.spread_line,mg=hs-as; return mg===l?"P":((c.call===m.home)===(mg>l)?"W":"L");
   };
   const anyCall=C&&((C.ml&&C.ml.call)||(C.spread&&C.spread.call));
-  const margin=g.proj_spread!=null?Math.abs(+g.proj_spread).toFixed(1):null;
+  const margin=g.proj_spread!=null?n1(Math.abs(+g.proj_spread)):null;
   let headline, sub;
   if(done){
     const W=F.home_score>F.away_score?m.home:F.away_score>F.home_score?m.away:null;
@@ -533,16 +533,53 @@ function pickBox(m){
   }
   const chip=(label,c,key)=>!c?null:{label,value:c.call?nickLabel(m,c.label):"No call",note:c.call?"":String(c.short||c.pass||""),on:!!c.call,result:res(key,c)};
   const chips=[{label:"Leo win chance",value:`${P} ${pct(g.prob)}`,note:margin?`by about ${margin} points`:"",on:false},chip("Moneyline",C&&C.ml,"ml"),chip("Spread",C&&C.spread,"spread")].filter(Boolean);
-  const mkt=(g.proj_spread!=null&&m.spread_line!=null&&+m.spread_line!==0)
-    ?`Leo has the ${P} by ${margin}; the posted spread has the ${TEAMS.nick(+m.spread_line>0?m.home:m.away)} by ${Math.abs(+m.spread_line)}.`:"";
-  const td=topScorers(m)[0];
-  const bullets=[COPY.biggestDriver(m), mkt, EX.statToKnow(m), td?`Most likely to score a touchdown: ${td.player} (${Math.round(td.prob*100)}%).`:""];
+  const stk=EX.statToKnow(m), bullets=[...reasonLines(m), lineVsLeo(m), /^Leo rates/.test(stk)?"":stk];   // the rating line would repeat the first reason
   const t=REVIEW&&REVIEW.three, rec=(x,lab)=>x&&(x.w+x.l)?`${lab} ${x.w}-${x.l}${x.p?"-"+x.p:""} (${x.units>0?"+":""}${(+x.units).toFixed(2)}u)`:"";
   const recLine=t?[rec(t.ml,"moneyline"),rec(t.spread,"spread")].filter(Boolean).join(", "):"";
   const n=t?(t.ml.w+t.ml.l+t.spread.w+t.spread.l):0;
   return SEO.analysisBox({ eyebrow:`Leo's analysis · ${A} vs ${H}`, headline, sub, chips, bullets,
     foot: recLine?`Leo&rsquo;s NFL calls since Nov 2: ${esc(recLine)}${n<50?`, an early read (${n} of 50)`:""}. Every call is graded in public. <a href="/nfl/results/">The record</a>`:"" });
 }
+/* The panel's reasons in numbers people know (Lynold, 2026-11-25: "this does
+   not tell me anything about the lions offense ... talk about how many points
+   the offense is scoring vs the other team"). Points from games-lite, yards
+   from the matchup file, this season before this game. */
+const n1=x=>{const r=Math.round(x*10)/10;return Number.isInteger(r)?String(r):r.toFixed(1);};
+function unitLine(m, off){
+  const def=off===m.home?m.away:m.home, O=TEAMS.nick(off), D=TEAMS.nick(def);
+  const so=EX.scoring(off,m.date), sd=EX.scoring(def,m.date);
+  const side=t=>m.sides[t===m.home?"home":"away"], ot=side(off).team_offense&&side(off).team_offense.this_season, dt=side(def).team_defense&&side(def).team_defense.this_season;
+  const yo=ot&&ot.pass_ypg!=null?Math.round(ot.pass_ypg+ot.rush_ypg):null, yd=dt&&dt.pass_ypg!=null?Math.round(dt.pass_ypg+dt.rush_ypg):null;
+  if(!so||!sd) return "";
+  return `the ${O} score ${n1(so.pf)} points${yo?` and gain ${yo} yards`:""} a game, and the ${D} allow ${n1(sd.pa)} points${yd?` and ${yd} yards`:""}`;
+}
+function reasonLines(m){
+  const g=m.leo.game, K=COPY.driverKind(m), fav=g.pick, other=fav===m.home?m.away:m.home, P=pct(g.prob);
+  const cap=t=>t?t[0].toUpperCase()+t.slice(1)+".":"";
+  if(!K) return [cap(unitLine(m,fav)), cap(unitLine(m,other))];
+  const T=TEAMS.nick(K.team), lead=K.team===fav?`Biggest reason for Leo's ${P}:`:`What keeps it close:`;
+  const R=m.ratings&&m.ratings.this_season, rt=(t,key)=>R&&R[t===m.home?"home":"away"]&&R[t===m.home?"home":"away"][key]!=null?Math.round(R[t===m.home?"home":"away"][key]):null;
+  const opp=K.team===m.home?m.away:m.home, ON=TEAMS.nick(opp);
+  if(K.k==="off_diff"){ const a=rt(K.team,"off_rating"), b=rt(opp,"def_rating");
+    return [`${lead} the ${T} offense${a!=null&&b!=null?`, rated ${a} out of 100 in Leo's model against a ${ON} defense at ${b}`:""}. ${cap(unitLine(m,K.team))}`, `On the other side, ${unitLine(m,opp)}.`]; }
+  if(K.k==="def_diff"){ const a=rt(K.team,"def_rating"), b=rt(opp,"off_rating");
+    return [`${lead} the ${T} defense${a!=null&&b!=null?`, rated ${a} out of 100 in Leo's model against a ${ON} offense at ${b}`:""}. ${cap(unitLine(m,opp))}`, `On the other side, ${unitLine(m,K.team)}.`]; }
+  if(K.k==="qb_diff"){
+    const q=t=>{const sd=m.sides[t===m.home?"home":"away"], Q=sd.this_season&&sd.this_season.qb, nm=t===m.home?m.home_qb_name:m.away_qb_name;
+      return Q&&Q.name===nm?`${nm}: ${Q.pass_yds.toLocaleString("en-US")} yards, ${Q.pass_td} ${Q.pass_td===1?"touchdown":"touchdowns"} and ${Q.ints} ${Q.ints===1?"interception":"interceptions"} in ${Q.games} games`:nm?`${nm}: no full season line yet`:"";};
+    return [`${lead} the quarterbacks. ${q(K.team)}. ${q(K.team===m.home?m.away:m.home)}.`, cap(unitLine(m,fav))];
+  }
+  return [`The teams rate close, so home field ${K.team===fav?`tips it to the ${T}`:`helps the ${T}`}.`, cap(unitLine(m,fav))];
+}
+function lineVsLeo(m){
+  const g=m.leo.game; if(g.proj_spread==null||m.spread_line==null||m.spread_line==="") return "";
+  const L=TEAMS.nick(+g.proj_spread>=0?m.home:m.away), lm=n1(Math.abs(+g.proj_spread)), sl=+m.spread_line;
+  if(sl===0) return `Leo expects the ${L} to win by ${lm}. The betting line calls it even.`;
+  const M=TEAMS.nick(sl>0?m.home:m.away), x=n1(Math.abs(sl));
+  return M===L?`Leo expects the ${L} to win by ${lm}. The betting line has them favored by ${x}.`
+    :`Leo expects the ${L} to win by ${lm}, but the betting line makes the ${M} ${x} point favorites.`;
+}
+
 const nickLabel=(m,t)=>String(t||"").replace(new RegExp(`\\b(${m.away}|${m.home})\\b`,"g"),a=>TEAMS.nick(a));
 
 function page(m){
@@ -751,7 +788,7 @@ ${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternT
   <p style="text-align:center;margin:0"><a class="wk-link" href="${weekUrl(m)}">Week ${v(m.week,"")} card &rarr;</a></p>
   ${pickBox(m)}
   ${SEO.jumpBar([m.leo&&m.leo.game?["pick","Pick"]:null,m.leo?["read","Leo's numbers"]:null,m.injuries?["injuries","Injuries"]:null,m.weather?["weather","Weather"]:null,m.ratings?["ratings","Ratings"]:null,["stats","Stats"],["h2h","Head to head"],["touchdowns","Touchdowns"],["faq","FAQ"]])}
-  ${COPY.summary(m)}
+  ${COPY.summary(m,{short:true})}
 
   ${COPY.whatHappened(m)}
 
