@@ -212,7 +212,11 @@ function renderNav(active) {
   if (!el) return;
   
   let navHtml = '<div class="nav-inner">'
-    + '<a class="brand" href="/" aria-label="Leo home"><span class="brand-leo">Leo</span></a>'
+    // New Dawn Horizon header (Lynold, 2026-11-26: "this does not feel very new dawn horizon"): the gold wolf
+    // mark beside the Leo wordmark on the First Light navy bar; no "by New Dawn Horizon" line (his choice).
+    + '<a class="brand" href="/" aria-label="Leo by New Dawn Horizon, home">'
+    + '<img class="brand-mark" src="/brand/logos/ndh-icon-gold.svg" alt="" width="34" height="34">'
+    + '<span class="brand-words"><span class="brand-leo">Leo</span></span></a>'
     + '<div class="nav-sport-selector">';
   
   // Add sport selector

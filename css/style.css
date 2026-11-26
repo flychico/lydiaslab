@@ -274,3 +274,48 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .nav-links > .navlink:not(.navlink-cta), .nav-drop { border-bottom: 1px solid var(--border); }
   .nav-links > .navlink-cta { margin-top: 12px; padding: 14px 10px; }
 }
+
+
+/* ---------- New Dawn Horizon header, First Light (Lynold, 2026-11-26) ----------
+   Night navy bar, the gold wolf beside the Leo wordmark, a dawn line along the bottom
+   edge. Gold is used as fill and for large type only (brand rule: not small text on cream). */
+nav {
+  background: #1A2535; border-bottom: 0; backdrop-filter: none;
+  box-shadow: 0 6px 24px rgba(20,29,41,.22);
+}
+nav::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  background: linear-gradient(90deg, rgba(201,168,76,0) 0%, #C9A84C 30%, #E8D49A 50%, #C9A84C 70%, rgba(201,168,76,0) 100%);
+}
+.nav-inner { height: 64px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; margin-right: 14px; color: #F5F0E8; text-decoration: none; }
+.brand:hover { text-decoration: none; }
+.brand-mark { width: 38px; height: 38px; display: block; flex: none; }
+.brand-words { display: flex; flex-direction: column; line-height: 1; }
+.brand .brand-leo { font-family: "EB Garamond", Georgia, serif; font-weight: 600; font-size: 1.75rem; letter-spacing: .01em; color: #F5F0E8; }
+.brand .brand-by { margin-top: 3px; font-size: .58rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #C9A84C; white-space: nowrap; }
+.nav-sport-selector { border-left-color: rgba(245,240,232,.18); }
+.nav-sport { background: transparent; border-color: rgba(245,240,232,.28); color: rgba(245,240,232,.82); }
+.nav-sport:hover { border-color: #C9A84C; color: #F5F0E8; }
+.nav-sport.active { background: #C9A84C; border-color: #C9A84C; color: #1A2535; font-weight: 800; }
+nav a.navlink { color: rgba(245,240,232,.80); }
+nav a.navlink:hover { color: #F5F0E8; background: rgba(245,240,232,.08); }
+nav a.navlink.active { color: #F5F0E8; background: transparent; box-shadow: inset 0 -2px 0 #C9A84C; border-radius: 0; }
+nav a.navlink-cta { background: #C9A84C; color: #1A2535; box-shadow: 0 6px 18px rgba(201,168,76,.25); }
+nav a.navlink-cta:hover { color: #1A2535; filter: brightness(1.06); }
+nav a.navlink-cta.active { background: #E8D49A; color: #1A2535; box-shadow: none; }
+.nav-toggle { color: #F5F0E8; }
+@media (max-width: 1120px) {
+  .nav-links { top: 64px; background: #1A2535; border-bottom: 2px solid #C9A84C; max-height: calc(100vh - 64px); }
+  .nav-links > .navlink:not(.navlink-cta), .nav-drop { border-bottom-color: rgba(245,240,232,.12); }
+  nav a.navlink.active { box-shadow: inset 3px 0 0 #C9A84C; padding-left: 14px; }
+  .nav-links > .navlink:not(.navlink-cta), .nav-drop > .navlink { border-radius: 0; }
+  .nav-drop-menu a { color: rgba(245,240,232,.86); border-bottom-color: rgba(245,240,232,.10); }
+  .nav-drop-menu a:hover { background: rgba(245,240,232,.06); color: #F5F0E8; }
+}
+@media (max-width: 420px) {
+  .brand-mark { width: 32px; height: 32px; }
+  .brand .brand-leo { font-size: 1.5rem; }
+  .brand .brand-by { font-size: .5rem; letter-spacing: .12em; }
+  .nav-sport-selector { margin: 0 4px; padding-left: 6px; }
+}
