@@ -169,15 +169,22 @@ function picksPost(date, existing) {
   if (existing && NOW() >= first) return existing;            // frozen at the last kickoff
   const READS = preKickoffReads(path.join(DIR, "prediction-history.csv"), date);
   const lines = [], fullLines = [], teams = [], mlCalls = [], callGames = new Set();
+  // Game-day reads only (Lynold, 2026-11-26, OD-11): an early read is never graded (it is not in prediction-history),
+  // so a picks post from it showed a price the record does not use (Lions ML +103 posted, -101 graded). A game
+  // without a saved game-day read is left out; with none at all there is no picks post yet.
+  let gameDay = 0;
   for (const g of games) {
     const reads = READS.get(g.game_id);
-    const H = reads && reads.length ? CALLS.held(reads) : CALLS.calls(g);
+    if (!reads || !reads.length) continue;
+    gameDay++;
+    const H = CALLS.held(reads);
     for (const mk of CALLS.MARKETS) {   // totals are information only (DEC-20261119-01)
       const l = callLine(mk, H[mk], g);
       if (l) { lines.push(l); fullLines.push(callLine(mk, H[mk], g, true)); callGames.add(g.game_id); if (mk !== "total") teams.push(H[mk].call);
         if (mk === "ml") mlCalls.push({ line: l, full: callLine(mk, H[mk], g, true), team: H.ml.call, p: H.ml.call === g.pick ? +g.model_prob : 1 - +g.model_prob, tip: kickUtc(date, g.kickoff) }); }
     }
   }
+  if (!gameDay) return existing || null;
   const week = games[0].week;
   const one = games.length === 1;
   const link = utm(one && games[0].game_id ? pageUrl(date, games[0]) : `${SITE}/nfl/week/${date.slice(0, 4)}-week-${week}/`, "picks", date);
