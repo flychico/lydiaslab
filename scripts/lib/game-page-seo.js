@@ -116,6 +116,49 @@ function occasion(sport, date, hhmm) {
   return "";
 }
 
+/*
+  Leo's analysis panel (Lynold, 2026-11-25: "its hard to tell where our
+  analysis is. it blends in with the page ... most readers are not going to
+  read the full website so this section needs to catch their attention").
+  One dark brand panel near the top: the verdict in a headline, the calls as
+  gold tiles, three or four short reasons, the record. Plain text in.
+  o: { id, eyebrow, headline, sub, chips: [{ label, value, note, on, result }], bullets: [], foot (html) }
+*/
+function analysisBox(o) {
+  const chip = c => `<div class="lx-chip${c.on ? " on" : ""}"><span class="lx-l">${escHtml(c.label)}</span><span class="lx-v">${escHtml(c.value)}${c.result ? ` <span class="lx-r ${c.result === "W" ? "w" : c.result === "L" ? "l" : "p"}">${c.result === "W" ? "RIGHT" : c.result === "L" ? "WRONG" : "PUSH"}</span>` : ""}</span>${c.note ? `<span class="lx-n">${escHtml(c.note)}</span>` : ""}</div>`;
+  const bl = (o.bullets || []).filter(Boolean);
+  return `<section class="lx" id="${o.id || "pick"}">
+  <p class="lx-eye">${escHtml(o.eyebrow || "Leo's analysis")}</p>
+  <h2 class="lx-h">${escHtml(o.headline)}</h2>
+  ${o.sub ? `<p class="lx-sub">${escHtml(o.sub)}</p>` : ""}
+  ${(o.chips || []).length ? `<div class="lx-chips">${o.chips.map(chip).join("")}</div>` : ""}
+  ${bl.length ? `<p class="lx-why">Why</p><ul class="lx-list">${bl.map(b => `<li>${escHtml(b)}</li>`).join("")}</ul>` : ""}
+  ${o.foot ? `<p class="lx-foot">${o.foot}</p>` : ""}
+</section>
+<style>
+.lx{background:#1A2535;color:#F5F0E8;border-radius:18px;padding:20px 20px 16px;margin:18px 0 10px;box-shadow:0 10px 28px rgba(26,37,53,.28);border-top:4px solid #C9A84C}
+.lx-eye{margin:0;font-size:.7rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#C9A84C}
+.lx .lx-h{font-size:clamp(1.35rem,4.6vw,1.75rem);line-height:1.2;margin:6px 0 4px;color:#F5F0E8;border:0;padding:0}
+.lx-sub{margin:0 0 12px;font-size:1rem;color:#E4DCCB}
+.lx-chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:4px 0 14px}
+.lx-chip{border:1px solid rgba(245,240,232,.22);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;background:rgba(245,240,232,.04)}
+.lx-chip.on{border-color:#C9A84C;background:rgba(201,168,76,.14)}
+.lx-l{font-size:.62rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#C9A84C}
+.lx-v{font-size:1.2rem;font-weight:800;color:#F5F0E8}
+.lx-chip:not(.on) .lx-v{color:#B9B2A4}
+.lx-n{font-size:.76rem;color:#CFC6B4}
+.lx-r{font-size:.62rem;font-weight:800;letter-spacing:.06em;padding:2px 7px;border-radius:999px;vertical-align:middle}
+.lx-r.w{background:#2F6E4A;color:#fff}.lx-r.l{background:#A63A2E;color:#fff}.lx-r.p{background:#5b6470;color:#fff}
+.lx-why{margin:0 0 4px;font-size:.66rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#C9A84C}
+.lx-list{margin:0 0 12px;padding:0;list-style:none}
+.lx-list li{position:relative;padding:7px 0 7px 18px;font-size:.98rem;line-height:1.5;color:#F5F0E8;border-top:1px solid rgba(245,240,232,.1)}
+.lx-list li:first-child{border-top:0}
+.lx-list li:before{content:"";position:absolute;left:2px;top:15px;width:7px;height:7px;border-radius:50%;background:#C9A84C}
+.lx-foot{margin:0;font-size:.8rem;color:#CFC6B4}
+.lx-foot a{color:#C9A84C;font-weight:700}
+</style>`;
+}
+
 /** The visible FAQ block. Plain text in, escaped here; matches the FAQPage markup from jsonLd({ faq }). */
 function faqHtml(items, heading = "Questions about this game") {
   if (!items || !items.length) return "";
@@ -222,4 +265,4 @@ function niceShort(date) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
-module.exports = { byline, withReadTime, jumpBar, occasion, etStamp, jsonLd, faqHtml, relatedLinks, easternToIso, listGames, teamLabel, nickSlug, GAME_DIR };
+module.exports = { analysisBox, byline, withReadTime, jumpBar, occasion, etStamp, jsonLd, faqHtml, relatedLinks, easternToIso, listGames, teamLabel, nickSlug, GAME_DIR };

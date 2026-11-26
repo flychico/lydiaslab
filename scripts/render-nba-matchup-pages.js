@@ -171,6 +171,40 @@ function finalBlock(g, res) {
     </ul></div>`;
 }
 
+/* Leo's analysis panel (Lynold, 2026-11-25): the verdict, the pick and the
+   reasons in one dark panel near the top, so a skimming reader finds it. */
+function analysis(g, res) {
+  const L = g.leo, NM = COPY.names(g), nm = ab => URLS.nick(ab, ab === g.home ? g.home_name : g.away_name);
+  const fav = L.p_home >= 0.5 ? g.home : g.away, p = Math.max(L.p_home, 1 - L.p_home), P = Math.round(p * 100) + "%";
+  const pk = (L.pick !== undefined) ? L.pick : PKS.pickForGame(g), cb = PKS.callBox(g), PT = PKS.pickText(g);
+  const LS = WHY.leoLine(g), lbl = c => URLS.nick(c, c === g.home ? g.home_name : g.away_name);
+  let headline, sub;
+  if (res && res.home_score != null) {
+    const W = res.home_score > res.away_score ? g.home : g.away;
+    headline = `Final: ${nm(g.away)} ${res.away_score}, ${nm(g.home)} ${res.home_score}`;
+    sub = `Leo had the ${nm(fav)} at ${P}: ${W === fav ? "right winner" : "wrong winner"}.`;
+  } else if (pk && pk.ok) { headline = `Leo Pick: ${nm(fav)} to win`; sub = `Leo gives them ${P}, at ${PKS.fmtPrice(pk.price)}. Tracked in units, not a bet.`; }
+  else if (pk && pk.early) { headline = `Leo has the ${nm(fav)} at ${P}`; sub = "Early read. Leo Picks come with the graded card, after the 5pm ET injury report on game day."; }
+  else { headline = `No pick: Leo has the ${nm(fav)} at ${P}`; sub = PT ? NM(PT.line).replace(/^No pick: [^,]*, (but )?/, "").replace(/^./, c => c.toUpperCase()) : cb.sub; }
+  const pr = res && res.pick_result && !res.pick_replay ? (res.pick_result === "win" ? "W" : res.pick_result === "loss" || res.pick_result === "lose" ? "L" : res.pick_result === "push" ? "P" : "L") : "";
+  const chips = [
+    { label: "Leo win chance", value: `${nm(fav)} ${P}`, on: false },
+    { label: "Leo spread", value: WHY.favLine(g, LS, lbl), on: false },
+    { label: "Leo Pick", value: NM(cb.value), note: NM(cb.sub), on: !!cb.on, result: pr }
+  ];
+  const w = WHY.why(g, { lostCoef: MODEL.coef && MODEL.coef.lost_d, leanPts: MODEL.lean_edge_pts });
+  const gap = NM(WHY.compare(g, MODEL.lean_edge_pts || 4) || "");
+  const plain = t => t
+    .replace(/^Team strength: (.+?) rates? ([\d.]+) pts better than (.+?) on results so far$/, "The $1 rate $2 points better than the $3 so far")
+    .replace(/^Injuries: (.+?) is missing more, ([\d.]+) pts toward (.+)$/, "The $1 are missing more players, worth $2 points to the $3")
+    .replace(/^Home court: worth ([\d.]+) pts to (.+)$/, "Home court is worth $1 points to the $2")
+    .replace(/\bpts\b/g, "points");
+  const bullets = [...(w.drivers || []).slice(0, 2).map(d => plain(NM(d.text)) + "."), gap, EX.statToKnow(g)];
+  const S = SEASON_PICKS, k = S ? S.w + S.l : 0;
+  return SEO.analysisBox({ eyebrow: `Leo's analysis · ${nm(g.away)} vs ${nm(g.home)}`, headline, sub, chips, bullets,
+    foot: S && k ? `Leo Picks since Nov 2: ${S.w}-${S.l}${S.p ? "-" + S.p : ""} (${S.units > 0 ? "+" : ""}${(+S.units).toFixed(2)}u)${k < 50 ? `, an early read (${k} of 50)` : ""}. Every pick is graded in public. <a href="/nba/results/">The record</a>` : "" });
+}
+
 function page(g, res) {
   const L = g.leo, mk = g.market || {}, H = g.home, A = g.away;
   const OCC = SEO.occasion("NBA", g.date);   // "Christmas Day" (competitor review, 2026-11-25)
@@ -252,8 +286,9 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
   ${(c => c && !g.public_at ? `<p class="moved">${esc(c.text)}</p>` : "")(RC.change(g, { nick: (a, n) => URLS.nick(a, n) }))}
   ${latestNote(g)}
 
+  ${analysis(g, res)}
   ${finalBlock(g, res)}
-  <h2 id="pick">${esc(NA)} vs ${esc(NH)} pick</h2>
+  <h2 id="numbers">${esc(NA)} vs ${esc(NH)}: Leo&rsquo;s numbers</h2>
   <div class="hdr">
     <div class="tm"><img src="${logo(A)}" alt="" onerror="this.style.visibility='hidden'"><b>${esc(g.away_name)}</b><span class="p">${pct(L.p_away)}</span><span class="dim">Leo win chance</span></div>
     <div class="mid">at</div>
@@ -267,11 +302,9 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
   ${gapTxt ? `<p class="gapread">${gapTxt}</p>` : ""}
   ${WHY.projScore(g) ? `<p class="gapread">Projected score: ${esc(NA)} ${WHY.projScore(g).away}, ${esc(NH)} ${WHY.projScore(g).home}, total ${WHY.projScore(g).total} (<a href="${HOW}#total">information only</a>).</p>` : ""}
   ${leanTxt}
-  ${(() => { const P = SEASON_PICKS, k = P ? P.w + P.l : 0; return P && k ? `<p class="gapread dim">Leo Picks since Nov 2: ${P.w}-${P.l}${P.p ? "-" + P.p : ""} (${P.units > 0 ? "+" : ""}${(+P.units).toFixed(2)}u)${k < 50 ? `, an early read (${k} of 50)` : ""}. Every pick is graded in public. <a href="/nba/results/">The record</a></p>` : ""; })()}
-  ${(st => st ? `<p class="stk"><b>Stat to know:</b> ${esc(st)}</p>` : "")(EX.statToKnow(g))}
   ${lede.length ? `<p class="lede">${lede.slice(0, lede.indexOf(null)).map(esc).join(" ")}</p><p class="lede2">${lede.slice(lede.indexOf(null) + 1).map(esc).join(" ")}</p>` : ""}
   <p style="margin:6px 0 0;font-size:.92rem">Every game this season: <a href="/nba/teams/${URLS.slugify(URLS.nick(g.away))}/">${esc(URLS.nick(g.away, g.away_name))} team page</a> &middot; <a href="/nba/teams/${URLS.slugify(URLS.nick(g.home))}/">${esc(URLS.nick(g.home, g.home_name))} team page</a></p>
-  ${SEO.jumpBar([["pick", "Pick"], res ? ["box", "Box score"] : null, ["why", "Why"], ["injuries", "Injuries"], ["stats", "Stats"], ["form", "Form"], ["players", "Players"], ["h2h", "Head to head"], ["faq", "FAQ"]])}
+  ${SEO.jumpBar([["pick", "Pick"], ["numbers", "Leo's numbers"], res ? ["box", "Box score"] : null, ["why", "Why"], ["injuries", "Injuries"], ["stats", "Stats"], ["form", "Form"], ["players", "Players"], ["h2h", "Head to head"], ["faq", "FAQ"]])}
   ${boxBlock(g, res)}
   ${whyBlock(g)}
   ${partsTable(g)}

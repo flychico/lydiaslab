@@ -509,31 +509,41 @@ function venueKind(m){
 const REVIEW=(()=>{try{return JSON.parse(fs.readFileSync(path.join(ROOT,"data/nfl/results-review.json"),"utf8"));}catch(e){return null;}})();
 function pickBox(m){
   const g=m.leo&&m.leo.game; if(!g) return "";
-  const C=g.calls, F=m.final_report, A=TEAMS.nick(m.away), H=TEAMS.nick(m.home);
+  const C=g.calls, F=m.final_report, A=TEAMS.nick(m.away), H=TEAMS.nick(m.home), P=TEAMS.nick(g.pick);
+  const done=F&&F.away_score!=null;
   const res=(key,c)=>{
-    if(!c||!c.call||!F||F.away_score==null) return "";
-    const hs=F.home_score, as=F.away_score; let r="";
-    if(key==="ml") r=hs===as?"P":((hs>as?m.home:m.away)===c.call?"W":"L");
-    if(key==="spread"){const l=+g.spread_line,mg=hs-as;r=mg===l?"P":((c.call===m.home)===(mg>l)?"W":"L");}
-    return r==="W"?' <span class="ok">RIGHT</span>':r==="L"?' <span class="no">WRONG</span>':r==="P"?" PUSH":"";
+    if(!c||!c.call||!done) return "";
+    const hs=F.home_score, as=F.away_score;
+    if(key==="ml") return hs===as?"P":((hs>as?m.home:m.away)===c.call?"W":"L");
+    const l=+g.spread_line,mg=hs-as; return mg===l?"P":((c.call===m.home)===(mg>l)?"W":"L");
   };
-  const box=(label,c,key,ctx)=>!c?"":`<div class="box${c.call?" call":" pass"}"><span class="lbl">${label}</span><span class="val">${c.call?esc(c.label):"No call"}${res(key,c)}</span><span class="lbl2">${esc(c.call?ctx:c.pass)}</span></div>`;
+  const anyCall=C&&((C.ml&&C.ml.call)||(C.spread&&C.spread.call));
+  const margin=g.proj_spread!=null?Math.abs(+g.proj_spread).toFixed(1):null;
+  let headline, sub;
+  if(done){
+    const W=F.home_score>F.away_score?m.home:F.away_score>F.home_score?m.away:null;
+    headline=`Final: ${A} ${F.away_score}, ${H} ${F.home_score}`;
+    sub=`Leo had the ${P} at ${pct(g.prob)}${W?(W===g.pick?": right winner.":": wrong winner."):"."}`;
+  } else if(anyCall){
+    headline=`Leo likes the ${P}`;
+    sub=`${pct(g.prob)} to win${margin?`, by about ${margin} points`:""}.${m.leo.early?" Early read; it updates until kickoff.":""}`;
+  } else {
+    headline=`No call: Leo has the ${P} at ${pct(g.prob)}`;
+    sub=`Not far enough from the line for a call.${m.leo.early?" Early read; it updates until kickoff.":""}`;
+  }
+  const chip=(label,c,key)=>!c?null:{label,value:c.call?nickLabel(m,c.label):"No call",note:c.call?"":String(c.short||c.pass||""),on:!!c.call,result:res(key,c)};
+  const chips=[{label:"Leo win chance",value:`${P} ${pct(g.prob)}`,note:margin?`by about ${margin} points`:"",on:false},chip("Moneyline",C&&C.ml,"ml"),chip("Spread",C&&C.spread,"spread")].filter(Boolean);
+  const mkt=(g.proj_spread!=null&&m.spread_line!=null&&+m.spread_line!==0)
+    ?`Leo has the ${P} by ${margin}; the posted spread has the ${TEAMS.nick(+m.spread_line>0?m.home:m.away)} by ${Math.abs(+m.spread_line)}.`:"";
+  const td=topScorers(m)[0];
+  const bullets=[COPY.biggestDriver(m), mkt, EX.statToKnow(m), td?`Most likely to score a touchdown: ${td.player} (${Math.round(td.prob*100)}%).`:""];
   const t=REVIEW&&REVIEW.three, rec=(x,lab)=>x&&(x.w+x.l)?`${lab} ${x.w}-${x.l}${x.p?"-"+x.p:""} (${x.units>0?"+":""}${(+x.units).toFixed(2)}u)`:"";
   const recLine=t?[rec(t.ml,"moneyline"),rec(t.spread,"spread")].filter(Boolean).join(", "):"";
   const n=t?(t.ml.w+t.ml.l+t.spread.w+t.spread.l):0;
-  const stat=EX.statToKnow(m);
-  return `
-  <section class="pickbox" id="pick">
-    <h2 class="sec" style="margin-top:18px">${esc(A)} vs ${esc(H)} pick</h2>
-    <p class="sub">Leo gives the <b>${esc(TEAMS.nick(g.pick))}</b> a <b>${pct(g.prob)}</b> chance to win${g.proj_spread!=null?`, by about ${Math.abs(+g.proj_spread).toFixed(1)} points`:""}.${m.leo.early?" Early read; it updates until kickoff.":""}</p>
-    ${C?`<div class="leo-grid calls">
-      ${box("Moneyline",C.ml,"ml",`Leo gives ${TEAMS.nick(g.pick)} ${pct(g.prob)}`)}
-      ${box("Spread",C.spread,"spread",`Leo ${fav(m,g.proj_spread)}`)}
-    </div>`:""}
-    ${recLine?`<p class="sub" style="margin:0">Leo&rsquo;s NFL calls since Nov 2: ${esc(recLine)}${n<50?`, an early read (${n} of 50)`:""}. Every call is graded in public. <a href="/nfl/results/">The record</a></p>`:""}
-    ${stat?`<p class="stk"><b>Stat to know:</b> ${esc(stat)}</p>`:""}
-  </section>`;
+  return SEO.analysisBox({ eyebrow:`Leo's analysis · ${A} vs ${H}`, headline, sub, chips, bullets,
+    foot: recLine?`Leo&rsquo;s NFL calls since Nov 2: ${esc(recLine)}${n<50?`, an early read (${n} of 50)`:""}. Every call is graded in public. <a href="/nfl/results/">The record</a>`:"" });
 }
+const nickLabel=(m,t)=>String(t||"").replace(new RegExp(`\\b(${m.away}|${m.home})\\b`,"g"),a=>TEAMS.nick(a));
 
 function page(m){
   const A=m.sides.away, H=m.sides.home;
@@ -741,10 +751,11 @@ ${SEO.jsonLd({sport:"NFL",url:m.url,title,description:desc,startIso:SEO.easternT
   <p style="text-align:center;margin:0"><a class="wk-link" href="${weekUrl(m)}">Week ${v(m.week,"")} card &rarr;</a></p>
   ${pickBox(m)}
   ${SEO.jumpBar([m.leo&&m.leo.game?["pick","Pick"]:null,m.leo?["read","Leo's numbers"]:null,m.injuries?["injuries","Injuries"]:null,m.weather?["weather","Weather"]:null,m.ratings?["ratings","Ratings"]:null,["stats","Stats"],["h2h","Head to head"],["touchdowns","Touchdowns"],["faq","FAQ"]])}
-  ${isThanksgivingWeek(m.season || 2026, m.week) ? signupBox(m) : ""}
   ${COPY.summary(m)}
 
   ${COPY.whatHappened(m)}
+
+  ${isThanksgivingWeek(m.season || 2026, m.week) ? signupBox(m) : ""}
 
   <p class="dim" style="text-align:center;margin:6px 0 0">${m.leo&&m.leo.early?"Early read, frozen at kickoff.":"Frozen before kickoff."} <a href="/nfl/how-leo-works/">How Leo works</a></p>
 
