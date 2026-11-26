@@ -192,17 +192,49 @@ function analysis(g, res) {
     { label: "Leo spread", value: WHY.favLine(g, LS, lbl), on: false },
     { label: "Leo Pick", value: NM(cb.value), note: NM(cb.sub), on: !!cb.on, result: pr }
   ];
-  const w = WHY.why(g, { lostCoef: MODEL.coef && MODEL.coef.lost_d, leanPts: MODEL.lean_edge_pts });
-  const gap = NM(WHY.compare(g, MODEL.lean_edge_pts || 4) || "");
-  const plain = t => t
-    .replace(/^Team strength: (.+?) rates? ([\d.]+) pts better than (.+?) on results so far$/, "The $1 rate $2 points better than the $3 so far")
-    .replace(/^Injuries: (.+?) is missing more, ([\d.]+) pts toward (.+)$/, "The $1 are missing more players, worth $2 points to the $3")
-    .replace(/^Home court: worth ([\d.]+) pts to (.+)$/, "Home court is worth $1 points to the $2")
-    .replace(/\bpts\b/g, "points");
-  const bullets = [...(w.drivers || []).slice(0, 2).map(d => plain(NM(d.text)) + "."), gap, EX.statToKnow(g)];
+  const bullets = nbaReasons(g, fav, P);
   const S = SEASON_PICKS, k = S ? S.w + S.l : 0;
   return SEO.analysisBox({ eyebrow: `Leo's analysis · ${nm(g.away)} vs ${nm(g.home)}`, headline, sub, chips, bullets,
     foot: S && k ? `Leo Picks since Nov 2: ${S.w}-${S.l}${S.p ? "-" + S.p : ""} (${S.units > 0 ? "+" : ""}${(+S.units).toFixed(2)}u)${k < 50 ? `, an early read (${k} of 50)` : ""}. Every pick is graded in public. <a href="/nba/results/">The record</a>` : "" });
+}
+
+/* The panel's reasons in numbers people know (Lynold, 2026-11-25, "same
+   treatment" as NFL): points scored and allowed, the injured player's own
+   scoring, Leo's margin against the betting line. No "pts better on results". */
+const r1 = x => { const v = Math.round(x * 10) / 10; return Number.isInteger(v) ? String(v) : v.toFixed(1); };
+function seasonPpg(team, name, date) {
+  const p = PLOG.find(x => x.team === team && x.name === name); if (!p) return null;
+  const g = p.log.filter(l => l[0] < date && l[3] != null && l[2] > 0);
+  return g.length ? { ppg: r1(g.reduce((s, l) => s + l[3], 0) / g.length), games: g.length } : null;
+}
+function nbaReasons(g, fav, P) {
+  const L = g.leo, nm = ab => URLS.nick(ab, ab === g.home ? g.home_name : g.away_name), other = fav === g.home ? g.away : g.home;
+  const sideOf = ab => ab === g.home ? "home" : "away", F = ab => g.context && g.context[sideOf(ab)] && g.context[sideOf(ab)].form;
+  const scoreLine = ab => { const f = F(ab); return f && f.ppg != null ? `the ${nm(ab)} score ${r1(f.ppg)} points a game and allow ${r1(f.opp_ppg)} (${f.wins}-${f.losses})` : ""; };
+  const injury = ab => {
+    const out = ((L.missing || {})[sideOf(ab)] || []).filter(x => x.status === "out").sort((a, b) => b.value - a.value)[0];
+    if (!out) return "";
+    const s = seasonPpg(ab, out.name, g.date);
+    return `${out.name} is out for the ${nm(ab)}${out.detail ? ` (${out.detail.toLowerCase().replace(/\s*not specified$/, "")})` : ""}${s ? `; he averages ${s.ppg} points in ${s.games} ${s.games === 1 ? "game" : "games"} this season` : "; he has not played this season"}`;
+  };
+  const cap = t => t ? t[0].toUpperCase() + t.slice(1) + "." : "";
+  const w = WHY.why(g, { lostCoef: MODEL.coef && MODEL.coef.lost_d, leanPts: MODEL.lean_edge_pts });
+  const top = (w.drivers || [])[0], key = top && top.key, helps = top && top.team === fav;
+  const lead = helps === false ? "What keeps it close:" : Math.max(L.p_home, 1 - L.p_home) < 0.53 ? "Leo's biggest factor:" : `Biggest reason for Leo's ${P}:`;
+  const out = [];
+  if (key === "ratings") out.push(`${lead} the ${nm(top.team)} have been the better team, by about ${r1(Math.abs(top.pts))} points a game in Leo's ratings. ${cap(scoreLine(top.team))}`, cap(scoreLine(top.team === g.home ? g.away : g.home)));
+  else if (key === "missing_players") { const hurt = top.team === g.home ? g.away : g.home; out.push(`${lead} injuries. ${cap(injury(hurt)) || `The ${nm(hurt)} are missing more players.`}`, cap(scoreLine(fav))); }
+  else if (key === "home_court") out.push(`The teams rate close, so home court ${helps ? `tips it to the ${nm(top.team)}` : `helps the ${nm(top.team)}`}.`, cap(scoreLine(fav)));
+  else if (key === "back_to_back" || key === "rest") { const ra = EX.restOf(g.away, g.date).rest, rh = EX.restOf(g.home, g.date).rest;
+    out.push(`${lead} rest. The ${nm(g.away)} had ${ra} ${ra === 1 ? "day" : "days"} off and the ${nm(g.home)} ${rh}${ra === 0 || rh === 0 ? `, so the ${nm(ra === 0 ? g.away : g.home)} play the second night of a back to back` : ""}.`, cap(scoreLine(fav))); }
+  else out.push(cap(scoreLine(fav)), cap(scoreLine(other)));
+  if (key !== "missing_players") { const inj = injury(g.home) || injury(g.away); if (inj && out.length < 3) out.push(cap(inj)); }
+  const ms = g.market && g.market.home_spread, LSv = WHY.leoLine(g), lm = r1(Math.abs(LSv == null ? L.home_margin : LSv)), LT = nm((LSv == null ? -L.home_margin : LSv) <= 0 ? g.home : g.away);
+  out.push(ms == null || ms === "" ? `Leo expects the ${LT} to win by ${lm}. No betting line yet.`
+    : +ms === 0 ? `Leo expects the ${LT} to win by ${lm}. The betting line calls it even.`
+    : (MT => MT === LT ? `Leo expects the ${LT} to win by ${lm}. The betting line has them favored by ${r1(Math.abs(+ms))}.` : `Leo expects the ${LT} to win by ${lm}, but the betting line makes the ${MT} ${r1(Math.abs(+ms))} point favorites.`)(nm(+ms < 0 ? g.home : g.away)));
+  const st = EX.statToKnow(g); if (st && out.length < 4) out.push(st);
+  return out.filter(Boolean).slice(0, 4);
 }
 
 function page(g, res) {
@@ -245,7 +277,7 @@ function page(g, res) {
 .tm img{width:58px;height:58px;object-fit:contain}
 .tm b{font-size:.95rem}.tm .p{font-size:1.5rem;font-weight:800}
 .mid{text-align:center;font-size:.8rem;color:var(--text-dim)}
-.boxes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.boxes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .box{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:11px 12px}
 .box .l{font-size:.64rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim)}
 .box .v{font-size:1.15rem;font-weight:800;margin-top:3px}.box .s{font-size:.76rem;color:var(--text-dim)}
@@ -273,7 +305,7 @@ ul.inj,ul.last5{margin:6px 0 0;padding-left:18px;font-size:.86rem;line-height:1.
 .nfl-signup{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;align-items:center;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin:26px 0 6px;box-shadow:var(--shadow-sm)}
 .nfl-signup p{margin:4px 0 0;color:var(--text-dim);font-size:.86rem}
 .nfl-signup form{display:flex;gap:8px}.nfl-signup input[type=email]{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--border);border-radius:10px}
-@media(max-width:700px){.two,.nfl-signup{grid-template-columns:1fr}.boxes{grid-template-columns:1fr 1fr}.box:last-child{grid-column:1/-1}}
+@media(max-width:700px){.two,.nfl-signup{grid-template-columns:1fr}.boxes{grid-template-columns:1fr 1fr}}
 </style>
 ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,title,description:desc,startIso:g.tip_utc?new Date(g.tip_utc).toISOString().replace(".000Z","Z"):null,homeName:g.home_name,awayName:g.away_name,venue:g.venue,completed:!!(g.completed||res),modified:g.public_at||GEN||undefined,faq:FAQ})}
 </head>
@@ -297,11 +329,9 @@ ${require("./lib/game-page-seo").jsonLd({sport:"NBA",url:`/nba/${slug(g)}/`,titl
   <div class="boxes">
     <div class="box"><div class="l">Leo spread</div><div class="v">${esc(require("./lib/nba-why").favLine(g, LS, lbl))}</div><div class="s">Leo&rsquo;s favorite, by</div></div>
     <div class="box"><div class="l">DraftKings</div><div class="v">${mk.home_spread == null ? "&mdash;" : esc(require("./lib/nba-why").favLine(g, mk.home_spread, lbl))}</div><div class="s">Moneyline ${esc(NA)} ${am(mk.away_ml)}, ${esc(NH)} ${am(mk.home_ml)}</div></div>
-    <div class="box"><div class="l">Call</div><div class="v">${esc(NM(PKS.callBox(g).value))}</div><div class="s">${esc(NM(PKS.callBox(g).sub))}</div></div>
   </div>
-  ${gapTxt ? `<p class="gapread">${gapTxt}</p>` : ""}
   ${WHY.projScore(g) ? `<p class="gapread">Projected score: ${esc(NA)} ${WHY.projScore(g).away}, ${esc(NH)} ${WHY.projScore(g).home}, total ${WHY.projScore(g).total} (<a href="${HOW}#total">information only</a>).</p>` : ""}
-  ${leanTxt}
+  ${!g.completed && SW.line(g) ? `<p class="gapread"><b>${esc(SW.line(g))}</b></p>` : ""}
   ${lede.length ? `<p class="lede">${lede.slice(0, lede.indexOf(null)).map(esc).join(" ")}</p><p class="lede2">${lede.slice(lede.indexOf(null) + 1).map(esc).join(" ")}</p>` : ""}
   <p style="margin:6px 0 0;font-size:.92rem">Every game this season: <a href="/nba/teams/${URLS.slugify(URLS.nick(g.away))}/">${esc(URLS.nick(g.away, g.away_name))} team page</a> &middot; <a href="/nba/teams/${URLS.slugify(URLS.nick(g.home))}/">${esc(URLS.nick(g.home, g.home_name))} team page</a></p>
   ${SEO.jumpBar([["pick", "Pick"], ["numbers", "Leo's numbers"], res ? ["box", "Box score"] : null, ["why", "Why"], ["injuries", "Injuries"], ["stats", "Stats"], ["form", "Form"], ["players", "Players"], ["h2h", "Head to head"], ["faq", "FAQ"]])}
