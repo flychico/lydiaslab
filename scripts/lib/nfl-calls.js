@@ -45,6 +45,11 @@ const RULES = {
   // the spread call is made once, from the first read on or after the week's Tuesday, and graded at that
   // read's line. Rows carry it as spread_lock_* fields (scripts/lib/nfl-spread-lock.js).
   SPREAD_LOCK_FROM: "2026-11-25",
+  // From Week 13 (games from 2026-12-03; Lynold, 2026-11-26, DEC-20261126-11: "Switch to agreement now"):
+  // a spread call when Leo's margin is within 1 point of the line, on Leo's side of it (exactly on the line:
+  // the team his win chance favours). 1 point or more off the line is no call. Still made from Tuesday's read.
+  SPREAD_AGREE_FROM: "2026-12-03",
+  SPREAD_AGREE_MAX: 1.0,
   TOTAL_FLOOR: 1.5,
   TOTAL_CAP: 7.0,
   TOTAL_CALLS: false       // DEC-20261119-01: totals are information only
@@ -76,7 +81,7 @@ function calls(g) {
   else out.ml = { call: g.pick, team: g.pick, prob, price, label: `${g.pick} ${am(price)}` };
 
   // ---- spread ---------------------------------------------------------------
-  const lockOn = String(g.date || "") >= RULES.SPREAD_LOCK_FROM;
+  const lockOn = !g._plain && String(g.date || "") >= RULES.SPREAD_LOCK_FROM;   // _plain: the rule itself, for the Tuesday lock
   const lst = g.spread_lock_status || (g.spread_lock && g.spread_lock.status) || "";
   if (lockOn) {
     const lLine = num(g.spread_lock_line), lSide = g.spread_lock_side || null;
@@ -94,7 +99,13 @@ function calls(g) {
     const side = gap > 0 ? home : away;
     const marginWinner = margin > 0 ? home : margin < 0 ? away : null;
     const v2 = String(g.date || "") >= RULES.SPREAD_V2_FROM;
-    if (v2) {
+    const agree = String(g.date || "") >= RULES.SPREAD_AGREE_FROM;
+    if (agree) {
+      const aside = gap > 0 ? home : gap < 0 ? away : (g.pick || (margin >= 0 ? home : away));
+      if (Math.abs(gap) >= RULES.SPREAD_AGREE_MAX) out.spread = { call: null, gap: r1(gap), pass: `Leo ${r1(Math.abs(gap))} points off the line; spread calls need Leo within ${RULES.SPREAD_AGREE_MAX} point of it`, short: "too far from the line" };
+      else out.spread = { call: aside, gap: r1(gap), line: teamLine(aside, home, sLine), label: `${aside} ${teamLine(aside, home, sLine)}` };
+    }
+    else if (v2) {
       if (Math.abs(gap) < RULES.SPREAD_V2_FLOOR) out.spread = { call: null, gap: r1(gap), pass: `Leo within ${RULES.SPREAD_V2_FLOOR} points of the line`, short: "too close to the line" };
       else if (g.pick && side !== g.pick) out.spread = { call: null, gap: r1(gap), pass: `Leo's margin points to ${side}, his win chance to ${g.pick}`, short: "models disagree" };
       else out.spread = { call: side, gap: r1(gap), line: teamLine(side, home, sLine), label: `${side} ${teamLine(side, home, sLine)}` };

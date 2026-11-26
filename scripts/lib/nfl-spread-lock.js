@@ -59,7 +59,8 @@ function apply(dir, picks, opts = {}) {
     let g = L.games[p.game_id];
     if (!g && !started && today >= weekTuesday(p.date) && num(p.spread_line) != null && num(p.exp_margin) != null) {
       // The call the rule makes on this read (calls() with no lock fields and a pre-lock date gives the plain rule).
-      const plain = CALLS.calls({ ...p, date: "2026-11-22", spread_lock_status: undefined }).spread;
+      // From Week 13 the agreement rule applies (DEC-20261126-11): _plain asks for the rule on the game's own date.
+      const plain = CALLS.calls(String(p.date) >= CALLS.RULES.SPREAD_AGREE_FROM ? { ...p, _plain: true, spread_lock_status: undefined } : { ...p, date: "2026-11-22", spread_lock_status: undefined }).spread;
       g = L.games[p.game_id] = {
         matchup: p.matchup, away: p.away, home: p.home, date: p.date,
         status: plain.call ? "locked" : "none", side: plain.call || null, line: num(p.spread_line),
