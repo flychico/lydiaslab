@@ -33,11 +33,11 @@ function readsPost({ sport, emoji, dayTitle, games, link, tags, now }) {
   if (!games.length) return null;
   const rows = games.map(g => ({ g, f: fav(g) })).sort((a, b) => b.f.p - a.f.p);
   const lines = rows.map(({ f }) => `${f.team} over ${f.opp} (${pct(f.p)})`);
-  const title = sport === "nfl" ? `WHO LEO HAS THIS WEEK ${emoji}` : `WHO LEO HAS TONIGHT ${emoji}`;   // hype voice, fits 280 (Nov 21)
+  const title = sport === "nfl" ? `${dayTitle ? dayTitle + ": " : ""}WHO LEO HAS ${emoji}` : `WHO LEO HAS TONIGHT ${emoji}`;   // the slate's name, not "this week" (Nov 26)
   const short = rows.map(({ f }) => `${f.team} ${pct(f.p)}`);
   return { id: "reads", kind: "reads", hero: "Leo's reads", created_at: now, tip_utc: games.map(g => g.tip).sort()[0],
     header: title, lines, record: "", facts: [], hashtags: tags(rows.slice(0, 3).map(r => r.f.code)),
-    text: compose(title, null, short, link, tags(rows.slice(0, 1).map(r => r.f.code))), link };
+    text: compose(title, null, short, link, tags(rows.map(r => r.f.code))), link };   // all teams: one team's tag only on a one-team post (Nov 26)
 }
 
 function upsetPost({ emoji, dayTitle, games, link, tags, now }) {
@@ -50,7 +50,7 @@ function upsetPost({ emoji, dayTitle, games, link, tags, now }) {
   const title = `UPSET WATCH 🚨`;
   const codes = [...dogs, ...flips].map(g => fav(g).code);
   return { id: "upset", kind: "reads", hero: "Upset watch", note: sub, created_at: now, tip_utc: [...dogs, ...flips].map(g => g.tip).sort()[0],
-    header: title, lines, record: "", facts: [], hashtags: tags(codes), text: compose(title, sub, short, link, tags(codes.slice(0, 1))), link };
+    header: title, lines, record: "", facts: [], hashtags: tags(codes), text: compose(title, sub, short, link, tags(codes)), link };
 }
 
 /** Up to n spotlight posts: the strongest matchup, then the closest games, skipping upset-watch games. */

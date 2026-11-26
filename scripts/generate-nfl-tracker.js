@@ -207,7 +207,7 @@ function main() {
   const lines = { spread: [], total: [] };
   for (const r of gameRows) {
     // held_earlier_read: a call kept from an earlier read before kickoff (DEC-20261115-53).
-    if (!lines[r.market] || (r.status !== "frozen" && r.status !== "held_earlier_read")) continue;
+    if (!lines[r.market] || !["frozen", "held_earlier_read", "tuesday_lock"].includes(r.status)) continue;
     const leo = n(r.leo_value), mkt = n(r.market_value), act = n(r.actual_value);
     if (leo == null || act == null) continue;
     lines[r.market].push({

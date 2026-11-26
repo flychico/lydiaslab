@@ -75,8 +75,9 @@ const doc = readJson(file, null) || { sport: "nba", date: DATE, posts: [] };
 const has = id => doc.posts.some(p => p.id === id);
 
 function hashtags(codes) {
-  const out = [TAGS.picks_tag || "#NBAPicks"];
-  for (const c of codes) { const t = (TAGS.teams[c] || {}).primary; if (t && !out.includes(t) && out.length < 2) out.push(t); }   // the sport tag and one team (Nov 21: four looked like spam)
+  // A team tag only when the post is about one team (Lynold, 2026-11-26: a five-team post carried one team's tag).
+  const out = [TAGS.picks_tag || "#NBAPicks"], uniq = [...new Set((codes || []).filter(Boolean))];
+  if (uniq.length === 1) { const t = (TAGS.teams[uniq[0]] || {}).primary; if (t) out.push(t); }
   return out;
 }
 // Same shape as the NFL posts (Lynold, NFL chat 2026-11-16): header, plain record, lines with

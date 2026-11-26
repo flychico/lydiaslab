@@ -69,14 +69,31 @@ function parseCsv(text) {
 
 // ---------- hashtags ----------
 const TAGS = readJson(path.join(OUT, "hashtags.json")) || { sport_tag: "#NFLPicks", teams: {} };
+// Lynold, 2026-11-26: a post about five teams carried one team's tag (#DallasCowboys on the QB
+// matchups post). A team tag only when the post is about one team; a post about several teams gets
+// the slate's tag instead (#Thanksgiving, #TNF, #MNF, #SNF) or the sport tag alone. Two tags at most (Nov 21).
+let SLATE_TAG = "";
 function hashtags(teams) {
   const out = [TAGS.sport_tag || "#NFLPicks"];
-  for (const t of teams) {
-    const h = TAGS.teams[t] && TAGS.teams[t].primary;
-    if (h && !out.includes(h)) out.push(h);
-    if (out.length >= 2) break;   // sport tag and one team (Nov 21)
-  }
+  const uniq = [...new Set((teams || []).filter(Boolean))];
+  if (uniq.length === 1) { const h = TAGS.teams[uniq[0]] && TAGS.teams[uniq[0]].primary; if (h) out.push(h); }
+  else if (uniq.length > 1 && SLATE_TAG) out.push(SLATE_TAG);
   return out;
+}
+const SEO = require("./lib/game-page-seo");
+// The slate's name from its first kickoff (Lynold, 2026-11-26: a 1pm Thanksgiving game was posted as
+// "THURSDAY NIGHT NUKE"). Thanksgiving, Black Friday, Christmas, Thursday/Sunday/Monday Night Football.
+const OCC_TITLE = { "Thanksgiving": ["THANKSGIVING", "Thanksgiving", "#Thanksgiving"], "Black Friday": ["BLACK FRIDAY", "Black Friday", ""],
+  "Christmas Day": ["CHRISTMAS", "Christmas", "#Christmas"], "Thursday Night Football": ["THURSDAY NIGHT", "Thursday night", "#TNF"],
+  "Monday Night Football": ["MONDAY NIGHT", "Monday night", "#MNF"], "Sunday Night Football": ["SUNDAY NIGHT", "Sunday night", "#SNF"] };
+function slateOcc(date) {
+  const picks = readJson(path.join(DIR, `picks-${date}.json`)) || [];
+  const first = picks.map(g => g.kickoff).filter(Boolean).sort()[0];
+  const occ = SEO.occasion("NFL", date, first);
+  const day = new Date(date + "T12:00:00Z").getUTCDay();
+  if (occ === "Thursday Night Football" && !(Number(String(first).split(":")[0]) >= 19)) return null;   // a Thursday day game is not "night"
+  if (occ === "Sunday Night Football" && picks.length > 1) return null;   // a full Sunday slate is the week
+  return OCC_TITLE[occ] || (day === 6 ? ["SATURDAY", "Saturday", ""] : null);
 }
 
 // ---------- Leo's top anytime touchdown chances, last capture before kickoff ----------
@@ -98,21 +115,19 @@ const pct = p => Math.round(p * 100);
 // ---------- picks post ----------
 function callLine(mk, c, g) {
   if (!c || !c.call) return null;
-  if (mk === "ml") return `${nick(c.call)} ML${Number.isFinite(+c.price) && c.price !== "" && c.price != null ? " " + (+c.price > 0 ? "+" : "") + Math.round(+c.price) : ""}`;   // price shown (HO-0092; Lynold, Nov 20 "Keep prices")
+  // held() returns the price on its row, not on the call (the price fell off the Thanksgiving post on Nov 26).
+  const price = c.price != null && c.price !== "" ? c.price : c.row && c.row.price;
+  if (mk === "ml") return `${nick(c.call)} ML${Number.isFinite(+price) && price !== "" && price != null ? " " + (+price > 0 ? "+" : "") + Math.round(+price) : ""}`;   // price shown (HO-0092; Lynold, Nov 20 "Keep prices")
   if (mk === "spread") return `${nick(c.call)} ${String(c.label).split(" ").slice(1).join(" ")}`;
   return `${nick(g.away)}/${nick(g.home)} ${c.label}`;
 }
 function slateHeader(date, week) {
-  const day = new Date(date + "T12:00:00Z").getUTCDay();
-  if (day === 1) return "Monday night 🏈";
-  if (day === 4) return "Thursday night 🏈";
-  return `Week ${week} 🏈`;
+  const o = slateOcc(date);
+  return o ? `${o[1]} 🏈` : `Week ${week} 🏈`;
 }
 function cheatTitle(date, week) {
-  const day = new Date(date + "T12:00:00Z").getUTCDay();
-  if (day === 1) return "MONDAY NIGHT";
-  if (day === 4) return "THURSDAY NIGHT";
-  return `NFL WEEK ${week}`;
+  const o = slateOcc(date);
+  return o ? o[0] : `NFL WEEK ${week}`;
 }
 // Lynold, 2026-11-18: no "21+", no "Every call graded, misses included", more human, less bot.
 const bare = link => String(link).replace(/^https?:\/\//, "");
@@ -136,12 +151,12 @@ function picksPost(date, existing) {
         if (mk === "ml") mlCalls.push({ line: l, team: H.ml.call, p: H.ml.call === g.pick ? +g.model_prob : 1 - +g.model_prob, tip: kickUtc(date, g.kickoff) }); }
     }
   }
-  const td = tdReads(date).slice(0, 3).map(r => `${r.player} ${pct(r.chance)}% to score`);
+  const td = tdReads(date).slice(0, 3).map(r => `${r.player} ${pct(r.chance)}%`);   // the heading already says "to score" (Nov 26)
   const week = games[0].week;
   const one = games.length === 1;
   const link = utm(one && games[0].game_id ? pageUrl(date, games[0]) : `${SITE}/nfl/week/${date.slice(0, 4)}-week-${week}/`, "picks", date);
   const header = slateHeader(date, week);
-  const tags = hashtags([...teams, ...games.flatMap(g => [g.home, g.away])]);
+  const tags = hashtags(teams.length ? teams : games.flatMap(g => [g.home, g.away]));   // the picked teams (Nov 26)
   // Lynold, Nov 16: "what would Leo do?"; Nov 18: plain, no 21+.
   // Cheat sheet look (Lynold, Nov 20): "NFL WEEK 12 CHEAT SHEET 🏈", "What would Leo do?", one bullet per call.
   // Hype voice (Lynold, Nov 20, DEC-20261120-05): one call is the NUKE, two or more the cheat sheet,
@@ -359,8 +374,8 @@ function qbFactsPost(date) {
   facts.sort((a, b) => b.score - a.score);
   const top = facts.slice(0, 6);
   const lines = top.map(f => `${f.qb} ${f.w}-${f.l} vs ${nick(f.opp)}`);
-  const week = picks[0].week, title = `QB MATCHUPS THIS WEEK 🤯`;
-  const tags = hashtags(top.slice(0, 1).map(f => f.team));
+  const week = picks[0].week, title = `${cheatTitle(date, week)} QB MATCHUPS 🤯`;   // was "QB MATCHUPS THIS WEEK" on a Thanksgiving slate (Nov 26)
+  const tags = hashtags(top.map(f => f.team));
   const last = q => String(q).split(" ").filter(w => !/^(jr\.?|sr\.?|ii|iii|iv)$/i.test(w)).pop();
   const link = utm(`${SITE}/nfl/previews/`, "picks", date);
   return { id: "qbfacts", kind: "reads", hero: "QB matchups", note: "Starting QBs vs this opponent", created_at: new Date(NOW()).toISOString(),
@@ -402,6 +417,7 @@ function statOfDay(date, week, rvGames) {
 // ---------- main ----------
 function build(date) {
   const file = path.join(OUT, `${date}.json`);
+  SLATE_TAG = (slateOcc(date) || [])[2] || "";
   const doc = readJson(file) || { sport: "NFL", date, posts: [] };
   const has = id => doc.posts.find(p => p.id === id);
   const set = post => { if (!post) return; const i = doc.posts.findIndex(p => p.id === post.id); if (i >= 0) doc.posts[i] = post; else doc.posts.push(post); };
@@ -415,7 +431,9 @@ function build(date) {
   if (!has("qbfacts") && has("reads")) { const q = qbFactsPost(date); if (q) { set(q); changed = true; } }
   // Strongest moneyline call as its own nuke post when there are 2+ calls (label only, graded at 1 unit).
   const pkNow = has("picks");
-  if (pkNow && (pkNow.n_calls || 0) >= 2 && (pkNow.ml_calls || []).length) {
+  // No nuke when every call is on one team: the cheat sheet already says it (Nov 26, Lions ML and Lions +2.5).
+  const oneTeam = pkNow && new Set((pkNow.lines || []).map(l => String(l).split(" ")[0])).size <= 1;
+  if (pkNow && !oneTeam && (pkNow.n_calls || 0) >= 2 && (pkNow.ml_calls || []).length) {
     const top = pkNow.ml_calls.slice().sort((a, b) => b.p - a.p)[0];
     const np = EX.nukePost({ title: `${cheatTitle(date, (readJson(path.join(DIR, `picks-${date}.json`)) || [{}])[0].week)} NUKE ☢️`, line: top.line,
       link: utm(`${SITE}/nfl/week/${date.slice(0, 4)}-week-${(readJson(path.join(DIR, `picks-${date}.json`)) || [{}])[0].week}/`, "nuke", date), tags: hashtags([top.team]), now: new Date(NOW()).toISOString(), tip: top.tip });
