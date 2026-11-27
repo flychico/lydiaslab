@@ -1,9 +1,8 @@
 {
  "date": "2026-11-27",
- "early": true,
- "generated_at": "2026-11-27T17:48:07.041Z",
+ "generated_at": "2026-11-27T22:32:31.563Z",
  "model_version": "leo-nba-v2",
- "injuries_as_of": "2026-11-27T17:48:04Z",
+ "injuries_as_of": "2026-11-27T22:32:23Z",
  "data_through": "2026-11-25",
  "games_rated": 270,
  "lean_edge_pts": 4,
@@ -24,13 +23,13 @@
    "neutral": false,
    "venue": "Madison Square Garden",
    "market": {
-    "provider": "DraftKings",
+    "provider": "Draft Kings",
     "home_spread": -2.5,
     "home_ml": -155,
     "away_ml": 130,
     "total": 222.5,
-    "home_spread_odds": -115,
-    "away_spread_odds": -105,
+    "home_spread_odds": -112,
+    "away_spread_odds": -108,
     "p_home": 0.5829926410466066
    },
    "model_version": "leo-nba-v2",
@@ -146,7 +145,7 @@
        "ppg": 6.8,
        "rpg": 1.2,
        "apg": 1,
-       "status": "day-to-day"
+       "status": "out"
       },
       {
        "name": "Andre Drummond",
@@ -160,6 +159,21 @@
      ],
      "injuries": [
       {
+       "name": "Miles McBride",
+       "status": "out",
+       "detail": "Groin Soreness"
+      },
+      {
+       "name": "OG Anunoby",
+       "status": "out",
+       "detail": "Calf Soreness"
+      },
+      {
+       "name": "Jordan Clarkson",
+       "status": "out",
+       "detail": "Foot Plantar Fasciitis"
+      },
+      {
        "name": "Karl-Anthony Towns",
        "status": "day-to-day",
        "detail": "Abdomen Bruise"
@@ -168,21 +182,6 @@
        "name": "Andre Drummond",
        "status": "out",
        "detail": "Concussion Not Specified"
-      },
-      {
-       "name": "Miles McBride",
-       "status": "day-to-day",
-       "detail": "Groin Soreness"
-      },
-      {
-       "name": "Jordan Clarkson",
-       "status": "out",
-       "detail": "Foot Plantar Fasciitis"
-      },
-      {
-       "name": "OG Anunoby",
-       "status": "out",
-       "detail": "Calf Soreness"
       }
      ]
     },
@@ -319,10 +318,10 @@
     }
    },
    "leo": {
-    "home_margin": 2.6,
+    "home_margin": 2.3,
     "home_spread": -2.5,
-    "p_home": 0.573,
-    "p_away": 0.427,
+    "p_home": 0.567,
+    "p_away": 0.433,
     "rating": {
      "home": 3.8,
      "away": 2.1,
@@ -357,6 +356,15 @@
        "detail": "Calf Soreness"
       },
       {
+       "name": "Miles McBride",
+       "id": "4431823",
+       "mpg": 14.6,
+       "value": 1.6,
+       "weight": 1,
+       "status": "out",
+       "detail": "Groin Soreness"
+      },
+      {
        "name": "Andre Drummond",
        "id": "6585",
        "mpg": 14.2,
@@ -364,15 +372,6 @@
        "weight": 1,
        "status": "out",
        "detail": "Concussion Not Specified"
-      },
-      {
-       "name": "Miles McBride",
-       "id": "4431823",
-       "mpg": 14.6,
-       "value": 1.6,
-       "weight": 0.4,
-       "status": "day-to-day",
-       "detail": "Groin Soreness"
       }
      ],
      "away": [
@@ -388,28 +387,86 @@
      ]
     },
     "lost": {
-     "home": 12,
+     "home": 13,
      "away": 7.7
     },
-    "edge_pts": 0.1,
+    "edge_pts": -0.2,
     "lean": null,
     "parts": {
      "home_court": 1.7,
      "ratings": 1.8,
      "back_to_back": 0,
      "rest": 0,
-     "missing_players": -1
+     "missing_players": -1.2
     },
     "projected": {
      "total": 226,
      "home": 114,
      "away": 112
     },
-    "pick": {
-     "early": true
-    }
+    "pick": null,
+    "depends": [
+     {
+      "if": "plays",
+      "scope": "player",
+      "team": "NY",
+      "players": [
+       {
+        "name": "Karl-Anthony Towns",
+        "status": "day-to-day",
+        "detail": "Abdomen Bruise",
+        "value": 15.4,
+        "weight": 0.4
+       }
+      ],
+      "before": {
+       "ok": false,
+       "side": null,
+       "p": null,
+       "price": null
+      },
+      "after": {
+       "ok": true,
+       "side": "home",
+       "p": 0.6048,
+       "price": -155,
+       "p_team": 0.6048
+      },
+      "home_margin": 3.69,
+      "text": "Depends on Karl-Anthony Towns (day-to-day, abdomen bruise). If he plays, Leo moves to 60% on the Knicks at -155 and this is a Leo Pick."
+     },
+     {
+      "if": "sits",
+      "scope": "player",
+      "team": "MIA",
+      "players": [
+       {
+        "name": "Giannis Antetokounmpo",
+        "status": "day-to-day",
+        "detail": "Groin",
+        "value": 19.2,
+        "weight": 0.4
+       }
+      ],
+      "before": {
+       "ok": false,
+       "side": null,
+       "p": null,
+       "price": null
+      },
+      "after": {
+       "ok": true,
+       "side": "home",
+       "p": 0.6379,
+       "price": -155,
+       "p_team": 0.6379
+      },
+      "home_margin": 4.9,
+      "text": "Depends on Giannis Antetokounmpo (day-to-day, groin). If he sits, Leo moves to 64% on the Knicks at -155 and this is a Leo Pick."
+     }
+    ]
    },
-   "early": true,
+   "public_at": "2026-11-27T22:32:31.563Z",
    "url": "/nba/heat-vs-knicks-prediction-odds-2026-11-27/"
   },
   {
@@ -428,13 +485,13 @@
    "neutral": false,
    "venue": "Little Caesars Arena",
    "market": {
-    "provider": "DraftKings",
-    "home_spread": -10.5,
+    "provider": "Draft Kings",
+    "home_spread": -9.5,
     "home_ml": -452,
     "away_ml": 351,
     "total": 219.5,
-    "home_spread_odds": -108,
-    "away_spread_odds": -112,
+    "home_spread_odds": -117,
+    "away_spread_odds": -103,
     "p_home": 0.7869153683430353
    },
    "model_version": "leo-nba-v2",
@@ -713,14 +770,20 @@
        "status": ""
       }
      ],
-     "injuries": []
+     "injuries": [
+      {
+       "name": "Kasparas Jakucionis",
+       "status": "out",
+       "detail": "Ankle"
+      }
+     ]
     }
    },
    "leo": {
-    "home_margin": 10.2,
-    "home_spread": -10.5,
-    "p_home": 0.768,
-    "p_away": 0.232,
+    "home_margin": 11.2,
+    "home_spread": -11,
+    "p_home": 0.79,
+    "p_away": 0.21,
     "rating": {
      "home": 3.5,
      "away": -7.8,
@@ -755,31 +818,46 @@
        "detail": "Quadriceps Strain"
       }
      ],
-     "away": []
+     "away": [
+      {
+       "name": "Kasparas Jakucionis",
+       "id": "5214640",
+       "mpg": 13.7,
+       "value": 4.4,
+       "weight": 1,
+       "status": "out",
+       "detail": "Ankle"
+      }
+     ]
     },
     "lost": {
      "home": 16.8,
-     "away": 0
+     "away": 4.4
     },
-    "edge_pts": -0.3,
+    "edge_pts": 1.7,
     "lean": null,
     "parts": {
      "home_court": 1.7,
      "ratings": 12.1,
      "back_to_back": 0,
      "rest": 0.1,
-     "missing_players": -3.8
+     "missing_players": -2.8
     },
     "projected": {
      "total": 223,
-     "home": 116,
+     "home": 117,
      "away": 106
     },
     "pick": {
-     "early": true
+     "side": "home",
+     "team": "DET",
+     "p": 0.79,
+     "price": -452,
+     "ok": false,
+     "why": "priced -452, -230 or dearer"
     }
    },
-   "early": true,
+   "public_at": "2026-11-27T22:32:31.563Z",
    "url": "/nba/bucks-vs-pistons-prediction-odds-2026-11-27/"
   },
   {
@@ -798,11 +876,11 @@
    "neutral": false,
    "venue": "Gainbridge Fieldhouse",
    "market": {
-    "provider": "DraftKings",
+    "provider": "Draft Kings",
     "home_spread": 3.5,
     "home_ml": 142,
     "away_ml": -170,
-    "total": 230.5,
+    "total": 228.5,
     "home_spread_odds": -112,
     "away_spread_odds": -108,
     "p_home": 0.3962430290578221
@@ -934,6 +1012,11 @@
      ],
      "injuries": [
       {
+       "name": "Larry Nance Jr.",
+       "status": "day-to-day",
+       "detail": "Ankle Soreness"
+      },
+      {
        "name": "Tyrese Haliburton",
        "status": "out",
        "detail": "Hamstring Strain"
@@ -942,11 +1025,6 @@
        "name": "Kelly Oubre Jr.",
        "status": "day-to-day",
        "detail": "Hand"
-      },
-      {
-       "name": "Larry Nance Jr.",
-       "status": "day-to-day",
-       "detail": "Ankle Soreness"
       },
       {
        "name": "T.J. McConnell",
@@ -1198,11 +1276,54 @@
      "home": 113,
      "away": 116
     },
-    "pick": {
-     "early": true
-    }
+    "pick": null,
+    "depends": [
+     {
+      "if": "sits",
+      "scope": "team",
+      "team": "IND",
+      "players": [
+       {
+        "name": "Kelly Oubre Jr.",
+        "status": "day-to-day",
+        "detail": "Hand",
+        "value": 4.9,
+        "weight": 0.4
+       },
+       {
+        "name": "T.J. McConnell",
+        "status": "day-to-day",
+        "detail": "Hamstring",
+        "value": 3.7,
+        "weight": 0.4
+       },
+       {
+        "name": "Larry Nance Jr.",
+        "status": "day-to-day",
+        "detail": "Ankle Soreness",
+        "value": 2.3,
+        "weight": 0.4
+       }
+      ],
+      "before": {
+       "ok": false,
+       "side": null,
+       "p": null,
+       "price": null
+      },
+      "after": {
+       "ok": true,
+       "side": "away",
+       "p": 0.61,
+       "price": -170,
+       "p_team": 0.61
+      },
+      "home_margin": -3.87,
+      "text": "Depends on Kelly Oubre Jr. and T.J. McConnell and Larry Nance Jr.. If they all sit, Leo moves to 61% on the 76ers at -170 and this is a Leo Pick."
+     }
+    ]
    },
-   "early": true,
+   "public_at": "2026-11-27T22:32:31.563Z",
    "url": "/nba/76ers-vs-pacers-prediction-odds-2026-11-27/"
   },
   {
@@ -1221,14 +1342,14 @@
    "neutral": false,
    "venue": "Scotiabank Arena",
    "market": {
-    "provider": "DraftKings",
+    "provider": "Draft Kings",
     "home_spread": -9.5,
-    "home_ml": -375,
-    "away_ml": 298,
+    "home_ml": -374,
+    "away_ml": 297,
     "total": 219.5,
     "home_spread_odds": -108,
     "away_spread_odds": -112,
-    "p_home": 0.758576874205845
+    "p_home": 0.7580126405211407
    },
    "model_version": "leo-nba-v2",
    "context": {
@@ -1594,10 +1715,15 @@
      "away": 107
     },
     "pick": {
-     "early": true
+     "side": "home",
+     "team": "TOR",
+     "p": 0.786,
+     "price": -374,
+     "ok": false,
+     "why": "priced -374, -230 or dearer"
     }
    },
-   "early": true,
+   "public_at": "2026-11-27T22:32:31.563Z",
    "url": "/nba/nets-vs-raptors-prediction-odds-2026-11-27/"
   },
   {
@@ -1616,14 +1742,14 @@
    "neutral": false,
    "venue": "TD Garden",
    "market": {
-    "provider": "DraftKings",
+    "provider": "Draft Kings",
     "home_spread": -8.5,
-    "home_ml": -359,
-    "away_ml": 286,
-    "total": 222.5,
-    "home_spread_odds": -110,
-    "away_spread_odds": -110,
-    "p_home": 0.7511844487570064
+    "home_ml": -378,
+    "away_ml": 300,
+    "total": 223.5,
+    "home_spread_odds": -118,
+    "away_spread_odds": -103,
+    "p_home": 0.7597989949748744
    },
    "model_version": "leo-nba-v2",
    "context": {
@@ -1980,10 +2106,15 @@
      "away": 107
     },
     "pick": {
-     "early": true
+     "side": "home",
+     "team": "BOS",
+     "p": 0.684,
+     "price": -378,
+     "ok": false,
+     "why": "priced -378, -230 or dearer"
     }
    },
-   "early": true,
+   "public_at": "2026-11-27T22:32:31.563Z",
    "url": "/nba/hawks-vs-celtics-prediction-odds-2026-11-27/"
   },
   {
@@ -2002,14 +2133,14 @@
    "neutral": false,
    "venue": "Target Center",
    "market": {
-    "provider": "DraftKings",
-    "home_spread": -3.5,
-    "home_ml": -180,
-    "away_ml": 151,
-    "total": 222.5,
-    "home_spread_odds": -117,
-    "away_spread_odds": -103,
-    "p_home": 0.617381798305548
+    "provider": "Draft Kings",
+    "home_spread": -2.5,
+    "home_ml": -155,
+    "away_ml": 130,
+    "total": 220.5,
+    "home_spread_odds": -118,
+    "away_spread_odds": -102,
+    "p_home": 0.5829926410466066
    },
    "model_version": "leo-nba-v2",
    "context": {
@@ -2115,7 +2246,7 @@
        "ppg": 17.3,
        "rpg": 4.4,
        "apg": 5.7,
-       "status": "day-to-day"
+       "status": "out"
       },
       {
        "name": "Terrence Shannon Jr.",
@@ -2139,7 +2270,7 @@
      "injuries": [
       {
        "name": "LaMelo Ball",
-       "status": "day-to-day",
+       "status": "out",
        "detail": "Ankle"
       },
       {
@@ -2322,10 +2453,10 @@
     }
    },
    "leo": {
-    "home_margin": 6.1,
-    "home_spread": -6,
-    "p_home": 0.671,
-    "p_away": 0.329,
+    "home_margin": 5.4,
+    "home_spread": -5,
+    "p_home": 0.652,
+    "p_away": 0.348,
     "rating": {
      "home": 6,
      "away": 2.1,
@@ -2355,8 +2486,8 @@
        "id": "4432816",
        "mpg": 30.1,
        "value": 5.3,
-       "weight": 0.4,
-       "status": "day-to-day",
+       "weight": 1,
+       "status": "out",
        "detail": "Ankle"
       },
       {
@@ -2427,28 +2558,33 @@
      ]
     },
     "lost": {
-     "home": 18.3,
+     "home": 21.5,
      "away": 19.3
     },
-    "edge_pts": 2.6,
+    "edge_pts": 2.9,
     "lean": null,
     "parts": {
      "home_court": 1.7,
      "ratings": 4.2,
      "back_to_back": 0,
      "rest": 0,
-     "missing_players": 0.2
+     "missing_players": -0.5
     },
     "projected": {
      "total": 227,
      "home": 116,
-     "away": 110
+     "away": 111
     },
     "pick": {
-     "early": true
+     "side": "home",
+     "team": "MIN",
+     "p": 0.652,
+     "price": -155,
+     "ok": true,
+     "why": ""
     }
    },
-   "early": true,
+   "public_at": "2026-11-27T22:32:31.563Z",
    "url": "/nba/grizzlies-vs-timberwolves-prediction-odds-2026-11-27/"
   },
   {
@@ -2467,14 +2603,14 @@
    "neutral": false,
    "venue": "Mortgage Matchup Center",
    "market": {
-    "provider": "DraftKings",
-    "home_spread": -1.5,
-    "home_ml": -121,
-    "away_ml": 103,
-    "total": 226.5,
-    "home_spread_odds": -115,
-    "away_spread_odds": -105,
-    "p_home": 0.5263913593210895
+    "provider": "Draft Kings",
+    "home_spread": -3.5,
+    "home_ml": -155,
+    "away_ml": 130,
+    "total": 225.5,
+    "home_spread_odds": -106,
+    "away_spread_odds": -114,
+    "p_home": 0.5829926410466066
    },
    "model_version": "leo-nba-v2",
    "context": {
@@ -2675,7 +2811,7 @@
        "ppg": 21.3,
        "rpg": 3.7,
        "apg": 4.7,
-       "status": ""
+       "status": "day-to-day"
       },
       {
        "name": "P.J. Washington",
@@ -2734,6 +2870,11 @@
      ],
      "injuries": [
       {
+       "name": "Kyrie Irving",
+       "status": "day-to-day",
+       "detail": "Knee Not Specified"
+      },
+      {
        "name": "Tobi Lawal",
        "status": "out",
        "detail": "Groin Strain"
@@ -2757,10 +2898,10 @@
     }
    },
    "leo": {
-    "home_margin": 1.4,
-    "home_spread": -1.5,
-    "p_home": 0.541,
-    "p_away": 0.459,
+    "home_margin": 2.3,
+    "home_spread": -2.5,
+    "p_home": 0.565,
+    "p_away": 0.435,
     "rating": {
      "home": -0.3,
      "away": 0.1,
@@ -2778,6 +2919,15 @@
      "home": [],
      "away": [
       {
+       "name": "Kyrie Irving",
+       "id": "6442",
+       "mpg": 32,
+       "value": 9.1,
+       "weight": 0.4,
+       "status": "day-to-day",
+       "detail": "Knee Not Specified"
+      },
+      {
        "name": "Sergio de Larrea",
        "id": "5279129",
        "mpg": 11.8,
@@ -2790,27 +2940,56 @@
     },
     "lost": {
      "home": 0,
-     "away": 1
+     "away": 4.7
     },
-    "edge_pts": -0.1,
+    "edge_pts": -1.2,
     "lean": null,
     "parts": {
      "home_court": 1.7,
      "ratings": -0.4,
      "back_to_back": 0,
      "rest": -0.1,
-     "missing_players": 0.2
+     "missing_players": 1
     },
     "projected": {
      "total": 226,
      "home": 114,
-     "away": 113
+     "away": 112
     },
-    "pick": {
-     "early": true
-    }
+    "pick": null,
+    "depends": [
+     {
+      "if": "sits",
+      "scope": "player",
+      "team": "DAL",
+      "players": [
+       {
+        "name": "Kyrie Irving",
+        "status": "day-to-day",
+        "detail": "Knee Not Specified",
+        "value": 9.1,
+        "weight": 0.4
+       }
+      ],
+      "before": {
+       "ok": false,
+       "side": null,
+       "p": null,
+       "price": null
+      },
+      "after": {
+       "ok": true,
+       "side": "home",
+       "p": 0.6004,
+       "price": -155,
+       "p_team": 0.6004
+      },
+      "home_margin": 3.53,
+      "text": "Depends on Kyrie Irving (day-to-day, knee not specified). If he sits, Leo moves to 60% on the Suns at -155 and this is a Leo Pick."
+     }
+    ]
    },
-   "early": true,
+   "public_at": "2026-11-27T22:32:31.563Z",
    "url": "/nba/mavericks-vs-suns-prediction-odds-2026-11-27/"
   },
   {
@@ -2829,14 +3008,14 @@
    "neutral": false,
    "venue": "Frost Bank Center",
    "market": {
-    "provider": "DraftKings",
-    "home_spread": -6.5,
-    "home_ml": -224,
-    "away_ml": 186,
-    "total": 225.5,
-    "home_spread_odds": -104,
-    "away_spread_odds": -116,
-    "p_home": 0.6641234035495107
+    "provider": "Draft Kings",
+    "home_spread": -5.5,
+    "home_ml": -217,
+    "away_ml": 180,
+    "total": 226.5,
+    "home_spread_odds": -118,
+    "away_spread_odds": -102,
+    "p_home": 0.6571490374215877
    },
    "model_version": "leo-nba-v2",
    "context": {
@@ -3052,7 +3231,7 @@
        "ppg": 24.7,
        "rpg": 3.3,
        "apg": 4.7,
-       "status": "out"
+       "status": ""
       },
       {
        "name": "Walker Kessler",
@@ -3109,20 +3288,14 @@
        "status": ""
       }
      ],
-     "injuries": [
-      {
-       "name": "Austin Reaves",
-       "status": "out",
-       "detail": "Heel Bruise"
-      }
-     ]
+     "injuries": []
     }
    },
    "leo": {
-    "home_margin": 7.9,
-    "home_spread": -7.5,
-    "p_home": 0.716,
-    "p_away": 0.284,
+    "home_margin": 5.7,
+    "home_spread": -5.5,
+    "p_home": 0.658,
+    "p_away": 0.342,
     "rating": {
      "home": 9.4,
      "away": 3.1,
@@ -3157,41 +3330,36 @@
        "detail": "Lower Leg Bruise"
       }
      ],
-     "away": [
-      {
-       "name": "Austin Reaves",
-       "id": "4066457",
-       "mpg": 35.3,
-       "value": 10.1,
-       "weight": 1,
-       "status": "out",
-       "detail": "Heel Bruise"
-      }
-     ]
+     "away": []
     },
     "lost": {
      "home": 11.2,
-     "away": 10.1
+     "away": 0
     },
-    "edge_pts": 1.4,
+    "edge_pts": 0.2,
     "lean": null,
     "parts": {
      "home_court": 1.7,
      "ratings": 6.7,
      "back_to_back": 0,
      "rest": -0.3,
-     "missing_players": -0.2
+     "missing_players": -2.5
     },
     "projected": {
      "total": 229,
-     "home": 118,
-     "away": 110
+     "home": 117,
+     "away": 111
     },
     "pick": {
-     "early": true
+     "side": "home",
+     "team": "SA",
+     "p": 0.658,
+     "price": -217,
+     "ok": true,
+     "why": ""
     }
    },
-   "early": true,
+   "public_at": "2026-11-27T22:32:31.563Z",
    "url": "/nba/lakers-vs-spurs-prediction-odds-2026-11-27/"
   },
   {
@@ -3210,14 +3378,14 @@
    "neutral": false,
    "venue": "Delta Center",
    "market": {
-    "provider": "DraftKings",
+    "provider": "Draft Kings",
     "home_spread": 9.5,
-    "home_ml": 361,
-    "away_ml": -468,
-    "total": 229.5,
+    "home_ml": 322,
+    "away_ml": -410,
+    "total": 232.5,
     "home_spread_odds": -105,
     "away_spread_odds": -116,
-    "p_home": 0.20840365733742314
+    "p_home": 0.22765824479957147
    },
    "model_version": "leo-nba-v2",
    "context": {
@@ -3576,10 +3744,15 @@
      "away": 118
     },
     "pick": {
-     "early": true
+     "side": "away",
+     "team": "DEN",
+     "p": 0.722,
+     "price": -410,
+     "ok": false,
+     "why": "priced -410, -230 or dearer"
     }
    },
-   "early": true,
+   "public_at": "2026-11-27T22:32:31.563Z",
    "url": "/nba/nuggets-vs-jazz-prediction-odds-2026-11-27/"
   },
   {
@@ -3598,11 +3771,11 @@
    "neutral": false,
    "venue": "Intuit Dome",
    "market": {
-    "provider": "DraftKings",
+    "provider": "Draft Kings",
     "home_spread": -2.5,
     "home_ml": -135,
     "away_ml": 114,
-    "total": 230.5,
+    "total": 229.5,
     "home_spread_odds": -110,
     "away_spread_odds": -110,
     "p_home": 0.551441114716549
@@ -3961,10 +4134,15 @@
      "away": 115
     },
     "pick": {
-     "early": true
+     "side": "home",
+     "team": "LAC",
+     "p": 0.63,
+     "price": -135,
+     "ok": true,
+     "why": ""
     }
    },
-   "early": true,
+   "public_at": "2026-11-27T22:32:31.563Z",
    "url": "/nba/pelicans-vs-clippers-prediction-odds-2026-11-27/"
   },
   {
@@ -3983,14 +4161,14 @@
    "neutral": false,
    "venue": "Moda Center",
    "market": {
-    "provider": "DraftKings",
-    "home_spread": -9.5,
-    "home_ml": -410,
-    "away_ml": 322,
-    "total": 219.5,
+    "provider": "Draft Kings",
+    "home_spread": -7.5,
+    "home_ml": -297,
+    "away_ml": 241,
+    "total": 217.5,
     "home_spread_odds": -112,
     "away_spread_odds": -108,
-    "p_home": 0.7723417552004286
+    "p_home": 0.7183937805457628
    },
    "model_version": "leo-nba-v2",
    "context": {
@@ -4069,7 +4247,7 @@
        "ppg": 20.9,
        "rpg": 3.2,
        "apg": 4.2,
-       "status": ""
+       "status": "out"
       },
       {
        "name": "Jrue Holiday",
@@ -4118,6 +4296,11 @@
       }
      ],
      "injuries": [
+      {
+       "name": "Damian Lillard",
+       "status": "out",
+       "detail": "Calf Soreness"
+      },
       {
        "name": "Chris Youngblood",
        "status": "out",
@@ -4288,10 +4471,10 @@
     }
    },
    "leo": {
-    "home_margin": 9.3,
-    "home_spread": -9.5,
-    "p_home": 0.749,
-    "p_away": 0.251,
+    "home_margin": 7.3,
+    "home_spread": -7.5,
+    "p_home": 0.702,
+    "p_away": 0.298,
     "rating": {
      "home": 4.6,
      "away": 0,
@@ -4307,6 +4490,15 @@
     },
     "missing": {
      "home": [
+      {
+       "name": "Damian Lillard",
+       "id": "6606",
+       "mpg": 29.5,
+       "value": 8.8,
+       "weight": 1,
+       "status": "out",
+       "detail": "Calf Soreness"
+      },
       {
        "name": "Ja Morant",
        "id": "4279888",
@@ -4348,7 +4540,7 @@
      ]
     },
     "lost": {
-     "home": 5.7,
+     "home": 14.5,
      "away": 17.2
     },
     "edge_pts": -0.2,
@@ -4358,20 +4550,44 @@
      "ratings": 5,
      "back_to_back": 0,
      "rest": 0,
-     "missing_players": 2.6
+     "missing_players": 0.6
     },
     "projected": {
      "total": 224,
-     "home": 117,
-     "away": 108
+     "home": 116,
+     "away": 109
     },
     "pick": {
-     "early": true
+     "side": "home",
+     "team": "POR",
+     "p": 0.702,
+     "price": -297,
+     "ok": false,
+     "why": "priced -297, -230 or dearer"
     }
    },
-   "early": true,
+   "public_at": "2026-11-27T22:32:31.563Z",
    "url": "/nba/warriors-vs-trail-blazers-prediction-odds-2026-11-27/"
   }
  ],
- "rechecks": []
+ "rechecks": [
+  {
+   "game_id": "401909326",
+   "tip_utc": "2026-11-28T00:00:00.000Z",
+   "recheck_utc": "2026-11-27T23:20:00.000Z",
+   "player": "Karl-Anthony Towns"
+  },
+  {
+   "game_id": "401909328",
+   "tip_utc": "2026-11-28T00:30:00.000Z",
+   "recheck_utc": "2026-11-27T23:50:00.000Z",
+   "player": "Kelly Oubre Jr., T.J. McConnell, Larry Nance Jr."
+  },
+  {
+   "game_id": "401909332",
+   "tip_utc": "2026-11-28T02:00:00.000Z",
+   "recheck_utc": "2026-11-28T01:20:00.000Z",
+   "player": "Kyrie Irving"
+  }
+ ]
 }
