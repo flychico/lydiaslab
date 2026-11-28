@@ -403,6 +403,8 @@ function wireAllSignupForms(root) {
         let emailed = false;
         try { const body = await res.json(); emailed = !!(body && body.emailed); } catch (_) { /* older service: no note */ }
         try { localStorage.setItem("leo_signed_up", String(Date.now())); } catch (_) {}   // the sign-up pop up never shows again
+        // GA4 key event (Lynold, Nov 27: "Fix both"): which list and which page brought the sign up. No email or name is sent.
+        try { if (typeof gtag === "function") gtag("event", "sign_up", { method: list, signup_page: location.pathname, signup_form: form.closest(".leo-pop") ? "popup" : "page" }); } catch (_) {}
         const done = form.closest(".leo-pop");
         form.outerHTML = '<div class="small" style="color:#2f9e44;font-weight:600">' + thanks + (emailed ? ' A confirmation email is on its way.' : '') + '</div>';
         if (done) setTimeout(function () { closeSignupPopup(); }, 3500);
