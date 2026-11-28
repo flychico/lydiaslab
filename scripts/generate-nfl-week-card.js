@@ -233,10 +233,43 @@ function tdTable({ week, games }) {
   const res = r => { const s = r.m.final_report && r.m.final_report.td_scored; if (!s) return ""; return (s[r.player] || 0) > 0 ? '<span class="ok">scored</span>' : '<span class="no">no TD</span>'; };
   return `
   <details class="wk-more"><summary>Week ${esc(week)} anytime touchdown scorer predictions</summary>
-  <p class="sub">The 15 players Leo gives the best chance to score a touchdown this week, from the frozen pre-game read. Chances, not promises; each game page has its own table.</p>
+  <p class="sub">The 15 players Leo gives the best chance to score a touchdown this week, from the frozen pre-game read. Chances, not promises; each game page has its own table. <a href="/nfl/anytime-touchdowns/">Every player&rsquo;s anytime touchdown chance this week</a>.</p>
   <div class="fxw"><table class="fx"><thead><tr><th>Player</th><th>Game</th><th>Leo chance</th><th>Result</th></tr></thead><tbody>
 ${rows.map(r => `    <tr><td><b>${esc(r.player)}</b> <span class="dim">${esc(r.team)} ${esc(r.depth || "")}</span></td><td><a href="${esc(r.m.url)}">${esc(TEAMS.nick(r.m.away))} at ${esc(TEAMS.nick(r.m.home))}</a></td><td>${Math.round(r.prob * 100)}%</td><td>${res(r)}</td></tr>`).join("\n")}
   </tbody></table></div></details>`;
+}
+
+// Lynold, 2026-11-27 (five-page rewrite): a compact "at a glance" strip at the very top: Leo's highest win
+// chance, this week's moneyline and spread calls, and the top 3 anytime touchdown chances (from the same reads as
+// /nfl/anytime-touchdowns/, linked). Numbers only from the week's files; nothing new is computed.
+const CTA = require("../js/leo-cta.js");
+function tdTop3(games) {
+  try {
+    const TD = require("./build-nfl-td-page.js");
+    const days = [...new Set(games.map(m => m.date))].sort();
+    if (!days.length) return [];
+    const W = TD.collect(days[0], days[days.length - 1]).find(w => String(w.week) === String(games[0].week));
+    if (!W) return [];
+    return W.games.flatMap(g => g.players.map(p => ({ player: p.player, team: p.team, prob: p.projection })))
+      .sort((a, b) => b.prob - a.prob || a.player.localeCompare(b.player)).slice(0, 3);
+  } catch (e) { return []; }
+}
+function glance(games) {
+  const read = games.filter(m => m.leo && m.leo.game && m.leo.game.prob != null);
+  const cells = [];
+  if (read.length) {
+    const top = [...read].sort((a, b) => b.leo.game.prob - a.leo.game.prob)[0], tg = top.leo.game;
+    const opp = tg.pick === top.home ? top.away : top.home;
+    cells.push(`<div class="gl-cell"><span class="gl-k">Highest win chance</span><b>${pct(tg.prob)}</b><span><a href="${esc(top.url)}">${esc(TEAMS.nick(tg.pick))} ${tg.pick === top.home ? "vs" : "at"} ${esc(TEAMS.nick(opp))}</a></span></div>`);
+  }
+  if (games.some(m => callsOf(m))) {
+    let ml = 0, sp = 0;
+    for (const m of games) { const C = callsOf(m); if (!C) continue; if (C.ml && C.ml.call) ml++; if (C.spread && C.spread.call) sp++; }
+    cells.push(`<div class="gl-cell"><span class="gl-k">Calls this week</span><b>${ml + sp}</b><span>${ml} moneyline, ${sp} spread</span></div>`);
+  }
+  const td = tdTop3(games);
+  if (td.length) cells.push(`<div class="gl-cell gl-td"><span class="gl-k">Top touchdown chances</span><ol>${td.map(r => `<li><b>${pct(r.prob)}</b> ${esc(r.player)} <span class="dim">${esc(TEAMS.nick(r.team))}</span></li>`).join("")}</ol><a href="/nfl/anytime-touchdowns/">Every player&rsquo;s chance &rarr;</a></div>`);
+  return cells.length ? `<section class="gl" aria-label="Week at a glance">${cells.join("")}</section>` : "";
 }
 
 function slateLine(games) {
@@ -293,6 +326,17 @@ details.wk-more{margin-top:24px}details.wk-more summary{cursor:pointer;font-weig
 .nfl-signup p{margin:4px 0 0;color:var(--text-dim);font-size:.86rem}
 .nfl-signup form{display:flex;gap:8px}.nfl-signup input[type=email]{flex:1;min-width:0}
 @media (max-width:640px){.nfl-signup{grid-template-columns:1fr}.wc-list{grid-template-columns:1fr}.wc-tile{padding:8px}}
+${CTA.CSS}
+.gl{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0 16px}
+.gl-cell{background:#1A2535;color:#F5F0E8;border-radius:14px;padding:12px 14px;border-top:3px solid #C9A84C;display:flex;flex-direction:column;gap:2px;min-width:0}
+.gl-k{font-size:.68rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#C9A84C}
+.gl-cell b{font-size:1.5rem;line-height:1.1}
+.gl-cell span{font-size:.85rem;color:rgba(245,240,232,.75)}
+.gl-cell a{color:#E8CF86}
+.gl-td ol{margin:2px 0 4px;padding-left:0;list-style:none;font-size:.9rem;line-height:1.5}
+.gl-td ol b{font-size:1rem;margin-right:4px}
+.gl-td .dim{color:rgba(245,240,232,.6)}
+@media (max-width:640px){.gl{grid-template-columns:1fr 1fr}.gl-td{grid-column:1/-1}}
 </style>
 </head>
 <body>
@@ -304,6 +348,8 @@ details.wk-more{margin-top:24px}details.wk-more summary{cursor:pointer;font-weig
     <p class="subtitle">${esc(slateLine(games))}</p>
     ${early ? `<p class="wk-rec small">Games marked Early read update every morning; the last read before kickoff is the one graded.</p>` : ""}
   </section>
+  ${CTA.html()}
+  ${glance(games)}
 
   <div class="nfl-signup">
     ${isThanksgivingWeek(season, week)
@@ -323,10 +369,11 @@ ${callsSummary(games)}
 ${games.map(gameCard).join("\n")}
   </section>
 
-  <section class="card" style="margin-top:18px"><h2 class="sec" style="margin-top:0">Week ${esc(week)} at a glance</h2><p style="margin:0">${esc(intro({ week, season, games, prev }))}</p></section>
+  <section class="card" style="margin-top:18px"><h2 class="sec" style="margin-top:0">Week ${esc(week)} in short</h2><p style="margin:0">${esc(intro({ week, season, games, prev }))}</p></section>
 
 ${tdTable({ week, games })}
 
+  ${CTA.html()}
   <p class="small dim" style="margin-top:14px"><a href="/nfl/how-leo-works/">How Leo works</a>: what each number means, when it freezes and how calls are graded.</p>
   <p class="data-note">Player and team statistics from the open nflverse dataset. For entertainment and information only. 21+. If you or someone you know has a gambling problem, call 1-800-MY-RESET.</p>
 </main>
