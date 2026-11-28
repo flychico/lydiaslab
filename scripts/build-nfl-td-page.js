@@ -395,10 +395,19 @@ ${CARD_LINE}
       { "@type": "ListItem", position: 1, name: "Leo", item: ORIGIN + "/" },
       { "@type": "ListItem", position: 2, name: "NFL", item: ORIGIN + "/nfl/scoreboard/" },
       { "@type": "ListItem", position: 3, name: "Anytime touchdowns", item: ORIGIN + HUB }] }] };
-  return { url, canonical: canon, html: shell({ title, desc, url, canonical: canon, jsonld, body: SEO.withReadTime(body) }) };
+  // Share card (render-td-share.js draws it in prerender-hubs.yml): a new file name each week so X fetches it fresh.
+  const image = `/img/share/nfl-td-${W.season}-w${W.week}.png`;
+  const share = {
+    week: W.week, season: W.season, image, updated: `Updated ${new Date(NOW).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric" })}`,
+    top: best.map(p => ({ player: p.player, team: p.team, chance: p.projection, meta: `${p.position || ""} · ${TEAMS.nick(p.team)} ${matchup(p)}` }))
+  };
+  const html = shell({ title, desc, url, canonical: canon, jsonld, body: SEO.withReadTime(body), image,
+    imageAlt: `Week ${W.week} anytime touchdown odds: ${best.slice(0, 3).map(p => `${p.player} ${pct(p.projection)}`).join(", ")}`,
+    shareTitle: `Week ${W.week} anytime touchdown odds: who's most likely to score` });
+  return { url, canonical: canon, html, share };
 }
 
-function shell({ title, desc, url, canonical, jsonld, body }) {
+function shell({ title, desc, url, canonical, jsonld, body, image = "/img/leo-card.png", imageAlt = "Leo by New Dawn Horizon", shareTitle = title }) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -413,8 +422,13 @@ ${GA_HEAD}
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(desc)}">
 <meta property="og:url" content="${ORIGIN}${url}">
-<meta property="og:image" content="${ORIGIN}/img/leo-card.png">
+<meta property="og:image" content="${ORIGIN}${image}">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="${esc(imageAlt)}">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="${ORIGIN}${image}">
+<meta name="twitter:title" content="${esc(shareTitle)}">
+<meta name="twitter:description" content="${esc(desc)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="stylesheet" href="/css/style.css">
 <style>
@@ -484,6 +498,7 @@ function main() {
   const permanentOf = W => `/nfl/anytime-touchdowns/${W.season}-week-${W.week}/`;
   // This week: the earliest week with a game not yet started; else the latest week.
   const cur = weeks.find(W => W.games.some(g => Date.parse(g.ko) > NOW)) || weeks[weeks.length - 1];
+  const shares = [];
   weeks.forEach((W, i) => {
     const lastKick = Math.max(...W.games.map(g => Date.parse(g.ko)));
     const dir = path.join(ROOT, permanentOf(W));
@@ -492,6 +507,7 @@ function main() {
     if (NOW > lastKick + 3 * 864e5) return;   // finished weeks keep the page they had (or never get one if they ended before the page existed)
     const prev = i > 0 ? permanentOf(weeks[i - 1]) : null, next = i < weeks.length - 1 ? permanentOf(weeks[i + 1]) : null;
     const pg = page(W, { hub: false, prev, next, current: W === cur });
+    shares.push(pg.share);
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(file, pg.html);
     console.log(`  ${pg.url}: ${W.games.length} games, ${W.games.reduce((s, g) => s + g.players.length, 0)} players${W.games.some(g => g.source === "early") ? " (early read)" : ""}`);
@@ -500,6 +516,8 @@ function main() {
   const hub = page(cur, { hub: true, prev: ci > 0 ? permanentOf(weeks[ci - 1]) : null, next: ci < weeks.length - 1 ? permanentOf(weeks[ci + 1]) : null });
   fs.mkdirSync(path.join(ROOT, HUB), { recursive: true });
   fs.writeFileSync(path.join(ROOT, HUB, "index.html"), hub.html);
+  // Share card data for every week page built this run (the hub uses its week's card); render-td-share.js draws them.
+  fs.writeFileSync(path.join(DIR, "td-share.json"), JSON.stringify({ cards: shares }, null, 1) + "\n");
   console.log(`NFL touchdown page: ${HUB} shows Week ${cur.week}`);
 }
 
