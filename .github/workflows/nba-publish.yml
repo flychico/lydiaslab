@@ -155,6 +155,12 @@ jobs:
         continue-on-error: true
         run: node scripts/capture-nba-prop-lines.js || true
 
+      # Leo's player projections for the same games, next to the line just saved (DEC-20261126-03 step 2,
+      # Lynold, 2026-11-28). Private test: not on the site; the line is never an input.
+      - name: Prop projections (private test)
+        continue-on-error: true
+        run: node scripts/project-nba-props.js || true
+
       - name: Matchup pages
         run: |
           node scripts/render-nba-matchup-pages.js ${{ steps.d.outputs.dates }}
