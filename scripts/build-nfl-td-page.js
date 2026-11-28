@@ -34,7 +34,7 @@ const ORIGIN = "https://ndhorizon.com";
 const HUB = "/nfl/anytime-touchdowns/";
 const PICKS_FROM = "2026-12-03";
 const TOP_N = 8;   // players shown per game, highest chance first
-const NOW = Date.now();
+const NOW = Number(process.env.TD_NOW_MS) || Date.now();   // TD_NOW_MS: previews only
 const todayET = new Date(NOW).toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 const addDays = (d, n) => { const x = new Date(d + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
 const readJson = f => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch (e) { return null; } };
@@ -86,7 +86,7 @@ function marketPrice(date, player, kickIso) {
     const p = +(o.implied_prob_raw || o.implied_prob); if (!(p > 0 && p < 1)) continue;
     if (!best || t > best.t) best = { t, p };
   }
-  return best ? american(best.p) : null;
+  return best ? { price: american(best.p), p: best.p } : null;
 }
 function scored(date, player, gameId) {
   if (!GRADED) GRADED = readCsv(path.join(DIR, "nfl-props-graded.csv")).filter(r => r.market === "ANYTIME_TD");
@@ -105,13 +105,18 @@ function collect(from, to) {
     let rows = Array.isArray(gameDay) ? gameDay.filter(p => p.market === "ANYTIME_TD") : [];
     let source = "game day";
     if (!rows.length && early && early.props) { rows = early.props; source = "early"; }
+    // Game-day rows saved before td_stats existed (Thanksgiving 2026) borrow the early read's stats for the same player.
+    if (source === "game day" && early && early.props) {
+      const st = new Map(early.props.filter(p => p.td_stats).map(p => [`${p.game_id}|${norm(p.player)}`, p.td_stats]));
+      rows = rows.map(p => p.td_stats ? p : { ...p, td_stats: st.get(`${p.game_id}|${norm(p.player)}`) || null });
+    }
     if (!rows.length) continue;
     const picks = readJson(path.join(DIR, "td-picks", `${d}.json`));
     for (const m of games) {
       const ko = kickUtc(d, m.kickoff);
       const players = rows.filter(p => p.game_id === m.game_id && p.projection > 0)
         .sort((a, b) => b.projection - a.projection)
-        .map(p => ({ ...p, leo_odds: fairOdds(p.projection), market: marketPrice(d, p.player, ko), result: scored(d, p.player, m.game_id) }));
+        .map(p => { const mk = marketPrice(d, p.player, ko); return { ...p, leo_odds: fairOdds(p.projection), market: mk ? mk.price : null, market_p: mk ? mk.p : null, result: scored(d, p.player, m.game_id) }; });
       if (!players.length) continue;
       const w = m.week;
       const W = weeks.get(w) || weeks.set(w, { week: w, season: Number(String(m.game_id).slice(0, 4)) || 2026, games: [], dates: new Set() }).get(w);
@@ -165,7 +170,7 @@ function gameTable(g) {
 <td><strong>${esc(p.player)}</strong> <span class="dim">${esc(p.position || "")}, ${esc(TEAMS.nick(p.team))}</span>${res ? " " + res : ""}</td>
 <td class="num"><strong>${pct(p.projection)}</strong></td>
 <td class="num">${esc(p.leo_odds)}</td>
-<td class="num hide-sm">${p.market != null ? esc(fmtPrice(p.market)) : '<span class="dim">soon</span>'}</td>
+<td class="num hide-sm">${p.market != null ? esc(fmtPrice(p.market)) : '<span class="dim">game day</span>'}</td>
 ${hasStats ? `<td class="num">${st.games ? `${st.tds} <span class="dim">(${st.td_games} of ${st.games} games)</span>` : ""}</td>
 <td>${last5(st)}</td>
 <td class="num hide-sm">${st.games ? `${st.car_pg} car, ${st.tgt_pg} tgt` : ""}</td>
@@ -182,6 +187,60 @@ ${rows}
 </tbody></table></div>
 </section>`;
 }
+
+// Lynold, 2026-11-27 (outside review): a "Top 20 Leo chances this week" table up top, the biggest gaps between
+// Leo's chance and the market's implied chance once prices are in (numbers side by side, no "edge" or "value"
+// wording), and one line pointing to the free card email under the intro and at the bottom.
+const DAY = d => new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
+function matchup(p) {
+  const m = p.g.m, home = p.team === m.home;
+  return `${home ? "vs" : "at"} ${TEAMS.nick(home ? m.away : m.home)}, ${DAY(p.g.date)}`;
+}
+function top20Table(all) {
+  const top = all.slice().sort((a, b) => b.projection - a.projection || a.player.localeCompare(b.player)).slice(0, 20);
+  if (!top.length) return "";
+  const hasStats = top.some(p => p.td_stats && p.td_stats.games);
+  const rows = top.map((p, i) => { const st = p.td_stats || {};
+    return `<tr data-chance="${p.projection.toFixed(4)}" data-tds="${st.games ? st.tds : -1}" data-rank="${i}">
+<td class="num dim">${i + 1}</td>
+<td><strong>${esc(p.player)}</strong> <span class="dim">${esc(p.position || "")}, ${esc(TEAMS.nick(p.team))}</span><div class="dim small">${esc(matchup(p))}</div></td>
+<td class="num"><strong>${pct(p.projection)}</strong><div class="dim small">${esc(p.leo_odds)}</div></td>
+${hasStats ? `<td class="num">${st.games ? `${st.tds}<div class="dim small">in ${st.games} games</div>` : ""}</td>` : ""}
+<td class="num hide-sm">${p.market != null ? esc(fmtPrice(p.market)) : '<span class="dim">game day</span>'}</td>
+</tr>`; }).join("\n");
+  return `<section id="top20">
+<h2>Top 20 Leo chances this week</h2>
+<p class="dim small">Every game, highest chance first. Tap a heading to sort.</p>
+<div class="table-wrap"><table class="td-table td-sort">
+<thead><tr><th class="num"><button type="button" data-sort="rank">#</button></th><th>Player and game</th><th class="num"><button type="button" data-sort="chance">Leo chance</button></th>${hasStats ? '<th class="num"><button type="button" data-sort="tds">Season TDs</button></th>' : ""}<th class="num hide-sm">Market</th></tr></thead>
+<tbody>
+${rows}
+</tbody></table></div>
+<script>(function(){var t=document.currentScript.previousElementSibling.querySelector("table");if(!t)return;var b=t.tBodies[0],dir={};t.querySelectorAll("button[data-sort]").forEach(function(btn){btn.addEventListener("click",function(){var k=btn.getAttribute("data-sort"),asc=k==="rank"?true:!!dir[k];dir[k]=!asc;var rows=[].slice.call(b.rows);rows.sort(function(x,y){var a=+x.getAttribute("data-"+k),c=+y.getAttribute("data-"+k);return asc?a-c:c-a});rows.forEach(function(r){b.appendChild(r)});});});})();</script>
+</section>`;
+}
+function gapsTable(all) {
+  const priced = all.filter(p => p.market_p > 0 && p.market_p < 1);
+  if (priced.length < 3) return `<section id="market"><h2>Leo and the market, side by side</h2><p class="dim">Market prices post on game day. This table then lists the players where Leo's chance and the market's implied chance are furthest apart.</p></section>`;
+  const top = priced.map(p => ({ ...p, diff: p.projection - p.market_p })).sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff) || a.player.localeCompare(b.player)).slice(0, 5);
+  const rows = top.map(p => { const d = Math.round(p.diff * 100);
+    return `<tr>
+<td><strong>${esc(p.player)}</strong> <span class="dim">${esc(TEAMS.nick(p.team))}</span><div class="dim small">${esc(matchup(p))}</div></td>
+<td class="num"><strong>${pct(p.projection)}</strong><div class="dim small">${esc(p.leo_odds)}</div></td>
+<td class="num">${pct(p.market_p)}<div class="dim small">${esc(fmtPrice(p.market))}</div></td>
+<td class="num"><strong>${d === 0 ? "0" : `${d > 0 ? "+" : "&minus;"}${Math.abs(d)}`}</strong><div class="dim small">pts</div></td>
+</tr>`; }).join("\n");
+  return `<section id="market">
+<h2>Leo and the market, side by side</h2>
+<p class="dim small">The five players where Leo's chance and the market's implied chance are furthest apart, either way: a plus means Leo's chance is higher, a minus means it is lower. The market chance comes from the average price and includes the bookmaker's margin. Leo never uses the market's numbers.</p>
+<div class="table-wrap"><table class="td-table">
+<thead><tr><th>Player and game</th><th class="num">Leo</th><th class="num">Market</th><th class="num" style="white-space:normal">Leo minus market</th></tr></thead>
+<tbody>
+${rows}
+</tbody></table></div>
+</section>`;
+}
+const CARD_LINE = `<p class="td-next"><a href="#free-card">The final game-day numbers, including Leo's two likeliest scorers in every game, go out in the free card email before kickoff.</a></p>`;
 
 function page(W, { hub, prev, next }) {
   const permanent = `/nfl/anytime-touchdowns/${W.season}-week-${W.week}/`;
@@ -213,15 +272,18 @@ function page(W, { hub, prev, next }) {
     { q: "How does Leo work out a touchdown chance?", a: "From each player's share of his team's carries and targets, his touchdown rate this season and last, his team's scoring, the opponent's points allowed, home field and his place on the depth chart. Players listed out or doubtful are left out." },
     { q: "When does this page update?", a: "It goes up days before the games from Leo's early read and updates on game day with the final read and the market prices. After the games, each player shows whether he scored." }
   ];
-  const jump = SEO.jumpBar([["top-" + firstDate, "Leo's top 3"], ...upcoming.map(g => [g.m.slug || g.m.game_id, `${TEAMS.nick(g.m.away)} vs ${TEAMS.nick(g.m.home)}`]), played.length ? ["played", "Already played"] : null, ["faq", "FAQ"]]);
+  const jump = SEO.jumpBar([["top20", "Top 20"], ["top-" + firstDate, "Leo's top 3"], ["market", "Leo and the market"], ...upcoming.map(g => [g.m.slug || g.m.game_id, `${TEAMS.nick(g.m.away)} vs ${TEAMS.nick(g.m.home)}`]), played.length ? ["played", "Already played"] : null, ["faq", "FAQ"]]);
   const body = `
 <p class="eyebrow"><a href="/nfl/">NFL</a> · Anytime touchdowns</p>
 <h1>NFL anytime touchdown predictions, Week ${W.week}</h1>
 ${SEO.byline(updated)}
 <p class="lede">Leo's most likely touchdown scorers for Week ${W.week}: ${best.map(p => `<strong>${esc(p.player)}</strong> ${pct(p.projection)} (${esc(p.leo_odds)})`).join(", ")}. Every player below shows Leo's chance, Leo's odds, his touchdowns this season and in his last five games, and what his opponent allows to his position.${early ? " Early read: it updates on game day with the final read and the market prices." : ""}</p>
+${CARD_LINE}
 ${jump}
+${top20Table(all)}
 ${top3Box}
-${SIGNUP.box("night")}
+${gapsTable(all)}
+<div id="free-card">${SIGNUP.box("night")}</div>
 ${upcoming.map(gameTable).join("\n")}
 ${played.length ? `<h2 id="played">Already played in Week ${W.week}</h2>\n<p class="dim">Leo's read before kickoff and who scored.</p>\n${played.map(gameTable).join("\n")}` : ""}
 <section id="how">
@@ -234,6 +296,7 @@ ${played.length ? `<h2 id="played">Already played in Week ${W.week}</h2>\n<p cla
 </ul>
 </section>
 ${SEO.faqHtml(faq, `Questions about Week ${W.week} touchdowns`)}
+${CARD_LINE}
 <p class="dim">${prev ? `<a href="${prev}">Previous week</a>` : ""}${prev && next ? " · " : ""}${next ? `<a href="${next}">Next week</a>` : ""}${prev || next ? " · " : ""}<a href="/nfl/previews/">This week's picks</a> · <a href="/nfl/results/">Leo's record</a></p>`;
   const pub = { "@type": "Organization", name: "New Dawn Horizon", url: ORIGIN + "/" };
   const jsonld = { "@context": "https://schema.org", "@graph": [
@@ -272,6 +335,12 @@ ${GA_HEAD}
 .td-table .num{text-align:right;white-space:nowrap}
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .td-game{margin:26px 0}
+.td-sort th button{all:unset;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+.td-table .small{font-size:.75rem;line-height:1.3}
+.td-sort td:nth-child(2){min-width:0;white-space:normal}
+.td-table th[style]{min-width:64px}
+@media (max-width:560px){.td-sort th,.td-sort td{padding:7px 5px}.td-sort th{white-space:normal}}
+.td-next{margin:12px 0;font-weight:600}
 .td-dots{display:inline-flex;gap:3px}
 .td-dot{width:18px;height:18px;border-radius:50%;border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:.66rem;font-weight:800;color:#1A2535}
 .td-dot.y{background:#C9A84C;border-color:#C9A84C}
