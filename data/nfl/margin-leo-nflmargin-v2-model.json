@@ -1,0 +1,109 @@
+{
+ "model_version": "leo-nflmargin-v2",
+ "trained_at": "2026-11-20T05:50:01.951Z",
+ "trained_seasons": [
+  2021,
+  2025
+ ],
+ "training_rows": 1355,
+ "features": [
+  "sos_d",
+  "home",
+  "qb_diff",
+  "off_diff",
+  "def_diff",
+  "injr_all_d"
+ ],
+ "lambda": 1,
+ "intercept": 2.0112555046852223,
+ "beta": [
+  0.31136757263900317,
+  0.0008040293306924791,
+  1.3722297163025368,
+  2.056206275142528,
+  0.8847639372720034,
+  -0.7071090003997887
+ ],
+ "coefficients": {
+  "sos_d": 0.31136757263900317,
+  "home": 0.0008040293306924791,
+  "qb_diff": 1.3722297163025368,
+  "off_diff": 2.056206275142528,
+  "def_diff": 0.8847639372720034,
+  "injr_all_d": -0.7071090003997887
+ },
+ "resid_sd": 12.98,
+ "constants": {
+  "PR": 0.6,
+  "PK": 4,
+  "HCA": 2,
+  "HK": 30
+ },
+ "spread_rule": "call when Leo's margin is 1.5+ points off the line and the side covers for the team Leo's win chance favours",
+ "walk_forward": {
+  "2023": {
+   "games": 272,
+   "miss": 10.292,
+   "line_miss": 9.901,
+   "calls": "47-38",
+   "units": 4.73,
+   "win_chance_brier": 0.2324,
+   "shadow_brier": 0.2316
+  },
+  "2024": {
+   "games": 272,
+   "miss": 9.895,
+   "line_miss": 9.61,
+   "calls": "52-39",
+   "units": 8.27,
+   "win_chance_brier": 0.2087,
+   "shadow_brier": 0.2071
+  },
+  "2025": {
+   "games": 271,
+   "miss": 10.33,
+   "line_miss": 9.732,
+   "calls": "39-51",
+   "units": -15.55,
+   "win_chance_brier": 0.2313,
+   "shadow_brier": 0.2306
+  }
+ },
+ "shadow_win_chance": {
+  "note": "private, not shown or graded publicly (Lynold, Nov 20: track it privately)",
+  "features": [
+   "qb_diff",
+   "off_diff",
+   "def_diff",
+   "injr_all_d"
+  ],
+  "lambda": 10,
+  "intercept": 0.18416991473636768,
+  "beta": [
+   0.328475847809319,
+   0.379719124623982,
+   0.21138482747202675,
+   -0.12042960313143251
+  ],
+  "scaler": {
+   "mean": {
+    "qb_diff": -0.011911020002270945,
+    "off_diff": 0.011489432482737745,
+    "def_diff": -0.00601201586594846,
+    "injr_all_d": -0.05993504656475134
+   },
+   "sd": {
+    "qb_diff": 1.3624007792987765,
+    "off_diff": 1.0259727955882805,
+    "def_diff": 1.129475836607345,
+    "injr_all_d": 1.2428009862243545
+   }
+  },
+  "coefficients": {
+   "qb_diff": 0.328475847809319,
+   "off_diff": 0.379719124623982,
+   "def_diff": 0.21138482747202675,
+   "injr_all_d": -0.12042960313143251
+  }
+ }
+}

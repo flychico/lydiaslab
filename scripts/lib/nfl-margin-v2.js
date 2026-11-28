@@ -24,7 +24,7 @@
  * Pure: parsed CSV rows in, numbers out.
  */
 "use strict";
-const MODEL_VERSION = "leo-nflmargin-v2";
+const MODEL_VERSION = "leo-nflmargin-v2.1";   // v2 refit with the QB replacement prior (2026-11-27)
 const PR = 0.6, PK = 4, HCA = 2.0, HK = 30;
 const FEATURES = ["sos_d", "home", "qb_diff", "off_diff", "def_diff", "injr_all_d"];
 const n = v => { const x = Number.parseFloat(v); return Number.isFinite(x) ? x : null; };

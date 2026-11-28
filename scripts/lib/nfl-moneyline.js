@@ -20,6 +20,12 @@ const PICK_THRESHOLD = 0.60;
 const TEAM_K_GAMES = 4;
 const QB_PRIOR_DB = 160;
 const QB_CURRENT_DB = 100;
+// QB replacement prior (OD-09, DEC-20261124-08; built 2026-11-27 on Lynold's "i also like the N1 - N6"): a QB with a
+// thin or empty record is shrunk toward a replacement-level QB (the 25th percentile of last season's QBs with 100+
+// dropbacks; the 75th for interception and sack rates) instead of the league average, and a QB with no record gets
+// that replacement level. Walk-forward 2023 to 2025: margin miss better every season, Brier 0.2241 to 0.2223.
+const QB_REPL_PCT = 0.25, QB_REPL_MIN_DB = 100;
+const API_STATE = { qbPrior: (typeof process !== 'undefined' && process.env && process.env.LEO_QB_PRIOR === 'league') ? 'league' : 'replacement' };   // LEO_QB_PRIOR=league restores the old prior (backtests only)
 
 const num = v => {
   const x = Number.parseFloat(v);
@@ -122,10 +128,29 @@ function leagueQbRates(map) {
  * with no prior shrinks toward the league QB baseline. The returned `z` is the
  * model feature. `rating` is a 0-100 display translation.
  */
+function quantile(a, q) {
+  const s = a.filter(Number.isFinite).sort((x, y) => x - y);
+  if (!s.length) return 0;
+  const i = (s.length - 1) * q, lo = Math.floor(i), hi = Math.ceil(i);
+  return s[lo] + (s[hi] - s[lo]) * (i - lo);
+}
+/** Replacement-level QB rates from a season's QBs with enough dropbacks. */
+function replacementQbRates(map) {
+  const qs = [...map.values()].map(qbRates).filter(r => r.db >= QB_REPL_MIN_DB);
+  if (qs.length < 8) return null;
+  const lo = QB_REPL_PCT, hi = 1 - QB_REPL_PCT;
+  return {
+    epa_db: quantile(qs.map(r => r.epa_db), lo), cpoe: quantile(qs.map(r => r.cpoe), lo), td_rate: quantile(qs.map(r => r.td_rate), lo),
+    int_rate: quantile(qs.map(r => r.int_rate), hi), sack_rate: quantile(qs.map(r => r.sack_rate), hi)
+  };
+}
+
 function buildQbRatings(currentRows, priorRows) {
   const cur = aggregateQb(currentRows);
   const pri = aggregateQb(priorRows);
-  const league = leagueQbRates(pri.size ? pri : cur);
+  const leagueAvg = leagueQbRates(pri.size ? pri : cur);
+  const repl = API_STATE.qbPrior === 'replacement' ? replacementQbRates(pri.size ? pri : cur) : null;
+  const league = repl || leagueAvg;   // the shrink target
   const names = new Set([...cur.keys(), ...pri.keys()]);
   const raw = new Map();
 
@@ -164,15 +189,22 @@ function buildQbRatings(currentRows, priorRows) {
     sack: vals.map(x => x.sack_rate)
   };
   const out = {};
-  for (const q of vals) {
-    // This is a QB-only rating. Model-level weighting versus offense/defense/H2H
-    // is learned later by logistic regression.
-    const zz = 0.50 * z(q.epa_db, pops.epa)
+  const zOf = q => 0.50 * z(q.epa_db, pops.epa)
              + 0.20 * z(q.cpoe, pops.cpoe)
              + 0.12 * z(q.td_rate, pops.td)
              - 0.10 * z(q.int_rate, pops.int)
              - 0.08 * z(q.sack_rate, pops.sack);
+  for (const q of vals) {
+    // This is a QB-only rating. Model-level weighting versus offense/defense/H2H
+    // is learned later by logistic regression.
+    const zz = zOf(q);
     out[q.name] = { ...q, z: zz, rating: rating100(zz) };
+  }
+  // A starter with no record at all is rated as a replacement-level QB (not league average). Hidden from
+  // Object.keys so pages and lists that walk the ratings never show it.
+  if (repl) {
+    const rz = zOf(repl);
+    Object.defineProperty(out, '__replacement__', { value: { name: 'replacement level', z: rz, rating: rating100(rz) }, enumerable: false });
   }
   return out;
 }
@@ -333,8 +365,9 @@ function h2hRecord(allGames, away, home, gameday, years = 3) {
 }
 
 function featureRow({ homeTeam, awayTeam, homeQb, awayQb, qbRatings, teamRatings, h2h }) {
-  const hq = qbRatings[homeQb];
-  const aq = qbRatings[awayQb];
+  const rp = qbRatings && qbRatings.__replacement__;
+  const hq = qbRatings[homeQb] || (homeQb && rp) || null;
+  const aq = qbRatings[awayQb] || (awayQb && rp) || null;
   const ht = teamRatings[homeTeam];
   const at = teamRatings[awayTeam];
   return {
@@ -439,6 +472,7 @@ function brier(rows, probabilityKey = 'prob') {
 }
 
 const API = {
+  API_STATE, replacementQbRates,
   PICK_THRESHOLD,
   predictWeighted,
   buildQbRatings,

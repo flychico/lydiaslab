@@ -37,7 +37,7 @@ const lambda = chooseLambda(rows, CORE_FEATURES);
 const m = fitLogistic(rows, CORE_FEATURES, { lambda });
 
 const out = {
-  model_version: 'leo-nflml-v2',
+  model_version: 'leo-nflml-v2.1',   // v2 with the QB replacement prior (DEC-20261124-08)
   trained_at: new Date().toISOString(),
   trained_seasons: [START, Number(through)],
   training_rows: rows.length,

@@ -405,7 +405,7 @@ function devig(a,b){ const x=impl(a),y=impl(b); if(x==null||y==null) return [nul
     return {
       date:target, game_id:g.game_id, matchup:`${g.away_team} @ ${g.home_team}`,
       away:g.away_team, home:g.home_team, kickoff:g.gametime, stadium:g.stadium,
-      week:g.week, model_version:"leo-nflml-v2", status,
+      week:g.week, model_version:ML_MODEL.model_version || "leo-nflml-v2", status,
       // Leo Pick only above 60%. The favoured side and its probability stay
       // in pick/model_prob; ml_call says whether it counts as a pick.
       ml_call: call.status, v1_model_prob: r3(v1Home >= 0.5 ? v1Home : 1-v1Home),

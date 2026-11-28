@@ -397,8 +397,12 @@ for (const f of ["css/style.css","css/scoreboard.css"]) {
   if (!html.includes("/data/nfl/moneyline-v2-model.json")) problems.push("tuner does not load moneyline-v2-model.json");
   if (fs.existsSync(pf)) {
     const ML = require(P("scripts/lib/nfl-moneyline.js"));
-    const model = JSON.parse(fs.readFileSync(P("data/nfl/moneyline-v2-model.json"), "utf8"));
+    const live = JSON.parse(fs.readFileSync(P("data/nfl/moneyline-v2-model.json"), "utf8"));
+    // A read saved before a refit is checked against the model it was made with (the old file is kept as
+    // data/nfl/moneyline-<model_version>-model.json, e.g. leo-nflml-v2 before the Nov 27 QB prior refit).
+    const byVersion = v => { if (!v || v === live.model_version) return live; const f = P(`data/nfl/moneyline-${v}-model.json`); return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, "utf8")) : live; };
     for (const g of JSON.parse(fs.readFileSync(pf, "utf8")).filter(g => g.ml_inputs)) {
+      const model = byVersion(g.model_version);
       const home = ML.predictWeighted(model, g.ml_inputs, {});
       const pub = g.pick === g.home ? g.model_prob : 1 - g.model_prob;
       // Neutral sites carry no home field (DEC-20261120-07). Reads saved before the neutral flag was stored
