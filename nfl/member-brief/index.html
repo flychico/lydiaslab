@@ -12,164 +12,125 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Daily Member Brief — NFL | Leo</title>
+<title>NFL Member Brief: What Leo Members Get Before Every Slate | Leo</title>
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Leo">
-<meta property="og:title" content="Daily Member Brief — NFL | Leo">
-<meta property="og:description" content="Daily MLB moneyline model previews, transparent results, and research tools.">
+<meta property="og:site_name" content="New Dawn Horizon">
+<meta property="og:title" content="NFL Member Brief: What Leo Members Get Before Every Slate | Leo">
+<meta property="og:description" content="Leo's NFL member brief: every game's calls, the reasoning behind each, and the numbers Leo read, by email before every slate. See a sample game.">
 <meta property="og:url" content="https://ndhorizon.com/nfl/member-brief/">
 <meta property="og:image" content="https://ndhorizon.com/img/leo-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Daily Member Brief — NFL | Leo">
-<meta name="twitter:description" content="Daily MLB moneyline model previews, transparent results, and research tools.">
+<meta name="twitter:title" content="NFL Member Brief: What Leo Members Get Before Every Slate | Leo">
+<meta name="twitter:description" content="Leo's NFL member brief: every game's calls, the reasoning behind each, and the numbers Leo read, by email before every slate. See a sample game.">
 <meta name="twitter:image" content="https://ndhorizon.com/img/leo-card.png">
 
-<meta name="robots" content="noindex,nofollow">
+<meta name="robots" content="index,follow">
+<meta name="description" content="Leo's NFL member brief: every game's calls, the reasoning behind each, and the numbers Leo read, by email before every slate. See a sample game.">
+<link rel="canonical" href="https://ndhorizon.com/nfl/member-brief/">
 <link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/scoreboard.css">
 <style>
-.brief-card { margin-bottom:18px; padding:0; overflow:hidden; }
-.brief-head { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:13px 17px; border-bottom:1px solid var(--border); background:var(--bg-elev); }
-.brief-teams { display:flex; align-items:center; gap:9px; font-weight:800; font-size:1.02rem; }
-.brief-teams img { width:28px; height:28px; object-fit:contain; }
-.brief-when { color:var(--text-dim); font-size:.8rem; text-align:right; }
-.brief-inner { padding:15px 17px; }
-.metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(132px,1fr)); gap:10px; margin-bottom:14px; }
-.metric-box { background:var(--bg-elev); border-radius:10px; padding:10px 12px; }
-.metric-box .label { display:block; color:var(--text-dim); font-size:.66rem; font-weight:700; text-transform:uppercase; letter-spacing:.4px; margin-bottom:3px; }
-.metric-box .value { display:block; font-weight:800; font-size:1.05rem; }
-.brief-line { display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-top:1px solid var(--border); font-size:.9rem; }
-.brief-line span:first-child { color:var(--text-dim); }
-.brief-line b { font-weight:700; }
-.section-note { font-size:1.15rem; margin:26px 0 12px; }
-@media (max-width:760px){ .brief-head{flex-direction:column;align-items:flex-start;gap:6px;} .brief-when{text-align:left;} }
+h2.sec{font-size:1.15rem;margin:22px 0 8px}
+.mb-list{margin:6px 0 0;padding-left:20px;line-height:1.6}
+.sample{border:1px solid var(--border);border-radius:16px;overflow:hidden;background:var(--card,#fff);margin:18px 0}
+.sample-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;background:#1A2535;color:#F5F0E8}
+.sample-head .tag{background:#C9A84C;color:#1A2535;font-weight:800;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;padding:3px 9px;border-radius:999px}
+.sample-teams{display:flex;align-items:center;gap:9px;font-weight:800}
+.sample-teams img{width:26px;height:26px;object-fit:contain;background:#F5F0E8;border-radius:50%;padding:2px}
+.sample-when{font-size:.8rem;opacity:.75}
+.sample-body{padding:14px 16px}
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px}
+.metric-box{background:var(--bg-elev);border-radius:10px;padding:10px 12px}
+.metric-box .label{display:block;color:var(--text-dim);font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.metric-box .value{display:block;font-weight:800;font-size:1.05rem}
+.metric-box .sub{display:block;color:var(--text-dim);font-size:.8rem;margin-top:2px}
+.locked{border-top:1px dashed var(--border);margin-top:12px;padding-top:10px;color:var(--text-dim);font-size:.88rem}
+.paths{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}
+.path{border:1px solid var(--border);border-radius:16px;padding:16px;background:var(--card,#fff)}
+.path h3{margin:0 0 6px;font-size:1.05rem}
+.path p{margin:0 0 12px;color:var(--text-dim);font-size:.92rem;line-height:1.5}
+.path .btn-go{display:inline-block;font-weight:800;padding:10px 16px;border-radius:999px;text-decoration:none}
+.path.free .btn-go{border:2px solid #1A2535;color:#1A2535}
+.path.member{border-color:#C9A84C;box-shadow:0 0 0 1px #C9A84C inset}
+.path.member .btn-go{background:#1A2535;color:#F5F0E8}
+@media (max-width:760px){.paths{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <nav id="nav"></nav>
 <main class="scoreboard-shell">
   <section class="score-hero">
-    <p class="eyebrow">Your morning read on the card.</p>
-    <h1>Daily Member Brief — NFL</h1>
-    <p class="subtitle">Every game on the slate with the market read, the projected total, and the Leo player projections that matter most, in one pass.</p>
-    <div class="score-hero-chips">
-      <span class="hero-chip">&#127944; Full slate</span>
-      <span class="hero-chip">&#128200; Market and model</span>
-      <span class="hero-chip">&#129514; Key projections</span>
-    </div>
+    <p class="eyebrow">For Leo Members</p>
+    <h1>The NFL member brief</h1>
+    <p class="subtitle">Before every slate, members get one email with every game on it: Leo&rsquo;s calls, why Leo has the number, and the numbers Leo read.</p>
+  </section>
+  <div data-leo-cta></div>
+
+  <h2 class="sec">What is in the brief</h2>
+  <ul class="mb-list">
+    <li>Leo&rsquo;s moneyline and spread calls for every game, or no call with the reason.</li>
+    <li>Why Leo has the winner at his number, split into home field, quarterback, offense and defense, in plain words.</li>
+    <li>Leo&rsquo;s number beside the line and the gap between them.</li>
+    <li>The starting quarterbacks Leo read and who is listed out or doubtful.</li>
+    <li>The season ratings behind the number and the time of the read.</li>
+    <li>The morning after: every call graded with units, each miss with its reason.</li>
+  </ul>
+
+  <section class="sample" id="sample" aria-label="Sample game">
+    <div class="sample-head"><span class="sample-teams">Loading a sample game&hellip;</span><span class="tag">Sample</span></div>
   </section>
 
-  <section class="kpis" id="kpis" aria-label="Brief summary"></section>
-  <div id="status" class="loading">Loading the NFL brief&hellip;</div>
-  <h2 class="section-note" id="games-head" style="display:none">Game by game</h2>
-  <div id="brief"></div>
-  <p class="data-note">Projections are Leo model output, not official picks. Market numbers are closing lines from the open nflverse dataset.</p>
-</main>
+  <h2 class="sec">Two ways to get Leo&rsquo;s NFL reads</h2>
+  <div class="paths">
+    <div class="path free"><h3>Free daily card</h3><p>Every game with Leo&rsquo;s win chance and calls, by email before the slate.</p><a class="btn-go" href="/membership/#free">Get the free card</a></div>
+    <div class="path member"><h3>Leo Member</h3><p>The full brief before every slate and the morning after review. $10 a week or $50 a month.</p><a class="btn-go" href="/membership/">Become a member</a></div>
+  </div>
 
+  <div data-leo-cta></div>
+  <p class="data-note">Projections are Leo model output, not official picks. Every call is graded in public on <a href="/nfl/results/">Leo&rsquo;s record</a>. Analysis only, not betting advice. 21+.</p>
+</main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
+<script src="/js/leo-cta.js"></script>
 <script>
 renderNav("/articles/"); renderFooter();
-
-const FEED="https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv";
-const statusEl=document.getElementById("status"), briefEl=document.getElementById("brief"), kpisEl=document.getElementById("kpis");
-
-function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
-function num(v){const n=parseFloat(v);return Number.isFinite(n)?n:null;}
-function fmtAm(v){const n=num(v);return n==null?"\u2014":(n>0?"+"+n:""+n);}
-function impl(a){const n=num(a);if(n==null)return null;return n>0?100/(n+100):(-n)/((-n)+100);}
-function devig(a,b){const x=impl(a),y=impl(b);if(x==null||y==null)return[null,null];const s=x+y;return s>0?[x/s,y/s]:[null,null];}
-function pct(p){return p==null?"\u2014":(p*100).toFixed(1)+"%";}
-function fmtTime(t){const m=String(t||"").match(/^(\d{1,2}):(\d{2})/);if(!m)return "TBD";let h=+m[1];const ap=h>=12?"PM":"AM";h=h%12||12;return h+":"+m[2]+" "+ap+" ET";}
-function parseCSV(text){
-  const rows=[];let row=[],f="",q=false;
-  for(let i=0;i<text.length;i++){const c=text[i];
-    if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++;}else q=false;}else f+=c;}
-    else if(c==='"')q=true; else if(c===","){row.push(f);f="";}
-    else if(c==="\n"){row.push(f);rows.push(row);row=[];f="";}
-    else if(c!=="\r")f+=c;}
-  if(f.length||row.length){row.push(f);rows.push(row);}
-  const h=rows.shift().map(x=>x.trim());
-  return rows.filter(r=>r.length>1).map(r=>Object.fromEntries(h.map((k,i)=>[k,(r[i]||"").trim()])));
-}
-async function tryJson(u){try{const r=await fetch(u,{cache:"no-store"});return r.ok?await r.json():null;}catch(e){return null;}}
-
-(async function load(){
-  let props=null;
-  for(const u of ["/data/nfl/props-"+iso(new Date())+".json",
-                  "/data/nfl/props-"+iso(new Date(Date.now()+864e5))+".json",
-                  "/data/nfl/props-today.json"]){
-    const j=await tryJson(u); if(Array.isArray(j)&&j.length){props=j;break;}
-  }
-  if(!props){
-    statusEl.innerHTML='<div class="score-empty">No NFL brief is published right now. It posts once the upcoming slate is generated.</div>';
-    return;
-  }
-  const date=props[0].date;
-  let games=[];
-  try{
-    const r=await fetch(FEED);
-    if(r.ok) games=parseCSV(await r.text()).filter(g=>g.gameday===date)
-                 .sort((a,b)=>String(a.gametime).localeCompare(String(b.gametime)));
-  }catch(e){}
-
-  const byGame={};
-  props.forEach(p=>{(byGame[p.matchup]=byGame[p.matchup]||[]).push(p);});
-
-  statusEl.style.display="none";
-  document.getElementById("games-head").style.display="";
-
-  const when=new Date(date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
-  const totals=games.map(g=>num(g.total_line)).filter(x=>x!=null);
-  const avgTot=totals.length?(totals.reduce((s,x)=>s+x,0)/totals.length).toFixed(1):"\u2014";
-  const tds=props.filter(p=>p.market==="ANYTIME_TD").sort((a,b)=>b.projection-a.projection);
-  kpisEl.innerHTML=
-    '<article class="kpi"><div class="label">Slate</div><div class="value">'+(games.length||Object.keys(byGame).length)+'</div><div class="sub">'+esc(when)+'</div></article>'+
-    '<article class="kpi"><div class="label">Projections</div><div class="value">'+props.length+'</div><div class="sub">across the card</div></article>'+
-    '<article class="kpi"><div class="label">Avg total</div><div class="value">'+avgTot+'</div><div class="sub">market closing</div></article>'+
-    '<article class="kpi"><div class="label">Top TD chance</div><div class="value">'+(tds[0]?(tds[0].projection*100).toFixed(0)+"%":"\u2014")+'</div><div class="sub">'+(tds[0]?esc(tds[0].player):"\u2014")+'</div></article>';
-
-  const order = games.length ? games.map(g=>({key:g.away_team+" @ "+g.home_team, g}))
-                            : Object.keys(byGame).map(k=>({key:k,g:null}));
-
-  briefEl.innerHTML = order.map(({key,g})=>{
-    const ps=byGame[key]||[];
-    if(!ps.length && !g) return "";
-    const [a,h] = key.split(" @ ");
-    const [pa,ph] = g?devig(g.away_moneyline,g.home_moneyline):[null,null];
-    const spread=g?num(g.spread_line):null;
-    const spreadTxt = spread==null?"\u2014":(spread>0?h+" -"+spread:(spread<0?a+" -"+Math.abs(spread):"PK"));
-    const pick = (pa!=null&&ph!=null) ? (ph>pa?h:a) : "\u2014";
-
-    const top = m => ps.filter(p=>p.market===m).sort((x,y)=>y.projection-x.projection)[0];
-    const lines=[];
-    const qb=top("QB_PASS_YARDS"), rb=top("RB_RUSH_YARDS"), wr=top("WR_REC_YARDS"), td=top("ANYTIME_TD");
-    if(qb) lines.push(["Top passer", esc(qb.player)+" \u2014 "+Math.round(qb.projection)+" yds"]);
-    if(rb) lines.push(["Top rusher", esc(rb.player)+" \u2014 "+Math.round(rb.projection)+" yds"]);
-    if(wr) lines.push(["Top receiver", esc(wr.player)+" \u2014 "+Math.round(wr.projection)+" yds"]);
-    if(td) lines.push(["Most likely TD", esc(td.player)+" \u2014 "+(td.projection*100).toFixed(1)+"%"]);
-
-    return '<article class="card brief-card">'+
-      '<div class="brief-head">'+
-        '<span class="brief-teams">'+
-          '<img src="/img/nfl/'+encodeURIComponent(a)+'.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'+esc(a)+
-          ' <span style="color:var(--text-dim);font-weight:500">at</span> '+
-          '<img src="/img/nfl/'+encodeURIComponent(h)+'.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'+esc(h)+
-        '</span>'+
-        '<span class="brief-when">'+(g?fmtTime(g.gametime)+'<br>'+esc(g.stadium||""):"")+'</span>'+
-      '</div>'+
-      '<div class="brief-inner">'+
-        '<div class="metric-grid">'+
-          '<div class="metric-box"><span class="label">Market lean</span><span class="value">'+esc(pick)+'</span></div>'+
-          '<div class="metric-box"><span class="label">'+esc(a)+'</span><span class="value">'+(g?fmtAm(g.away_moneyline):"\u2014")+'</span></div>'+
-          '<div class="metric-box"><span class="label">'+esc(h)+'</span><span class="value">'+(g?fmtAm(g.home_moneyline):"\u2014")+'</span></div>'+
-          '<div class="metric-box"><span class="label">Spread</span><span class="value">'+esc(spreadTxt)+'</span></div>'+
-          '<div class="metric-box"><span class="label">Total</span><span class="value">'+(g&&num(g.total_line)!=null?num(g.total_line):"\u2014")+'</span></div>'+
-        '</div>'+
-        lines.map(l=>'<div class="brief-line"><span>'+l[0]+'</span><b>'+l[1]+'</b></div>').join("")+
-      '</div></article>';
-  }).join("");
+// Sample game for non-members (Lynold, 2026-11-27 five-page rewrite): one upcoming game from the saved picks
+// files, with the market read and one key projection. The rest of the brief goes to members by email.
+(async function(){
+  const box=document.getElementById("sample"); if(!box) return;
+  const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  const get=async u=>{try{const r=await fetch(u,{cache:"no-store"});return r.ok?await r.json():null;}catch(e){return null;}};
+  const num=v=>{const n=parseFloat(v);return Number.isFinite(n)?n:null;};
+  const impl=a=>{const n=num(a);return n==null?null:n>0?100/(n+100):(-n)/((-n)+100);};
+  const pct=p=>p==null?"n/a":Math.round(p*100)+"%";
+  const kick=x=>{const m=+String(x.date).slice(5,7),off=(m>=11||m<=2)?"-05:00":"-04:00";return Date.parse(x.date+"T"+(x.kickoff||"13:00")+":00"+off);};
+  const ko12=k=>{const [h,m]=String(k||"").split(":").map(Number);return Number.isFinite(h)?((h%12)||12)+":"+String(m||0).padStart(2,"0")+(h<12?"am":"pm")+" ET":"";};
+  const files=await Promise.all([0,1,2,3,4,5,6,7].map(k=>get("/data/nfl/picks-"+iso(new Date(Date.now()+k*864e5))+".json")));
+  const up=[]; for(const f of files) if(Array.isArray(f)) for(const x of f) if(kick(x)>Date.now()&&x.model_prob!=null) up.push(x);
+  up.sort((a,b)=>kick(a)-kick(b));
+  const g=up[0];
+  if(!g){ box.innerHTML='<div class="sample-head"><span class="sample-teams">No upcoming game to show yet</span><span class="tag">Sample</span></div><div class="sample-body"><p>The sample fills in when Leo&rsquo;s next NFL read is saved.</p></div>'; return; }
+  const homeP=g.pick===g.home?g.model_prob:1-g.model_prob;
+  const ha=impl(g.home_ml), aa=impl(g.away_ml), mkHome=ha!=null&&aa!=null?ha/(ha+aa):null;
+  const fav=homeP>=.5?g.home:g.away, favP=Math.max(homeP,1-homeP), mkFav=mkHome==null?null:(fav===g.home?mkHome:1-mkHome);
+  const m=num(g.exp_margin!=null&&g.exp_margin!==""?g.exp_margin:g.proj_spread), line=num(g.spread_line);
+  const by=v=>v==null?"n/a":Math.abs(v)<.05?"pick'em":(v>0?g.home:g.away)+" by "+Math.abs(Math.round(v*2)/2);
+  const lineTxt=line==null?"no line yet":"the line: "+by(line);
+  // One key projection: the game's top anytime touchdown chance (free on the touchdown board).
+  let td=null; for(const u of ["/data/nfl/td-early/"+g.date+".json","/data/nfl/props-today.json"]){ const d=await get(u); const rows=(d&&(d.props||d))||[];
+    const r=(Array.isArray(rows)?rows:[]).filter(x=>x.market==="ANYTIME_TD"&&(x.game_id===g.game_id||x.matchup===g.matchup)).sort((a,b)=>b.projection-a.projection)[0]; if(r){td=r;break;} }
+  const day=new Date(g.date+"T12:00:00").toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+  const logo=t=>'<img src="/img/nfl/'+encodeURIComponent(t)+'.png" alt="">';
+  box.innerHTML='<div class="sample-head"><span class="sample-teams">'+logo(g.away)+esc(g.away)+' at '+logo(g.home)+esc(g.home)+'</span><span class="tag">Sample</span></div>'+
+    '<div class="sample-body"><p class="sample-when" style="margin:0 0 10px;color:var(--text-dim)">'+esc(day)+(g.kickoff?' &middot; '+esc(ko12(g.kickoff)):'')+' &middot; Leo&rsquo;s latest read</p>'+
+    '<div class="metric-grid">'+
+      '<div class="metric-box"><span class="label">Leo win chance</span><span class="value">'+esc(fav)+' '+pct(favP)+'</span><span class="sub">market, no vig: '+(mkFav==null?"no price yet":pct(mkFav))+'</span></div>'+
+      '<div class="metric-box"><span class="label">Leo margin</span><span class="value">'+esc(by(m))+'</span><span class="sub">'+esc(lineTxt)+'</span></div>'+
+      '<div class="metric-box"><span class="label">Leo total</span><span class="value">'+(g.proj_total==null?"n/a":esc(String(g.proj_total)))+'</span><span class="sub">line '+(g.total_line==null?"n/a":esc(String(g.total_line)))+', information only</span></div>'+
+      (td?'<div class="metric-box"><span class="label">Key projection</span><span class="value">'+esc(td.player)+' '+pct(td.projection)+'</span><span class="sub">anytime touchdown, <a href="/nfl/anytime-touchdowns/">full board</a></span></div>':'')+
+    '</div>'+
+    '<p class="locked">Members also get the calls for this game, why Leo has '+esc(fav)+' at '+pct(favP)+', the quarterbacks and who is out, and the same for every other game on the slate.</p></div>';
 })();
 </script>
 </body>
