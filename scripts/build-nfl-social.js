@@ -151,9 +151,9 @@ function tdPost(date) {
   if (td.length < 2) return null;
   const week = picks[0].week, title = `${cheatTitle(date, week)} TOUCHDOWN WATCH ${slateEmoji(date)}`;
   const lines = td.map(r => `${r.player} ${pct(r.chance)}%`);
-  const link = utm(`${SITE}/nfl/previews/`, "td", date);
+  const link = utm(`${SITE}/nfl/anytime-touchdowns/`, "td", date);   // the touchdown page (Lynold, 2026-11-27)
   return { id: "td", kind: "reads", hero: "Most likely to score", note: "Anytime touchdown chances, not picks", created_at: new Date(NOW()).toISOString(),
-    tip_utc: first, header: title, lines, record: "", facts: [], hashtags: [], reply_lead: "Leo's touchdown chances for every player:",
+    tip_utc: first, header: title, lines, record: "", facts: [], hashtags: [], reply_lead: "Leo's odds for every anytime touchdown scorer this week:",
     text: EX.tail([title, "", "Leo's top anytime touchdown chances today.", "", ...lines.map(l => `🏈 ${l}`)], link, []), link };
 }
 // Lynold, 2026-11-18: no "21+", no "Every call graded, misses included", more human, less bot.

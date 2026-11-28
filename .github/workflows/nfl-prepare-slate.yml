@@ -160,6 +160,7 @@ jobs:
           node scripts/generate-nfl-matchups.js "${{ steps.slate_date.outputs.date }}"
           node scripts/render-nfl-matchup-pages.js "${{ steps.slate_date.outputs.date }}"
           node scripts/build-game-archives.js nfl
+          node scripts/build-nfl-td-page.js || true   # /nfl/anytime-touchdowns/ (Lynold, 2026-11-27)
           node scripts/build-matchup-pages.js nfl || true   # permanent matchup pages (Lynold, 2026-11-25)
           node scripts/generate-sitemap.js
 
@@ -222,10 +223,13 @@ jobs:
             node scripts/generate-nfl-model.js "$D" --early &&
             node scripts/generate-nfl-matchups.js "$D" --early &&
             node scripts/render-nfl-matchup-pages.js "$D" --early && built=$((built+1)) || echo "::warning::early read for $D failed"
+            # Anytime touchdown chances days ahead for /nfl/anytime-touchdowns/ (Lynold, 2026-11-27). Never graded.
+            node scripts/generate-nfl-props.js "$D" --early || echo "::warning::early touchdown read for $D failed"
           done
           if [ "$built" = "0" ]; then echo "No early reads built."; exit 0; fi
           node scripts/build-game-archives.js nfl || true
           node scripts/build-matchup-pages.js nfl || true   # permanent matchup pages (Lynold, 2026-11-25)
+          node scripts/build-nfl-td-page.js || true   # /nfl/anytime-touchdowns/ (Lynold, 2026-11-27)
           node scripts/generate-sitemap.js || true
           node scripts/build-prediction-files.js nfl || true
           node scripts/build-rating-files.js nfl || true

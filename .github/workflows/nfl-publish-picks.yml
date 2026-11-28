@@ -106,6 +106,7 @@ jobs:
           node scripts/generate-nfl-matchups.js "${{ steps.slate_date.outputs.date }}"
           node scripts/render-nfl-matchup-pages.js "${{ steps.slate_date.outputs.date }}"
           node scripts/build-game-archives.js nfl
+          node scripts/build-nfl-td-page.js || true   # /nfl/anytime-touchdowns/ (Lynold, 2026-11-27)
           node scripts/build-matchup-pages.js nfl || true   # permanent matchup pages (Lynold, 2026-11-25)
           node scripts/build-nfl-team-pages.js || true
           node scripts/generate-sitemap.js

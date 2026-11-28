@@ -177,6 +177,7 @@ function renderNav(active) {
       [prefix + "games/", "Every game"]
     ]],
     // Props left the NFL menu (Lynold, 2026-11-23: ungraded since DEC-20261119-02); the page stays under /nfl/tools/.
+    [prefix + "anytime-touchdowns/", "Touchdowns"],   // Lynold, 2026-11-27: "its own page and its own tab"
     [prefix + "teams/", "Teams"],
     [prefix + "tools/", "Lab", LAB],
     [prefix + "stats/", "Stats"],

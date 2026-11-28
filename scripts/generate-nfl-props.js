@@ -110,7 +110,11 @@ function oppAdjustment(defRecent, defSeason, leagueAvg, nGames) {
 // per-player Poisson rate here priced only RB rushing and WR receiving TDs.
 
 (async function main() {
-  const targetDate = process.argv[2] || new Date(Date.now() + 864e5).toISOString().slice(0, 10);
+  const targetDate = process.argv[2] && /^\d{4}-\d{2}-\d{2}$/.test(process.argv[2]) ? process.argv[2] : new Date(Date.now() + 864e5).toISOString().slice(0, 10);
+  // --early (Lynold, 2026-11-27: the anytime touchdown page goes up "a week / a few days in advance so google has
+  // enough time to index it"): touchdown chances only, to data/nfl/td-early/<date>.json. Never written to the prop
+  // history, props-<date>.json or props-today.json: an early read is never graded.
+  const EARLY = process.argv.includes("--early");
   console.log(`NFL props for ${targetDate}`);
 
   const [games, wk26, wk25, roster] = await Promise.all([
@@ -149,12 +153,36 @@ function oppAdjustment(defRecent, defSeason, leagueAvg, nGames) {
       att: n(r.attempts), pyds: n(r.passing_yards), ptd: n(r.passing_tds),
       car: n(r.carries), ryds: n(r.rushing_yards), rtd: n(r.rushing_tds),
       tgt: n(r.targets), recy: n(r.receiving_yards), rectd: n(r.receiving_tds),
-      wk: n(r.week), tm: r.team
+      wk: n(r.week), tm: r.team, opp: r.opponent_team || ""
     });
   };
   wk26.forEach(r => add("cur", r));
   // Regular season only: a playoff game is not part of "last season".
   wk25.filter(r => !r.season_type || r.season_type === "REG").forEach(r => add("prior", r));
+  // Touchdown page stats (Lynold, 2026-11-27, a sportsbook stats page as the model): this season's touchdowns,
+  // games with one, the last five games, usage, and what the opponent allows to the position. Display only.
+  const POSG = p => p === "FB" ? "RB" : p;
+  const allowed = new Map();   // "<opp team>|<pos>" -> {tds, games:Set}
+  for (const r of wk26) {
+    if (r.season_type && r.season_type !== "REG") continue;
+    const k = `${r.opponent_team}|${POSG(r.position)}`;
+    const a = allowed.get(k) || allowed.set(k, { tds: 0, games: new Set() }).get(k);
+    a.tds += n(r.rushing_tds) + n(r.receiving_tds); a.games.add(n(r.week));
+  }
+  const oppGames = new Map();
+  for (const r of wk26) if (!r.season_type || r.season_type === "REG") (oppGames.get(r.opponent_team) || oppGames.set(r.opponent_team, new Set()).get(r.opponent_team)).add(n(r.week));
+  function tdStats(c, opp) {
+    const g = [...c.cur].sort((a, b) => b.wk - a.wk), tds = x => (x.rtd || 0) + (x.rectd || 0);
+    const pr = c.prior || [], a = allowed.get(`${opp}|${POSG(c.pos)}`), og = (oppGames.get(opp) || new Set()).size;
+    return {
+      games: g.length, tds: g.reduce((s, x) => s + tds(x), 0), td_games: g.filter(x => tds(x) > 0).length,
+      last5: g.slice(0, 5).map(x => ({ wk: x.wk, opp: x.opp || "", td: tds(x) })),
+      car_pg: g.length ? r1(g.reduce((s, x) => s + (x.car || 0), 0) / g.length) : 0,
+      tgt_pg: g.length ? r1(g.reduce((s, x) => s + (x.tgt || 0), 0) / g.length) : 0,
+      prior_games: pr.length, prior_tds: pr.reduce((s, x) => s + tds(x), 0),
+      opp_allowed_pg: a && og ? Math.round(a.tds / og * 100) / 100 : null
+    };
+  }
   // Team targets per game, both seasons, attached to every player-game so a
   // receiver's share is his targets over his team's targets in his games.
   const teamTgt = rows => { const m = new Map(); rows.forEach(r => { const k = `${r.team}|${n(r.week)}`; m.set(k, (m.get(k) || 0) + n(r.targets)); }); return m; };
@@ -312,9 +340,19 @@ function oppAdjustment(defRecent, defSeason, leagueAvg, nGames) {
              "ANYTIME_TD", Math.round(TDM.probability(TD_MODEL, row) * 1000) / 1000,
              { model_version: TD_MODEL.model_version, expected_volume: r1(row._use),
                rate_used: Math.round(row.td_rate * 1000) / 1000,
-               team_ppg: r1(row.team_ppg), opp_allowed: r1(row.opp_allowed) });
+               team_ppg: r1(row.team_ppg), opp_allowed: r1(row.opp_allowed),
+               td_stats: tdStats(c, opp) });
       }
     }
+  }
+
+  if (EARLY) {
+    const td = props.filter(p => p.market === "ANYTIME_TD");
+    const dir = path.join(ROOT, "data/nfl/td-early");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, `${targetDate}.json`), JSON.stringify({ date: targetDate, built_at: new Date().toISOString(), early: true, props: td }, null, 1) + "\n");
+    console.log(`  early: ${td.length} touchdown chances -> data/nfl/td-early/${targetDate}.json (no history, not graded)`);
+    return;
   }
 
   fs.mkdirSync(path.join(ROOT, "data/nfl"), { recursive: true });
