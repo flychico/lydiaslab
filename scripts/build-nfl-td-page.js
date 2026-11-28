@@ -496,6 +496,9 @@ function main() {
   const weeks = collect(addDays(todayET, -7), addDays(todayET, 9));
   if (!weeks.length) { console.log("NFL touchdown page: no touchdown reads in range."); return; }
   const permanentOf = W => `/nfl/anytime-touchdowns/${W.season}-week-${W.week}/`;
+  // Link a neighbouring week only when its page exists or is built this run (Week 11 was linked before it existed).
+  const willBuild = W => !(NOW > Math.max(...W.games.map(g => Date.parse(g.ko))) + 3 * 864e5);
+  const linkable = W => { const u = permanentOf(W); return willBuild(W) || fs.existsSync(path.join(ROOT, u, "index.html")) ? u : null; };
   // This week: the earliest week with a game not yet started; else the latest week.
   const cur = weeks.find(W => W.games.some(g => Date.parse(g.ko) > NOW)) || weeks[weeks.length - 1];
   const shares = [];
@@ -505,7 +508,7 @@ function main() {
     const file = path.join(dir, "index.html");
     // A finished week's page is kept once all its results are in (never rewritten later in the season).
     if (NOW > lastKick + 3 * 864e5) return;   // finished weeks keep the page they had (or never get one if they ended before the page existed)
-    const prev = i > 0 ? permanentOf(weeks[i - 1]) : null, next = i < weeks.length - 1 ? permanentOf(weeks[i + 1]) : null;
+    const prev = i > 0 ? linkable(weeks[i - 1]) : null, next = i < weeks.length - 1 ? linkable(weeks[i + 1]) : null;
     const pg = page(W, { hub: false, prev, next, current: W === cur });
     shares.push(pg.share);
     fs.mkdirSync(dir, { recursive: true });
@@ -513,7 +516,7 @@ function main() {
     console.log(`  ${pg.url}: ${W.games.length} games, ${W.games.reduce((s, g) => s + g.players.length, 0)} players${W.games.some(g => g.source === "early") ? " (early read)" : ""}`);
   });
   const ci = weeks.indexOf(cur);
-  const hub = page(cur, { hub: true, prev: ci > 0 ? permanentOf(weeks[ci - 1]) : null, next: ci < weeks.length - 1 ? permanentOf(weeks[ci + 1]) : null });
+  const hub = page(cur, { hub: true, prev: ci > 0 ? linkable(weeks[ci - 1]) : null, next: ci < weeks.length - 1 ? linkable(weeks[ci + 1]) : null });
   fs.mkdirSync(path.join(ROOT, HUB), { recursive: true });
   fs.writeFileSync(path.join(ROOT, HUB, "index.html"), hub.html);
   // Share card data for every week page built this run (the hub uses its week's card); render-td-share.js draws them.
