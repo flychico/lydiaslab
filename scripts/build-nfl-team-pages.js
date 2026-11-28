@@ -21,6 +21,7 @@ const fs = require("fs");
 const path = require("path");
 const { GA_HEAD } = require("./lib/ga");
 const TEAMS = require("./lib/nfl-teams");
+const CTA = require("../js/leo-cta.js");   // one conversion line on NFL pages (Lynold, 2026-11-27)
 
 const ROOT = path.resolve(__dirname, "..");
 const args = process.argv.slice(2);
@@ -231,15 +232,99 @@ function teamPage(abbr, division, games) {
   return { html: shell({ title, desc, url, jsonld, body }), record: rec(s.w, s.l, s.t) };
 }
 
+// ---- Hub notes (Lynold, 2026-11-27, five-page rewrite: "Turn the pure index into a useful page"): each team's Leo
+// rating (data/ratings/nfl.csv, the ratings the win chance uses) and this week's game with Leo's latest win chance
+// (data/nfl/picks-<date>.json, the latest read for the current week). Display only.
+function loadRatings() {
+  const f = path.join(ROOT, "data", "ratings", "nfl.csv");
+  const out = {};
+  if (!fs.existsSync(f)) return out;
+  for (const r of parseCsv(fs.readFileSync(f, "utf8"))) {
+    const v = Number(r.leo_overall);
+    if (r.abbr && Number.isFinite(v)) out[r.abbr] = { rank: Number(r.rank), overall: v, asOf: r.as_of };
+  }
+  return out;
+}
+function kickMs(x) {
+  if (!x.date) return NaN;
+  const m = +x.date.slice(5, 7), off = (m >= 11 || m <= 2) ? "-05:00" : "-04:00";
+  return Date.parse(`${x.date}T${x.kickoff || "13:00"}:00${off}`);
+}
+function loadWeek(now) {
+  const dir = path.join(ROOT, "data", "nfl");
+  const games = [];
+  for (const f of fs.readdirSync(dir)) {
+    const m = f.match(/^picks-(\d{4}-\d{2}-\d{2})\.json$/);
+    if (!m) continue;
+    const d = Date.parse(m[1] + "T12:00:00Z");
+    if (!(d > now - 8 * 864e5 && d < now + 9 * 864e5)) continue;
+    let arr; try { arr = JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")); } catch (e) { continue; }
+    if (Array.isArray(arr)) for (const g of arr) if (g && g.away && g.home && Number.isFinite(Number(g.model_prob))) games.push(g);
+  }
+  const ahead = games.filter(g => kickMs(g) > now);
+  if (!ahead.length) return { week: null, byTeam: {} };
+  const week = Math.min(...ahead.map(g => Number(g.week)).filter(Number.isFinite));
+  const byTeam = {};
+  for (const g of games.filter(g => Number(g.week) === week)) {
+    const p = Number(g.model_prob), homeP = g.pick === g.home ? p : 1 - p;
+    const day = new Date(g.date + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
+    const played = kickMs(g) <= now;
+    byTeam[g.home] = { opp: g.away, at: false, chance: homeP, day, played };
+    byTeam[g.away] = { opp: g.home, at: true, chance: 1 - homeP, day, played };
+  }
+  return { week, byTeam };
+}
+function teamNote(t, R, W) {
+  const r = R[t], g = W.byTeam[t];
+  const bits = [];
+  if (r) bits.push(`Leo rating ${r.overall.toFixed(1)}, ${ordinal(r.rank)} of 32`);
+  if (g) bits.push(g.played ? `Played ${g.day}: Leo had ${pct(g.chance)} ${g.at ? "at" : "vs"} ${TEAMS.nick(g.opp)}` : `${g.day}: Leo ${pct(g.chance)} ${g.at ? "at" : "vs"} ${TEAMS.nick(g.opp)}`);
+  else if (W.week) bits.push(`No game in Week ${W.week}`);
+  return bits.length ? `<span class="tn">${esc(bits.join(" · "))}</span>` : "";
+}
+const ordinal = n => { const s = ["th", "st", "nd", "rd"], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
+function topStrip(R, W) {
+  const top = Object.entries(R).sort((a, b) => b[1].overall - a[1].overall).slice(0, 5);
+  if (!top.length) return "";
+  const rows = top.map(([t, r]) => { const g = W.byTeam[t];
+    return `<li><span class="tr-rank">${r.rank}</span><img src="/img/nfl/${encodeURIComponent(t)}.png" alt="" width="26" height="26" loading="lazy">
+<span class="tr-who"><a href="/nfl/teams/${teamSlug(t)}/">${esc(TEAMS.nick(t))}</a><span class="dim small">${g ? `${g.played ? "played" : ""} ${g.at ? "at" : "vs"} ${esc(TEAMS.nick(g.opp))}, ${esc(g.day)}: Leo ${g.played ? "had " : ""}${pct(g.chance)}`.trim() : W.week ? `no game in Week ${W.week}` : ""}</span></span>
+<span class="tr-v">${r.overall.toFixed(1)}</span></li>`; }).join("");
+  return `<section class="top-rated card">
+<p class="tr-eye">Highest-rated teams${W.week ? ` · Week ${W.week}` : ""}</p>
+<ol>${rows}</ol>
+<p class="small" style="margin:8px 0 0"><a href="/nfl/week/">Every${W.week ? ` Week ${W.week}` : ""} game with Leo's win chance</a> · <a href="/nfl/stats/">Full power ratings</a></p>
+</section>`;
+}
+
 function hubPage(records) {
   const url = "/nfl/teams/";
   const title = `NFL Team Predictions ${SEASON}: Every Game Leo Analyzed, by Team | Leo`;
   const desc = `Predictions for all 32 NFL teams in ${SEASON}: Leo's win chance before every game, who Leo favored, the final score and whether Leo's read was right.`;
-  const body = `<h1>NFL team predictions ${SEASON}</h1>
+  const R = loadRatings(), W = loadWeek(Date.now());
+  const body = `<style>
+.div-grid li{line-height:1.45;margin:0 0 8px}
+.div-grid .tn{display:block;font-size:.78rem;color:var(--text-dim);line-height:1.35}
+.top-rated{padding:14px 16px;margin:14px 0 18px}
+.top-rated ol{list-style:none;margin:0;padding:0}
+.top-rated li{display:grid;grid-template-columns:22px 26px 1fr auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)}
+.top-rated li:last-child{border-bottom:0}
+.top-rated img{width:26px;height:26px;object-fit:contain}
+.tr-eye{margin:0 0 6px;color:#9c7f33;font-weight:800;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase}
+.tr-rank{font-family:Georgia,serif;color:#9c7f33;font-weight:700;text-align:center}
+.tr-who{display:flex;flex-direction:column;min-width:0}.tr-who a{font-weight:700}
+.tr-v{font-weight:800;font-size:1.1rem}
+${CTA.CSS}
+</style>
+<h1>NFL team predictions ${SEASON}</h1>
+  ${CTA.html()}
+  ${topStrip(R, W)}
   <p class="subtitle">Pick a team to see every ${SEASON} game Leo analyzed: Leo&rsquo;s win chance before kickoff, the team Leo favored, the final score and whether Leo&rsquo;s read was right. The record beside each team is that team&rsquo;s own record in the games Leo analyzed. Leo&rsquo;s NFL reads start in Week 2 of the ${SEASON} season.</p>
   <div class="div-grid">${DIVISIONS.map(([div, teams]) => `<div class="card"><h2 style="margin:0;font-size:1.05rem">${esc(div)}</h2><ul>${teams.map(t =>
-    `<li><a href="/nfl/teams/${teamSlug(t)}/">${esc(TEAMS.full(t))}</a> <span class="dim small">${esc(records[t] || "")}</span></li>`).join("")}</ul></div>`).join("")}</div>
-  <p class="dim small" style="margin-top:18px">This week: <a href="/nfl/week/">NFL predictions and touchdown scorers</a> &middot; <a href="/nfl/games/">every NFL game page</a> &middot; <a href="/nfl/results/">Leo&rsquo;s NFL record</a>.</p>`;
+    `<li><a href="/nfl/teams/${teamSlug(t)}/">${esc(TEAMS.full(t))}</a> <span class="dim small">${esc(records[t] || "")}</span>${teamNote(t, R, W)}</li>`).join("")}</ul></div>`).join("")}</div>
+  <p class="dim small" style="margin-top:10px">Leo rating: 0 to 100, the team rating Leo's win chance uses (quarterback, offense and defense), as of ${esc((Object.values(R)[0] || {}).asOf || "today")}. Win chances are Leo's latest read and freeze at kickoff. <a href="/data-feed/">Rating files</a>.</p>
+  <p class="dim small" style="margin-top:18px">This week: <a href="/nfl/week/">NFL predictions and touchdown scorers</a> &middot; <a href="/nfl/games/">every NFL game page</a> &middot; <a href="/nfl/results/">Leo&rsquo;s NFL record</a>.</p>
+  ${CTA.html()}`;
   const jsonld = { "@context": "https://schema.org", "@graph": [
     { "@type": "CollectionPage", "@id": `${ORIGIN}${url}#page`, name: title.replace(/ \| Leo$/, ""), description: desc, url: ORIGIN + url },
     { "@type": "BreadcrumbList", itemListElement: [
