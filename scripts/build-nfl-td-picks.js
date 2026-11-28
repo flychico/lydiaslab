@@ -152,7 +152,8 @@ function build(date) {
 
 function record() {
   if (!fs.existsSync(OUT)) return;
-  const out = { since: TRACK_FROM, built_at: new Date(NOW).toISOString(), tracking: "private test, not on the site", rules: {} };
+  const out = { since: TRACK_FROM, built_at: new Date(NOW).toISOString(),
+    tracking: "rules: the private test, Nov 26 to Dec 2, never shown on the site (leo50 stays private after it). public: Leo's touchdown picks, the public record from Dec 3 (top3_day only)", rules: {} };
   for (const k of Object.keys(RULES)) out.rules[k] = { label: RULES[k], picks: 0, graded: 0, won: 0, lost: 0, void: 0, priced: 0, units: 0, avg_chance: null, avg_book_chance: null };
   for (const f of fs.readdirSync(OUT).filter(f => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort()) {
     const d = readJson(path.join(OUT, f)); if (!d) continue;
@@ -215,6 +216,10 @@ function writeResultsTile(P) {
   if (/<!--leo-td-->[\s\S]*?<!--\/leo-td-->/.test(html)) html = html.replace(/<!--leo-td-->[\s\S]*?<!--\/leo-td-->/, tile);
   else if (html.includes("<!--/leo-parlay-->")) html = html.replace("<!--/leo-parlay-->", "<!--/leo-parlay-->\n  " + tile);
   else return;
+  // One line in the "How Leo is graded" box, before the early read line.
+  const how = `<!--leo-td-how--><li><b>Touchdown picks</b> from December 3: Leo's top 3 anytime touchdown chances of each game day, read before the first kickoff, 1 unit each at the market price at Leo's read. A player who does not play is void. Kept apart from the moneyline and spread record.</li><!--/leo-td-how-->`;
+  if (/<!--leo-td-how-->[\s\S]*?<!--\/leo-td-how-->/.test(html)) html = html.replace(/<!--leo-td-how-->[\s\S]*?<!--\/leo-td-how-->/, how);
+  else if (html.includes("<li>Under 50 graded calls")) html = html.replace("<li>Under 50 graded calls", how + "\n      <li>Under 50 graded calls");
   fs.writeFileSync(RESULTS_PAGE, html);
 }
 

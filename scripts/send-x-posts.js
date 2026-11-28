@@ -203,7 +203,9 @@ function postBy(sport, date, post) {
     // Nov 23; replaces the one email per slate and the posts-off switch of Nov 22). The Leo Daily Brief still has its menu.
     for (const post of doc.posts || []) {
       if (!post.text) continue;
-      const h = hashOf(post), prev = log.sent[post.id];
+      // A post may set update_key: the touchdown picks post is emailed again only when its three players change,
+      // not when a price moves (coordinator, N6, 2026-11-27).
+      const h = post.update_key ? `key:${post.update_key}` : hashOf(post), prev = log.sent[post.id];
       let note = "";
       if (prev) {
         if (post.kind !== "picks" || prev.hash === h) continue;

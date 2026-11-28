@@ -185,6 +185,7 @@ function tdPicksPost(date, existing) {
   const link = utm(`${SITE}/nfl/anytime-touchdowns/`, "td", date);
   return { id: "td", kind: "picks", hero: "Leo's touchdown picks", note: "Anytime touchdown picks, 1 unit each", created_at: new Date(NOW()).toISOString(),
     tip_utc: first, header: title, lines, record: "", facts: [], hashtags: [], pages: [], players: top.map(p => `${nickOf(p.team)}: ${p.player}`),
+    update_key: top.map(p => p.player).sort().join("|"),   // "(updated)" email only when the three players change
     reply_lead: "Leo's odds for every anytime touchdown scorer this week:",
     text: EX.tail([title, "", hook, "", ...full, "", EX.WITH_LEO], link, []), link };
 }
