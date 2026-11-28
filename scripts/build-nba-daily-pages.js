@@ -19,6 +19,7 @@ const RC = require("./lib/nba-read-change");   // the read moved after the card 
 const path = require("path");
 const WHY = require("./lib/nba-why");
 const PKS = require("./lib/nba-picks");   // Leo Picks (DEC-20261102-30); shown from PKS.TRACK_FROM
+const CTA = require("../js/leo-cta.js");   // one conversion line, as on the NFL pages (Lynold, 2026-11-28: NBA gets what NFL got)
 
 const ROOT = path.join(__dirname, "..");
 const DATA = path.join(ROOT, "data/nba");
@@ -115,7 +116,9 @@ function topPanels(date, games, res) {
   const P = rec && rec.picks;
   const first = games.map(g => g.tip_utc).filter(Boolean).sort()[0];
   const tile = (l, v, s) => `<div class="nc-tile"><small>${l}</small><b>${v}</b><span>${s}</span></div>`;
-  const tiles = `<section class="nc-tiles">${tile("Games", games.length, first ? "first tip " + esc(tip(first)) : "")}${tracked ? tile("Leo Picks tonight", picks.length, "60%+, better than -230") : ""}${P && P.n ? tile("Leo Picks so far", `${P.won}-${P.lost}`, `${P.units > 0 ? "+" : ""}${(+P.units).toFixed(2)} units since Nov 2`) : ""}</section>`;
+  // "At a glance" (as the NFL week page, Nov 27): the night's highest Leo win chance beside the counts.
+  const top = games.filter(g => g.leo && g.leo.p_home != null).map(g => { const h = g.leo.p_home >= 0.5; return { t: h ? g.home_name : g.away_name, o: h ? g.away_name : g.home_name, p: h ? g.leo.p_home : 1 - g.leo.p_home }; }).sort((a, b) => b.p - a.p)[0];
+  const tiles = `<section class="nc-tiles">${tile("Games", games.length, first ? "first tip " + esc(tip(first)) : "")}${top ? tile("Highest win chance", pct(top.p), `${esc(nick(top.t))} over the ${esc(nick(top.o))}`) : ""}${tracked ? tile("Leo Picks tonight", picks.length, "60%+, better than -230") : ""}${P && P.n ? tile("Leo Picks so far", `${P.won}-${P.lost}`, `${P.units > 0 ? "+" : ""}${(+P.units).toFixed(2)} units since Nov 2`) : ""}</section>`;
   if (!tracked) return tiles;
   const rows = picks.length ? picks.map(g => { const nk = nickFor(g), pk = g.leo.pick || {};
       return `<div class="nc-prow"><b>${esc(nk(PKS.pickText(g).badge.replace(/^Pick /, "")))}</b><span>${esc(nick(g.away_name))} at ${esc(nick(g.home_name))} &middot; ${esc(tip(g.tip_utc))}<br>Leo ${Math.round((pk.p || Math.max(g.leo.p_home, 1 - g.leo.p_home)) * 100)}% to win</span></div>`; }).join("")
@@ -123,7 +126,8 @@ function topPanels(date, games, res) {
   return tiles + `<section class="nc-panel"><h2>Tonight&rsquo;s Leo Picks (moneyline)</h2>${rows}${picks.length ? `<p class="nc-dim" style="margin:8px 0 0">Graded at this price. It locks when Leo first makes the pick.</p>` : ""}</section>`;
 }
 
-function shell({ url, title, desc, h1, eyebrow, body, ld }) {
+function shell({ url, title, desc, h1, eyebrow, body, ld, image }) {
+  const img = ORIGIN + (image || "/img/leo-card.png");
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -135,8 +139,9 @@ ${GA_HEAD}
 <link rel="canonical" href="${ORIGIN}${url}">
 <meta property="og:type" content="article"><meta property="og:site_name" content="Leo">
 <meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}">
-<meta property="og:url" content="${ORIGIN}${url}"><meta property="og:image" content="${ORIGIN}/img/leo-card.png">
-<meta name="twitter:card" content="summary_large_image">
+<meta property="og:url" content="${ORIGIN}${url}"><meta property="og:image" content="${img}">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="${img}">
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/scoreboard.css">
 <style>
@@ -176,6 +181,7 @@ ${GA_HEAD}
 .nc-prow{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--border)}.nc-prow:first-of-type{border-top:0}
 .nc-prow b{font-size:1rem;white-space:nowrap}.nc-prow span{text-align:right;font-size:.8rem;color:var(--text-dim)}
 .dn-list{list-style:none;padding:0;display:grid;gap:6px}.dn-list a{display:block;padding:9px 12px;border:1px solid var(--border);border-radius:10px}
+${CTA.CSS}
 </style>
 <script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>
 </head>
@@ -186,7 +192,9 @@ ${GA_HEAD}
     <p class="eyebrow">${esc(eyebrow)}</p>
     <h1>${esc(h1)}</h1>
   </section>
+  ${CTA.html()}
 ${body}
+  ${CTA.html()}
   <p class="data-note">Leo's win chance and spread come from team results, rest and the injury report, frozen before tip. The DraftKings line is shown for comparison and is never an input. Analysis only, not betting advice. 21+. If gambling stops being fun, call 1-800-MY-RESET.</p>
 </main>
 <footer id="footer"></footer><script src="/js/app.js"></script>
@@ -223,7 +231,10 @@ ${games.map(g => card(g, byId[String(g.game_id)])).join("\n")}
       { "@type": "ListItem", position: 3, name: `NBA predictions ${monthDay(date)}`, item: ORIGIN + url }] } };
   const dir = path.join(ROOT, "nba/predictions", date);
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, "index.html"), shell({ url, title, desc, h1: `NBA predictions for ${longDay(date)}`, eyebrow: "NBA · Leo's read for the night", body, ld }));
+  // Share card (as the NFL touchdown page, Nov 27): drawn by scripts/render-nba-share.js in prerender-hubs.yml.
+  const share = `/img/share/nba-night-${date}.png`;
+  const image = fs.existsSync(path.join(ROOT, share.slice(1))) ? share : null;
+  fs.writeFileSync(path.join(dir, "index.html"), shell({ url, title, desc, h1: `NBA predictions for ${longDay(date)}`, eyebrow: "NBA · Leo's read for the night", body, ld, image }));
   return true;
 }
 

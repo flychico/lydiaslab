@@ -25,7 +25,8 @@ const path = require("path");
 const { GA_HEAD } = require("./lib/ga");
 const URLS = require("./lib/nba-urls");
 const PK = require("./lib/nba-picks");
-const TA = require("./lib/nba-team-analysis");   // shooting, with and without, duos (Lynold, 2026-11-17)
+const TA = require("./lib/nba-team-analysis");
+const CTA = require("../js/leo-cta.js");   // one conversion line, as on the NFL pages (Lynold, 2026-11-28)   // shooting, with and without, duos (Lynold, 2026-11-17)
 
 const ROOT = path.resolve(__dirname, ".."), DIR = path.join(ROOT, "data", "nba");
 const ORIGIN = "https://ndhorizon.com";
@@ -303,15 +304,79 @@ function teamPage(abbr, division, games, sched, AN) {
   return { html: shell({ title, desc, url, jsonld, body }), record: s.judged.length ? rec(s.right, s.judged.length - s.right) : "" };   // Leo's reads right-wrong in this team's games (Lynold, 2026-11-16)
 }
 
+// ---- Hub notes (as the NFL teams hub, Nov 27; Lynold, 2026-11-28: NBA gets what NFL got): each team's Leo rating
+// (data/ratings/nba.csv, points better than an average team, the rating the win chance uses) and its next game with
+// Leo's latest win chance (data/nba/picks-<date>.json, today and the next three days). Display only.
+function loadRatings() {
+  const out = {};
+  for (const r of readCsv(path.join(ROOT, "data", "ratings", "nba.csv"))) { const v = Number(r.leo_rating); if (r.abbr && Number.isFinite(v)) out[r.abbr] = { rank: Number(r.rank), v, asOf: r.as_of }; }
+  return out;
+}
+function loadNext(today) {
+  const by = {};
+  const iso = k => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date(Date.parse(today + "T12:00:00Z") + k * 864e5));
+  for (const k of [0, 1, 2, 3]) {
+    const d = iso(k), c = readJson(path.join(DIR, `picks-${d}.json`), null);
+    for (const g of (c && c.games) || []) {
+      const L = g.leo || {}; if (L.p_home == null || g.completed) continue;
+      const day = k === 0 ? "Tonight" : new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
+      if (!by[g.home]) by[g.home] = { opp: g.away, at: false, chance: L.p_home, day };
+      if (!by[g.away]) by[g.away] = { opp: g.home, at: true, chance: 1 - L.p_home, day };
+    }
+  }
+  return by;
+}
+const ordinal = n => { const s = ["th", "st", "nd", "rd"], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
+const rpts = v => (v > 0 ? "+" : "") + v.toFixed(1);
+function teamNote(t, R, N) {
+  const r = R[t], g = N[t], bits = [];
+  if (r) bits.push(`Leo rating ${rpts(r.v)}, ${ordinal(r.rank)} of 30`);
+  if (g) bits.push(`${g.day}: Leo ${pct(g.chance)} ${g.at ? "at" : "vs"} ${nick(g.opp)}`);
+  return bits.length ? `<span class="tn">${esc(bits.join(" · "))}</span>` : "";
+}
+function topStrip(R, N) {
+  const top = Object.entries(R).sort((a, b) => b[1].v - a[1].v).slice(0, 5);
+  if (!top.length) return "";
+  const rows = top.map(([t, r]) => { const g = N[t];
+    return `<li><span class="tr-rank">${r.rank}</span><img src="https://a.espncdn.com/i/teamlogos/nba/500/${t.toLowerCase()}.png" alt="" width="26" height="26" loading="lazy">
+<span class="tr-who"><a href="${teamUrl(t)}">${esc(nick(t))}</a><span class="dim small">${g ? `${esc(g.day)} ${g.at ? "at" : "vs"} ${esc(nick(g.opp))}: Leo ${pct(g.chance)}` : "no game in the next few days"}</span></span>
+<span class="tr-v">${rpts(r.v)}</span></li>`; }).join("");
+  return `<section class="top-rated card">
+<p class="tr-eye">Highest-rated teams</p>
+<ol>${rows}</ol>
+<p class="small" style="margin:8px 0 0"><a href="/nba/previews/">Every game tonight with Leo's win chance</a> · <a href="/nba/stats/">Full team ratings</a></p>
+</section>`;
+}
+
 function hubPage(records, sched) {
   const url = "/nba/teams/";
   const title = "NBA Team Predictions: Leo's Win Chance and Spread for Every Game, by Team | Leo";
   const desc = "Predictions for all 30 NBA teams: Leo's win chance and spread before every game beside the DraftKings line, who Leo favored, the final score and whether Leo's read was right.";
-  const body = `<h1>NBA team predictions</h1>
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
+  const R = loadRatings(), N = loadNext(today);
+  const body = `<style>
+.div-grid li{line-height:1.45;margin:0 0 8px}
+.div-grid .tn{display:block;font-size:.78rem;color:var(--text-dim);line-height:1.35}
+.top-rated{padding:14px 16px;margin:14px 0 18px}
+.top-rated ol{list-style:none;margin:0;padding:0}
+.top-rated li{display:grid;grid-template-columns:22px 26px 1fr auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)}
+.top-rated li:last-child{border-bottom:0}
+.top-rated img{width:26px;height:26px;object-fit:contain}
+.tr-eye{margin:0 0 6px;color:#9c7f33;font-weight:800;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase}
+.tr-rank{font-family:Georgia,serif;color:#9c7f33;font-weight:700;text-align:center}
+.tr-who{display:flex;flex-direction:column;min-width:0}.tr-who a{font-weight:700}
+.tr-v{font-weight:800;font-size:1.1rem}
+${CTA.CSS}
+</style>
+<h1>NBA team predictions</h1>
+  ${CTA.html()}
+  ${topStrip(R, N)}
   <p class="subtitle">Pick a team to see every game Leo analyzed this season: Leo&rsquo;s win chance before tip, the team Leo favored, the final score, whether Leo&rsquo;s read was right, and Leo&rsquo;s spread beside DraftKings. The record beside each team is Leo&rsquo;s record in that team&rsquo;s games: right when the team Leo favored won, wrong when it lost (games Leo had at exactly 50% are left out). Leo&rsquo;s NBA reads start on October 31, 2026.</p>
   <div class="div-grid">${DIVISIONS.map(([div, teams]) => `<div class="card"><h2 style="margin:0;font-size:1.05rem">${esc(div)}</h2><ul>${teams.map(t =>
-    `<li><a href="${teamUrl(t)}">${esc(sched.names[t] || nick(t))}</a> ${records[t] ? `<span class="dim small">Leo ${esc(records[t])}</span>` : ""}</li>`).join("")}</ul></div>`).join("")}</div>
-  <p class="dim small" style="margin-top:18px">Tonight: <a href="/nba/scoreboard/">NBA predictions</a> &middot; <a href="/nba/games/">every NBA game page</a> &middot; <a href="/nba/results/">Leo&rsquo;s NBA results</a>.</p>`;
+    `<li><a href="${teamUrl(t)}">${esc(sched.names[t] || nick(t))}</a> ${records[t] ? `<span class="dim small">Leo ${esc(records[t])}</span>` : ""}${teamNote(t, R, N)}</li>`).join("")}</ul></div>`).join("")}</div>
+  <p class="dim small" style="margin-top:10px">Leo rating: points better or worse than an average team, the rating Leo&rsquo;s win chance uses, as of ${esc((Object.values(R)[0] || {}).asOf || "today")}. Win chances are Leo&rsquo;s latest read and freeze at tip. <a href="/data-feed/">Rating files</a>.</p>
+  <p class="dim small" style="margin-top:18px">Tonight: <a href="/nba/scoreboard/">NBA predictions</a> &middot; <a href="/nba/games/">every NBA game page</a> &middot; <a href="/nba/results/">Leo&rsquo;s NBA results</a>.</p>
+  ${CTA.html()}`;
   const jsonld = { "@context": "https://schema.org", "@graph": [
     { "@type": "CollectionPage", "@id": `${ORIGIN}${url}#page`, name: title.replace(/ \| Leo$/, ""), description: desc, url: ORIGIN + url },
     { "@type": "BreadcrumbList", itemListElement: [

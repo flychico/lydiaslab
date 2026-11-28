@@ -126,6 +126,7 @@ function renderNav(active) {
   const LAB = sport === "NBA"
     ? [
         [prefix + "tools/model-tuner/", "Model Tuner"],
+        [prefix + "member-brief/", "Daily Member Brief"],
         [prefix + "tools/injury-tracker/", "Injury Tracker"],
         [prefix + "players/", "Player Scoring"],
         [prefix + "stats/", "Team Ratings"]
