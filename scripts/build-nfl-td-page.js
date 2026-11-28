@@ -168,7 +168,7 @@ function gameTable(g) {
     const res = p.result === "W" ? '<span class="td-res w">Scored</span>' : p.result === "L" ? '<span class="td-res l">No TD</span>' : "";
     return `<tr>
 <td><strong>${esc(p.player)}</strong> <span class="dim">${esc(p.position || "")}, ${esc(TEAMS.nick(p.team))}</span>${res ? " " + res : ""}</td>
-<td class="num"><strong>${pct(p.projection)}</strong></td>
+<td class="num"><strong>${pct(p.projection)}</strong>${BAR(p.projection)}</td>
 <td class="num">${esc(p.leo_odds)}</td>
 <td class="num hide-sm">${p.market != null ? esc(fmtPrice(p.market)) : '<span class="dim">game day</span>'}</td>
 ${hasStats ? `<td class="num">${st.games ? `${st.tds} <span class="dim">(${st.td_games} of ${st.games} games)</span>` : ""}</td>
@@ -203,8 +203,8 @@ function top20Table(all) {
   const rows = top.map((p, i) => { const st = p.td_stats || {};
     return `<tr data-chance="${p.projection.toFixed(4)}" data-tds="${st.games ? st.tds : -1}" data-rank="${i}">
 <td class="num dim">${i + 1}</td>
-<td><strong>${esc(p.player)}</strong> <span class="dim">${esc(p.position || "")}, ${esc(TEAMS.nick(p.team))}</span><div class="dim small">${esc(matchup(p))}</div></td>
-<td class="num"><strong>${pct(p.projection)}</strong><div class="dim small">${esc(p.leo_odds)}</div></td>
+<td><span class="td-pl">${LOGO(p.team)}<span><strong>${esc(p.player)}</strong> <span class="dim">${esc(p.position || "")}</span><div class="dim small">${esc(TEAMS.nick(p.team))} ${esc(matchup(p))}</div></span></span></td>
+<td class="num"><strong>${pct(p.projection)}</strong> <span class="dim small">${esc(p.leo_odds)}</span>${BAR(p.projection)}</td>
 ${hasStats ? `<td class="num">${st.games ? `${st.tds}<div class="dim small">in ${st.games} games</div>` : ""}</td>` : ""}
 <td class="num hide-sm">${p.market != null ? esc(fmtPrice(p.market)) : '<span class="dim">game day</span>'}</td>
 </tr>`; }).join("\n");
@@ -240,7 +240,27 @@ ${rows}
 </tbody></table></div>
 </section>`;
 }
-const CARD_LINE = `<p class="td-next"><a href="#free-card">The final game-day numbers, including Leo's two likeliest scorers in every game, go out in the free card email before kickoff.</a></p>`;
+const LOGO = t => `<img class="td-logo" src="/img/nfl/${encodeURIComponent(t)}.png" alt="" width="28" height="28" loading="lazy">`;
+const BAR = p => `<span class="td-bar"><span style="width:${Math.round(Math.min(1, p) * 100)}%"></span></span>`;
+// Lynold, 2026-11-27: "you have good content here but i do think people are reading it because the appearnace".
+// The page opens with a visual leaderboard instead of a paragraph, the free card box right under it, and bars for chances.
+function leaderboard(best, W) {
+  const rows = best.map((p, i) => { const st = p.td_stats || {};
+    return `<li class="ldr-row">
+<span class="ldr-rank">${i + 1}</span>${LOGO(p.team)}
+<span class="ldr-who"><span class="ldr-name">${esc(p.player)}</span><span class="ldr-meta">${esc(p.position || "")} · ${esc(TEAMS.nick(p.team))} ${esc(matchup(p))}${st.games ? ` · ${st.tds} TD in ${st.games} games` : ""}</span></span>
+<span class="ldr-num"><span class="ldr-pct">${pct(p.projection)}</span><span class="ldr-odds">${esc(p.leo_odds)}</span></span>
+<span class="ldr-bar"><span style="width:${Math.round(p.projection * 100)}%"></span></span>
+</li>`; }).join("\n");
+  return `<section class="ldr" id="leaders">
+<p class="ldr-eye">Week ${W.week} · Most likely to score</p>
+<ol class="ldr-list">
+${rows}
+</ol>
+<p class="ldr-foot"><a href="#top20">See the top 20</a> · <a href="#how">How Leo works this out</a></p>
+</section>`;
+}
+const CARD_LINE = `<p class="td-next"><a class="td-cta" href="#free-card">Get the final game-day numbers free by email &rarr;</a></p>`;
 
 function page(W, { hub, prev, next }) {
   const permanent = `/nfl/anytime-touchdowns/${W.season}-week-${W.week}/`;
@@ -256,7 +276,10 @@ function page(W, { hub, prev, next }) {
   const title = `NFL Anytime Touchdown Predictions Week ${W.week} ${W.season}: Leo's Odds for Every Player | Leo by ND Horizon`;
   const desc = `Week ${W.week} anytime touchdown odds from Leo: ${best.slice(0, 3).map(p => `${p.player} ${pct(p.projection)}`).join(", ")}. Every player's chance, recent touchdowns and matchup.`;
   const updated = new Date(NOW).toISOString();
-  const top3Box = days.filter(d => upDates.has(d.date) || !upcoming.length).map(d => SEO.analysisBox({
+  const shownDays = days.filter(d => upDates.has(d.date) || !upcoming.length);
+  const laterDays = shownDays.slice(1);
+  const laterLine = laterDays.length ? `<p class="td-later"><strong>Leo's top 3 on later days:</strong> ${laterDays.map(d => `${esc(new Date(d.date + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" }))}: ${esc(d.top.map(p => `${p.player} ${pct(p.projection)}`).join(", "))}`).join(" · ")}</p>` : "";
+  const top3Box = shownDays.slice(0, 1).map(d => SEO.analysisBox({
     id: `top-${d.date}`,
     eyebrow: `${d.picks ? "Leo's touchdown picks" : "Leo's top 3"} · ${new Date(d.date + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", timeZone: "UTC" })}`,
     headline: d.top.map(p => p.player.split(" ").slice(-1)[0]).join(", "),
@@ -272,22 +295,24 @@ function page(W, { hub, prev, next }) {
     { q: "How does Leo work out a touchdown chance?", a: "From each player's share of his team's carries and targets, his touchdown rate this season and last, his team's scoring, the opponent's points allowed, home field and his place on the depth chart. Players listed out or doubtful are left out." },
     { q: "When does this page update?", a: "It goes up days before the games from Leo's early read and updates on game day with the final read and the market prices. After the games, each player shows whether he scored." }
   ];
-  const jump = SEO.jumpBar([["top20", "Top 20"], ["top-" + firstDate, "Leo's top 3"], ["market", "Leo and the market"], ...upcoming.map(g => [g.m.slug || g.m.game_id, `${TEAMS.nick(g.m.away)} vs ${TEAMS.nick(g.m.home)}`]), played.length ? ["played", "Already played"] : null, ["faq", "FAQ"]]);
+  const jump = SEO.jumpBar([["top-" + firstDate, "Leo's top 3"], ["top20", "Top 20"], ["market", "Leo and the market"], ...upcoming.map(g => [g.m.slug || g.m.game_id, `${TEAMS.nick(g.m.away)} vs ${TEAMS.nick(g.m.home)}`]), played.length ? ["played", "Already played"] : null, ["faq", "FAQ"]]);
   const body = `
 <p class="eyebrow"><a href="/nfl/">NFL</a> · Anytime touchdowns</p>
 <h1>NFL anytime touchdown predictions, Week ${W.week}</h1>
-${SEO.byline(updated)}
-<p class="lede">Leo's most likely touchdown scorers for Week ${W.week}: ${best.map(p => `<strong>${esc(p.player)}</strong> ${pct(p.projection)} (${esc(p.leo_odds)})`).join(", ")}. Every player below shows Leo's chance, Leo's odds, his touchdowns this season and in his last five games, and what his opponent allows to his position.${early ? " Early read: it updates on game day with the final read and the market prices." : ""}</p>
-${CARD_LINE}
-${jump}
-${top20Table(all)}
-${top3Box}
-${gapsTable(all)}
+<p class="td-dek">Leo's chance that each player scores, set before kickoff and graded after.${early ? " Early read, final numbers on game day." : ""}</p>
+<p class="byline" style="text-align:center;color:var(--text-dim);font-size:.84rem;margin:4px 0 14px">By <a href="/nfl/how-leo-works/">Leo</a>, the New Dawn Horizon sports model · Updated ${esc(new Date(NOW).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }))} ET</p>
+${leaderboard(best, W)}
 <div id="free-card">${SIGNUP.box("night")}</div>
+${jump}
+${top3Box}
+${laterLine}
+${top20Table(all)}
+${gapsTable(all)}
 ${upcoming.map(gameTable).join("\n")}
 ${played.length ? `<h2 id="played">Already played in Week ${W.week}</h2>\n<p class="dim">Leo's read before kickoff and who scored.</p>\n${played.map(gameTable).join("\n")}` : ""}
 <section id="how">
 <h2>How to read the table</h2>
+<p>Leo's most likely touchdown scorers for Week ${W.week}: ${best.map(p => `${esc(p.player)} ${pct(p.projection)} (${esc(p.leo_odds)})`).join(", ")}. Every player shows Leo's chance, Leo's odds, his touchdowns this season and in his last five games, and what his opponent allows to his position.${early ? " This is an early read: it updates on game day with the final read and the market prices." : ""}</p>
 <ul class="key">
 <li><strong>Leo chance</strong>: Leo's chance the player scores at least one rushing or receiving touchdown.</li>
 <li><strong>Leo odds</strong>: that chance as a fair price with no bookmaker margin. <strong>Market</strong>: the average market price at Leo's latest read, shown for comparison only. Leo never uses it.</li>
@@ -340,7 +365,29 @@ ${GA_HEAD}
 .td-sort td:nth-child(2){min-width:0;white-space:normal}
 .td-table th[style]{min-width:64px}
 @media (max-width:560px){.td-sort th,.td-sort td{padding:7px 5px}.td-sort th{white-space:normal}}
-.td-next{margin:12px 0;font-weight:600}
+.td-next{margin:22px 0;text-align:center}
+.td-cta{display:inline-block;background:#1A2535;color:#F5F0E8!important;font-weight:700;padding:12px 18px;border-radius:999px;text-decoration:none!important;box-shadow:0 0 0 2px #C9A84C inset}
+.td-dek{font-size:1.12rem;text-align:center;color:var(--text-dim);margin:6px auto 4px;max-width:560px}
+.ldr{background:#1A2535;color:#F5F0E8;border-radius:18px;padding:18px 16px 14px;margin:8px 0 16px;border-top:4px solid #C9A84C;box-shadow:var(--shadow-sm)}
+.ldr-eye{margin:0 0 10px;color:#C9A84C;font-weight:800;font-size:.74rem;letter-spacing:.12em;text-transform:uppercase}
+.ldr-list{list-style:none;margin:0;padding:0}
+.ldr-row{display:grid;grid-template-columns:22px 32px 1fr auto;grid-template-rows:auto 6px;align-items:center;column-gap:10px;row-gap:6px;padding:11px 0;border-bottom:1px solid rgba(245,240,232,.10)}
+.ldr-row:last-child{border-bottom:0}
+.ldr-rank{font-family:Georgia,serif;font-size:1.35rem;color:#C9A84C;font-weight:700;text-align:center}
+.ldr-row .td-logo{width:32px;height:32px;background:#F5F0E8;border-radius:50%;padding:3px;box-sizing:border-box}
+.ldr-who{display:flex;flex-direction:column;min-width:0}
+.ldr-name{font-weight:800;font-size:1.02rem;line-height:1.2}
+.ldr-meta{font-size:.78rem;color:rgba(245,240,232,.68);line-height:1.35}
+.ldr-num{display:flex;flex-direction:column;align-items:flex-end}
+.ldr-pct{font-size:1.45rem;font-weight:800;line-height:1}
+.ldr-odds{font-size:.78rem;color:#C9A84C;font-weight:700;margin-top:3px}
+.ldr-bar{grid-column:3 / 5;height:6px;border-radius:3px;background:rgba(245,240,232,.12);overflow:hidden}
+.ldr-bar span{display:block;height:100%;background:linear-gradient(90deg,#9c7f33,#C9A84C,#E8CF86);border-radius:3px}
+.ldr-foot{margin:10px 0 0;font-size:.85rem;text-align:center}.ldr-foot a{color:#C9A84C}
+.td-bar{display:block;height:4px;border-radius:2px;background:var(--border);margin-top:5px;min-width:56px;overflow:hidden}
+.td-bar span{display:block;height:100%;background:#C9A84C}
+.td-pl{display:flex;gap:8px;align-items:center}.td-pl .td-logo{width:24px;height:24px;flex:none}
+.td-later{font-size:.9rem;color:var(--text-dim);margin:-4px 0 18px;line-height:1.5}
 .td-dots{display:inline-flex;gap:3px}
 .td-dot{width:18px;height:18px;border-radius:50%;border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:.66rem;font-weight:800;color:#1A2535}
 .td-dot.y{background:#C9A84C;border-color:#C9A84C}
