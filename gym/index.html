@@ -6,6 +6,34 @@
 <title>MichelAngelo: Free Workout Planner and Log</title>
 <meta name="description" content="Free strength training planner and workout log. Answer a few questions and it builds your plan, then tracks your lifts, food and weight. No account, your data stays on your device.">
 <link rel="canonical" href="https://ndhorizon.com/gym/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="New Dawn Horizon">
+<meta property="og:title" content="MichelAngelo: Free Workout Planner and Log">
+<meta property="og:description" content="Answer a few questions and it builds your plan, then logs every set, meal and weigh-in. Free, no account, your data stays on your device.">
+<meta property="og:url" content="https://ndhorizon.com/gym/">
+<meta property="og:image" content="https://ndhorizon.com/gym/og.jpg">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="MichelAngelo, a free workout planner and log from New Dawn Horizon">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="MichelAngelo: Free Workout Planner and Log">
+<meta name="twitter:description" content="Answer a few questions and it builds your plan, then logs every set, meal and weigh-in. Free, no account, your data stays on your device.">
+<meta name="twitter:image" content="https://ndhorizon.com/gym/og.jpg">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "MichelAngelo",
+  "alternateName": "MichelAngelo: Free Workout Planner and Log",
+  "url": "https://ndhorizon.com/gym/",
+  "description": "A free strength training planner and workout log. It builds a plan from a few questions and tracks lifts, food and body weight. No account; data stays on the person's device.",
+  "applicationCategory": "HealthApplication",
+  "operatingSystem": "Any (runs in the browser; can be added to the home screen)",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "image": "https://ndhorizon.com/gym/og.jpg",
+  "publisher": { "@type": "Organization", "@id": "https://ndhorizon.com/#organization", "name": "New Dawn Horizon", "url": "https://ndhorizon.com/" }
+}
+</script>
 <meta name="theme-color" content="#F5F0E8">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@500;600&family=Onest:wght@400;500;600;700;800&display=swap">
@@ -13,7 +41,7 @@
 <link rel="apple-touch-icon" href="/gym/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <style>
 /* Leo palette (matches ndhorizon.com css/style.css): cream ground, deep navy
    for text and primary actions, gold as fill only. Variable names are kept so
@@ -631,7 +659,7 @@ function load(){
   try { const f = JSON.parse(localStorage.getItem("forge-v1")); if (f && f.v === 1) { f.profile = null; return f; } } catch(e){}
   return { v:1, profile:null, plan:null, logs:[], weights:[], active:null, theme:"auto" };
 }
-const APP_V = 42; // written into the saved data so the coach can see which version a device runs before sending it something new
+const APP_V = 43; // written into the saved data so the coach can see which version a device runs before sending it something new
 function save(){ S.updatedAt = Date.now(); S.appV = APP_V; localStorage.setItem(KEY, JSON.stringify(S)); try { scheduleSync(); } catch (e) {} }
 
 /* ============ Theme ============ */
@@ -2062,7 +2090,7 @@ function renderSettings(){
   </div>` : ""}
   <div class="card" id="set-data"><h3>Your data</h3>
     <p class="small" style="line-height:1.6;margin-top:6px">Everything you log (workouts, food, weight, settings) is saved <b>only in this browser on this device</b>. Nothing is sent to Leo, and there is no account behind it. Two things reach outside, and only when you use them: looking up a food asks public food databases for the item you typed, and the optional sync or coach setup keeps a copy in a GitHub account that you own. The page also loads its fonts from Google Fonts, which sends none of your data.</p>
-    <p class="small" style="line-height:1.6;margin-top:6px">Clearing this browser's data erases it, so save a backup file now and then (Backup, further down).</p>
+    <p class="small" style="line-height:1.6;margin-top:6px">Clearing this browser's data erases it, so save a backup file now and then (Backup, further down). The site's <a href="/privacy/">privacy policy</a> covers the rest of ndhorizon.com.</p>
     <p class="dim small" style="line-height:1.6;margin-top:8px"><b>Not medical advice.</b> This app gives general fitness and nutrition information. It doesn't know your health history. Check with a doctor before changing your training, diet or supplements, and stop if something hurts.</p>
   </div>
 
@@ -2140,7 +2168,8 @@ function renderSettings(){
   </div>
   <div class="card"><h3>Danger zone</h3>
     <button class="btn danger full" onclick="if(confirm('Delete ALL workout data on this device? This cannot be undone.'+(syncCfg?'\\n\\nSync will be turned off here. Your cloud copy is kept.':''))){localStorage.removeItem(KEY);localStorage.removeItem('forge-v1');localStorage.removeItem(SYNC_KEY);location.reload()}">Erase everything</button></div>
-  <p class="dim small">MichelAngelo · runs offline once loaded · optional sync through your own GitHub · no tracking, no subscription.</p>`;
+  <p class="dim small">MichelAngelo · runs offline once loaded · optional sync through your own GitHub · no tracking, no subscription.</p>
+  <p class="dim small">A free tool from <a href="https://ndhorizon.com/">New Dawn Horizon</a> · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></p>`;
 }
 function redoQuestionnaire(){
   const p = S.profile;
