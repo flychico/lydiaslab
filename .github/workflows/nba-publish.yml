@@ -158,7 +158,9 @@ jobs:
       - name: Matchup pages
         run: |
           node scripts/render-nba-matchup-pages.js ${{ steps.d.outputs.dates }}
-          node scripts/build-nba-daily-pages.js "$(TZ=America/New_York date +%F)" "$(TZ=America/New_York date -d '-1 day' +%F)" || node scripts/build-nba-daily-pages.js
+          # Night pages for today, yesterday and every early-read date: early game pages link their night page,
+          # which used to 404 until game day (Lynold, 2026-11-27: /nba/predictions/2026-11-29/ "what the hell?").
+          node scripts/build-nba-daily-pages.js "$(TZ=America/New_York date +%F)" "$(TZ=America/New_York date -d '-1 day' +%F)" ${{ steps.d.outputs.dates }} || node scripts/build-nba-daily-pages.js
           node scripts/build-game-archives.js nba
           node scripts/build-matchup-pages.js nba || true   # permanent matchup pages (Lynold, 2026-11-25)
           node scripts/build-nba-team-pages.js || true   # team pages (SEO-07); never fails the run
