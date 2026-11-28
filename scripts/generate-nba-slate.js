@@ -294,7 +294,22 @@ function readHistory() {
   if (locksChanged) LOCK.save(DATE);
   if (publicChanged) PUBLIC.save(DATE);
   fs.writeFileSync(prevFile, JSON.stringify(doc, null, 1) + "\n");
-  if (EARLY) { console.log(`NBA ${DATE}: early read written (${out.length} games, not graded)`); return; }
+  if (EARLY) {
+    // Private test (Lynold, 2026-11-27, after a 1:33am capper card whose lines moved his way by tip): every early
+    // read's sides and lines are kept, so scripts/build-nba-early-clv.js can measure whether Leo's early sides beat
+    // the closing line. Never shown on the site, never graded as picks.
+    try {
+      const ef = path.join(DIR, "early-reads", `${DATE}.json`);
+      const prevE = fs.existsSync(ef) ? JSON.parse(fs.readFileSync(ef, "utf8")) : { date: DATE, reads: [] };
+      prevE.reads.push({ captured_at: now, model_version: model.model_version, games: out.map(g => ({
+        game_id: g.game_id, home: g.home, away: g.away, tip_utc: g.tip_utc,
+        leo_home_margin: g.leo && g.leo.home_margin, leo_p_home: g.leo && g.leo.p_home, leo_total: g.leo && g.leo.projected && g.leo.projected.total,
+        home_spread: g.market && g.market.home_spread, total: g.market && g.market.total, home_ml: g.market && g.market.home_ml, away_ml: g.market && g.market.away_ml })) });
+      fs.mkdirSync(path.dirname(ef), { recursive: true });
+      fs.writeFileSync(ef, JSON.stringify(prevE, null, 1) + "\n");
+    } catch (e) { console.log(`NBA ${DATE}: early read log skipped (${e.message})`); }
+    console.log(`NBA ${DATE}: early read written (${out.length} games, not graded)`); return;
+  }
   if (DATE === today()) fs.writeFileSync(path.join(DIR, "picks-today.json"), JSON.stringify(doc, null, 1) + "\n");
   fs.writeFileSync(path.join(DIR, "injuries-today.json"), JSON.stringify({ as_of: inj.timestamp, players: inj.list }, null, 1) + "\n");
   if (hist.length) {
