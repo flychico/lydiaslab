@@ -179,10 +179,23 @@ function loadModel() {
 // row: optional inputs from the same read (picks-<date>.json ml_inputs, used
 // by the member brief); the check below still requires they reproduce the
 // published chance.
+// Reads made before a refit are explained with the model they were made with: the old file is kept as
+// data/nfl/moneyline-<model_version>-model.json (leo-nflml-v2 before the Nov 27 QB prior refit, DEC-20261127-02).
+const OLD_MODELS = {};
+function modelFor(v) {
+  if (!v || v === MODEL.model_version) return MODEL;
+  if (!(v in OLD_MODELS)) { try { OLD_MODELS[v] = JSON.parse(fs.readFileSync(path.join(ROOT, `data/nfl/moneyline-${v}-model.json`), "utf8")); } catch (e) { OLD_MODELS[v] = null; } }
+  return OLD_MODELS[v] && OLD_MODELS[v].model_version === v ? OLD_MODELS[v] : null;
+}
 function drivers(m, row) {
   if (!loadModel() || !MODEL.features) return null;
   const r = row || INPUTS[m.game_id];
-  if (!r || (r.model_version || MODEL.model_version) !== MODEL.model_version) return null;
+  if (!r) return null;
+  const MODEL_ = modelFor(r.model_version);
+  if (!MODEL_ || !MODEL_.features) return null;
+  return driversWith(MODEL_, m, r);
+}
+function driversWith(MODEL, m, r) {
   const parts = { home: MODEL.intercept };
   MODEL.features.forEach((f, k) => { parts[f] = MODEL.beta[k] * (Number(r[f]) - MODEL.scaler.mean[f]) / MODEL.scaler.sd[f]; });
   const eta = Object.values(parts).reduce((a, b) => a + b, 0);
@@ -243,7 +256,7 @@ function driversAny(m) {
   if (D) return D;
   try {
     const P = JSON.parse(fs.readFileSync(path.join(ROOT, "data/nfl", `picks-${m.date}.json`), "utf8")).find(p => p.game_id === m.game_id || p.matchup === m.matchup);
-    if (P && P.ml_inputs) return drivers(m, { ...P.ml_inputs, home_qb_name: P.home_qb, away_qb_name: P.away_qb });
+    if (P && P.ml_inputs) return drivers(m, { ...P.ml_inputs, model_version: P.ml_inputs.model_version || P.model_version, home_qb_name: P.home_qb, away_qb_name: P.away_qb });
   } catch (e) { /* no picks file */ }
   return null;
 }
