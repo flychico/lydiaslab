@@ -315,8 +315,11 @@ ${rows}
 }
 const CARD_LINE = `<p class="td-next"><a class="td-cta" href="#free-card">Get the final game-day numbers free by email &rarr;</a></p>`;
 
-function page(W, { hub, prev, next }) {
+function page(W, { hub, prev, next, current }) {
   const permanent = `/nfl/anytime-touchdowns/${W.season}-week-${W.week}/`;
+  // The hub is the page to rank (Lynold, Nov 27: "make sure this page gets indexed asap"): it and the current week's
+  // own page point their canonical at the hub; a week's own page points at itself once it is no longer current.
+  const canon = (hub || current) ? HUB : permanent;
   const url = hub ? HUB : permanent;
   const upcoming = W.games.filter(g => Date.parse(g.ko) > NOW), played = W.games.filter(g => !(Date.parse(g.ko) > NOW)).reverse();
   const focus = upcoming.length ? upcoming : W.games;
@@ -392,7 +395,7 @@ ${CARD_LINE}
       { "@type": "ListItem", position: 1, name: "Leo", item: ORIGIN + "/" },
       { "@type": "ListItem", position: 2, name: "NFL", item: ORIGIN + "/nfl/scoreboard/" },
       { "@type": "ListItem", position: 3, name: "Anytime touchdowns", item: ORIGIN + HUB }] }] };
-  return { url, canonical: permanent, html: shell({ title, desc, url, canonical: permanent, jsonld, body: SEO.withReadTime(body) }) };
+  return { url, canonical: canon, html: shell({ title, desc, url, canonical: canon, jsonld, body: SEO.withReadTime(body) }) };
 }
 
 function shell({ title, desc, url, canonical, jsonld, body }) {
@@ -488,7 +491,7 @@ function main() {
     // A finished week's page is kept once all its results are in (never rewritten later in the season).
     if (NOW > lastKick + 3 * 864e5) return;   // finished weeks keep the page they had (or never get one if they ended before the page existed)
     const prev = i > 0 ? permanentOf(weeks[i - 1]) : null, next = i < weeks.length - 1 ? permanentOf(weeks[i + 1]) : null;
-    const pg = page(W, { hub: false, prev, next });
+    const pg = page(W, { hub: false, prev, next, current: W === cur });
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(file, pg.html);
     console.log(`  ${pg.url}: ${W.games.length} games, ${W.games.reduce((s, g) => s + g.players.length, 0)} players${W.games.some(g => g.source === "early") ? " (early read)" : ""}`);
