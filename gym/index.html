@@ -7,7 +7,7 @@
 <meta name="description" content="Free strength training planner and workout log. Answer a few questions and it builds your plan, then tracks your lifts, food and weight. No account, your data stays on your device.">
 <link rel="canonical" href="https://ndhorizon.com/gym/">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="New Dawn Horizon">
+<meta property="og:site_name" content="MichelAngelo">
 <meta property="og:title" content="MichelAngelo: Free Workout Planner and Log">
 <meta property="og:description" content="Answer a few questions and it builds your plan, then logs every set, meal and weigh-in. Free, no account, your data stays on your device.">
 <meta property="og:url" content="https://ndhorizon.com/gym/">
@@ -126,7 +126,9 @@ textarea{background:var(--card);border:1px solid var(--border);border-radius:9px
 .dashwide{grid-column:1/-1}
 .tabbar .deskonly{display:none}
 /* ---- Wide-screen dashboard layout (phone is untouched) ---- */
+.phonestrip{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0 12px}
 @media(min-width:900px){
+  .phonestrip{display:none}
   body{padding-bottom:0;padding-left:220px}
   .wrap{max-width:1060px;padding:30px 40px}
   body.dashmode .wrap{max-width:1280px}
@@ -659,7 +661,7 @@ function load(){
   try { const f = JSON.parse(localStorage.getItem("forge-v1")); if (f && f.v === 1) { f.profile = null; return f; } } catch(e){}
   return { v:1, profile:null, plan:null, logs:[], weights:[], active:null, theme:"auto" };
 }
-const APP_V = 43; // written into the saved data so the coach can see which version a device runs before sending it something new
+const APP_V = 44; // written into the saved data so the coach can see which version a device runs before sending it something new
 function save(){ S.updatedAt = Date.now(); S.appV = APP_V; localStorage.setItem(KEY, JSON.stringify(S)); try { scheduleSync(); } catch (e) {} }
 
 /* ============ Theme ============ */
@@ -741,7 +743,7 @@ function poolFor(equip){
    STRONG & LEAN: strong and muscular without getting bulky
    (5 days x 60 min, full gym).
    Strength-first hybrid ("powerbuilding"):
-   - Every muscle trained 2x a week (upper/lower strength + push/pull/legs).
+   - Every muscle trained 2x a week (4 days: Upper A, Lower A, Upper B, Lower B; 5-6 days add push/pull/legs).
    - Main lift of each strength day: 4 x 3-5 at RPE 8 (about 2 reps left),
      3 min rest. Heavy low-rep work is what builds strength.
    - Secondary compounds 3 x 5-8 / 6-10 at RPE 8; accessories 3 x 8-15 at
@@ -754,24 +756,36 @@ function poolFor(equip){
 --------------------------------------------------------------------- */
 const STRONG_DAYS = {
   UpperS:{ name:"Upper · Strength", slots:[["bb-bench",4,3,5,180,8],["bb-row",4,5,7,150,8],["ohp",3,5,7,150,8],["neutral-pulldown",3,6,10,120,8],["hammer-curl",2,8,12,60,9],["oh-tri-ext",2,8,12,60,9],["face-pull",2,12,20,60,9]] },
-  LowerS:{ name:"Lower · Strength", slots:[["bb-squat",4,3,5,180,8],["rdl",3,5,8,150,8],["bulgarian",3,6,10,90,8],["leg-curl",3,8,12,75,9],["calf-raise",3,8,12,60,9],["hanging-knee",3,10,15,60,9],["back-ext",2,10,15,60,9]] },
+  LowerS:{ name:"Lower · Strength", slots:[["bb-squat",4,3,5,180,8],["rdl",3,5,8,150,8],["leg-press",3,8,12,120,8],["leg-curl",3,8,12,75,9],["calf-raise",3,8,12,60,9],["hanging-knee",3,10,15,60,9],["back-ext",2,10,15,60,9]] },
   Push:  { name:"Push · Muscle",    slots:[["incline-db",4,6,10,120,8],["db-ohp",3,8,12,120,8],["cable-fly",3,10,15,75,9],["lateral-raise",4,12,20,60,9],["rope-pushdown",3,10,15,60,9],["dips",2,6,12,90,9],["cable-lateral",2,12,20,60,9]] },
   Pull:  { name:"Pull · Muscle",    slots:[["chest-supported-row",4,8,12,120,8],["lat-pulldown",3,8,12,90,8],["face-pull",3,12,20,60,9],["incline-curl",3,10,15,60,9],["cable-crunch",3,10,15,60,9],["bb-shrug",2,8,12,60,9],["reverse-pec-deck",2,12,20,60,9]] },
-  Legs:  { name:"Legs · Muscle",    slots:[["hack-squat",3,6,10,150,8],["hip-thrust",3,8,12,120,8],["seated-leg-curl",3,10,15,75,9],["leg-ext",3,10,15,60,9],["seated-calf",3,10,15,60,9],["walking-lunge",2,10,12,90,9],["ab-wheel",3,8,12,60,9]] },
+  Legs:  { name:"Legs · Muscle",    slots:[["hack-squat",3,6,10,150,8],["hip-thrust",3,8,12,120,8],["seated-leg-curl",3,10,15,75,9],["leg-ext",3,10,15,60,9],["seated-calf",3,10,15,60,9],["leg-press",3,10,15,90,9],["ab-wheel",3,8,12,60,9]] },
   FullA: { name:"Full Body A · Heavy", slots:[["bb-squat",4,3,5,180,8],["bb-bench",4,3,5,180,8],["bb-row",3,5,8,150,8],["lateral-raise",3,12,20,60,9],["hammer-curl",2,8,12,60,9],["hanging-knee",2,10,15,60,9]] },
-  FullB: { name:"Full Body B · Heavy", slots:[["trap-bar-dl",4,3,5,180,8],["ohp",4,4,6,150,8],["neutral-pulldown",3,6,10,120,8],["bulgarian",3,8,10,90,9],["rope-pushdown",2,10,15,60,9],["calf-raise",2,8,12,60,9]] },
+  FullB: { name:"Full Body B · Heavy", slots:[["trap-bar-dl",4,3,5,180,8],["ohp",4,4,6,150,8],["neutral-pulldown",3,6,10,120,8],["leg-press",3,8,12,120,9],["rope-pushdown",2,10,15,60,9],["calf-raise",2,8,12,60,9]] },
   FullC: { name:"Full Body C · Muscle", slots:[["incline-db",3,8,12,120,8],["hack-squat",3,8,12,120,8],["chest-supported-row",3,8,12,90,9],["seated-leg-curl",3,10,15,60,9],["face-pull",2,12,20,60,9],["incline-curl",2,10,15,60,9]] },
+  UpperA:{ name:"Upper A · Strength", slots:[["bb-bench",4,3,5,180,8],["bb-row",4,5,7,150,8],["ohp",3,5,7,150,8],["neutral-pulldown",3,6,10,120,8],["hammer-curl",2,8,12,60,9],["oh-tri-ext",2,8,12,60,9],["face-pull",2,12,20,60,9]] },
+  LowerA:{ name:"Lower A · Strength", slots:[["bb-squat",4,3,5,180,8],["rdl",3,5,8,150,8],["leg-press",3,8,12,120,8],["leg-curl",3,8,12,75,9],["calf-raise",3,8,12,60,9],["hanging-knee",3,10,15,60,9],["back-ext",2,10,15,60,9]] },
+  UpperB:{ name:"Upper B · Muscle", slots:[["incline-db",4,6,10,120,8],["chest-supported-row",4,8,12,120,8],["db-ohp",3,8,12,120,8],["lat-pulldown",3,8,12,90,8],["lateral-raise",4,12,20,60,9],["rope-pushdown",3,10,15,60,9],["incline-curl",3,10,15,60,9]] },
+  LowerB:{ name:"Lower B · Muscle", slots:[["leg-press",4,8,12,150,8],["rdl",3,8,12,120,8],["seated-leg-curl",3,10,15,75,9],["leg-ext",3,10,15,60,9],["seated-calf",3,10,15,60,9],["cable-crunch",3,10,15,60,9],["back-ext",2,10,15,60,9]] },
   Arms:  { name:"Arms & Shoulders", slots:[["close-grip-bench",3,6,10,120,8],["ez-curl",3,8,12,75,9],["db-ohp",3,8,12,90,9],["lateral-raise",3,12,20,60,9],["rope-pushdown",3,10,15,60,9],["incline-curl",2,10,15,60,9]] }
 };
-const STRONG_SPLITS = { 1:["FullA"], 2:["FullA","FullB"], 3:["FullA","FullB","FullC"], 4:["UpperS","LowerS","Push","Pull"],
+const STRONG_SPLITS = { 1:["FullA"], 2:["FullA","FullB"], 3:["FullA","FullB","FullC"], 4:["UpperA","LowerA","UpperB","LowerB"],
   5:["UpperS","LowerS","Push","Pull","Legs"], 6:["UpperS","LowerS","Push","Pull","Legs","Arms"] };
 // Slots that fit the session. Heavy work first, so short sessions keep it.
 const STRONG_COUNT = {20:3, 30:4, 45:5, 60:6, 75:7, 90:7};
+/* Never put lunges or split squats in a generated day. On Lynold's own device
+   (coach connected) hip thrusts stay out until January 2027 as well. */
+const NO_GEN = new Set(["bulgarian","walking-lunge","reverse-lunge","curtsy-lunge","bw-lunge"]);
+function genOk(id){
+  if (NO_GEN.has(id)) return false;
+  if (/hip-thrust/.test(id) && today() < "2027-01-01" && typeof hasCoach === "function" && hasCoach()) return false;
+  return true;
+}
 function generateStrongPlan(p){
   const n = STRONG_COUNT[p.duration] || 6;
   const days = (STRONG_SPLITS[p.days] || STRONG_SPLITS[5]).map(key => {
     const d = STRONG_DAYS[key];
-    const exercises = d.slots.slice(0, n).filter(sl => EXBY[sl[0]]).map(([ex, sets, lo, hi, rest, rpe]) => ({ ex, sets, lo, hi, rest, rpe }));
+    const exercises = d.slots.filter(sl => EXBY[sl[0]] && genOk(sl[0])).slice(0, n).map(([ex, sets, lo, hi, rest, rpe]) => ({ ex, sets, lo, hi, rest, rpe }));
     // Pair accessories (never the heavy lifts) as supersets to fit 60 minutes.
     let ssid = 0;
     for (let i = 0; i < exercises.length - 1; i++) {
@@ -796,7 +810,7 @@ function generatePlan(p){
     const used = new Set();
     const exercises = [];
     for (const pat of pats) {
-      let opts = pool.filter(e => e.p === pat && !used.has(e.id));
+      let opts = pool.filter(e => e.p === pat && !used.has(e.id) && genOk(e.id));
       // on push/leg days train triceps; on pull days train biceps — so arms complement the day
       if (pat === "arms") {
         const tri = opts.filter(e => /Tri/i.test(e.m)), bi = opts.filter(e => /Bicep/i.test(e.m));
@@ -836,7 +850,7 @@ function generatePlan(p){
   if (coreOpts.length) days.forEach((d, i) => {
     if (d.exercises.some(e => EXBY[e.ex] && EXBY[e.ex].p === "core")) return;
     if (i % 2 !== 0) return; // add to roughly every other day, not all
-    const pick = coreOpts[i % coreOpts.length];
+    const pick = coreOpts[i % coreOpts.length]; if (!genOk(pick.id)) return;
     d.exercises.push({ ex: pick.id, sets: goal.accessory[0], lo: goal.accessory[1], hi: goal.accessory[2], rest: REST.accessory });
   });
   return { created: today(), days, nextDay: 0 };
@@ -1312,8 +1326,26 @@ function drawAdherence(id, adh){
 }
 
 /* ---- Onboarding ---- */
-let Q = { name:"", units:"lb", goal:"general", focus:"balanced", days:3, duration:45, equip:"gym", heightFt:"", heightInch:"", weightLb:"", goalW:"", age:"" };
+let Q = { name:"", units:"lb", goal:"strong", focus:"balanced", days:4, duration:60, equip:"gym", heightFt:"", heightInch:"", weightLb:"", goalW:"", age:"" };
+/* Instagram's and Facebook's in-app browsers throw away saved data, so a plan
+   made there is lost. Block setup there and send the person to Safari. */
+function inAppBrowser(){ return /Instagram|FBAN|FBAV/i.test(navigator.userAgent || ""); }
+function renderInAppBlock(){
+  V.innerHTML = `
+  <h1><span class="mich">Michel</span><span class="angelo">Angelo</span></h1>
+  <div class="card" style="border-color:var(--gold)">
+    <h3 style="margin-bottom:8px">Open in Safari first.</h3>
+    <p class="small" style="line-height:1.6;margin:0 0 12px">Instagram's browser does not keep your plan.</p>
+    <button class="btn full" onclick="document.getElementById('iab-how').style.display='block';this.style.display='none'">How do I open it in Safari?</button>
+    <ol id="iab-how" class="small" style="display:none;line-height:1.7;margin:12px 0 0;padding-left:20px">
+      <li>Tap <b>Share</b> (or the <b>•••</b> menu) at the top or bottom of this screen.</li>
+      <li>Tap <b>Open in Safari</b> (it may say <b>Open in external browser</b>).</li>
+      <li>Build your plan there. To keep it one tap away, use Safari's Share button, then <b>Add to Home Screen</b>.</li>
+    </ol>
+  </div>`;
+}
 function renderOnboarding(){
+  if (inAppBrowser()) return renderInAppBlock();
   const GOAL_DESC = {
     strong:"Strength first, muscle second. Heavy 3–5 rep main lifts plus 8–15 rep muscle work, every muscle twice a week, hard sets with an effort target. Lean, not bulky: food targets stay near maintenance. (Full gym.)",
     strength:"Heavier weight, lower reps (3–6). Best for raw strength and PRs.",
@@ -1329,7 +1361,7 @@ function renderOnboarding(){
   V.innerHTML = `
   <h1><span class="mich">Michel</span><span class="angelo">Angelo</span></h1>
   <div class="quote">"Every block of stone has a statue inside it, and it is the task of the sculptor to discover it."</div>
-  <p class="small" style="line-height:1.6;margin:0 0 12px">A free workout planner and log. Answer a few questions and it builds your plan, then tracks your lifts, food and weight. <b>No account. Your data stays on this device.</b></p>
+  <p class="small" style="line-height:1.6;margin:0 0 12px">Free gym log. It builds the plan, then grades the day. No account. The data stays on this phone.</p>
   <div class="card">
     <h3>Build my plan</h3>
     <label style="margin-top:0">What should we call you? <span class="dim small">(optional)</span></label>
@@ -1375,6 +1407,7 @@ function pills(key, opts){
 }
 function setQ(k, v){ Q[k] = (k==="days"||k==="duration") ? Number(v) : v; renderOnboarding(); }
 function finishOnboarding(){
+  if (inAppBrowser()) return renderInAppBlock(); // never write a plan into the in-app browser
   const kg = Q.units === "kg", heightIn = kg ? Math.round((Number(Q.heightCm) || 0) / 2.54) : (Number(Q.heightFt) || 0) * 12 + (Number(Q.heightInch) || 0);
   const w = Number(Q.weightLb) || null; // in the person's own unit
   S.profile = { ...(Q.keep || {}), goal:Q.goal, focus:Q.focus, days:Q.days, duration:Q.duration, equip:Q.equip, units: kg ? "kg" : "lb",
@@ -1388,6 +1421,22 @@ function finishOnboarding(){
 }
 
 /* ---- Today ---- */
+/* Phones (under 900px): weight trend, today's protein and sessions this week
+   at the very top of Today. */
+function phoneStrip(){
+  const ws = (S.weights || []).slice().sort((a, b) => a.date.localeCompare(b.date)), recent = ws.filter(w => w.date >= shiftDate(today(), -13));
+  let wv = "—", wsub = "no weigh-in yet";
+  if (ws.length) {
+    const wk = ws.filter(w => w.date >= shiftDate(today(), -6)), avg = (wk.length ? wk : ws.slice(-1)).reduce((a, w) => a + w.lbs, 0) / (wk.length || 1);
+    wv = (Math.round(avg * 10) / 10) + " lb";
+    const t = recent.length >= 6 ? bwTrend() : null;
+    wsub = t ? `${t.perWeek <= 0 ? "▼" : "▲"} ${Math.abs(Math.round(t.perWeek * 10) / 10)} lb a week` : wk.length ? `7-day avg · ${recent.length} of 6 weigh-ins for a trend` : `last weigh-in ${ws[ws.length - 1].date.slice(5).replace("-", "/")}`;
+  }
+  const n = dayNutrition(today()), tp = effTargets().protein, pHit = n.p >= tp;
+  const ws0 = weekStartOf(today()), wst = S.fresh && S.fresh > ws0 ? S.fresh : ws0, done = sessionsBetween(wst, today()), goal = (S.profile && S.profile.days) || 4;
+  const tile = (lab, val, sub, cls) => `<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:9px 10px;min-width:0"><div class="dim" style="font-size:.66rem;font-weight:700;letter-spacing:.06em">${lab}</div><div class="${cls || ""}" style="font-weight:800;font-size:1.05rem;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${val}</div><div class="dim" style="font-size:.7rem;line-height:1.3;margin-top:2px">${sub}</div></div>`;
+  return `<div class="phonestrip">${tile("WEIGHT", wv, wsub)}${tile("PROTEIN TODAY", `${Math.round(n.p)} / ${tp} g`, pHit ? "hit ✓" : `${Math.round(tp - n.p)} g to go`, pHit ? "green" : "")}${tile("THIS WEEK", `${done} / ${goal}`, done >= goal ? "sessions done ✓" : "sessions", done >= goal ? "green" : "")}</div>`;
+}
 function renderToday(){
   if (S.active) return renderWorkout();
   const plan = S.plan;
@@ -1399,6 +1448,7 @@ function renderToday(){
   <h1>Today</h1>
   ${offerStrong ? `<div class="card" style="border-color:var(--gold)"><b>New program: Strong &amp; Lean</b><div class="dim small" style="margin:5px 0 10px;line-height:1.55">Strength first, muscle second, built for getting strong without getting bulky. 5 days, about 60 minutes: Upper and Lower heavy days (3–5 reps), then Push, Pull and Legs muscle days. Every muscle twice a week, every set with an effort target. Your history and progress stay; the plan is rebuilt.</div><button class="btn small-btn" onclick="switchToStrong()">Switch my plan</button> <button class="btn ghost small-btn" onclick="S.strongDismissed=true;save();render()">Not now</button></div>` : ""}
   <p class="dim small">${S.profile && S.profile.name ? "Hi " + esc(S.profile.name) + " · " : ""}${new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})} · ${streakText()}</p>
+  ${phoneStrip()}
   ${weighInCard()}
   ${reviewCard()}
   ${coachCard()}
