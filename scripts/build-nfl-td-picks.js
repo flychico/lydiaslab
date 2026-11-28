@@ -20,6 +20,12 @@
  * Picks freeze at kickoff (top3_day at the day's first kickoff) and are never rewritten after; results are
  * filled in when graded.
  * Writes data/nfl/td-picks/<date>.json and data/nfl/td-picks/record.json.
+ *
+ * Public from Week 13 (N6, built 2026-11-27): top3_day picks from PUBLIC_FROM (Thu Dec 3, the first Week 13 game)
+ * are Leo's touchdown picks, shown and graded publicly: record.json gains a "public" block (top3_day from that date
+ * only; the Thanksgiving to Dec 2 test stays private), and /nfl/results/ gets a touchdown picks tile between the
+ * <!--leo-td--> markers, kept apart from the moneyline and spread record. Nothing public is written before the
+ * first public pick exists.
  */
 "use strict";
 const fs = require("fs");
@@ -29,6 +35,8 @@ const ROOT = path.join(__dirname, "..");
 const DIR = path.join(ROOT, "data/nfl");
 const OUT = path.join(DIR, "td-picks");
 const TRACK_FROM = "2026-11-26";
+const PUBLIC_FROM = "2026-12-03";   // first Week 13 game (DEC-20261126-08)
+const RESULTS_PAGE = path.join(ROOT, "nfl/results/index.html");
 const RULES = {
   top3_day: "Leo's top 3 anytime touchdown chances of the game day (read before the first kickoff)",
   leo50: "Every player Leo gives 50% or more (read before his kickoff)",
@@ -135,7 +143,7 @@ function build(date) {
   picks.leo50 = [...kept, ...fresh].sort((a, b) => a.kickoff_utc.localeCompare(b.kickoff_utc) || b.chance - a.chance);
 
   for (const k of Object.keys(picks)) picks[k] = picks[k].map(p => grade(p, date));
-  const doc = { date, built_at: new Date(NOW).toISOString(), tracking: "private test, not on the site", rules: RULES, first_kickoff_utc: new Date(firstKick).toISOString(), picks };
+  const doc = { date, built_at: new Date(NOW).toISOString(), tracking: date >= PUBLIC_FROM ? "top3_day public (Leo's touchdown picks); leo50 private" : "private test, not on the site", rules: RULES, first_kickoff_utc: new Date(firstKick).toISOString(), picks };
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(file, JSON.stringify(doc, null, 1) + "\n");
   console.log(`td picks ${date}: top3_day ${picks.top3_day.map(p => `${p.player} ${Math.round(p.chance * 100)}% ${p.price ?? "no price"}${p.result ? " " + p.result : ""}`).join(", ")}; leo50 ${picks.leo50.length}`);
@@ -165,8 +173,49 @@ function record() {
     if (R._nb) R.avg_book_chance = Math.round(1000 * R._b / R._nb) / 1000;
     delete R._c; delete R._b; delete R._nb;
   }
+  out.public = publicRecord();
   fs.writeFileSync(path.join(OUT, "record.json"), JSON.stringify(out, null, 1) + "\n");
+  if (out.public.picks) writeResultsTile(out.public);
   for (const [k, R] of Object.entries(out.rules)) console.log(`  ${k}: ${R.won}-${R.lost}${R.void ? `, ${R.void} void` : ""}, ${R.units >= 0 ? "+" : ""}${R.units}u on ${R.priced} priced`);
+}
+
+/** Leo's touchdown picks, public from PUBLIC_FROM: top3_day only, 1 unit at the price at Leo's read. */
+function publicRecord() {
+  const R = { since: PUBLIC_FROM, rule: "top3_day", label: "Leo's touchdown picks: his top 3 anytime touchdown chances of each game day, read before the first kickoff, 1 unit each at the market price at Leo's read",
+    picks: 0, graded: 0, won: 0, lost: 0, void: 0, priced: 0, units: 0, days: [] };
+  if (!fs.existsSync(OUT)) return R;
+  for (const f of fs.readdirSync(OUT).filter(f => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort()) {
+    const date = f.slice(0, 10); if (date < PUBLIC_FROM) continue;
+    const d = readJson(path.join(OUT, f)); const ps = (d && d.picks && d.picks.top3_day) || [];
+    if (!ps.length) continue;
+    const day = { date, won: 0, lost: 0, void: 0, units: 0, graded: ps.every(p => p.result), picks: ps.map(p => ({ player: p.player, team: p.team, position: p.position, game_id: p.game_id, chance: p.chance, price: p.price, result: p.result, units: p.units })) };
+    for (const p of ps) {
+      R.picks++;
+      if (p.result === "void") { R.void++; day.void++; continue; }
+      if (!p.result) continue;
+      R.graded++; if (p.result === "W") { R.won++; day.won++; } else { R.lost++; day.lost++; }
+      if (p.units != null) { R.priced++; R.units = Math.round((R.units + p.units) * 100) / 100; day.units = Math.round((day.units + p.units) * 100) / 100; }
+    }
+    R.days.push(day);
+  }
+  return R;
+}
+const signed = u => `${u >= 0 ? "+" : ""}${Number(u).toFixed(2)}u`;
+const lastName = n => String(n || "").replace(/\s+(Jr\.?|Sr\.?|II|III|IV)$/i, "").split(" ").pop();
+/** The touchdown picks tile on /nfl/results/ (between <!--leo-td--> markers, after the Leo Parlay line). */
+function writeResultsTile(P) {
+  if (!fs.existsSync(RESULTS_PAGE)) return;
+  const last = P.days.filter(d => d.graded).pop();
+  const day = last ? new Date(last.date + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" }) : "";
+  const mark = r => r === "W" ? " ✅" : r === "L" ? " ❌" : r === "void" ? " (did not play, void)" : "";
+  const lastLine = last ? ` Last: ${day}, ${last.picks.map(p => `${lastName(p.player)}${mark(p.result)}`).join(", ")}.` : " First picks are being graded.";
+  const rec = P.graded ? `${P.won}-${P.lost}` : "0-0";
+  const tile = `<!--leo-td--><section class="rec-row" id="td-picks" aria-label="Touchdown picks" style="margin:6px 0 4px"><article class="rec"><span class="lab">Touchdown picks, since Dec 3</span><span class="big">${rec}</span><span class="beat"><b>${signed(P.units)}</b> · ${P.graded < 50 ? `early read, ${P.graded} of 50 picks` : `${P.graded} picks`}${P.void ? ` · ${P.void} void` : ""}</span></article></section><p class="small" id="td-picks-line" style="margin:6px 0 14px"><b>Touchdown picks</b> (Leo's top 3 anytime touchdown chances of each game day, 1 unit each at the market price at Leo's read, kept apart from this record).${lastLine} <a href="/nfl/anytime-touchdowns/">Every touchdown pick</a></p><!--/leo-td-->`;
+  let html = fs.readFileSync(RESULTS_PAGE, "utf8");
+  if (/<!--leo-td-->[\s\S]*?<!--\/leo-td-->/.test(html)) html = html.replace(/<!--leo-td-->[\s\S]*?<!--\/leo-td-->/, tile);
+  else if (html.includes("<!--/leo-parlay-->")) html = html.replace("<!--/leo-parlay-->", "<!--/leo-parlay-->\n  " + tile);
+  else return;
+  fs.writeFileSync(RESULTS_PAGE, html);
 }
 
 if (require.main === module) {
@@ -175,4 +224,4 @@ if (require.main === module) {
   for (const d of [...new Set(dates)]) build(d);
   record();
 }
-module.exports = { build, record, RULES, TRACK_FROM };
+module.exports = { build, record, publicRecord, RULES, TRACK_FROM, PUBLIC_FROM };

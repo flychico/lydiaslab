@@ -123,6 +123,17 @@ function collect(from, to) {
   return [...weeks.values()].sort((a, b) => a.week - b.week);
 }
 
+/** The public touchdown picks record (record.json "public", from PICKS_FROM; build-nfl-td-picks.js). */
+const PUB = (() => { const r = readJson(path.join(DIR, "td-picks", "record.json")); return (r && r.public) || null; })();
+const su = u => `${u >= 0 ? "+" : ""}${Number(u).toFixed(2)}u`;
+function dayLine(d) {
+  const day = PUB && PUB.days.find(x => x.date === d.date);
+  return day && day.graded ? ` This day: ${day.won}-${day.lost}${day.void ? `, ${day.void} void` : ""}, ${su(day.units)}.` : "";
+}
+function publicFoot() {
+  if (!PUB || !PUB.graded) return `Leo's touchdown picks record starts with these. <a href="/nfl/results/">Every result</a>`;
+  return `Leo's touchdown picks since Dec 3: <strong>${PUB.won}-${PUB.lost}, ${su(PUB.units)}</strong>${PUB.void ? `, ${PUB.void} void` : ""}${PUB.graded < 50 ? `, early read (${PUB.graded} of 50)` : ""}. <a href="/nfl/results/">Every result</a>`;
+}
 /** Leo's top 3 of each game day: frozen picks when saved, else the three highest chances of that date. */
 function dayTop3(W) {
   const out = [];
@@ -132,7 +143,7 @@ function dayTop3(W) {
     let top = frozen ? frozen.top3.map(p => {
       const g = gs.find(x => x.m.game_id === p.game_id) || gs[0];
       const live = g.players.find(x => norm(x.player) === norm(p.player)) || {};
-      return { player: p.player, team: p.team || live.team, projection: p.chance, leo_odds: fairOdds(p.chance), market: p.price ?? live.market, result: p.result || live.result, g };
+      return { player: p.player, team: p.team || live.team, projection: p.chance, leo_odds: fairOdds(p.chance), market: p.price ?? live.market, result: p.result || live.result, units: p.units, frozen: true, g };
     }) : gs.flatMap(g => g.players.map(p => ({ ...p, g }))).sort((a, b) => b.projection - a.projection).slice(0, 3);
     out.push({ date: d, top, picks: d >= PICKS_FROM });
   }
@@ -190,9 +201,11 @@ function page(W, { hub, prev, next }) {
     id: `top-${d.date}`,
     eyebrow: `${d.picks ? "Leo's touchdown picks" : "Leo's top 3"} · ${new Date(d.date + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", timeZone: "UTC" })}`,
     headline: d.top.map(p => p.player.split(" ").slice(-1)[0]).join(", "),
-    sub: d.picks ? "Graded at 1 unit each at the market price at Leo's read." : "The three players Leo gives the best chance to score. Leo's touchdown picks are graded publicly from Week 13.",
-    chips: d.top.map(p => ({ label: `${p.player} (${TEAMS.nick(p.team)})`, value: `${pct(p.projection)} · ${p.leo_odds}`, on: true, note: p.market != null ? `market ${fmtPrice(p.market)}` : "market price on game day", result: p.result || null })),
-    foot: ""
+    sub: d.picks ? `Graded at 1 unit each at the market price at Leo's read.${dayLine(d)}` : "The three players Leo gives the best chance to score. Leo's touchdown picks are graded publicly from Week 13.",
+    chips: d.top.map(p => ({ label: `${p.player} (${TEAMS.nick(p.team)})`, value: `${pct(p.projection)} · ${p.leo_odds}`, on: true,
+      note: [p.market != null ? `market ${fmtPrice(p.market)}` : "market price on game day", d.picks && p.result === "void" ? "did not play, void" : null, d.picks && p.units != null && /^[WL]$/.test(p.result || "") ? `${p.units >= 0 ? "+" : ""}${p.units.toFixed(2)}u` : null].filter(Boolean).join(" · "),
+      result: /^[WL]$/.test(p.result || "") ? p.result : null })),
+    foot: d.picks ? publicFoot() : ""
   })).join("\n");
   const faq = [
     { q: `Who is most likely to score a touchdown in Week ${W.week}?`, a: `In Leo's read, ${best.slice(0, 3).map(p => `${p.player} (${pct(p.projection)})`).join(", ")}.` },

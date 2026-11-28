@@ -156,6 +156,61 @@ function tdPost(date) {
     tip_utc: first, header: title, lines, record: "", facts: [], hashtags: [], reply_lead: "Leo's odds for every anytime touchdown scorer this week:",
     text: EX.tail([title, "", "Leo's top anytime touchdown chances today.", "", ...lines.map(l => `🏈 ${l}`)], link, []), link };
 }
+// ---------- Leo's touchdown picks, public from Week 13 (N6, DEC-20261126-08) ----------
+// From TD_PUBLIC_FROM the TOUCHDOWN WATCH post becomes Leo's touchdown picks: the top3_day set saved by
+// build-nfl-td-picks.js (Leo's three highest anytime touchdown chances of the game day, game-day reads only),
+// with Leo's chance and the price at Leo's read. It follows the latest read until the first kickoff (emailed again
+// as "(updated)" when the three change, like the picks post), then freezes with the picks file. Graded the
+// morning after (tdres post). Before Dec 3 the TOUCHDOWN WATCH chances post is unchanged.
+const TD_PUBLIC_FROM = "2026-12-03";
+const fmtPrice = v => v == null || !Number.isFinite(+v) ? null : +v > 0 ? `+${Math.round(+v)}` : `${Math.round(+v)}`;
+const tdPicksFile = date => readJson(path.join(DIR, "td-picks", `${date}.json`));
+function tdPicksPost(date, existing) {
+  const picks = readJson(path.join(DIR, `picks-${date}.json`));
+  if (!Array.isArray(picks) || !picks.length) return existing || null;
+  const first = picks.map(g => kickUtc(date, g.kickoff)).filter(Boolean).sort()[0];
+  if (!first || (existing && NOW() >= Date.parse(first))) return existing || null;
+  if (NOW() >= Date.parse(first)) return existing || null;
+  const top = ((tdPicksFile(date) || {}).picks || {}).top3_day || [];
+  if (top.length < 2) return existing || null;
+  const week = picks[0].week, title = `${cheatTitle(date, week)} TOUCHDOWN PICKS ${slateEmoji(date)}`;
+  const when = slateWhen(date, picks);
+  const likely = top.filter(p => p.chance >= 0.5).length;
+  // One hook from Leo's own numbers (the Clarky post shape, Nov 26).
+  const hook = likely === top.length ? `Leo has all ${EX.word(top.length)} more likely to score than not.`
+    : `Leo's ${EX.word(top.length)} best chances to score ${when}.`;
+  const nickOf = a => TEAMS.nick(a);
+  const lines = top.map(p => `${p.player} TD ${fmtPrice(p.price) || `${pct(p.chance)}%`}`);   // the graphic
+  const full = top.map(p => `🏈 ${p.player} (${nickOf(p.team)}) anytime TD${fmtPrice(p.price) ? " " + fmtPrice(p.price) : ""}, Leo ${pct(p.chance)}%`);
+  const link = utm(`${SITE}/nfl/anytime-touchdowns/`, "td", date);
+  return { id: "td", kind: "picks", hero: "Leo's touchdown picks", note: "Anytime touchdown picks, 1 unit each", created_at: new Date(NOW()).toISOString(),
+    tip_utc: first, header: title, lines, record: "", facts: [], hashtags: [], pages: [], players: top.map(p => `${nickOf(p.team)}: ${p.player}`),
+    reply_lead: "Leo's odds for every anytime touchdown scorer this week:",
+    text: EX.tail([title, "", hook, "", ...full, "", EX.WITH_LEO], link, []), link };
+}
+/** Public touchdown picks record from TD_PUBLIC_FROM (record.json "public", written by build-nfl-td-picks.js). */
+function tdPublic() { const r = readJson(path.join(DIR, "td-picks", "record.json")); return (r && r.public) || null; }
+const signedU = u => `${u >= 0 ? "+" : ""}${Number(u).toFixed(2)}u`;
+function tdRecordLine(date) {
+  const P = tdPublic(); const day = P && P.days.find(d => d.date === date);
+  if (!day || !day.graded) return "";
+  return `Touchdown picks ${day.won}-${day.lost}${day.void ? `, ${day.void} void` : ""}, ${signedU(day.units)}`;
+}
+/** Results of the day's touchdown picks, once all three are graded (the morning after). */
+function tdResultsPost(date) {
+  const P = tdPublic(); const day = P && P.days.find(d => d.date === date);
+  if (!day || !day.graded) return null;
+  const rank = { W: 0, void: 1, L: 2 };
+  const lines = day.picks.slice().sort((a, b) => rank[a.result] - rank[b.result]).map(p =>
+    p.result === "void" ? `${p.player} did not play, void` : `${p.player} TD${fmtPrice(p.price) ? " " + fmtPrice(p.price) : ""} ${MARK[p.result]}`);
+  const picks = readJson(path.join(DIR, `picks-${date}.json`)) || [{}];
+  const header = `${cheatTitle(date, picks[0].week)} TOUCHDOWN PICKS ${slateEmoji(date)}`, open = EX.opener(day.won, day.lost, "DAY");
+  const since = `${P.won}-${P.lost}, ${signedU(P.units)} since Dec 3`;
+  const record = `${day.won}-${day.lost}${day.void ? `, ${day.void} void` : ""}, ${signedU(day.units)} on the day. ${since}`;
+  const link = utm(`${SITE}/nfl/anytime-touchdowns/`, "tdres", date);
+  return { id: "tdres", kind: "results", created_at: new Date(NOW()).toISOString(), header, lines, record, facts: [], hashtags: [],
+    reply_lead: "Every touchdown pick and its record:", text: EX.tail([header, "", open, "", ...lines, "", record], link, []), link };
+}
 // Lynold, 2026-11-18: no "21+", no "Every call graded, misses included", more human, less bot.
 const bare = link => String(link).replace(/^https?:\/\//, "");
 function picksPost(date, existing) {
@@ -260,8 +315,10 @@ function resultsPost(id, date, games, label, facts, dayGames) {
   const link = utm(`${SITE}/nfl/results/`, id, date);
   // One plain line (Lynold, 2026-11-18, "Bare minimum"): "9-4 today, 17-14 since Nov 2".
   const record = `${t.rec} ${id === "day" ? "on the day" : "so far today"}${seasonRec(date) ? `, ${seasonRec(date)} since Nov 2` : ""}`;
+  // Touchdown picks are their own record (N6): a line on the day post only when they are already graded.
+  const tdLine = id === "day" && date >= TD_PUBLIC_FROM ? tdRecordLine(date) : "";
   return { id, kind: "results", created_at: new Date(NOW()).toISOString(), header, lines, record, facts: [],
-    hashtags: tags, text: EX.tail([header, "", ...lines, "", record], link, tags), link };   // link last, fits 280
+    hashtags: tags, text: EX.tail([header, "", ...lines, "", record, tdLine || null], link, tags), link };   // link last, fits 280
 }
 
 // ---------- player facts ----------
@@ -468,7 +525,11 @@ function build(date) {
 
   if (!has("reads")) for (const p of extraPosts(date)) if (!has(p.id)) { set(p); changed = true; }
   if (!has("qbfacts") && has("reads")) { const q = qbFactsPost(date); if (q) { set(q); changed = true; } }
-  if (!has("td") && has("reads")) { const t = tdPost(date); if (t) { set(t); changed = true; } }
+  if (date >= TD_PUBLIC_FROM) {   // Leo's touchdown picks (N6): follow the reads until the first kickoff, then frozen
+    const old = has("td"), t = tdPicksPost(date, old);
+    if (t && t !== old && JSON.stringify(t.lines) !== JSON.stringify(old && old.lines)) { set(t); changed = true; }
+    if (!has("tdres")) { const r = tdResultsPost(date); if (r) { set(r); changed = true; } }
+  } else if (!has("td") && has("reads")) { const t = tdPost(date); if (t) { set(t); changed = true; } }
   // Strongest moneyline call as its own nuke post when there are 2+ calls (label only, graded at 1 unit).
   const pkNow = has("picks");
   // No nuke when every call is on one team: the cheat sheet already says it (Nov 26, Lions ML and Lions +2.5).
@@ -509,7 +570,7 @@ function build(date) {
   if (has("day") && !has("stat")) { const p = statOfDay(date, week, rvGames); if (p) { set(p); changed = true; } }
   doc.posts = doc.posts.filter(Boolean);
   if (!changed) { console.log(`NFL social ${date}: nothing new (${doc.posts.length} post(s)).`); return doc; }
-  const order = id => id === "picks" ? 0 : id === "nuke" ? 0.05 : id === "stat" ? 10001 : id === "reads" ? 0.1 : id === "upset" ? 0.2 : id === "qbfacts" ? 0.25 : id === "td" ? 0.27 : /^g\d$/.test(id) ? 0.3 + +id.slice(1) / 10 : id === "day" ? 9999 : id === "rday" ? 10000 : 1 + (parseInt(String(id).split("-")[1], 10) || 0);
+  const order = id => id === "picks" ? 0 : id === "nuke" ? 0.05 : id === "stat" ? 10001 : id === "reads" ? 0.1 : id === "upset" ? 0.2 : id === "qbfacts" ? 0.25 : id === "td" ? 0.27 : id === "tdres" ? 10000.5 : /^g\d$/.test(id) ? 0.3 + +id.slice(1) / 10 : id === "day" ? 9999 : id === "rday" ? 10000 : 1 + (parseInt(String(id).split("-")[1], 10) || 0);
   doc.posts.sort((a, b) => order(a.id) - order(b.id));
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(file, JSON.stringify(doc, null, 1) + "\n");

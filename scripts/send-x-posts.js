@@ -115,6 +115,8 @@ function cardType(post) {
   if (post.kind === "stat") return { noPick: false, type: "stat line" };
   if (post.id === "nuke" || post.hero === "Leo's nuke") return { noPick: false, type: "nuke" };
   if (post.id === "qbfacts") return { noPick: false, type: "QB matchup facts" };
+  if (post.id === "td" && post.kind === "picks") return { noPick: false, type: "touchdown picks" };
+  if (post.id === "tdres") return { noPick: false, type: "touchdown picks results" };
   if (post.kind === "reads") return { noPick: false, type: post.id === "upset" ? "upset watch" : /^g\d$/.test(post.id) ? "game spotlight" : "Leo's reads" };
   if (post.id === "rday") return { noPick: false, type: "results (Leo's reads)" };
   return { noPick, type: post.parlay ? (post.kind === "picks" ? "Leo Parlay" : "Leo Parlay results") : post.kind !== "picks" ? "results" : noPick ? "no picks" : "picks" };
@@ -122,7 +124,7 @@ function cardType(post) {
 // The daily message of business/CHATGPT_VISUALS.md PART 2, ready to paste.
 function chatMessage(sport, date, post) {
   const { noPick, type } = cardType(post);
-  const who = players(sport, date, post);
+  const who = Array.isArray(post.players) && post.players.length ? post.players.join(", ") : players(sport, date, post);
   return [
     "Make today's Leo card. Card type: " + type + ".",
     post.id === "qbfacts" ? 'Use the picks card look with the headline "QB MATCHUPS", each quarterback\'s record on its own bar, small photoreal headshots of the quarterbacks named. These are facts, not picks.' : null,
@@ -130,6 +132,8 @@ function chatMessage(sport, date, post) {
     post.kind === "stat" ? `Bleacher Report style highlight card: a photorealistic action shot of ${post.player || "the player"} (${post.team || ""}) in his current uniform, the headline "${post.header.replace(/\s*\S+$/u, "")}", each stat on its own line, and the result line. Not a pick.` : null,
     type === "nuke" ? 'Use the picks card look with the headline "NUKE" and a radioactive symbol, one big hero player for the team, the pick and price in gold. Do not show any bet amount or payout.' : null,
     post.id === "rday" ? 'Use the results card look with the headline "LEO\'S READS" and the line "' + post.record + ' winners"; these are win chances graded, not picks.' : null,
+    post.id === "td" && post.kind === "picks" ? 'Use the picks card look with the headline "TOUCHDOWN PICKS", each player on his own bar with the price, small photoreal headshots of the players named in their current uniforms. Do not show any bet amount or payout.' : null,
+    post.id === "tdres" ? 'Use the results card look with the headline "TOUCHDOWN PICKS" and the record line; each player on his own bar with a check or a cross.' : null,
     who ? "Players to use: " + who : null,
     noPick && post.note ? "Reason line: " + post.note : null,
     "Post:",
